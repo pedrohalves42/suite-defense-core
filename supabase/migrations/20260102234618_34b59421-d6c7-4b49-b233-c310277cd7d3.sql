@@ -16,7 +16,7 @@ ADD COLUMN IF NOT EXISTS red_risk_factor NUMERIC(4,3);
 COMMENT ON COLUMN public.system_audits.raw_score IS 'Original score from AI before guardrails';
 COMMENT ON COLUMN public.system_audits.official_score IS 'Weighted moving average score (50% current + 30% avg3 + 20% avg7)';
 COMMENT ON COLUMN public.system_audits.market_score IS 'Conservative score for investors/market (more stable)';
-COMMENT ON COLUMN public.system_audits.guardrail_applied IS 'Whether variation guardrail was applied (max ±10 pts)';
+COMMENT ON COLUMN public.system_audits.guardrail_applied IS 'Whether variation guardrail was applied (max ?10 pts)';
 COMMENT ON COLUMN public.system_audits.guardrail_reason IS 'Reason for guardrail application';
 COMMENT ON COLUMN public.system_audits.deterministic_base_score IS 'Score calculated from fixed rules (no LLM variance)';
 COMMENT ON COLUMN public.system_audits.red_risk_factor IS 'Risk multiplier from Red Team (0.7-1.0)';

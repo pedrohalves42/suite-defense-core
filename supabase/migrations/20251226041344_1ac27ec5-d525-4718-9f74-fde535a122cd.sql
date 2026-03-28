@@ -1,8 +1,8 @@
 -- =====================================================
--- FASE 1: TWO-MAN-RULE & POLICY ENGINE HIERÁRQUICO
+-- FASE 1: TWO-MAN-RULE & POLICY ENGINE HIERARQUICO
 -- =====================================================
 
--- Tabela de cadeias de aprovação
+-- Tabela de cadeias de aprovacao
 CREATE TABLE public.approval_chains (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -17,7 +17,7 @@ CREATE TABLE public.approval_chains (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Tabela de requisições de aprovação
+-- Tabela de requisicoes de aprovacao
 CREATE TABLE public.approval_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -37,7 +37,7 @@ CREATE TABLE public.approval_requests (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Tabela de aprovações individuais
+-- Tabela de aprovacoes individuais
 CREATE TABLE public.approvals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID NOT NULL REFERENCES public.approval_requests(id) ON DELETE CASCADE,
@@ -45,11 +45,11 @@ CREATE TABLE public.approvals (
   decision TEXT NOT NULL CHECK (decision IN ('approved', 'rejected')),
   reason TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE(request_id, approved_by) -- Um usuário só pode aprovar/rejeitar uma vez
+  UNIQUE(request_id, approved_by) -- Um usuario so pode aprovar/rejeitar uma vez
 );
 
 -- =====================================================
--- FASE 2: NARRATIVA EXECUTIVA CONTÍNUA
+-- FASE 2: NARRATIVA EXECUTIVA CONTINUA
 -- =====================================================
 
 -- Tabela de snapshots de delta de risco
@@ -72,14 +72,14 @@ CREATE TABLE public.risk_delta_snapshots (
 );
 
 -- =====================================================
--- FASE 3: EXPORTAÇÃO AUDIT-READY
+-- FASE 3: EXPORTACAO AUDIT-READY
 -- =====================================================
 
--- Tabela de bundles de evidência exportados
+-- Tabela de bundles de evidencia exportados
 CREATE TABLE public.evidence_bundles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-  audit_id TEXT NOT NULL UNIQUE, -- ID público para verificação
+  audit_id TEXT NOT NULL UNIQUE, -- ID publico para verificacao
   bundle_type TEXT NOT NULL DEFAULT 'incident' CHECK (bundle_type IN ('incident', 'compliance', 'audit', 'custom')),
   period_start TIMESTAMPTZ NOT NULL,
   period_end TIMESTAMPTZ NOT NULL,
@@ -89,7 +89,7 @@ CREATE TABLE public.evidence_bundles (
   total_size_bytes BIGINT NOT NULL DEFAULT 0,
   download_url TEXT,
   download_expires_at TIMESTAMPTZ,
-  verification_url TEXT, -- URL pública para verificar
+  verification_url TEXT, -- URL publica para verificar
   created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -98,7 +98,7 @@ CREATE TABLE public.evidence_bundles (
 -- FASE 4: INCIDENT TIMELINE NARRATIVA
 -- =====================================================
 
--- Tabela de incidentes reconstruídos
+-- Tabela de incidentes reconstruidos
 CREATE TABLE public.incident_timelines (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -202,7 +202,7 @@ WITH CHECK (tenant_id IN (SELECT tenant_id FROM user_roles WHERE user_id = auth.
 -- FUNCTIONS
 -- =====================================================
 
--- Função para submeter aprovação (Two-Man-Rule)
+-- Funcao para submeter aprovacao (Two-Man-Rule)
 CREATE OR REPLACE FUNCTION public.submit_approval(
   p_request_id UUID,
   p_decision TEXT,
@@ -222,7 +222,7 @@ DECLARE
 BEGIN
   v_user_id := auth.uid();
   
-  -- Verificar se usuário está autenticado
+  -- Verificar se usuario esta autenticado
   IF v_user_id IS NULL THEN
     RETURN jsonb_build_object('success', false, 'error', 'Unauthorized');
   END IF;
@@ -234,7 +234,7 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Request not found');
   END IF;
   
-  -- Verificar se usuário tem permissão no tenant
+  -- Verificar se usuario tem permissao no tenant
   SELECT tenant_id INTO v_tenant_id FROM user_roles 
   WHERE user_id = v_user_id AND tenant_id = v_request.tenant_id AND role IN ('admin', 'super_admin')
   LIMIT 1;
@@ -243,30 +243,30 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Forbidden: insufficient permissions');
   END IF;
   
-  -- Verificar se request ainda está pendente
+  -- Verificar se request ainda esta pendente
   IF v_request.status != 'pending' THEN
     RETURN jsonb_build_object('success', false, 'error', 'Request is no longer pending', 'status', v_request.status);
   END IF;
   
-  -- Verificar se não expirou
+  -- Verificar se nao expirou
   IF v_request.expires_at < NOW() THEN
     UPDATE approval_requests SET status = 'expired' WHERE id = p_request_id;
     RETURN jsonb_build_object('success', false, 'error', 'Request has expired');
   END IF;
   
-  -- Verificar se é o mesmo usuário que criou (não pode aprovar própria request)
+  -- Verificar se e o mesmo usuario que criou (nao pode aprovar propria request)
   IF v_request.requested_by = v_user_id THEN
     RETURN jsonb_build_object('success', false, 'error', 'Cannot approve your own request');
   END IF;
   
-  -- Verificar se já votou
+  -- Verificar se ja votou
   SELECT EXISTS(SELECT 1 FROM approvals WHERE request_id = p_request_id AND approved_by = v_user_id) INTO v_already_voted;
   
   IF v_already_voted THEN
     RETURN jsonb_build_object('success', false, 'error', 'Already voted on this request');
   END IF;
   
-  -- Registrar aprovação
+  -- Registrar aprovacao
   INSERT INTO approvals (request_id, approved_by, decision, reason)
   VALUES (p_request_id, v_user_id, p_decision, p_reason);
   
@@ -285,13 +285,13 @@ BEGIN
     RETURN jsonb_build_object('success', true, 'status', 'rejected', 'message', 'Request rejected');
   END IF;
   
-  -- Contar aprovações
+  -- Contar aprovacoes
   SELECT COUNT(*) INTO v_approval_count FROM approvals WHERE request_id = p_request_id AND decision = 'approved';
   
   -- Atualizar contador
   UPDATE approval_requests SET current_approvers = v_approval_count WHERE id = p_request_id;
   
-  -- Verificar se atingiu quórum
+  -- Verificar se atingiu quorum
   IF v_approval_count >= v_request.required_approvers THEN
     UPDATE approval_requests 
     SET status = 'approved', approved_at = NOW()
@@ -310,7 +310,7 @@ BEGIN
 END;
 $$;
 
--- Função para reconstruir timeline de incidente
+-- Funcao para reconstruir timeline de incidente
 CREATE OR REPLACE FUNCTION public.reconstruct_incident_timeline(
   p_agent_id UUID,
   p_start_time TIMESTAMPTZ,
@@ -328,7 +328,7 @@ DECLARE
 BEGIN
   v_user_id := auth.uid();
   
-  -- Verificar permissão
+  -- Verificar permissao
   SELECT a.tenant_id INTO v_tenant_id 
   FROM agents a
   JOIN user_roles ur ON ur.tenant_id = a.tenant_id
@@ -442,7 +442,7 @@ BEGIN
 END;
 $$;
 
--- Função para criar request de aprovação (two-man-rule)
+-- Funcao para criar request de aprovacao (two-man-rule)
 CREATE OR REPLACE FUNCTION public.create_approval_request(
   p_action_type TEXT,
   p_action_payload JSONB,
@@ -468,7 +468,7 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Unauthorized');
   END IF;
   
-  -- Buscar tenant do usuário
+  -- Buscar tenant do usuario
   SELECT tenant_id INTO v_tenant_id FROM user_roles 
   WHERE user_id = v_user_id AND role IN ('admin', 'super_admin', 'operator')
   LIMIT 1;
@@ -477,7 +477,7 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Forbidden');
   END IF;
   
-  -- Buscar chain aplicável
+  -- Buscar chain aplicavel
   SELECT * INTO v_chain FROM approval_chains 
   WHERE tenant_id = v_tenant_id 
     AND is_active = true 

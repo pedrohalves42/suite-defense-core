@@ -5,10 +5,10 @@ ADD COLUMN IF NOT EXISTS break_glass_enabled BOOLEAN DEFAULT false,
 ADD COLUMN IF NOT EXISTS break_glass_last_used_at TIMESTAMPTZ,
 ADD COLUMN IF NOT EXISTS break_glass_last_used_by UUID;
 
--- Atualizar comentário do mfa_policy
+-- Atualizar comentario do mfa_policy
 COMMENT ON COLUMN tenants.mfa_policy IS 'MFA policy config: require_mfa_all_users, require_mfa_roles[], mfa_grace_period_hours, grace_exempt_roles[], break_glass settings';
 
--- Criar função para verificar se usuário é break glass
+-- Criar funcao para verificar se usuario e break glass
 CREATE OR REPLACE FUNCTION public.is_break_glass_user(_user_id UUID, _tenant_id UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -40,7 +40,7 @@ DECLARE
   requester_role app_role;
   actual_requester_id UUID;
 BEGIN
-  -- Usar auth.uid() se requester_id não fornecido
+  -- Usar auth.uid() se requester_id nao fornecido
   actual_requester_id := COALESCE(_requester_id, auth.uid());
   
   -- Buscar role do requisitante
@@ -49,7 +49,7 @@ BEGIN
   WHERE user_id = actual_requester_id
   LIMIT 1;
   
-  -- Analyst NÃO pode alterar roles
+  -- Analyst NAO pode alterar roles
   IF requester_role = 'analyst' THEN
     RETURN jsonb_build_object(
       'success', false,
@@ -58,7 +58,7 @@ BEGIN
     );
   END IF;
   
-  -- Viewer NÃO pode alterar roles
+  -- Viewer NAO pode alterar roles
   IF requester_role = 'viewer' THEN
     RETURN jsonb_build_object(
       'success', false,
@@ -67,7 +67,7 @@ BEGIN
     );
   END IF;
   
-  -- Operator NÃO pode alterar roles
+  -- Operator NAO pode alterar roles
   IF requester_role = 'operator' THEN
     RETURN jsonb_build_object(
       'success', false,
@@ -85,7 +85,7 @@ BEGIN
     );
   END IF;
   
-  -- Admin não pode criar super_admin
+  -- Admin nao pode criar super_admin
   IF requester_role = 'admin' AND _new_role = 'super_admin' THEN
     RETURN jsonb_build_object(
       'success', false,

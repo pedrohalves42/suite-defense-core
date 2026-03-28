@@ -1,5 +1,5 @@
 /**
- * correlate-edr-events — Multi-signal correlation engine.
+ * correlate-edr-events ? Multi-signal correlation engine.
  * 
  * Groups related detection events into correlated incidents
  * based on configurable correlation rules (time window, tactics, agents).
@@ -69,7 +69,7 @@ Deno.serve(async (req: Request) => {
 
   // V-5003 FIX: Iterate per tenant to enforce strict isolation
   for (const tenantId of allTenantIds) {
-    // V-7006: Slim select — only fetch fields needed for correlation, not full event data
+    // V-7006: Slim select ? only fetch fields needed for correlation, not full event data
     const { data: detections } = await supabase
       .from('endpoint_detection_events')
       .select('id, tenant_id, agent_id, mitre_technique_id, mitre_tactic, detection_name, severity, event_time, source_event_type, status, command_line, process_name')
@@ -184,7 +184,7 @@ async function createIncident(
   const firstTime = matchedDets[0].event_time;
   const lastTime = matchedDets[matchedDets.length - 1].event_time;
 
-  // V-2004: Deduplication check — skip if an incident already exists for this rule + agent in the same time window
+  // V-2004: Deduplication check ? skip if an incident already exists for this rule + agent in the same time window
   const { data: existingIncident } = await supabase
     .from('correlated_incidents')
     .select('id')
@@ -203,7 +203,7 @@ async function createIncident(
     .from('correlated_incidents')
     .insert({
       tenant_id: tenantId,
-      title: `${rule.rule_name} — ${matchedDets.length} events`,
+      title: `${rule.rule_name} ? ${matchedDets.length} events`,
       description: `Correlation rule "${rule.rule_name}" matched ${matchedDets.length} detection events on agent ${agentId}. Tactics: ${tactics.join(', ')}`,
       severity: rule.severity,
       confidence_score: Math.min(95, 50 + matchedDets.length * 10),
@@ -250,7 +250,7 @@ async function createIncident(
         alert_type: 'correlated_incident',
         severity: 'critical',
         title: `[INCIDENT] ${rule.rule_name}`,
-        description: `Multi-signal attack detected: ${tactics.join(' → ')}. ${matchedDets.length} events correlated.`,
+        description: `Multi-signal attack detected: ${tactics.join(' ? ')}. ${matchedDets.length} events correlated.`,
         status: 'active',
         metadata: { incident_id: incident.id, affected_agents: [agentId], techniques },
       })

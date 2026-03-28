@@ -7,7 +7,7 @@ import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { callFunction, assertError } from "../helpers/test-client.ts";
 import { SEED } from "../helpers/seed-data.ts";
 
-Deno.test("heartbeat — rejects unauthenticated requests", async () => {
+Deno.test("heartbeat ? rejects unauthenticated requests", async () => {
   const { response, text } = await callFunction("heartbeat", {
     body: SEED.heartbeat,
     headers: {},
@@ -25,7 +25,7 @@ Deno.test("heartbeat — rejects unauthenticated requests", async () => {
   assertEquals(rawResponse.status >= 400, true, `Expected auth rejection, got ${rawResponse.status}`);
 });
 
-Deno.test("heartbeat — rejects missing agent token", async () => {
+Deno.test("heartbeat ? rejects missing agent token", async () => {
   const { response } = await callFunction("heartbeat", {
     body: SEED.heartbeat,
   });
@@ -33,7 +33,7 @@ Deno.test("heartbeat — rejects missing agent token", async () => {
   assertEquals(response.status >= 400, true, `Expected 4xx without agent token, got ${response.status}`);
 });
 
-Deno.test("heartbeat — rejects invalid agent token", async () => {
+Deno.test("heartbeat ? rejects invalid agent token", async () => {
   const { response } = await callFunction("heartbeat", {
     body: SEED.heartbeat,
     agentToken: "invalid-token-that-does-not-exist",
@@ -41,7 +41,7 @@ Deno.test("heartbeat — rejects invalid agent token", async () => {
   assertEquals(response.status >= 400, true, `Expected 4xx with invalid token, got ${response.status}`);
 });
 
-Deno.test("heartbeat — rejects empty body", async () => {
+Deno.test("heartbeat ? rejects empty body", async () => {
   const { response } = await callFunction("heartbeat", {
     body: {},
     agentToken: "fake-token",
@@ -49,7 +49,7 @@ Deno.test("heartbeat — rejects empty body", async () => {
   assertEquals(response.status >= 400, true, `Expected validation error, got ${response.status}`);
 });
 
-Deno.test("heartbeat — rejects GET method", async () => {
+Deno.test("heartbeat ? rejects GET method", async () => {
   const rawResponse = await fetch(
     `${Deno.env.get("VITE_SUPABASE_URL")}/functions/v1/heartbeat`,
     {

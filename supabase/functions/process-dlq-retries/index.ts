@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
             agent: entry.agent_name,
           })
 
-          // Mark as exhausted immediately — do NOT create a new job
+          // Mark as exhausted immediately ? do NOT create a new job
           await supabase
             .from('failed_jobs_dlq')
             .update({
@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
           });
 
         if (jobError) {
-          // Dedup index block is acceptable — skip silently
+          // Dedup index block is acceptable ? skip silently
           if (jobError.message?.includes('idx_jobs_dedup_active')) {
             log.info('DLQ retry skipped: active job already exists', {
               id: entry.id,
@@ -197,7 +197,7 @@ Deno.serve(async (req) => {
               agent_id: entry.agent_id,
               alert_type: 'dlq_exhausted',
               severity: 'critical',
-              message: `Job "${entry.job_type}" falhou permanentemente após ${maxRetries} tentativas para ${entry.agent_name}`,
+              message: `Job "${entry.job_type}" falhou permanentemente apos ${maxRetries} tentativas para ${entry.agent_name}`,
               metadata: {
                 dlq_id: entry.id,
                 original_job_id: entry.original_job_id,

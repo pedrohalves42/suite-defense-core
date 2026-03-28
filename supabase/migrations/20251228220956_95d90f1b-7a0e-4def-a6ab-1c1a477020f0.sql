@@ -1,7 +1,7 @@
 
 -- =========================================================================
--- MIGRAÇÃO DEFINITIVA: Substituir TODAS as políticas que usam current_user_tenant_id()
--- Solução: usar tenant_id IN (SELECT tenant_id FROM user_roles WHERE user_id = auth.uid())
+-- MIGRACAO DEFINITIVA: Substituir TODAS as politicas que usam current_user_tenant_id()
+-- Solucao: usar tenant_id IN (SELECT tenant_id FROM user_roles WHERE user_id = auth.uid())
 -- =========================================================================
 
 -- Helper function to check if user belongs to a tenant

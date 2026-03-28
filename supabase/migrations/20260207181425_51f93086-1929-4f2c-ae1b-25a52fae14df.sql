@@ -1,6 +1,6 @@
 
 -- ============================================================================
--- CORREÇÃO GAP #1: profiles_public com isolamento de tenant
+-- CORRECAO GAP #1: profiles_public com isolamento de tenant
 -- ADR-FINAL-001 Compliance: Security Invoker + Tenant Isolation
 -- ============================================================================
 
@@ -23,12 +23,12 @@ WHERE EXISTS (
     AND (ur.tenant_id = get_active_tenant_id() OR is_current_super_admin())
 );
 
--- Comentário para auditoria SOC2/ISO27001
+-- Comentario para auditoria SOC2/ISO27001
 COMMENT ON VIEW profiles_public IS 
 'ADR-FINAL-001: View com security_invoker=on e isolamento via user_roles.tenant_id. 
-Usuários normais veem apenas perfis do seu tenant ativo. Super admins veem todos.
-Corrigido em 2026-02-07 para fechar gap de segurança crítico.';
+Usuarios normais veem apenas perfis do seu tenant ativo. Super admins veem todos.
+Corrigido em 2026-02-07 para fechar gap de seguranca critico.';
 
--- Garantir permissões corretas
+-- Garantir permissoes corretas
 REVOKE ALL ON profiles_public FROM anon, public;
 GRANT SELECT ON profiles_public TO authenticated, service_role;

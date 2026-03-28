@@ -82,8 +82,8 @@ serveAgent(async (_req, ctx) => {
 
     if (computedStatus === 'critical' || computedStatus === 'not_configured') {
       const alertMessage = computedStatus === 'critical'
-        ? `Backup atrasado: ${backup.backup_tool || backup.backup_type} - último backup há ${backupAgeHours}h`
-        : `Backup não configurado: ${backup.backup_tool || backup.backup_type}`;
+        ? `Backup atrasado: ${backup.backup_tool || backup.backup_type} - ultimo backup ha ${backupAgeHours}h`
+        : `Backup nao configurado: ${backup.backup_tool || backup.backup_type}`;
 
       const { error: alertError } = await supabase
         .from('system_alerts')

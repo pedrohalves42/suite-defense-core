@@ -1,8 +1,8 @@
 
 -- =====================================================
--- ENTERPRISE HARDENING: Motor de Automação CyberShield
+-- ENTERPRISE HARDENING: Motor de Automacao CyberShield
 -- Anti-tempestade, Circuit Breaker, Blast Radius, 
--- Governança, Versionamento, SLA, Auditoria de Decisões
+-- Governanca, Versionamento, SLA, Auditoria de Decisoes
 -- =====================================================
 
 -- 1. AUTOMATION EXECUTION LOG (Debounce por agente+regra)
@@ -24,7 +24,7 @@ ALTER TABLE public.automation_execution_log ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Service role full access on automation_execution_log" ON public.automation_execution_log FOR ALL USING (true) WITH CHECK (true);
 REVOKE ALL ON public.automation_execution_log FROM anon;
 
-COMMENT ON TABLE public.automation_execution_log IS 'Log de debounce para anti-tempestade de jobs: 1 execução por agente/regra por período de cooldown';
+COMMENT ON TABLE public.automation_execution_log IS 'Log de debounce para anti-tempestade de jobs: 1 execucao por agente/regra por periodo de cooldown';
 
 -- 2. HARDENING COLUMNS on automation_rules
 ALTER TABLE public.automation_rules 
@@ -51,13 +51,13 @@ ALTER TABLE public.automation_rules DROP CONSTRAINT IF EXISTS automation_rules_c
 ALTER TABLE public.automation_rules ADD CONSTRAINT automation_rules_circuit_state_check 
   CHECK (circuit_state IN ('closed', 'open', 'half_open'));
 
-COMMENT ON COLUMN public.automation_rules.max_executions_per_hour IS 'Rate limit máximo de execuções por hora por tenant/regra';
+COMMENT ON COLUMN public.automation_rules.max_executions_per_hour IS 'Rate limit maximo de execucoes por hora por tenant/regra';
 COMMENT ON COLUMN public.automation_rules.circuit_state IS 'Estado do circuit breaker: closed (normal), open (bloqueado), half_open (teste)';
-COMMENT ON COLUMN public.automation_rules.mode IS 'Modo de operação: active (executa), observe_only (só loga), disabled (inativo)';
-COMMENT ON COLUMN public.automation_rules.max_affected_percentage IS 'Blast radius máximo: % da frota que pode ser afetada simultaneamente';
-COMMENT ON COLUMN public.automation_rules.dry_run IS 'Modo dry-run: avalia e loga mas não executa ações';
+COMMENT ON COLUMN public.automation_rules.mode IS 'Modo de operacao: active (executa), observe_only (so loga), disabled (inativo)';
+COMMENT ON COLUMN public.automation_rules.max_affected_percentage IS 'Blast radius maximo: % da frota que pode ser afetada simultaneamente';
+COMMENT ON COLUMN public.automation_rules.dry_run IS 'Modo dry-run: avalia e loga mas nao executa acoes';
 
--- 3. AUTOMATION APPROVALS (Governança)
+-- 3. AUTOMATION APPROVALS (Governanca)
 CREATE TABLE IF NOT EXISTS public.automation_approvals (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES public.tenants(id),
@@ -86,7 +86,7 @@ ALTER TABLE public.automation_approvals ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Service role full access on automation_approvals" ON public.automation_approvals FOR ALL USING (true) WITH CHECK (true);
 REVOKE ALL ON public.automation_approvals FROM anon;
 
-COMMENT ON TABLE public.automation_approvals IS 'Fila de aprovações para ações de automação que requerem autorização humana';
+COMMENT ON TABLE public.automation_approvals IS 'Fila de aprovacoes para acoes de automacao que requerem autorizacao humana';
 
 -- 4. AUTOMATION RULE VERSIONS (Versionamento)
 CREATE TABLE IF NOT EXISTS public.automation_rule_versions (
@@ -106,7 +106,7 @@ ALTER TABLE public.automation_rule_versions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Service role full access on automation_rule_versions" ON public.automation_rule_versions FOR ALL USING (true) WITH CHECK (true);
 REVOKE ALL ON public.automation_rule_versions FROM anon;
 
-COMMENT ON TABLE public.automation_rule_versions IS 'Histórico de versões de regras de automação para rollback e auditoria';
+COMMENT ON TABLE public.automation_rule_versions IS 'Historico de versoes de regras de automacao para rollback e auditoria';
 
 -- 5. AUTOMATION DECISION LOG (Auditoria Enterprise)
 CREATE TABLE IF NOT EXISTS public.automation_decision_log (
@@ -140,7 +140,7 @@ ALTER TABLE public.automation_decision_log ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Service role full access on automation_decision_log" ON public.automation_decision_log FOR ALL USING (true) WITH CHECK (true);
 REVOKE ALL ON public.automation_decision_log FROM anon;
 
-COMMENT ON TABLE public.automation_decision_log IS 'Log consolidado de decisões do motor de automação para auditoria enterprise';
+COMMENT ON TABLE public.automation_decision_log IS 'Log consolidado de decisoes do motor de automacao para auditoria enterprise';
 
 -- 6. AUTOMATION SLA METRICS
 CREATE TABLE IF NOT EXISTS public.automation_sla_metrics (
@@ -161,7 +161,7 @@ ALTER TABLE public.automation_sla_metrics ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Service role full access on automation_sla_metrics" ON public.automation_sla_metrics FOR ALL USING (true) WITH CHECK (true);
 REVOKE ALL ON public.automation_sla_metrics FROM anon;
 
-COMMENT ON TABLE public.automation_sla_metrics IS 'Métricas de SLA interno do motor de automação';
+COMMENT ON TABLE public.automation_sla_metrics IS 'Metricas de SLA interno do motor de automacao';
 
 -- 7. TRIGGER: Auto-version on rule update
 CREATE OR REPLACE FUNCTION public.trg_automation_rule_version()

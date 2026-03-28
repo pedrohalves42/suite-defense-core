@@ -1,8 +1,8 @@
 -- ============================================================
--- MIGRAÇÃO: Correções Cirúrgicas Finais (6 Erros Críticos)
+-- MIGRACAO: Correcoes Cirurgicas Finais (6 Erros Criticos)
 -- ============================================================
 
--- 1. Corrigir archive_old_executions (DELETE com CTE válido)
+-- 1. Corrigir archive_old_executions (DELETE com CTE valido)
 CREATE OR REPLACE FUNCTION archive_old_executions(
   p_older_than_days INTEGER DEFAULT 90,
   p_batch_size INTEGER DEFAULT 1000
@@ -20,7 +20,7 @@ BEGIN
     RAISE EXCEPTION 'Only super_admin can archive executions';
   END IF;
 
-  -- Etapa 1: Arquivar execuções antigas (CTE correto)
+  -- Etapa 1: Arquivar execucoes antigas (CTE correto)
   WITH to_archive AS (
     SELECT id FROM job_executions
     WHERE created_at < NOW() - (p_older_than_days || ' days')::INTERVAL
@@ -34,7 +34,7 @@ BEGIN
   
   GET DIAGNOSTICS v_archived = ROW_COUNT;
   
-  -- Etapa 2: Deletar com CTE (CORREÇÃO CRÍTICA - PostgreSQL não suporta LIMIT em DELETE)
+  -- Etapa 2: Deletar com CTE (CORRECAO CRITICA - PostgreSQL nao suporta LIMIT em DELETE)
   WITH to_delete AS (
     SELECT id FROM job_executions
     WHERE archived_at < NOW() - INTERVAL '30 days'
@@ -55,9 +55,9 @@ END;
 $$;
 
 COMMENT ON FUNCTION archive_old_executions IS 
-'Arquiva e deleta job_executions antigas. Usa CTE para batch (PostgreSQL não suporta LIMIT em DELETE).';
+'Arquiva e deleta job_executions antigas. Usa CTE para batch (PostgreSQL nao suporta LIMIT em DELETE).';
 
--- 2. Criar trigger na tabela (CRÍTICO - função existia mas trigger não)
+-- 2. Criar trigger na tabela (CRITICO - funcao existia mas trigger nao)
 DROP TRIGGER IF EXISTS tr_prevent_execution_deletion ON job_executions;
 
 CREATE TRIGGER tr_prevent_execution_deletion
@@ -66,9 +66,9 @@ CREATE TRIGGER tr_prevent_execution_deletion
   EXECUTE FUNCTION prevent_execution_deletion();
 
 COMMENT ON TRIGGER tr_prevent_execution_deletion ON job_executions IS 
-'ADR: Proteção de imutabilidade. Permite delete apenas de registros arquivados há 30+ dias.';
+'ADR: Protecao de imutabilidade. Permite delete apenas de registros arquivados ha 30+ dias.';
 
--- 3. Recriar view com security_invoker=on (CRÍTICO para RLS)
+-- 3. Recriar view com security_invoker=on (CRITICO para RLS)
 DROP VIEW IF EXISTS v_agent_state;
 
 CREATE VIEW v_agent_state 
@@ -101,9 +101,9 @@ WHERE a.status = 'active'
   AND (a.tenant_id = get_active_tenant_id() OR is_current_super_admin());
 
 COMMENT ON VIEW v_agent_state IS 
-'ADR: View canônica com security_invoker=on. Toda UI deve ler estado APENAS desta view.';
+'ADR: View canonica com security_invoker=on. Toda UI deve ler estado APENAS desta view.';
 
--- Controle de acesso explícito
+-- Controle de acesso explicito
 REVOKE ALL ON v_agent_state FROM PUBLIC;
 GRANT SELECT ON v_agent_state TO authenticated;
 GRANT SELECT ON v_agent_state TO service_role;

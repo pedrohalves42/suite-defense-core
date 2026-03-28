@@ -86,7 +86,7 @@ SELECT
   'Computador offline de forma inesperada' AS title,
   CASE 
     WHEN a.offline_reason LIKE '%crash%' THEN 'Este computador parou de responder de forma inesperada e pode indicar problema grave.'
-    ELSE 'Este computador está offline e pode necessitar de atenção.'
+    ELSE 'Este computador esta offline e pode necessitar de atencao.'
   END AS description,
   CASE 
     WHEN a.offline_reason LIKE '%crash%' THEN 'high'

@@ -1,9 +1,9 @@
 
 -- ============================================
--- RLS para partições de agent_system_metrics
+-- RLS para particoes de agent_system_metrics
 -- ============================================
 
--- Habilitar RLS em todas as partições
+-- Habilitar RLS em todas as particoes
 ALTER TABLE IF EXISTS public.agent_system_metrics_2025_12 ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.agent_system_metrics_2026_01 ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.agent_system_metrics_2026_02 ENABLE ROW LEVEL SECURITY;
@@ -17,7 +17,7 @@ ALTER TABLE IF EXISTS public.agent_system_metrics_2026_09 ENABLE ROW LEVEL SECUR
 ALTER TABLE IF EXISTS public.agent_system_metrics_2026_10 ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.agent_system_metrics_2026_11 ENABLE ROW LEVEL SECURITY;
 
--- Políticas RLS para 2025_12
+-- Politicas RLS para 2025_12
 DROP POLICY IF EXISTS "Admins can view tenant metrics" ON public.agent_system_metrics_2025_12;
 CREATE POLICY "Admins can view tenant metrics" ON public.agent_system_metrics_2025_12
 FOR SELECT USING (
@@ -30,7 +30,7 @@ FOR SELECT USING (
   EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role = 'super_admin'::app_role)
 );
 
--- Políticas RLS para 2026_01
+-- Politicas RLS para 2026_01
 DROP POLICY IF EXISTS "Admins can view tenant metrics" ON public.agent_system_metrics_2026_01;
 CREATE POLICY "Admins can view tenant metrics" ON public.agent_system_metrics_2026_01
 FOR SELECT USING (
@@ -43,7 +43,7 @@ FOR SELECT USING (
   EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role = 'super_admin'::app_role)
 );
 
--- Políticas RLS para 2026_02
+-- Politicas RLS para 2026_02
 DROP POLICY IF EXISTS "Admins can view tenant metrics" ON public.agent_system_metrics_2026_02;
 CREATE POLICY "Admins can view tenant metrics" ON public.agent_system_metrics_2026_02
 FOR SELECT USING (
@@ -56,7 +56,7 @@ FOR SELECT USING (
   EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role = 'super_admin'::app_role)
 );
 
--- Políticas RLS para 2026_03
+-- Politicas RLS para 2026_03
 DROP POLICY IF EXISTS "Admins can view tenant metrics" ON public.agent_system_metrics_2026_03;
 CREATE POLICY "Admins can view tenant metrics" ON public.agent_system_metrics_2026_03
 FOR SELECT USING (
@@ -69,7 +69,7 @@ FOR SELECT USING (
   EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role = 'super_admin'::app_role)
 );
 
--- Políticas RLS para 2026_04
+-- Politicas RLS para 2026_04
 DROP POLICY IF EXISTS "Admins can view tenant metrics" ON public.agent_system_metrics_2026_04;
 CREATE POLICY "Admins can view tenant metrics" ON public.agent_system_metrics_2026_04
 FOR SELECT USING (
@@ -82,7 +82,7 @@ FOR SELECT USING (
   EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role = 'super_admin'::app_role)
 );
 
--- Políticas RLS para 2026_05
+-- Politicas RLS para 2026_05
 DROP POLICY IF EXISTS "Admins can view tenant metrics" ON public.agent_system_metrics_2026_05;
 CREATE POLICY "Admins can view tenant metrics" ON public.agent_system_metrics_2026_05
 FOR SELECT USING (
@@ -95,7 +95,7 @@ FOR SELECT USING (
   EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role = 'super_admin'::app_role)
 );
 
--- Políticas RLS para 2026_06
+-- Politicas RLS para 2026_06
 DROP POLICY IF EXISTS "Admins can view tenant metrics" ON public.agent_system_metrics_2026_06;
 CREATE POLICY "Admins can view tenant metrics" ON public.agent_system_metrics_2026_06
 FOR SELECT USING (
@@ -108,7 +108,7 @@ FOR SELECT USING (
   EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role = 'super_admin'::app_role)
 );
 
--- Políticas RLS para 2026_07
+-- Politicas RLS para 2026_07
 DROP POLICY IF EXISTS "Admins can view tenant metrics" ON public.agent_system_metrics_2026_07;
 CREATE POLICY "Admins can view tenant metrics" ON public.agent_system_metrics_2026_07
 FOR SELECT USING (
@@ -121,7 +121,7 @@ FOR SELECT USING (
   EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role = 'super_admin'::app_role)
 );
 
--- Políticas RLS para 2026_08
+-- Politicas RLS para 2026_08
 DROP POLICY IF EXISTS "Admins can view tenant metrics" ON public.agent_system_metrics_2026_08;
 CREATE POLICY "Admins can view tenant metrics" ON public.agent_system_metrics_2026_08
 FOR SELECT USING (
@@ -134,7 +134,7 @@ FOR SELECT USING (
   EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role = 'super_admin'::app_role)
 );
 
--- Políticas RLS para 2026_09
+-- Politicas RLS para 2026_09
 DROP POLICY IF EXISTS "Admins can view tenant metrics" ON public.agent_system_metrics_2026_09;
 CREATE POLICY "Admins can view tenant metrics" ON public.agent_system_metrics_2026_09
 FOR SELECT USING (
@@ -147,7 +147,7 @@ FOR SELECT USING (
   EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role = 'super_admin'::app_role)
 );
 
--- Políticas RLS para 2026_10
+-- Politicas RLS para 2026_10
 DROP POLICY IF EXISTS "Admins can view tenant metrics" ON public.agent_system_metrics_2026_10;
 CREATE POLICY "Admins can view tenant metrics" ON public.agent_system_metrics_2026_10
 FOR SELECT USING (
@@ -160,7 +160,7 @@ FOR SELECT USING (
   EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role = 'super_admin'::app_role)
 );
 
--- Políticas RLS para 2026_11
+-- Politicas RLS para 2026_11
 DROP POLICY IF EXISTS "Admins can view tenant metrics" ON public.agent_system_metrics_2026_11;
 CREATE POLICY "Admins can view tenant metrics" ON public.agent_system_metrics_2026_11
 FOR SELECT USING (

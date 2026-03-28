@@ -83,11 +83,11 @@ foreach ($test in $testCases) {
     
     if ($success) {
         $passed++
-        $icon = "✓"
+        $icon = "?"
         $color = "Green"
     } else {
         $failed++
-        $icon = "✗"
+        $icon = "?"
         $color = "Red"
     }
     
@@ -110,7 +110,7 @@ $criticalFalsePositives = $testCases | Where-Object { -not $_.Expected } | ForEa
 }
 
 if ($criticalFalsePositives) {
-    Write-Host "`n⚠ CRITICAL: False positives detected!" -ForegroundColor Red
+    Write-Host "`n[WARN]  CRITICAL: False positives detected!" -ForegroundColor Red
     $criticalFalsePositives | ForEach-Object {
         Write-Host "   $($_.Domain) incorrectly blocked by $($_.Pattern)" -ForegroundColor Red
     }
@@ -118,7 +118,7 @@ if ($criticalFalsePositives) {
 }
 
 if ($failed -eq 0) {
-    Write-Host "`n✓ All domain matching tests passed" -ForegroundColor Green
+    Write-Host "`n? All domain matching tests passed" -ForegroundColor Green
     Write-Host "  False-positive prevention: VERIFIED" -ForegroundColor Green
     exit 0
 } else {

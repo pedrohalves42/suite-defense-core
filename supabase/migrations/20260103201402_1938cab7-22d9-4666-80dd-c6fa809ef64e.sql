@@ -2,7 +2,7 @@
 -- PATCH: Semantic Approval Correction + Enforcement
 -- =============================================================
 
--- 1. BACKFILL: Materializar approved_at nas ações já aprovadas
+-- 1. BACKFILL: Materializar approved_at nas acoes ja aprovadas
 UPDATE ai_actions
 SET
   approved_at = created_at,
@@ -11,7 +11,7 @@ WHERE
   review_decision = 'approved'
   AND approved_at IS NULL;
 
--- 2. ENFORCEMENT TRIGGER: Garantir semântica futura
+-- 2. ENFORCEMENT TRIGGER: Garantir semantica futura
 CREATE OR REPLACE FUNCTION enforce_ai_action_approval()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -32,7 +32,7 @@ BEFORE INSERT OR UPDATE ON ai_actions
 FOR EACH ROW
 EXECUTE FUNCTION enforce_ai_action_approval();
 
--- 3. EXPLAINABILITY: Adicionar coluna para explicações
+-- 3. EXPLAINABILITY: Adicionar coluna para explicacoes
 ALTER TABLE ai_actions 
 ADD COLUMN IF NOT EXISTS explanation text;
 
@@ -51,7 +51,7 @@ DECLARE
   result jsonb;
   v_tenant_id uuid;
 BEGIN
-  -- Se não passou tenant_id, pega o primeiro tenant ativo
+  -- Se nao passou tenant_id, pega o primeiro tenant ativo
   IF p_tenant_id IS NULL THEN
     SELECT id INTO v_tenant_id FROM tenants WHERE status = 'active' LIMIT 1;
   ELSE

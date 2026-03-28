@@ -12,8 +12,8 @@ FOR EACH ROW
 WHEN (NEW.last_heartbeat IS DISTINCT FROM OLD.last_heartbeat)
 EXECUTE FUNCTION public.cancel_jobs_on_agent_offline();
 
--- Criar função para cleanup proativo de jobs de agentes offline
--- Esta função será chamada por edge function scheduled
+-- Criar funcao para cleanup proativo de jobs de agentes offline
+-- Esta funcao sera chamada por edge function scheduled
 CREATE OR REPLACE FUNCTION public.cleanup_offline_agents_jobs()
 RETURNS TABLE(cleaned_count INTEGER, agent_ids UUID[], job_ids UUID[])
 LANGUAGE plpgsql
@@ -50,7 +50,7 @@ BEGIN
   INTO v_cleaned_count, v_agent_ids, v_job_ids
   FROM cancelled_jobs;
   
-  -- Log da operação
+  -- Log da operacao
   IF v_cleaned_count > 0 THEN
     RAISE NOTICE 'Cleanup completed: % jobs cancelled for offline agents', v_cleaned_count;
   END IF;

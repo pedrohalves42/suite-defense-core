@@ -2,7 +2,7 @@
 DROP VIEW IF EXISTS v_security_invariants;
 
 CREATE OR REPLACE VIEW v_security_invariants AS
--- PUBLIC_WRITE_POLICIES: Verifica policies públicas perigosas (exclui políticas de bloqueio)
+-- PUBLIC_WRITE_POLICIES: Verifica policies publicas perigosas (exclui politicas de bloqueio)
 SELECT
   'PUBLIC_WRITE_POLICIES' as invariant,
   COUNT(*) as violations,
@@ -21,7 +21,7 @@ WHERE schemaname = 'public'
 
 UNION ALL
 
--- SCHEDULED_JOBS_NO_RUNS: Jobs habilitados sem execução recente
+-- SCHEDULED_JOBS_NO_RUNS: Jobs habilitados sem execucao recente
 SELECT
   'SCHEDULED_JOBS_NO_RUNS' as invariant,
   COUNT(*) as violations,
@@ -36,7 +36,7 @@ AND NOT EXISTS (
 
 UNION ALL
 
--- DLQ_CRITICAL_JOBS: Jobs com falhas não resolvidas
+-- DLQ_CRITICAL_JOBS: Jobs com falhas nao resolvidas
 SELECT
   'DLQ_CRITICAL_JOBS' as invariant,
   COUNT(*) as violations,
@@ -47,7 +47,7 @@ AND ran_at > NOW() - INTERVAL '24 hours'
 
 UNION ALL
 
--- KILL_SWITCH_FUNCTIONAL: Verifica se função existe
+-- KILL_SWITCH_FUNCTIONAL: Verifica se funcao existe
 SELECT
   'KILL_SWITCH_FUNCTIONAL' as invariant,
   CASE 

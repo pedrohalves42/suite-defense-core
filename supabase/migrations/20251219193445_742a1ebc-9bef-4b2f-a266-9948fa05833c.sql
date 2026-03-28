@@ -1,9 +1,9 @@
 -- ============================================================
 -- INV-STATE: State Machine Formal para Jobs
--- Impede transições ilegais como queued→completed
+-- Impede transicoes ilegais como queued?completed
 -- ============================================================
 
--- Função que valida transições de estado
+-- Funcao que valida transicoes de estado
 CREATE OR REPLACE FUNCTION public.enforce_job_state_transitions()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -20,15 +20,15 @@ DECLARE
   }'::jsonb;
   v_allowed_states jsonb;
 BEGIN
-  -- Se status não mudou, permitir
+  -- Se status nao mudou, permitir
   IF OLD.status = NEW.status THEN
     RETURN NEW;
   END IF;
   
-  -- Buscar transições válidas para o estado atual
+  -- Buscar transicoes validas para o estado atual
   v_allowed_states := v_valid_transitions->OLD.status;
   
-  -- Verificar se o novo estado está na lista de permitidos
+  -- Verificar se o novo estado esta na lista de permitidos
   IF v_allowed_states IS NULL OR NOT v_allowed_states ? NEW.status THEN
     RAISE EXCEPTION 'ILLEGAL_STATE_TRANSITION: Cannot transition from % to %. Allowed transitions from %: %',
       OLD.status,
@@ -42,22 +42,22 @@ BEGIN
 END;
 $$;
 
--- Trigger BEFORE UPDATE para validar transições
+-- Trigger BEFORE UPDATE para validar transicoes
 DROP TRIGGER IF EXISTS trg_enforce_job_state_transitions ON jobs;
 CREATE TRIGGER trg_enforce_job_state_transitions
   BEFORE UPDATE OF status ON jobs
   FOR EACH ROW
   EXECUTE FUNCTION enforce_job_state_transitions();
 
--- Comentários de documentação
+-- Comentarios de documentacao
 COMMENT ON FUNCTION enforce_job_state_transitions() IS 
 'INV-STATE: Enforces legal state machine transitions for jobs.
 Valid transitions:
-  - queued → delivered, failed, cancelled
-  - delivered → completed, failed, cancelled
-  - completed → (terminal state)
-  - failed → (terminal state)
-  - cancelled → (terminal state)
+  - queued ? delivered, failed, cancelled
+  - delivered ? completed, failed, cancelled
+  - completed ? (terminal state)
+  - failed ? (terminal state)
+  - cancelled ? (terminal state)
 Raises SQLSTATE 23514 on illegal transition.';
 
 COMMENT ON TRIGGER trg_enforce_job_state_transitions ON jobs IS 

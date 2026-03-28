@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}))
     const action = body.action || 'who-is-oncall'
 
-    // ─── CREATE ALERT ───
+    // ??? CREATE ALERT ???
     if (action === 'alert') {
       const { summary, severity, source, details, tenantId } = body
       if (!summary) {
@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ─── WHO IS ON-CALL ───
+    // ??? WHO IS ON-CALL ???
     if (action === 'who-is-oncall') {
       let oncallUsers: Array<Record<string, unknown>> = []
 
@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ─── ESCALATE ───
+    // ??? ESCALATE ???
     if (action === 'escalate') {
       const { incidentId } = body
       if (!incidentId) {
@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ─── UPDATE SCHEDULE ───
+    // ??? UPDATE SCHEDULE ???
     if (action === 'schedule') {
       const { name, timezone, rotation } = body
       if (!name || !rotation) {
@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ─── GET ALERTS ───
+    // ??? GET ALERTS ???
     if (action === 'alerts') {
       const { data: alerts } = await supabase
         .from('oncall_alerts')

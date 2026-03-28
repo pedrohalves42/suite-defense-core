@@ -330,7 +330,7 @@ Deno.serve(async (req) => {
     }
 
     // V-7007: Merge token update + override check into the existing agent update
-    // instead of 3 sequential queries (update agent → update token → select override)
+    // instead of 3 sequential queries (update agent ? update token ? select override)
     // Token last_used_at update runs in parallel
     const [, overrideCheck] = await Promise.all([
       supabase

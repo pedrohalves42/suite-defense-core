@@ -1,9 +1,9 @@
 
 -- =====================================================
--- CONSOLIDAÇÃO DE EVIDÊNCIAS SOC2 - Caminho para 85%
+-- CONSOLIDACAO DE EVIDENCIAS SOC2 - Caminho para 85%
 -- =====================================================
 
--- 1. POLÍTICAS – completar evidência de aprovação (CC2)
+-- 1. POLITICAS ? completar evidencia de aprovacao (CC2)
 
 WITH super_admin AS (
   SELECT user_id as id, tenant_id
@@ -20,8 +20,8 @@ WHERE
   status = 'approved'
   AND (approved_at IS NULL OR approved_by IS NULL);
 
--- 2. SECURITY_EVENTS – fechar backlog histórico (CC4/CC7)
--- Status válidos: open, acknowledged, closed
+-- 2. SECURITY_EVENTS ? fechar backlog historico (CC4/CC7)
+-- Status validos: open, acknowledged, closed
 
 WITH resolver AS (
   SELECT user_id as id
@@ -55,7 +55,7 @@ WHERE
   status = 'open'
   AND created_at >= NOW() - INTERVAL '30 days';
 
--- 3. SYSTEM_ALERTS – resolver pendentes antigos
+-- 3. SYSTEM_ALERTS ? resolver pendentes antigos
 
 WITH resolver AS (
   SELECT user_id as id
@@ -77,7 +77,7 @@ WHERE
   (resolved = false OR resolved IS NULL)
   AND created_at < NOW() - INTERVAL '7 days';
 
--- 4. TRILHA DE AUDITORIA – registrar normalização
+-- 4. TRILHA DE AUDITORIA ? registrar normalizacao
 
 INSERT INTO audit_logs (
   id,
@@ -98,8 +98,8 @@ SELECT
   'system',
   'soc2-bootstrap',
   jsonb_build_object(
-    'score_estimated_before', '≈70%',
-    'score_estimated_after', '≈85%',
+    'score_estimated_before', '?70%',
+    'score_estimated_after', '?85%',
     'action_type', 'administrative_bootstrap',
     'normalized_at', NOW()
   ),

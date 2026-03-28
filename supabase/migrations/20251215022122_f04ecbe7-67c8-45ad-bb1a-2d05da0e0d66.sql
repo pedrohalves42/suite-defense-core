@@ -4,10 +4,10 @@
 -- =============================================
 
 -- =============================================
--- FASE 5: POLÍTICA DE RETENÇÃO
+-- FASE 5: POLITICA DE RETENCAO
 -- =============================================
 
--- 5.1 Função para limpeza de métricas antigas (90 dias)
+-- 5.1 Funcao para limpeza de metricas antigas (90 dias)
 CREATE OR REPLACE FUNCTION public.cleanup_old_metrics_90days()
 RETURNS TABLE(deleted_count bigint, table_name text)
 LANGUAGE plpgsql
@@ -20,7 +20,7 @@ DECLARE
   v_cutoff_90days TIMESTAMP WITH TIME ZONE := NOW() - INTERVAL '90 days';
   v_cutoff_365days TIMESTAMP WITH TIME ZONE := NOW() - INTERVAL '365 days';
 BEGIN
-  -- Limpar métricas de sistema > 90 dias
+  -- Limpar metricas de sistema > 90 dias
   DELETE FROM public.agent_system_metrics_partitioned
   WHERE collected_at < v_cutoff_90days;
   GET DIAGNOSTICS v_metrics_deleted = ROW_COUNT;
@@ -42,13 +42,13 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.cleanup_old_metrics_90days() IS '🔒 Essencial - Política de retenção: métricas 90 dias, audit logs 365 dias';
+COMMENT ON FUNCTION public.cleanup_old_metrics_90days() IS '? Essencial - Politica de retencao: metricas 90 dias, audit logs 365 dias';
 
 -- =============================================
--- FASE 6: AGREGAÇÃO/ROLLUP PARA DASHBOARD
+-- FASE 6: AGREGACAO/ROLLUP PARA DASHBOARD
 -- =============================================
 
--- 6.1 Tabela de métricas agregadas diárias
+-- 6.1 Tabela de metricas agregadas diarias
 CREATE TABLE IF NOT EXISTS public.agent_metrics_daily (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS public.agent_metrics_daily (
   max_cpu_percent NUMERIC(5,2),
   min_cpu_percent NUMERIC(5,2),
   
-  -- Memória
+  -- Memoria
   avg_memory_percent NUMERIC(5,2),
   max_memory_percent NUMERIC(5,2),
   min_memory_percent NUMERIC(5,2),
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS public.agent_metrics_daily (
   avg_disk_percent NUMERIC(5,2),
   max_disk_percent NUMERIC(5,2),
   
-  -- Estatísticas
+  -- Estatisticas
   sample_count INTEGER DEFAULT 0,
   max_uptime_seconds BIGINT,
   
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS public.agent_metrics_daily (
   CONSTRAINT uq_agent_metrics_daily UNIQUE(agent_id, metric_date)
 );
 
--- Índices para performance
+-- Indices para performance
 CREATE INDEX IF NOT EXISTS idx_agent_metrics_daily_tenant_date 
   ON public.agent_metrics_daily(tenant_id, metric_date DESC);
 CREATE INDEX IF NOT EXISTS idx_agent_metrics_daily_agent_date 
@@ -103,7 +103,7 @@ CREATE POLICY "Super admins can view all daily metrics"
     WHERE ur.user_id = auth.uid() AND ur.role = 'super_admin'::app_role
   ));
 
--- 6.2 Função para agregar métricas diárias
+-- 6.2 Funcao para agregar metricas diarias
 CREATE OR REPLACE FUNCTION public.aggregate_daily_metrics(p_date DATE DEFAULT CURRENT_DATE - 1)
 RETURNS TABLE(agents_processed bigint, rows_inserted bigint)
 LANGUAGE plpgsql
@@ -114,7 +114,7 @@ DECLARE
   v_agents BIGINT := 0;
   v_inserted BIGINT := 0;
 BEGIN
-  -- Agregar métricas do dia anterior por padrão
+  -- Agregar metricas do dia anterior por padrao
   INSERT INTO public.agent_metrics_daily (
     tenant_id, agent_id, metric_date,
     avg_cpu_percent, max_cpu_percent, min_cpu_percent,
@@ -165,47 +165,47 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.aggregate_daily_metrics(DATE) IS '🔒 Essencial - Agregação diária de métricas para dashboard performático';
+COMMENT ON FUNCTION public.aggregate_daily_metrics(DATE) IS '? Essencial - Agregacao diaria de metricas para dashboard performatico';
 
 -- =============================================
--- FASE 7: DOCUMENTAÇÃO SECURITY DEFINER
+-- FASE 7: DOCUMENTACAO SECURITY DEFINER
 -- =============================================
 
--- 7.1 Adicionar comentários categorizando funções existentes
-COMMENT ON FUNCTION public.has_role(UUID, app_role) IS '🔒 Essencial - Verificação de role para RLS';
-COMMENT ON FUNCTION public.current_user_tenant_id() IS '🔒 Essencial - Isolamento multi-tenant';
-COMMENT ON FUNCTION public.hash_agent_token(TEXT) IS '🔒 Essencial - Hash seguro de tokens';
-COMMENT ON FUNCTION public.check_and_block_ip(TEXT, TEXT) IS '🔒 Essencial - Proteção contra brute force';
-COMMENT ON FUNCTION public.cleanup_old_hmac_signatures() IS '🔒 Essencial - Manutenção de replay protection';
-COMMENT ON FUNCTION public.cleanup_stuck_jobs() IS '🔒 Essencial - Recuperação de jobs travados';
-COMMENT ON FUNCTION public.cleanup_stuck_builds() IS '🔒 Essencial - Recuperação de builds travados';
-COMMENT ON FUNCTION public.cleanup_orphaned_agents() IS '🔒 Essencial - Limpeza de agentes órfãos';
-COMMENT ON FUNCTION public.handle_new_user() IS '🔒 Essencial - Trigger de onboarding';
-COMMENT ON FUNCTION public.set_tenant_id_from_user() IS '🔒 Essencial - Auto-populate tenant_id';
-COMMENT ON FUNCTION public.update_user_role_rpc(UUID, app_role) IS '🔒 Essencial - Atualização segura de roles';
-COMMENT ON FUNCTION public.ensure_tenant_features(UUID, TEXT, INTEGER) IS '🔒 Essencial - Provisionamento de features';
-COMMENT ON FUNCTION public.log_sensitive_access(TEXT, TEXT, TEXT, JSONB) IS '🔒 Essencial - Audit logging';
-COMMENT ON FUNCTION public.diagnose_agent_issues(TEXT, UUID) IS '🔒 Essencial - Diagnóstico de agentes';
-COMMENT ON FUNCTION public.get_agent_health_metrics(UUID) IS '🔒 Essencial - Métricas de saúde';
-COMMENT ON FUNCTION public.calculate_pipeline_metrics(UUID, INTEGER) IS '🔒 Essencial - Métricas de pipeline';
-COMMENT ON FUNCTION public.get_installation_health_status(UUID) IS '🔒 Essencial - Status de instalação';
-COMMENT ON FUNCTION public.check_installation_failure_rate(UUID, INTEGER, NUMERIC) IS '🔒 Essencial - Monitoramento de falhas';
-COMMENT ON FUNCTION public.redirect_metrics_to_partition() IS '🔒 Essencial - Trigger de particionamento';
-COMMENT ON FUNCTION public.drop_old_metrics_partitions(INTEGER) IS '🔒 Essencial - Manutenção de partições';
-COMMENT ON FUNCTION public.check_action_rate_limit(TEXT, UUID) IS '🔒 Essencial - Rate limit de AI actions';
-COMMENT ON FUNCTION public.check_quota_threshold() IS '🔒 Essencial - Trigger de quota';
+-- 7.1 Adicionar comentarios categorizando funcoes existentes
+COMMENT ON FUNCTION public.has_role(UUID, app_role) IS '? Essencial - Verificacao de role para RLS';
+COMMENT ON FUNCTION public.current_user_tenant_id() IS '? Essencial - Isolamento multi-tenant';
+COMMENT ON FUNCTION public.hash_agent_token(TEXT) IS '? Essencial - Hash seguro de tokens';
+COMMENT ON FUNCTION public.check_and_block_ip(TEXT, TEXT) IS '? Essencial - Protecao contra brute force';
+COMMENT ON FUNCTION public.cleanup_old_hmac_signatures() IS '? Essencial - Manutencao de replay protection';
+COMMENT ON FUNCTION public.cleanup_stuck_jobs() IS '? Essencial - Recuperacao de jobs travados';
+COMMENT ON FUNCTION public.cleanup_stuck_builds() IS '? Essencial - Recuperacao de builds travados';
+COMMENT ON FUNCTION public.cleanup_orphaned_agents() IS '? Essencial - Limpeza de agentes orfaos';
+COMMENT ON FUNCTION public.handle_new_user() IS '? Essencial - Trigger de onboarding';
+COMMENT ON FUNCTION public.set_tenant_id_from_user() IS '? Essencial - Auto-populate tenant_id';
+COMMENT ON FUNCTION public.update_user_role_rpc(UUID, app_role) IS '? Essencial - Atualizacao segura de roles';
+COMMENT ON FUNCTION public.ensure_tenant_features(UUID, TEXT, INTEGER) IS '? Essencial - Provisionamento de features';
+COMMENT ON FUNCTION public.log_sensitive_access(TEXT, TEXT, TEXT, JSONB) IS '? Essencial - Audit logging';
+COMMENT ON FUNCTION public.diagnose_agent_issues(TEXT, UUID) IS '? Essencial - Diagnostico de agentes';
+COMMENT ON FUNCTION public.get_agent_health_metrics(UUID) IS '? Essencial - Metricas de saude';
+COMMENT ON FUNCTION public.calculate_pipeline_metrics(UUID, INTEGER) IS '? Essencial - Metricas de pipeline';
+COMMENT ON FUNCTION public.get_installation_health_status(UUID) IS '? Essencial - Status de instalacao';
+COMMENT ON FUNCTION public.check_installation_failure_rate(UUID, INTEGER, NUMERIC) IS '? Essencial - Monitoramento de falhas';
+COMMENT ON FUNCTION public.redirect_metrics_to_partition() IS '? Essencial - Trigger de particionamento';
+COMMENT ON FUNCTION public.drop_old_metrics_partitions(INTEGER) IS '? Essencial - Manutencao de particoes';
+COMMENT ON FUNCTION public.check_action_rate_limit(TEXT, UUID) IS '? Essencial - Rate limit de AI actions';
+COMMENT ON FUNCTION public.check_quota_threshold() IS '? Essencial - Trigger de quota';
 
--- 7.2 View de inventário SECURITY DEFINER
+-- 7.2 View de inventario SECURITY DEFINER
 CREATE OR REPLACE VIEW public.v_security_definer_inventory AS
 SELECT 
   p.proname as function_name,
   n.nspname as schema_name,
   CASE 
-    WHEN d.description LIKE '🔒 Essencial%' THEN 'essential'
-    WHEN d.description LIKE '🧪 Legado%' THEN 'legacy'
+    WHEN d.description LIKE '? Essencial%' THEN 'essential'
+    WHEN d.description LIKE '? Legado%' THEN 'legacy'
     ELSE 'unclassified'
   END as category,
-  COALESCE(d.description, 'Sem documentação') as documentation,
+  COALESCE(d.description, 'Sem documentacao') as documentation,
   pg_get_functiondef(p.oid) as definition
 FROM pg_proc p
 JOIN pg_namespace n ON p.pronamespace = n.oid
@@ -214,20 +214,20 @@ WHERE n.nspname = 'public'
   AND p.prosecdef = true
 ORDER BY 
   CASE 
-    WHEN d.description LIKE '🔒 Essencial%' THEN 1
-    WHEN d.description LIKE '🧪 Legado%' THEN 2
+    WHEN d.description LIKE '? Essencial%' THEN 1
+    WHEN d.description LIKE '? Legado%' THEN 2
     ELSE 3
   END,
   p.proname;
 
-COMMENT ON VIEW public.v_security_definer_inventory IS 'Inventário de funções SECURITY DEFINER para auditoria';
+COMMENT ON VIEW public.v_security_definer_inventory IS 'Inventario de funcoes SECURITY DEFINER para auditoria';
 
 -- =============================================
 -- LOG FINAL
 -- =============================================
 DO $$
 BEGIN
-  RAISE NOTICE '✅ Fase 5: Política de retenção implementada (cleanup_old_metrics_90days)';
-  RAISE NOTICE '✅ Fase 6: Tabela agent_metrics_daily + função aggregate_daily_metrics criadas';
-  RAISE NOTICE '✅ Fase 7: 22 funções documentadas + view v_security_definer_inventory criada';
+  RAISE NOTICE '[OK]  Fase 5: Politica de retencao implementada (cleanup_old_metrics_90days)';
+  RAISE NOTICE '[OK]  Fase 6: Tabela agent_metrics_daily + funcao aggregate_daily_metrics criadas';
+  RAISE NOTICE '[OK]  Fase 7: 22 funcoes documentadas + view v_security_definer_inventory criada';
 END $$;

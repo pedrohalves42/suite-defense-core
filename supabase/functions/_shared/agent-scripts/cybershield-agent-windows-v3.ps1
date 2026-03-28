@@ -156,7 +156,7 @@ function Verify-Ed25519Signature {
                 Write-Log "[SECURITY] No signature verification configured (backward compatible mode)" "WARN"
                 return $true
             } else {
-                Write-Log "[SECURITY] ❌ Signature required but not provided" "ERROR"
+                Write-Log "[SECURITY] [ERROR]  Signature required but not provided" "ERROR"
                 return $false
             }
         }
@@ -188,9 +188,9 @@ function Verify-Ed25519Signature {
                 $isValid = $ed25519.VerifyData($ScriptBytes, $signature, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
                 
                 if ($isValid) {
-                    Write-Log "[SECURITY] ✅ Ed25519 signature verified successfully" "SUCCESS"
+                    Write-Log "[SECURITY] [OK]  Ed25519 signature verified successfully" "SUCCESS"
                 } else {
-                    Write-Log "[SECURITY] ❌ Ed25519 signature verification FAILED" "ERROR"
+                    Write-Log "[SECURITY] [ERROR]  Ed25519 signature verification FAILED" "ERROR"
                 }
                 
                 return $isValid
@@ -217,9 +217,9 @@ function Verify-Ed25519Signature {
             $isValid = $ed25519.VerifyData($ScriptBytes, $signature)
             
             if ($isValid) {
-                Write-Log "[SECURITY] ✅ Ed25519 signature verified successfully" "SUCCESS"
+                Write-Log "[SECURITY] [OK]  Ed25519 signature verified successfully" "SUCCESS"
             } else {
-                Write-Log "[SECURITY] ❌ Ed25519 signature verification FAILED" "ERROR"
+                Write-Log "[SECURITY] [ERROR]  Ed25519 signature verification FAILED" "ERROR"
             }
             
             return $isValid
@@ -2151,7 +2151,7 @@ function Invoke-UpdateAgentJob {
         
         # ============================================================
         # FASE 2.6: ED25519 SIGNATURE VERIFICATION
-        # Verifica assinatura criptográfica ANTES de aplicar update
+        # Verifica assinatura criptografica ANTES de aplicar update
         # ============================================================
         $signatureVerified = $false
         if ($data.signature_base64) {

@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS security_reports (
 -- 5. Habilitar RLS
 ALTER TABLE security_reports ENABLE ROW LEVEL SECURITY;
 
--- 6. Políticas RLS
+-- 6. Politicas RLS
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -54,7 +54,7 @@ BEGIN
   END IF;
 END $$;
 
--- 7. Índices
+-- 7. Indices
 CREATE INDEX IF NOT EXISTS idx_security_reports_tenant ON security_reports(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_security_reports_status ON security_reports(status);
 CREATE INDEX IF NOT EXISTS idx_security_reports_expires ON security_reports(expires_at) WHERE expires_at IS NOT NULL;

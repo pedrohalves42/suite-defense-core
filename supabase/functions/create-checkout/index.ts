@@ -65,7 +65,7 @@ serveTenant(async (req, ctx) => {
     .maybeSingle();
 
   if (existingSubscription?.stripe_subscription_id && existingSubscription?.status === "active") {
-    throw new Error("Você já possui uma assinatura ativa.");
+    throw new Error("Voce ja possui uma assinatura ativa.");
   }
 
   const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });

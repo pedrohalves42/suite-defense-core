@@ -23,7 +23,7 @@ CREATE TABLE public.agent_rollback_events (
   created_at timestamptz DEFAULT now()
 );
 
--- Índices para queries eficientes
+-- Indices para queries eficientes
 CREATE INDEX idx_rollback_agent ON agent_rollback_events(agent_id, created_at DESC);
 CREATE INDEX idx_rollback_tenant ON agent_rollback_events(tenant_id, created_at DESC);
 CREATE INDEX idx_rollback_safe_mode ON agent_rollback_events(safe_mode_triggered, created_at DESC) WHERE safe_mode_triggered = true;
@@ -44,7 +44,7 @@ CREATE POLICY "super_admin_view_all_rollbacks" ON agent_rollback_events
   USING (public.has_role(auth.uid(), 'super_admin'));
 
 -- Comments
-COMMENT ON TABLE agent_rollback_events IS 'Registra eventos de rollback automático de agentes para auditoria e diagnóstico';
+COMMENT ON TABLE agent_rollback_events IS 'Registra eventos de rollback automatico de agentes para auditoria e diagnostico';
 COMMENT ON COLUMN agent_rollback_events.reason IS 'Motivo do rollback: health_check_failed, crash_detected, state_machine_invalid, heartbeat_failed, manual_rollback';
-COMMENT ON COLUMN agent_rollback_events.safe_mode_triggered IS 'True se o agente entrou em safe mode após múltiplos rollbacks';
+COMMENT ON COLUMN agent_rollback_events.safe_mode_triggered IS 'True se o agente entrou em safe mode apos multiplos rollbacks';
 COMMENT ON COLUMN agent_rollback_events.rollback_count IS 'Contador de rollbacks consecutivos para o mesmo agente';

@@ -1,6 +1,6 @@
 
 -- AUDIT FIX: Documentar views globais por design (SOC2/ISO27001 compliance)
--- Estas views são intencionalmente sem filtro de tenant por serem administrativas
+-- Estas views sao intencionalmente sem filtro de tenant por serem administrativas
 
 -- 1. Documentar rate_limit_stats
 COMMENT ON VIEW public.rate_limit_stats IS 

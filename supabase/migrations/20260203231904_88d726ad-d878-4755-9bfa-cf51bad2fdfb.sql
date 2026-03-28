@@ -1,4 +1,4 @@
--- Corrigir função de balanceamento - adicionar created_at ao CTE
+-- Corrigir funcao de balanceamento - adicionar created_at ao CTE
 CREATE OR REPLACE FUNCTION get_balanced_pending_actions(p_limit INTEGER DEFAULT 50)
 RETURNS TABLE (
   id UUID,

@@ -7,13 +7,13 @@ SECURITY DEFINER
 SET search_path = 'public'
 AS $$
 BEGIN
-  -- Impedir alteração após conclusão/cancelamento/falha
+  -- Impedir alteracao apos conclusao/cancelamento/falha
   IF OLD.status IN ('completed', 'cancelled', 'failed', 'ignored') THEN
     RAISE EXCEPTION 'IMMUTABLE_VIOLATION: Playbook execution is immutable after completion. Status: %', OLD.status
       USING ERRCODE = '23514';
   END IF;
   
-  -- Impedir alteração de snapshots após criação
+  -- Impedir alteracao de snapshots apos criacao
   IF OLD.playbook_snapshot IS NOT NULL AND NEW.playbook_snapshot IS DISTINCT FROM OLD.playbook_snapshot THEN
     RAISE EXCEPTION 'IMMUTABLE_VIOLATION: playbook_snapshot cannot be modified after creation'
       USING ERRCODE = '23514';
@@ -35,7 +35,7 @@ SECURITY DEFINER
 SET search_path = 'public'
 AS $$
 BEGIN
-  -- Incrementar versão quando playbook é modificado (exceto updated_at)
+  -- Incrementar versao quando playbook e modificado (exceto updated_at)
   IF (NEW.name IS DISTINCT FROM OLD.name) OR
      (NEW.description IS DISTINCT FROM OLD.description) OR
      (NEW.trigger_type IS DISTINCT FROM OLD.trigger_type) OR

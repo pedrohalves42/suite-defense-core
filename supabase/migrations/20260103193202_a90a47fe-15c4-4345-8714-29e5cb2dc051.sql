@@ -1,17 +1,17 @@
 -- =====================================================
--- PASSO 1: Aprovação Humana REAL para AI Actions (+20 pts)
+-- PASSO 1: Aprovacao Humana REAL para AI Actions (+20 pts)
 -- =====================================================
 
--- Adicionar campos de aprovação formal a ai_actions
+-- Adicionar campos de aprovacao formal a ai_actions
 ALTER TABLE ai_actions ADD COLUMN IF NOT EXISTS approved_at timestamptz;
 ALTER TABLE ai_actions ADD COLUMN IF NOT EXISTS approved_by uuid REFERENCES auth.users(id);
 ALTER TABLE ai_actions ADD COLUMN IF NOT EXISTS approval_request_id uuid REFERENCES approval_requests(id);
 
--- Trigger: Enforcement de aprovação para ações high/critical
+-- Trigger: Enforcement de aprovacao para acoes high/critical
 CREATE OR REPLACE FUNCTION public.enforce_ai_action_approval()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Se status mudou para 'executed' e risk_level é high/critical
+  -- Se status mudou para 'executed' e risk_level e high/critical
   IF NEW.status = 'executed' AND (OLD.status IS NULL OR OLD.status != 'executed') THEN
     IF NEW.risk_level IN ('high', 'critical') AND NEW.approved_at IS NULL THEN
       RAISE EXCEPTION 'AI actions with high/critical risk require formal approval before execution (approved_at must be set)';
@@ -28,14 +28,14 @@ CREATE TRIGGER trg_enforce_ai_action_approval
   EXECUTE FUNCTION public.enforce_ai_action_approval();
 
 -- =====================================================
--- PASSO 2: Gate Humano para Alertas Críticos (+15 pts)
+-- PASSO 2: Gate Humano para Alertas Criticos (+15 pts)
 -- =====================================================
 
--- Adicionar campos para alertas críticos
+-- Adicionar campos para alertas criticos
 ALTER TABLE system_alerts ADD COLUMN IF NOT EXISTS requires_human_decision boolean DEFAULT false;
 ALTER TABLE system_alerts ADD COLUMN IF NOT EXISTS decision_event_id uuid REFERENCES decision_events(id);
 
--- Trigger para auto-flag alertas críticos
+-- Trigger para auto-flag alertas criticos
 CREATE OR REPLACE FUNCTION public.flag_critical_alerts()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -52,7 +52,7 @@ CREATE TRIGGER trg_flag_critical_alerts
   FOR EACH ROW
   EXECUTE FUNCTION public.flag_critical_alerts();
 
--- Enforcement: alertas críticos não podem ser resolvidos sem humano
+-- Enforcement: alertas criticos nao podem ser resolvidos sem humano
 CREATE OR REPLACE FUNCTION public.enforce_critical_alert_human_review()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -72,10 +72,10 @@ CREATE TRIGGER trg_enforce_critical_human_review
   EXECUTE FUNCTION public.enforce_critical_alert_human_review();
 
 -- =====================================================
--- PASSO 3: DLQ Auditável com Trilha de Decisão (+10 pts)
+-- PASSO 3: DLQ Auditavel com Trilha de Decisao (+10 pts)
 -- =====================================================
 
--- Adicionar campos para trilha de decisão na DLQ
+-- Adicionar campos para trilha de decisao na DLQ
 ALTER TABLE failed_jobs_dlq ADD COLUMN IF NOT EXISTS decision_event_id uuid REFERENCES decision_events(id);
 ALTER TABLE failed_jobs_dlq ADD COLUMN IF NOT EXISTS resolution_source text CHECK (resolution_source IS NULL OR resolution_source IN ('human', 'system', 'auto_cleanup'));
 
@@ -87,7 +87,7 @@ DECLARE
   v_tenant_id uuid;
 BEGIN
   IF NEW.status = 'resolved' AND (OLD.status IS NULL OR OLD.status != 'resolved') THEN
-    -- Buscar tenant_id do job original se não existir na DLQ
+    -- Buscar tenant_id do job original se nao existir na DLQ
     v_tenant_id := NEW.tenant_id;
     
     -- Criar decision_event para rastreabilidade
@@ -126,7 +126,7 @@ CREATE TRIGGER trg_create_dlq_decision_event
   FOR EACH ROW
   EXECUTE FUNCTION public.create_dlq_decision_event();
 
--- View para monitorar DLQ antiga sem resolução (alertas pendentes)
+-- View para monitorar DLQ antiga sem resolucao (alertas pendentes)
 CREATE OR REPLACE VIEW public.v_dlq_pending_attention AS
 SELECT 
   d.*,
@@ -137,7 +137,7 @@ WHERE d.status = 'pending'
   AND d.review_required = true;
 
 -- =====================================================
--- Índices para performance
+-- Indices para performance
 -- =====================================================
 CREATE INDEX IF NOT EXISTS idx_ai_actions_approved_at ON ai_actions(approved_at) WHERE approved_at IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_system_alerts_requires_human ON system_alerts(requires_human_decision) WHERE requires_human_decision = true;

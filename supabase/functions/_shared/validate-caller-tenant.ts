@@ -41,7 +41,7 @@ export async function validateCallerTenant(
     return { authorized: true, isInternalCall: true };
   }
 
-  // 3. Must be an authenticated user call — validate JWT and tenant access
+  // 3. Must be an authenticated user call ? validate JWT and tenant access
   if (!authHeader) {
     return { 
       authorized: false, 

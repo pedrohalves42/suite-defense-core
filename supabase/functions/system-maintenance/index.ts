@@ -4,7 +4,7 @@ import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 
 /**
- * system-maintenance — Consolidated cleanup function
+ * system-maintenance ? Consolidated cleanup function
  * 
  * Replaces 7 individual cleanup functions:
  *   cleanup-stale-updates, cleanup-stale-reports, cleanup-stale-playbooks,
@@ -46,7 +46,7 @@ interface TaskResult {
   duration_ms: number;
 }
 
-// ─── Task Implementations ────────────────────────────────────────────────────
+// ??? Task Implementations ????????????????????????????????????????????????????
 
 async function cleanStaleUpdates(supabase: ReturnType<typeof createClient>): Promise<TaskResult> {
   const start = Date.now();
@@ -188,7 +188,7 @@ async function cleanStuckBuilds(supabase: ReturnType<typeof createClient>): Prom
 
       const { error: updateErr } = await supabase
         .from('agent_builds')
-        .update({ build_status: 'failed', error_message: 'Build timed out — cleaned by system-maintenance' })
+        .update({ build_status: 'failed', error_message: 'Build timed out ? cleaned by system-maintenance' })
         .in('id', ids);
 
       if (updateErr) result.errors.push(updateErr.message);
@@ -323,7 +323,7 @@ const TASK_MAP: Record<TaskName, (sb: ReturnType<typeof createClient>) => Promis
   security_cleanup: securityCleanup,
 };
 
-// ─── Main Handler ────────────────────────────────────────────────────────────
+// ??? Main Handler ????????????????????????????????????????????????????????????
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -346,7 +346,7 @@ Deno.serve(async (req) => {
           tasks = body.tasks.filter((t: string) => ALL_TASKS.includes(t as TaskName)) as TaskName[];
         }
       } catch {
-        // No body or invalid JSON — run all tasks
+        // No body or invalid JSON ? run all tasks
       }
     }
 

@@ -1,8 +1,8 @@
 <#
     CyberShield Agent - Windows v4.1.2
     
-    SSA-009: Restauração da coleta de browser_history (Chrome, Firefox, Edge)
-    SSA-010: Restauração de todos os jobs do v3 (scan, fix_firewall, restart_service, etc.)
+    SSA-009: Restauracao da coleta de browser_history (Chrome, Firefox, Edge)
+    SSA-010: Restauracao de todos os jobs do v3 (scan, fix_firewall, restart_service, etc.)
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
     FASE 2.4: DNS Filter Go como Windows Service
@@ -80,8 +80,8 @@ param(
     [string]$AgentVersion = "v4.1.2"
 )
 
-# CRITICAL: Forçar TLS 1.2 para compatibilidade com Windows Server 2012/2016
-# PowerShell usa TLS 1.0 por padrão, mas Supabase requer TLS 1.2+
+# CRITICAL: Forcar TLS 1.2 para compatibilidade com Windows Server 2012/2016
+# PowerShell usa TLS 1.0 por padrao, mas Supabase requer TLS 1.2+
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $ErrorActionPreference = "Stop"
@@ -236,7 +236,7 @@ function Verify-Ed25519Signature {
                 Write-Log "[SECURITY] No signature verification configured (backward compatible mode)" "WARN"
                 return $true
             } else {
-                Write-Log "[SECURITY] ❌ Signature required but not provided" "ERROR"
+                Write-Log "[SECURITY] [ERROR]  Signature required but not provided" "ERROR"
                 return $false
             }
         }
@@ -268,9 +268,9 @@ function Verify-Ed25519Signature {
                 $isValid = $ed25519.VerifyData($ScriptBytes, $signature, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
                 
                 if ($isValid) {
-                    Write-Log "[SECURITY] ✅ Ed25519 signature verified successfully" "SUCCESS"
+                    Write-Log "[SECURITY] [OK]  Ed25519 signature verified successfully" "SUCCESS"
                 } else {
-                    Write-Log "[SECURITY] ❌ Ed25519 signature verification FAILED" "ERROR"
+                    Write-Log "[SECURITY] [ERROR]  Ed25519 signature verification FAILED" "ERROR"
                 }
                 
                 return $isValid
@@ -297,9 +297,9 @@ function Verify-Ed25519Signature {
             $isValid = $ed25519.VerifyData($ScriptBytes, $signature)
             
             if ($isValid) {
-                Write-Log "[SECURITY] ✅ Ed25519 signature verified successfully" "SUCCESS"
+                Write-Log "[SECURITY] [OK]  Ed25519 signature verified successfully" "SUCCESS"
             } else {
-                Write-Log "[SECURITY] ❌ Ed25519 signature verification FAILED" "ERROR"
+                Write-Log "[SECURITY] [ERROR]  Ed25519 signature verification FAILED" "ERROR"
             }
             
             return $isValid
@@ -341,7 +341,7 @@ function Verify-JobSignature {
         # If public key is configured but job has no signature, reject
         if ([string]::IsNullOrEmpty($signature)) {
             if ($Global:RequireJobSignatures) {
-                Write-Log "[SECURITY] ❌ REJECTED: Job $jobId has no signature (signatures required)" "ERROR"
+                Write-Log "[SECURITY] [ERROR]  REJECTED: Job $jobId has no signature (signatures required)" "ERROR"
                 
                 Add-EvidenceEntry -Type "security_alert" -Data @{
                     event = "unsigned_job_rejected"
@@ -358,7 +358,7 @@ function Verify-JobSignature {
         
         # Verify algorithm is Ed25519
         if ($signingAlg -and $signingAlg -ne "Ed25519") {
-            Write-Log "[SECURITY] ❌ REJECTED: Unsupported signing algorithm: $signingAlg" "ERROR"
+            Write-Log "[SECURITY] [ERROR]  REJECTED: Unsupported signing algorithm: $signingAlg" "ERROR"
             return $false
         }
         
@@ -393,7 +393,7 @@ function Verify-JobSignature {
             $isValid = $ed25519.VerifyData($payloadBytes, $signatureBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
             
             if ($isValid) {
-                Write-Log "[SECURITY] ✅ Job $jobId signature verified successfully" "SUCCESS"
+                Write-Log "[SECURITY] [OK]  Job $jobId signature verified successfully" "SUCCESS"
                 
                 Add-EvidenceEntry -Type "security_check" -Data @{
                     event = "job_signature_verified"
@@ -404,7 +404,7 @@ function Verify-JobSignature {
                 
                 return $true
             } else {
-                Write-Log "[SECURITY] ❌ REJECTED: Job $jobId signature verification FAILED" "ERROR"
+                Write-Log "[SECURITY] [ERROR]  REJECTED: Job $jobId signature verification FAILED" "ERROR"
                 
                 Add-EvidenceEntry -Type "security_alert" -Data @{
                     event = "invalid_job_signature"
@@ -432,7 +432,7 @@ function Verify-JobSignature {
             
             # In strict mode, reject; otherwise allow with signature present
             if ($Global:RequireJobSignatures) {
-                Write-Log "[SECURITY] ❌ Cannot verify signature - rejecting in strict mode" "ERROR"
+                Write-Log "[SECURITY] [ERROR]  Cannot verify signature - rejecting in strict mode" "ERROR"
                 return $false
             }
             
@@ -894,7 +894,7 @@ function Add-EvidenceEntry {
     )
     
     try {
-        # RUNTIME VALIDATION - Backward + Forward compatible (substitui ValidateSet rígido)
+        # RUNTIME VALIDATION - Backward + Forward compatible (substitui ValidateSet rigido)
         $AllowedTypes = @(
             "state_change", "job_execution", "dns_block", "policy_sync", 
             "auto_recovery", "heartbeat", "update_applied", "update_check", 
@@ -904,7 +904,7 @@ function Add-EvidenceEntry {
         
         if ($Type -notin $AllowedTypes) {
             Write-Log "[EVIDENCE] Tipo desconhecido aceito graciosamente: $Type" "WARN"
-            # Não bloqueia - aceita qualquer tipo para forward compatibility
+            # Nao bloqueia - aceita qualquer tipo para forward compatibility
         }
         
         # Criar hash SHA256 do data para integridade
@@ -2257,7 +2257,7 @@ function Execute-Job {
     # SSA-004: Verify job signature BEFORE execution
     $signatureValid = Verify-JobSignature -Job $Job
     if (-not $signatureValid) {
-        Write-Log "[SECURITY] ❌ BLOCKED: Job $($Job.id) rejected due to invalid/missing signature" "ERROR"
+        Write-Log "[SECURITY] [ERROR]  BLOCKED: Job $($Job.id) rejected due to invalid/missing signature" "ERROR"
         
         # Submit rejection result to backend
         Submit-JobResult `
@@ -3678,7 +3678,7 @@ function Invoke-UpdateAgentJob {
         
         # ============================================================
         # FASE 2.6: ED25519 SIGNATURE VERIFICATION
-        # Verifica assinatura criptográfica ANTES de aplicar update
+        # Verifica assinatura criptografica ANTES de aplicar update
         # ============================================================
         $signatureVerified = $false
         if ($data.signature_base64) {

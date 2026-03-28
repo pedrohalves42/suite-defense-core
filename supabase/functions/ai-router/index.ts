@@ -1,5 +1,5 @@
 /**
- * AI Router — Consolidated dispatcher for AI edge functions.
+ * AI Router ? Consolidated dispatcher for AI edge functions.
  * 
  * Hybrid approach:
  * - Direct handlers: For simpler AI functions (< 250 lines), logic is extracted
@@ -27,7 +27,7 @@ const RouterSchema = z.object({
   payload: z.record(z.unknown()).optional().default({}),
 });
 
-// ─── Direct handler map (no HTTP proxy) ──────────────────────────────────────
+// ??? Direct handler map (no HTTP proxy) ??????????????????????????????????????
 const DIRECT_HANDLERS: Record<string, AIHandler> = {
   'correlate-alerts': handleCorrelateAlerts,
   'execute-solution': handleExecuteSolution,
@@ -35,7 +35,7 @@ const DIRECT_HANDLERS: Record<string, AIHandler> = {
   'get-insights': handleGetInsights as AIHandler,
 };
 
-// ─── Proxy targets (complex functions that remain standalone) ────────────────
+// ??? Proxy targets (complex functions that remain standalone) ????????????????
 const PROXY_TARGETS: Record<string, string> = {
   'analyze-agent': 'ai-analyze-agent',
   'behavioral-anomaly-detector': 'ai-behavioral-anomaly-detector',
@@ -66,7 +66,7 @@ serveTenant(async (req, ctx) => {
 
   const { action, payload } = parsed.data;
 
-  // ── Try direct handler first ──
+  // ?? Try direct handler first ??
   const directHandler = DIRECT_HANDLERS[action];
   if (directHandler) {
     logger.info(`[${requestId}] ai-router: direct dispatch action=${action}`);
@@ -86,7 +86,7 @@ serveTenant(async (req, ctx) => {
     }
   }
 
-  // ── Proxy to standalone function ──
+  // ?? Proxy to standalone function ??
   const functionName = PROXY_TARGETS[action];
   if (!functionName) {
     const allActions = [...Object.keys(DIRECT_HANDLERS), ...Object.keys(PROXY_TARGETS)];
@@ -96,7 +96,7 @@ serveTenant(async (req, ctx) => {
     );
   }
 
-  logger.info(`[${requestId}] ai-router: proxy dispatch action=${action} → ${functionName}`);
+  logger.info(`[${requestId}] ai-router: proxy dispatch action=${action} ? ${functionName}`);
 
   try {
     const targetUrl = `${SUPABASE_URL}/functions/v1/${functionName}`;

@@ -1,8 +1,8 @@
 -- ============================================
--- FASE 1-4: Segurança Avançada - Tabelas e Funções
+-- FASE 1-4: Seguranca Avancada - Tabelas e Funcoes
 -- ============================================
 
--- 1. Tabela de regras de segregação de funções (Two-Man-Rule expandido)
+-- 1. Tabela de regras de segregacao de funcoes (Two-Man-Rule expandido)
 CREATE TABLE IF NOT EXISTS public.segregation_rules (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -44,20 +44,20 @@ USING (
   )
 );
 
--- 2. Adicionar política de MFA por tenant
+-- 2. Adicionar politica de MFA por tenant
 ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS mfa_policy jsonb DEFAULT '{
   "require_mfa_all_users": false,
   "require_mfa_roles": ["admin", "super_admin"],
   "mfa_grace_period_hours": 72
 }'::jsonb;
 
--- 3. Adicionar colunas de rotação de tokens em agent_tokens
+-- 3. Adicionar colunas de rotacao de tokens em agent_tokens
 ALTER TABLE public.agent_tokens 
 ADD COLUMN IF NOT EXISTS rotation_required_at timestamptz,
 ADD COLUMN IF NOT EXISTS last_rotated_at timestamptz,
 ADD COLUMN IF NOT EXISTS rotation_policy_days integer DEFAULT 90;
 
--- Índice para buscar tokens que precisam de rotação
+-- Indice para buscar tokens que precisam de rotacao
 CREATE INDEX IF NOT EXISTS idx_agent_tokens_rotation 
 ON public.agent_tokens(rotation_required_at) 
 WHERE rotation_required_at IS NOT NULL;
@@ -103,12 +103,12 @@ USING (
   )
 );
 
--- Índices para ai_anomalies
+-- Indices para ai_anomalies
 CREATE INDEX IF NOT EXISTS idx_ai_anomalies_tenant ON public.ai_anomalies(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_ai_anomalies_severity ON public.ai_anomalies(severity) WHERE reviewed_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_ai_anomalies_detected ON public.ai_anomalies(detected_at DESC);
 
--- 5. View de saúde de agentes por nó
+-- 5. View de saude de agentes por no
 CREATE OR REPLACE VIEW public.v_agent_health_by_node AS
 SELECT 
   a.id,
@@ -138,7 +138,7 @@ SELECT
 FROM public.agents a
 WHERE a.status != 'archived';
 
--- 6. Tabela de alertas persistentes para falhas críticas
+-- 6. Tabela de alertas persistentes para falhas criticas
 CREATE TABLE IF NOT EXISTS public.persistent_failure_alerts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid REFERENCES public.tenants(id) ON DELETE CASCADE NOT NULL,
@@ -182,12 +182,12 @@ USING (
   )
 );
 
--- Índice para buscar alertas não reconhecidos
+-- Indice para buscar alertas nao reconhecidos
 CREATE INDEX IF NOT EXISTS idx_persistent_alerts_unack 
 ON public.persistent_failure_alerts(tenant_id, is_acknowledged) 
 WHERE is_acknowledged = false;
 
--- 7. Função RPC para verificar permissão de segregação (com search_path)
+-- 7. Funcao RPC para verificar permissao de segregacao (com search_path)
 CREATE OR REPLACE FUNCTION public.check_segregation_rule(
   _tenant_id uuid,
   _action_type text,
@@ -231,7 +231,7 @@ BEGIN
 END;
 $$;
 
--- 8. Função RPC para obter política de MFA do tenant (com search_path)
+-- 8. Funcao RPC para obter politica de MFA do tenant (com search_path)
 CREATE OR REPLACE FUNCTION public.get_tenant_mfa_policy(_tenant_id uuid)
 RETURNS jsonb
 LANGUAGE sql
@@ -248,7 +248,7 @@ AS $$
   WHERE id = _tenant_id;
 $$;
 
--- 9. Inserir regras de segregação padrão
+-- 9. Inserir regras de segregacao padrao
 INSERT INTO public.segregation_rules (tenant_id, action_type, min_approvers, required_roles, exclude_requester)
 SELECT 
   t.id,

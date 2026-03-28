@@ -19,7 +19,7 @@ CREATE TABLE public.playbooks (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Ações do Playbook (ordenadas)
+-- Acoes do Playbook (ordenadas)
 CREATE TABLE public.playbook_actions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   playbook_id UUID REFERENCES public.playbooks(id) ON DELETE CASCADE,
@@ -33,7 +33,7 @@ CREATE TABLE public.playbook_actions (
   UNIQUE(playbook_id, order_index)
 );
 
--- Registro de execuções de Playbooks
+-- Registro de execucoes de Playbooks
 CREATE TABLE public.playbook_executions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   playbook_id UUID REFERENCES public.playbooks(id) ON DELETE SET NULL,
@@ -52,7 +52,7 @@ CREATE TABLE public.playbook_executions (
   ignore_reason TEXT
 );
 
--- Índices para performance
+-- Indices para performance
 CREATE INDEX idx_playbooks_tenant ON public.playbooks(tenant_id);
 CREATE INDEX idx_playbooks_trigger_type ON public.playbooks(trigger_type);
 CREATE INDEX idx_playbooks_enabled ON public.playbooks(is_enabled) WHERE is_enabled = true;
@@ -146,16 +146,16 @@ FOR EACH ROW
 EXECUTE FUNCTION public.update_updated_at_column();
 
 -- =============================================
--- INSERIR 5 PLAYBOOKS PADRÃO DO MVP (SYSTEM)
+-- INSERIR 5 PLAYBOOKS PADRAO DO MVP (SYSTEM)
 -- =============================================
 
--- PLAYBOOK 1: Computador Offline há 24h
+-- PLAYBOOK 1: Computador Offline ha 24h
 INSERT INTO public.playbooks (id, tenant_id, name, description, trigger_type, trigger_conditions, severity, is_system, require_approval)
 VALUES (
   'a1000000-0000-0000-0000-000000000001',
   NULL,
-  'Computador Offline há 24h',
-  'Resposta automática quando um computador não se comunica há mais de 24 horas. Pode indicar desligamento, falha de rede ou tentativa de evasão.',
+  'Computador Offline ha 24h',
+  'Resposta automatica quando um computador nao se comunica ha mais de 24 horas. Pode indicar desligamento, falha de rede ou tentativa de evasao.',
   'agent_offline',
   '{"hours_threshold": 24}',
   'high',
@@ -164,17 +164,17 @@ VALUES (
 );
 
 INSERT INTO public.playbook_actions (playbook_id, order_index, action_type, label, description, action_payload, risk_level) VALUES
-('a1000000-0000-0000-0000-000000000001', 1, 'notify', 'Notificar responsável', 'Envia alerta por email/Telegram ao responsável', '{"channels": ["email", "telegram"]}', 'low'),
-('a1000000-0000-0000-0000-000000000001', 2, 'generate_report', 'Gerar relatório de indisponibilidade', 'PDF com última comunicação, histórico e impacto estimado', '{"report_type": "availability", "include_history": true}', 'low'),
-('a1000000-0000-0000-0000-000000000001', 3, 'create_job', 'Coletar diagnóstico', 'Agenda job de diagnóstico para quando o agente voltar', '{"job_type": "diagnostic_full", "priority": "high"}', 'low');
+('a1000000-0000-0000-0000-000000000001', 1, 'notify', 'Notificar responsavel', 'Envia alerta por email/Telegram ao responsavel', '{"channels": ["email", "telegram"]}', 'low'),
+('a1000000-0000-0000-0000-000000000001', 2, 'generate_report', 'Gerar relatorio de indisponibilidade', 'PDF com ultima comunicacao, historico e impacto estimado', '{"report_type": "availability", "include_history": true}', 'low'),
+('a1000000-0000-0000-0000-000000000001', 3, 'create_job', 'Coletar diagnostico', 'Agenda job de diagnostico para quando o agente voltar', '{"job_type": "diagnostic_full", "priority": "high"}', 'low');
 
--- PLAYBOOK 2: DNS bloqueou múltiplas tentativas
+-- PLAYBOOK 2: DNS bloqueou multiplas tentativas
 INSERT INTO public.playbooks (id, tenant_id, name, description, trigger_type, trigger_conditions, severity, is_system, require_approval)
 VALUES (
   'a2000000-0000-0000-0000-000000000002',
   NULL,
-  'DNS bloqueou múltiplas tentativas',
-  'Resposta quando um computador tenta acessar repetidamente domínios bloqueados. Pode indicar malware, phishing ou comportamento indevido.',
+  'DNS bloqueou multiplas tentativas',
+  'Resposta quando um computador tenta acessar repetidamente dominios bloqueados. Pode indicar malware, phishing ou comportamento indevido.',
   'dns_blocked',
   '{"min_blocked_requests": 10, "time_window_hours": 1}',
   'critical',
@@ -183,17 +183,17 @@ VALUES (
 );
 
 INSERT INTO public.playbook_actions (playbook_id, order_index, action_type, label, description, action_payload, risk_level) VALUES
-('a2000000-0000-0000-0000-000000000002', 1, 'isolate', 'Isolar máquina', 'Bloqueia comunicação externa exceto CyberShield', '{"isolation_level": "network", "allow_cybershield": true}', 'high'),
-('a2000000-0000-0000-0000-000000000002', 2, 'generate_report', 'Gerar evidência de segurança', 'Lista de domínios, horários, política aplicada com hash e assinatura', '{"report_type": "security_evidence", "include_domains": true, "sign_evidence": true}', 'low'),
-('a2000000-0000-0000-0000-000000000002', 3, 'escalate', 'Avisar auditor/gestor', 'Envia relatório resumido e marca incidente como em análise', '{"notify_roles": ["admin", "auditor"], "create_incident": true}', 'low');
+('a2000000-0000-0000-0000-000000000002', 1, 'isolate', 'Isolar maquina', 'Bloqueia comunicacao externa exceto CyberShield', '{"isolation_level": "network", "allow_cybershield": true}', 'high'),
+('a2000000-0000-0000-0000-000000000002', 2, 'generate_report', 'Gerar evidencia de seguranca', 'Lista de dominios, horarios, politica aplicada com hash e assinatura', '{"report_type": "security_evidence", "include_domains": true, "sign_evidence": true}', 'low'),
+('a2000000-0000-0000-0000-000000000002', 3, 'escalate', 'Avisar auditor/gestor', 'Envia relatorio resumido e marca incidente como em analise', '{"notify_roles": ["admin", "auditor"], "create_incident": true}', 'low');
 
--- PLAYBOOK 3: Job crítico falhou repetidamente
+-- PLAYBOOK 3: Job critico falhou repetidamente
 INSERT INTO public.playbooks (id, tenant_id, name, description, trigger_type, trigger_conditions, severity, is_system, require_approval)
 VALUES (
   'a3000000-0000-0000-0000-000000000003',
   NULL,
-  'Job crítico falhou repetidamente',
-  'Resposta quando uma tarefa crítica falha repetidamente. O sistema não conseguiu concluir a ação automaticamente.',
+  'Job critico falhou repetidamente',
+  'Resposta quando uma tarefa critica falha repetidamente. O sistema nao conseguiu concluir a acao automaticamente.',
   'job_failed',
   '{"min_failures": 3, "critical_job_types": ["software_inventory_collect", "light_vuln_scan", "collect_antivirus_status"]}',
   'high',
@@ -202,9 +202,9 @@ VALUES (
 );
 
 INSERT INTO public.playbook_actions (playbook_id, order_index, action_type, label, description, action_payload, risk_level) VALUES
-('a3000000-0000-0000-0000-000000000003', 1, 'create_job', 'Reexecutar em modo seguro', 'Execução isolada com verbose logging', '{"job_type": "retry_safe_mode", "verbose": true}', 'medium'),
-('a3000000-0000-0000-0000-000000000003', 2, 'create_job', 'Coletar diagnóstico do agente', 'CPU, disco, permissões, estado do serviço', '{"job_type": "diagnostic_full"}', 'low'),
-('a3000000-0000-0000-0000-000000000003', 3, 'escalate', 'Escalar para administrador', 'Cria ticket interno com linha do tempo automática', '{"create_ticket": true, "include_timeline": true}', 'low');
+('a3000000-0000-0000-0000-000000000003', 1, 'create_job', 'Reexecutar em modo seguro', 'Execucao isolada com verbose logging', '{"job_type": "retry_safe_mode", "verbose": true}', 'medium'),
+('a3000000-0000-0000-0000-000000000003', 2, 'create_job', 'Coletar diagnostico do agente', 'CPU, disco, permissoes, estado do servico', '{"job_type": "diagnostic_full"}', 'low'),
+('a3000000-0000-0000-0000-000000000003', 3, 'escalate', 'Escalar para administrador', 'Cria ticket interno com linha do tempo automatica', '{"create_ticket": true, "include_timeline": true}', 'low');
 
 -- PLAYBOOK 4: Integridade do agente comprometida
 INSERT INTO public.playbooks (id, tenant_id, name, description, trigger_type, trigger_conditions, severity, is_system, require_approval)
@@ -212,7 +212,7 @@ VALUES (
   'a4000000-0000-0000-0000-000000000004',
   NULL,
   'Integridade do agente comprometida',
-  'Resposta quando o agente apresenta alteração inesperada. Pode indicar corrupção, interferência ou ataque.',
+  'Resposta quando o agente apresenta alteracao inesperada. Pode indicar corrupcao, interferencia ou ataque.',
   'integrity_low',
   '{"integrity_threshold": 80}',
   'critical',
@@ -222,16 +222,16 @@ VALUES (
 
 INSERT INTO public.playbook_actions (playbook_id, order_index, action_type, label, description, action_payload, risk_level) VALUES
 ('a4000000-0000-0000-0000-000000000004', 1, 'revoke_token', 'Revogar credenciais do agente', 'Invalida todos os tokens ativos do agente', '{"revoke_all": true}', 'high'),
-('a4000000-0000-0000-0000-000000000004', 2, 'create_job', 'Forçar reinstalação assinada', 'Agenda reinstalação com versão assinada', '{"job_type": "force_reinstall", "use_signed": true}', 'high'),
-('a4000000-0000-0000-0000-000000000004', 3, 'generate_report', 'Gerar relatório de integridade', 'Relatório completo de integridade com evidências', '{"report_type": "integrity", "include_hashes": true}', 'low');
+('a4000000-0000-0000-0000-000000000004', 2, 'create_job', 'Forcar reinstalacao assinada', 'Agenda reinstalacao com versao assinada', '{"job_type": "force_reinstall", "use_signed": true}', 'high'),
+('a4000000-0000-0000-0000-000000000004', 3, 'generate_report', 'Gerar relatorio de integridade', 'Relatorio completo de integridade com evidencias', '{"report_type": "integrity", "include_hashes": true}', 'low');
 
--- PLAYBOOK 5: Preparação para auditoria (Manual)
+-- PLAYBOOK 5: Preparacao para auditoria (Manual)
 INSERT INTO public.playbooks (id, tenant_id, name, description, trigger_type, trigger_conditions, severity, is_system, require_approval)
 VALUES (
   'a5000000-0000-0000-0000-000000000005',
   NULL,
-  'Preparação para Auditoria',
-  'Conjunto de ações para preparar ambiente para auditoria de compliance. Executado manualmente.',
+  'Preparacao para Auditoria',
+  'Conjunto de acoes para preparar ambiente para auditoria de compliance. Executado manualmente.',
   'manual',
   '{}',
   'medium',
@@ -240,11 +240,11 @@ VALUES (
 );
 
 INSERT INTO public.playbook_actions (playbook_id, order_index, action_type, label, description, action_payload, risk_level) VALUES
-('a5000000-0000-0000-0000-000000000005', 1, 'generate_report', 'Gerar relatório completo de compliance', 'Relatório consolidado de conformidade', '{"report_type": "compliance_full", "include_all_agents": true}', 'low'),
-('a5000000-0000-0000-0000-000000000005', 2, 'generate_report', 'Exportar evidências dos últimos 90 dias', 'Pacote de evidências assinadas', '{"report_type": "evidence_export", "days_back": 90, "sign_package": true}', 'low'),
-('a5000000-0000-0000-0000-000000000005', 3, 'create_job', 'Verificar integridade global', 'Job de verificação em todos os agentes', '{"job_type": "integrity_check", "target": "all_agents"}', 'low');
+('a5000000-0000-0000-0000-000000000005', 1, 'generate_report', 'Gerar relatorio completo de compliance', 'Relatorio consolidado de conformidade', '{"report_type": "compliance_full", "include_all_agents": true}', 'low'),
+('a5000000-0000-0000-0000-000000000005', 2, 'generate_report', 'Exportar evidencias dos ultimos 90 dias', 'Pacote de evidencias assinadas', '{"report_type": "evidence_export", "days_back": 90, "sign_package": true}', 'low'),
+('a5000000-0000-0000-0000-000000000005', 3, 'create_job', 'Verificar integridade global', 'Job de verificacao em todos os agentes', '{"job_type": "integrity_check", "target": "all_agents"}', 'low');
 
--- Função para avaliar playbooks automaticamente
+-- Funcao para avaliar playbooks automaticamente
 CREATE OR REPLACE FUNCTION public.evaluate_playbook_trigger(
   p_tenant_id UUID,
   p_trigger_type TEXT,
@@ -287,7 +287,7 @@ BEGIN
     RETURN NULL; -- Dentro do cooldown
   END IF;
   
-  -- Criar execução pendente
+  -- Criar execucao pendente
   INSERT INTO public.playbook_executions (
     playbook_id,
     tenant_id,

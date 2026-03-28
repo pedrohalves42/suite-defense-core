@@ -1,6 +1,6 @@
 
 -- =========================================================================
--- MIGRAÇÃO FINAL: Remover TODAS as políticas restantes com current_user_tenant_id()
+-- MIGRACAO FINAL: Remover TODAS as politicas restantes com current_user_tenant_id()
 -- =========================================================================
 
 -- 1. api_keys
@@ -50,7 +50,7 @@ DROP POLICY IF EXISTS "Admins can manage virus scans in their tenant" ON public.
 DROP POLICY IF EXISTS "Operators and viewers can read virus scans in their tenant" ON public.virus_scans;
 
 -- =========================================================================
--- Verificação final
+-- Verificacao final
 -- =========================================================================
--- As novas políticas multi-tenant já foram criadas na migração anterior
+-- As novas politicas multi-tenant ja foram criadas na migracao anterior
 -- Agora todas usam user_has_tenant_access() em vez de current_user_tenant_id()

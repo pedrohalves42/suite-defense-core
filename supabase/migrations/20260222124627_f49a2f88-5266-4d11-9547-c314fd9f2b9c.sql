@@ -1,5 +1,5 @@
 
--- Tabela de configurações de webhook para destinos de notificação
+-- Tabela de configuracoes de webhook para destinos de notificacao
 CREATE TABLE public.webhook_configs (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -19,11 +19,11 @@ CREATE TABLE public.webhook_configs (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE public.webhook_configs IS 'Configurações de destinos de webhook para notificações externas';
+COMMENT ON TABLE public.webhook_configs IS 'Configuracoes de destinos de webhook para notificacoes externas';
 COMMENT ON COLUMN public.webhook_configs.url IS 'URL de destino para envio de alertas via POST';
 COMMENT ON COLUMN public.webhook_configs.secret IS 'Chave HMAC para assinatura de payloads (X-Webhook-Signature)';
 COMMENT ON COLUMN public.webhook_configs.event_types IS 'Tipos de eventos que disparam o webhook';
-COMMENT ON COLUMN public.webhook_configs.severity_filter IS 'Filtro de severidade mínima para disparo';
+COMMENT ON COLUMN public.webhook_configs.severity_filter IS 'Filtro de severidade minima para disparo';
 COMMENT ON COLUMN public.webhook_configs.failure_count IS 'Contador de falhas consecutivas para circuit breaker';
 
 ALTER TABLE public.webhook_configs ENABLE ROW LEVEL SECURITY;
@@ -63,7 +63,7 @@ CREATE TABLE public.dlq_exhaustion_alerts (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE public.dlq_exhaustion_alerts IS 'Alertas gerados quando jobs falham definitivamente após todos os retries';
+COMMENT ON TABLE public.dlq_exhaustion_alerts IS 'Alertas gerados quando jobs falham definitivamente apos todos os retries';
 COMMENT ON COLUMN public.dlq_exhaustion_alerts.failure_class IS 'Classe de falha do job (TIMEOUT, BUG, AGENT_OFFLINE, etc)';
 
 ALTER TABLE public.dlq_exhaustion_alerts ENABLE ROW LEVEL SECURITY;

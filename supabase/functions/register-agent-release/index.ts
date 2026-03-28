@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
       release_notes, 
       channel = 'stable', 
       manual_sha256,
-      // FASE 2: Assinatura criptográfica Ed25519
+      // FASE 2: Assinatura criptografica Ed25519
       signature_base64,
       signed_by
     } = payload;

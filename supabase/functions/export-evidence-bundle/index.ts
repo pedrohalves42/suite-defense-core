@@ -213,13 +213,13 @@ serveTenant<EvidenceRequest>(async (_req, ctx) => {
     },
     readme: {
       title: 'CyberShield Evidence Bundle',
-      description: 'Este pacote contém evidências criptograficamente verificáveis de eventos de segurança.',
+      description: 'Este pacote contem evidencias criptograficamente verificaveis de eventos de seguranca.',
       howToVerify: [
         `1. Acesse: ${bundleRecord.verification_url}`,
-        '2. O sistema verificará a integridade do hash SHA-256',
-        '3. Se o hash coincidir, as evidências são autênticas e não foram alteradas',
+        '2. O sistema verificara a integridade do hash SHA-256',
+        '3. Se o hash coincidir, as evidencias sao autenticas e nao foram alteradas',
       ],
-      disclaimer: 'Este bundle foi gerado automaticamente pelo CyberShield e contém assinaturas digitais para validação.',
+      disclaimer: 'Este bundle foi gerado automaticamente pelo CyberShield e contem assinaturas digitais para validacao.',
     },
   };
 

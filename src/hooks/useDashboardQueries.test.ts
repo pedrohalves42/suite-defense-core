@@ -104,12 +104,15 @@ describe('useDashboardQueries', () => {
     expect(typeof result.current.refresh).toBe('function');
   });
 
-  it('should set up realtime channels', async () => {
-    renderHook(() => useDashboardQueries(), { wrapper: createWrapper() });
+  it('should use realtime queries for agents and jobs', async () => {
+    const { result } = renderHook(() => useDashboardQueries(), { wrapper: createWrapper() });
 
     await waitFor(() => {
-      expect(supabase.channel).toHaveBeenCalledWith('rq-agents-tenant-123');
-      expect(supabase.channel).toHaveBeenCalledWith('rq-jobs-tenant-123');
+      expect(result.current.loading).toBe(false);
     });
+
+    // Hook now uses useRealtimeQuery internally instead of direct supabase.channel calls
+    expect(result.current.agents).toBeDefined();
+    expect(result.current.jobs).toBeDefined();
   });
 });

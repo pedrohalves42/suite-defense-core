@@ -1,9 +1,9 @@
--- Tabela para relatórios agendados
+-- Tabela para relatorios agendados
 CREATE TABLE public.scheduled_reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   report_type TEXT NOT NULL DEFAULT 'security_weekly',
-  name TEXT NOT NULL DEFAULT 'Relatório Semanal de Segurança',
+  name TEXT NOT NULL DEFAULT 'Relatorio Semanal de Seguranca',
   schedule TEXT NOT NULL DEFAULT 'weekly',
   day_of_week INTEGER DEFAULT 1,
   hour INTEGER DEFAULT 9,
@@ -36,7 +36,7 @@ CREATE POLICY "Admins can manage scheduled reports"
     WHERE user_id = auth.uid() AND role IN ('admin', 'super_admin')
   ));
 
--- Índices
+-- Indices
 CREATE INDEX idx_scheduled_reports_tenant ON scheduled_reports(tenant_id);
 CREATE INDEX idx_scheduled_reports_schedule ON scheduled_reports(is_active, next_send_at);
 

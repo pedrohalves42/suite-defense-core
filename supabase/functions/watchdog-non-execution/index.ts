@@ -1,17 +1,17 @@
 /**
  * Watchdog Non-Execution Detection
  * 
- * Detecta agentes que estão "online" (heartbeat OK) mas não estão
- * pegando ou executando jobs. Cria alertas para investigação.
+ * Detecta agentes que estao "online" (heartbeat OK) mas nao estao
+ * pegando ou executando jobs. Cria alertas para investigacao.
  * 
- * Regras de detecção:
- * - not_polling_jobs: Heartbeat OK, mas +3 jobs queued há +1h
- * - not_executing_jobs: Jobs delivered, mas sem finish há +30min
- * - execution_stale: Última execução há +4h com jobs pendentes
+ * Regras de deteccao:
+ * - not_polling_jobs: Heartbeat OK, mas +3 jobs queued ha +1h
+ * - not_executing_jobs: Jobs delivered, mas sem finish ha +30min
+ * - execution_stale: Ultima execucao ha +4h com jobs pendentes
  * 
  * Executa: A cada 15 minutos (cron)
  * 
- * IMPORTANTE: Esta função APENAS alerta. NÃO toma ações destrutivas.
+ * IMPORTANTE: Esta funcao APENAS alerta. NAO toma acoes destrutivas.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.47.10';
@@ -63,13 +63,13 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Buscar agentes com problemas de execução
+    // Buscar agentes com problemas de execucao
     const { data: unhealthyAgents, error: queryError } = await supabase
       .from('v_agent_execution_health')
       .select('*')
       .neq('health_status', 'healthy')
-      .neq('health_status', 'offline') // Offline já é tratado por outro monitor
-      .neq('health_status', 'never_connected'); // Nunca conectou não é problema de execução
+      .neq('health_status', 'offline') // Offline ja e tratado por outro monitor
+      .neq('health_status', 'never_connected'); // Nunca conectou nao e problema de execucao
 
     if (queryError) {
       logger.error(`[${requestId}] Query error: ${queryError.message}`);
@@ -103,15 +103,15 @@ Deno.serve(async (req) => {
 
     logger.info(`[${requestId}] Problems by type: ${JSON.stringify(problemsByType)}`);
 
-    // Criar alertas para cada agente problemático
+    // Criar alertas para cada agente problematico
     const alertsCreated = [];
     const alertsSkipped = [];
     const skippedDueToBusinessHours = [];
 
-    // Cache de verificação de horário por tenant
+    // Cache de verificacao de horario por tenant
     const tenantBusinessHoursCache: Record<string, { shouldProcess: boolean; reason: string }> = {};
 
-    // V-8003 FIX: Batch dedup check — fetch all recent alerts at once instead of N+1
+    // V-8003 FIX: Batch dedup check ? fetch all recent alerts at once instead of N+1
     const agentIds = (unhealthyAgents as AgentExecutionHealth[]).map(a => a.agent_id).filter(Boolean);
     const { data: recentAlerts } = await supabase
       .from('system_alerts')
@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
         agent_id: agent.agent_id,
         alert_type: 'non_execution_detected',
         severity: agent.severity as 'low' | 'medium' | 'high' | 'critical',
-        title: `Problema de execução: ${agent.agent_name}`,
+        title: `Problema de execucao: ${agent.agent_name}`,
         message: agent.health_description,
         resolved: false,
         details: {

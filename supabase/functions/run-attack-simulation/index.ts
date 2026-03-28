@@ -1,6 +1,6 @@
 /**
- * run-attack-simulation — Migrated to serveTenant() middleware (V-1096)
- * Previously used validateCallerTenant() directly — now handled by middleware.
+ * run-attack-simulation ? Migrated to serveTenant() middleware (V-1096)
+ * Previously used validateCallerTenant() directly ? now handled by middleware.
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { corsHeaders } from '../_shared/cors.ts';
@@ -32,12 +32,12 @@ serveTenant(async (_req, ctx) => {
   }
 
   const simTitles: Record<string, string> = {
-    eicar_test: 'Teste EICAR - Detecção de Antivírus',
-    firewall_test: 'Teste de Firewall - Verificação de Status',
+    eicar_test: 'Teste EICAR - Deteccao de Antivirus',
+    firewall_test: 'Teste de Firewall - Verificacao de Status',
     canary_file_test: 'Teste Canary Files - Monitoramento de Acesso',
-    usb_policy_test: 'Teste USB Policy - Verificação de Bloqueio',
-    dns_filter_test: 'Teste DNS Filter - Verificação de Bloqueio',
-    port_scan_test: 'Teste Port Scan - Verificação de Bloqueio',
+    usb_policy_test: 'Teste USB Policy - Verificacao de Bloqueio',
+    dns_filter_test: 'Teste DNS Filter - Verificacao de Bloqueio',
+    port_scan_test: 'Teste Port Scan - Verificacao de Bloqueio',
   };
 
   // Create simulation record
@@ -85,9 +85,9 @@ serveTenant(async (_req, ctx) => {
       .limit(1)
       .maybeSingle();
 
-    // EICAR: Windows Defender é ativo por padrão em todas as máquinas Windows.
-    // Só considerar "não detectado" se houver registro EXPLÍCITO de AV inactive.
-    // Sem registro = Defender ativo por padrão = detectaria o EICAR.
+    // EICAR: Windows Defender e ativo por padrao em todas as maquinas Windows.
+    // So considerar "nao detectado" se houver registro EXPLICITO de AV inactive.
+    // Sem registro = Defender ativo por padrao = detectaria o EICAR.
     const wouldDetect = simulation_type === 'eicar_test' 
       ? (avStatus?.status !== 'inactive') // null (sem registro) ou 'active' = detectado
       : simulation_type === 'firewall_test'

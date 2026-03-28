@@ -117,33 +117,33 @@ serve(async (req) => {
       // Create insight if alert triggered
       if (alertTriggered) {
         const insightTitle = consecutiveAlerts >= 3
-          ? `Gap de Confiança em Degradação Contínua (${consecutiveAlerts} vezes)`
+          ? `Gap de Confianca em Degradacao Continua (${consecutiveAlerts} vezes)`
           : currentGap > 10
-          ? `Gap de Confiança Crítico: ${currentGap.toFixed(1)} pontos`
-          : `Dimensão ${worstDimension} com Gap Crítico: ${Math.abs(worstDimensionGap).toFixed(1)} pontos`;
+          ? `Gap de Confianca Critico: ${currentGap.toFixed(1)} pontos`
+          : `Dimensao ${worstDimension} com Gap Critico: ${Math.abs(worstDimensionGap).toFixed(1)} pontos`;
 
         const dimensionLabels: Record<string, string> = {
-          data_protection: 'Proteção de Dados',
+          data_protection: 'Protecao de Dados',
           access_control: 'Controle de Acesso',
           audit_logging: 'Logs de Auditoria',
-          vulnerability_management: 'Gestão de Vulnerabilidades',
+          vulnerability_management: 'Gestao de Vulnerabilidades',
           incident_response: 'Resposta a Incidentes',
           compliance: 'Conformidade',
-          network_security: 'Segurança de Rede',
-          endpoint_protection: 'Proteção de Endpoints',
+          network_security: 'Seguranca de Rede',
+          endpoint_protection: 'Protecao de Endpoints',
           cross_tenant_isolation: 'Isolamento Multi-tenant',
         };
 
         const suggestedAction = worstDimension
-          ? `Focar melhorias em ${dimensionLabels[worstDimension] || worstDimension}. Executar auditoria detalhada nesta dimensão.`
-          : 'Executar auditoria completa Ana + Red Team para identificar gaps específicos.';
+          ? `Focar melhorias em ${dimensionLabels[worstDimension] || worstDimension}. Executar auditoria detalhada nesta dimensao.`
+          : 'Executar auditoria completa Ana + Red Team para identificar gaps especificos.';
 
         await supabase.from('ai_insights').insert({
           tenant_id: tenant.id,
           insight_type: 'compliance',
           severity: currentGap > 10 ? 'critical' : 'high',
           title: insightTitle,
-          description: `A diferença entre a avaliação interna (Ana) e adversarial (Red Team) está em ${currentGap.toFixed(1)} pontos. Tendência: ${isImproving ? 'melhorando' : 'estável ou piorando'}.`,
+          description: `A diferenca entre a avaliacao interna (Ana) e adversarial (Red Team) esta em ${currentGap.toFixed(1)} pontos. Tendencia: ${isImproving ? 'melhorando' : 'estavel ou piorando'}.`,
           evidence: {
             analysis,
             recommendation: suggestedAction,

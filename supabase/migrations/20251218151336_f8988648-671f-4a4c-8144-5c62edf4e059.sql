@@ -1,12 +1,12 @@
 -- ============================================================================
--- FASE 1B: Correção de Permissões de Segurança em Views
--- Revogar acesso anon e aplicar permissões corretas
+-- FASE 1B: Correcao de Permissoes de Seguranca em Views
+-- Revogar acesso anon e aplicar permissoes corretas
 -- ============================================================================
 
--- 1. DROP da view desnecessária
+-- 1. DROP da view desnecessaria
 DROP VIEW IF EXISTS public.v_security_definer_inventory CASCADE;
 
--- 2. REVOGAR acesso anon de TODAS as views de segurança
+-- 2. REVOGAR acesso anon de TODAS as views de seguranca
 REVOKE ALL ON public.agent_releases_public FROM anon;
 REVOKE ALL ON public.agent_system_metrics_unified FROM anon;
 REVOKE ALL ON public.agents_health_view FROM anon;
@@ -54,7 +54,7 @@ GRANT SELECT ON public.v_stuck_jobs_report TO authenticated;
 GRANT SELECT ON public.v_system_operations_summary TO authenticated;
 
 -- 5. Views de admin (rate_limit_stats, v_edge_function_stats) - apenas authenticated
--- O filtro de super_admin será feito nas queries do frontend
+-- O filtro de super_admin sera feito nas queries do frontend
 GRANT SELECT ON public.rate_limit_stats TO authenticated;
 GRANT SELECT ON public.v_edge_function_stats TO authenticated;
 

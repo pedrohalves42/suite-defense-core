@@ -42,7 +42,7 @@ servePublic(async (_req, ctx) => {
   const { supabase, requestId, body } = ctx;
   const action = body?.action || 'begin';
 
-  // ─── BEGIN AUTHENTICATION ───
+  // ??? BEGIN AUTHENTICATION ???
   if (action === 'begin') {
     const parsed = BeginSchema.safeParse(body);
     if (!parsed.success) {
@@ -111,7 +111,7 @@ servePublic(async (_req, ctx) => {
     return options;
   }
 
-  // ─── COMPLETE AUTHENTICATION ───
+  // ??? COMPLETE AUTHENTICATION ???
   if (action === 'complete') {
     const parsed = CompleteSchema.safeParse(body);
     if (!parsed.success) {

@@ -1,6 +1,6 @@
 
 -- ============================================================
--- CORREÇÃO FINAL: auto_resolve_stale_tasks sem audit_logs
+-- CORRECAO FINAL: auto_resolve_stale_tasks sem audit_logs
 -- (audit_logs tem trigger que requer tenant_id do JWT)
 -- ============================================================
 CREATE OR REPLACE FUNCTION auto_resolve_stale_tasks()
@@ -16,7 +16,7 @@ DECLARE
   v_old_insights_triaged INTEGER := 0;
   v_result jsonb;
 BEGIN
-  -- 1. Auto-fechar tasks de JOB com severidade medium/low após 14 dias
+  -- 1. Auto-fechar tasks de JOB com severidade medium/low apos 14 dias
   UPDATE tasks SET
     status = 'ignored',
     closed_at = NOW(),
@@ -34,7 +34,7 @@ BEGIN
     AND auto_generated = true;
   GET DIAGNOSTICS v_job_tasks_closed = ROW_COUNT;
 
-  -- 2. Auto-fechar tasks de DLQ com severidade low após 7 dias
+  -- 2. Auto-fechar tasks de DLQ com severidade low apos 7 dias
   UPDATE tasks SET
     status = 'ignored',
     closed_at = NOW(),
@@ -51,7 +51,7 @@ BEGIN
     AND created_at < NOW() - INTERVAL '7 days';
   GET DIAGNOSTICS v_dlq_tasks_closed = ROW_COUNT;
 
-  -- 3. Auto-fechar tasks de system_alert com severity low/info após 3 dias
+  -- 3. Auto-fechar tasks de system_alert com severity low/info apos 3 dias
   UPDATE tasks SET
     status = 'resolved',
     closed_at = NOW(),
@@ -68,7 +68,7 @@ BEGIN
     AND created_at < NOW() - INTERVAL '3 days';
   GET DIAGNOSTICS v_low_alerts_closed = ROW_COUNT;
 
-  -- 4. Auto-triar insights de AI não-críticos após 21 dias
+  -- 4. Auto-triar insights de AI nao-criticos apos 21 dias
   UPDATE tasks SET
     status = 'accepted_risk',
     closed_at = NOW(),
@@ -96,7 +96,7 @@ BEGIN
     'executed_at', NOW()
   );
 
-  -- Reportar para cron_health_checks (não usa audit_logs por causa de RLS)
+  -- Reportar para cron_health_checks (nao usa audit_logs por causa de RLS)
   INSERT INTO cron_health_checks (cron_name, last_success_at, consecutive_failures, updated_at, last_result)
   VALUES ('auto-resolve-stale-tasks', NOW(), 0, NOW(), v_result)
   ON CONFLICT (cron_name) DO UPDATE SET
@@ -120,7 +120,7 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
--- Atualizar run_system_maintenance para não falhar se uma função falhar
+-- Atualizar run_system_maintenance para nao falhar se uma funcao falhar
 CREATE OR REPLACE FUNCTION run_system_maintenance()
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -134,7 +134,7 @@ DECLARE
   r4 jsonb := '{"skipped": true}'::jsonb;
   result jsonb;
 BEGIN
-  -- Executar funções de manutenção com tratamento de erro individual
+  -- Executar funcoes de manutencao com tratamento de erro individual
   BEGIN
     SELECT update_offline_agent_status() INTO r1;
   EXCEPTION WHEN OTHERS THEN

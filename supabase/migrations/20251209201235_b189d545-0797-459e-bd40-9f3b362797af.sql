@@ -1,5 +1,5 @@
--- P1 Correção: Função diagnose_agent_issues() com validação de tenant
--- Recriar com parâmetro p_tenant_id obrigatório para prevenir cross-tenant leakage
+-- P1 Correcao: Funcao diagnose_agent_issues() com validacao de tenant
+-- Recriar com parametro p_tenant_id obrigatorio para prevenir cross-tenant leakage
 
 DROP FUNCTION IF EXISTS public.diagnose_agent_issues(text);
 
@@ -10,7 +10,7 @@ SECURITY INVOKER
 SET search_path TO 'public'
 AS $function$
 BEGIN
-  -- Validar que o tenant_id pertence ao usuário autenticado
+  -- Validar que o tenant_id pertence ao usuario autenticado
   IF NOT EXISTS (
     SELECT 1 FROM public.user_roles 
     WHERE user_id = auth.uid() 
@@ -25,7 +25,7 @@ BEGIN
     RETURN QUERY SELECT 
       'agent_not_found'::TEXT,
       'critical'::TEXT,
-      'Agente não encontrado no sistema'::TEXT,
+      'Agente nao encontrado no sistema'::TEXT,
       jsonb_build_object('agent_name', p_agent_name, 'tenant_id', p_tenant_id);
     RETURN;
   END IF;
@@ -51,7 +51,7 @@ BEGIN
   SELECT 
     'stale_heartbeat'::TEXT,
     'high'::TEXT,
-    'Último heartbeat há mais de 5 minutos'::TEXT,
+    'Ultimo heartbeat ha mais de 5 minutos'::TEXT,
     jsonb_build_object(
       'agent_name', p_agent_name,
       'last_heartbeat', a.last_heartbeat,
@@ -63,7 +63,7 @@ BEGIN
     AND a.last_heartbeat IS NOT NULL
     AND a.last_heartbeat < NOW() - INTERVAL '5 minutes';
   
-  -- Verificar token inválido/expirado
+  -- Verificar token invalido/expirado
   RETURN QUERY
   SELECT 
     'invalid_token'::TEXT,
@@ -88,7 +88,7 @@ BEGIN
   SELECT 
     'stuck_jobs'::TEXT,
     'medium'::TEXT,
-    'Jobs em estado "delivered" há mais de 1 hora sem conclusão'::TEXT,
+    'Jobs em estado "delivered" ha mais de 1 hora sem conclusao'::TEXT,
     jsonb_build_object(
       'agent_name', p_agent_name,
       'stuck_job_count', COUNT(*)
@@ -100,12 +100,12 @@ BEGIN
   GROUP BY j.agent_name
   HAVING COUNT(*) > 0;
   
-  -- Verificar métricas ausentes nas últimas 24 horas
+  -- Verificar metricas ausentes nas ultimas 24 horas
   RETURN QUERY
   SELECT 
     'no_metrics'::TEXT,
     'medium'::TEXT,
-    'Nenhuma métrica de sistema registrada nas últimas 24 horas'::TEXT,
+    'Nenhuma metrica de sistema registrada nas ultimas 24 horas'::TEXT,
     jsonb_build_object(
       'agent_name', p_agent_name,
       'agent_id', a.id
@@ -149,12 +149,12 @@ BEGIN
 END;
 $function$;
 
--- P1 Correção: Adicionar colunas para bloqueio progressivo de IP
+-- P1 Correcao: Adicionar colunas para bloqueio progressivo de IP
 ALTER TABLE public.failed_login_attempts 
 ADD COLUMN IF NOT EXISTS blocked_until TIMESTAMP WITH TIME ZONE,
 ADD COLUMN IF NOT EXISTS block_count INTEGER DEFAULT 0;
 
--- Criar função de verificação e bloqueio progressivo de IP
+-- Criar funcao de verificacao e bloqueio progressivo de IP
 CREATE OR REPLACE FUNCTION public.check_and_block_ip(p_ip_address TEXT, p_email TEXT DEFAULT NULL)
 RETURNS TABLE(
   is_blocked BOOLEAN,
@@ -172,7 +172,7 @@ DECLARE
   v_blocked_until TIMESTAMP WITH TIME ZONE;
   v_new_block_duration INTERVAL;
 BEGIN
-  -- Verificar se IP está na blocklist
+  -- Verificar se IP esta na blocklist
   SELECT ip.blocked_until INTO v_blocked_until
   FROM public.ip_blocklist ip
   WHERE ip.ip_address = p_ip_address
@@ -183,7 +183,7 @@ BEGIN
     RETURN;
   END IF;
   
-  -- Contar tentativas nos últimos 15 minutos
+  -- Contar tentativas nos ultimos 15 minutos
   SELECT COUNT(*), COALESCE(MAX(block_count), 0)
   INTO v_attempt_count, v_block_count
   FROM public.failed_login_attempts
@@ -198,7 +198,7 @@ BEGIN
   ELSIF v_attempt_count >= 5 THEN
     v_new_block_duration := INTERVAL '5 minutes';
   ELSE
-    -- Não bloquear ainda
+    -- Nao bloquear ainda
     RETURN QUERY SELECT false, NULL::TIMESTAMP WITH TIME ZONE, v_attempt_count, 0;
     RETURN;
   END IF;
@@ -219,7 +219,7 @@ BEGIN
   WHERE ip_address = p_ip_address
     AND created_at > NOW() - INTERVAL '15 minutes';
   
-  -- Log de segurança
+  -- Log de seguranca
   INSERT INTO public.security_logs (
     ip_address,
     endpoint,
@@ -256,7 +256,7 @@ BEGIN
 END;
 $function$;
 
--- Índice para melhorar performance de consultas de bloqueio
+-- Indice para melhorar performance de consultas de bloqueio
 CREATE INDEX IF NOT EXISTS idx_failed_login_attempts_ip_created 
 ON public.failed_login_attempts(ip_address, created_at DESC);
 

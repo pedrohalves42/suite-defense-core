@@ -91,8 +91,8 @@ serveAgent(async (_req, ctx) => {
       const categoryLabels: Record<string, string> = {
         cpf: 'CPF',
         cnpj: 'CNPJ',
-        credit_card: 'Cartão de Crédito',
-        medical_record: 'Prontuário Médico',
+        credit_card: 'Cartao de Credito',
+        medical_record: 'Prontuario Medico',
         password: 'Senha',
         api_key: 'Chave de API',
         rg: 'RG',
@@ -106,8 +106,8 @@ serveAgent(async (_req, ctx) => {
           agent_id: agentId,
           alert_type: 'data_exposure',
           severity: severity === 'critical' ? 'critical' : 'high',
-          title: 'Dados Sensíveis Expostos',
-          message: `${finding.match_count} ocorrência(s) de ${categoryLabels[finding.data_category] || finding.data_category} encontrada(s) em ${finding.file_path} no endpoint ${agentName}`,
+          title: 'Dados Sensiveis Expostos',
+          message: `${finding.match_count} ocorrencia(s) de ${categoryLabels[finding.data_category] || finding.data_category} encontrada(s) em ${finding.file_path} no endpoint ${agentName}`,
           acknowledged: false,
         });
 

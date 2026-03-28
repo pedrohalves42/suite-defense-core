@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
     logger.info('[integrity-sentinel] Starting integrity check...')
 
     // ============================================================
-    // 1. VERIFICAR VIOLAÇÕES DE INTEGRIDADE via RPC (mais eficiente)
+    // 1. VERIFICAR VIOLACOES DE INTEGRIDADE via RPC (mais eficiente)
     // Usa a view job_integrity_violations otimizada
     // ============================================================
     const { data: violations, error: violationsError } = await supabase
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
     if (violationsError) {
       logger.error('[integrity-sentinel] Error fetching violations:', violationsError)
     } else if (violations && violations.length > 0) {
-      logger.error('[integrity-sentinel] 🔴 CRITICAL: Found integrity violations!', {
+      logger.error('[integrity-sentinel] ? CRITICAL: Found integrity violations!', {
         count: violations.length,
         violations: violations.map((v: Record<string, unknown>) => ({
           job_id: v.job_id,
@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
 
       // Criar alertas P0 para cada tenant afetado
       for (const [tenantId, tenantViolations] of violationsByTenant) {
-        // Verificar se já existe alerta recente para evitar spam
+        // Verificar se ja existe alerta recente para evitar spam
         const { data: existingAlerts } = await supabase
           .from('system_alerts')
           .select('id')
@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
         }
       }
     } else {
-      logger.info('[integrity-sentinel] ✅ No integrity violations found')
+      logger.info('[integrity-sentinel] [OK]  No integrity violations found')
     }
 
     // ============================================================
@@ -163,9 +163,9 @@ Deno.serve(async (req) => {
       const invalidReleases = releaseIntegrity.filter((r: { is_valid: boolean }) => !r.is_valid)
       
       if (invalidReleases.length > 0) {
-        logger.warn('[integrity-sentinel] ⚠️ Invalid agent releases found:', invalidReleases)
+        logger.warn('[integrity-sentinel] [WARN] ? Invalid agent releases found:', invalidReleases)
         
-        // Criar alerta para releases inválidos (não é P0, é warning)
+        // Criar alerta para releases invalidos (nao e P0, e warning)
         // Usar tenant null para alerta global
         const { error: releaseAlertError } = await supabase
           .from('system_alerts')
@@ -185,12 +185,12 @@ Deno.serve(async (req) => {
           logger.error('[integrity-sentinel] Error creating release integrity alert:', releaseAlertError)
         }
       } else {
-        logger.info('[integrity-sentinel] ✅ All agent releases valid')
+        logger.info('[integrity-sentinel] [OK]  All agent releases valid')
       }
     }
 
     // ============================================================
-    // 3. VERIFICAR JOBS COMPLETED SEM OUTPUT (últimas 24h)
+    // 3. VERIFICAR JOBS COMPLETED SEM OUTPUT (ultimas 24h)
     // ============================================================
     const { data: emptyOutputJobs, error: emptyError } = await supabase
       .from('jobs')
@@ -202,7 +202,7 @@ Deno.serve(async (req) => {
       .limit(100)
 
     if (!emptyError && emptyOutputJobs && emptyOutputJobs.length > 0) {
-      logger.warn('[integrity-sentinel] ⚠️ Jobs completed without output:', {
+      logger.warn('[integrity-sentinel] [WARN] ? Jobs completed without output:', {
         count: emptyOutputJobs.length,
         sample: emptyOutputJobs.slice(0, 5)
       })

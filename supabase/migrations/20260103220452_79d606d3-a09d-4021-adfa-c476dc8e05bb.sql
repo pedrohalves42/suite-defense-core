@@ -119,7 +119,7 @@ SELECT pe.id AS item_id,
     a.agent_name,
     a.hostname,
     COALESCE(p.name, 'Playbook'::text) AS title,
-    COALESCE(pe.trigger_source, 'Ação pendente'::text) AS description,
+    COALESCE(pe.trigger_source, 'Acao pendente'::text) AS description,
     COALESCE(p.severity, 'medium'::text) AS severity,
     pe.risk_score,
     pe.trigger_context AS context,
@@ -169,7 +169,7 @@ UNION ALL
     agt.agent_name,
     agt.hostname,
     'Agente Offline'::text AS title,
-    COALESCE(agt.offline_reason, 'Sem comunicação'::text) AS description,
+    COALESCE(agt.offline_reason, 'Sem comunicacao'::text) AS description,
         CASE
             WHEN (agt.offline_detected_at < (now() - '24:00:00'::interval)) THEN 'critical'::text
             WHEN (agt.offline_detected_at < (now() - '04:00:00'::interval)) THEN 'high'::text

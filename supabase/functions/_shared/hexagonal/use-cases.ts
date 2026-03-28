@@ -15,7 +15,7 @@ import type {
 import type { DomainEvent } from './types.ts';
 import { logger } from '../logger.ts';
 
-// ─── Domain Events ──────────────────────────────────────
+// ??? Domain Events ??????????????????????????????????????
 class UpdateJobCreatedEvent implements DomainEvent {
   readonly eventType = 'UpdateJobCreated';
   readonly occurredOn = new Date();
@@ -28,7 +28,7 @@ class UpdateJobCreatedEvent implements DomainEvent {
   }
 }
 
-// ─── Result types ───────────────────────────────────────
+// ??? Result types ???????????????????????????????????????
 export interface PlatformResult {
   platform: string;
   outdatedCount: number;
@@ -41,7 +41,7 @@ export interface ProcessAgentUpdatesResult {
   platforms: PlatformResult[];
 }
 
-// ─── Use Case ───────────────────────────────────────────
+// ??? Use Case ???????????????????????????????????????????
 export class ProcessAgentUpdatesUseCase {
   constructor(
     private readonly versionQuery: VersionQueryPort,
@@ -155,9 +155,9 @@ export class ProcessAgentUpdatesUseCase {
     agent: OutdatedAgentInfo,
     targetVersion: string,
   ): Promise<boolean> {
-    // ─── GUARD: Reject downgrade attempts ─────────────
+    // ??? GUARD: Reject downgrade attempts ?????????????
     if (this.isNewerOrEqual(agent.agentVersion, targetVersion)) {
-      logger.info('[ProcessAgentUpdates] Skipping — agent already at or above target version', {
+      logger.info('[ProcessAgentUpdates] Skipping ? agent already at or above target version', {
         requestId,
         agentName: agent.agentName,
         currentVersion: agent.agentVersion,
@@ -219,7 +219,7 @@ export class ProcessAgentUpdatesUseCase {
 
   /**
    * Semver-aware comparison: returns true if current >= target.
-   * Prevents downgrade jobs (e.g. v5.0.8 → v5.0.7).
+   * Prevents downgrade jobs (e.g. v5.0.8 ? v5.0.7).
    */
   private isNewerOrEqual(current: string, target: string): boolean {
     const parse = (v: string): number[] =>

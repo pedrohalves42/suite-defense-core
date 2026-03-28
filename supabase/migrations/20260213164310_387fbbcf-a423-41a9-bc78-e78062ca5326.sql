@@ -5,7 +5,7 @@
 -- =============================================
 
 -- =============================================
--- 1. ATOMIC RATE LIMIT (2-3 queries → 1)
+-- 1. ATOMIC RATE LIMIT (2-3 queries ? 1)
 -- The rate_limits table uses unique constraint on (identifier, endpoint)
 -- with a single sliding window row per pair.
 -- =============================================
@@ -81,7 +81,7 @@ END;
 $$;
 
 -- =============================================
--- 2. CONSOLIDATED HEARTBEAT RPC (7-10 queries → 1 call)
+-- 2. CONSOLIDATED HEARTBEAT RPC (7-10 queries ? 1 call)
 -- Uses actual column names from agents/agent_tokens tables
 -- =============================================
 CREATE OR REPLACE FUNCTION public.process_heartbeat_v2(
@@ -195,7 +195,7 @@ $$;
 
 -- =============================================
 -- 3. HMAC FORMAT CACHE TABLE
--- Reduces 8 brute-force verification attempts → 1
+-- Reduces 8 brute-force verification attempts ? 1
 -- =============================================
 CREATE TABLE IF NOT EXISTS public.agent_hmac_format_cache (
     agent_id uuid PRIMARY KEY REFERENCES agents(id) ON DELETE CASCADE,
@@ -218,7 +218,7 @@ COMMENT ON TABLE public.agent_hmac_format_cache IS
     'Caches the HMAC format that each agent uses to avoid brute-forcing 8 combinations on every request';
 
 -- =============================================
--- 4. HMAC CLEANUP → MAINTENANCE CRON (remove from hot path)
+-- 4. HMAC CLEANUP ? MAINTENANCE CRON (remove from hot path)
 -- =============================================
 CREATE OR REPLACE FUNCTION public.run_system_maintenance()
 RETURNS jsonb
@@ -274,7 +274,7 @@ BEGIN
     DELETE FROM agent_disk_metrics WHERE collected_at < now() - interval '30 days' RETURNING id
   ) SELECT count(*) INTO v_diskmetrics_cleaned FROM del2;
 
-  -- 8. HMAC CLEANUP (moved from hot path probabilistic → scheduled)
+  -- 8. HMAC CLEANUP (moved from hot path probabilistic ? scheduled)
   WITH del3 AS (
     DELETE FROM hmac_signatures WHERE created_at < now() - interval '7 days' RETURNING id
   ) SELECT count(*) INTO v_hmac_cleaned FROM del3;
@@ -300,7 +300,7 @@ END;
 $$;
 
 -- =============================================
--- 5. POLL-JOBS OPTIMIZED (3 queries → 1 RPC)
+-- 5. POLL-JOBS OPTIMIZED (3 queries ? 1 RPC)
 -- =============================================
 CREATE OR REPLACE FUNCTION public.poll_jobs_v2(
     p_token_hash text,

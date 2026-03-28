@@ -1,8 +1,8 @@
 -- =============================================================
--- AGENT_IMPRODUTIVE_005: Throttle automático de agentes improdutivos
+-- AGENT_IMPRODUTIVE_005: Throttle automatico de agentes improdutivos
 -- =============================================================
 
--- 1. Criar nova regra de decisão
+-- 1. Criar nova regra de decisao
 INSERT INTO public.decision_rules (code, description, scope, definition, is_enabled)
 VALUES (
   'AGENT_IMPRODUTIVE_005',
@@ -55,20 +55,20 @@ BEGIN
     v.stale_queued_jobs,
     v.pending_jobs
   FROM v_agent_execution_health v
-  -- Agentes com problemas de execução
+  -- Agentes com problemas de execucao
   WHERE v.health_status IN ('not_polling_jobs', 'not_executing_jobs', 'execution_stale')
-    -- Heartbeat OK (online nos últimos 30 min)
+    -- Heartbeat OK (online nos ultimos 30 min)
     AND v.minutes_since_heartbeat < 30
-    -- Não já throttled por esta regra nas últimas 2 horas
+    -- Nao ja throttled por esta regra nas ultimas 2 horas
     AND NOT EXISTS (
       SELECT 1 FROM decision_events de
       WHERE de.agent_id = v.agent_id
         AND de.rule_code = 'AGENT_IMPRODUTIVE_005'
         AND de.created_at > NOW() - INTERVAL '2 hours'
     )
-    -- Não está em SAFE_MODE (já tem proteção ativa)
+    -- Nao esta em SAFE_MODE (ja tem protecao ativa)
     AND v.health_status != 'safe_mode'
-    -- Tem jobs parados há mais de 1h OU não executa há mais de 2h
+    -- Tem jobs parados ha mais de 1h OU nao executa ha mais de 2h
     AND (
       v.stale_queued_jobs >= 3
       OR v.minutes_since_execution > 120

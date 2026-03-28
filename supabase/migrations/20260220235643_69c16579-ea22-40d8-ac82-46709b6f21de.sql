@@ -1,6 +1,6 @@
 
 -- ============================================================
--- Tabela cron_health: Monitoramento de saúde dos cron jobs
+-- Tabela cron_health: Monitoramento de saude dos cron jobs
 -- ============================================================
 
 CREATE TABLE public.cron_health (

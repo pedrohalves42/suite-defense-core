@@ -72,7 +72,7 @@ UNION ALL
     'Computador offline de forma inesperada'::text AS title,
         CASE
             WHEN (a.offline_reason ~~ '%crash%'::text) THEN 'Este computador parou de responder de forma inesperada e pode indicar problema grave.'::text
-            ELSE 'Este computador está offline e pode necessitar de atenção.'::text
+            ELSE 'Este computador esta offline e pode necessitar de atencao.'::text
         END AS description,
         CASE
             WHEN (a.offline_reason ~~ '%crash%'::text) THEN 'high'::text

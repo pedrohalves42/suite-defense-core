@@ -1,11 +1,11 @@
--- Função para cancelar automaticamente jobs pendentes quando um agente fica offline
+-- Funcao para cancelar automaticamente jobs pendentes quando um agente fica offline
 CREATE OR REPLACE FUNCTION public.auto_cancel_jobs_on_agent_offline()
 RETURNS TRIGGER AS $$
 DECLARE
   cancelled_count INTEGER;
 BEGIN
   -- Verifica se o agente ficou offline (heartbeat antigo ou null)
-  -- Considera offline se: não tinha heartbeat antes OU heartbeat ficou > 30 minutos
+  -- Considera offline se: nao tinha heartbeat antes OU heartbeat ficou > 30 minutos
   IF (OLD.last_heartbeat IS NOT NULL AND OLD.last_heartbeat > NOW() - INTERVAL '30 minutes')
      AND (NEW.last_heartbeat IS NULL OR NEW.last_heartbeat < NOW() - INTERVAL '30 minutes') THEN
     
@@ -52,13 +52,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- Criar trigger para execução automática
+-- Criar trigger para execucao automatica
 DROP TRIGGER IF EXISTS trg_auto_cancel_jobs_on_offline ON public.agents;
 CREATE TRIGGER trg_auto_cancel_jobs_on_offline
   AFTER UPDATE OF last_heartbeat ON public.agents
   FOR EACH ROW
   EXECUTE FUNCTION public.auto_cancel_jobs_on_agent_offline();
 
--- Comentário explicativo
+-- Comentario explicativo
 COMMENT ON FUNCTION public.auto_cancel_jobs_on_agent_offline() IS 
-'Cancela automaticamente jobs pendentes quando um agente fica offline (sem heartbeat há mais de 30 minutos)';
+'Cancela automaticamente jobs pendentes quando um agente fica offline (sem heartbeat ha mais de 30 minutos)';

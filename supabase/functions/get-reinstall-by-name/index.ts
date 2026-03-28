@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
       if (ekError || !ek) {
         logger.error(`[${requestId}] Invalid enrollment key`);
         return new Response(
-          '# ERROR: Invalid or expired enrollment key\n# Tip: use an ACTIVE Enrollment Key from Chaves de Instalação (not JWT)\nWrite-Host "ERROR: Invalid key" -ForegroundColor Red\n',
+          '# ERROR: Invalid or expired enrollment key\n# Tip: use an ACTIVE Enrollment Key from Chaves de Instalacao (not JWT)\nWrite-Host "ERROR: Invalid key" -ForegroundColor Red\n',
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }
         );
       }

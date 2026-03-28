@@ -1,5 +1,5 @@
 /**
- * submit-endpoint-events — Unified EDR telemetry ingestion endpoint.
+ * submit-endpoint-events ? Unified EDR telemetry ingestion endpoint.
  * 
  * ARCHITECTURE: Event Buffer Pattern (10-30x throughput improvement)
  * Instead of inserting directly into 4+ event tables, events are written
@@ -20,7 +20,7 @@ const MAX_EVENTS_PER_BATCH = 1000;
 const INTERNAL_FUNCTION_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 
-// ── MITRE ATT&CK Detection Rules (Local Engine) ──
+// ?? MITRE ATT&CK Detection Rules (Local Engine) ??
 
 interface DetectionRule {
   id: string;
@@ -245,13 +245,13 @@ serveAgent(async (_req, ctx) => {
   const preparedNetwork = networkEvents.length ? prepareEvents(networkEvents) : [];
   const preparedRegistry = registryEvents.length ? prepareEvents(registryEvents) : [];
 
-  // ── Run detections INLINE for real-time alerting ──
+  // ?? Run detections INLINE for real-time alerting ??
   if (preparedProcess.length) allDetections.push(...runDetections(preparedProcess, 'process'));
   if (preparedFile.length) allDetections.push(...runDetections(preparedFile, 'file'));
   if (preparedNetwork.length) allDetections.push(...runDetections(preparedNetwork, 'network'));
   if (preparedRegistry.length) allDetections.push(...runDetections(preparedRegistry, 'registry'));
 
-  // ── EVENT BUFFER: Single-table write instead of 4 separate inserts ──
+  // ?? EVENT BUFFER: Single-table write instead of 4 separate inserts ??
   // This reduces DB write pressure by ~75% (1 INSERT vs 4 INSERTs)
   // The flush-event-buffer worker distributes to final tables in batch
   const bufferRows: { tenant_id: string; agent_id: string; event_category: string; payload: any }[] = [];
@@ -299,7 +299,7 @@ serveAgent(async (_req, ctx) => {
     await triggerBufferFlush();
   }
 
-  // ── Insert Detection Events (still direct — these are low volume, high priority) ──
+  // ?? Insert Detection Events (still direct ? these are low volume, high priority) ??
   if (allDetections.length > 0) {
     const detRows = allDetections.map(d => ({
       ...d,

@@ -227,7 +227,7 @@ serve(async (req) => {
             channel: 'in_app',
             type: 'report',
             tenant_id: tenant.id,
-            subject: `Relatório Semanal de Segurança - ${tenant.name}`,
+            subject: `Relatorio Semanal de Seguranca - ${tenant.name}`,
             message: executiveSummary,
             severity: 'info',
             metadata: {
@@ -320,34 +320,34 @@ function generateExecutiveSummary(metrics: WeeklyMetrics, tenantName: string): s
     ? Math.round((metrics.agents.active / metrics.agents.total) * 100) 
     : 0;
 
-  let status = '🟢 SEGURO';
+  let status = '? SEGURO';
   if (criticalVulns > 0 || metrics.security_events.critical > 5) {
-    status = '🔴 ATENÇÃO CRÍTICA';
+    status = '? ATENCAO CRITICA';
   } else if (highVulns > 3 || metrics.agents.offline > 5) {
-    status = '🟡 REQUER ATENÇÃO';
+    status = '? REQUER ATENCAO';
   }
 
   return `
-📊 RELATÓRIO SEMANAL DE SEGURANÇA - ${tenantName}
+? RELATORIO SEMANAL DE SEGURANCA - ${tenantName}
 
 ${status}
 
-📈 RESUMO EXECUTIVO:
+? RESUMO EXECUTIVO:
 
-• Playbooks Executados: ${metrics.playbooks_executed} (${metrics.playbooks_auto_executed} automáticos)
-• Vulnerabilidades Críticas: ${criticalVulns} | Altas: ${highVulns}
-• Tentativas Bloqueadas: ${metrics.blocked_attempts}
-• Taxa de Proteção: ${protectionRate}% (${metrics.agents.active}/${metrics.agents.total} agentes)
+? Playbooks Executados: ${metrics.playbooks_executed} (${metrics.playbooks_auto_executed} automaticos)
+? Vulnerabilidades Criticas: ${criticalVulns} | Altas: ${highVulns}
+? Tentativas Bloqueadas: ${metrics.blocked_attempts}
+? Taxa de Protecao: ${protectionRate}% (${metrics.agents.active}/${metrics.agents.total} agentes)
 
-🔐 APROVAÇÕES:
-• Aprovadas: ${metrics.approval_requests.approved}
-• Rejeitadas: ${metrics.approval_requests.rejected}
-• Expiradas: ${metrics.approval_requests.expired}
+? APROVACOES:
+? Aprovadas: ${metrics.approval_requests.approved}
+? Rejeitadas: ${metrics.approval_requests.rejected}
+? Expiradas: ${metrics.approval_requests.expired}
 
-📊 TENDÊNCIA DE RISCO:
-• Score Atual: ${metrics.risk_score.current}
-• Score Anterior: ${metrics.risk_score.previous}
-• Tendência: ${metrics.risk_score.trend === 'up' ? '⬆️ Aumentou' : metrics.risk_score.trend === 'down' ? '⬇️ Diminuiu' : '➡️ Estável'}
+? TENDENCIA DE RISCO:
+? Score Atual: ${metrics.risk_score.current}
+? Score Anterior: ${metrics.risk_score.previous}
+? Tendencia: ${metrics.risk_score.trend === 'up' ? '?? Aumentou' : metrics.risk_score.trend === 'down' ? '?? Diminuiu' : '?? Estavel'}
 
 ---
 Gerado automaticamente pelo CyberShield Security Platform

@@ -1,12 +1,12 @@
 -- =============================================================================
--- CORREÇÃO CRÍTICA: auto_set_tenant_id para operações de service_role
+-- CORRECAO CRITICA: auto_set_tenant_id para operacoes de service_role
 -- =============================================================================
--- Problema: Edge Functions com service_role não têm JWT com active_tenant_id,
+-- Problema: Edge Functions com service_role nao tem JWT com active_tenant_id,
 -- causando falha em todos os triggers que inserem em tabelas com este trigger.
--- Solução: Aceitar tenant_id explícito e não falhar para service_role.
+-- Solucao: Aceitar tenant_id explicito e nao falhar para service_role.
 -- =============================================================================
 
--- Modificar função para ser mais permissiva com operações de sistema
+-- Modificar funcao para ser mais permissiva com operacoes de sistema
 CREATE OR REPLACE FUNCTION public.auto_set_tenant_id()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -14,7 +14,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $function$
 BEGIN
-  -- Se tenant_id já foi fornecido explicitamente, usar sem modificação
+  -- Se tenant_id ja foi fornecido explicitamente, usar sem modificacao
   IF NEW.tenant_id IS NOT NULL THEN
     RETURN NEW;
   END IF;
@@ -28,8 +28,8 @@ BEGIN
   END IF;
   
   -- Se ainda NULL, verificar contexto
-  -- Para operações de sistema (triggers cascateados, service_role), 
-  -- permitir NULL apenas para tabelas não-críticas
+  -- Para operacoes de sistema (triggers cascateados, service_role), 
+  -- permitir NULL apenas para tabelas nao-criticas
   IF current_setting('role', true) IN ('service_role', 'postgres', 'supabase_admin') 
      OR current_user IN ('postgres', 'supabase_admin') THEN
     -- Logar com sampling para evitar flood (1% das vezes)
@@ -38,25 +38,25 @@ BEGIN
         TG_TABLE_NAME, current_user;
     END IF;
     
-    -- Tabelas críticas DEVEM ter tenant_id explícito
+    -- Tabelas criticas DEVEM ter tenant_id explicito
     IF TG_TABLE_NAME IN ('security_logs', 'audit_logs') THEN
       RAISE EXCEPTION 'tenant_id must be provided explicitly for % (system operation)', TG_TABLE_NAME
         USING ERRCODE = '23502';
     END IF;
     
-    -- Para outras tabelas, permitir NULL em operações de sistema
-    -- (a aplicação deve garantir que tenant_id é passado quando necessário)
+    -- Para outras tabelas, permitir NULL em operacoes de sistema
+    -- (a aplicacao deve garantir que tenant_id e passado quando necessario)
     RETURN NEW;
   END IF;
   
-  -- Para usuários normais, tenant_id é obrigatório
+  -- Para usuarios normais, tenant_id e obrigatorio
   RAISE EXCEPTION 'tenant_id cannot be NULL and no active tenant found in JWT for table %', TG_TABLE_NAME
     USING ERRCODE = '23502';
 END;
 $function$;
 
 -- =============================================================================
--- CORREÇÃO: check_job_quota - Garantir tenant_id explícito em security_logs
+-- CORRECAO: check_job_quota - Garantir tenant_id explicito em security_logs
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION public.check_job_quota()
@@ -69,7 +69,7 @@ DECLARE
   v_max_queued INTEGER;
   v_current_queued INTEGER;
 BEGIN
-  -- Buscar limite customizado ou usar padrão
+  -- Buscar limite customizado ou usar padrao
   SELECT COALESCE(tjq.max_queued_jobs, 100)
   INTO v_max_queued
   FROM tenant_job_quotas tjq
@@ -88,7 +88,7 @@ BEGIN
   
   -- Verificar quota
   IF v_current_queued >= v_max_queued THEN
-    -- CORREÇÃO: Inserir com tenant_id EXPLÍCITO (usando o tenant_id do job)
+    -- CORRECAO: Inserir com tenant_id EXPLICITO (usando o tenant_id do job)
     INSERT INTO security_logs (
       tenant_id,
       ip_address,
@@ -98,7 +98,7 @@ BEGIN
       blocked,
       details
     ) VALUES (
-      NEW.tenant_id,  -- IMPORTANTE: tenant_id explícito do job
+      NEW.tenant_id,  -- IMPORTANTE: tenant_id explicito do job
       'system',
       'job_insert',
       'quota_exceeded',

@@ -1,25 +1,25 @@
-// Native Deno.serve() used — no external HTTP server import needed
+// Native Deno.serve() used ? no external HTTP server import needed
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsSecurityHeaders, secureJsonResponse, secureErrorResponse, secureCorsPreflightResponse } from '../_shared/security-headers.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 
 /**
- * Evaluate Automation Rules — Enterprise-Grade Engine v2
+ * Evaluate Automation Rules ? Enterprise-Grade Engine v2
  * 
- * Pipeline: Event → Rule Evaluator → Dependency Check → Risk Engine → Cooldown →
- *           Rate Limit → Blast Radius (Adaptive) → Circuit Breaker → Approval Gate →
- *           Distributed Lock → Idempotency Check → Execution → Audit + Risk Score
+ * Pipeline: Event ? Rule Evaluator ? Dependency Check ? Risk Engine ? Cooldown ?
+ *           Rate Limit ? Blast Radius (Adaptive) ? Circuit Breaker ? Approval Gate ?
+ *           Distributed Lock ? Idempotency Check ? Execution ? Audit + Risk Score
  *
  * v2 Additions:
- *   🔥 1. Rule Dependency Graph (anti-loop)
- *   🔥 2. Adaptive Blast Radius (severity + business hours)
- *   🔥 3. Tenant Risk Score (recalculated per cycle)
- *   🔥 4. Idempotency Keys (deduplication)
- *   🔥 5. Distributed Locking (advisory locks per rule)
+ *   ? 1. Rule Dependency Graph (anti-loop)
+ *   ? 2. Adaptive Blast Radius (severity + business hours)
+ *   ? 3. Tenant Risk Score (recalculated per cycle)
+ *   ? 4. Idempotency Keys (deduplication)
+ *   ? 5. Distributed Locking (advisory locks per rule)
  */
 
-// ── Helpers ──
+// ?? Helpers ??
 
 function evaluateOperator(value: number, operator: string, threshold: number): boolean {
   switch (operator) {
@@ -48,14 +48,14 @@ function matchesScope(rule: any, agentId: string): boolean {
 
 /**
  * Generate a deterministic idempotency key for an agent+rule+time_window combination.
- * Window is 1 hour — same key means "already executed this hour".
+ * Window is 1 hour ? same key means "already executed this hour".
  */
 function generateIdempotencyKey(agentId: string, ruleId: string): string {
   const hourBucket = Math.floor(Date.now() / (60 * 60 * 1000));
   return `${ruleId}:${agentId}:${hourBucket}`;
 }
 
-// ── Enterprise Protection Pipeline ──
+// ?? Enterprise Protection Pipeline ??
 
 interface ProtectionResult {
   allowed: boolean;
@@ -206,7 +206,7 @@ async function tryAcquireRuleLock(supabase: any, ruleId: string): Promise<boolea
     const { data } = await supabase.rpc('try_acquire_rule_lock', { p_rule_id: ruleId });
     return data === true;
   } catch {
-    return true; // Fail open — don't block on lock failure
+    return true; // Fail open ? don't block on lock failure
   }
 }
 
@@ -339,7 +339,7 @@ async function createApprovalRequest(
   }
 }
 
-// ── Action Executors ──
+// ?? Action Executors ??
 
 async function executeAction(
   supabase: any,
@@ -369,7 +369,7 @@ async function executeAction(
 
       if (alertError) throw new Error(alertError.message || JSON.stringify(alertError));
 
-      // ── SOAR Bridge ──
+      // ?? SOAR Bridge ??
       const triggerTypeMap: Record<string, string> = {
         'suspicious_process': 'suspicious_process',
         'agent_offline': 'agent_offline',
@@ -455,7 +455,7 @@ async function executeAction(
   }
 }
 
-// ── Trigger Evaluators ──
+// ?? Trigger Evaluators ??
 
 interface TriggerCandidate {
   agentId: string;
@@ -635,7 +635,7 @@ async function evaluateSecurityCheck(
             agent_name: agent.agent_name,
             av_engine: av?.engine_name || 'none',
             severity: 'critical',
-            message: `Antivírus ${av ? 'inativo' : 'não detectado'} no agente '${agent.agent_name}'`,
+            message: `Antivirus ${av ? 'inativo' : 'nao detectado'} no agente '${agent.agent_name}'`,
           },
         });
       }
@@ -697,7 +697,7 @@ async function evaluateSecurityCheck(
           device_id: usb.device_id,
           device_name: usb.device_name,
           severity: 'high',
-          message: `USB não autorizado (${usb.device_name || usb.device_id}) no agente '${agent?.agent_name}'`,
+          message: `USB nao autorizado (${usb.device_name || usb.device_id}) no agente '${agent?.agent_name}'`,
         },
       });
     }
@@ -728,7 +728,7 @@ async function evaluateSecurityCheck(
           vuln_count: agentVulnList.length,
           top_vulns: agentVulnList.slice(0, 3).map((v: Record<string, unknown>) => v.title),
           severity: 'critical',
-          message: `${agentVulnList.length} vulnerabilidade(s) crítica(s) no agente '${agent?.agent_name}'`,
+          message: `${agentVulnList.length} vulnerabilidade(s) critica(s) no agente '${agent?.agent_name}'`,
         },
       });
     }
@@ -737,7 +737,7 @@ async function evaluateSecurityCheck(
   return candidates;
 }
 
-// ── Per-Tenant Evaluation with Enterprise Pipeline v2 ──
+// ?? Per-Tenant Evaluation with Enterprise Pipeline v2 ??
 
 async function evaluateForTenant(
   supabase: any,
@@ -763,7 +763,7 @@ async function evaluateForTenant(
   const totalAgents = agents.length;
   const agentIds = agents.map((a: Record<string, unknown>) => a.id);
 
-  // ─── P0: GLOBAL CIRCUIT BREAKER ───
+  // ??? P0: GLOBAL CIRCUIT BREAKER ???
   // Check fleet-wide impact before processing any rules
   try {
     const { data: globalBreaker } = await supabase.rpc('check_global_circuit_breaker', {
@@ -779,7 +779,7 @@ async function evaluateForTenant(
     logger.warn('[Enterprise Engine v2] Global circuit breaker check failed (fail-open):', e);
   }
 
-  // ─── P0: TENANT DAILY QUOTA ───
+  // ??? P0: TENANT DAILY QUOTA ???
   try {
     const { data: quota } = await supabase.rpc('check_tenant_automation_quota', { p_tenant_id: tenantId });
     if (quota && !quota.allowed) {
@@ -821,7 +821,7 @@ async function evaluateForTenant(
       continue;
     }
 
-    // 🔥 Layer 6: Distributed Lock — one evaluator per rule at a time
+    // ? Layer 6: Distributed Lock ? one evaluator per rule at a time
     const lockAcquired = await tryAcquireRuleLock(supabase, rule.id);
     if (!lockAcquired) {
       totalDecisions++;
@@ -867,7 +867,7 @@ async function evaluateForTenant(
         continue;
       }
 
-      // ─── EXECUTE ACTION ───
+      // ??? EXECUTE ACTION ???
       const startTime = Date.now();
       const { status, result } = await executeAction(supabase, rule, candidate.agentId, tenantId, candidate.triggerData, agents);
       const execTimeMs = Date.now() - startTime;
@@ -926,7 +926,7 @@ async function evaluateForTenant(
     }
   }
 
-  // 🔥 Recalculate tenant risk score at end of cycle
+  // ? Recalculate tenant risk score at end of cycle
   let riskScore: number | undefined;
   try {
     const { data: score } = await supabase.rpc('recalculate_tenant_risk_score', { p_tenant_id: tenantId });
@@ -938,7 +938,7 @@ async function evaluateForTenant(
   return { evaluated: rules.length, triggered: totalTriggered, blocked: totalBlocked, decisions: totalDecisions, risk_score: riskScore };
 }
 
-// ── Main Handler ──
+// ?? Main Handler ??
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {

@@ -1,12 +1,12 @@
 /**
  * MITRE ATT&CK Rule Sync Service
- * AGT-019: Pipeline automático de atualização de regras MITRE
+ * AGT-019: Pipeline automatico de atualizacao de regras MITRE
  * 
  * Endpoints:
- *   POST / (action=sync)  — Sincroniza regras do MITRE CTI GitHub
- *   POST / (action=rules) — Lista regras ativas
- *   POST / (action=version) — Versão atual
- *   POST / (action=stale)   — Regras desatualizadas
+ *   POST / (action=sync)  ? Sincroniza regras do MITRE CTI GitHub
+ *   POST / (action=rules) ? Lista regras ativas
+ *   POST / (action=version) ? Versao atual
+ *   POST / (action=stale)   ? Regras desatualizadas
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
@@ -44,13 +44,13 @@ Deno.serve(async (req: Request) => {
     const body = await req.json().catch(() => ({}));
     const action = body.action || 'rules';
 
-    // ── SYNC ──────────────────────────────────────────
+    // ?? SYNC ??????????????????????????????????????????
     if (action === 'sync') {
       const result = await syncMitreRules(supabase);
       return json(result);
     }
 
-    // ── LIST RULES ────────────────────────────────────
+    // ?? LIST RULES ????????????????????????????????????
     if (action === 'rules') {
       const { data, error } = await supabase
         .from('mitre_rules')
@@ -61,7 +61,7 @@ Deno.serve(async (req: Request) => {
       return json({ rules: data ?? [] });
     }
 
-    // ── VERSION ───────────────────────────────────────
+    // ?? VERSION ???????????????????????????????????????
     if (action === 'version') {
       const { data } = await supabase
         .from('mitre_metadata')
@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
       return json({ metadata: data ?? { version: 'unknown', synced_at: null } });
     }
 
-    // ── STALE CHECK ───────────────────────────────────
+    // ?? STALE CHECK ???????????????????????????????????
     if (action === 'stale') {
       const { data } = await supabase
         .from('mitre_rules')
@@ -90,7 +90,7 @@ Deno.serve(async (req: Request) => {
   }
 });
 
-// ── Helpers ────────────────────────────────────────────
+// ?? Helpers ????????????????????????????????????????????
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -101,7 +101,7 @@ function json(data: unknown, status = 200) {
 
 async function syncMitreRules(supabase: ReturnType<typeof createClient>) {
   const t0 = Date.now();
-  logger.info('[mitre-sync] Fetching MITRE Enterprise ATT&CK…');
+  logger.info('[mitre-sync] Fetching MITRE Enterprise ATT&CK?');
 
   const resp = await fetch(MITRE_ENTERPRISE_URL);
   if (!resp.ok) throw new Error(`MITRE fetch failed: ${resp.status}`);

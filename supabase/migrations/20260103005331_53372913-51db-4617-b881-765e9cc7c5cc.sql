@@ -2,7 +2,7 @@
 -- CICLO 4: Regra de Reentrada de Agentes (Quarentena)
 -- =====================================================
 
--- Adicionar colunas de revalidação na tabela agents
+-- Adicionar colunas de revalidacao na tabela agents
 ALTER TABLE agents 
 ADD COLUMN IF NOT EXISTS requires_revalidation BOOLEAN DEFAULT false,
 ADD COLUMN IF NOT EXISTS revalidation_reason TEXT,
@@ -15,13 +15,13 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  -- Se agente está voltando de offline para online
+  -- Se agente esta voltando de offline para online
   IF OLD.status = 'offline' AND NEW.status = 'online' THEN
     -- Se ficou offline por mais de 7 dias
     IF OLD.offline_detected_at IS NOT NULL 
        AND OLD.offline_detected_at < NOW() - INTERVAL '7 days' THEN
       NEW.requires_revalidation := true;
-      NEW.revalidation_reason := 'Offline por mais de 7 dias - requer validação antes de processar jobs críticos';
+      NEW.revalidation_reason := 'Offline por mais de 7 dias - requer validacao antes de processar jobs criticos';
       NEW.revalidation_required_at := NOW();
     END IF;
   END IF;
@@ -36,7 +36,7 @@ FOR EACH ROW
 WHEN (OLD.status IS DISTINCT FROM NEW.status)
 EXECUTE FUNCTION fn_agent_reentry_check();
 
--- Criar alerta automático quando agente requer revalidação
+-- Criar alerta automatico quando agente requer revalidacao
 CREATE OR REPLACE FUNCTION fn_alert_agent_reentry()
 RETURNS TRIGGER 
 SECURITY DEFINER
@@ -50,8 +50,8 @@ BEGIN
       NEW.tenant_id, 
       'medium', 
       'agent_reentry_validation',
-      'Agente requer revalidação',
-      format('O agente %s ficou offline por período prolongado e requer validação antes de processar jobs críticos.', NEW.agent_name),
+      'Agente requer revalidacao',
+      format('O agente %s ficou offline por periodo prolongado e requer validacao antes de processar jobs criticos.', NEW.agent_name),
       NEW.id,
       NOW()
     );

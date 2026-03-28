@@ -1,4 +1,4 @@
--- Tabela para rastrear execuções de relatórios agendados
+-- Tabela para rastrear execucoes de relatorios agendados
 CREATE TABLE public.report_executions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -15,7 +15,7 @@ CREATE TABLE public.report_executions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Índices para performance
+-- Indices para performance
 CREATE INDEX idx_report_executions_tenant_id ON public.report_executions(tenant_id);
 CREATE INDEX idx_report_executions_scheduled_report_id ON public.report_executions(scheduled_report_id);
 CREATE INDEX idx_report_executions_created_at ON public.report_executions(created_at DESC);
@@ -24,7 +24,7 @@ CREATE INDEX idx_report_executions_status ON public.report_executions(status);
 -- Habilitar RLS
 ALTER TABLE public.report_executions ENABLE ROW LEVEL SECURITY;
 
--- Políticas RLS usando função multi-tenant existente
+-- Politicas RLS usando funcao multi-tenant existente
 CREATE POLICY "report_executions_select_multitenant" ON public.report_executions
   FOR SELECT TO authenticated
   USING (public.user_has_tenant_access(tenant_id));

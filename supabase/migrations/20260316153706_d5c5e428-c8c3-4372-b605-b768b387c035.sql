@@ -41,7 +41,7 @@ BEGIN
         status = 'online',
         archived_at = NULL,
         archived_reason = NULL,
-        agent_state_reason = 'Auto-reativado via heartbeat após ' || v_days_archived || ' dias arquivado',
+        agent_state_reason = 'Auto-reativado via heartbeat apos ' || v_days_archived || ' dias arquivado',
         agent_state_changed_at = now(),
         last_heartbeat = now()
     WHERE id = p_agent_id AND tenant_id = p_tenant_id;
@@ -50,16 +50,16 @@ BEGIN
     v_alert_severity := 'info';
     v_alert_title := 'Agente reativado automaticamente';
     v_alert_message := format(
-      'O agente "%s" (%s) foi reativado automaticamente após enviar heartbeat. Estava arquivado há %s dias.',
+      'O agente "%s" (%s) foi reativado automaticamente apos enviar heartbeat. Estava arquivado ha %s dias.',
       v_agent.agent_name, COALESCE(v_agent.hostname, 'N/A'), v_days_archived
     );
     v_requires_decision := false;
   ELSE
     v_action := 'alert_only';
     v_alert_severity := 'warning';
-    v_alert_title := 'Heartbeat de agente arquivado (requer aprovação)';
+    v_alert_title := 'Heartbeat de agente arquivado (requer aprovacao)';
     v_alert_message := format(
-      'O agente "%s" (%s) enviou heartbeat mas está arquivado há %s dias. Reativação requer aprovação manual.',
+      'O agente "%s" (%s) enviou heartbeat mas esta arquivado ha %s dias. Reativacao requer aprovacao manual.',
       v_agent.agent_name, COALESCE(v_agent.hostname, 'N/A'), v_days_archived
     );
     v_requires_decision := true;

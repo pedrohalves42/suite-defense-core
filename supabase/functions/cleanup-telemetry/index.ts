@@ -1,5 +1,5 @@
 /**
- * cleanup-telemetry — Scheduled cleanup & summarization of telemetry data.
+ * cleanup-telemetry ? Scheduled cleanup & summarization of telemetry data.
  * 
  * Auth: Internal only (cron/service_role) via assertInternalCaller
  */

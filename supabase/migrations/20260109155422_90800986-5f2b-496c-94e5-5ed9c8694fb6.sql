@@ -1,5 +1,5 @@
 -- =============================================================================
--- ADR-028: Eliminação de Políticas Permissivas Residuais
+-- ADR-028: Eliminacao de Politicas Permissivas Residuais
 -- =============================================================================
 
 -- 1. ai_rejected_decisions - remover policy duplicada public + true

@@ -1,5 +1,5 @@
 -- =============================================================================
--- PACOTE FINAL DE CORREÇÕES - Com Tabela Correta
+-- PACOTE FINAL DE CORRECOES - Com Tabela Correta
 -- =============================================================================
 
 -- =============================================================================
@@ -67,7 +67,7 @@ $$;
 GRANT EXECUTE ON FUNCTION public.detect_critical_failure_pattern(integer, integer) TO service_role;
 
 -- =============================================================================
--- FASE A2: Dropar AMBAS as versões de check_offline_agents_for_playbook
+-- FASE A2: Dropar AMBAS as versoes de check_offline_agents_for_playbook
 -- =============================================================================
 
 DROP FUNCTION IF EXISTS public.check_offline_agents_for_playbook();
@@ -110,10 +110,10 @@ GRANT EXECUTE ON FUNCTION public.check_offline_agents_for_playbook(uuid) TO serv
 -- Dropar o trigger existente na tabela correta
 DROP TRIGGER IF EXISTS tr_collect_task_evidence ON public.tasks;
 
--- Dropar a função trigger (sem argumentos)
+-- Dropar a funcao trigger (sem argumentos)
 DROP FUNCTION IF EXISTS public.collect_task_evidence();
 
--- Recriar a função trigger corrigida
+-- Recriar a funcao trigger corrigida
 CREATE FUNCTION public.collect_task_evidence()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -269,7 +269,7 @@ TO service_role
 WITH CHECK (true);
 
 -- =============================================================================
--- COMENTÁRIOS
+-- COMENTARIOS
 -- =============================================================================
 
 COMMENT ON FUNCTION public.detect_critical_failure_pattern(integer, integer) IS 'Fixed: uses exit_code instead of error_code';

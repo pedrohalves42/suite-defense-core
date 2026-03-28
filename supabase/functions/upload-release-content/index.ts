@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
     }
 
     // SAFETY: Version mismatch guard
-    const headerMatch = trimmed.match(/CyberShield\s+Agent\s*[-–]\s*\w+\s+v?([\d]+\.[\d]+\.[\d]+)/i);
+    const headerMatch = trimmed.match(/CyberShield\s+Agent\s*[-?]\s*\w+\s+v?([\d]+\.[\d]+\.[\d]+)/i);
     if (headerMatch) {
       const scriptVersion = headerMatch[1];
       const targetVersion = version.replace(/^v/, '');

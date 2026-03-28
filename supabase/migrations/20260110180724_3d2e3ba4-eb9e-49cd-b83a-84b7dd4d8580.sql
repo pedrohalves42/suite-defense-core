@@ -1,6 +1,6 @@
 -- ============================================================================
--- AUDITORIA PROFUNDA: Correções CRITICAL + HIGH
--- Dr. Isaac K. Vellum — 2026-01-10
+-- AUDITORIA PROFUNDA: Correcoes CRITICAL + HIGH
+-- Dr. Isaac K. Vellum ? 2026-01-10
 -- ============================================================================
 
 -- ============================================================================
@@ -14,7 +14,7 @@ SECURITY DEFINER
 SET search_path TO 'public'
 AS $$
 BEGIN
-  -- Criar task para TODA falha não-transient (CORRIGIDO)
+  -- Criar task para TODA falha nao-transient (CORRIGIDO)
   IF COALESCE(NEW.failure_class, 'UNKNOWN') NOT IN ('TRANSIENT', 'EXPECTED_DROP') THEN
     INSERT INTO public.tasks (
       tenant_id, source_type, source_id, title, description, severity, 
@@ -25,7 +25,7 @@ BEGIN
       'dlq',
       NEW.id,
       '[DLQ] ' || COALESCE(NEW.job_type, 'unknown') || ': ' || COALESCE(NEW.failure_class, 'UNKNOWN'),
-      'Item na Dead Letter Queue requer revisão.' ||
+      'Item na Dead Letter Queue requer revisao.' ||
       E'\n\nClasse de Falha: ' || COALESCE(NEW.failure_class, 'UNKNOWN') ||
       E'\nErro: ' || COALESCE(NEW.error_message, 'Sem mensagem') ||
       E'\nAgente: ' || COALESCE(NEW.agent_name, 'N/A') ||
@@ -95,7 +95,7 @@ WHERE dlq.failure_class NOT IN ('TRANSIENT', 'EXPECTED_DROP')
 ON CONFLICT DO NOTHING;
 
 -- ============================================================================
--- CRITICAL-004: RLS Policy para partição agent_system_metrics_2026_02
+-- CRITICAL-004: RLS Policy para particao agent_system_metrics_2026_02
 -- ============================================================================
 
 DO $$
@@ -133,7 +133,7 @@ WHERE NOT EXISTS (
 ON CONFLICT DO NOTHING;
 
 -- ============================================================================
--- HIGH-001: Cleanup approval_requests órfãos (chain_id IS NULL)
+-- HIGH-001: Cleanup approval_requests orfaos (chain_id IS NULL)
 -- Usando coluna correta (approved_at no lugar de resolved_at)
 -- ============================================================================
 
@@ -145,8 +145,8 @@ WHERE chain_id IS NULL
   AND status = 'pending';
 
 -- ============================================================================
--- Adicionar comentário de auditoria
+-- Adicionar comentario de auditoria
 -- ============================================================================
 
 COMMENT ON FUNCTION public.create_task_from_dlq_item() IS 
-'AUDIT 2026-01-10: Corrigido para criar task para TODA falha não-transient. Antes só criava para flagged_suspicious=true OU retry_count>=3.';
+'AUDIT 2026-01-10: Corrigido para criar task para TODA falha nao-transient. Antes so criava para flagged_suspicious=true OU retry_count>=3.';

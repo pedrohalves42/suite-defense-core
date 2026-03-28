@@ -1,9 +1,9 @@
-# CyberShield Agent - Reinstalação com Preservação de Credenciais
+# CyberShield Agent - Reinstalacao com Preservacao de Credenciais
 # Version: 1.0.0
-# Descrição: Reinstala o agente preservando identidade, credenciais e histórico
+# Descricao: Reinstala o agente preservando identidade, credenciais e historico
 #
 # USO:
-#   Automático (detecta credenciais do script existente):
+#   Automatico (detecta credenciais do script existente):
 #     irm https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/get-reinstall-preserve-script | iex
 #
 #   Manual (fornece credenciais):
@@ -45,16 +45,16 @@ function Get-HmacSha256 {
 
 Write-Host ""
 Write-Host "========================================================" -ForegroundColor Cyan
-Write-Host "  CyberShield Agent - Reinstalação Preservando Identidade" -ForegroundColor Cyan
+Write-Host "  CyberShield Agent - Reinstalacao Preservando Identidade" -ForegroundColor Cyan
 Write-Host "  Version: 1.0.0" -ForegroundColor Cyan
 Write-Host "========================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Verificar se é Administrador
+# Verificar se e Administrador
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     Write-Status "Este script precisa ser executado como Administrador!" "ERROR"
-    Write-Host "   Clique com botão direito no PowerShell e selecione 'Executar como Administrador'" -ForegroundColor Yellow
+    Write-Host "   Clique com botao direito no PowerShell e selecione 'Executar como Administrador'" -ForegroundColor Yellow
     exit 1
 }
 
@@ -84,7 +84,7 @@ if ($existingScripts -and $existingScripts.Count -gt 0) {
         Write-Status "Nome do agente detectado: $detectedAgentName" "SUCCESS"
     }
     
-    # Ler conteúdo e extrair credenciais
+    # Ler conteudo e extrair credenciais
     $scriptContent = Get-Content $existingScript.FullName -Raw
     
     # Extrair AgentToken
@@ -108,7 +108,7 @@ if ($existingScripts -and $existingScripts.Count -gt 0) {
     Write-Status "Nenhum script existente encontrado em $InstallDir" "WARN"
 }
 
-# Usar parâmetros fornecidos ou detectados
+# Usar parametros fornecidos ou detectados
 if (-not $AgentName -and $detectedAgentName) { $AgentName = $detectedAgentName }
 if (-not $AgentToken -and $detectedAgentToken) { $AgentToken = $detectedAgentToken }
 if (-not $HmacSecret -and $detectedHmacSecret) { $HmacSecret = $detectedHmacSecret }
@@ -118,12 +118,12 @@ if (-not $ServerUrl -and $detectedServerUrl) { $ServerUrl = $detectedServerUrl }
 if (-not $AgentName -or -not $AgentToken -or -not $HmacSecret) {
     Write-Status "Credenciais incompletas!" "ERROR"
     Write-Host ""
-    Write-Host "Credenciais necessárias:" -ForegroundColor Yellow
+    Write-Host "Credenciais necessarias:" -ForegroundColor Yellow
     Write-Host "  - AgentName:  $(if($AgentName){'OK'}else{'FALTANDO'})" -ForegroundColor $(if($AgentName){'Green'}else{'Red'})
     Write-Host "  - AgentToken: $(if($AgentToken){'OK'}else{'FALTANDO'})" -ForegroundColor $(if($AgentToken){'Green'}else{'Red'})
     Write-Host "  - HmacSecret: $(if($HmacSecret){'OK'}else{'FALTANDO'})" -ForegroundColor $(if($HmacSecret){'Green'}else{'Red'})
     Write-Host ""
-    Write-Host "Execute com parâmetros manuais:" -ForegroundColor Yellow
+    Write-Host "Execute com parametros manuais:" -ForegroundColor Yellow
     Write-Host '  .\reinstall-agent-preserve.ps1 -AgentName "nome" -AgentToken "uuid" -HmacSecret "hex64"' -ForegroundColor Gray
     exit 1
 }
@@ -136,10 +136,10 @@ Write-Host "  HmacSecret: $($HmacSecret.Substring(0,8))..." -ForegroundColor Whi
 Write-Host "  ServerUrl:  $ServerUrl" -ForegroundColor White
 
 # ============================================================
-# FASE 2: Parar Serviços
+# FASE 2: Parar Servicos
 # ============================================================
 Write-Host ""
-Write-Status "=== FASE 2/6: Parar Serviços ===" "INFO"
+Write-Status "=== FASE 2/6: Parar Servicos ===" "INFO"
 
 # Parar Scheduled Task
 $tasks = Get-ScheduledTask -TaskName "CyberShield*" -ErrorAction SilentlyContinue
@@ -186,7 +186,7 @@ if ($existingScript) {
 Write-Host ""
 Write-Status "=== FASE 4/6: Baixar Script Atualizado ===" "INFO"
 
-# Preparar requisição HMAC
+# Preparar requisicao HMAC
 $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds().ToString()
 $nonce = [Guid]::NewGuid().ToString()
 $method = "GET"
@@ -217,19 +217,19 @@ try {
     
     if (-not $response.script_content -and -not $response.script_content_base64) {
         if ($response.message -eq "Already up to date") {
-            Write-Status "Agente já está na versão mais recente: $($response.current_version)" "SUCCESS"
-            Write-Status "Reinstalação continuará com o script existente..." "INFO"
+            Write-Status "Agente ja esta na versao mais recente: $($response.current_version)" "SUCCESS"
+            Write-Status "Reinstalacao continuara com o script existente..." "INFO"
             
             # Usar script existente
             if ($existingScript) {
                 $newScriptContent = Get-Content $existingScript.FullName -Raw
                 $newVersion = $response.current_version
             } else {
-                Write-Status "Nenhum script disponível para reinstalar" "ERROR"
+                Write-Status "Nenhum script disponivel para reinstalar" "ERROR"
                 exit 1
             }
         } else {
-            Write-Status "Servidor não retornou script: $($response.message)" "ERROR"
+            Write-Status "Servidor nao retornou script: $($response.message)" "ERROR"
             exit 1
         }
     } else {
@@ -243,7 +243,7 @@ try {
         }
         $newVersion = $response.version
         
-        Write-Status "Versão baixada: $newVersion" "SUCCESS"
+        Write-Status "Versao baixada: $newVersion" "SUCCESS"
         Write-Status "Tamanho: $($newScriptContent.Length) bytes" "INFO"
         
         # Validar SHA256
@@ -257,8 +257,8 @@ try {
             if ($calculatedHash -eq $expectedHash) {
                 Write-Status "SHA256 validado com sucesso" "SUCCESS"
             } else {
-                Write-Status "SHA256 não corresponde! Esperado: $($expectedHash.Substring(0,16))... Calculado: $($calculatedHash.Substring(0,16))..." "WARN"
-                # Continuar mesmo assim - pode ser diferença de normalização
+                Write-Status "SHA256 nao corresponde! Esperado: $($expectedHash.Substring(0,16))... Calculado: $($calculatedHash.Substring(0,16))..." "WARN"
+                # Continuar mesmo assim - pode ser diferenca de normalizacao
             }
         }
     }
@@ -266,7 +266,7 @@ try {
     Write-Status "Falha ao baixar script: $($_.Exception.Message)" "ERROR"
     
     if ($existingScript) {
-        Write-Status "Usando script existente para reinstalação..." "WARN"
+        Write-Status "Usando script existente para reinstalacao..." "WARN"
         $newScriptContent = Get-Content $existingScript.FullName -Raw
         $newVersion = "unknown"
     } else {
@@ -287,7 +287,7 @@ foreach ($script in $oldScripts) {
     Write-Status "Removido: $($script.Name)" "INFO"
 }
 
-# Criar diretórios necessários
+# Criar diretorios necessarios
 if (-not (Test-Path $InstallDir)) {
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 }
@@ -319,7 +319,7 @@ Write-Status "=== FASE 6/6: Iniciar Agente ===" "INFO"
 Start-ScheduledTask -TaskName $fullTaskName
 Write-Status "Agente iniciado" "SUCCESS"
 
-# Aguardar inicialização
+# Aguardar inicializacao
 Start-Sleep -Seconds 5
 
 # Verificar status
@@ -332,7 +332,7 @@ if ($task) {
 $logFile = Join-Path $LogDir "agent.log"
 if (Test-Path $logFile) {
     Write-Host ""
-    Write-Host "Últimas linhas do log:" -ForegroundColor Cyan
+    Write-Host "Ultimas linhas do log:" -ForegroundColor Cyan
     Write-Host "-" * 60 -ForegroundColor Gray
     Get-Content $logFile -Tail 10 | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
     Write-Host "-" * 60 -ForegroundColor Gray
@@ -343,16 +343,16 @@ if (Test-Path $logFile) {
 # ============================================================
 Write-Host ""
 Write-Host "========================================================" -ForegroundColor Green
-Write-Host "  REINSTALAÇÃO CONCLUÍDA COM SUCESSO!" -ForegroundColor Green
+Write-Host "  REINSTALACAO CONCLUIDA COM SUCESSO!" -ForegroundColor Green
 Write-Host "========================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Resumo:" -ForegroundColor Cyan
 Write-Host "  Nome do Agente: $AgentName" -ForegroundColor White
-Write-Host "  Versão: $newVersion" -ForegroundColor White
+Write-Host "  Versao: $newVersion" -ForegroundColor White
 Write-Host "  Script: $newScriptPath" -ForegroundColor White
 Write-Host "  Task: $fullTaskName" -ForegroundColor White
 Write-Host ""
-Write-Host "Próximos passos:" -ForegroundColor Cyan
+Write-Host "Proximos passos:" -ForegroundColor Cyan
 Write-Host "  1. Verificar no dashboard se o agente aparece como 'online'" -ForegroundColor Gray
 Write-Host "  2. Verificar logs: Get-Content $logFile -Tail 50 -Wait" -ForegroundColor Gray
 Write-Host "  3. Verificar heartbeat no dashboard" -ForegroundColor Gray

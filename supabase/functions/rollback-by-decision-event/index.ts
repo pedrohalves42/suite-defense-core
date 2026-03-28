@@ -41,7 +41,7 @@ serveTenant(async (_req, ctx) => {
     );
   }
 
-  // 1. Fetch decision_event — filter by caller's tenant_id
+  // 1. Fetch decision_event ? filter by caller's tenant_id
   const { data: event, error } = await supabase
     .from('decision_events')
     .select('*')
@@ -92,7 +92,7 @@ serveTenant(async (_req, ctx) => {
     );
   }
 
-  // 3. Revert alert — filter by tenant_id
+  // 3. Revert alert ? filter by tenant_id
   const { error: revertError } = await supabase
     .from('system_alerts')
     .update({ resolved: false, resolved_at: null })

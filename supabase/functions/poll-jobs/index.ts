@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
     const hmacMinNormV = normalizeVersion(HMAC_REQUIRED_MIN_VERSION)
     const isModernAgent = !!(currentNormV && hmacMinNormV && currentNormV >= hmacMinNormV)
 
-    // TUNING: agentData now comes from initial join — zero extra queries
+    // TUNING: agentData now comes from initial join ? zero extra queries
     const agentData = {
       id: token.agent_id,
       tenant_id: (agent as Record<string, unknown>).tenant_id || null,
@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Rate limiting — TUNING: 120/min was absurd for 600s interval; 6/min allows burst retries
+    // Rate limiting ? TUNING: 120/min was absurd for 600s interval; 6/min allows burst retries
     const rateLimitResult = await checkRateLimit(supabase, agent.agent_name, 'poll-jobs', {
       maxRequests: 6,
       windowMinutes: 1,
@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
 
     // TUNING: agentData already fetched above (single query), reused here
 
-    // COMPAT: Detectar versão do agente para formato de resposta
+    // COMPAT: Detectar versao do agente para formato de resposta
     const agentVersionForCompat = agentData.agent_version || 'v0.0.0'
     const parseVersion = (v: string): number[] => {
       const m = v.replace(/^v/, '').match(/^(\d+)\.(\d+)\.(\d+)/)
@@ -194,8 +194,8 @@ Deno.serve(async (req) => {
       })
     }
 
-    // VALIDACAO CRITICA: Não entregar jobs para agentes que estavam offline >2h
-    // Alinhado com o guard de criação de jobs (create-job, seed-collection-jobs)
+    // VALIDACAO CRITICA: Nao entregar jobs para agentes que estavam offline >2h
+    // Alinhado com o guard de criacao de jobs (create-job, seed-collection-jobs)
     const now = new Date()
     const lastHeartbeat = agentData.last_heartbeat ? new Date(agentData.last_heartbeat) : null
     const hoursSinceHeartbeat = lastHeartbeat 
@@ -203,7 +203,7 @@ Deno.serve(async (req) => {
       : Infinity
 
     // Se estava offline >2h, primeiro apenas atualizar heartbeat e retornar vazio
-    // Na próxima poll (após heartbeat atualizado), jobs serão entregues normalmente
+    // Na proxima poll (apos heartbeat atualizado), jobs serao entregues normalmente
     if (hoursSinceHeartbeat > 2) {
       logger.warn('Agent was offline >2h, updating heartbeat but not delivering jobs yet', {
         agentName: agent.agent_name,
@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    // COST-OPT v4.1: Removido update de last_heartbeat aqui — já feito pelo heartbeat dedicado (10min)
+    // COST-OPT v4.1: Removido update de last_heartbeat aqui ? ja feito pelo heartbeat dedicado (10min)
     // Apenas atualizar last_used_at do token para tracking de uso
     await supabase
       .from('agent_tokens')
@@ -257,17 +257,17 @@ Deno.serve(async (req) => {
       )
     }
     
-    // P0-003: Usar RPC claim_jobs_for_agent para claiming atômico com locking
+    // P0-003: Usar RPC claim_jobs_for_agent para claiming atomico com locking
     // Isso previne race conditions e garante que apenas um processo pode reclamar cada job
-    // A RPC já filtra por expires_at > NOW() e já marca como 'delivered' atomicamente
-    // FASE 4: Agora também cria job_executions para trilha de auditoria imutável
+    // A RPC ja filtra por expires_at > NOW() e ja marca como 'delivered' atomicamente
+    // FASE 4: Agora tambem cria job_executions para trilha de auditoria imutavel
     interface ClaimedJob {
       job_id: string
       job_type: string
       payload: Record<string, unknown>
-      execution_id: string    // ID da execução (job_executions)
-      nonce: string           // Nonce único para esta execução
-      payload_hash: string    // SHA256 do payload para verificação
+      execution_id: string    // ID da execucao (job_executions)
+      nonce: string           // Nonce unico para esta execucao
+      payload_hash: string    // SHA256 do payload para verificacao
       expires_at: string
       // Hash Chain fields (P1.5)
       execution_index: number | null
@@ -295,7 +295,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    // LOG CRÍTICO: mostrar jobs reclamados atomicamente (com execution_id)
+    // LOG CRITICO: mostrar jobs reclamados atomicamente (com execution_id)
     logger.info('Jobs claimed atomically with executions', { 
       agentName: agent.agent_name,
       jobCount: jobs?.length ?? 0,
@@ -304,7 +304,7 @@ Deno.serve(async (req) => {
       executionIds: jobs?.map((j: ClaimedJob) => j.execution_id) ?? []
     })
 
-    // Filtro de validação (null, ID, type, payload, execution_id)
+    // Filtro de validacao (null, ID, type, payload, execution_id)
     const validJobs = (jobs || []).filter((job: ClaimedJob) => {
       if (!job) {
         logger.warn('NULL job detected, filtering out')
@@ -318,12 +318,12 @@ Deno.serve(async (req) => {
         logger.warn('Job without valid job_type', { jobId: job.job_id })
         return false
       }
-      // Payload pode ser {} mas não null/undefined
+      // Payload pode ser {} mas nao null/undefined
       if (job.payload === undefined || job.payload === null) {
         logger.warn('Job without payload', { jobId: job.job_id })
         return false
       }
-      // Execution ID é obrigatório na nova arquitetura
+      // Execution ID e obrigatorio na nova arquitetura
       if (!job.execution_id || typeof job.execution_id !== 'string') {
         logger.warn('Job without execution_id', { jobId: job.job_id })
         return false
@@ -336,7 +336,7 @@ Deno.serve(async (req) => {
       validJobIds: validJobs.map((j: ClaimedJob) => j.job_id)
     })
 
-    // Se não há jobs válidos, retornar array vazio imediatamente
+    // Se nao ha jobs validos, retornar array vazio imediatamente
     if (validJobs.length === 0) {
       logger.debug('No valid jobs to return', { agentName: agent.agent_name })
       return new Response(
@@ -353,7 +353,7 @@ Deno.serve(async (req) => {
       logger.warn('ED25519_PRIVATE_KEY not configured - jobs will be unsigned', { agentName: agent.agent_name })
     }
 
-    // Preparar resposta - jobs já foram marcados como delivered pela RPC
+    // Preparar resposta - jobs ja foram marcados como delivered pela RPC
     // Agora inclui execution_id, nonce e payload_hash para trilha de auditoria
     const jobsResponse = await Promise.all(validJobs.map(async (j: ClaimedJob) => {
       const jobPayload = j.payload || {}
@@ -388,7 +388,7 @@ Deno.serve(async (req) => {
         approved: true,
         agent_id: token.agent_id,
         expires_at: j.expires_at,
-        // FASE 4: Trilha de auditoria imutável
+        // FASE 4: Trilha de auditoria imutavel
         execution_id: j.execution_id,
         nonce: j.nonce,
         payload_hash: j.payload_hash,
@@ -399,7 +399,7 @@ Deno.serve(async (req) => {
       }
     })).then(results => results.filter(Boolean))
 
-    // LOG CRÍTICO: mostrar exatamente o que será retornado (com execution tracking)
+    // LOG CRITICO: mostrar exatamente o que sera retornado (com execution tracking)
     logger.info('Jobs to return to agent with execution tracking', { 
       agentName: agent.agent_name,
       responseCount: jobsResponse.length,
@@ -408,7 +408,7 @@ Deno.serve(async (req) => {
       response: JSON.stringify(jobsResponse)
     })
 
-    // Jobs já foram marcados como 'delivered' atomicamente pela RPC claim_jobs_for_agent
+    // Jobs ja foram marcados como 'delivered' atomicamente pela RPC claim_jobs_for_agent
     // E job_executions criadas para trilha de auditoria
     logger.success('Jobs delivered via atomic claim with audit trail', { 
       jobIds: validJobs.map((j: ClaimedJob) => j.job_id), 
@@ -425,8 +425,8 @@ Deno.serve(async (req) => {
         agentVersion: agentVersionForCompat,
         jobCount: jobsResponse.length,
       })
-      // PROTEÇÃO: Para agentes legacy, entregar APENAS jobs de recuperação
-      // Jobs operacionais serão desperdiçados (agente não consegue parseá-los corretamente)
+      // PROTECAO: Para agentes legacy, entregar APENAS jobs de recuperacao
+      // Jobs operacionais serao desperdicados (agente nao consegue parsea-los corretamente)
       const recoveryTypes = ['update_agent', 'reinstall_agent', 'force_update']
       const recoveryJobs = jobsResponse.filter(j => j && recoveryTypes.includes(j.type || j.job_type || ''))
       const blockedCount = jobsResponse.length - recoveryJobs.length
@@ -471,7 +471,7 @@ Deno.serve(async (req) => {
     // Novo formato encapsulado para agentes modernos
     const responsePayload = {
       jobs: jobsResponse,
-      poll_interval_seconds: 600, // COST-OPT-V6: 300s → 600s (jobs now come via heartbeat)
+      poll_interval_seconds: 600, // COST-OPT-V6: 300s ? 600s (jobs now come via heartbeat)
     };
     return new Response(
       JSON.stringify(responsePayload),

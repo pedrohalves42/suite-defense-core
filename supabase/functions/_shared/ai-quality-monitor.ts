@@ -174,7 +174,7 @@ export async function detectDrift(
         current_value: current.avg_latency,
         baseline_value: baseline.avg_latency,
         deviation_percent: latencyDrift,
-        message: `Latency increased ${latencyDrift.toFixed(1)}% from baseline (${baseline.avg_latency.toFixed(0)}ms → ${current.avg_latency.toFixed(0)}ms)`,
+        message: `Latency increased ${latencyDrift.toFixed(1)}% from baseline (${baseline.avg_latency.toFixed(0)}ms ? ${current.avg_latency.toFixed(0)}ms)`,
       });
     } else if (latencyDrift > QUALITY_BASELINES.drift_warning_threshold) {
       drifts.push({

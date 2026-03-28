@@ -92,7 +92,7 @@ serveTenant(async (req, ctx) => {
     return new Response(
       JSON.stringify({
         error: "LEGACY_BLOCK",
-        message: "Para expandir dispositivos ou fazer upgrade, é necessário migrar para os planos atuais.",
+        message: "Para expandir dispositivos ou fazer upgrade, e necessario migrar para os planos atuais.",
         requires_migration: true,
       }),
       { status: 403, headers: { 'Content-Type': 'application/json' } }
@@ -312,7 +312,7 @@ serveTenant(async (req, ctx) => {
 
       result = {
         success: true,
-        message: `Assinatura será cancelada em ${cancelAt.toLocaleDateString('pt-BR')}`,
+        message: `Assinatura sera cancelada em ${cancelAt.toLocaleDateString('pt-BR')}`,
         cancel_at: cancelAt.toISOString(),
       };
       break;

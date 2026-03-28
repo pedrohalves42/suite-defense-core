@@ -34,7 +34,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Get playbook — V-10003 FIX: Also filter by tenant_id to prevent cross-tenant execution
+    // Get playbook ? V-10003 FIX: Also filter by tenant_id to prevent cross-tenant execution
     const { data: playbook, error: pbError } = await supabase
       .from('playbooks')
       .select('*')

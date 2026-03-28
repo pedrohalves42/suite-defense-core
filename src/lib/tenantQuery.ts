@@ -110,7 +110,8 @@ export function tenantQuery<T extends TableName>(
       const original = Reflect.get(target, prop, receiver);
       if (typeof original === 'function' && INTERCEPTED_METHODS.has(prop as string)) {
         return (...args: unknown[]) => {
-          const result = (original as Function).apply(target, args);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const result = (original as (...a: unknown[]) => any).apply(target, args);
           // After select/update/delete, the result is a FilterBuilder that has .eq()
           return result.eq('tenant_id', tenantId);
         };

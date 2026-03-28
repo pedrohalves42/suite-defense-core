@@ -1,4 +1,4 @@
--- Corrigir search_path das novas funções para segurança
+-- Corrigir search_path das novas funcoes para seguranca
 CREATE OR REPLACE FUNCTION public.enforce_ai_action_approval()
 RETURNS TRIGGER 
 LANGUAGE plpgsql

@@ -19,20 +19,20 @@ CREATE TABLE IF NOT EXISTS public.signed_documents (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Comentário
-COMMENT ON TABLE public.signed_documents IS 'Armazena metadados de documentos assinados criptograficamente (Whitepapers, políticas, etc.)';
+-- Comentario
+COMMENT ON TABLE public.signed_documents IS 'Armazena metadados de documentos assinados criptograficamente (Whitepapers, politicas, etc.)';
 
--- Índices
+-- Indices
 CREATE INDEX IF NOT EXISTS idx_signed_documents_name ON public.signed_documents(document_name);
 CREATE INDEX IF NOT EXISTS idx_signed_documents_signed_at ON public.signed_documents(signed_at DESC);
 
 -- =====================================================
--- RLS: Verificação pública, gerenciamento por super_admins
+-- RLS: Verificacao publica, gerenciamento por super_admins
 -- =====================================================
 
 ALTER TABLE public.signed_documents ENABLE ROW LEVEL SECURITY;
 
--- Qualquer pessoa pode verificar documentos assinados (público)
+-- Qualquer pessoa pode verificar documentos assinados (publico)
 CREATE POLICY "Anyone can verify signed documents"
   ON public.signed_documents
   FOR SELECT

@@ -73,24 +73,24 @@ export function generateReasoningSummary(
   aiAnalysis?: string
 ): string {
   if (evidence.length === 0) {
-    return `Análise baseada em ${context}. Dados insuficientes para evidência detalhada.`;
+    return `Analise baseada em ${context}. Dados insuficientes para evidencia detalhada.`;
   }
 
   const criticalEvidence = evidence.filter(e => e.severity === 'critical');
   const warningEvidence = evidence.filter(e => e.severity === 'warning');
   
-  let summary = `Esta análise é baseada em ${evidence.length} pontos de evidência coletados de ${extractDataSources(evidence).length} fonte(s) de dados.`;
+  let summary = `Esta analise e baseada em ${evidence.length} pontos de evidencia coletados de ${extractDataSources(evidence).length} fonte(s) de dados.`;
   
   if (criticalEvidence.length > 0) {
-    summary += ` ${criticalEvidence.length} evidência(s) crítica(s) identificada(s).`;
+    summary += ` ${criticalEvidence.length} evidencia(s) critica(s) identificada(s).`;
   }
   
   if (warningEvidence.length > 0) {
-    summary += ` ${warningEvidence.length} ponto(s) de atenção detectado(s).`;
+    summary += ` ${warningEvidence.length} ponto(s) de atencao detectado(s).`;
   }
   
   if (aiAnalysis) {
-    summary += ` Análise de IA aplicada para correlação e recomendações.`;
+    summary += ` Analise de IA aplicada para correlacao e recomendacoes.`;
   }
   
   return summary;

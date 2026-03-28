@@ -174,7 +174,7 @@ Analise quais tem maior probabilidade de falha.`;
             tenant_id: tenant.id,
             insight_type: 'prediction',
             severity: p.failure_probability > 0.8 ? 'critical' : 'warning',
-            title: `Previsão: ${p.agent_name} pode ${p.predicted_failure_type === 'disk_full' ? 'ficar sem disco' : p.predicted_failure_type === 'memory_exhaustion' ? 'esgotar memória' : 'ter sobrecarga'} em ${p.time_horizon_hours}h`,
+            title: `Previsao: ${p.agent_name} pode ${p.predicted_failure_type === 'disk_full' ? 'ficar sem disco' : p.predicted_failure_type === 'memory_exhaustion' ? 'esgotar memoria' : 'ter sobrecarga'} em ${p.time_horizon_hours}h`,
             description: `Probabilidade de falha: ${Math.round(p.failure_probability * 100)}%. Fatores: ${p.contributing_factors.join(', ')}`,
             evidence: { prediction: p, analysis_type: 'trend_based' },
             recommendation: p.recommendation,

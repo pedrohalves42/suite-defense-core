@@ -3,8 +3,8 @@
     
     Instalador empresarial com:
     - Suporte a GPO/SCCM/Intune
-    - Instalação silenciosa
-    - Configuração via arquivo JSON
+    - Instalacao silenciosa
+    - Configuracao via arquivo JSON
     - DNS Filter integrado
     - Logging estruturado para auditorias
     
@@ -13,7 +13,7 @@
         -EnrollmentKey "EK-XXXXX" `
         -ServerUrl "https://projeto.supabase.co"
     
-    Uso via arquivo de configuração:
+    Uso via arquivo de configuracao:
     powershell.exe -ExecutionPolicy Bypass -File .\install-enterprise-v4.ps1 `
         -ConfigFile "C:\Deploy\cybershield-config.json"
 #>
@@ -118,7 +118,7 @@ function Write-InstallLog {
 #  LOAD CONFIGURATION
 # ============================================
 function Get-InstallConfiguration {
-    Write-InstallLog "Carregando configuração..." "INFO" "Config"
+    Write-InstallLog "Carregando configuracao..." "INFO" "Config"
     
     $config = @{
         ServerUrl = $ServerUrl
@@ -140,19 +140,19 @@ function Get-InstallConfiguration {
             if ($null -ne $fileConfig.SkipDNSFilter) { $config.SkipDNSFilter = $fileConfig.SkipDNSFilter }
             if ($fileConfig.InstallPath) { $config.InstallPath = $fileConfig.InstallPath }
             
-            Write-InstallLog "Configuração carregada de: $ConfigFile" "SUCCESS" "Config"
+            Write-InstallLog "Configuracao carregada de: $ConfigFile" "SUCCESS" "Config"
         } catch {
-            Write-InstallLog "Erro ao carregar arquivo de configuração: $_" "ERROR" "Config"
+            Write-InstallLog "Erro ao carregar arquivo de configuracao: $_" "ERROR" "Config"
             throw
         }
     }
     
     # Validate required fields
     if (-not $config.ServerUrl) {
-        throw "ServerUrl é obrigatório. Forneça via parâmetro ou arquivo de configuração."
+        throw "ServerUrl e obrigatorio. Forneca via parametro ou arquivo de configuracao."
     }
     if (-not $config.EnrollmentKey) {
-        throw "EnrollmentKey é obrigatório. Forneça via parâmetro ou arquivo de configuração."
+        throw "EnrollmentKey e obrigatorio. Forneca via parametro ou arquivo de configuracao."
     }
     
     $script:Config = $config
@@ -163,25 +163,25 @@ function Get-InstallConfiguration {
 #  PRE-REQUISITES CHECK
 # ============================================
 function Test-Prerequisites {
-    Write-InstallLog "Verificando pré-requisitos..." "INFO" "Prerequisites"
+    Write-InstallLog "Verificando pre-requisitos..." "INFO" "Prerequisites"
     
     $issues = @()
     
     # Check 1: Admin privileges
     $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
     if (-not $isAdmin) {
-        $issues += "Privilégios de administrador são necessários"
+        $issues += "Privilegios de administrador sao necessarios"
     }
     
     # Check 2: PowerShell version
     if ($PSVersionTable.PSVersion.Major -lt 5) {
-        $issues += "PowerShell 5.0 ou superior é necessário (atual: $($PSVersionTable.PSVersion))"
+        $issues += "PowerShell 5.0 ou superior e necessario (atual: $($PSVersionTable.PSVersion))"
     }
     
     # Check 3: .NET Framework
     $dotNetVersion = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full" -ErrorAction SilentlyContinue).Release
     if ($dotNetVersion -lt 394802) {
-        $issues += ".NET Framework 4.6.2 ou superior é necessário"
+        $issues += ".NET Framework 4.6.2 ou superior e necessario"
     }
     
     # Check 4: Disk space (500MB minimum)
@@ -190,34 +190,34 @@ function Test-Prerequisites {
     } else { "C" }
     $freeSpace = (Get-PSDrive $drive -ErrorAction SilentlyContinue).Free / 1MB
     if ($freeSpace -lt 500) {
-        $issues += "Espaço em disco insuficiente (mínimo: 500MB, disponível: ${freeSpace}MB)"
+        $issues += "Espaco em disco insuficiente (minimo: 500MB, disponivel: ${freeSpace}MB)"
     }
     
     # Check 5: Network connectivity
     try {
         $testResult = Test-NetConnection -ComputerName "supabase.co" -Port 443 -WarningAction SilentlyContinue
         if (-not $testResult.TcpTestSucceeded) {
-            $issues += "Conectividade com internet não disponível na porta 443"
+            $issues += "Conectividade com internet nao disponivel na porta 443"
         }
     } catch {
-        Write-InstallLog "Aviso: Não foi possível verificar conectividade de rede" "WARN" "Prerequisites"
+        Write-InstallLog "Aviso: Nao foi possivel verificar conectividade de rede" "WARN" "Prerequisites"
     }
     
     # Check 6: Antivirus exclusions warning
     $avProducts = Get-CimInstance -Namespace "root/SecurityCenter2" -ClassName "AntivirusProduct" -ErrorAction SilentlyContinue
     if ($avProducts) {
         $avNames = ($avProducts | Select-Object -ExpandProperty displayName) -join ", "
-        Write-InstallLog "Antivírus detectado: $avNames. Considere adicionar exclusões para $BaseDir" "WARN" "Prerequisites"
+        Write-InstallLog "Antivirus detectado: $avNames. Considere adicionar exclusoes para $BaseDir" "WARN" "Prerequisites"
     }
     
     if ($issues.Count -gt 0) {
         foreach ($issue in $issues) {
             Write-InstallLog "FALHA: $issue" "ERROR" "Prerequisites"
         }
-        throw "Verificação de pré-requisitos falhou"
+        throw "Verificacao de pre-requisitos falhou"
     }
     
-    Write-InstallLog "✓ Todos os pré-requisitos atendidos" "SUCCESS" "Prerequisites"
+    Write-InstallLog "? Todos os pre-requisitos atendidos" "SUCCESS" "Prerequisites"
     return $true
 }
 
@@ -258,10 +258,10 @@ function Invoke-Enrollment {
                 TenantId = $response.tenant_id
             }
             
-            Write-InstallLog "✓ Enrollment concluído. Agent ID: $($response.agent_id.Substring(0,8))..." "SUCCESS" "Enrollment"
+            Write-InstallLog "? Enrollment concluido. Agent ID: $($response.agent_id.Substring(0,8))..." "SUCCESS" "Enrollment"
             return $true
         } else {
-            throw "Resposta de enrollment inválida"
+            throw "Resposta de enrollment invalida"
         }
     } catch {
         $errorMsg = if ($_.Exception.Response) {
@@ -322,7 +322,7 @@ function Install-AgentFiles {
             ).Replace("-", "").ToLower()
             
             if ($actualHash -ne $expectedHash.ToLower()) {
-                throw "Verificação de integridade falhou (SHA256 mismatch)"
+                throw "Verificacao de integridade falhou (SHA256 mismatch)"
             }
         }
         
@@ -330,7 +330,7 @@ function Install-AgentFiles {
         $agentScriptPath = "$installPath\cybershield-agent-$($script:Config.AgentName).ps1"
         $scriptContent | Out-File -FilePath $agentScriptPath -Encoding UTF8 -Force
         
-        Write-InstallLog "✓ Script do agente instalado em: $agentScriptPath" "SUCCESS" "Install"
+        Write-InstallLog "? Script do agente instalado em: $agentScriptPath" "SUCCESS" "Install"
         $script:AgentScriptPath = $agentScriptPath
         
     } catch {
@@ -348,7 +348,7 @@ function Install-AgentFiles {
     )
     [System.IO.File]::WriteAllBytes($credentialsPath, $encryptedCreds)
     
-    Write-InstallLog "✓ Credenciais armazenadas com segurança" "SUCCESS" "Install"
+    Write-InstallLog "? Credenciais armazenadas com seguranca" "SUCCESS" "Install"
     
     return $true
 }
@@ -381,10 +381,10 @@ function Install-ScheduledTask {
     # Create task
     $action = New-ScheduledTaskAction -Execute $psPath -Argument $arguments
     
-    # FIX: Usar RepetitionDuration explícito para evitar erro Duration:P999999990T23H59M59S
+    # FIX: Usar RepetitionDuration explicito para evitar erro Duration:P999999990T23H59M59S
     $startupTrigger = New-ScheduledTaskTrigger -AtStartup
     
-    # Trigger de repetição com duração explícita (365 dias - máximo seguro)
+    # Trigger de repeticao com duracao explicita (365 dias - maximo seguro)
     $repetitionTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1)
     $repetitionTrigger.Repetition.Interval = "PT5M"   # 5 minutos
     $repetitionTrigger.Repetition.Duration = "P365D"  # 365 dias (valor seguro)
@@ -392,7 +392,7 @@ function Install-ScheduledTask {
     
     $triggers = @($startupTrigger, $repetitionTrigger)
     
-    # ENHANCED RECOVERY: Configurações robustas para auto-recuperação
+    # ENHANCED RECOVERY: Configuracoes robustas para auto-recuperacao
     $settings = New-ScheduledTaskSettingsSet `
         -AllowStartIfOnBatteries `
         -DontStopIfGoingOnBatteries `
@@ -403,7 +403,7 @@ function Install-ScheduledTask {
         -MultipleInstances IgnoreNew `
         -RunOnlyIfNetworkAvailable $false
     
-    # Habilitar reinício em caso de falha (RunOnlyIfIdle = false implícito)
+    # Habilitar reinicio em caso de falha (RunOnlyIfIdle = false implicito)
     Write-InstallLog "Recovery: RestartCount=10, RestartInterval=30s, RepetitionInterval=5min" "INFO" "Task"
     
     $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
@@ -416,7 +416,7 @@ function Install-ScheduledTask {
         -Principal $principal `
         -Force | Out-Null
     
-    Write-InstallLog "✓ Scheduled Task criada: $taskName" "SUCCESS" "Task"
+    Write-InstallLog "? Scheduled Task criada: $taskName" "SUCCESS" "Task"
     return $true
 }
 
@@ -425,7 +425,7 @@ function Install-ScheduledTask {
 # ============================================
 function Install-DNSFilter {
     if ($script:Config.SkipDNSFilter) {
-        Write-InstallLog "DNS Filter ignorado por configuração" "INFO" "DNSFilter"
+        Write-InstallLog "DNS Filter ignorado por configuracao" "INFO" "DNSFilter"
         return $true
     }
     
@@ -447,7 +447,7 @@ function Install-DNSFilter {
     
     $dnsConfig | ConvertTo-Json | Out-File "$dnsFilterDir\config.json" -Encoding UTF8
     
-    Write-InstallLog "✓ Configuração do DNS Filter preparada" "SUCCESS" "DNSFilter"
+    Write-InstallLog "? Configuracao do DNS Filter preparada" "SUCCESS" "DNSFilter"
     return $true
 }
 
@@ -464,10 +464,10 @@ function Start-Agent {
     
     $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
     if ($task.State -eq "Running") {
-        Write-InstallLog "✓ Agente iniciado com sucesso" "SUCCESS" "Start"
+        Write-InstallLog "? Agente iniciado com sucesso" "SUCCESS" "Start"
         return $true
     } else {
-        Write-InstallLog "Aviso: Agente pode não ter iniciado. Status: $($task.State)" "WARN" "Start"
+        Write-InstallLog "Aviso: Agente pode nao ter iniciado. Status: $($task.State)" "WARN" "Start"
         return $false
     }
 }
@@ -478,7 +478,7 @@ function Start-Agent {
 function Send-InstallationReport {
     param([bool]$Success, [string]$Error = "")
     
-    Write-InstallLog "Enviando relatório de instalação..." "INFO" "Report"
+    Write-InstallLog "Enviando relatorio de instalacao..." "INFO" "Report"
     
     try {
         $reportUrl = "$($script:Config.ServerUrl)/functions/v1/track-installation-event"
@@ -503,9 +503,9 @@ function Send-InstallationReport {
         } | ConvertTo-Json -Depth 5
         
         $null = Invoke-RestMethod -Uri $reportUrl -Method POST -Headers $headers -Body $body -TimeoutSec 30
-        Write-InstallLog "✓ Relatório enviado" "SUCCESS" "Report"
+        Write-InstallLog "? Relatorio enviado" "SUCCESS" "Report"
     } catch {
-        Write-InstallLog "Aviso: Falha ao enviar relatório: $_" "WARN" "Report"
+        Write-InstallLog "Aviso: Falha ao enviar relatorio: $_" "WARN" "Report"
     }
 }
 
@@ -513,7 +513,7 @@ function Send-InstallationReport {
 #  UNINSTALL
 # ============================================
 function Invoke-Uninstall {
-    Write-InstallLog "Iniciando desinstalação..." "INFO" "Uninstall"
+    Write-InstallLog "Iniciando desinstalacao..." "INFO" "Uninstall"
     
     # Stop and remove scheduled task
     $taskName = "CyberShield Agent"
@@ -529,7 +529,7 @@ function Invoke-Uninstall {
     if ($dnsService) {
         Stop-Service -Name "CyberShieldDNS" -Force -ErrorAction SilentlyContinue
         sc.exe delete "CyberShieldDNS" | Out-Null
-        Write-InstallLog "Serviço DNS Filter removido" "INFO" "Uninstall"
+        Write-InstallLog "Servico DNS Filter removido" "INFO" "Uninstall"
     }
     
     # Remove files (keep logs for audit)
@@ -549,7 +549,7 @@ function Invoke-Uninstall {
         }
     }
     
-    Write-InstallLog "✓ Desinstalação concluída. Logs preservados em: $BaseDir\logs" "SUCCESS" "Uninstall"
+    Write-InstallLog "? Desinstalacao concluida. Logs preservados em: $BaseDir\logs" "SUCCESS" "Uninstall"
     
     return $true
 }
@@ -604,7 +604,7 @@ function Start-Installation {
         if (-not $Silent) {
             Write-Host ""
             Write-Host "============================================" -ForegroundColor Green
-            Write-Host "  INSTALAÇÃO CONCLUÍDA COM SUCESSO!" -ForegroundColor Green
+            Write-Host "  INSTALACAO CONCLUIDA COM SUCESSO!" -ForegroundColor Green
             Write-Host "============================================" -ForegroundColor Green
             Write-Host ""
             Write-Host "Agent Name: $($script:Config.AgentName)" -ForegroundColor White
@@ -613,19 +613,19 @@ function Start-Installation {
             Write-Host ""
         }
         
-        Write-InstallLog "Instalação concluída em $($duration.TotalSeconds.ToString('0.0'))s" "SUCCESS" "Main"
+        Write-InstallLog "Instalacao concluida em $($duration.TotalSeconds.ToString('0.0'))s" "SUCCESS" "Main"
         exit 0
         
     } catch {
         $errorMsg = $_.Exception.Message
-        Write-InstallLog "ERRO CRÍTICO: $errorMsg" "ERROR" "Main"
+        Write-InstallLog "ERRO CRITICO: $errorMsg" "ERROR" "Main"
         
         Send-InstallationReport -Success $false -Error $errorMsg
         
         if (-not $Silent) {
             Write-Host ""
             Write-Host "============================================" -ForegroundColor Red
-            Write-Host "  INSTALAÇÃO FALHOU" -ForegroundColor Red
+            Write-Host "  INSTALACAO FALHOU" -ForegroundColor Red
             Write-Host "============================================" -ForegroundColor Red
             Write-Host ""
             Write-Host "Erro: $errorMsg" -ForegroundColor Red

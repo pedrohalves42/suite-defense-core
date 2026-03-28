@@ -48,23 +48,23 @@ interface ActionCenterFeed {
 const ACTION_COPY: Record<string, { title: string; description: string; cta: string }> = {
   // === Vulnerability & Software Risk ===
   vulnerability_critical: {
-    title: 'Falha crítica que pode permitir invasão',
-    description: 'Encontramos uma falha grave com exploit público disponível. Se explorada, um invasor pode assumir o controle.',
+    title: 'Falha critica que pode permitir invasao',
+    description: 'Encontramos uma falha grave com exploit publico disponivel. Se explorada, um invasor pode assumir o controle.',
     cta: 'Corrigir agora',
   },
   vulnerability_high: {
     title: 'Vulnerabilidade de alto impacto',
-    description: 'Vulnerabilidade significativa que pode ser explorada em cenários específicos.',
-    cta: 'Avaliar correção',
+    description: 'Vulnerabilidade significativa que pode ser explorada em cenarios especificos.',
+    cta: 'Avaliar correcao',
   },
   software_risk_detected: {
     title: 'Software de alto risco detectado',
-    description: 'Este computador possui software classificado como alto risco que pode comprometer a segurança.',
+    description: 'Este computador possui software classificado como alto risco que pode comprometer a seguranca.',
     cta: 'Revisar software',
   },
   software_outdated: {
     title: 'Software desatualizado detectado',
-    description: 'Versões antigas de software podem conter vulnerabilidades conhecidas.',
+    description: 'Versoes antigas de software podem conter vulnerabilidades conhecidas.',
     cta: 'Atualizar software',
   },
   
@@ -72,79 +72,79 @@ const ACTION_COPY: Record<string, { title: string; description: string; cta: str
   agent_offline: {
     title: 'Computador offline de forma inesperada',
     description: 'Este computador parou de responder sem desligamento normal registrado.',
-    cta: 'Analisar situação',
+    cta: 'Analisar situacao',
   },
   agent_offline_suspicious: {
     title: 'Computador offline com comportamento suspeito',
-    description: 'Este computador ficou offline após alertas de segurança recentes.',
+    description: 'Este computador ficou offline apos alertas de seguranca recentes.',
     cta: 'Investigar agora',
   },
   agent_degraded: {
     title: 'Agente com performance degradada',
-    description: 'O agente está respondendo, mas com atrasos ou falhas intermitentes.',
+    description: 'O agente esta respondendo, mas com atrasos ou falhas intermitentes.',
     cta: 'Diagnosticar',
   },
   safe_mode_detected: {
-    title: 'Proteções limitadas ativas',
-    description: 'Este computador entrou em modo de segurança após falhas e ainda não retornou ao modo normal.',
-    cta: 'Reativar proteções',
+    title: 'Protecoes limitadas ativas',
+    description: 'Este computador entrou em modo de seguranca apos falhas e ainda nao retornou ao modo normal.',
+    cta: 'Reativar protecoes',
   },
   
   // === Network & Access ===
   multiple_malicious_access: {
     title: 'Tentativas DNS maliciosas recorrentes',
-    description: 'Foram detectadas múltiplas tentativas de acesso a domínios maliciosos.',
+    description: 'Foram detectadas multiplas tentativas de acesso a dominios maliciosos.',
     cta: 'Bloquear automaticamente',
   },
   blocked_access_pattern: {
-    title: 'Padrão de acesso bloqueado',
-    description: 'Múltiplas tentativas de acesso a sites bloqueados foram registradas.',
-    cta: 'Revisar política',
+    title: 'Padrao de acesso bloqueado',
+    description: 'Multiplas tentativas de acesso a sites bloqueados foram registradas.',
+    cta: 'Revisar politica',
   },
   suspicious_network_activity: {
     title: 'Atividade de rede suspeita',
-    description: 'Conexões ou transferências de dados incomuns foram detectadas.',
-    cta: 'Investigar tráfego',
+    description: 'Conexoes ou transferencias de dados incomuns foram detectadas.',
+    cta: 'Investigar trafego',
   },
   
   // === Process & Execution ===
   suspicious_process: {
-    title: 'Processo incomum em execução',
-    description: 'Um programa que não faz parte do comportamento normal está rodando.',
+    title: 'Processo incomum em execucao',
+    description: 'Um programa que nao faz parte do comportamento normal esta rodando.',
     cta: 'Encerrar processo',
   },
   unauthorized_execution: {
-    title: 'Execução não autorizada',
-    description: 'Um programa foi executado sem aprovação prévia.',
-    cta: 'Bloquear execução',
+    title: 'Execucao nao autorizada',
+    description: 'Um programa foi executado sem aprovacao previa.',
+    cta: 'Bloquear execucao',
   },
   
   // === System Health ===
   high_cpu_usage: {
     title: 'CPU em uso excessivo',
-    description: 'O processador está sob carga elevada por período prolongado.',
+    description: 'O processador esta sob carga elevada por periodo prolongado.',
     cta: 'Identificar causa',
   },
   high_memory_usage: {
-    title: 'Memória em uso excessivo',
-    description: 'A memória RAM está quase totalmente ocupada.',
-    cta: 'Liberar memória',
+    title: 'Memoria em uso excessivo',
+    description: 'A memoria RAM esta quase totalmente ocupada.',
+    cta: 'Liberar memoria',
   },
   high_disk_usage: {
     title: 'Disco quase cheio',
-    description: 'O espaço em disco está criticamente baixo.',
-    cta: 'Limpar espaço',
+    description: 'O espaco em disco esta criticamente baixo.',
+    cta: 'Limpar espaco',
   },
   
   // === AI Insight types ===
   vulnerability: {
     title: 'Vulnerabilidade detectada pela IA',
-    description: 'Nossa análise automática identificou uma falha de segurança que requer atenção.',
-    cta: 'Ver recomendação',
+    description: 'Nossa analise automatica identificou uma falha de seguranca que requer atencao.',
+    cta: 'Ver recomendacao',
   },
   anomaly: {
-    title: 'Comportamento anômalo detectado',
-    description: 'Padrão incomum identificado que pode indicar problema de segurança.',
+    title: 'Comportamento anomalo detectado',
+    description: 'Padrao incomum identificado que pode indicar problema de seguranca.',
     cta: 'Analisar',
   },
   anomaly_detection: {
@@ -154,72 +154,72 @@ const ACTION_COPY: Record<string, { title: string; description: string; cta: str
   },
   compliance: {
     title: 'Problema de conformidade',
-    description: 'Configuração ou comportamento fora dos padrões de segurança esperados.',
+    description: 'Configuracao ou comportamento fora dos padroes de seguranca esperados.',
     cta: 'Corrigir',
   },
   performance: {
     title: 'Problema de performance detectado',
-    description: 'Métricas de sistema indicam degradação que pode afetar operações.',
+    description: 'Metricas de sistema indicam degradacao que pode afetar operacoes.',
     cta: 'Otimizar',
   },
   security_posture: {
-    title: 'Postura de segurança comprometida',
-    description: 'Análise indica configurações ou estados que enfraquecem a segurança.',
+    title: 'Postura de seguranca comprometida',
+    description: 'Analise indica configuracoes ou estados que enfraquecem a seguranca.',
     cta: 'Fortalecer',
   },
   threat_intel: {
-    title: 'Indicador de ameaça detectado',
-    description: 'Inteligência de ameaças identificou potencial risco.',
+    title: 'Indicador de ameaca detectado',
+    description: 'Inteligencia de ameacas identificou potencial risco.',
     cta: 'Investigar',
   },
   root_cause: {
     title: 'Causa raiz identificada',
-    description: 'A IA identificou a origem provável de problemas recorrentes.',
+    description: 'A IA identificou a origem provavel de problemas recorrentes.',
     cta: 'Resolver causa',
   },
   optimization: {
-    title: 'Oportunidade de otimização',
-    description: 'Há espaço para melhorar configurações ou processos.',
-    cta: 'Ver sugestões',
+    title: 'Oportunidade de otimizacao',
+    description: 'Ha espaco para melhorar configuracoes ou processos.',
+    cta: 'Ver sugestoes',
   },
   predictive: {
     title: 'Risco futuro previsto',
-    description: 'Com base em padrões, um problema pode ocorrer em breve.',
+    description: 'Com base em padroes, um problema pode ocorrer em breve.',
     cta: 'Prevenir',
   },
   
   // === Job & Automation ===
   job_failed: {
     title: 'Tarefa agendada falhou',
-    description: 'Uma tarefa automática não foi concluída com sucesso.',
+    description: 'Uma tarefa automatica nao foi concluida com sucesso.',
     cta: 'Ver detalhes',
   },
   job_stuck: {
     title: 'Tarefa travada',
-    description: 'Uma tarefa está em execução há muito tempo sem progresso.',
+    description: 'Uma tarefa esta em execucao ha muito tempo sem progresso.',
     cta: 'Cancelar tarefa',
   },
   playbook_triggered: {
     title: 'Playbook acionado',
-    description: 'Uma automação de segurança foi disparada por evento detectado.',
-    cta: 'Revisar ação',
+    description: 'Uma automacao de seguranca foi disparada por evento detectado.',
+    cta: 'Revisar acao',
   },
   
   // === Antivirus & Protection ===
   antivirus_disabled: {
-    title: 'Antivírus desativado',
-    description: 'A proteção antivírus foi desabilitada neste computador.',
-    cta: 'Reativar proteção',
+    title: 'Antivirus desativado',
+    description: 'A protecao antivirus foi desabilitada neste computador.',
+    cta: 'Reativar protecao',
   },
   antivirus_outdated: {
-    title: 'Definições de vírus desatualizadas',
-    description: 'As definições de vírus estão antigas e podem não detectar ameaças recentes.',
-    cta: 'Atualizar definições',
+    title: 'Definicoes de virus desatualizadas',
+    description: 'As definicoes de virus estao antigas e podem nao detectar ameacas recentes.',
+    cta: 'Atualizar definicoes',
   },
   malware_detected: {
     title: 'Malware detectado',
     description: 'Software malicioso foi identificado no sistema.',
-    cta: 'Remover ameaça',
+    cta: 'Remover ameaca',
   },
 };
 
@@ -251,7 +251,7 @@ function enrichActionItem(item: ActionItem): ActionItem & { humanized: typeof AC
   const copy = ACTION_COPY[item.trigger_type] || null;
 
   // For AI insights, prefer the real title/description from the database
-  // over the generic ACTION_COPY map (which only has generic labels like "Oportunidade de otimização")
+  // over the generic ACTION_COPY map (which only has generic labels like "Oportunidade de otimizacao")
   if (item.source_type === 'ai_insight' && (item.title || item.description)) {
     const recommendation = (item.context as Record<string, unknown>)?.recommendation;
     return {
@@ -263,7 +263,7 @@ function enrichActionItem(item: ActionItem): ActionItem & { humanized: typeof AC
       },
       // Add recommendation to description if available and description is short
       description: recommendation && item.description && item.description.length < 120
-        ? `${item.description} — ${recommendation}`
+        ? `${item.description} ? ${recommendation}`
         : item.description,
     };
   }
@@ -463,8 +463,8 @@ Deno.serve(async (req) => {
           agent_id: agent.id,
           agent_name: agent.agent_name,
           hostname: agent.hostname,
-          title: `${agent.agent_name || agent.hostname || 'Computador'} está offline`,
-          description: `Offline há ${duration}. ${agent.offline_reason || 'Sem desligamento normal registrado.'}`,
+          title: `${agent.agent_name || agent.hostname || 'Computador'} esta offline`,
+          description: `Offline ha ${duration}. ${agent.offline_reason || 'Sem desligamento normal registrado.'}`,
           severity,
           risk_score: severity === 'urgent' ? 90 : severity === 'high' ? 70 : severity === 'medium' ? 40 : 20,
           context: {
@@ -510,7 +510,7 @@ Deno.serve(async (req) => {
           agent_id: exec.agent_id,
           agent_name: exec.agent?.agent_name || null,
           hostname: exec.agent?.hostname || null,
-          title: exec.playbook?.name || 'Ação pendente',
+          title: exec.playbook?.name || 'Acao pendente',
           description: exec.playbook?.description || null,
           severity: exec.playbook?.severity || 'medium',
           risk_score: exec.risk_score,
@@ -1205,7 +1205,7 @@ Deno.serve(async (req) => {
               resolution_method: 'no_action_available',
               resolved_at: new Date().toISOString(),
               resolved_by: user.id,
-              final_outcome: 'Insight revisado - nenhuma ação automatizada disponível.',
+              final_outcome: 'Insight revisado - nenhuma acao automatizada disponivel.',
             })
             .eq('id', item_id);
 

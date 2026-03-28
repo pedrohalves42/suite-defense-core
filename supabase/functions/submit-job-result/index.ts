@@ -1,5 +1,5 @@
 /**
- * submit-job-result — Orchestrator
+ * submit-job-result ? Orchestrator
  * 
  * Decomposed from 1,893-line monolith into modules:
  * - validation.ts: payload parsing & normalization
@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
   )
 
   try {
-    // ── 1. Auth via X-Agent-Token ──
+    // ?? 1. Auth via X-Agent-Token ??
     const agentToken = req.headers.get('X-Agent-Token')
     const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
     
@@ -70,11 +70,11 @@ Deno.serve(async (req) => {
       hmac_secret: agentRaw.hmac_secret,
     }
 
-    // ── 2. Fetch agent version for version gate ──
+    // ?? 2. Fetch agent version for version gate ??
     const { data: agentData } = await supabase.from('agents').select('agent_version').eq('id', agent.id).single()
     const agentVersion = agentData?.agent_version || 'v0.0.0'
 
-    // ── 3. HMAC verification ──
+    // ?? 3. HMAC verification ??
     if (!agent.hmac_secret) {
       logger.error('[submit-job-result] CRITICAL: Agent without HMAC secret:', agent.agent_name)
       return new Response(JSON.stringify({ error: 'HMAC secret not configured for agent' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
@@ -89,19 +89,19 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'unauthorized', code: hmacResult.errorCode, message: hmacResult.errorMessage, transient: hmacResult.transient }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    // ── 4. Rate limiting ──
+    // ?? 4. Rate limiting ??
     const rateLimitResult = await checkRateLimit(supabase, agent.agent_name, 'submit-job-result', { maxRequests: 100, windowMinutes: 1, blockMinutes: 5 })
     if (!rateLimitResult.allowed) {
       return new Response(JSON.stringify({ error: 'Rate limit exceeded', resetAt: rateLimitResult.resetAt }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    // ── 5. Parse & validate payload ──
+    // ?? 5. Parse & validate payload ??
     const rawPayload = await req.json()
     const validation = validateAndParsePayload(rawPayload)
     if (!validation.success) return validation.response
     const payload = validation.data
 
-    // ── 6. Fetch job ──
+    // ?? 6. Fetch job ??
     const { data: job, error: fetchError } = await supabase
       .from('jobs')
       .select('id, agent_name, tenant_id, status, type, agent_id, payload_hash, created_at')
@@ -116,14 +116,14 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Job nao encontrado' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    // ── 7. Build context ──
+    // ?? 7. Build context ??
     const outputData = parseOutputData(payload.output)
     const ctx: SubmitContext = {
       supabase, agent, agentVersion, job: job as JobRecord, payload, outputData, ipAddress,
       sideEffects: { inserted: false, recordCount: 0 },
     }
 
-    // ── 8. Security checks (sequential — each can short-circuit) ──
+    // ?? 8. Security checks (sequential ? each can short-circuit) ??
     const versionGateErr = await checkVersionGate(ctx)
     if (versionGateErr) return versionGateErr
 
@@ -139,13 +139,13 @@ Deno.serve(async (req) => {
     const dupeErr = await checkDuplicateSubmission(ctx)
     if (dupeErr) return dupeErr
 
-    // ── 9. ZERO TRUST: Side effects BEFORE marking completed ──
+    // ?? 9. ZERO TRUST: Side effects BEFORE marking completed ??
     await processSideEffects(ctx)
 
-    // ── 10. Execution finalization (audit trail) ──
+    // ?? 10. Execution finalization (audit trail) ??
     const execResult = await finalizeExecution(ctx)
 
-    // ── 11. Update job ──
+    // ?? 11. Update job ??
     const updateData: Record<string, unknown> = {
       status: payload.status,
       finished_at: payload.finished_at || new Date().toISOString(),
@@ -157,16 +157,16 @@ Deno.serve(async (req) => {
     if (payload.error_message) updateData.error_message = sanitizeErrorMessage(payload.error_message)
     if (payload.execution_time_seconds !== undefined) updateData.execution_time_seconds = payload.execution_time_seconds
 
-    // ── 12. Governance validation ──
+    // ?? 12. Governance validation ??
     await validateGovernance(ctx, updateData)
 
     // Handle empty web activity
     if (job.type === 'collect_web_activity' && payload.status === 'completed' && !ctx.sideEffects.inserted) {
       updateData.status = 'completed'
-      updateData.error_message = '[WARNING] Coleta web concluída sem histórico disponível no endpoint (sem DNS cache/browser history neste ciclo).'
+      updateData.error_message = '[WARNING] Coleta web concluida sem historico disponivel no endpoint (sem DNS cache/browser history neste ciclo).'
     }
 
-    // ── 13. Persist job update ──
+    // ?? 13. Persist job update ??
     const { data: updateResult, error: updateError } = await supabase.from('jobs').update(updateData).eq('id', payload.job_id).select()
 
     if (updateError) {
@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
       logger.info('[JOB_INTEGRITY_OK]', { job_id: job.id, type: job.type, agent_id: job.agent_id, sideEffectsInserted: ctx.sideEffects.inserted, insertedRecordsCount: ctx.sideEffects.recordCount })
     }
 
-    // ── 14. Post-completion (non-blocking) ──
+    // ?? 14. Post-completion (non-blocking) ??
     await validateUpdateAgentVersion(ctx)
     await triggerAutoReport(ctx)
     await analyzeBlockedAccess(ctx)

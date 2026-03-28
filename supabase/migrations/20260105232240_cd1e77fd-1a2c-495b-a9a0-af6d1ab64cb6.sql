@@ -1,5 +1,5 @@
 -- ============================================
--- CORRIGIR FUNÇÕES SEM search_path
+-- CORRIGIR FUNCOES SEM search_path
 -- ============================================
 
 -- Corrigir diagnose_agent_issues
@@ -24,19 +24,19 @@ BEGIN
     RETURN QUERY SELECT 
       'agent_not_found'::text,
       'critical'::text,
-      'Agente não encontrado'::text,
+      'Agente nao encontrado'::text,
       jsonb_build_object('agent_name', p_agent_name),
       now(),
       'diagnose_agent_issues'::text;
     RETURN;
   END IF;
   
-  -- Se arquivado, retornar apenas essa informação
+  -- Se arquivado, retornar apenas essa informacao
   IF v_is_archived THEN
     RETURN QUERY SELECT 
       'agent_archived'::text,
       'info'::text,
-      'Agente está arquivado e não aparece em dashboards operacionais'::text,
+      'Agente esta arquivado e nao aparece em dashboards operacionais'::text,
       jsonb_build_object('agent_id', v_agent_id),
       now(),
       'diagnose_agent_issues'::text;

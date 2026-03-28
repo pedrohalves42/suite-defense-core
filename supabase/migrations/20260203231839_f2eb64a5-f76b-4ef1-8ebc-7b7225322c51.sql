@@ -1,4 +1,4 @@
--- RPC para buscar ações pendentes com balanceamento entre tenants (round-robin)
+-- RPC para buscar acoes pendentes com balanceamento entre tenants (round-robin)
 -- Isso resolve o problema de "tenant starvation" onde um tenant bloqueado impede outros de processar
 CREATE OR REPLACE FUNCTION get_balanced_pending_actions(p_limit INTEGER DEFAULT 50)
 RETURNS TABLE (
@@ -14,7 +14,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  -- Usa window function para distribuir ações entre tenants
+  -- Usa window function para distribuir acoes entre tenants
   -- ROW_NUMBER() OVER (PARTITION BY tenant_id) garante que pegamos de cada tenant alternadamente
   RETURN QUERY
   WITH ranked_actions AS (
@@ -54,6 +54,6 @@ END;
 $$;
 
 COMMENT ON FUNCTION get_balanced_pending_actions IS 
-'Anti-starvation RPC: distribui ações pendentes de forma justa entre todos os tenants, 
+'Anti-starvation RPC: distribui acoes pendentes de forma justa entre todos os tenants, 
 evitando que um tenant com rate limit excedido bloqueie outros. 
 Implementa round-robin por tenant_rank para garantir que todos processem igualmente.';

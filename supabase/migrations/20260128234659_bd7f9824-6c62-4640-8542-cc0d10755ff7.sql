@@ -1,10 +1,10 @@
 -- =====================================================================
--- MIGRATION: Correção Definitiva do Signup (handle_new_user)
+-- MIGRATION: Correcao Definitiva do Signup (handle_new_user)
 -- ADR-024: Elimina erro 500 causado por schema drift
 -- =====================================================================
 
 -- ===========================================
--- PARTE A: PRÉ-CHECK (Fail Fast)
+-- PARTE A: PRE-CHECK (Fail Fast)
 -- ===========================================
 DO $$
 DECLARE
@@ -23,7 +23,7 @@ BEGIN
   ) INTO _has_slug;
   
   IF NOT _has_slug THEN
-    RAISE EXCEPTION 'PRE-CHECK FAILED: coluna "slug" não existe em public.tenants';
+    RAISE EXCEPTION 'PRE-CHECK FAILED: coluna "slug" nao existe em public.tenants';
   END IF;
 
   -- Verificar coluna owner_user_id em tenants
@@ -33,7 +33,7 @@ BEGIN
   ) INTO _has_owner_user_id;
   
   IF NOT _has_owner_user_id THEN
-    RAISE EXCEPTION 'PRE-CHECK FAILED: coluna "owner_user_id" não existe em public.tenants';
+    RAISE EXCEPTION 'PRE-CHECK FAILED: coluna "owner_user_id" nao existe em public.tenants';
   END IF;
 
   -- Verificar coluna trial_end em tenant_subscriptions
@@ -43,7 +43,7 @@ BEGIN
   ) INTO _has_trial_end;
   
   IF NOT _has_trial_end THEN
-    RAISE EXCEPTION 'PRE-CHECK FAILED: coluna "trial_end" não existe em public.tenant_subscriptions';
+    RAISE EXCEPTION 'PRE-CHECK FAILED: coluna "trial_end" nao existe em public.tenant_subscriptions';
   END IF;
 
   -- Verificar coluna current_period_end em tenant_subscriptions
@@ -53,10 +53,10 @@ BEGIN
   ) INTO _has_current_period_end;
   
   IF NOT _has_current_period_end THEN
-    RAISE EXCEPTION 'PRE-CHECK FAILED: coluna "current_period_end" não existe em public.tenant_subscriptions';
+    RAISE EXCEPTION 'PRE-CHECK FAILED: coluna "current_period_end" nao existe em public.tenant_subscriptions';
   END IF;
 
-  -- Verificar enum app_role contém 'admin'
+  -- Verificar enum app_role contem 'admin'
   SELECT EXISTS (
     SELECT 1 FROM pg_enum e
     JOIN pg_type t ON e.enumtypid = t.oid
@@ -64,7 +64,7 @@ BEGIN
   ) INTO _has_admin_role;
   
   IF NOT _has_admin_role THEN
-    RAISE EXCEPTION 'PRE-CHECK FAILED: enum app_role não contém valor "admin"';
+    RAISE EXCEPTION 'PRE-CHECK FAILED: enum app_role nao contem valor "admin"';
   END IF;
 
   -- Verificar plano 'free' existe
@@ -73,10 +73,10 @@ BEGIN
   ) INTO _has_free_plan;
   
   IF NOT _has_free_plan THEN
-    RAISE EXCEPTION 'PRE-CHECK FAILED: plano "free" não existe em subscription_plans';
+    RAISE EXCEPTION 'PRE-CHECK FAILED: plano "free" nao existe em subscription_plans';
   END IF;
 
-  -- Verificar função ensure_tenant_features(uuid, text, integer) existe
+  -- Verificar funcao ensure_tenant_features(uuid, text, integer) existe
   SELECT EXISTS (
     SELECT 1 FROM pg_proc p
     JOIN pg_namespace n ON p.pronamespace = n.oid
@@ -86,14 +86,14 @@ BEGIN
   ) INTO _has_ensure_features;
   
   IF NOT _has_ensure_features THEN
-    RAISE EXCEPTION 'PRE-CHECK FAILED: função ensure_tenant_features(uuid, text, integer) não existe';
+    RAISE EXCEPTION 'PRE-CHECK FAILED: funcao ensure_tenant_features(uuid, text, integer) nao existe';
   END IF;
 
   RAISE NOTICE 'PRE-CHECK PASSED: Todos os requisitos de schema validados';
 END $$;
 
 -- ===========================================
--- PARTE B: HANDLE_NEW_USER (Versão Correta)
+-- PARTE B: HANDLE_NEW_USER (Versao Correta)
 -- ===========================================
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
@@ -113,7 +113,7 @@ DECLARE
   admin_provisioned BOOLEAN := FALSE;
   trial_end_date TIMESTAMPTZ;
 BEGIN
-  -- Extrair dados do usuário
+  -- Extrair dados do usuario
   full_name := COALESCE(
     NEW.raw_user_meta_data->>'full_name',
     NEW.raw_user_meta_data->>'name',
@@ -145,7 +145,7 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  -- 4) Gerar slug único para tenant
+  -- 4) Gerar slug unico para tenant
   tenant_slug := lower(regexp_replace(
     COALESCE(full_name, split_part(user_email, '@', 1)),
     '[^a-zA-Z0-9]+', '-', 'g'
@@ -160,7 +160,7 @@ BEGIN
   )
   RETURNING id INTO new_tenant_id;
 
-  -- 6) Criar role 'admin' para o usuário no tenant
+  -- 6) Criar role 'admin' para o usuario no tenant
   INSERT INTO public.user_roles (user_id, role, tenant_id)
   VALUES (NEW.id, 'admin', new_tenant_id);
 
@@ -182,7 +182,7 @@ BEGIN
   LIMIT 1;
 
   IF free_plan_id IS NULL THEN
-    RAISE EXCEPTION 'Plano "free" não encontrado em subscription_plans';
+    RAISE EXCEPTION 'Plano "free" nao encontrado em subscription_plans';
   END IF;
 
   -- 9) Calcular data de trial (14 dias)
@@ -223,11 +223,11 @@ BEGIN
 END;
 $$;
 
--- Comentário para auditoria
+-- Comentario para auditoria
 COMMENT ON FUNCTION public.handle_new_user() IS 
 'ADR-024: Trigger de onboarding corrigido. Usa schema correto (slug, owner_user_id, admin role). 
-UPSERT em tenant_subscriptions para idempotência com create_default_subscription. 
-Trial de 14 dias automático. Respeita admin_provisioned e pending_invite.';
+UPSERT em tenant_subscriptions para idempotencia com create_default_subscription. 
+Trial de 14 dias automatico. Respeita admin_provisioned e pending_invite.';
 
 -- ===========================================
 -- PARTE C: CREATE_DEFAULT_SUBSCRIPTION (Hardened)
@@ -247,12 +247,12 @@ BEGIN
   WHERE name = 'free'
   LIMIT 1;
 
-  -- Se não existe plano free, não fazer nada (fail silently, handle_new_user cuidará)
+  -- Se nao existe plano free, nao fazer nada (fail silently, handle_new_user cuidara)
   IF free_plan_id IS NULL THEN
     RETURN NEW;
   END IF;
 
-  -- INSERT com ON CONFLICT DO NOTHING (dupla proteção)
+  -- INSERT com ON CONFLICT DO NOTHING (dupla protecao)
   INSERT INTO public.tenant_subscriptions (tenant_id, plan_id)
   VALUES (NEW.id, free_plan_id)
   ON CONFLICT (tenant_id) DO NOTHING;
@@ -261,13 +261,13 @@ BEGIN
 END;
 $$;
 
--- Comentário para auditoria
+-- Comentario para auditoria
 COMMENT ON FUNCTION public.create_default_subscription() IS 
 'ADR-024: Trigger hardened com ON CONFLICT DO NOTHING. 
-Cria subscription básica; handle_new_user faz UPSERT para trial de 14 dias.';
+Cria subscription basica; handle_new_user faz UPSERT para trial de 14 dias.';
 
 -- ===========================================
--- PARTE D: Garantir triggers estão ativos
+-- PARTE D: Garantir triggers estao ativos
 -- ===========================================
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created

@@ -145,7 +145,7 @@ serveTenant(async (_req, ctx) => {
     build_duration_seconds: 0,
   });
 
-  logger.info(`[generate-portable-installer][${requestId}] ✅ Generated: ${cmdBytes.length} bytes, SHA256: ${sha256}`);
+  logger.info(`[generate-portable-installer][${requestId}] [OK]  Generated: ${cmdBytes.length} bytes, SHA256: ${sha256}`);
 
   return {
     success: true,

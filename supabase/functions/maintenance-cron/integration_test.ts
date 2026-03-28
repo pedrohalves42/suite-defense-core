@@ -10,7 +10,7 @@ import { ProcessHeartbeatUseCase } from "../_shared/hexagonal/use-cases/process-
 import { RunMaintenanceUseCase } from "../_shared/hexagonal/use-cases/run-maintenance.ts";
 import { UpdateDecisionService, normalizeVersion, calculateSha256 } from "../_shared/hexagonal/update-decision-service.ts";
 
-// ─── Mock Supabase Client ──────────────────────────────
+// ??? Mock Supabase Client ??????????????????????????????
 
 function createMockSupabase(overrides: Record<string, any> = {}) {
   const defaultData: Record<string, any> = {
@@ -57,7 +57,7 @@ function createMockSupabase(overrides: Record<string, any> = {}) {
   };
 }
 
-// ─── UpdateDecisionService Tests ───────────────────────
+// ??? UpdateDecisionService Tests ???????????????????????
 
 Deno.test("UpdateDecisionService - normalizeVersion strips 'v' prefix", () => {
   assertEquals(normalizeVersion("v5.0.3"), "5.0.3");
@@ -105,7 +105,7 @@ Deno.test("UpdateDecisionService - force legacy delivery bypasses checks", async
   assertEquals(decision.action, "upgrade");
 });
 
-// ─── ProcessHeartbeatUseCase Tests ──────────────────────
+// ??? ProcessHeartbeatUseCase Tests ??????????????????????
 
 Deno.test("ProcessHeartbeat - returns ok with agent name", async () => {
   const mockSupabase = createMockSupabase();
@@ -123,7 +123,7 @@ Deno.test("ProcessHeartbeat - returns ok with agent name", async () => {
   assertExists(result.timestamp);
 });
 
-// ─── RunMaintenanceUseCase Tests ────────────────────────
+// ??? RunMaintenanceUseCase Tests ????????????????????????
 
 Deno.test("RunMaintenance - returns result with all counters", async () => {
   const mockSupabase = createMockSupabase();
@@ -136,7 +136,7 @@ Deno.test("RunMaintenance - returns result with all counters", async () => {
   assertEquals(typeof result.durationMs, "number");
 });
 
-// ─── SHA256 Calculation Tests ───────────────────────────
+// ??? SHA256 Calculation Tests ???????????????????????????
 
 Deno.test("calculateSha256 produces consistent hex string", async () => {
   const hash1 = await calculateSha256("hello world");

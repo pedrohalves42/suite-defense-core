@@ -5,7 +5,7 @@ import { hashToken } from "../_shared/token-hash.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { logger } from '../_shared/logger.ts';
 
-// HARDENED: Restrict CORS — this endpoint is called by PowerShell agents, not browsers
+// HARDENED: Restrict CORS ? this endpoint is called by PowerShell agents, not browsers
 const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || "https://cybershield-audit.lovable.app";
 const corsHeaders = {
   "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
@@ -45,7 +45,7 @@ serve(async (req) => {
       );
     }
 
-    // HARDENED: X-Agent-Token is REQUIRED — no fallback mode
+    // HARDENED: X-Agent-Token is REQUIRED ? no fallback mode
     const agentTokenHeader = req.headers.get("X-Agent-Token");
     if (!agentTokenHeader) {
       logger.warn(`[${requestId}] REJECTED: Missing X-Agent-Token header`);
@@ -119,7 +119,7 @@ serve(async (req) => {
 
     const agent = agentToken.agents as Record<string, unknown>;
     
-    // Verify HMAC signature — REQUIRED for data integrity
+    // Verify HMAC signature ? REQUIRED for data integrity
     const hmacResult = await verifyHmacSignature(
       supabaseClient,
       req,
@@ -173,7 +173,7 @@ serve(async (req) => {
       verified: true
     });
 
-    // Build telemetry record — always verified at this point
+    // Build telemetry record ? always verified at this point
     const telemetryData = {
       agent_id: agent.id,
       tenant_id: agent.tenant_id,

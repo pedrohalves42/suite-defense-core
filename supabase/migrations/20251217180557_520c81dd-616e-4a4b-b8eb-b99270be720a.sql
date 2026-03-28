@@ -28,7 +28,7 @@ BEGIN
       true,
       true,
       'daily',
-      (CURRENT_DATE + INTERVAL '1 day' + INTERVAL '19 hours')::timestamptz, -- 16h Brasília = 19h UTC
+      (CURRENT_DATE + INTERVAL '1 day' + INTERVAL '19 hours')::timestamptz, -- 16h Brasilia = 19h UTC
       jsonb_build_object('auto_created', true, 'created_for_agent', NEW.agent_name)
     );
   END LOOP;

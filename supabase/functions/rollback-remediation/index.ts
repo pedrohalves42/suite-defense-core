@@ -61,7 +61,7 @@ Deno.serve(async (req: Request) => {
     // V-3013 FIX: Get the action first, then verify user has admin access to THAT tenant
     const userTenantIds = adminRoles.map(r => r.tenant_id);
     
-    // Fetch original action — filter by user's accessible tenants
+    // Fetch original action ? filter by user's accessible tenants
     const { data: action, error: fetchErr } = await supabase
       .from('auto_remediation_actions')
       .select('*')
@@ -141,8 +141,8 @@ Deno.serve(async (req: Request) => {
       agent_id: action.agent_id,
       alert_type: 'remediation_rollback',
       severity: 'medium',
-      title: 'Rollback de Remediação Executado',
-      message: `Ação "${action.action_type}" revertida no agente "${action.agent_name}"`,
+      title: 'Rollback de Remediacao Executado',
+      message: `Acao "${action.action_type}" revertida no agente "${action.agent_name}"`,
       details: { original_action_id: action_id, rollback_job_id: job?.id },
     });
 

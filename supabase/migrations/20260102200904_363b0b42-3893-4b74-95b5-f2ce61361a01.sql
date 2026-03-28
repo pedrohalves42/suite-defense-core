@@ -287,7 +287,7 @@ SELECT
   a.agent_name,
   a.hostname,
   COALESCE(p.name, 'Playbook') AS title,
-  COALESCE(pe.trigger_source, 'Ação pendente') AS description,
+  COALESCE(pe.trigger_source, 'Acao pendente') AS description,
   COALESCE(p.severity, 'medium') AS severity,
   pe.risk_score,
   pe.trigger_context AS context,
@@ -344,7 +344,7 @@ SELECT
   agt.agent_name,
   agt.hostname,
   'Agente Offline'::text AS title,
-  COALESCE(agt.offline_reason, 'Sem comunicação') AS description,
+  COALESCE(agt.offline_reason, 'Sem comunicacao') AS description,
   CASE
     WHEN agt.offline_detected_at < now() - interval '24 hours' THEN 'critical'
     WHEN agt.offline_detected_at < now() - interval '4 hours' THEN 'high'

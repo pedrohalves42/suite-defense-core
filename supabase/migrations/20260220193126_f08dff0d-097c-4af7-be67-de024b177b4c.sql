@@ -9,7 +9,7 @@ DECLARE
   v_insight_record RECORD;
   v_agent_name TEXT;
 BEGIN
-  -- Buscar informações do insight associado
+  -- Buscar informacoes do insight associado
   SELECT 
     agent_id,
     insight_type

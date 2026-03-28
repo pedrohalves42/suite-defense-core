@@ -1,5 +1,5 @@
 /**
- * dispatch-notification — DEPRECATED REDIRECT (COST-OPT v9)
+ * dispatch-notification ? DEPRECATED REDIRECT (COST-OPT v9)
  * 
  * Now redirects all calls to notification-dispatcher.
  * Kept for backward compatibility with existing callers.
@@ -42,7 +42,7 @@ Deno.serve(async (req: Request) => {
 
     const payload = await req.json();
 
-    // Map old dispatch-notification format → notification-dispatcher format
+    // Map old dispatch-notification format ? notification-dispatcher format
     const channelTypeMap: Record<string, string> = {
       whatsapp: 'whatsapp',
       telegram: 'telegram',

@@ -26,7 +26,7 @@ serveTenant(async (req, ctx) => {
 
   const action = body.action || 'begin';
 
-  // ─── LIST KEYS ───
+  // ??? LIST KEYS ???
   if (action === 'keys' && !body.credentialId) {
     const { data: credentials, error } = await supabase
       .from('fido2_credentials')
@@ -39,7 +39,7 @@ serveTenant(async (req, ctx) => {
     return credentials || [];
   }
 
-  // ─── REVOKE KEY ───
+  // ??? REVOKE KEY ???
   if (action === 'keys' && body.credentialId) {
     const { error } = await supabase
       .from('fido2_credentials')
@@ -52,7 +52,7 @@ serveTenant(async (req, ctx) => {
     return { success: true };
   }
 
-  // ─── BEGIN REGISTRATION ───
+  // ??? BEGIN REGISTRATION ???
   if (action === 'begin') {
     const { deviceName } = body;
     if (!deviceName) {
@@ -100,7 +100,7 @@ serveTenant(async (req, ctx) => {
     return options;
   }
 
-  // ─── COMPLETE REGISTRATION ───
+  // ??? COMPLETE REGISTRATION ???
   if (action === 'complete') {
     const { registrationResponse, expectedChallenge } = body;
     if (!registrationResponse || !expectedChallenge) {

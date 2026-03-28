@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     logger.info('[process-failed-jobs] Starting intelligent failed jobs processing...');
 
     // Get failed jobs with retry count < MAX_RETRIES
-    // Agora inclui failure_class para decisão inteligente
+    // Agora inclui failure_class para decisao inteligente
     const { data: failedJobs, error: fetchError } = await supabase
       .from('jobs')
       .select('id, tenant_id, agent_id, agent_name, type, payload, status, approved, error_message, retry_count, failure_class')
@@ -97,12 +97,12 @@ Deno.serve(async (req) => {
       results.byClass[failureClass] = (results.byClass[failureClass] || 0) + 1;
 
       try {
-        // Decisão inteligente: retry ou DLQ
+        // Decisao inteligente: retry ou DLQ
         const shouldRetry = RETRYABLE_CLASSES.includes(failureClass) && currentRetry < MAX_RETRIES;
         const shouldDlq = DLQ_CLASSES.includes(failureClass) || currentRetry >= MAX_RETRIES;
 
         if (shouldDlq) {
-          // Enviar direto para DLQ (sem retry inútil)
+          // Enviar direto para DLQ (sem retry inutil)
           logger.info(`[process-failed-jobs] Job ${job.id} -> DLQ (class: ${failureClass}, retries: ${currentRetry})`);
           
           results.sentToDlq++;
@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
               failed_at: new Date().toISOString(),
             }, { onConflict: 'original_job_id' });
 
-          // Marcar job original como processado (não tentar novamente)
+          // Marcar job original como processado (nao tentar novamente)
           await supabase
             .from('jobs')
             .update({

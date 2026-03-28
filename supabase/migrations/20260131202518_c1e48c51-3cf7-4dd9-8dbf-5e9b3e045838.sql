@@ -287,12 +287,12 @@ DECLARE
   v_tenant_id uuid;
   v_decision_source text;
 BEGIN
-  -- Só processa quando status muda para 'resolved' ou 'failed'
+  -- So processa quando status muda para 'resolved' ou 'failed'
   IF (TG_OP = 'UPDATE' AND NEW.status IN ('resolved', 'failed') AND OLD.status = 'pending') THEN
     v_tenant_id := NEW.tenant_id;
     
-    -- Mapear resolution_source para decision_source válido
-    -- Valores válidos: 'human', 'ai', 'system', 'policy', 'resilience_engine'
+    -- Mapear resolution_source para decision_source valido
+    -- Valores validos: 'human', 'ai', 'system', 'policy', 'resilience_engine'
     v_decision_source := CASE 
       WHEN NEW.resolution_source = 'auto_cleanup' THEN 'system'
       WHEN NEW.resolution_source = 'human' THEN 'human'

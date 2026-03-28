@@ -1,6 +1,6 @@
 
 -- ============================================================
--- ADR-040: Software Protection Mode (Observação / Alerta / Bloqueio)
+-- ADR-040: Software Protection Mode (Observacao / Alerta / Bloqueio)
 -- Per-tenant configuration for software inventory enforcement
 -- ============================================================
 

@@ -1,6 +1,6 @@
 
 -- ============================================================
--- CORREÇÃO: Função auto_resolve_stale_tasks com colunas corretas
+-- CORRECAO: Funcao auto_resolve_stale_tasks com colunas corretas
 -- ============================================================
 CREATE OR REPLACE FUNCTION auto_resolve_stale_tasks()
 RETURNS jsonb
@@ -15,7 +15,7 @@ DECLARE
   v_old_insights_triaged INTEGER := 0;
   v_result jsonb;
 BEGIN
-  -- 1. Auto-fechar tasks de JOB com severidade medium/low após 14 dias
+  -- 1. Auto-fechar tasks de JOB com severidade medium/low apos 14 dias
   UPDATE tasks SET
     status = 'ignored',
     closed_at = NOW(),
@@ -33,7 +33,7 @@ BEGIN
     AND auto_generated = true;
   GET DIAGNOSTICS v_job_tasks_closed = ROW_COUNT;
 
-  -- 2. Auto-fechar tasks de DLQ com severidade low após 7 dias
+  -- 2. Auto-fechar tasks de DLQ com severidade low apos 7 dias
   UPDATE tasks SET
     status = 'ignored',
     closed_at = NOW(),
@@ -50,7 +50,7 @@ BEGIN
     AND created_at < NOW() - INTERVAL '7 days';
   GET DIAGNOSTICS v_dlq_tasks_closed = ROW_COUNT;
 
-  -- 3. Auto-fechar tasks de system_alert com severity low/info após 3 dias
+  -- 3. Auto-fechar tasks de system_alert com severity low/info apos 3 dias
   UPDATE tasks SET
     status = 'resolved',
     closed_at = NOW(),
@@ -67,7 +67,7 @@ BEGIN
     AND created_at < NOW() - INTERVAL '3 days';
   GET DIAGNOSTICS v_low_alerts_closed = ROW_COUNT;
 
-  -- 4. Auto-triar insights de AI não-críticos após 21 dias
+  -- 4. Auto-triar insights de AI nao-criticos apos 21 dias
   UPDATE tasks SET
     status = 'accepted_risk',
     closed_at = NOW(),

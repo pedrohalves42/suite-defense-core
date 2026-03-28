@@ -12,7 +12,7 @@ const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
 /**
  * confirm-force-update
  * 
- * Endpoint chamado pelo agente após aplicar um force update com sucesso.
+ * Endpoint chamado pelo agente apos aplicar um force update com sucesso.
  * Limpa os campos de force_update e registra o timestamp.
  * 
  * GUARDS:
@@ -21,8 +21,8 @@ const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
  * - Loop detection: logs delivery count for diagnostics
  * 
  * Body:
- * - new_version: string (versão instalada)
- * - old_version: string (versão anterior)
+ * - new_version: string (versao instalada)
+ * - old_version: string (versao anterior)
  */
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -32,9 +32,9 @@ Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
 
   try {
-    logger.info('[confirm-force-update] Requisição recebida', { requestId });
+    logger.info('[confirm-force-update] Requisicao recebida', { requestId });
 
-    // Verificar headers de autenticação (aceita padrão novo X-HMAC-* + legado X-*)
+    // Verificar headers de autenticacao (aceita padrao novo X-HMAC-* + legado X-*)
     const agentToken = req.headers.get('X-Agent-Token');
     const signature = req.headers.get('X-HMAC-Signature');
     const hmacTimestamp = req.headers.get('X-HMAC-Timestamp') || req.headers.get('X-Timestamp');
@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (tokenError || !tokenData) {
-      logger.error('[confirm-force-update] Token inválido', { requestId, error: tokenError });
+      logger.error('[confirm-force-update] Token invalido', { requestId, error: tokenError });
       return new Response(
         JSON.stringify({ error: 'Invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -275,7 +275,7 @@ Deno.serve(async (req) => {
       });
 
     if (evidenceError) {
-      logger.warn('[confirm-force-update] Falha ao registrar evidence (não crítico)', { requestId, error: evidenceError });
+      logger.warn('[confirm-force-update] Falha ao registrar evidence (nao critico)', { requestId, error: evidenceError });
     }
 
     logger.info('[confirm-force-update] Force update confirmado com sucesso', {

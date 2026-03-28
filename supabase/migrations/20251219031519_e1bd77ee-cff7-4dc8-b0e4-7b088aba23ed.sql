@@ -1,4 +1,4 @@
--- Criar tabela para armazenar métricas detalhadas de múltiplos discos
+-- Criar tabela para armazenar metricas detalhadas de multiplos discos
 CREATE TABLE public.agent_disk_metrics (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
@@ -18,7 +18,7 @@ CREATE TABLE public.agent_disk_metrics (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Índices para performance
+-- Indices para performance
 CREATE INDEX idx_disk_metrics_agent_id ON agent_disk_metrics(agent_id);
 CREATE INDEX idx_disk_metrics_tenant_id ON agent_disk_metrics(tenant_id);
 CREATE INDEX idx_disk_metrics_collected_at ON agent_disk_metrics(collected_at DESC);
@@ -27,7 +27,7 @@ CREATE INDEX idx_disk_metrics_agent_drive ON agent_disk_metrics(agent_id, drive_
 -- Habilitar RLS
 ALTER TABLE agent_disk_metrics ENABLE ROW LEVEL SECURITY;
 
--- Políticas RLS
+-- Politicas RLS
 CREATE POLICY "Admins can view tenant disk metrics" ON agent_disk_metrics
   FOR SELECT
   USING (tenant_id IN (
@@ -50,7 +50,7 @@ CREATE POLICY "Service role can delete disk metrics" ON agent_disk_metrics
   FOR DELETE
   USING (true);
 
--- Função RPC para buscar detalhes dos discos de um agente
+-- Funcao RPC para buscar detalhes dos discos de um agente
 CREATE OR REPLACE FUNCTION public.get_agent_disk_details(p_agent_id uuid)
 RETURNS TABLE(
   drive_letter text,
@@ -85,7 +85,7 @@ BEGIN
 END;
 $$;
 
--- Função para limpeza de métricas antigas (90 dias)
+-- Funcao para limpeza de metricas antigas (90 dias)
 CREATE OR REPLACE FUNCTION public.cleanup_old_disk_metrics(retention_days integer DEFAULT 90)
 RETURNS bigint
 LANGUAGE plpgsql

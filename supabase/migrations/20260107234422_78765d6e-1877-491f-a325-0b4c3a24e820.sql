@@ -79,7 +79,7 @@ BEGIN
       'system_alert',
       NEW.id::text,
       'Alerta: ' || COALESCE(NEW.alert_type, 'Sistema'),
-      COALESCE(NEW.message, 'Alerta de sistema requer atenção'),
+      COALESCE(NEW.message, 'Alerta de sistema requer atencao'),
       NEW.severity,
       'open',
       NEW.severity = 'critical',

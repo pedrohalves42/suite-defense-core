@@ -56,7 +56,7 @@ export async function assertInternalCaller(req: Request, options?: { allowAuthen
   // 5. Authenticated user JWT (when explicitly allowed by the caller)
   if (options?.allowAuthenticatedUsers && authHeader && authHeader.startsWith('Bearer ')) {
     // The JWT is present but doesn't match service_role or anon key,
-    // so it's likely a user JWT. Let it through — the calling function
+    // so it's likely a user JWT. Let it through ? the calling function
     // is responsible for verifying admin role via Supabase auth.getUser().
     logger.info('[assert-internal-caller] Authorized via user JWT (allowAuthenticatedUsers)');
     return null;

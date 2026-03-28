@@ -2,10 +2,10 @@
     CyberShield Agent - Windows v4.5.0
     
     v4.5.0: TOTAL RESILIENCE - Agente NUNCA fica offline com PC ligado
-    - NEW: Network Watchdog - detecta reconexão de rede e força heartbeat imediato
+    - NEW: Network Watchdog - detecta reconexao de rede e forca heartbeat imediato
     - NEW: Task Health Assert - verifica integridade da Scheduled Task a cada 5 min
     - NEW: Power Event Detection - detecta wake from sleep/hibernate via WMI
-    - NEW: Test-NetworkConnectivity - teste rápido de TCP na porta 443
+    - NEW: Test-NetworkConnectivity - teste rapido de TCP na porta 443
     - NEW: Invoke-NetworkWatchdog - loop de monitoramento de conectividade
     - NEW: Assert-TaskHealth - auto-repair de task desabilitada
     - NEW: Register-PowerEventWatcher - listener de Win32_PowerManagementEvent
@@ -13,16 +13,16 @@
     - IMPROVED: Features array inclui novos monitores
     - IMPROVED: Logging inclui status de power events
     
-    v4.4.0: FSM ENTERPRISE - Máquina de Estados Formal
-    - NEW: Estado SHUTDOWN adicionado à FSM
+    v4.4.0: FSM ENTERPRISE - Maquina de Estados Formal
+    - NEW: Estado SHUTDOWN adicionado a FSM
     - NEW: Test-StateInvariants bloqueia ENFORCING com componentes falhados
     
     v4.3.0: WATCHDOG INTERNO - Auto-recovery robusto com retry loop
     - NEW: Wrapper de watchdog envolvendo todo o script principal
-    - NEW: Retry loop com até 10 tentativas e backoff exponencial
-    - NEW: Reinício automático da Scheduled Task após esgotamento de retries
-    - NEW: Notificação ao servidor sobre eventos de watchdog
-    - IMPROVED: Lógica de recovery mais robusta
+    - NEW: Retry loop com ate 10 tentativas e backoff exponencial
+    - NEW: Reinicio automatico da Scheduled Task apos esgotamento de retries
+    - NEW: Notificacao ao servidor sobre eventos de watchdog
+    - IMPROVED: Logica de recovery mais robusta
     
     v4.2.2: AUTO-RECOVERY - Agentes nao ficam mais offline permanentemente
     - CRITICAL FIX: Scheduled Task com RepetitionInterval de 5 minutos
@@ -133,8 +133,8 @@ param(
     [string]$AgentVersion = "v4.5.0"
 )
 
-# CRITICAL: Forçar TLS 1.2 para compatibilidade com Windows Server 2012/2016
-# PowerShell usa TLS 1.0 por padrão, mas Supabase requer TLS 1.2+
+# CRITICAL: Forcar TLS 1.2 para compatibilidade com Windows Server 2012/2016
+# PowerShell usa TLS 1.0 por padrao, mas Supabase requer TLS 1.2+
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $ErrorActionPreference = "Stop"
@@ -240,12 +240,12 @@ $Global:PollIntervalSeconds = 60
 # ============================================
 #  FSM ENTERPRISE v2.0: FAILURE POLICY
 # ============================================
-# Política de falha configurável para hard stops
+# Politica de falha configuravel para hard stops
 $Global:FailurePolicy = @{
-    MaxRecoveryAttempts = 5           # Máximo de tentativas antes de SAFE_MODE
+    MaxRecoveryAttempts = 5           # Maximo de tentativas antes de SAFE_MODE
     RecoveryWindowSeconds = 300       # Janela para contar tentativas
-    CooldownSeconds = 600             # Cooldown após exaurir tentativas
-    MaxConsecutiveFailures = 10       # Máximo de falhas consecutivas por componente
+    CooldownSeconds = 600             # Cooldown apos exaurir tentativas
+    MaxConsecutiveFailures = 10       # Maximo de falhas consecutivas por componente
     OnExhaust = "ERROR"               # Estado ao exaurir: ERROR (triggers incident_summary)
 }
 
@@ -257,22 +257,22 @@ $Global:FailureCounters = @{
     job_engine = @{ consecutive = 0; last_failure = $null; cooldown_until = $null }
 }
 
-# Cache para deduplicação de logs (redução de ruído)
+# Cache para deduplicacao de logs (reducao de ruido)
 $Global:LogDeduplicationCache = @{}
 $Global:LogDeduplicationTTLSeconds = 30
 
-# Último health snapshot (1 por ciclo)
+# Ultimo health snapshot (1 por ciclo)
 $Global:LastHealthSnapshotTime = $null
 
 # ============================================
 #  FSM ENTERPRISE v2.1: RESILIENCE MONITORS
 # ============================================
-# Variáveis globais para Network Watchdog e Task Health
+# Variaveis globais para Network Watchdog e Task Health
 $Global:LastNetworkState = $true              # Estado anterior da rede
-$Global:NetworkCheckIntervalSeconds = 30      # Intervalo de verificação de rede
-$Global:ForceReconnect = $false               # Flag para forçar reconexão
-$Global:LastNetworkCheck = $null              # Último check de rede
-$Global:LastTaskHealthCheck = $null           # Último check de task health
+$Global:NetworkCheckIntervalSeconds = 30      # Intervalo de verificacao de rede
+$Global:ForceReconnect = $false               # Flag para forcar reconexao
+$Global:LastNetworkCheck = $null              # Ultimo check de rede
+$Global:LastTaskHealthCheck = $null           # Ultimo check de task health
 $Global:TaskHealthCheckIntervalSeconds = 300  # Verifica task a cada 5 min
 $Global:PowerEventRegistered = $false         # Flag para evitar registro duplicado
 
@@ -833,26 +833,26 @@ function Invoke-AgentSelfTest {
 # ============================================
 #  FSM ENTERPRISE v2.1: RESILIENCE FUNCTIONS
 # ============================================
-# Funções de resiliência para garantir que o agente nunca fique offline
-# com o PC ligado e conectado à internet
+# Funcoes de resiliencia para garantir que o agente nunca fique offline
+# com o PC ligado e conectado a internet
 
 function Test-NetworkConnectivity {
     <#
     .SYNOPSIS
         Testa conectividade com o servidor Supabase
     .DESCRIPTION
-        Verifica se consegue alcançar o endpoint do servidor.
-        Usa TLS 1.2 e timeout curto para detecção rápida.
+        Verifica se consegue alcancar o endpoint do servidor.
+        Usa TLS 1.2 e timeout curto para deteccao rapida.
     #>
     try {
-        # Forçar TLS 1.2 (critical para Windows Server antigos)
+        # Forcar TLS 1.2 (critical para Windows Server antigos)
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         
         # Extrair hostname do ServerUrl
         $uri = [System.Uri]$Global:ServerUrl
         $hostname = $uri.Host
         
-        # Tentar conexão TCP na porta 443 (mais rápido que HTTP request)
+        # Tentar conexao TCP na porta 443 (mais rapido que HTTP request)
         $tcpClient = New-Object System.Net.Sockets.TcpClient
         $connectTask = $tcpClient.ConnectAsync($hostname, 443)
         $connected = $connectTask.Wait(5000)  # 5 segundos timeout
@@ -873,15 +873,15 @@ function Test-NetworkConnectivity {
 function Invoke-NetworkWatchdog {
     <#
     .SYNOPSIS
-        Network Watchdog - monitora conectividade e força reconexão
+        Network Watchdog - monitora conectividade e forca reconexao
     .DESCRIPTION
-        Detecta quando a rede volta após desconexão e força heartbeat imediato.
+        Detecta quando a rede volta apos desconexao e forca heartbeat imediato.
         Chamado a cada ciclo do main loop.
     #>
     try {
         $now = Get-Date
         
-        # Inicializar timestamps se necessário
+        # Inicializar timestamps se necessario
         if ($null -eq $Global:LastNetworkCheck) {
             $Global:LastNetworkCheck = $now
             $Global:LastNetworkState = Test-NetworkConnectivity
@@ -893,7 +893,7 @@ function Invoke-NetworkWatchdog {
         
         # Verificar a cada N segundos
         if (($now - $Global:LastNetworkCheck).TotalSeconds -lt $Global:NetworkCheckIntervalSeconds) {
-            # Se ForceReconnect flag está ativo (ex: wake from sleep), processar imediatamente
+            # Se ForceReconnect flag esta ativo (ex: wake from sleep), processar imediatamente
             if (-not $Global:ForceReconnect) {
                 return @{
                     checked = $false
@@ -905,7 +905,7 @@ function Invoke-NetworkWatchdog {
         $Global:LastNetworkCheck = $now
         $currentState = Test-NetworkConnectivity
         
-        # Detectar transição de offline para online
+        # Detectar transicao de offline para online
         if (-not $Global:LastNetworkState -and $currentState) {
             Write-Log "[NETWORK-WATCHDOG] Rede restaurada! Forcando heartbeat imediato..." "INFO"
             
@@ -920,7 +920,7 @@ function Invoke-NetworkWatchdog {
             $Global:ForceReconnect = $false
             $Global:LastNetworkState = $currentState
             
-            # Forçar heartbeat imediato
+            # Forcar heartbeat imediato
             $success = Send-Heartbeat
             
             if ($success) {
@@ -942,7 +942,7 @@ function Invoke-NetworkWatchdog {
             }
         }
         
-        # Processar ForceReconnect mesmo se rede já estava online
+        # Processar ForceReconnect mesmo se rede ja estava online
         if ($Global:ForceReconnect -and $currentState) {
             Write-Log "[NETWORK-WATCHDOG] ForceReconnect ativo com rede disponivel. Heartbeat imediato..." "INFO"
             $Global:ForceReconnect = $false
@@ -979,15 +979,15 @@ function Invoke-NetworkWatchdog {
 function Assert-TaskHealth {
     <#
     .SYNOPSIS
-        Verifica se a Scheduled Task do agente está saudável
+        Verifica se a Scheduled Task do agente esta saudavel
     .DESCRIPTION
-        Verifica se a task existe, está configurada corretamente e está Running.
+        Verifica se a task existe, esta configurada corretamente e esta Running.
         Se encontrar problemas, tenta auto-repair.
     #>
     try {
         $now = Get-Date
         
-        # Inicializar timestamp se necessário
+        # Inicializar timestamp se necessario
         if ($null -eq $Global:LastTaskHealthCheck) {
             $Global:LastTaskHealthCheck = $now
             return @{
@@ -1024,8 +1024,8 @@ function Assert-TaskHealth {
                 agent_version = $Global:AgentVersion
             } -Severity "critical"
             
-            # Não podemos re-registrar a task de dentro do script porque 
-            # não temos os parâmetros originais. Apenas logar.
+            # Nao podemos re-registrar a task de dentro do script porque 
+            # nao temos os parametros originais. Apenas logar.
             return @{
                 checked = $true
                 healthy = $false
@@ -1033,7 +1033,7 @@ function Assert-TaskHealth {
             }
         }
         
-        # Verificar se está habilitada
+        # Verificar se esta habilitada
         if ($task.State -eq "Disabled") {
             Write-Log "[TASK-HEALTH] Task desabilitada! Tentando reabilitar..." "WARN"
             try {
@@ -1068,10 +1068,10 @@ function Assert-TaskHealth {
         $principal = $task.Principal
         if ($principal.UserId -and $principal.UserId -notlike "*SYSTEM*" -and $principal.UserId -ne "S-1-5-18") {
             Write-Log "[TASK-HEALTH] AVISO: Task nao executa como SYSTEM (atual: $($principal.UserId))" "WARN"
-            # Não corrigir automaticamente, apenas alertar
+            # Nao corrigir automaticamente, apenas alertar
         }
         
-        # Task saudável
+        # Task saudavel
         return @{
             checked = $true
             healthy = $true
@@ -1094,8 +1094,8 @@ function Register-PowerEventWatcher {
     .SYNOPSIS
         Registra listener para eventos de power (wake from sleep/hibernate)
     .DESCRIPTION
-        Usa WMI para detectar quando o PC volta de hibernação/sleep e 
-        define ForceReconnect flag para forçar heartbeat imediato.
+        Usa WMI para detectar quando o PC volta de hibernacao/sleep e 
+        define ForceReconnect flag para forcar heartbeat imediato.
     #>
     if ($Global:PowerEventRegistered) {
         return @{ registered = $true; reason = "already_registered" }
@@ -1142,7 +1142,7 @@ function Register-PowerEventWatcher {
         }
     }
     catch {
-        # Em alguns sistemas (containers, VMs), WMI events podem não funcionar
+        # Em alguns sistemas (containers, VMs), WMI events podem nao funcionar
         Write-Log "[POWER-EVENTS] Nao foi possivel registrar eventos de power: $($_.Exception.Message)" "WARN"
         return @{
             registered = $false
@@ -1346,7 +1346,7 @@ function Verify-JobSignature {
         # If public key is configured but job has no signature, reject
         if ([string]::IsNullOrEmpty($signature)) {
             if ($Global:RequireJobSignatures) {
-                Write-Log "[SECURITY] ❌ REJECTED: Job $jobId has no signature (signatures required)" "ERROR"
+                Write-Log "[SECURITY] [ERROR]  REJECTED: Job $jobId has no signature (signatures required)" "ERROR"
                 
                 Add-EvidenceEntry -Type "security_alert" -Data @{
                     event = "unsigned_job_rejected"
@@ -1363,7 +1363,7 @@ function Verify-JobSignature {
         
         # Verify algorithm is Ed25519
         if ($signingAlg -and $signingAlg -ne "Ed25519") {
-            Write-Log "[SECURITY] ❌ REJECTED: Unsupported signing algorithm: $signingAlg" "ERROR"
+            Write-Log "[SECURITY] [ERROR]  REJECTED: Unsupported signing algorithm: $signingAlg" "ERROR"
             return $false
         }
         
@@ -1398,7 +1398,7 @@ function Verify-JobSignature {
             $isValid = $ed25519.VerifyData($payloadBytes, $signatureBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
             
             if ($isValid) {
-                Write-Log "[SECURITY] ✅ Job $jobId signature verified successfully" "SUCCESS"
+                Write-Log "[SECURITY] [OK]  Job $jobId signature verified successfully" "SUCCESS"
                 
                 Add-EvidenceEntry -Type "security_check" -Data @{
                     event = "job_signature_verified"
@@ -1409,7 +1409,7 @@ function Verify-JobSignature {
                 
                 return $true
             } else {
-                Write-Log "[SECURITY] ❌ REJECTED: Job $jobId signature verification FAILED" "ERROR"
+                Write-Log "[SECURITY] [ERROR]  REJECTED: Job $jobId signature verification FAILED" "ERROR"
                 
                 Add-EvidenceEntry -Type "security_alert" -Data @{
                     event = "invalid_job_signature"
@@ -1437,7 +1437,7 @@ function Verify-JobSignature {
             
             # In strict mode, reject; otherwise allow with signature present
             if ($Global:RequireJobSignatures) {
-                Write-Log "[SECURITY] ❌ Cannot verify signature - rejecting in strict mode" "ERROR"
+                Write-Log "[SECURITY] [ERROR]  Cannot verify signature - rejecting in strict mode" "ERROR"
                 return $false
             }
             
@@ -1768,7 +1768,7 @@ $Global:StateTransitions = @{
     "DEGRADED" = @("RECOVERY", "ERROR", "ENFORCING", "SHUTDOWN")
     "RECOVERY" = @("ENFORCING", "DEGRADED", "ERROR", "SHUTDOWN")
     "ERROR" = @("RECOVERY", "SHUTDOWN")
-    "SHUTDOWN" = @()  # Terminal - sem saídas permitidas
+    "SHUTDOWN" = @()  # Terminal - sem saidas permitidas
 }
 
 # Estados que permitem execucao de jobs
@@ -1782,17 +1782,17 @@ $Global:JobExecutionStates = @("ENFORCING", "DEGRADED", "SYNCING")
 function Test-StateInvariants {
     <#
     .SYNOPSIS
-        Valida invariantes de estado - ENFORCING só é permitido se componentes críticos OK
+        Valida invariantes de estado - ENFORCING so e permitido se componentes criticos OK
     .DESCRIPTION
         Impede que o agente entre em ENFORCING com componentes falhados.
-        Elimina "estados mentirosos" onde ENFORCING é mantido sem enforcement real.
+        Elimina "estados mentirosos" onde ENFORCING e mantido sem enforcement real.
     #>
     param([string]$ProposedState)
     
     if ($ProposedState -eq "ENFORCING") {
         $violations = @()
         
-        # DNS Filter obrigatório se habilitado
+        # DNS Filter obrigatorio se habilitado
         if ($Global:DNSFilterConfig -and $Global:DNSFilterConfig.Enabled) {
             try {
                 $dnsStatus = Get-DNSFilterStatus -ErrorAction SilentlyContinue
@@ -1800,7 +1800,7 @@ function Test-StateInvariants {
                     $violations += "dns_filter_not_running"
                 }
             } catch {
-                # Se não conseguir verificar DNS, não bloqueia (pode ser muito cedo no bootstrap)
+                # Se nao conseguir verificar DNS, nao bloqueia (pode ser muito cedo no bootstrap)
             }
         }
         
@@ -1827,10 +1827,10 @@ function Test-StateInvariants {
 function Add-ComponentFailure {
     <#
     .SYNOPSIS
-        Registra falha de componente com hard stop após limite
+        Registra falha de componente com hard stop apos limite
     .DESCRIPTION
         Implementa regras duras de falha para evitar loops infinitos.
-        Após MaxConsecutiveFailures, força transição para estado de exaustão.
+        Apos MaxConsecutiveFailures, forca transicao para estado de exaustao.
     #>
     param(
         [Parameter(Mandatory = $true)]
@@ -1853,7 +1853,7 @@ function Add-ComponentFailure {
     
     $counter = $Global:FailureCounters[$Component]
     
-    # Verificar se está em cooldown
+    # Verificar se esta em cooldown
     if ($counter.cooldown_until -and (Get-Date) -lt $counter.cooldown_until) {
         Write-Log "[FAILURE] $Component in cooldown until $($counter.cooldown_until)" "DEBUG"
         return @{ action = "cooldown"; remaining_seconds = [int]($counter.cooldown_until - (Get-Date)).TotalSeconds }
@@ -1864,14 +1864,14 @@ function Add-ComponentFailure {
     
     Write-Log "[FAILURE] $Component failure #$($counter.consecutive) (max: $($Global:FailurePolicy.MaxConsecutiveFailures))" "WARN"
     
-    # Hard stop após MaxConsecutiveFailures
+    # Hard stop apos MaxConsecutiveFailures
     if ($counter.consecutive -ge $Global:FailurePolicy.MaxConsecutiveFailures) {
         Write-Log "[CRITICAL] $Component exceeded max failures ($($counter.consecutive)) - HARD STOP" "ERROR"
         
         # Entrar em cooldown
         $counter.cooldown_until = (Get-Date).AddSeconds($Global:FailurePolicy.CooldownSeconds)
         
-        # Log único de exaustão (não múltiplos)
+        # Log unico de exaustao (nao multiplos)
         Add-EvidenceEntry -Type "recovery_exhausted" -Data @{
             component = $Component
             consecutive_failures = $counter.consecutive
@@ -1884,7 +1884,7 @@ function Add-ComponentFailure {
         # Gerar incident summary
         Write-IncidentSummary -RootCause "${Component}_exhausted" -CorrelationId $CorrelationId
         
-        # Transição para estado de exaustão
+        # Transicao para estado de exaustao
         Set-AgentState -NewState $Global:FailurePolicy.OnExhaust `
             -Reason "Component $Component exhausted after $($counter.consecutive) failures" `
             -ErrorDetails $ErrorMessage
@@ -1898,7 +1898,7 @@ function Add-ComponentFailure {
 function Reset-ComponentFailure {
     <#
     .SYNOPSIS
-        Reseta contador de falhas de um componente após sucesso
+        Reseta contador de falhas de um componente apos sucesso
     #>
     param([string]$Component)
     
@@ -1919,10 +1919,10 @@ function Reset-ComponentFailure {
 function Write-LogDedup {
     <#
     .SYNOPSIS
-        Log com deduplicação automática (evita ruído)
+        Log com deduplicacao automatica (evita ruido)
     .DESCRIPTION
         Suprime logs duplicados dentro de LogDeduplicationTTLSeconds.
-        Reduz volume de logs em ~80% sem perder informação.
+        Reduz volume de logs em ~80% sem perder informacao.
     #>
     param(
         [string]$Message,
@@ -1933,7 +1933,7 @@ function Write-LogDedup {
     $cacheKey = "$Level|$Message"
     $now = Get-Date
     
-    # Verificar se já logou recentemente
+    # Verificar se ja logou recentemente
     if ($Global:LogDeduplicationCache.ContainsKey($cacheKey)) {
         $lastLog = $Global:LogDeduplicationCache[$cacheKey]
         $elapsed = ($now - $lastLog).TotalSeconds
@@ -1958,10 +1958,10 @@ function Write-LogDedup {
 function Write-HealthSnapshot {
     <#
     .SYNOPSIS
-        Snapshot único de saúde por ciclo (1 evento = 1 log)
+        Snapshot unico de saude por ciclo (1 evento = 1 log)
     .DESCRIPTION
-        Substitui múltiplos logs de estado por um único snapshot agregado.
-        Chamado a cada 5 minutos (não a cada evento).
+        Substitui multiplos logs de estado por um unico snapshot agregado.
+        Chamado a cada 5 minutos (nao a cada evento).
     #>
     param([string]$CorrelationId = $null)
     
@@ -2010,10 +2010,10 @@ function Write-HealthSnapshot {
 function Write-IncidentSummary {
     <#
     .SYNOPSIS
-        Gera resumo de incidente ao entrar em estado crítico
+        Gera resumo de incidente ao entrar em estado critico
     .DESCRIPTION
         Chamado automaticamente ao entrar em ERROR ou SAFE_MODE.
-        Fornece contexto forense para investigação.
+        Fornece contexto forense para investigacao.
     #>
     param(
         [Parameter(Mandatory = $true)]
@@ -2029,7 +2029,7 @@ function Write-IncidentSummary {
     
     $incidentId = [guid]::NewGuid().ToString()
     
-    # Construir timeline dos últimos 10 eventos de estado
+    # Construir timeline dos ultimos 10 eventos de estado
     $timeline = @()
     if ($Global:AgentState.History -and $Global:AgentState.History.Count -gt 0) {
         $timeline = $Global:AgentState.History | Select-Object -Last 10 | ForEach-Object {
@@ -2038,7 +2038,7 @@ function Write-IncidentSummary {
         }
     }
     
-    # Determinar ação recomendada
+    # Determinar acao recomendada
     $recommendedAction = switch -Regex ($RootCause) {
         "dns" { "reinstall_dns_service" }
         "heartbeat" { "check_network_connectivity" }
@@ -2095,20 +2095,20 @@ function Set-AgentState {
         [string]$CorrelationId = $null
     )
     
-    # Gerar correlation_id se não fornecido
+    # Gerar correlation_id se nao fornecido
     if (-not $CorrelationId) {
         $CorrelationId = [guid]::NewGuid().ToString().Substring(0, 8)
     }
     
     $currentState = $Global:AgentState.Current
     
-    # FSM Enterprise v2.0: Validar invariantes ANTES de permitir transição
+    # FSM Enterprise v2.0: Validar invariantes ANTES de permitir transicao
     if ($NewState -eq "ENFORCING") {
         $invariants = Test-StateInvariants -ProposedState $NewState
         if (-not $invariants.valid) {
             Write-Log "[STATE] INVARIANT VIOLATION: Cannot enter $NewState - $($invariants.violations -join ', ')" "WARN"
             
-            # Forçar DEGRADED ao invés de ENFORCING inválido
+            # Forcar DEGRADED ao inves de ENFORCING invalido
             $NewState = "DEGRADED"
             $Reason = "Invariant violation: $($invariants.violations -join ', ')"
         }
@@ -2177,7 +2177,7 @@ function Set-AgentState {
         correlation_id = $CorrelationId
     } -StateBefore $currentState -StateAfter $NewState -Severity $(if ($NewState -eq "ERROR") { "error" } elseif ($NewState -eq "DEGRADED") { "warning" } else { "info" })
     
-    # FSM Enterprise v2.0: Gerar incident summary para estados críticos
+    # FSM Enterprise v2.0: Gerar incident summary para estados criticos
     if ($NewState -eq "ERROR" -and $currentState -ne "ERROR") {
         Write-IncidentSummary -RootCause $Reason -CorrelationId $CorrelationId
     }
@@ -2220,7 +2220,7 @@ function Add-EvidenceEntry {
     )
     
     try {
-        # RUNTIME VALIDATION - Backward + Forward compatible (substitui ValidateSet rígido)
+        # RUNTIME VALIDATION - Backward + Forward compatible (substitui ValidateSet rigido)
         $AllowedTypes = @(
             "state_change", "job_execution", "dns_block", "policy_sync", 
             "auto_recovery", "heartbeat", "update_applied", "update_check", 
@@ -2230,7 +2230,7 @@ function Add-EvidenceEntry {
         
         if ($Type -notin $AllowedTypes) {
             Write-Log "[EVIDENCE] Tipo desconhecido aceito graciosamente: $Type" "WARN"
-            # Não bloqueia - aceita qualquer tipo para forward compatibility
+            # Nao bloqueia - aceita qualquer tipo para forward compatibility
         }
         
         # Criar hash SHA256 do data para integridade
@@ -4789,10 +4789,10 @@ function Invoke-ReinstallAgentJob {
         # CRITICAL FIX v4.2.3: Triggers duplos para auto-recovery
         # AtStartup: Inicia com Windows
         # RepetitionInterval 5min: Reinicia automaticamente se processo morrer
-        # FIX: Usar RepetitionDuration explícito para evitar erro Duration:P999999990T23H59M59S
+        # FIX: Usar RepetitionDuration explicito para evitar erro Duration:P999999990T23H59M59S
         $startupTrigger = New-ScheduledTaskTrigger -AtStartup
         
-        # Trigger de repetição com duração explícita (365 dias - máximo seguro)
+        # Trigger de repeticao com duracao explicita (365 dias - maximo seguro)
         $repetitionTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1)
         $repetitionTrigger.Repetition.Interval = "PT5M"   # 5 minutos
         $repetitionTrigger.Repetition.Duration = "P365D"  # 365 dias (valor seguro)
@@ -5616,7 +5616,7 @@ function Invoke-UpdateAgentJob {
         
         # ============================================================
         # FASE 2.6: ED25519 SIGNATURE VERIFICATION
-        # Verifica assinatura criptográfica ANTES de aplicar update
+        # Verifica assinatura criptografica ANTES de aplicar update
         # ============================================================
         $signatureVerified = $false
         if ($data.signature_base64) {
@@ -5705,7 +5705,7 @@ function Invoke-UpdateAgentJob {
         Write-Log "[SUCCESS] Script v$newVersion instalado em $targetScript" "SUCCESS"
         
         # SSA-014 FIX: Auto-restart igual ao Apply-ForcedUpdate
-        # (Mesmo padrão que funciona corretamente no forced update)
+        # (Mesmo padrao que funciona corretamente no forced update)
         Write-Log "[UPDATE] Reiniciando Scheduled Task para ativar nova versao..." "INFO"
         try {
             Stop-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
@@ -5952,11 +5952,11 @@ try {
                         -ErrorMessage "Heartbeat failed" `
                         -CorrelationId $correlationId
                     
-                    # Só tenta recovery se não exauriu e está em estado apropriado
+                    # So tenta recovery se nao exauriu e esta em estado apropriado
                     if ($failureResult.action -eq "retry" -and $failureResult.attempt -ge 3 -and $state -eq "ENFORCING") {
                         Invoke-AutoRecovery -FailedComponent "heartbeat" -ErrorMessage "Heartbeat failed"
                     }
-                    # Se exauriu, já entrou em ERROR via Add-ComponentFailure
+                    # Se exauriu, ja entrou em ERROR via Add-ComponentFailure
                 } else {
                     # Sucesso - resetar contador
                     Reset-ComponentFailure -Component "heartbeat"
@@ -5991,11 +5991,11 @@ try {
                         -ErrorMessage $dnsHealth.reason `
                         -CorrelationId $correlationId
                     
-                    # Só tenta recovery se não exauriu e atingiu limite mínimo
+                    # So tenta recovery se nao exauriu e atingiu limite minimo
                     if ($failureResult.action -eq "retry" -and $failureResult.attempt -ge 3) {
                         Invoke-AutoRecovery -FailedComponent "dns_filter" -ErrorMessage $dnsHealth.reason
                     }
-                    # Se exauriu, já entrou em ERROR via Add-ComponentFailure
+                    # Se exauriu, ja entrou em ERROR via Add-ComponentFailure
                 } else {
                     # Sucesso - resetar contador
                     Reset-ComponentFailure -Component "dns_filter"
@@ -6067,7 +6067,7 @@ try {
             # ============================================
             #  FSM ENTERPRISE v2.1: NETWORK WATCHDOG
             # ============================================
-            # Verifica conectividade e força heartbeat quando rede volta
+            # Verifica conectividade e forca heartbeat quando rede volta
             try {
                 $networkResult = Invoke-NetworkWatchdog
                 
@@ -6100,7 +6100,7 @@ try {
                 Invoke-LogRotation
                 Invoke-EvidenceRotation
                 
-                # Limpar cache de deduplicação a cada hora
+                # Limpar cache de deduplicacao a cada hora
                 $Global:LogDeduplicationCache.Clear()
                 
                 $lastRotation = Get-Date

@@ -141,7 +141,7 @@ serve(async (req: Request) => {
           const { data: emailData, error: emailError } = await resend.emails.send({
             from: 'CyberShield <reports@resend.dev>',
             to: [recipient],
-            subject: `📊 ${report.name} - ${tenantName}`,
+            subject: `? ${report.name} - ${tenantName}`,
             html,
           });
 
@@ -152,7 +152,7 @@ serve(async (req: Request) => {
               tenant_id: report.tenant_id,
               channel_type: 'email',
               recipient,
-              message_preview: `Relatório: ${report.name}`,
+              message_preview: `Relatorio: ${report.name}`,
               status: 'failed',
               error_message: emailError.message
             });
@@ -163,7 +163,7 @@ serve(async (req: Request) => {
               tenant_id: report.tenant_id,
               channel_type: 'email',
               recipient,
-              message_preview: `Relatório: ${report.name}`,
+              message_preview: `Relatorio: ${report.name}`,
               status: 'sent',
               external_id: emailData?.id,
               sent_at: new Date().toISOString()
@@ -311,7 +311,7 @@ function generateReportHtml(data: ReportData, report: ScheduledReport, tenantNam
     <!-- Header -->
     <tr>
       <td style="background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%); padding: 32px; border-radius: 12px 12px 0 0; text-align: center;">
-        <h1 style="color: #ffffff; margin: 0; font-size: 28px;">🔒 CyberShield</h1>
+        <h1 style="color: #ffffff; margin: 0; font-size: 28px;">? CyberShield</h1>
         <p style="color: #94a3b8; margin: 8px 0 0 0; font-size: 14px;">${tenantName}</p>
       </td>
     </tr>
@@ -319,9 +319,9 @@ function generateReportHtml(data: ReportData, report: ScheduledReport, tenantNam
     <!-- Report Title -->
     <tr>
       <td style="background-color: #ffffff; padding: 24px 32px; border-bottom: 1px solid #e5e7eb;">
-        <h2 style="color: #111827; margin: 0; font-size: 20px;">📊 ${report.name}</h2>
+        <h2 style="color: #111827; margin: 0; font-size: 20px;">? ${report.name}</h2>
         <p style="color: #6b7280; margin: 8px 0 0 0; font-size: 14px;">
-          Período: ${weekAgo} - ${today}
+          Periodo: ${weekAgo} - ${today}
         </p>
       </td>
     </tr>
@@ -334,19 +334,19 @@ function generateReportHtml(data: ReportData, report: ScheduledReport, tenantNam
           <tr>
             <td width="25%" style="padding: 12px; background-color: #f0fdf4; border-radius: 8px; text-align: center;">
               <div style="font-size: 28px; font-weight: 700; color: #16a34a;">${onlineAgents}/${data.agents.length}</div>
-              <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">🖥️ Computadores Online</div>
+              <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">?? Computadores Online</div>
             </td>
             <td width="25%" style="padding: 12px; background-color: ${criticalVulns > 0 ? '#fef2f2' : '#f0fdf4'}; border-radius: 8px; text-align: center;">
               <div style="font-size: 28px; font-weight: 700; color: ${criticalVulns > 0 ? '#dc2626' : '#16a34a'};">${criticalVulns}</div>
-              <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">🔴 Vuln. Críticas</div>
+              <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">? Vuln. Criticas</div>
             </td>
             <td width="25%" style="padding: 12px; background-color: ${highVulns > 0 ? '#fff7ed' : '#f0fdf4'}; border-radius: 8px; text-align: center;">
               <div style="font-size: 28px; font-weight: 700; color: ${highVulns > 0 ? '#ea580c' : '#16a34a'};">${highVulns}</div>
-              <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">🟠 Vuln. Altas</div>
+              <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">? Vuln. Altas</div>
             </td>
             <td width="25%" style="padding: 12px; background-color: ${threats > 0 ? '#fef2f2' : '#f0fdf4'}; border-radius: 8px; text-align: center;">
               <div style="font-size: 28px; font-weight: 700; color: ${threats > 0 ? '#dc2626' : '#16a34a'};">${threats}</div>
-              <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">🛡️ Ameaças</div>
+              <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">?? Ameacas</div>
             </td>
           </tr>
         </table>
@@ -357,7 +357,7 @@ function generateReportHtml(data: ReportData, report: ScheduledReport, tenantNam
     <!-- Vulnerabilities Section -->
     <tr>
       <td style="background-color: #ffffff; padding: 24px 32px; border-top: 1px solid #e5e7eb;">
-        <h3 style="color: #374151; margin: 0 0 16px 0; font-size: 16px;">🔴 Vulnerabilidades Encontradas (${data.vulnerabilities.length})</h3>
+        <h3 style="color: #374151; margin: 0 0 16px 0; font-size: 16px;">? Vulnerabilidades Encontradas (${data.vulnerabilities.length})</h3>
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
           <tr style="background-color: #f9fafb;">
             <th style="padding: 12px; text-align: left; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Severidade</th>
@@ -383,12 +383,12 @@ function generateReportHtml(data: ReportData, report: ScheduledReport, tenantNam
     <!-- Agents Section -->
     <tr>
       <td style="background-color: #ffffff; padding: 24px 32px; border-top: 1px solid #e5e7eb;">
-        <h3 style="color: #374151; margin: 0 0 16px 0; font-size: 16px;">🖥️ Status dos Computadores (${data.agents.length})</h3>
+        <h3 style="color: #374151; margin: 0 0 16px 0; font-size: 16px;">?? Status dos Computadores (${data.agents.length})</h3>
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
           <tr style="background-color: #f9fafb;">
             <th style="padding: 12px; text-align: left; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Nome</th>
             <th style="padding: 12px; text-align: left; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Status</th>
-            <th style="padding: 12px; text-align: left; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Versão</th>
+            <th style="padding: 12px; text-align: left; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Versao</th>
           </tr>
           ${data.agents.slice(0, 10).map(a => {
             const isOnline = a.last_heartbeat && (Date.now() - new Date(a.last_heartbeat).getTime()) < 30 * 60 * 1000;
@@ -397,7 +397,7 @@ function generateReportHtml(data: ReportData, report: ScheduledReport, tenantNam
             <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; color: #374151;">${a.agent_name || a.hostname}</td>
             <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
               <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: ${isOnline ? '#16a34a' : '#dc2626'};">
-                ${isOnline ? '✅ Online' : '❌ Offline'}
+                ${isOnline ? '[OK]  Online' : '[ERROR]  Offline'}
               </span>
             </td>
             <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">${a.agent_version || 'N/A'}</td>
@@ -413,11 +413,11 @@ function generateReportHtml(data: ReportData, report: ScheduledReport, tenantNam
     <!-- Web Activity Section -->
     <tr>
       <td style="background-color: #ffffff; padding: 24px 32px; border-top: 1px solid #e5e7eb;">
-        <h3 style="color: #374151; margin: 0 0 16px 0; font-size: 16px;">🌐 Atividade Web (${data.webActivity.length} domínios)</h3>
-        ${blockedDomains > 0 ? `<p style="color: #dc2626; font-size: 14px; margin: 0 0 12px 0;">⚠️ ${blockedDomains} acessos bloqueados no período</p>` : ''}
+        <h3 style="color: #374151; margin: 0 0 16px 0; font-size: 16px;">? Atividade Web (${data.webActivity.length} dominios)</h3>
+        ${blockedDomains > 0 ? `<p style="color: #dc2626; font-size: 14px; margin: 0 0 12px 0;">[WARN] ? ${blockedDomains} acessos bloqueados no periodo</p>` : ''}
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
           <tr style="background-color: #f9fafb;">
-            <th style="padding: 12px; text-align: left; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Domínio</th>
+            <th style="padding: 12px; text-align: left; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Dominio</th>
             <th style="padding: 12px; text-align: left; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Categoria</th>
             <th style="padding: 12px; text-align: center; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Visitas</th>
           </tr>
@@ -437,10 +437,10 @@ function generateReportHtml(data: ReportData, report: ScheduledReport, tenantNam
     <tr>
       <td style="background-color: #f9fafb; padding: 24px 32px; border-radius: 0 0 12px 12px; text-align: center;">
         <p style="color: #6b7280; margin: 0; font-size: 12px;">
-          Relatório gerado automaticamente em ${now}
+          Relatorio gerado automaticamente em ${now}
         </p>
         <p style="color: #9ca3af; margin: 8px 0 0 0; font-size: 11px;">
-          CyberShield - Proteção Inteligente para sua Empresa
+          CyberShield - Protecao Inteligente para sua Empresa
         </p>
       </td>
     </tr>
@@ -462,9 +462,9 @@ function getSeverityColor(severity: string): string {
 
 function getSeverityLabel(severity: string): string {
   switch (severity) {
-    case 'critical': return 'CRÍTICO';
+    case 'critical': return 'CRITICO';
     case 'high': return 'ALTO';
-    case 'medium': return 'MÉDIO';
+    case 'medium': return 'MEDIO';
     case 'low': return 'BAIXO';
     default: return severity.toUpperCase();
   }
@@ -472,16 +472,16 @@ function getSeverityLabel(severity: string): string {
 
 function getCategoryLabel(category: string | null): string {
   const labels: Record<string, string> = {
-    social: '📱 Social',
-    video: '🎬 Vídeo',
-    news: '📰 Notícias',
-    work: '💼 Trabalho',
-    shopping: '🛒 Compras',
-    email: '📧 Email',
-    search: '🔍 Busca',
-    games: '🎮 Jogos',
-    adult: '🔞 Adulto',
-    gambling: '🎰 Apostas',
+    social: '? Social',
+    video: '? Video',
+    news: '? Noticias',
+    work: '? Trabalho',
+    shopping: '? Compras',
+    email: '? Email',
+    search: '[SCAN]  Busca',
+    games: '? Jogos',
+    adult: '? Adulto',
+    gambling: '? Apostas',
   };
   return labels[category || ''] || category || 'Outro';
 }

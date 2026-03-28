@@ -4,7 +4,7 @@ import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 
 /**
- * notification-dispatcher — Consolidated notification function
+ * notification-dispatcher ? Consolidated notification function
  * 
  * Replaces 10 individual notification functions:
  *   send-alert-email, send-health-alert, send-security-alert,
@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     let callerTenantId: string | null = null;
 
     if (internalAuth) {
-      // Not internal — check JWT
+      // Not internal ? check JWT
       const authHeader = req.headers.get('Authorization');
       if (!authHeader) {
         return new Response(

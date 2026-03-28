@@ -2,8 +2,8 @@
 -- FECHAMENTO DO LOOP: AUTO_REVERT_THROTTLE_006
 -- =============================================================
 
--- 1️⃣ RPC: detect_throttle_revert_candidates
--- Detecta agentes que podem ter o throttle removido com segurança
+-- 1?? RPC: detect_throttle_revert_candidates
+-- Detecta agentes que podem ter o throttle removido com seguranca
 CREATE OR REPLACE FUNCTION public.detect_throttle_revert_candidates()
 RETURNS TABLE (
   agent_id uuid,
@@ -29,15 +29,15 @@ BEGIN
   FROM agents a
   JOIN v_agent_execution_health v ON v.agent_id = a.id
   WHERE
-    -- Está throttled
+    -- Esta throttled
     a.is_throttled = true
-    -- Cooldown mínimo (2h desde o throttle)
+    -- Cooldown minimo (2h desde o throttle)
     AND a.throttled_at < NOW() - INTERVAL '2 hours'
-    -- Voltou a executar recentemente (menos de 15min sem execução)
+    -- Voltou a executar recentemente (menos de 15min sem execucao)
     AND v.minutes_since_execution < 15
     -- Backlog sob controle
     AND v.pending_jobs < 5
-    -- Anti-flap: não foi throttled recentemente de novo
+    -- Anti-flap: nao foi throttled recentemente de novo
     AND NOT EXISTS (
       SELECT 1
       FROM decision_events de
@@ -50,7 +50,7 @@ BEGIN
 END;
 $$;
 
--- 2️⃣ Ativar regra AUTO_REVERT_THROTTLE_006
+-- 2?? Ativar regra AUTO_REVERT_THROTTLE_006
 UPDATE public.decision_rules
 SET is_enabled = true
 WHERE code = 'AUTO_REVERT_THROTTLE_006';

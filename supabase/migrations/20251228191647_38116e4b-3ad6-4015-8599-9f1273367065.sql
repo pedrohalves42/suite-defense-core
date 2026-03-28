@@ -3,7 +3,7 @@
 -- FASE 1: Sincronizar agent_execution_chain com estado real
 -- =====================================================
 
--- Corrigir dessincronização do chain para todos os agentes
+-- Corrigir dessincronizacao do chain para todos os agentes
 UPDATE agent_execution_chain aec
 SET 
   last_execution_index = COALESCE(
@@ -27,7 +27,7 @@ WHERE EXISTS (
 );
 
 -- =====================================================
--- FASE 2: Recriar RPC claim_jobs_for_agent com proteção
+-- FASE 2: Recriar RPC claim_jobs_for_agent com protecao
 -- =====================================================
 
 CREATE OR REPLACE FUNCTION public.claim_jobs_for_agent(p_agent_id uuid, p_max_jobs integer DEFAULT 5)
@@ -204,7 +204,7 @@ END;
 $function$;
 
 -- =====================================================
--- FASE 3: View de monitoramento de saúde do chain
+-- FASE 3: View de monitoramento de saude do chain
 -- =====================================================
 
 CREATE OR REPLACE VIEW v_execution_chain_health AS

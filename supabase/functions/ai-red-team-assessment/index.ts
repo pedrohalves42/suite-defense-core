@@ -157,7 +157,7 @@ serve(async (req) => {
     if (latestAudit) {
       anaSummary = `Score: ${latestAudit.overall_score}/100. Recommendation: ${latestAudit.recommendation}. Summary: ${latestAudit.executive_summary}`;
     } else {
-      anaSummary = 'Nenhuma auditoria anterior disponível.';
+      anaSummary = 'Nenhuma auditoria anterior disponivel.';
     }
 
     logger.info('[ai-red-team-assessment] Metrics collected, Ana summary available');
@@ -213,8 +213,8 @@ serve(async (req) => {
           threat_level: threatLevel,
           red_score: redScore,
           binary_criteria: binaryCriteria,
-          attack_vectors: ['Análise determinística - provedores de IA indisponíveis'],
-          residual_risks: [`${criteriaCount} critérios de risco identificados automaticamente`],
+          attack_vectors: ['Analise deterministica - provedores de IA indisponiveis'],
+          residual_risks: [`${criteriaCount} criterios de risco identificados automaticamente`],
           dimension_threats: {
             system_identity: binaryCriteria.offline_agents_exist ? 'medium' : 'low',
             governance: binaryCriteria.human_approval_rate_zero ? 'high' : 'low',
@@ -226,9 +226,9 @@ serve(async (req) => {
             compliance_alignment: 'unknown',
             market_trust: binaryCriteria.critical_alerts_open ? 'medium' : 'low',
           },
-          executive_threat_summary: `Análise determinística: ${criteriaCount} critérios de risco ativos. Provedores de IA indisponíveis - análise completa requer reconexão.`,
-          worst_case_scenario: 'Não disponível - análise de IA requer provedor ativo',
-          recommended_hardening: ['Verificar configuração dos provedores de IA', 'Revisar critérios binários identificados'],
+          executive_threat_summary: `Analise deterministica: ${criteriaCount} criterios de risco ativos. Provedores de IA indisponiveis - analise completa requer reconexao.`,
+          worst_case_scenario: 'Nao disponivel - analise de IA requer provedor ativo',
+          recommended_hardening: ['Verificar configuracao dos provedores de IA', 'Revisar criterios binarios identificados'],
           _fallback_reason: 'AI_PROVIDERS_UNAVAILABLE',
           _is_deterministic: true,
         };

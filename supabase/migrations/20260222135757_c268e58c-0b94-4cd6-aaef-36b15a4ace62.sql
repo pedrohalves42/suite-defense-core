@@ -3,8 +3,8 @@
 -- ENTERPRISE UPGRADES: 5 New Capabilities
 -- =============================================
 
--- 🔥 1. RULE DEPENDENCY GRAPH (Anti-loop)
--- Prevents Rule A → Rule B → Rule A cycles
+-- ? 1. RULE DEPENDENCY GRAPH (Anti-loop)
+-- Prevents Rule A ? Rule B ? Rule A cycles
 CREATE TABLE IF NOT EXISTS public.automation_rule_dependencies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES public.tenants(id),
@@ -94,7 +94,7 @@ AS $$
     );
 $$;
 
--- 🔥 2. ADAPTIVE BLAST RADIUS
+-- ? 2. ADAPTIVE BLAST RADIUS
 -- Adjusts limits based on severity, business hours, and action type
 CREATE TABLE IF NOT EXISTS public.adaptive_blast_radius_config (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -171,7 +171,7 @@ BEGIN
 END;
 $$;
 
--- 🔥 3. TENANT RISK SCORE
+-- ? 3. TENANT RISK SCORE
 -- Dynamic scoring based on blocked rules, open breakers, failure frequency
 CREATE TABLE IF NOT EXISTS public.tenant_risk_scores (
   tenant_id UUID PRIMARY KEY REFERENCES public.tenants(id),
@@ -280,7 +280,7 @@ BEGIN
 END;
 $$;
 
--- 🔥 4. IDEMPOTENCY KEY for execution deduplication
+-- ? 4. IDEMPOTENCY KEY for execution deduplication
 ALTER TABLE public.automation_execution_log 
   ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
 
@@ -288,7 +288,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_exec_log_idempotency
   ON public.automation_execution_log (idempotency_key) 
   WHERE idempotency_key IS NOT NULL;
 
--- 🔥 5. DISTRIBUTED LOCKING per rule (advisory locks)
+-- ? 5. DISTRIBUTED LOCKING per rule (advisory locks)
 CREATE OR REPLACE FUNCTION public.try_acquire_rule_lock(p_rule_id UUID)
 RETURNS BOOLEAN
 LANGUAGE plpgsql

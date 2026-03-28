@@ -1,8 +1,8 @@
 
 -- =============================================
--- CORREÇÃO 1: Job type alignment with agent v5.0.3
--- CORREÇÃO 2: Functional automation rules  
--- CORREÇÃO 6: Missing tables for SOAR operations
+-- CORRECAO 1: Job type alignment with agent v5.0.3
+-- CORRECAO 2: Functional automation rules  
+-- CORRECAO 6: Missing tables for SOAR operations
 -- =============================================
 
 -- 1.1 Cancel all pending/queued unsupported job types

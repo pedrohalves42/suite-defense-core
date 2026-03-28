@@ -70,7 +70,7 @@ serveTenant(async (req, ctx) => {
       created_by: userId,
       expires_at: expiresAt,
       max_uses: maxUses,
-      description: description || `Chave gerada por usuário`,
+      description: description || `Chave gerada por usuario`,
       tenant_id: tenantId,
     })
     .select()

@@ -1,7 +1,7 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 
-// COST-OPT v4: heartbeat padrão de 10min → considerar offline apenas após 30min
+// COST-OPT v4: heartbeat padrao de 10min ? considerar offline apenas apos 30min
 const OFFLINE_THRESHOLD_MINUTES = 30;
 
 serveTenant(async (_req, ctx) => {
@@ -19,7 +19,7 @@ serveTenant(async (_req, ctx) => {
     );
   }
 
-  // Buscar alertas pendentes (não resolvidos E não reconhecidos)
+  // Buscar alertas pendentes (nao resolvidos E nao reconhecidos)
   const { data: recentAlerts, error: alertsError } = await supabase
     .from('system_alerts')
     .select('*')

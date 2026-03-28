@@ -10,7 +10,7 @@ import { hashToken } from '../_shared/token-hash.ts';
 const SUPABASE_URL = requireEnv('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
 
-// Interface para informações de disco individual
+// Interface para informacoes de disco individual
 interface DiskInfo {
   drive_letter: string;    // "C:", "D:", etc.
   drive_label?: string;    // "Sistema", "Dados", etc.
@@ -35,7 +35,7 @@ interface SystemMetrics {
   disk_used_gb?: number;
   disk_free_gb?: number;
   disk_usage_percent?: number;
-  // NOVO: Array de discos para suporte a múltiplos discos
+  // NOVO: Array de discos para suporte a multiplos discos
   disks?: DiskInfo[];
   network_bytes_sent?: number;
   network_bytes_received?: number;
@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
       disks_drives: metrics.disks?.map(d => d.drive_letter).join(',') || 'none'
     });
 
-    // Processar múltiplos discos se disponível, senão usar valores legado
+    // Processar multiplos discos se disponivel, senao usar valores legado
     let primaryDisk = {
       total_gb: metrics.disk_total_gb,
       used_gb: metrics.disk_used_gb,
@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
       usage_percent: metrics.disk_usage_percent
     };
 
-    // Se há múltiplos discos, encontrar o mais crítico para métricas principais
+    // Se ha multiplos discos, encontrar o mais critico para metricas principais
     if (metrics.disks && metrics.disks.length > 0) {
       const criticalDisk = metrics.disks.reduce((prev, curr) => 
         (curr.usage_percent > (prev.usage_percent || 0)) ? curr : prev
@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
     }
 
     logger.debug('Inserting metrics into database');
-    // Inserir metricas no banco (usando disco mais crítico)
+    // Inserir metricas no banco (usando disco mais critico)
     const { error: insertError } = await supabase
       .from('agent_system_metrics_partitioned')
       .insert({
@@ -232,7 +232,7 @@ Deno.serve(async (req) => {
       
       if (diskError) {
         logger.warn('Failed to insert disk metrics', diskError);
-        // Não falhar a requisição inteira, apenas logar o erro
+        // Nao falhar a requisicao inteira, apenas logar o erro
       } else {
         logger.debug(`Inserted ${diskRecords.length} disk metrics`);
       }
@@ -347,7 +347,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // FASE 2: Auto-resolução de alertas quando métricas normalizam
+    // FASE 2: Auto-resolucao de alertas quando metricas normalizam
     const alertsToResolve: string[] = [];
 
     // CPU normalizou (< 90%)?
@@ -368,10 +368,10 @@ Deno.serve(async (req) => {
     if (alertsToResolve.length > 0) {
       const now = new Date().toISOString();
 
-      // ADR-029 FIX: Alertas críticos requerem resolução humana (resolved_by obrigatório)
-      // Só resolver automaticamente alertas que NÃO são críticos
+      // ADR-029 FIX: Alertas criticos requerem resolucao humana (resolved_by obrigatorio)
+      // So resolver automaticamente alertas que NAO sao criticos
       // Isso respeita o trigger enforce_critical_alert_human_review
-      // Usando filtro explícito com severity IN ('low','medium','high') para evitar críticos
+      // Usando filtro explicito com severity IN ('low','medium','high') para evitar criticos
       const { error: resolveError, count: resolvedCount } = await supabase
         .from('system_alerts')
         .update({ 
@@ -381,7 +381,7 @@ Deno.serve(async (req) => {
         })
         .eq('agent_id', agent.id)
         .eq('resolved', false)
-        .in('severity', ['low', 'medium', 'high']) // Exclui 'critical' - precisam de resolução humana
+        .in('severity', ['low', 'medium', 'high']) // Exclui 'critical' - precisam de resolucao humana
         .in('alert_type', alertsToResolve);
 
       if (resolveError) {
@@ -391,7 +391,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── Bloco A: Trigger automation rules evaluation after metrics ingestion ──
+    // ?? Bloco A: Trigger automation rules evaluation after metrics ingestion ??
     let automationTriggered = 0;
     try {
       const { data: activeRules } = await supabase
@@ -425,7 +425,7 @@ Deno.serve(async (req) => {
       logger.warn('Automation evaluation failed (non-blocking)', automationError);
     }
 
-    // ── Light Mode Evaluation ──
+    // ?? Light Mode Evaluation ??
     let lightModeConfig: any = null;
     try {
       // Get latest process snapshot for media process detection
@@ -456,7 +456,7 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         if (detectedMedia.length > 0 && cpuPercent > 50 && networkMbps > 10) {
-          // Conditions met — activate light mode
+          // Conditions met ? activate light mode
           if (!existingConfig?.is_active) {
             const configData = {
               agent_id: agent.id,

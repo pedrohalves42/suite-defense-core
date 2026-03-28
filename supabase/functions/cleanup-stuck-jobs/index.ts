@@ -1,5 +1,5 @@
 // FASE 2: Funcao de cleanup de jobs travados
-// ZERO-GAP FIX: delivered→failed (not queued) to comply with FSM trigger
+// ZERO-GAP FIX: delivered?failed (not queued) to comply with FSM trigger
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
 import { logger } from '../_shared/logger.ts';
@@ -48,9 +48,9 @@ Deno.serve(async (req) => {
 
     logger.info(`[cleanup-stuck-jobs] Starting cleanup at ${now}`)
 
-    // FASE 1: Jobs delivered travados > timeout → FAILED (não queued!)
-    // O trigger enforce_job_state_transitions bloqueia delivered→queued.
-    // A transição legal é delivered→failed.
+    // FASE 1: Jobs delivered travados > timeout ? FAILED (nao queued!)
+    // O trigger enforce_job_state_transitions bloqueia delivered?queued.
+    // A transicao legal e delivered?failed.
     const { data: stuckDelivered, error: stuckError } = await supabase
       .from('jobs')
       .select('id, agent_name, type, delivered_at, delivery_attempts, expires_at')
@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      // All stuck delivered jobs → failed (legal FSM transition)
+      // All stuck delivered jobs ? failed (legal FSM transition)
       const allIds = stuckDelivered.map(j => j.id)
       if (allIds.length > 0) {
         const { error: failError } = await supabase
@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      // For retryable jobs: create NEW replacement jobs (instead of illegal delivered→queued)
+      // For retryable jobs: create NEW replacement jobs (instead of illegal delivered?queued)
       let recreatedCount = 0
       for (const job of retryable) {
         // Fetch full job data to recreate
@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
           if (!insertError) {
             recreatedCount++
           } else {
-            // Dedup index may block — that's fine, means there's already an active job
+            // Dedup index may block ? that's fine, means there's already an active job
             if (!insertError.message?.includes('idx_jobs_dedup_active')) {
               logger.error(`[cleanup-stuck-jobs] Error recreating job for ${job.agent_name}:`, insertError.message)
             }
@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
       logger.error('[cleanup-stuck-jobs] Error cleaning zombie executions:', e)
     }
 
-    // FASE 3: Jobs expirados (TTL exceeded) — queued or delivered
+    // FASE 3: Jobs expirados (TTL exceeded) ? queued or delivered
     const { data: expiredJobs, error: expiredError } = await supabase
       .from('jobs')
       .select('id, agent_name, type')
@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    logger.info(`[cleanup-stuck-jobs] Summary: ${failedDeliveredCount} delivered→failed, ${zombieCleaned.total} zombie executions, ${expiredCount} expired→failed`)
+    logger.info(`[cleanup-stuck-jobs] Summary: ${failedDeliveredCount} delivered?failed, ${zombieCleaned.total} zombie executions, ${expiredCount} expired?failed`)
 
     // Log observability
     try {

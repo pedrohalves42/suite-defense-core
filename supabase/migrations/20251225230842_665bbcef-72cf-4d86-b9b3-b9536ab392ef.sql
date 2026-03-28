@@ -6,15 +6,15 @@
 ALTER TABLE public.job_executions
 ADD COLUMN IF NOT EXISTS legacy BOOLEAN DEFAULT false;
 
--- 2. Criar índice para queries de legacy executions
+-- 2. Criar indice para queries de legacy executions
 CREATE INDEX IF NOT EXISTS idx_job_executions_legacy 
 ON public.job_executions(legacy) WHERE legacy = true;
 
--- 3. Comentário de documentação
+-- 3. Comentario de documentacao
 COMMENT ON COLUMN public.job_executions.legacy IS 
 'Flag para executions criadas retroativamente para jobs v1 (sem trilha de auditoria original)';
 
--- 4. Criar função para criar executions retroativas
+-- 4. Criar funcao para criar executions retroativas
 CREATE OR REPLACE FUNCTION public.create_retroactive_execution(p_job_id UUID)
 RETURNS UUID
 LANGUAGE plpgsql
@@ -25,7 +25,7 @@ DECLARE
   v_execution_id UUID;
   v_job RECORD;
 BEGIN
-  -- Verificar se já existe execution para este job
+  -- Verificar se ja existe execution para este job
   IF EXISTS (
     SELECT 1 FROM job_executions WHERE job_id = p_job_id
   ) THEN
@@ -82,8 +82,8 @@ BEGIN
 END;
 $$;
 
--- 5. Comentário de documentação
+-- 5. Comentario de documentacao
 COMMENT ON FUNCTION public.create_retroactive_execution(UUID) IS 
-'Cria uma execution retroativa para jobs v1 que não têm trilha de auditoria.
-Usado para migração histórica, relatórios e auditoria.
+'Cria uma execution retroativa para jobs v1 que nao tem trilha de auditoria.
+Usado para migracao historica, relatorios e auditoria.
 NUNCA usar no fluxo normal de jobs - apenas para compatibilidade.';

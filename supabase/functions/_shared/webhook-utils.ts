@@ -24,9 +24,9 @@ export function detectWebhookProvider(url: string): 'slack' | 'teams' | 'generic
  * Formats payload for Slack webhook
  */
 function formatSlackPayload(payload: WebhookPayload): Record<string, unknown> {
-  const emoji = payload.alertType === 'agent_offline' ? '🔴' : 
-                payload.alertType === 'agent_online' ? '🟢' : 
-                payload.alertType === 'jobs_failed' ? '❌' : '🔔';
+  const emoji = payload.alertType === 'agent_offline' ? '?' : 
+                payload.alertType === 'agent_online' ? '?' : 
+                payload.alertType === 'jobs_failed' ? '[ERROR] ' : '?';
   
   const title = payload.alertType === 'agent_offline' ? `Agent Offline: ${payload.agentName}` :
                 payload.alertType === 'agent_online' ? `Agent Online: ${payload.agentName}` :
@@ -104,10 +104,10 @@ function formatTeamsPayload(payload: WebhookPayload): Record<string, unknown> {
                      payload.alertType === 'agent_online' ? '28a745' : 
                      payload.alertType === 'jobs_failed' ? 'dc3545' : '0078d4';
 
-  const title = payload.alertType === 'agent_offline' ? `🔴 Agent Offline: ${payload.agentName}` :
-                payload.alertType === 'agent_online' ? `🟢 Agent Online: ${payload.agentName}` :
-                payload.alertType === 'jobs_failed' ? `❌ Jobs Failed` :
-                '🔔 CyberShield Alert';
+  const title = payload.alertType === 'agent_offline' ? `? Agent Offline: ${payload.agentName}` :
+                payload.alertType === 'agent_online' ? `? Agent Online: ${payload.agentName}` :
+                payload.alertType === 'jobs_failed' ? `[ERROR]  Jobs Failed` :
+                '? CyberShield Alert';
 
   const facts: Array<Record<string, string>> = [
     { name: "Time", value: payload.timestamp },

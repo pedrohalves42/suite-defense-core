@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 3. Evidence logs → extract events and connect to agents
+    // 3. Evidence logs ? extract events and connect to agents
     const { data: evidenceLogs } = await supabase
       .from("agent_evidence_logs")
       .select("agent_id, agent_name, event_type, event_data, severity")
@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
       const hashMatch = jsonStr.match(/\b[a-f0-9]{64}\b/gi);
       if (hashMatch) {
         for (const hash of [...new Set(hashMatch)].slice(0, 3)) {
-          const hNid = addNode("hash", hash, hash.slice(0, 16) + "…", 60, { from_event: ev.event_type });
+          const hNid = addNode("hash", hash, hash.slice(0, 16) + "?", 60, { from_event: ev.event_type });
           addEdge(agentNid, hNid, "detected_hash", 0.9);
         }
       }
@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 4. Threat matches → connect agents to IoCs
+    // 4. Threat matches ? connect agents to IoCs
     const { data: matches } = await supabase
       .from("threat_matches")
       .select("agent_id, indicator_id, match_type, detected_value")
@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 5. Blocked access attempts → IPs/domains
+    // 5. Blocked access attempts ? IPs/domains
     const { data: blocked } = await supabase
       .from("blocked_access_attempts")
       .select("agent_id, blocked_target, block_type, severity")
@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
       addEdge(agentNodeIds[b.agent_id], bNid, "blocked_access", 0.85);
     }
 
-    // 6. Vuln findings → CVE nodes
+    // 6. Vuln findings ? CVE nodes
     const { data: vulns } = await supabase
       .from("vuln_findings")
       .select("agent_id, cve_id, severity, affected_software")

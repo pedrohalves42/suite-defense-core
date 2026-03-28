@@ -320,7 +320,7 @@ if ($AgentName) {
                 Write-Status "Auto-recovery failed - using preserved local credentials as fallback" "WARN"
             } else {
                 Write-Status "Auto-recovery failed after auth attempts" "ERROR"
-                Write-Status "Use an ACTIVE Enrollment Key from 'Chaves de Instalação' (do not paste JWT there)." "ERROR"
+                Write-Status "Use an ACTIVE Enrollment Key from 'Chaves de Instalacao' (do not paste JWT there)." "ERROR"
                 Write-Status "You can also set CYBERSHIELD_JWT for manual recovery mode." "WARN"
             }
         }

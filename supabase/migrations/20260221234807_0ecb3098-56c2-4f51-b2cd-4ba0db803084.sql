@@ -1,9 +1,9 @@
 
 -- =============================================
--- FASE 1+2: Correções Críticas e Blindagem
+-- FASE 1+2: Correcoes Criticas e Blindagem
 -- =============================================
 
--- 1. Criar tabela soar_executions para rastrear execuções SOAR
+-- 1. Criar tabela soar_executions para rastrear execucoes SOAR
 CREATE TABLE IF NOT EXISTS public.soar_executions (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   tenant_id UUID NOT NULL REFERENCES public.tenants(id),
@@ -41,7 +41,7 @@ CREATE INDEX idx_soar_executions_tenant ON public.soar_executions(tenant_id);
 CREATE INDEX idx_soar_executions_status ON public.soar_executions(status);
 CREATE INDEX idx_soar_executions_created ON public.soar_executions(created_at DESC);
 
-COMMENT ON TABLE public.soar_executions IS 'Registros de execuções do sistema SOAR para rastreabilidade e auditoria';
+COMMENT ON TABLE public.soar_executions IS 'Registros de execucoes do sistema SOAR para rastreabilidade e auditoria';
 
 -- 2. Fix automation_executions: garantir error_message nunca NULL em falhas
 -- Adicionar constraint via trigger
@@ -64,7 +64,7 @@ CREATE TRIGGER trg_automation_error_msg
   FOR EACH ROW
   EXECUTE FUNCTION public.trg_ensure_automation_error_message();
 
--- 3. Corrigir as 2 execuções existentes sem error_message
+-- 3. Corrigir as 2 execucoes existentes sem error_message
 UPDATE public.automation_executions 
 SET error_message = COALESCE(
   action_result->>'error',
@@ -90,4 +90,4 @@ LEFT JOIN public.soar_playbooks sp ON sp.id = se.playbook_id
 WHERE se.tenant_id = current_user_tenant_id() OR is_super_admin(auth.uid())
 GROUP BY se.tenant_id, se.status, se.trigger_type, sp.name;
 
-COMMENT ON VIEW public.v_soar_execution_summary IS 'Resumo de execuções SOAR por tenant - usa security_invoker para isolamento';
+COMMENT ON VIEW public.v_soar_execution_summary IS 'Resumo de execucoes SOAR por tenant - usa security_invoker para isolamento';

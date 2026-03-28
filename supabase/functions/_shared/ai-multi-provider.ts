@@ -2,12 +2,12 @@
  * AI Multi-Provider System v3.0
  * 
  * Weighted round-robin load balancing across 6 AI providers:
- * - Groq (Llama 3.3-70B) — 30% weight, fastest, free
- * - Cerebras (Llama 3.3-70B) — 20% weight, ultra-fast, free
- * - OpenRouter (Gemini 2.0 Flash) — 15% weight, free
- * - Google Gemini (2.5 Flash) — 15% weight, free tier
-  * - Mistral (Small 3.1) — 10% weight, free tier 1B tokens/month
-  * - Platform AI (Gemini 3 Flash) — 0% weight, emergency-only fallback
+ * - Groq (Llama 3.3-70B) ? 30% weight, fastest, free
+ * - Cerebras (Llama 3.3-70B) ? 20% weight, ultra-fast, free
+ * - OpenRouter (Gemini 2.0 Flash) ? 15% weight, free
+ * - Google Gemini (2.5 Flash) ? 15% weight, free tier
+  * - Mistral (Small 3.1) ? 10% weight, free tier 1B tokens/month
+  * - Platform AI (Gemini 3 Flash) ? 0% weight, emergency-only fallback
  * 
  * Features:
  * - Weighted round-robin distribution for cost optimization
@@ -280,7 +280,7 @@ async function callGoogleGemini(
   // Extract system instruction separately (Gemini native support)
   const systemMsg = messages.find(m => m.role === 'system');
   
-  // Build contents array — only user and model roles, excluding system messages
+  // Build contents array ? only user and model roles, excluding system messages
   const contents = messages
     .filter(m => m.role !== 'system')
     .map(msg => ({
@@ -560,7 +560,7 @@ export async function aiComplete(
   const metrics = createMetricsLogger(functionName, 'multi-provider');
   metrics.logStart(tenantId);
 
-  // ─── Semantic Cache Lookup ──────────────────────────
+  // ??? Semantic Cache Lookup ??????????????????????????
   let cacheUseCase: AICacheUseCase | null = null;
   let cacheResult: Awaited<ReturnType<AICacheUseCase['lookup']>> | null = null;
 
@@ -605,7 +605,7 @@ export async function aiComplete(
     logger.warn('[AI Router] Cache lookup failed, proceeding without cache:', cacheErr);
   }
 
-  // ─── Smart Provider Routing ──────────────────────────
+  // ??? Smart Provider Routing ??????????????????????????
   let provider = await selectSmartProvider(functionName, messages);
   let usedFallback = false;
   let lastError: string | undefined;
@@ -643,7 +643,7 @@ export async function aiComplete(
         cost_usd: costUsd,
       });
 
-      // ─── Store in Cache (fire-and-forget) ──────────
+      // ??? Store in Cache (fire-and-forget) ??????????
       if (cacheUseCase && cacheResult && result.content) {
         cacheUseCase.store({
           promptHash: cacheResult.promptHash,

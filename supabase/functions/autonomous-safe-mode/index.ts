@@ -324,7 +324,7 @@ async function processSafeModeRule(supabase: any, rule: any): Promise<RuleResult
     const { data: entryResult, error: entryError } = await supabase
       .rpc('enter_autonomous_safe_mode', {
         p_agent_id: agent.agent_id,
-        p_reason: `Detecção automática: ${agent.failure_count} falhas do tipo "${agent.failure_type}" em ${timeWindowMinutes} minutos`,
+        p_reason: `Deteccao automatica: ${agent.failure_count} falhas do tipo "${agent.failure_type}" em ${timeWindowMinutes} minutos`,
         p_failure_type: agent.failure_type,
         p_failure_count: agent.failure_count
       });
@@ -370,8 +370,8 @@ async function processSafeModeRule(supabase: any, rule: any): Promise<RuleResult
         body: {
           tenant_id: agent.tenant_id,
           notification_type: 'safe_mode_auto',
-          title: `SAFE_MODE Automático: ${agent.agent_name}`,
-          message: `O agente ${agent.agent_name} entrou automaticamente em SAFE_MODE após ${agent.failure_count} falhas.`,
+          title: `SAFE_MODE Automatico: ${agent.agent_name}`,
+          message: `O agente ${agent.agent_name} entrou automaticamente em SAFE_MODE apos ${agent.failure_count} falhas.`,
           severity: 'critical',
           data: { agent_id: agent.agent_id, agent_name: agent.agent_name, rule_code: rule.code }
         }
@@ -444,7 +444,7 @@ async function processThrottleRule(supabase: any, rule: any): Promise<RuleResult
       .rpc('apply_agent_throttle', {
         p_agent_id: candidate.agent_id,
         p_poll_interval_seconds: params.poll_interval_seconds,
-        p_reason: `Alta taxa de requisições: ${candidate.request_count} requests, ${candidate.error_rate}% erros`
+        p_reason: `Alta taxa de requisicoes: ${candidate.request_count} requests, ${candidate.error_rate}% erros`
       });
 
     if (throttleError) {
@@ -516,7 +516,7 @@ async function processIsolateRule(supabase: any, rule: any): Promise<RuleResult>
     const { error: isolateError } = await supabase
       .rpc('apply_agent_isolation', {
         p_agent_id: candidate.agent_id,
-        p_reason: `Ameaça de segurança: ${candidate.event_count} eventos suspeitos detectados`
+        p_reason: `Ameaca de seguranca: ${candidate.event_count} eventos suspeitos detectados`
       });
 
     if (isolateError) {
@@ -535,7 +535,7 @@ async function processIsolateRule(supabase: any, rule: any): Promise<RuleResult>
       event_type: 'agent_isolated',
       severity: 'critical',
       title: `Agente Isolado: ${candidate.agent_name}`,
-      description: `Agente isolado automaticamente devido a ${candidate.event_count} eventos de segurança suspeitos.`,
+      description: `Agente isolado automaticamente devido a ${candidate.event_count} eventos de seguranca suspeitos.`,
       status: 'open',
       data: {
         rule_code: rule.code,
@@ -567,7 +567,7 @@ async function processIsolateRule(supabase: any, rule: any): Promise<RuleResult>
       agent_id: candidate.agent_id,
       agent_name: candidate.agent_name,
       action: 'ISOLATE',
-      reason: `${candidate.event_count} eventos de segurança suspeitos`
+      reason: `${candidate.event_count} eventos de seguranca suspeitos`
     });
 
     logger.debug(`[AGENT_ISOLATE_003] Isolated agent ${candidate.agent_name}`);
@@ -663,12 +663,12 @@ async function processImprodutiveRule(supabase: any, rule: any): Promise<RuleRes
   for (const candidate of candidates || []) {
     const actionsExecuted: ActionExecuted[] = [];
 
-    // Apply throttle (ação reversível)
+    // Apply throttle (acao reversivel)
     const { error: throttleError } = await supabase
       .rpc('apply_agent_throttle', {
         p_agent_id: candidate.agent_id,
         p_poll_interval_seconds: params.poll_interval_seconds,
-        p_reason: `Improdutivo: ${candidate.stale_queued_jobs || 0} jobs parados, ${Math.round(candidate.minutes_since_execution || 0)}min sem execução`
+        p_reason: `Improdutivo: ${candidate.stale_queued_jobs || 0} jobs parados, ${Math.round(candidate.minutes_since_execution || 0)}min sem execucao`
       });
 
     if (throttleError) {
@@ -683,7 +683,7 @@ async function processImprodutiveRule(supabase: any, rule: any): Promise<RuleRes
     const { error: insightError } = await supabase.from('ai_insights').insert({
       tenant_id: candidate.tenant_id,
       title: `Agente improdutivo: ${candidate.agent_name}`,
-      description: `O agente está online mas não processa jobs há ${Math.round(candidate.minutes_since_execution || 0)} minutos. Foi aplicado throttle automático (poll interval: ${params.poll_interval_seconds}s) que será revertido automaticamente em ${params.auto_revert_after_hours}h.`,
+      description: `O agente esta online mas nao processa jobs ha ${Math.round(candidate.minutes_since_execution || 0)} minutos. Foi aplicado throttle automatico (poll interval: ${params.poll_interval_seconds}s) que sera revertido automaticamente em ${params.auto_revert_after_hours}h.`,
       severity: 'medium',
       insight_type: 'agent_improdutive',
       evidence: {
@@ -692,7 +692,7 @@ async function processImprodutiveRule(supabase: any, rule: any): Promise<RuleRes
         pending_jobs: candidate.pending_jobs,
         minutes_since_execution: candidate.minutes_since_execution
       },
-      recommendation: 'Verifique se o agente está com problemas de conectividade ou se há bloqueios no sistema.',
+      recommendation: 'Verifique se o agente esta com problemas de conectividade ou se ha bloqueios no sistema.',
       acknowledged: false
     });
 
@@ -729,7 +729,7 @@ async function processImprodutiveRule(supabase: any, rule: any): Promise<RuleRes
       agent_id: candidate.agent_id,
       agent_name: candidate.agent_name,
       action: 'THROTTLE',
-      reason: `Improdutivo: ${candidate.stale_queued_jobs || 0} jobs parados, ${Math.round(candidate.minutes_since_execution || 0)}min sem execução`
+      reason: `Improdutivo: ${candidate.stale_queued_jobs || 0} jobs parados, ${Math.round(candidate.minutes_since_execution || 0)}min sem execucao`
     });
 
     logger.debug(`[AGENT_IMPRODUTIVE_005] Throttled improdutive agent ${candidate.agent_name}`);
@@ -739,7 +739,7 @@ async function processImprodutiveRule(supabase: any, rule: any): Promise<RuleRes
 }
 
 // =============================================================
-// AUTO_REVERT_THROTTLE_006: Remove throttle após estabilização
+// AUTO_REVERT_THROTTLE_006: Remove throttle apos estabilizacao
 // =============================================================
 async function processAutoRevertThrottle(supabase: any, rule: any): Promise<RuleResult> {
   logger.debug('[AUTO_REVERT_THROTTLE_006] Checking revert candidates');
@@ -777,7 +777,7 @@ async function processAutoRevertThrottle(supabase: any, rule: any): Promise<Rule
     const { error: insightError } = await supabase.from('ai_insights').insert({
       tenant_id: candidate.tenant_id,
       title: `Throttle removido: ${candidate.agent_name}`,
-      description: `O agente voltou a executar jobs normalmente (última execução: ${Math.round(candidate.minutes_since_execution || 0)}min, pending: ${candidate.pending_jobs}) e teve o throttle removido automaticamente após cooldown de 2h.`,
+      description: `O agente voltou a executar jobs normalmente (ultima execucao: ${Math.round(candidate.minutes_since_execution || 0)}min, pending: ${candidate.pending_jobs}) e teve o throttle removido automaticamente apos cooldown de 2h.`,
       severity: 'low',
       insight_type: 'agent_recovered',
       evidence: {
@@ -786,7 +786,7 @@ async function processAutoRevertThrottle(supabase: any, rule: any): Promise<Rule
         pending_jobs: candidate.pending_jobs,
         reverted_at: new Date().toISOString()
       },
-      recommendation: 'Nenhuma ação necessária. O agente está operando normalmente.',
+      recommendation: 'Nenhuma acao necessaria. O agente esta operando normalmente.',
       acknowledged: false
     });
 
@@ -819,7 +819,7 @@ async function processAutoRevertThrottle(supabase: any, rule: any): Promise<Rule
       agent_id: candidate.agent_id,
       agent_name: candidate.agent_name,
       action: 'REMOVE_THROTTLE',
-      reason: 'Estabilização confirmada após cooldown de 2h'
+      reason: 'Estabilizacao confirmada apos cooldown de 2h'
     });
 
     logger.debug(`[AUTO_REVERT_THROTTLE_006] Reverted throttle for ${candidate.agent_name}`);
@@ -830,7 +830,7 @@ async function processAutoRevertThrottle(supabase: any, rule: any): Promise<Rule
 
 // =============================================================
 // SILENT_FAILURE_007: Detecta jobs completed sem dados esperados
-// Framework: DETECÇÃO + BLOQUEIO + PROVA AUTOMÁTICA
+// Framework: DETECCAO + BLOQUEIO + PROVA AUTOMATICA
 // =============================================================
 async function processSilentFailureDetection(supabase: any, rule: any): Promise<RuleResult> {
   logger.debug('[SILENT_FAILURE_007] Detecting silent job failures');
@@ -890,7 +890,7 @@ async function processSilentFailureDetection(supabase: any, rule: any): Promise<
     const { error: insightError } = await supabase.from('ai_insights').insert({
       tenant_id: tenantId,
       title: `Falhas silenciosas detectadas: ${tenantFailures.length} jobs`,
-      description: `Jobs do tipo ${tenantFailures.map((f: Record<string, unknown>) => f.job_type).join(', ')} foram marcados como completed mas não produziram dados esperados. Isso indica uma possível falha no pipeline ou dados corrompidos.`,
+      description: `Jobs do tipo ${tenantFailures.map((f: Record<string, unknown>) => f.job_type).join(', ')} foram marcados como completed mas nao produziram dados esperados. Isso indica uma possivel falha no pipeline ou dados corrompidos.`,
       severity: 'high',
       insight_type: 'integrity_violation',
       evidence: {
@@ -899,7 +899,7 @@ async function processSilentFailureDetection(supabase: any, rule: any): Promise<
         sample_job_id: firstFailure.job_id,
         detected_at: new Date().toISOString()
       },
-      recommendation: 'Investigar logs do submit-job-result. Verificar se os agentes estão enviando dados corretamente. Considerar re-executar os jobs afetados.',
+      recommendation: 'Investigar logs do submit-job-result. Verificar se os agentes estao enviando dados corretamente. Considerar re-executar os jobs afetados.',
       acknowledged: false
     });
 
@@ -949,7 +949,7 @@ async function processSilentFailureDetection(supabase: any, rule: any): Promise<
 async function processSlowJobsRule(supabase: any, rule: any): Promise<RuleResult> {
   logger.debug('[JOB_SLOW_008] Detecting systematically slow jobs');
 
-  // Buscar jobs que consistentemente excedem o p95 de execução
+  // Buscar jobs que consistentemente excedem o p95 de execucao
   const { data: slowJobs, error } = await supabase.rpc('detect_slow_jobs', {
     p_time_window_hours: 24,
     p_min_occurrences: 3
@@ -1004,7 +1004,7 @@ async function processSlowJobsRule(supabase: any, rule: any): Promise<RuleResult
         await supabase.from('ai_insights').insert({
           tenant_id: firstTenant,
           title: `Jobs sistematicamente lentos detectados`,
-          description: `${slowTypes.length} tipos de jobs estão consistentemente lentos: ${slowTypes.map(s => s.agent_name).join(', ')}`,
+          description: `${slowTypes.length} tipos de jobs estao consistentemente lentos: ${slowTypes.map(s => s.agent_name).join(', ')}`,
           severity: 'medium',
           insight_type: 'job_performance',
           evidence: { slow_job_types: slowTypes },
@@ -1022,12 +1022,12 @@ async function processSlowJobsRule(supabase: any, rule: any): Promise<RuleResult
 }
 
 // =============================================================
-// INSIGHT_IGNORED_009: Escala insights críticos ignorados
+// INSIGHT_IGNORED_009: Escala insights criticos ignorados
 // =============================================================
 async function processIgnoredInsightsRule(supabase: any, rule: any): Promise<RuleResult> {
   logger.debug('[INSIGHT_IGNORED_009] Checking ignored critical insights');
 
-  // Buscar insights críticos não reconhecidos há mais de 72h
+  // Buscar insights criticos nao reconhecidos ha mais de 72h
   const cutoffDate = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
   
   const { data: ignoredInsights, error } = await supabase
@@ -1095,7 +1095,7 @@ async function processIgnoredInsightsRule(supabase: any, rule: any): Promise<Rul
 }
 
 // =============================================================
-// BLOCKED_ACCESS_PATTERN_010: Detecta padrões suspeitos de acesso bloqueado
+// BLOCKED_ACCESS_PATTERN_010: Detecta padroes suspeitos de acesso bloqueado
 // =============================================================
 async function processBlockedAccessPatternRule(supabase: any, rule: any): Promise<RuleResult> {
   const conditions = rule.definition?.conditions || {
@@ -1149,13 +1149,13 @@ async function processBlockedAccessPatternRule(supabase: any, rule: any): Promis
 
     const agentName = agentInfo?.agent_name || agentId.substring(0, 8);
 
-    // Criar alerta crítico
+    // Criar alerta critico
     await supabase.from('system_alerts').insert({
       tenant_id: data.tenant_id,
       agent_id: agentId,
       alert_type: 'blocked_access_pattern',
       severity: 'critical',
-      message: `Padrão suspeito: ${data.count} tentativas de acesso bloqueado em ${conditions.time_window_minutes}min`,
+      message: `Padrao suspeito: ${data.count} tentativas de acesso bloqueado em ${conditions.time_window_minutes}min`,
       data: {
         blocked_count: data.count,
         unique_domains: data.domains.size,
@@ -1168,8 +1168,8 @@ async function processBlockedAccessPatternRule(supabase: any, rule: any): Promis
     // Criar insight
     await supabase.from('ai_insights').insert({
       tenant_id: data.tenant_id,
-      title: `Padrão suspeito de navegação: ${agentName}`,
-      description: `O agente ${agentName} tentou acessar ${data.count} URLs bloqueadas em ${conditions.time_window_minutes} minutos, incluindo ${data.domains.size} domínios únicos.`,
+      title: `Padrao suspeito de navegacao: ${agentName}`,
+      description: `O agente ${agentName} tentou acessar ${data.count} URLs bloqueadas em ${conditions.time_window_minutes} minutos, incluindo ${data.domains.size} dominios unicos.`,
       severity: 'critical',
       insight_type: 'security_threat',
       evidence: {
@@ -1177,7 +1177,7 @@ async function processBlockedAccessPatternRule(supabase: any, rule: any): Promis
         unique_domains: data.domains.size,
         sample_domains: Array.from(data.domains).slice(0, 10)
       },
-      recommendation: 'Investigar o comportamento do usuário. Considerar isolamento temporário do agente.',
+      recommendation: 'Investigar o comportamento do usuario. Considerar isolamento temporario do agente.',
       acknowledged: false
     });
 
@@ -1214,7 +1214,7 @@ async function processBlockedAccessPatternRule(supabase: any, rule: any): Promis
 }
 
 // =============================================================
-// AGENT_DIVERGENT_011: Detecta agentes com métricas divergentes
+// AGENT_DIVERGENT_011: Detecta agentes com metricas divergentes
 // =============================================================
 async function processAgentDivergentRule(supabase: any, rule: any): Promise<RuleResult> {
   const conditions = rule.definition?.conditions || {
@@ -1224,7 +1224,7 @@ async function processAgentDivergentRule(supabase: any, rule: any): Promise<Rule
 
   logger.debug('[AGENT_DIVERGENT_011] Detecting divergent agents');
 
-  // Buscar métricas recentes de todos os agentes
+  // Buscar metricas recentes de todos os agentes
   const cutoffTime = new Date(Date.now() - conditions.comparison_window_hours * 60 * 60 * 1000).toISOString();
   
   const { data: metrics, error } = await supabase
@@ -1238,7 +1238,7 @@ async function processAgentDivergentRule(supabase: any, rule: any): Promise<Rule
     return { rule_code: rule.code, processed_count: 0, agents: [] };
   }
 
-  // Calcular estatísticas por tenant
+  // Calcular estatisticas por tenant
   const tenantStats = new Map<string, { cpuValues: number[]; memValues: number[] }>();
   const agentStats = new Map<string, { tenant_id: string; cpuValues: number[]; memValues: number[] }>();
 
@@ -1260,7 +1260,7 @@ async function processAgentDivergentRule(supabase: any, rule: any): Promise<Rule
     if (m.memory_usage_percent != null) as.memValues.push(m.memory_usage_percent);
   }
 
-  // Calcular média e desvio padrão por tenant
+  // Calcular media e desvio padrao por tenant
   const calcStats = (values: number[]) => {
     if (values.length === 0) return { mean: 0, stddev: 0 };
     const mean = values.reduce((a, b) => a + b, 0) / values.length;
@@ -1312,7 +1312,7 @@ async function processAgentDivergentRule(supabase: any, rule: any): Promise<Rule
     await supabase.from('ai_insights').insert({
       tenant_id: divergent.tenant_id,
       title: `Agente divergente: ${agentName}`,
-      description: `O agente ${agentName} apresenta métricas significativamente diferentes do grupo (CPU: ${divergent.cpuDeviation.toFixed(1)}σ, Memória: ${divergent.memDeviation.toFixed(1)}σ).`,
+      description: `O agente ${agentName} apresenta metricas significativamente diferentes do grupo (CPU: ${divergent.cpuDeviation.toFixed(1)}?, Memoria: ${divergent.memDeviation.toFixed(1)}?).`,
       severity: 'medium',
       insight_type: 'anomaly_detection',
       evidence: {
@@ -1320,7 +1320,7 @@ async function processAgentDivergentRule(supabase: any, rule: any): Promise<Rule
         memory_deviation_stddev: divergent.memDeviation,
         threshold_stddev: conditions.deviation_threshold_stddev
       },
-      recommendation: 'Investigar processos em execução no agente. Pode indicar malware ou uso indevido.',
+      recommendation: 'Investigar processos em execucao no agente. Pode indicar malware ou uso indevido.',
       acknowledged: false
     });
 
@@ -1345,7 +1345,7 @@ async function processAgentDivergentRule(supabase: any, rule: any): Promise<Rule
       agent_id: divergent.agent_id,
       agent_name: agentName,
       action: 'DETECT_DIVERGENT_AGENT',
-      reason: `CPU: ${divergent.cpuDeviation.toFixed(1)}σ, Mem: ${divergent.memDeviation.toFixed(1)}σ do grupo`
+      reason: `CPU: ${divergent.cpuDeviation.toFixed(1)}?, Mem: ${divergent.memDeviation.toFixed(1)}? do grupo`
     });
   }
 
@@ -1353,7 +1353,7 @@ async function processAgentDivergentRule(supabase: any, rule: any): Promise<Rule
 }
 
 // =============================================================
-// PROGRESSIVE_DEGRADATION_012: Detecta tendência de degradação
+// PROGRESSIVE_DEGRADATION_012: Detecta tendencia de degradacao
 // =============================================================
 async function processProgressiveDegradationRule(supabase: any, rule: any): Promise<RuleResult> {
   const conditions = rule.definition?.conditions || {
@@ -1363,12 +1363,12 @@ async function processProgressiveDegradationRule(supabase: any, rule: any): Prom
 
   logger.debug('[PROGRESSIVE_DEGRADATION_012] Detecting progressive degradation');
 
-  // Comparar métricas de 12h atrás com métricas recentes
+  // Comparar metricas de 12h atras com metricas recentes
   const now = Date.now();
   const oldCutoff = new Date(now - conditions.min_trend_duration_hours * 60 * 60 * 1000);
   const midpoint = new Date(now - (conditions.min_trend_duration_hours / 2) * 60 * 60 * 1000);
 
-  // Buscar jobs e calcular success rate por período
+  // Buscar jobs e calcular success rate por periodo
   const { data: oldJobs } = await supabase
     .from('jobs')
     .select('agent_id, tenant_id, status')
@@ -1399,7 +1399,7 @@ async function processProgressiveDegradationRule(supabase: any, rule: any): Prom
   const oldRates = calcSuccessRate(oldJobs);
   const recentRates = calcSuccessRate(recentJobs);
 
-  // Detectar agentes com degradação
+  // Detectar agentes com degradacao
   const degradingAgents: { agent_id: string; tenant_id: string; oldRate: number; newRate: number; degradation: number }[] = [];
 
   for (const [agentId, recent] of recentRates) {
@@ -1432,7 +1432,7 @@ async function processProgressiveDegradationRule(supabase: any, rule: any): Prom
     // Criar insight
     await supabase.from('ai_insights').insert({
       tenant_id: degrading.tenant_id,
-      title: `Degradação progressiva: ${agentName}`,
+      title: `Degradacao progressiva: ${agentName}`,
       description: `O agente ${agentName} apresenta queda de ${degrading.degradation.toFixed(1)}% na taxa de sucesso (de ${degrading.oldRate.toFixed(1)}% para ${degrading.newRate.toFixed(1)}%).`,
       severity: 'high',
       insight_type: 'prediction',
@@ -1442,7 +1442,7 @@ async function processProgressiveDegradationRule(supabase: any, rule: any): Prom
         degradation_percent: degrading.degradation,
         trend_duration_hours: conditions.min_trend_duration_hours
       },
-      recommendation: 'Investigar causa da degradação antes que se torne crítica. Verificar logs de erro e conectividade.',
+      recommendation: 'Investigar causa da degradacao antes que se torne critica. Verificar logs de erro e conectividade.',
       acknowledged: false
     });
 

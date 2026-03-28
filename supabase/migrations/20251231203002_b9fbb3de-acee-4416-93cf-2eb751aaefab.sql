@@ -1,5 +1,5 @@
 
--- Corrigir get_audit_raw_metrics: usar original_job_id ao invés de job_id
+-- Corrigir get_audit_raw_metrics: usar original_job_id ao inves de job_id
 DROP FUNCTION IF EXISTS get_audit_raw_metrics(uuid);
 
 CREATE OR REPLACE FUNCTION get_audit_raw_metrics(p_tenant_id uuid)
@@ -55,7 +55,7 @@ BEGIN
     WHERE tenant_id = p_tenant_id
       AND created_at >= now() - interval '30 days'
   ),
-  -- APPROVALS (Governança)
+  -- APPROVALS (Governanca)
   approval_stats AS (
     SELECT
       COUNT(*) AS total,
@@ -88,7 +88,7 @@ BEGIN
     'dlq_review_rate', CASE WHEN dlq_stats.total > 0 
       THEN ROUND(dlq_stats.reviewed::numeric / dlq_stats.total * 100, 2) ELSE 0 END,
     
-    -- INSIGHTS → ACTIONS
+    -- INSIGHTS ? ACTIONS
     'ai_insights_30d', insight_stats.total,
     'insights_resolved_30d', insight_stats.resolved,
     'insights_resolution_rate', CASE WHEN insight_stats.total > 0 

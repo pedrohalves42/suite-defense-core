@@ -40,7 +40,7 @@ BEGIN
         CASE WHEN v_offline_count > 1 THEN 'es' ELSE '' END,
         CASE WHEN v_offline_count > 1 THEN 's' ELSE '' END
       ),
-      'message', 'Verifique se estão ligados e conectados à internet',
+      'message', 'Verifique se estao ligados e conectados a internet',
       'urgency', CASE WHEN v_offline_count > 5 THEN 'high' ELSE 'medium' END,
       'action', 'Ver computadores',
       'actionHref', '/admin/agent-health'
@@ -57,11 +57,11 @@ BEGIN
   IF v_critical_alerts > 0 THEN
     result := result || jsonb_build_object(
       'type', 'critical_alerts',
-      'title', format('%s alerta%s de segurança', 
+      'title', format('%s alerta%s de seguranca', 
         v_critical_alerts,
         CASE WHEN v_critical_alerts > 1 THEN 's' ELSE '' END
       ),
-      'message', 'Ameaças detectadas que precisam de atenção',
+      'message', 'Ameacas detectadas que precisam de atencao',
       'urgency', 'high',
       'action', 'Ver alertas',
       'actionHref', '/admin/security-monitoring'
@@ -79,7 +79,7 @@ BEGIN
     result := result || jsonb_build_object(
       'type', 'pending_jobs',
       'title', 'Tarefas pendentes',
-      'message', format('%s tarefas aguardando execução há mais de 1 hora', v_pending_jobs),
+      'message', format('%s tarefas aguardando execucao ha mais de 1 hora', v_pending_jobs),
       'urgency', 'medium',
       'action', 'Ver tarefas',
       'actionHref', '/admin/job-orchestration'
@@ -91,7 +91,7 @@ BEGIN
     result := result || jsonb_build_object(
       'type', 'all_good',
       'title', 'Tudo em ordem!',
-      'message', 'Seus computadores estão protegidos e funcionando normalmente',
+      'message', 'Seus computadores estao protegidos e funcionando normalmente',
       'urgency', 'low'
     );
   END IF;

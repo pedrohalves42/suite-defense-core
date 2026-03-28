@@ -12,7 +12,7 @@ CREATE TABLE public.agent_tags (
     UNIQUE(tenant_id, name)
 );
 
--- Tabela de relação agente-tag (many-to-many)
+-- Tabela de relacao agente-tag (many-to-many)
 CREATE TABLE public.agent_tag_assignments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     agent_id UUID NOT NULL REFERENCES public.agents(id) ON DELETE CASCADE,
@@ -22,7 +22,7 @@ CREATE TABLE public.agent_tag_assignments (
     UNIQUE(agent_id, tag_id)
 );
 
--- Índices para performance
+-- Indices para performance
 CREATE INDEX idx_agent_tags_tenant ON public.agent_tags(tenant_id);
 CREATE INDEX idx_agent_tag_assignments_agent ON public.agent_tag_assignments(agent_id);
 CREATE INDEX idx_agent_tag_assignments_tag ON public.agent_tag_assignments(tag_id);

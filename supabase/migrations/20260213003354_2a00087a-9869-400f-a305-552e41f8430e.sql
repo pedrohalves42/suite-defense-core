@@ -21,7 +21,7 @@ BEGIN
   SELECT 
     b.tenant_id,
     'system_alert',
-    '🚨 Blocked access attempts detected - ' || b.attempt_count || ' in 5min',
+    '? Blocked access attempts detected - ' || b.attempt_count || ' in 5min',
     'Multiple blocked access attempts detected. Investigate potential brute force or unauthorized access.',
     CASE WHEN b.attempt_count >= 20 THEN 'critical' ELSE 'high' END,
     'open',

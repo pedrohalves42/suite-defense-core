@@ -4,7 +4,7 @@
 -- =============================================================================
 
 -- FIX 1: maintenance-cron AINDA falhando porque 'stale_cron' e 'system_maintenance'
--- NÃO estão no CHECK constraint de system_alerts.alert_type
+-- NAO estao no CHECK constraint de system_alerts.alert_type
 -- A migration anterior adicionou DEFAULT 'system_maintenance' mas o CHECK bloqueia!
 ALTER TABLE public.system_alerts DROP CONSTRAINT IF EXISTS system_alerts_alert_type_check;
 ALTER TABLE public.system_alerts ADD CONSTRAINT system_alerts_alert_type_check
@@ -22,11 +22,11 @@ ALTER TABLE public.system_alerts ADD CONSTRAINT system_alerts_alert_type_check
 
 -- FIX 2: Evidence trigger produz 0 records apesar de 159 executions
 -- Root cause: auto_create_evidence_from_execution() usa event_type que pode
--- não passar no CHECK constraint de agent_evidence_logs
--- Verificar e expandir o CHECK + corrigir a função
+-- nao passar no CHECK constraint de agent_evidence_logs
+-- Verificar e expandir o CHECK + corrigir a funcao
 ALTER TABLE public.agent_evidence_logs DROP CONSTRAINT IF EXISTS agent_evidence_logs_event_type_check;
 
--- Recriar a função evidence para ser robusta e não falhar silenciosamente
+-- Recriar a funcao evidence para ser robusta e nao falhar silenciosamente
 CREATE OR REPLACE FUNCTION public.auto_create_evidence_from_execution()
 RETURNS trigger
 LANGUAGE plpgsql

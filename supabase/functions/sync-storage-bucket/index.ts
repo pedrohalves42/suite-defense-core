@@ -5,8 +5,8 @@ import { logger } from '../_shared/logger.ts';
 /**
  * Sync Storage Bucket
  * 
- * Sincroniza scripts de agent_releases para o storage bucket como fallback de emergência.
- * Garante que o storage bucket sempre tenha a mesma versão que a tabela agent_releases.
+ * Sincroniza scripts de agent_releases para o storage bucket como fallback de emergencia.
+ * Garante que o storage bucket sempre tenha a mesma versao que a tabela agent_releases.
  */
 
 Deno.serve(async (req) => {
@@ -206,7 +206,7 @@ Deno.serve(async (req) => {
       throw uploadError;
     }
 
-    logger.info(`[${requestId}] ✅ Storage bucket synced successfully!`);
+    logger.info(`[${requestId}] [OK]  Storage bucket synced successfully!`);
     logger.info(`[${requestId}] Version: ${version}`);
     logger.info(`[${requestId}] Size: ${script_content.length} bytes`);
     logger.info(`[${requestId}] SHA256: ${calculatedSha256.substring(0, 32)}...`);

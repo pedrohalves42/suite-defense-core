@@ -1,5 +1,5 @@
 -- =====================================================
--- FASE 1: Controle de Processos - Novas Ações de Playbook
+-- FASE 1: Controle de Processos - Novas Acoes de Playbook
 -- =====================================================
 
 -- 1. Criar novo playbook para controle de processos suspeitos
@@ -20,7 +20,7 @@ INSERT INTO public.playbooks (
   'a6000000-0000-0000-0000-000000000006',
   NULL,
   'Processo Suspeito Detectado',
-  'Responde automaticamente quando um processo suspeito ou malicioso é identificado',
+  'Responde automaticamente quando um processo suspeito ou malicioso e identificado',
   'suspicious_process',
   '{"process_reputation": "malicious", "min_occurrences": 1}'::jsonb,
   'critical',
@@ -31,7 +31,7 @@ INSERT INTO public.playbooks (
   1
 ) ON CONFLICT (id) DO NOTHING;
 
--- 2. Adicionar ações para o playbook de processo suspeito
+-- 2. Adicionar acoes para o playbook de processo suspeito
 INSERT INTO public.playbook_actions (
   id,
   playbook_id,
@@ -48,7 +48,7 @@ INSERT INTO public.playbook_actions (
   1,
   'notify',
   'Alertar sobre processo suspeito',
-  'Envia notificação sobre o processo detectado para análise',
+  'Envia notificacao sobre o processo detectado para analise',
   '{"channel": "all", "priority": "high"}'::jsonb,
   'low'
 ),
@@ -67,14 +67,14 @@ INSERT INTO public.playbook_actions (
   'a6000000-0000-0000-0000-000000000006',
   3,
   'isolate',
-  'Isolar máquina',
-  'Coloca a máquina em quarentena de rede',
+  'Isolar maquina',
+  'Coloca a maquina em quarentena de rede',
   '{"notify_user": true}'::jsonb,
   'high'
 )
 ON CONFLICT (id) DO NOTHING;
 
--- 3. Criar playbook para serviço não autorizado
+-- 3. Criar playbook para servico nao autorizado
 INSERT INTO public.playbooks (
   id,
   tenant_id,
@@ -91,8 +91,8 @@ INSERT INTO public.playbooks (
 ) VALUES (
   'a7000000-0000-0000-0000-000000000007',
   NULL,
-  'Serviço Não Autorizado',
-  'Responde quando um serviço não autorizado é detectado em execução',
+  'Servico Nao Autorizado',
+  'Responde quando um servico nao autorizado e detectado em execucao',
   'unauthorized_service',
   '{"service_state": "running", "authorized": false}'::jsonb,
   'high',
@@ -103,7 +103,7 @@ INSERT INTO public.playbooks (
   1
 ) ON CONFLICT (id) DO NOTHING;
 
--- 4. Adicionar ações para playbook de serviço não autorizado
+-- 4. Adicionar acoes para playbook de servico nao autorizado
 INSERT INTO public.playbook_actions (
   id,
   playbook_id,
@@ -119,8 +119,8 @@ INSERT INTO public.playbook_actions (
   'a7000000-0000-0000-0000-000000000007',
   1,
   'notify',
-  'Alertar sobre serviço',
-  'Envia alerta sobre o serviço não autorizado',
+  'Alertar sobre servico',
+  'Envia alerta sobre o servico nao autorizado',
   '{"channel": "all"}'::jsonb,
   'low'
 ),
@@ -129,8 +129,8 @@ INSERT INTO public.playbook_actions (
   'a7000000-0000-0000-0000-000000000007',
   2,
   'stop_service',
-  'Parar serviço',
-  'Para o serviço imediatamente',
+  'Parar servico',
+  'Para o servico imediatamente',
   '{}'::jsonb,
   'high'
 ),
@@ -139,14 +139,14 @@ INSERT INTO public.playbook_actions (
   'a7000000-0000-0000-0000-000000000007',
   3,
   'disable_service',
-  'Desabilitar serviço',
-  'Desabilita o serviço permanentemente para prevenir reinício',
+  'Desabilitar servico',
+  'Desabilita o servico permanentemente para prevenir reinicio',
   '{}'::jsonb,
   'high'
 )
 ON CONFLICT (id) DO NOTHING;
 
--- 5. Adicionar ação restart_service ao playbook de Computador Offline
+-- 5. Adicionar acao restart_service ao playbook de Computador Offline
 INSERT INTO public.playbook_actions (
   id,
   playbook_id,
@@ -162,8 +162,8 @@ INSERT INTO public.playbook_actions (
   'a1000000-0000-0000-0000-000000000001',
   4,
   'restart_service',
-  'Reiniciar serviço do agente',
-  'Tenta reiniciar o serviço CyberShield no computador',
+  'Reiniciar servico do agente',
+  'Tenta reiniciar o servico CyberShield no computador',
   '{"service_name": "CyberShieldAgent"}'::jsonb,
   'medium'
 )

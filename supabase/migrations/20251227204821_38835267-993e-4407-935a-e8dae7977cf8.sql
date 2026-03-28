@@ -1,5 +1,5 @@
--- Onda 1: Criar view v_pipeline_health_metrics (BUG CRÍTICO)
--- Esta view é referenciada pelo código mas nunca foi criada
+-- Onda 1: Criar view v_pipeline_health_metrics (BUG CRITICO)
+-- Esta view e referenciada pelo codigo mas nunca foi criada
 
 CREATE OR REPLACE VIEW public.v_pipeline_health_metrics AS
 SELECT
@@ -38,4 +38,4 @@ ORDER BY hour DESC;
 
 -- Add comment for documentation
 COMMENT ON VIEW public.v_pipeline_health_metrics IS 
-  'Métricas de saúde do pipeline de jobs por hora. Inclui taxa de sucesso, falhas silenciosas e jobs com dados produzidos.';
+  'Metricas de saude do pipeline de jobs por hora. Inclui taxa de sucesso, falhas silenciosas e jobs com dados produzidos.';

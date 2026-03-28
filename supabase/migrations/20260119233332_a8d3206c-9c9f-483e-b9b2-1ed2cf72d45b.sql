@@ -25,7 +25,7 @@ BEGIN
     RETURN json_build_object(
       'can_delete', false,
       'reason', 'AGENT_NOT_FOUND',
-      'message', 'Agente não encontrado'
+      'message', 'Agente nao encontrado'
     );
   END IF;
   
@@ -39,10 +39,10 @@ BEGIN
     );
   END IF;
   
-  -- Período de retenção: 30 dias
+  -- Periodo de retencao: 30 dias
   v_oldest_allowed := NOW() - INTERVAL '30 days';
   
-  -- Verificar job_executions (tabela imutável principal)
+  -- Verificar job_executions (tabela imutavel principal)
   SELECT COUNT(*), MAX(created_at) + INTERVAL '30 days'
   INTO v_job_exec_count, v_blocked_until
   FROM job_executions
@@ -54,7 +54,7 @@ BEGIN
       'reason', 'AUDIT_RETENTION',
       'blocked_records', v_job_exec_count,
       'blocked_until', v_blocked_until,
-      'message', 'Existem ' || v_job_exec_count || ' registros de auditoria que não podem ser excluídos até ' || TO_CHAR(v_blocked_until, 'DD/MM/YYYY')
+      'message', 'Existem ' || v_job_exec_count || ' registros de auditoria que nao podem ser excluidos ate ' || TO_CHAR(v_blocked_until, 'DD/MM/YYYY')
     );
   END IF;
   

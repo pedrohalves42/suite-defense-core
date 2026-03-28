@@ -25,6 +25,6 @@ CREATE INDEX IF NOT EXISTS idx_generated_reports_commercial_priority ON public.g
 CREATE INDEX IF NOT EXISTS idx_generated_reports_follow_up ON public.generated_reports(follow_up_at) WHERE follow_up_at IS NOT NULL;
 
 -- Comment for documentation
-COMMENT ON COLUMN public.generated_reports.sales_status IS 'Pipeline status: open → contacted → negotiated → closed_won/closed_lost';
+COMMENT ON COLUMN public.generated_reports.sales_status IS 'Pipeline status: open ? contacted ? negotiated ? closed_won/closed_lost';
 COMMENT ON COLUMN public.generated_reports.commercial_summary IS 'Ready-to-send text for WhatsApp/Email - auto-generated';
-COMMENT ON COLUMN public.generated_reports.commercial_priority IS 'Notification priority based on risk_score: high (≥60), medium (≥30), low (<30)';
+COMMENT ON COLUMN public.generated_reports.commercial_priority IS 'Notification priority based on risk_score: high (?60), medium (?30), low (<30)';

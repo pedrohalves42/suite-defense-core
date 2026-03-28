@@ -7,8 +7,8 @@ import { hashToken } from '../_shared/token-hash.ts'
 import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
-  // [WARN] ⚠️ DEPRECATED: Sunset date 2026-06-01. Use /submit-job-result (v3) instead.
-  logger.warn('[ack-job] [WARN] ⚠️ DEPRECATED: Sunset 2026-06-01. Use /submit-job-result instead.');
+  // [WARN] [WARN] ? DEPRECATED: Sunset date 2026-06-01. Use /submit-job-result (v3) instead.
+  logger.warn('[ack-job] [WARN] [WARN] ? DEPRECATED: Sunset 2026-06-01. Use /submit-job-result instead.');
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })

@@ -1,7 +1,7 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 
-// ── CEF Format ──
+// ?? CEF Format ??
 function toCEF(event: Record<string, unknown>): string {
   const severity = mapSeverityToCEF(event.severity as string);
   const name = (event.title || event.event_type || 'SecurityEvent') as string;
@@ -30,7 +30,7 @@ function mapSeverityToCEF(severity: string): number {
   return map[severity?.toLowerCase()] || 5;
 }
 
-// ── Syslog RFC 5424 Format ──
+// ?? Syslog RFC 5424 Format ??
 function toSyslog(event: Record<string, unknown>): string {
   const pri = mapSeverityToSyslog(event.severity as string);
   const timestamp = event.created_at || new Date().toISOString();

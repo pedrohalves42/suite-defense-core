@@ -1,5 +1,5 @@
--- RPC para detectar agentes que estão com heartbeat atrasado (stale)
--- Útil para monitoramento e alertas automáticos
+-- RPC para detectar agentes que estao com heartbeat atrasado (stale)
+-- Util para monitoramento e alertas automaticos
 CREATE OR REPLACE FUNCTION get_stale_agents(
   p_tenant_id uuid,
   p_threshold_minutes int DEFAULT 30
@@ -37,8 +37,8 @@ AS $$
   ORDER BY last_heartbeat ASC;
 $$;
 
--- Comentário para documentação
-COMMENT ON FUNCTION get_stale_agents IS 'Retorna agentes cujo heartbeat está atrasado além do threshold especificado (padrão 30 min). Útil para monitoramento e detecção de agentes offline.';
+-- Comentario para documentacao
+COMMENT ON FUNCTION get_stale_agents IS 'Retorna agentes cujo heartbeat esta atrasado alem do threshold especificado (padrao 30 min). Util para monitoramento e deteccao de agentes offline.';
 
--- Grant para usuários autenticados
+-- Grant para usuarios autenticados
 GRANT EXECUTE ON FUNCTION get_stale_agents(uuid, int) TO authenticated;

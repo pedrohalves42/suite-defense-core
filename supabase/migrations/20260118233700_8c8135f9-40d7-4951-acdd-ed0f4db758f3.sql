@@ -1,4 +1,4 @@
--- ADR-030: Adicionar security_invoker em 5 views críticas
+-- ADR-030: Adicionar security_invoker em 5 views criticas
 
 -- v_dlq_risk_overview
 DROP VIEW IF EXISTS public.v_dlq_risk_overview;

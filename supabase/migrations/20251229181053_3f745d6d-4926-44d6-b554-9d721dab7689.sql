@@ -2,11 +2,11 @@
 -- FASE 1: Criar coluna agent_version_code
 -- =====================================================
 
--- Adicionar coluna para comparação numérica de versões
+-- Adicionar coluna para comparacao numerica de versoes
 ALTER TABLE public.agents ADD COLUMN IF NOT EXISTS agent_version_code INTEGER;
 
--- Criar função para converter versão string para código numérico
--- Fórmula: major * 10000 + minor * 100 + patch
+-- Criar funcao para converter versao string para codigo numerico
+-- Formula: major * 10000 + minor * 100 + patch
 -- Ex: v4.2.1 = 40201, v4.1.9 = 40109
 CREATE OR REPLACE FUNCTION public.parse_version_code(version_text TEXT)
 RETURNS INTEGER
@@ -40,13 +40,13 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
--- Popular coluna com versões existentes
+-- Popular coluna com versoes existentes
 UPDATE public.agents 
 SET agent_version_code = public.parse_version_code(agent_version)
 WHERE agent_version IS NOT NULL 
   AND agent_version_code IS NULL;
 
--- Criar índice para queries eficientes
+-- Criar indice para queries eficientes
 CREATE INDEX IF NOT EXISTS idx_agents_version_code ON public.agents(agent_version_code);
 
 -- =====================================================

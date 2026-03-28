@@ -1,5 +1,5 @@
 -- ============================================================
--- COST-OPT v8: flush-event-buffer 60s → 120s
+-- COST-OPT v8: flush-event-buffer 60s ? 120s
 -- Saves ~720 invocations/day (~21,600/month)
 -- The inline triggerBufferFlush ensures real-time latency is maintained
 -- ============================================================

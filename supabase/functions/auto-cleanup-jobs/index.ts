@@ -1,13 +1,13 @@
 /**
  * Auto Cleanup Jobs - Edge Function
  * 
- * Executa limpeza automática de jobs órfãos:
- * - Jobs em 'queued' há mais de 24 horas -> cancelled
- * - Jobs em 'delivered' há mais de 1 hora -> failed
+ * Executa limpeza automatica de jobs orfaos:
+ * - Jobs em 'queued' ha mais de 24 horas -> cancelled
+ * - Jobs em 'delivered' ha mais de 1 hora -> failed
  * 
  * Pode ser executada via:
  * - CRON job (pg_cron)
- * - Chamada manual (com autenticação)
+ * - Chamada manual (com autenticacao)
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
     let queuedThresholdHours = 2 // Reduzido de 24h para 2h
     let deliveredThresholdHours = 0.5 // Reduzido de 1h para 30min
     let targetTenantId: string | null = null
-    let enableRetry = true // Nova opção para re-agendar jobs falhos
+    let enableRetry = true // Nova opcao para re-agendar jobs falhos
 
     if (req.method === 'POST') {
       try {
@@ -217,7 +217,7 @@ Deno.serve(async (req) => {
     const allJobs = [...(cancelledJobs ?? []), ...(failedJobs ?? [])]
     const tenantsAffected = [...new Set(allJobs.map(j => j.tenant_id))]
 
-    // Step 3: Re-agendar jobs falhos para retry automático (apenas jobs recorrentes)
+    // Step 3: Re-agendar jobs falhos para retry automatico (apenas jobs recorrentes)
     let retriedCount = 0
     if (enableRetry && failedJobs && failedJobs.length > 0) {
       for (const failedJob of failedJobs) {
@@ -227,7 +227,7 @@ Deno.serve(async (req) => {
           .eq('id', failedJob.id)
           .single()
 
-        // Só re-agendar jobs recorrentes
+        // So re-agendar jobs recorrentes
         if (originalJob?.is_recurring && originalJob?.agent_id) {
           const { error: retryError } = await supabase
             .from('jobs')

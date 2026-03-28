@@ -336,7 +336,7 @@ BEGIN
   IF OLD.trigger_type <> NEW.trigger_type THEN v_diff := v_diff || 'trigger_type changed; '; END IF;
   IF OLD.trigger_conditions <> NEW.trigger_conditions THEN v_diff := v_diff || 'trigger_conditions changed; '; END IF;
   IF OLD.actions <> NEW.actions THEN v_diff := v_diff || 'actions changed; '; END IF;
-  IF OLD.is_active <> NEW.is_active THEN v_diff := v_diff || format('is_active: %s→%s; ', OLD.is_active, NEW.is_active); END IF;
+  IF OLD.is_active <> NEW.is_active THEN v_diff := v_diff || format('is_active: %s?%s; ', OLD.is_active, NEW.is_active); END IF;
 
   INSERT INTO soar_playbook_versions (playbook_id, tenant_id, version, config_snapshot, changed_by, diff_summary)
   VALUES (NEW.id, NEW.tenant_id, v_next_version,

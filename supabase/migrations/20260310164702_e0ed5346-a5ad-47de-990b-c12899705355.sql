@@ -1,7 +1,7 @@
 
--- ═══════════════════════════════════════════════════════
+-- ???????????????????????????????????????????????????????
 -- Threat Intelligence Tables
--- ═══════════════════════════════════════════════════════
+-- ???????????????????????????????????????????????????????
 
 -- Indicator types enum
 CREATE TYPE public.threat_indicator_type AS ENUM (
@@ -35,7 +35,7 @@ CREATE TYPE public.threat_feed_source AS ENUM (
   'internal'
 );
 
--- ── Threat Indicators Table ──
+-- ?? Threat Indicators Table ??
 CREATE TABLE public.threat_indicators (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -56,7 +56,7 @@ CREATE TABLE public.threat_indicators (
   UNIQUE(tenant_id, indicator_type, indicator_value, source)
 );
 
--- ── Threat Feed Sync Log ──
+-- ?? Threat Feed Sync Log ??
 CREATE TABLE public.threat_feed_sync_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -71,7 +71,7 @@ CREATE TABLE public.threat_feed_sync_log (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ── Threat Matches (IoC found on agent) ──
+-- ?? Threat Matches (IoC found on agent) ??
 CREATE TABLE public.threat_matches (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -86,7 +86,7 @@ CREATE TABLE public.threat_matches (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ── Indexes ──
+-- ?? Indexes ??
 CREATE INDEX idx_threat_indicators_tenant ON public.threat_indicators(tenant_id);
 CREATE INDEX idx_threat_indicators_type_value ON public.threat_indicators(indicator_type, indicator_value);
 CREATE INDEX idx_threat_indicators_active ON public.threat_indicators(is_active) WHERE is_active = true;
@@ -96,7 +96,7 @@ CREATE INDEX idx_threat_matches_tenant ON public.threat_matches(tenant_id);
 CREATE INDEX idx_threat_matches_agent ON public.threat_matches(agent_id);
 CREATE INDEX idx_threat_matches_status ON public.threat_matches(status) WHERE status = 'open';
 
--- ── RLS ──
+-- ?? RLS ??
 ALTER TABLE public.threat_indicators ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.threat_feed_sync_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.threat_matches ENABLE ROW LEVEL SECURITY;
@@ -141,7 +141,7 @@ CREATE POLICY "tenant_isolation_update" ON public.threat_matches
 CREATE POLICY "service_role_all_threat_matches" ON public.threat_matches
   FOR ALL TO service_role USING (true);
 
--- ── Updated_at trigger ──
+-- ?? Updated_at trigger ??
 CREATE OR REPLACE FUNCTION public.update_threat_indicators_updated_at()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -159,7 +159,7 @@ CREATE TRIGGER trg_threat_indicators_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION public.update_threat_indicators_updated_at();
 
--- ── RPC: Get threat stats for dashboard ──
+-- ?? RPC: Get threat stats for dashboard ??
 CREATE OR REPLACE FUNCTION public.get_threat_intel_stats(p_tenant_id UUID)
 RETURNS JSONB
 LANGUAGE plpgsql

@@ -1,5 +1,5 @@
 /**
- * KV Cache — lightweight key-value cache backed by the kv_cache table.
+ * KV Cache ? lightweight key-value cache backed by the kv_cache table.
  * Used by Edge Functions to cache expensive queries (DNS blocklists, policies, etc.)
  */
 
@@ -34,7 +34,7 @@ export async function cacheGet<T = unknown>(
 
 /**
  * Set a cached value with TTL in seconds.
- * Uses upsert — overwrites existing keys.
+ * Uses upsert ? overwrites existing keys.
  */
 export async function cacheSet(
   supabase: SupabaseClient,

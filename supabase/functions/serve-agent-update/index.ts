@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
         reason: agent.force_update_reason
       });
 
-      // Buscar release forçada
+      // Buscar release forcada
       const { data: forcedRelease, error: forcedError } = await supabase
         .from('agent_releases')
         .select('id, version, script_content, sha256, release_notes, signature_base64, signed_at, signed_by')
@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
           forceVersion: agent.force_update_version,
           platform 
         });
-        // Limpar force_update se versão não existe
+        // Limpar force_update se versao nao existe
         await supabase
           .from('agents')
           .update({ 
@@ -269,7 +269,7 @@ Deno.serve(async (req) => {
       .eq('enabled', true)
       .single();
 
-    // Calcular bucket determinístico via SHA256(agent_id) - sempre calculamos para telemetria
+    // Calcular bucket deterministico via SHA256(agent_id) - sempre calculamos para telemetria
     const agentIdHash = await crypto.subtle.digest(
       'SHA-256',
       new TextEncoder().encode(agent.id)
@@ -277,7 +277,7 @@ Deno.serve(async (req) => {
     const bucketHashArray = Array.from(new Uint8Array(agentIdHash));
     const bucket = ((bucketHashArray[0] << 8) | bucketHashArray[1]) % 100;
 
-    // Função helper para registrar decisão de rollout
+    // Funcao helper para registrar decisao de rollout
     const logRolloutDecision = async (decision: 'allowed' | 'skipped' | 'no_policy' | 'already_current' | 'force_update', targetVersion: string, rolloutPercentage: number) => {
       try {
         await supabase.from('agent_update_decisions').insert({
@@ -305,7 +305,7 @@ Deno.serve(async (req) => {
           targetVersion: rolloutPolicy.target_version
         });
         
-        // TELEMETRIA: Registrar decisão "skipped"
+        // TELEMETRIA: Registrar decisao "skipped"
         await logRolloutDecision('skipped', rolloutPolicy.target_version, rolloutPolicy.rollout_percentage);
         
         return new Response(
@@ -327,7 +327,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Buscar ultima release ativa (incluindo assinatura criptográfica)
+    // Buscar ultima release ativa (incluindo assinatura criptografica)
     const { data: release, error: releaseError } = await supabase
       .from('agent_releases')
       .select('id, version, script_content, sha256, release_notes, created_at, signature_base64, signed_at, signed_by')
@@ -460,9 +460,9 @@ Deno.serve(async (req) => {
       });
     }
     
-    // Se ainda não temos script válido, retornar erro
+    // Se ainda nao temos script valido, retornar erro
     if (!finalScriptContent || finalScriptContent.length < 1000) {
-      logger.error('[serve-agent-update] Nenhum script válido disponível', { requestId });
+      logger.error('[serve-agent-update] Nenhum script valido disponivel', { requestId });
       return new Response(
         JSON.stringify({ 
           error: 'No valid script available',
@@ -517,7 +517,7 @@ Deno.serve(async (req) => {
       base64Size: base64Script.length
     });
 
-    // TELEMETRIA: Registrar decisão "allowed" (update será enviado)
+    // TELEMETRIA: Registrar decisao "allowed" (update sera enviado)
     await logRolloutDecision('allowed', release.version, rolloutPolicy?.rollout_percentage || 100);
 
     return new Response(

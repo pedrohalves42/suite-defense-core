@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
       stuckAgentsResult,
       stuckInstallResult,
     ] = await Promise.allSettled([
-      // ── 1. Stuck Jobs ──
+      // ?? 1. Stuck Jobs ??
       (async () => {
         const cutoff = new Date(Date.now() - 45 * 60 * 1000).toISOString();
         const { data, error } = await supabase
@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
         if (!updateErr) result.stuck_jobs.failed = ids.length;
       })(),
 
-      // ── 2. Pending Agents (no heartbeat > 10min) ──
+      // ?? 2. Pending Agents (no heartbeat > 10min) ??
       (async () => {
         const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
         const { data, error } = await supabase
@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
         result.pending_agents.count = data?.length || 0;
       })(),
 
-      // ── 3. Agent Health (offline detection) ──
+      // ?? 3. Agent Health (offline detection) ??
       (async () => {
         const offlineCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
         const { data, error } = await supabase
@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
         result.agent_health.total_active = count || 0;
       })(),
 
-      // ── 4. DLQ Exhaustion ──
+      // ?? 4. DLQ Exhaustion ??
       (async () => {
         const { data, error } = await supabase
           .from('failed_jobs_dlq')
@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
         }
       })(),
 
-      // ── 5. Slow Operations (> 2s in last 5 min) ──
+      // ?? 5. Slow Operations (> 2s in last 5 min) ??
       (async () => {
         const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
         const { count, error } = await supabase
@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
         result.slow_operations.count = count || 0;
       })(),
 
-      // ── 6. Stuck Agents (pending + no heartbeat > 10min) ──
+      // ?? 6. Stuck Agents (pending + no heartbeat > 10min) ??
       (async () => {
         const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
         const { data, error } = await supabase
@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
         }
       })(),
 
-      // ── 7. Stuck Installations (via view) ──
+      // ?? 7. Stuck Installations (via view) ??
       (async () => {
         const { data, error } = await supabase
           .from('v_agent_lifecycle_state')

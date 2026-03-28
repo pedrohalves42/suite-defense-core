@@ -1,5 +1,5 @@
 
--- Atualizar a função auto_mark_agents_inactive para usar threshold de 10 minutos
+-- Atualizar a funcao auto_mark_agents_inactive para usar threshold de 10 minutos
 -- Isso alinha o backend com o frontend que usa 5 min como threshold visual
 CREATE OR REPLACE FUNCTION public.auto_mark_agents_inactive()
 RETURNS jsonb
@@ -48,7 +48,7 @@ BEGIN
 END;
 $$;
 
--- Aumentar frequência do cron: de cada 30 min para cada 5 min
+-- Aumentar frequencia do cron: de cada 30 min para cada 5 min
 SELECT cron.unschedule(90);
 SELECT cron.schedule(
   'auto-mark-agents-offline',
@@ -56,7 +56,7 @@ SELECT cron.schedule(
   'SELECT public.auto_mark_agents_inactive()'
 );
 
--- Marcar imediatamente os que estão sem heartbeat há mais de 10 min
+-- Marcar imediatamente os que estao sem heartbeat ha mais de 10 min
 UPDATE agents
 SET 
   status = 'offline',

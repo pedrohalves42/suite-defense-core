@@ -1,12 +1,12 @@
 -- =========================================
--- FASE 1: Novas Regras de Decisão Automáticas
+-- FASE 1: Novas Regras de Decisao Automaticas
 -- =========================================
 
--- Regra 1: SILENT_FAILURE_007 - Agente improdutivo (online mas não executa)
+-- Regra 1: SILENT_FAILURE_007 - Agente improdutivo (online mas nao executa)
 INSERT INTO decision_rules (code, description, is_enabled, scope, definition)
 VALUES (
   'SILENT_FAILURE_007',
-  'Detecta agentes com heartbeat ativo mas sem execuções recentes',
+  'Detecta agentes com heartbeat ativo mas sem execucoes recentes',
   true,
   'agent',
   '{
@@ -60,11 +60,11 @@ ON CONFLICT (code) DO UPDATE SET
   is_enabled = EXCLUDED.is_enabled,
   updated_at = NOW();
 
--- Regra 3: INSIGHT_IGNORED_009 - Insights críticos ignorados
+-- Regra 3: INSIGHT_IGNORED_009 - Insights criticos ignorados
 INSERT INTO decision_rules (code, description, is_enabled, scope, definition)
 VALUES (
   'INSIGHT_IGNORED_009',
-  'Reeleva severidade de insights críticos não reconhecidos',
+  'Reeleva severidade de insights criticos nao reconhecidos',
   true,
   'insight',
   '{
@@ -77,7 +77,7 @@ VALUES (
     "parameters": {
       "new_severity": "critical",
       "notification_channel": "email",
-      "notification_title": "Insight crítico ignorado há 3 dias"
+      "notification_title": "Insight critico ignorado ha 3 dias"
     },
     "safety": {
       "cooldown_hours": 24,
@@ -90,11 +90,11 @@ ON CONFLICT (code) DO UPDATE SET
   is_enabled = EXCLUDED.is_enabled,
   updated_at = NOW();
 
--- Regra 4: BLOCKED_ACCESS_PATTERN_010 - Padrão de acesso bloqueado
+-- Regra 4: BLOCKED_ACCESS_PATTERN_010 - Padrao de acesso bloqueado
 INSERT INTO decision_rules (code, description, is_enabled, scope, definition)
 VALUES (
   'BLOCKED_ACCESS_PATTERN_010',
-  'Detecta padrões suspeitos de tentativas de acesso bloqueado',
+  'Detecta padroes suspeitos de tentativas de acesso bloqueado',
   true,
   'agent',
   '{
@@ -106,7 +106,7 @@ VALUES (
     "actions": ["CREATE_AI_INSIGHT", "CREATE_SYSTEM_ALERT", "ENABLE_INTENSIVE_MONITORING"],
     "parameters": {
       "insight_severity": "critical",
-      "alert_title": "Padrão suspeito de navegação detectado",
+      "alert_title": "Padrao suspeito de navegacao detectado",
       "monitoring_duration_hours": 24
     },
     "safety": {
@@ -120,7 +120,7 @@ ON CONFLICT (code) DO UPDATE SET
   is_enabled = EXCLUDED.is_enabled,
   updated_at = NOW();
 
--- Regra 5: AGENT_DIVERGENT_011 - Agente com métricas divergentes
+-- Regra 5: AGENT_DIVERGENT_011 - Agente com metricas divergentes
 INSERT INTO decision_rules (code, description, is_enabled, scope, definition)
 VALUES (
   'AGENT_DIVERGENT_011',
@@ -150,11 +150,11 @@ ON CONFLICT (code) DO UPDATE SET
   is_enabled = EXCLUDED.is_enabled,
   updated_at = NOW();
 
--- Regra 6: PROGRESSIVE_DEGRADATION_012 - Degradação progressiva
+-- Regra 6: PROGRESSIVE_DEGRADATION_012 - Degradacao progressiva
 INSERT INTO decision_rules (code, description, is_enabled, scope, definition)
 VALUES (
   'PROGRESSIVE_DEGRADATION_012',
-  'Detecta tendência de degradação antes de se tornar crítica',
+  'Detecta tendencia de degradacao antes de se tornar critica',
   true,
   'agent',
   '{
@@ -181,7 +181,7 @@ ON CONFLICT (code) DO UPDATE SET
   updated_at = NOW();
 
 -- =========================================
--- FASE 2: RPC para gerar AI Actions de Insights Críticos
+-- FASE 2: RPC para gerar AI Actions de Insights Criticos
 -- =========================================
 
 CREATE OR REPLACE FUNCTION public.generate_ai_actions_from_insights()
@@ -197,7 +197,7 @@ DECLARE
   v_action_type text;
   v_action_payload jsonb;
 BEGIN
-  -- Processa insights críticos não reconhecidos sem ação associada
+  -- Processa insights criticos nao reconhecidos sem acao associada
   FOR v_insight IN
     SELECT i.*
     FROM ai_insights i
@@ -217,7 +217,7 @@ BEGIN
   LOOP
     v_insights_processed := v_insights_processed + 1;
     
-    -- Determina tipo de ação baseado na categoria do insight
+    -- Determina tipo de acao baseado na categoria do insight
     CASE 
       WHEN v_insight.category ILIKE '%agent%' OR v_insight.category ILIKE '%health%' THEN
         v_action_type := 'suggest_agent_restart';
@@ -231,7 +231,7 @@ BEGIN
         v_action_type := 'create_system_alert';
         v_action_payload := jsonb_build_object(
           'insight_id', v_insight.id,
-          'title', 'Alerta de Segurança: ' || v_insight.title,
+          'title', 'Alerta de Seguranca: ' || v_insight.title,
           'message', v_insight.description,
           'severity', v_insight.severity,
           'category', 'security'
@@ -241,14 +241,14 @@ BEGIN
         v_action_payload := jsonb_build_object(
           'insight_id', v_insight.id,
           'insight_title', v_insight.title,
-          'suggested_action', 'Limpar jobs travados ou cancelar jobs problemáticos'
+          'suggested_action', 'Limpar jobs travados ou cancelar jobs problematicos'
         );
       WHEN v_insight.category ILIKE '%config%' OR v_insight.category ILIKE '%policy%' THEN
         v_action_type := 'suggest_config_change';
         v_action_payload := jsonb_build_object(
           'insight_id', v_insight.id,
           'insight_title', v_insight.title,
-          'suggested_action', 'Revisar configuração do sistema'
+          'suggested_action', 'Revisar configuracao do sistema'
         );
       ELSE
         v_action_type := 'create_system_alert';
@@ -260,7 +260,7 @@ BEGIN
         );
     END CASE;
     
-    -- Cria a ação
+    -- Cria a acao
     INSERT INTO ai_actions (
       tenant_id,
       insight_id,
@@ -288,7 +288,7 @@ END;
 $$;
 
 -- =========================================
--- FASE 3: RPC para processar regras de decisão
+-- FASE 3: RPC para processar regras de decisao
 -- =========================================
 
 CREATE OR REPLACE FUNCTION public.evaluate_decision_rules()
@@ -338,9 +338,9 @@ BEGIN
               AND j.created_at < NOW() - INTERVAL '30 minutes'
           )
       LOOP
-        -- Verifica se não executou jobs recentemente
+        -- Verifica se nao executou jobs recentemente
         IF v_agent.last_execution < NOW() - INTERVAL '60 minutes' THEN
-          -- Cria evento de decisão
+          -- Cria evento de decisao
           INSERT INTO decision_events (
             tenant_id, rule_code, agent_id, agent_name, action,
             evidence, executed_actions
@@ -366,7 +366,7 @@ BEGIN
             'high',
             'agent_health',
             'Agente improdutivo: ' || v_agent.agent_name,
-            'O agente ' || v_agent.agent_name || ' está online mas não executou jobs nas últimas horas. Última execução: ' || 
+            'O agente ' || v_agent.agent_name || ' esta online mas nao executou jobs nas ultimas horas. Ultima execucao: ' || 
             COALESCE(v_agent.last_execution::text, 'nunca')
           );
           
@@ -375,9 +375,9 @@ BEGIN
       END LOOP;
     END IF;
     
-    -- Regra INSIGHT_IGNORED_009: Insights críticos ignorados
+    -- Regra INSIGHT_IGNORED_009: Insights criticos ignorados
     IF v_rule.code = 'INSIGHT_IGNORED_009' THEN
-      -- Escala insights ignorados há mais de 72h
+      -- Escala insights ignorados ha mais de 72h
       UPDATE ai_insights
       SET 
         severity = 'critical',
@@ -388,7 +388,7 @@ BEGIN
         AND created_at < NOW() - INTERVAL '72 hours'
         AND title NOT LIKE '[ESCALADO]%';
         
-      -- Registra evento se houve escalações
+      -- Registra evento se houve escalacoes
       IF FOUND THEN
         INSERT INTO decision_events (
           tenant_id, rule_code, action, evidence, executed_actions
@@ -408,7 +408,7 @@ BEGIN
     END IF;
   END LOOP;
   
-  -- Gera AI Actions para insights não processados
+  -- Gera AI Actions para insights nao processados
   PERFORM generate_ai_actions_from_insights();
   
   RETURN jsonb_build_object(

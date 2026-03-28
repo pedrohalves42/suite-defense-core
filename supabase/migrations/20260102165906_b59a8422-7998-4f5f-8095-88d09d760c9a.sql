@@ -1,10 +1,10 @@
 -- ============================================================
--- MIGRATION: Correção Sistêmica do Bug archived_at (v2)
--- Usando DROP/CREATE para views com dependências
+-- MIGRATION: Correcao Sistemica do Bug archived_at (v2)
+-- Usando DROP/CREATE para views com dependencias
 -- ============================================================
 
 -- ============================================================
--- FASE 1: Criar View Canônica active_agents (se não existir)
+-- FASE 1: Criar View Canonica active_agents (se nao existir)
 -- ============================================================
 DROP VIEW IF EXISTS public.active_agents CASCADE;
 CREATE VIEW public.active_agents AS
@@ -16,7 +16,7 @@ COMMENT ON VIEW public.active_agents IS
 'Canonical operational view. Excludes archived agents. REQUIRED for all operational RPCs and dashboards.';
 
 -- ============================================================
--- FASE 2: Recriar Views Operacionais (ordem de dependência)
+-- FASE 2: Recriar Views Operacionais (ordem de dependencia)
 -- ============================================================
 
 -- 2.1 agents_health_view
@@ -114,11 +114,11 @@ SELECT
   END AS severity,
   CASE
     WHEN a.last_heartbeat IS NULL THEN 'Agente nunca conectou ao sistema'::text
-    WHEN a.last_heartbeat < (now() - '00:30:00'::interval) THEN 'Agente offline há mais de 30 minutos'::text
-    WHEN a.agent_mode = 'SAFE_MODE'::text THEN 'Agente em modo seguro - execução limitada'::text
-    WHEN COALESCE(stale_q.stale_queued_jobs, 0::bigint) > 3 THEN 'Agente online mas não está buscando jobs há mais de 1 hora'::text
-    WHEN COALESCE(stale_d.stale_delivered_jobs, 0::bigint) > 2 THEN 'Agente recebeu jobs mas não está executando há mais de 30 minutos'::text
-    WHEN je.last_execution_at IS NOT NULL AND je.last_execution_at < (now() - '04:00:00'::interval) AND COALESCE(pending.pending_jobs, 0::bigint) > 0 THEN 'Última execução há mais de 4 horas com jobs pendentes'::text
+    WHEN a.last_heartbeat < (now() - '00:30:00'::interval) THEN 'Agente offline ha mais de 30 minutos'::text
+    WHEN a.agent_mode = 'SAFE_MODE'::text THEN 'Agente em modo seguro - execucao limitada'::text
+    WHEN COALESCE(stale_q.stale_queued_jobs, 0::bigint) > 3 THEN 'Agente online mas nao esta buscando jobs ha mais de 1 hora'::text
+    WHEN COALESCE(stale_d.stale_delivered_jobs, 0::bigint) > 2 THEN 'Agente recebeu jobs mas nao esta executando ha mais de 30 minutos'::text
+    WHEN je.last_execution_at IS NOT NULL AND je.last_execution_at < (now() - '04:00:00'::interval) AND COALESCE(pending.pending_jobs, 0::bigint) > 0 THEN 'Ultima execucao ha mais de 4 horas com jobs pendentes'::text
     ELSE 'Agente funcionando normalmente'::text
   END AS health_description,
   now() AS checked_at

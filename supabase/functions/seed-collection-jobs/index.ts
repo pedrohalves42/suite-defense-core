@@ -2,7 +2,7 @@
  * seed-collection-jobs Edge Function
  * 
  * Cria jobs de coleta recorrentes para agentes ativos.
- * Este é o "motor de ignição" que garante que o sistema de jobs
+ * Este e o "motor de ignicao" que garante que o sistema de jobs
  * tenha trabalho para processar.
  * 
  * Tipos de coleta criados:
@@ -14,8 +14,8 @@
  * - service_health_check (a cada 4h)
  * - light_vuln_scan (a cada 24h)
  * 
- * Segurança: Usa create_job_if_not_exists para deduplicação.
- * Performance: Só processa agentes ativos com heartbeat < 2h.
+ * Seguranca: Usa create_job_if_not_exists para deduplicacao.
+ * Performance: So processa agentes ativos com heartbeat < 2h.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';

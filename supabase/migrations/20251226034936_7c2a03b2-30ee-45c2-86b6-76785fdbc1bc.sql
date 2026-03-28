@@ -2,7 +2,7 @@
 -- PHASE 3: Security Hardening + Shadow Mode
 -- ============================================
 
--- 1. TRIGGER ANTI-BYPASS: Forçar require_approval para ações destrutivas
+-- 1. TRIGGER ANTI-BYPASS: Forcar require_approval para acoes destrutivas
 CREATE OR REPLACE FUNCTION enforce_no_auto_destructive_actions()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -23,7 +23,7 @@ BEFORE INSERT OR UPDATE ON playbooks
 FOR EACH ROW
 EXECUTE FUNCTION enforce_no_auto_destructive_actions();
 
--- 2. TABELA risk_decision_log: Log dedicado para decisões do motor de risco
+-- 2. TABELA risk_decision_log: Log dedicado para decisoes do motor de risco
 CREATE TABLE IF NOT EXISTS risk_decision_log (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   playbook_execution_id uuid REFERENCES playbook_executions(id) ON DELETE SET NULL,
@@ -66,8 +66,8 @@ ADD COLUMN IF NOT EXISTS dry_run boolean DEFAULT false;
 ALTER TABLE tenant_settings 
 ADD COLUMN IF NOT EXISTS enable_dry_run_mode boolean DEFAULT false;
 
--- Comment para documentação
-COMMENT ON COLUMN tenant_settings.enable_dry_run_mode IS 'Shadow Mode: quando ativado, playbooks são avaliados mas não executados automaticamente. Todas as decisões são logadas em risk_decision_log com dry_run=true';
-COMMENT ON COLUMN playbook_executions.dry_run IS 'Indica se esta execução foi uma simulação (Shadow Mode)';
-COMMENT ON TABLE risk_decision_log IS 'Log dedicado para auditoria de decisões do motor de risco de playbooks';
-COMMENT ON FUNCTION enforce_no_auto_destructive_actions() IS 'Trigger anti-bypass: força require_approval=true para playbooks com ações destrutivas';
+-- Comment para documentacao
+COMMENT ON COLUMN tenant_settings.enable_dry_run_mode IS 'Shadow Mode: quando ativado, playbooks sao avaliados mas nao executados automaticamente. Todas as decisoes sao logadas em risk_decision_log com dry_run=true';
+COMMENT ON COLUMN playbook_executions.dry_run IS 'Indica se esta execucao foi uma simulacao (Shadow Mode)';
+COMMENT ON TABLE risk_decision_log IS 'Log dedicado para auditoria de decisoes do motor de risco de playbooks';
+COMMENT ON FUNCTION enforce_no_auto_destructive_actions() IS 'Trigger anti-bypass: forca require_approval=true para playbooks com acoes destrutivas';

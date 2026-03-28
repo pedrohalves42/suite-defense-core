@@ -79,7 +79,7 @@ BEGIN
   FOR UPDATE;
 
   -- SELF-HEALING: Get the actual max execution_index from job_executions
-  -- This is the source of truth — if chain is stale, we auto-correct
+  -- This is the source of truth ? if chain is stale, we auto-correct
   SELECT MAX(je.execution_index) INTO v_actual_max_index
   FROM job_executions je
   WHERE je.agent_id = p_agent_id

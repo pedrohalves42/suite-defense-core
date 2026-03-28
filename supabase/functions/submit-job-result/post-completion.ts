@@ -24,7 +24,7 @@ export async function validateGovernance(ctx: SubmitContext, updateData: Record<
   
   if (blockedDomainsCount > 0 && !hasRealEnforcement) {
     updateData.status = 'completed'
-    updateData.error_message = `[WARNING] ${blockedDomainsCount} domínios para bloquear mas enforcement_method=${enforcementMethod}. Nenhuma modificação real aplicada.`
+    updateData.error_message = `[WARNING] ${blockedDomainsCount} dominios para bloquear mas enforcement_method=${enforcementMethod}. Nenhuma modificacao real aplicada.`
     logger.warn('[submit-job-result] [GOVERNANCE] ENFORCEMENT FALHOU', {
       job_id: payload.job_id,
       agent: agent.agent_name,
@@ -83,7 +83,7 @@ export async function validateUpdateAgentVersion(ctx: SubmitContext): Promise<vo
     await supabase
       .from('jobs')
       .update({
-        error_message: `Update entregue mas agente ainda em ${currentVersion}. Script salvo em disco - reinício do Windows necessário.`
+        error_message: `Update entregue mas agente ainda em ${currentVersion}. Script salvo em disco - reinicio do Windows necessario.`
       })
       .eq('id', payload.job_id)
   }

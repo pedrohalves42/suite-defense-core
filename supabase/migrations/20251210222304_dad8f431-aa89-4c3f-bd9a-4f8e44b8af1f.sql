@@ -1,8 +1,8 @@
 -- ============================================
--- FASE 3: Ativar Particionamento de Métricas
+-- FASE 3: Ativar Particionamento de Metricas
 -- ============================================
 
--- 1. Criar função para redirecionar inserts para partições mensais
+-- 1. Criar funcao para redirecionar inserts para particoes mensais
 CREATE OR REPLACE FUNCTION public.redirect_metrics_to_partition()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -18,7 +18,7 @@ BEGIN
   partition_end := (partition_start + interval '1 month')::date;
   partition_name := 'agent_system_metrics_' || to_char(partition_start, 'YYYY_MM');
   
-  -- Criar partição se não existir
+  -- Criar particao se nao existir
   IF NOT EXISTS (
     SELECT 1 FROM pg_class c
     JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -53,7 +53,7 @@ BEGIN
 END;
 $$;
 
--- 2. Criar trigger na tabela principal (se não existir)
+-- 2. Criar trigger na tabela principal (se nao existir)
 DROP TRIGGER IF EXISTS tr_redirect_metrics_to_partition ON public.agent_system_metrics;
 
 CREATE TRIGGER tr_redirect_metrics_to_partition
@@ -61,7 +61,7 @@ BEFORE INSERT ON public.agent_system_metrics
 FOR EACH ROW
 EXECUTE FUNCTION public.redirect_metrics_to_partition();
 
--- 3. Garantir partição atual existe
+-- 3. Garantir particao atual existe
 DO $$
 DECLARE
   partition_name text;
@@ -95,7 +95,7 @@ ALTER TABLE public.agent_tokens
 ADD COLUMN IF NOT EXISTS token_hash text,
 ADD COLUMN IF NOT EXISTS token_prefix varchar(12);
 
--- 2. Criar índice para busca eficiente por hash
+-- 2. Criar indice para busca eficiente por hash
 CREATE INDEX IF NOT EXISTS idx_agent_tokens_token_hash 
 ON public.agent_tokens(token_hash) 
 WHERE token_hash IS NOT NULL;
@@ -107,7 +107,7 @@ SET
   token_prefix = left(token, 8) || '...'
 WHERE token_hash IS NULL AND token IS NOT NULL;
 
--- 4. Criar função SQL para hash de token
+-- 4. Criar funcao SQL para hash de token
 CREATE OR REPLACE FUNCTION public.hash_agent_token(p_token text)
 RETURNS text
 LANGUAGE sql
@@ -117,15 +117,15 @@ AS $$
   SELECT encode(sha256(p_token::bytea), 'hex');
 $$;
 
--- 5. Tornar colunas NOT NULL após migração (apenas se todos preenchidos)
+-- 5. Tornar colunas NOT NULL apos migracao (apenas se todos preenchidos)
 DO $$
 BEGIN
-  -- Verificar se todos tokens têm hash
+  -- Verificar se todos tokens tem hash
   IF NOT EXISTS (
     SELECT 1 FROM public.agent_tokens 
     WHERE token_hash IS NULL AND token IS NOT NULL
   ) THEN
-    -- Aplicar NOT NULL apenas se todos estão preenchidos
+    -- Aplicar NOT NULL apenas se todos estao preenchidos
     ALTER TABLE public.agent_tokens ALTER COLUMN token_hash SET NOT NULL;
     ALTER TABLE public.agent_tokens ALTER COLUMN token_prefix SET NOT NULL;
     RAISE NOTICE 'Applied NOT NULL constraints to token_hash and token_prefix';

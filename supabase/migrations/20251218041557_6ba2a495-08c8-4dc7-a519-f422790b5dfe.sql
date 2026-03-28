@@ -1,6 +1,6 @@
 -- =============================================
 -- FASE 2.2: Tabela agent_evidence_logs
--- Armazena evidências estruturadas dos agentes
+-- Armazena evidencias estruturadas dos agentes
 -- =============================================
 
 CREATE TABLE public.agent_evidence_logs (
@@ -10,16 +10,16 @@ CREATE TABLE public.agent_evidence_logs (
     agent_name TEXT NOT NULL,
     agent_version TEXT,
     event_type TEXT NOT NULL CHECK (event_type IN (
-        'state_change',      -- Mudança de estado
-        'job_execution',     -- Execução de job
+        'state_change',      -- Mudanca de estado
+        'job_execution',     -- Execucao de job
         'dns_block',         -- Bloqueio DNS
-        'policy_sync',       -- Sincronização de política
+        'policy_sync',       -- Sincronizacao de politica
         'auto_recovery',     -- Tentativa de auto-recovery
         'heartbeat',         -- Heartbeat enviado
         'update_applied',    -- Update aplicado
         'error',             -- Erro ocorrido
-        'policy_drift',      -- Drift de política detectado
-        'security_event'     -- Evento de segurança
+        'policy_drift',      -- Drift de politica detectado
+        'security_event'     -- Evento de seguranca
     )),
     event_data JSONB NOT NULL DEFAULT '{}',
     evidence_hash TEXT NOT NULL, -- SHA256 do event_data para integridade
@@ -29,7 +29,7 @@ CREATE TABLE public.agent_evidence_logs (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Índices para queries de compliance e auditoria
+-- Indices para queries de compliance e auditoria
 CREATE INDEX idx_evidence_tenant_date ON public.agent_evidence_logs(tenant_id, created_at DESC);
 CREATE INDEX idx_evidence_agent_date ON public.agent_evidence_logs(agent_id, created_at DESC);
 CREATE INDEX idx_evidence_type ON public.agent_evidence_logs(event_type);
@@ -56,10 +56,10 @@ FOR INSERT
 WITH CHECK (true);
 
 -- Comment
-COMMENT ON TABLE public.agent_evidence_logs IS 'Audit trail de eventos dos agentes v4.0+ para compliance e análise forense';
+COMMENT ON TABLE public.agent_evidence_logs IS 'Audit trail de eventos dos agentes v4.0+ para compliance e analise forense';
 
 -- =============================================
--- Função para submeter evidência de agente
+-- Funcao para submeter evidencia de agente
 -- =============================================
 CREATE OR REPLACE FUNCTION public.submit_agent_evidence(
     p_tenant_id UUID,

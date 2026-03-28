@@ -2,7 +2,7 @@ import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 
 /**
- * Token Rotation Service — SEC-008
+ * Token Rotation Service ? SEC-008
  * Hash-only storage, 30-day TTL, 7-day rotation window
  */
 
@@ -27,7 +27,7 @@ serveTenant(async (req, ctx) => {
 
   const action = body.action || (req.method === 'GET' ? 'needs-rotation' : undefined);
 
-  // ─── NEEDS ROTATION ───
+  // ??? NEEDS ROTATION ???
   if (action === 'needs-rotation' || req.method === 'GET') {
     const { data: tokens, error } = await supabase
       .from('agent_tokens')
@@ -44,7 +44,7 @@ serveTenant(async (req, ctx) => {
     };
   }
 
-  // ─── GENERATE ───
+  // ??? GENERATE ???
   if (action === 'generate') {
     const { agentId } = body;
     if (!agentId) {
@@ -85,7 +85,7 @@ serveTenant(async (req, ctx) => {
     };
   }
 
-  // ─── VALIDATE ───
+  // ??? VALIDATE ???
   if (action === 'validate') {
     const { agentId, token: agentToken, hmacSecret } = body;
     if (!agentId || !agentToken) {
@@ -128,7 +128,7 @@ serveTenant(async (req, ctx) => {
     return { valid: true, needs_rotation: needsRotation };
   }
 
-  // ─── REVOKE ───
+  // ??? REVOKE ???
   if (action === 'revoke') {
     const { agentId, reason } = body;
     if (!agentId) {

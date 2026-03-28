@@ -1,9 +1,9 @@
 -- =============================================================================
--- AJUSTES FINOS DE CONSOLIDAÇÃO (4 ajustes)
+-- AJUSTES FINOS DE CONSOLIDACAO (4 ajustes)
 -- =============================================================================
 
--- AJUSTE 1: Guard contra updates cosméticos no trigger
--- Recriar função com guard no topo para máxima clareza
+-- AJUSTE 1: Guard contra updates cosmeticos no trigger
+-- Recriar funcao com guard no topo para maxima clareza
 CREATE OR REPLACE FUNCTION create_decision_event_from_alert()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -11,17 +11,17 @@ SECURITY DEFINER
 SET search_path = 'public'
 AS $$
 BEGIN
-  -- Guard 1: Apenas mudança real de estado resolved (primeiro!)
+  -- Guard 1: Apenas mudanca real de estado resolved (primeiro!)
   IF OLD.resolved IS NOT DISTINCT FROM NEW.resolved THEN
     RETURN NEW;
   END IF;
 
-  -- Guard 2: Apenas alertas críticos
+  -- Guard 2: Apenas alertas criticos
   IF NEW.severity <> 'critical' THEN
     RETURN NEW;
   END IF;
 
-  -- Criar decision_event para resolução
+  -- Criar decision_event para resolucao
   IF NEW.resolved = true AND OLD.resolved = false THEN
     INSERT INTO decision_events (
       tenant_id,
@@ -87,16 +87,16 @@ BEGIN
 END;
 $$;
 
--- AJUSTE 2: Índice único em policy_assignments
+-- AJUSTE 2: Indice unico em policy_assignments
 -- Previne assignments duplicados
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_policy_assignment
 ON policy_assignments (policy_id, target_type, target_id);
 
--- AJUSTE 3: Renomear função para clareza conceitual
--- get_reason_tree_for_alert → get_alert_decision_chain
+-- AJUSTE 3: Renomear funcao para clareza conceitual
+-- get_reason_tree_for_alert ? get_alert_decision_chain
 ALTER FUNCTION get_reason_tree_for_alert(uuid) RENAME TO get_alert_decision_chain;
 
--- AJUSTE 4: Documentar relação entre funções
+-- AJUSTE 4: Documentar relacao entre funcoes
 COMMENT ON FUNCTION get_alert_decision_chain(uuid) IS 
 'Returns the causal decision chain for a specific alert.
 Distinct from generate_audit_reason_tree() which explains the overall ANA score.

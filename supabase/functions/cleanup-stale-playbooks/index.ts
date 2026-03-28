@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
           .update({
             status: 'failed',
             completed_at: new Date().toISOString(),
-            notes: `Timeout automático: execução excedeu ${TIMEOUT_MINUTES} minutos sem conclusão`,
+            notes: `Timeout automatico: execucao excedeu ${TIMEOUT_MINUTES} minutos sem conclusao`,
           })
           .eq('id', execution.id);
 
@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
             tenant_id: execution.tenant_id,
             alert_type: 'playbook_timeout',
             severity: 'high',
-            message: `Execução de playbook travada por mais de ${TIMEOUT_MINUTES} minutos foi automaticamente marcada como falha`,
+            message: `Execucao de playbook travada por mais de ${TIMEOUT_MINUTES} minutos foi automaticamente marcada como falha`,
             metadata: {
               execution_id: execution.id,
               playbook_id: execution.playbook_id,

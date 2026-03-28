@@ -1,5 +1,5 @@
 
--- Corrigir get_audit_raw_metrics removendo referência a blast_radius inexistente
+-- Corrigir get_audit_raw_metrics removendo referencia a blast_radius inexistente
 DROP FUNCTION IF EXISTS get_audit_raw_metrics(uuid);
 
 CREATE OR REPLACE FUNCTION get_audit_raw_metrics(p_tenant_id uuid)
@@ -66,7 +66,7 @@ BEGIN
     WHERE tenant_id = p_tenant_id
       AND created_at >= now() - interval '30 days'
   ),
-  -- APPROVALS (Governança) - incluindo rejeições
+  -- APPROVALS (Governanca) - incluindo rejeicoes
   approval_stats AS (
     SELECT
       COUNT(*) AS total,
@@ -106,7 +106,7 @@ BEGIN
     'dlq_review_rate', CASE WHEN dlq_stats.total > 0 
       THEN ROUND(dlq_stats.reviewed::numeric / dlq_stats.total * 100, 2) ELSE 100 END,
     
-    -- INSIGHTS → ACTIONS
+    -- INSIGHTS ? ACTIONS
     'ai_insights_30d', insight_stats.total,
     'insights_resolved_30d', insight_stats.resolved,
     'insights_resolution_rate', CASE WHEN insight_stats.total > 0 
@@ -118,7 +118,7 @@ BEGIN
     -- DECISION GOVERNANCE
     'decision_events_30d', decision_stats.total,
     
-    -- HUMAN OVERSIGHT (Governança Crítica)
+    -- HUMAN OVERSIGHT (Governanca Critica)
     'approval_requests_30d', approval_stats.total,
     'approved_requests_30d', approval_stats.approved,
     'rejected_requests_30d', approval_stats.rejected,

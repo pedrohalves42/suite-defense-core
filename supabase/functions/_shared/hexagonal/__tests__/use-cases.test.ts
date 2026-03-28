@@ -10,7 +10,7 @@ import type {
 } from '../ports.ts';
 import { Platform, type DomainEvent } from '../types.ts';
 
-// ─── In-memory test doubles ────────────────────────────
+// ??? In-memory test doubles ????????????????????????????
 class FakeVersionQuery implements VersionQueryPort {
   latestVersions: LatestVersionInfo[] = [];
   outdatedAgents: OutdatedAgentInfo[] = [];
@@ -44,7 +44,7 @@ class FakeEventDispatcher implements EventDispatcherPort {
   async dispatch(event: DomainEvent) { this.events.push(event); }
 }
 
-// ─── Tests ──────────────────────────────────────────────
+// ??? Tests ??????????????????????????????????????????????
 Deno.test('ProcessAgentUpdates returns empty when no latest versions', async () => {
   const useCase = new ProcessAgentUpdatesUseCase(
     new FakeVersionQuery(),
@@ -101,7 +101,7 @@ Deno.test('ProcessAgentUpdates skips agents with pending jobs', async () => {
 Deno.test('ProcessAgentUpdates logs observability on success', async () => {
   const vq = new FakeVersionQuery();
   vq.latestVersions = [{ platform: Platform.WINDOWS, version: '5.1.0' }];
-  // No outdated agents — but latestVersions exists so observability fires
+  // No outdated agents ? but latestVersions exists so observability fires
   const obs = new FakeObservability();
   const useCase = new ProcessAgentUpdatesUseCase(
     vq,
@@ -128,7 +128,7 @@ Deno.test('ProcessAgentUpdates rejects downgrade (agent newer than target)', asy
   const useCase = new ProcessAgentUpdatesUseCase(vq, uj, new FakeObservability(), new FakeEventDispatcher());
   const result = await useCase.execute('test-req');
 
-  // Should NOT create any jobs — v5.0.8 >= v5.0.7
+  // Should NOT create any jobs ? v5.0.8 >= v5.0.7
   assertEquals(result.totalJobsCreated, 0);
   assertEquals(uj.createdJobs.length, 0);
 });

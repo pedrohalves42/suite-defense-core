@@ -1,8 +1,8 @@
 /**
  * Generate Explainable AI Decision Report
  * 
- * Gera relatório explicável de decisões automatizadas para compliance e auditoria.
- * Conteúdo: resumo executivo, lista de decisões, políticas aplicadas, efetividade.
+ * Gera relatorio explicavel de decisoes automatizadas para compliance e auditoria.
+ * Conteudo: resumo executivo, lista de decisoes, politicas aplicadas, efetividade.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
@@ -61,13 +61,13 @@ interface ExplainableReport {
 // Human-readable explanation generator
 function generateExplanation(insightType: string, actionType: string, executionMode: string): string {
   const explanations: Record<string, string> = {
-    antivirus_disabled: 'O sistema detectou que o antivírus estava desativado e executou ação automática de reativação conforme política de segurança.',
-    antivirus_outdated: 'Antivírus desatualizado detectado. Ação de atualização foi executada automaticamente.',
-    vulnerability_critical: 'Vulnerabilidade crítica identificada. Ação requer aprovação manual devido ao alto impacto potencial.',
-    dns_malicious_activity: 'Tentativas de acesso a domínios maliciosos bloqueadas automaticamente para prevenir vazamento de dados.',
-    agent_offline_suspicious: 'Agente offline de forma suspeita. Sessões de usuário foram bloqueadas como medida preventiva.',
-    safe_mode_prolonged: 'Agente em Safe Mode por tempo prolongado. Reset manual necessário para restaurar funcionalidade.',
-    anomaly_stuck_jobs: 'Jobs travados no sistema foram limpos automaticamente para manter a operação.',
+    antivirus_disabled: 'O sistema detectou que o antivirus estava desativado e executou acao automatica de reativacao conforme politica de seguranca.',
+    antivirus_outdated: 'Antivirus desatualizado detectado. Acao de atualizacao foi executada automaticamente.',
+    vulnerability_critical: 'Vulnerabilidade critica identificada. Acao requer aprovacao manual devido ao alto impacto potencial.',
+    dns_malicious_activity: 'Tentativas de acesso a dominios maliciosos bloqueadas automaticamente para prevenir vazamento de dados.',
+    agent_offline_suspicious: 'Agente offline de forma suspeita. Sessoes de usuario foram bloqueadas como medida preventiva.',
+    safe_mode_prolonged: 'Agente em Safe Mode por tempo prolongado. Reset manual necessario para restaurar funcionalidade.',
+    anomaly_stuck_jobs: 'Jobs travados no sistema foram limpos automaticamente para manter a operacao.',
   };
   
   return explanations[insightType] || `Insight do tipo "${insightType}" processado no modo "${executionMode}".`;
@@ -76,9 +76,9 @@ function generateExplanation(insightType: string, actionType: string, executionM
 // Get policy name applied
 function getPolicyApplied(insightType: string, hasCustomPolicy: boolean, executionMode: string): string {
   if (hasCustomPolicy) {
-    return `Política personalizada do tenant: ${executionMode}`;
+    return `Politica personalizada do tenant: ${executionMode}`;
   }
-  return `Política padrão do sistema: ${executionMode}`;
+  return `Politica padrao do sistema: ${executionMode}`;
 }
 
 Deno.serve(async (req) => {
@@ -221,7 +221,7 @@ Deno.serve(async (req) => {
         execution_mode: executionMode,
         effectiveness: effectiveness,
         explanation: generateExplanation(insight.insight_type, action?.action_type || 'none', executionMode),
-        evidence_summary: insight.evidence ? 'Evidência disponível' : 'Sem evidência',
+        evidence_summary: insight.evidence ? 'Evidencia disponivel' : 'Sem evidencia',
       });
 
       evidenceHashes.push({
@@ -264,7 +264,7 @@ Deno.serve(async (req) => {
 
     logger.info(`[${requestId}] Report generated: ${totalDecisions} decisions`);
 
-    // CICLO 7: Calcular hash de integridade e persistir relatório
+    // CICLO 7: Calcular hash de integridade e persistir relatorio
     const reportStr = JSON.stringify(report);
     const hashBuffer = await crypto.subtle.digest(
       'SHA-256',
@@ -274,7 +274,7 @@ Deno.serve(async (req) => {
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
-    // Persistir relatório para auditoria (upsert para evitar duplicatas)
+    // Persistir relatorio para auditoria (upsert para evitar duplicatas)
     const { error: persistError } = await supabase
       .from('ai_decision_reports')
       .upsert({
@@ -330,9 +330,9 @@ function generateHTMLReport(report: ExplainableReport): string {
       <td>${d.policy_applied}</td>
       <td>
         <span class="badge badge-${d.effectiveness}">
-          ${d.effectiveness === 'resolved' ? '✅ Resolvido' : 
-            d.effectiveness === 'partial' ? '⚠️ Parcial' : 
-            d.effectiveness === 'failed' ? '❌ Falhou' : '⏳ Pendente'}
+          ${d.effectiveness === 'resolved' ? '[OK]  Resolvido' : 
+            d.effectiveness === 'partial' ? '[WARN] ? Parcial' : 
+            d.effectiveness === 'failed' ? '[ERROR]  Falhou' : '? Pendente'}
         </span>
       </td>
     </tr>
@@ -344,7 +344,7 @@ function generateHTMLReport(report: ExplainableReport): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Relatório de Decisões AI - ${report.tenant_name}</title>
+  <title>Relatorio de Decisoes AI - ${report.tenant_name}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
@@ -369,10 +369,10 @@ function generateHTMLReport(report: ExplainableReport): string {
   </style>
 </head>
 <body>
-  <h1>Relatório de Decisões AI</h1>
+  <h1>Relatorio de Decisoes AI</h1>
   <p class="meta">
-    <strong>${report.tenant_name}</strong> • 
-    Período: ${new Date(report.period.start).toLocaleDateString('pt-BR')} a ${new Date(report.period.end).toLocaleDateString('pt-BR')} •
+    <strong>${report.tenant_name}</strong> ? 
+    Periodo: ${new Date(report.period.start).toLocaleDateString('pt-BR')} a ${new Date(report.period.end).toLocaleDateString('pt-BR')} ?
     Gerado em: ${new Date(report.generated_at).toLocaleString('pt-BR')}
   </p>
 
@@ -380,15 +380,15 @@ function generateHTMLReport(report: ExplainableReport): string {
   <div class="summary-grid">
     <div class="summary-card">
       <div class="value">${report.executive_summary.total_decisions}</div>
-      <div class="label">Total de Decisões</div>
+      <div class="label">Total de Decisoes</div>
     </div>
     <div class="summary-card">
       <div class="value">${report.executive_summary.auto_executed}</div>
-      <div class="label">Execuções Automáticas</div>
+      <div class="label">Execucoes Automaticas</div>
     </div>
     <div class="summary-card">
       <div class="value">${report.executive_summary.manual_approved}</div>
-      <div class="label">Aprovações Manuais</div>
+      <div class="label">Aprovacoes Manuais</div>
     </div>
     <div class="summary-card">
       <div class="value">${report.executive_summary.effectiveness_rate}%</div>
@@ -396,33 +396,33 @@ function generateHTMLReport(report: ExplainableReport): string {
     </div>
   </div>
 
-  <h2>Governança</h2>
+  <h2>Governanca</h2>
   <p>
-    <strong>${report.governance.custom_policies_used}</strong> políticas personalizadas em uso •
-    <strong>${report.governance.default_policies_used}</strong> políticas padrão aplicadas •
-    <strong>100%</strong> das ações dentro das políticas definidas
+    <strong>${report.governance.custom_policies_used}</strong> politicas personalizadas em uso ?
+    <strong>${report.governance.default_policies_used}</strong> politicas padrao aplicadas ?
+    <strong>100%</strong> das acoes dentro das politicas definidas
   </p>
 
-  <h2>Decisões Detalhadas</h2>
+  <h2>Decisoes Detalhadas</h2>
   <table>
     <thead>
       <tr>
         <th>Data/Hora</th>
         <th>Tipo</th>
-        <th>Ação</th>
-        <th>Política Aplicada</th>
+        <th>Acao</th>
+        <th>Politica Aplicada</th>
         <th>Resultado</th>
       </tr>
     </thead>
     <tbody>
-      ${decisionsRows || '<tr><td colspan="5" style="text-align:center;color:#6b7280;">Nenhuma decisão no período</td></tr>'}
+      ${decisionsRows || '<tr><td colspan="5" style="text-align:center;color:#6b7280;">Nenhuma decisao no periodo</td></tr>'}
     </tbody>
   </table>
 
   <div class="footer">
     <p>Report ID: ${report.report_id}</p>
-    <p>Este relatório é gerado automaticamente pelo sistema de decisões AI para fins de compliance e auditoria.</p>
-    <p>${report.evidence_hashes.length} hashes de evidência registrados para verificação de integridade.</p>
+    <p>Este relatorio e gerado automaticamente pelo sistema de decisoes AI para fins de compliance e auditoria.</p>
+    <p>${report.evidence_hashes.length} hashes de evidencia registrados para verificacao de integridade.</p>
   </div>
 </body>
 </html>

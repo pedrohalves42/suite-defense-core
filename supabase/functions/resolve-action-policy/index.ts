@@ -1,13 +1,13 @@
 /**
  * Resolve Action Policy - Enterprise Policy Engine
  * 
- * Ponto único de decisão para políticas de ação.
- * Hierarquia determinística:
- * 1. Política específica do tenant (por insight_type)
- * 2. Mapeamento padrão do sistema (code-level)
+ * Ponto unico de decisao para politicas de acao.
+ * Hierarquia deterministica:
+ * 1. Politica especifica do tenant (por insight_type)
+ * 2. Mapeamento padrao do sistema (code-level)
  * 3. Modo global do tenant (fallback)
  * 
- * Também atualiza last_applied_at quando política é usada.
+ * Tambem atualiza last_applied_at quando politica e usada.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
@@ -34,30 +34,30 @@ interface PolicyResponse {
 // These must match the insight_type values in ai_insights table
 const DEFAULT_MAPPINGS: Record<string, 'auto' | 'approval'> = {
   // === Tipos principais de insight (mais usados) ===
-  // Ameaças de segurança: auto para remediação rápida
+  // Ameacas de seguranca: auto para remediacao rapida
   security_threat: 'auto',
   
-  // Detecção de anomalias: auto para alertar/remediar automaticamente
+  // Deteccao de anomalias: auto para alertar/remediar automaticamente
   anomaly_detection: 'auto',
   anomaly: 'auto', // variant
   
-  // Predições: approval (ações preventivas podem ter impacto)
+  // Predicoes: approval (acoes preventivas podem ter impacto)
   prediction: 'approval',
   
-  // Análise de causa raiz: approval (requer revisão)
+  // Analise de causa raiz: approval (requer revisao)
   root_cause: 'approval',
   
-  // Otimizações: approval (mudanças de configuração)
+  // Otimizacoes: approval (mudancas de configuracao)
   optimization: 'approval',
   
-  // === Tipos específicos de agente ===
+  // === Tipos especificos de agente ===
   agent_improdutive: 'auto',
-  agent_recovered: 'auto', // apenas notificação
+  agent_recovered: 'auto', // apenas notificacao
   
-  // Violação de integridade: auto (urgente)
+  // Violacao de integridade: auto (urgente)
   integrity_violation: 'auto',
   
-  // Informativos: disabled (sem ação)
+  // Informativos: disabled (sem acao)
   info: 'auto',
   
   // === Tipos legados (mantidos para compatibilidade) ===
@@ -70,7 +70,7 @@ const DEFAULT_MAPPINGS: Record<string, 'auto' | 'approval'> = {
   job_failed_recurring: 'auto',
   blocked_access_detected: 'auto',
   
-  // Requer aprovação (alto impacto)
+  // Requer aprovacao (alto impacto)
   vulnerability_critical: 'approval',
   vulnerability_high: 'approval',
   safe_mode_prolonged: 'approval',
@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
     logger.info(`[${requestId}] Resolving policy for tenant=${tenant_id}, insight_type=${insight_type}`)
 
     /**
-     * 1️⃣ Buscar política específica do tenant para este insight_type
+     * 1?? Buscar politica especifica do tenant para este insight_type
      */
     const { data: tenantPolicy, error: policyError } = await supabase
       .from('tenant_action_policies')
@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
     }
 
     /**
-     * 2️⃣ Verificar mapeamento padrão do sistema
+     * 2?? Verificar mapeamento padrao do sistema
      */
     const defaultMode = DEFAULT_MAPPINGS[insight_type]
     
@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
     }
 
     /**
-     * 3️⃣ Fallback: modo global do tenant
+     * 3?? Fallback: modo global do tenant
      */
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')

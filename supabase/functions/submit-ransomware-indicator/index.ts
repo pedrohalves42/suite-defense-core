@@ -80,9 +80,9 @@ serveAgent(async (_req, ctx) => {
 
     const typeLabels: Record<string, string> = {
       mass_encryption: 'Criptografia em massa detectada',
-      rapid_rename: 'Renomeação rápida de arquivos',
+      rapid_rename: 'Renomeacao rapida de arquivos',
       suspicious_process: 'Processo suspeito de ransomware',
-      canary_triggered: 'Arquivo canário modificado',
+      canary_triggered: 'Arquivo canario modificado',
       entropy_spike: 'Pico de entropia em arquivos',
     };
 
@@ -93,11 +93,11 @@ serveAgent(async (_req, ctx) => {
         agent_id: agentId,
         alert_type: 'ransomware',
         severity: 'critical',
-        title: '🚨 ALERTA DE RANSOMWARE',
+        title: '? ALERTA DE RANSOMWARE',
         message: `${typeLabels[indicator.indicator_type] || indicator.indicator_type} no endpoint ${agentName}. ${
           indicator.affected_files_count ? `${indicator.affected_files_count} arquivos afetados.` : ''
         } ${indicator.process_name ? `Processo: ${indicator.process_name}` : ''} ${
-          indicator.auto_response_taken ? `Ação automática: ${indicator.auto_response_taken}` : 'AÇÃO MANUAL NECESSÁRIA'
+          indicator.auto_response_taken ? `Acao automatica: ${indicator.auto_response_taken}` : 'ACAO MANUAL NECESSARIA'
         }`.trim(),
         acknowledged: false,
       });

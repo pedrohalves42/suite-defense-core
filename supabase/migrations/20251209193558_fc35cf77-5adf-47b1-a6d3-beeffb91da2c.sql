@@ -10,7 +10,7 @@ SET
   max_users = 2
 WHERE name = 'free';
 
--- 2. Update Starter plan (R$150/mês fixo, até 5 dispositivos)
+-- 2. Update Starter plan (R$150/mes fixo, ate 5 dispositivos)
 UPDATE subscription_plans
 SET 
   max_devices = 5, 
@@ -21,7 +21,7 @@ SET
   max_users = 5
 WHERE name = 'starter';
 
--- 3. Update Pro/Business plan (R$450/mês fixo, até 25 dispositivos)
+-- 3. Update Pro/Business plan (R$450/mes fixo, ate 25 dispositivos)
 UPDATE subscription_plans
 SET 
   max_devices = 25, 
@@ -32,7 +32,7 @@ SET
   max_users = 25
 WHERE name = 'pro';
 
--- 4. Insert Scale plan (R$1.200/mês fixo, até 100 dispositivos)
+-- 4. Insert Scale plan (R$1.200/mes fixo, ate 100 dispositivos)
 INSERT INTO subscription_plans (
   name, max_users, max_agents, max_devices, max_scans_per_month, 
   price_per_device, trial_days

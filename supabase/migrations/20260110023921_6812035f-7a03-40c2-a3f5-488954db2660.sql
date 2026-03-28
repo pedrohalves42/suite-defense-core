@@ -1,6 +1,6 @@
 
 -- =====================================================
--- FASE 3 & 4: Triggers e Funções Possíveis
+-- FASE 3 & 4: Triggers e Funcoes Possiveis
 -- =====================================================
 
 -- Ciclo 15: Auto Collect Evidence (tasks table)
@@ -87,7 +87,7 @@ BEGIN
     'safe_mode_activated',
     'high',
     'Agente em Safe Mode',
-    format('Agente entrou em modo de segurança. Razão: %s', COALESCE(NEW.reason, 'Não especificada')),
+    format('Agente entrou em modo de seguranca. Razao: %s', COALESCE(NEW.reason, 'Nao especificada')),
     NEW.agent_id,
     false
   );

@@ -1,5 +1,5 @@
 /**
- * evaluate-edr-detections — Server-side detection engine.
+ * evaluate-edr-detections ? Server-side detection engine.
  * 
  * Evaluates configurable detection rules from DB against recent telemetry.
  * Called via cron or on-demand to catch patterns the inline engine might miss.
@@ -115,9 +115,9 @@ Deno.serve(async (req: Request) => {
   // If there are global rules (tenant_id = null), we need to find which tenants have data
   const hasGlobalRules = rules.some(r => !r.tenant_id);
   if (hasGlobalRules) {
-    // V-9004 FIX: Get distinct tenants from recent events — use RPC or wider limit
+    // V-9004 FIX: Get distinct tenants from recent events ? use RPC or wider limit
     // to avoid missing tenants with data beyond the previous .limit(100)
-    // V-12005 FIX: Don't filter by is_suspicious=false here — we need ALL tenants with data
+    // V-12005 FIX: Don't filter by is_suspicious=false here ? we need ALL tenants with data
     // The is_suspicious filter is applied later during actual event evaluation
     for (const eventType of eventTypes) {
       const table = `endpoint_${eventType}_events`;

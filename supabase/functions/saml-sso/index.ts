@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}))
     const action = body.action || 'metadata'
 
-    // ─── METADATA ───
+    // ??? METADATA ???
     if (action === 'metadata') {
       const metadata = `<?xml version="1.0"?>
 <EntityDescriptor entityID="${SP_ENTITY_ID}" xmlns="urn:oasis:names:tc:SAML:2.0:metadata">
@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ─── LOGIN: Initiate SAML AuthnRequest ───
+    // ??? LOGIN: Initiate SAML AuthnRequest ???
     if (action === 'login') {
       const { tenantId } = body
       if (!tenantId) {
@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ─── ACS: Assertion Consumer Service (IdP callback) ───
+    // ??? ACS: Assertion Consumer Service (IdP callback) ???
     if (action === 'acs') {
       const { samlResponse, relayState } = body
       if (!samlResponse) {
@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
       // Decode SAML response
       const decoded = atob(samlResponse)
 
-      // Extract attributes (simplified — production should use proper XML parser)
+      // Extract attributes (simplified ? production should use proper XML parser)
       const extractAttr = (name: string): string | null => {
         const re = new RegExp(`Name="${name}"[^>]*>\\s*<[^>]*AttributeValue[^>]*>([^<]+)`, 'i')
         const m = decoded.match(re)
@@ -197,7 +197,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ─── CONFIGURE: Set up SAML for tenant ───
+    // ??? CONFIGURE: Set up SAML for tenant ???
     if (action === 'configure') {
       const authHeader = req.headers.get('Authorization')
       if (!authHeader) {
@@ -246,7 +246,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ─── GET CONFIG ───
+    // ??? GET CONFIG ???
     if (action === 'config') {
       const { tenantId } = body
       if (!tenantId) {

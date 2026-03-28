@@ -1,6 +1,6 @@
--- Migration: Corrigir políticas de invites para usar authenticated em vez de public
--- Problema: Políticas atuais usam role 'public' que é menos restritivo
--- Solução: Migrar para 'authenticated' para melhor prática de segurança
+-- Migration: Corrigir politicas de invites para usar authenticated em vez de public
+-- Problema: Politicas atuais usam role 'public' que e menos restritivo
+-- Solucao: Migrar para 'authenticated' para melhor pratica de seguranca
 
 -- Drop existing public policies
 DROP POLICY IF EXISTS invites_delete_active_tenant ON public.invites;

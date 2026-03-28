@@ -43,7 +43,7 @@ Deno.serve(async (req: Request) => {
     let userId: string | null = null;
 
     if (authHeader && authHeader === internalSecret) {
-      // Internal call — tenant_id comes from body
+      // Internal call ? tenant_id comes from body
     } else if (jwtHeader) {
       const userClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
         global: { headers: { Authorization: jwtHeader } },
@@ -73,7 +73,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Get agent info — V-3001 FIX: Always filter by tenant to prevent cross-tenant access
+    // Get agent info ? V-3001 FIX: Always filter by tenant to prevent cross-tenant access
     let agentQuery = supabase
       .from('agents').select('id, agent_name, tenant_id, status')
       .eq('id', agent_id);
@@ -100,9 +100,9 @@ Deno.serve(async (req: Request) => {
     }
     tenantId = tenantId || agent.tenant_id;
 
-    // ═══════════════════════════════════════════════════════
+    // ???????????????????????????????????????????????????????
     // SPRINT 13: Blast Radius Check (max 10% fleet simultaneous)
-    // ═══════════════════════════════════════════════════════
+    // ???????????????????????????????????????????????????????
     try {
       const { data: blastCheck, error: blastError } = await supabase.rpc('check_blast_radius' as never, {
         p_tenant_id: tenantId,
@@ -131,7 +131,7 @@ Deno.serve(async (req: Request) => {
           success: false,
           error: 'BLAST_RADIUS_EXCEEDED',
           affected_percent: blastCheck.affected_percent,
-          message: `Remediação bloqueada: ${blastCheck.affected_percent?.toFixed(1)}% da frota já está sendo remediada. Limite: 10%.`,
+          message: `Remediacao bloqueada: ${blastCheck.affected_percent?.toFixed(1)}% da frota ja esta sendo remediada. Limite: 10%.`,
         }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     } catch (blastErr) {
@@ -139,9 +139,9 @@ Deno.serve(async (req: Request) => {
       logger.warn(`[auto-remediate] Blast radius check failed (fail-open): ${blastErr}`);
     }
 
-    // ═══════════════════════════════════════════════════════
+    // ???????????????????????????????????????????????????????
     // SPRINT 13: Global Circuit Breaker
-    // ═══════════════════════════════════════════════════════
+    // ???????????????????????????????????????????????????????
     try {
       const { data: globalBreaker } = await supabase.rpc('check_global_circuit_breaker' as never, {
         p_tenant_id: tenantId,
@@ -154,7 +154,7 @@ Deno.serve(async (req: Request) => {
         return new Response(JSON.stringify({
           success: false,
           error: 'CIRCUIT_BREAKER_OPEN',
-          message: 'Circuit breaker aberto: muitas remediações nos últimos 10 minutos. Aguarde o cooldown.',
+          message: 'Circuit breaker aberto: muitas remediacoes nos ultimos 10 minutos. Aguarde o cooldown.',
         }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     } catch {
@@ -187,8 +187,8 @@ Deno.serve(async (req: Request) => {
         agent_id,
         alert_type: 'remediation_approval',
         severity: 'medium',
-        title: 'Aprovação de Remediação Necessária',
-        message: `Ação "${action_type}" no agente "${agent.agent_name}" aguarda aprovação`,
+        title: 'Aprovacao de Remediacao Necessaria',
+        message: `Acao "${action_type}" no agente "${agent.agent_name}" aguarda aprovacao`,
         details: { action_id: action?.id, action_type, trigger_source, trigger_details },
       });
 
@@ -229,16 +229,16 @@ Deno.serve(async (req: Request) => {
       error_message: jobErr?.message,
     }).eq('id', action?.id);
 
-    // ═══════════════════════════════════════════════════════
+    // ???????????????????????????????????????????????????????
     // SPRINT 13: Post-remediation notification
-    // ═══════════════════════════════════════════════════════
+    // ???????????????????????????????????????????????????????
     await supabase.from('system_alerts').insert({
       tenant_id: tenantId,
       agent_id,
       alert_type: 'auto_remediation',
       severity: 'high',
-      title: 'Auto-Remediação Executada',
-      message: `Ação "${action_type}" executada no agente "${agent.agent_name}". ${ROLLBACK_MAP[action_type] ? 'Rollback disponível em caso de falha.' : ''}`,
+      title: 'Auto-Remediacao Executada',
+      message: `Acao "${action_type}" executada no agente "${agent.agent_name}". ${ROLLBACK_MAP[action_type] ? 'Rollback disponivel em caso de falha.' : ''}`,
       details: {
         action_id: action?.id,
         job_id: job?.id,
@@ -270,16 +270,16 @@ Deno.serve(async (req: Request) => {
       tenant_id: tenantId,
     });
 
-    // ═══════════════════════════════════════════════════════
+    // ???????????????????????????????????????????????????????
     // SPRINT 13: Dispatch browser notification via dispatch-notification
-    // ═══════════════════════════════════════════════════════
+    // ???????????????????????????????????????????????????????
     try {
       await supabase.functions.invoke('dispatch-notification', {
         body: {
           tenant_id: tenantId,
           type: 'remediation_executed',
-          title: `🔧 Remediação: ${action_type}`,
-          message: `Ação "${action_type}" executada no agente "${agent.agent_name}"`,
+          title: `[JOB]  Remediacao: ${action_type}`,
+          message: `Acao "${action_type}" executada no agente "${agent.agent_name}"`,
           severity: 'high',
           metadata: { action_id: action?.id, job_id: job?.id },
         },

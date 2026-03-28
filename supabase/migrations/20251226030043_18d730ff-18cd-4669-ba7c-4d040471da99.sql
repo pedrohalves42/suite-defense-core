@@ -25,7 +25,7 @@ DECLARE
   v_execution RECORD;
   v_result JSONB;
 BEGIN
-  -- Verificar que a execução existe e pertence ao agente
+  -- Verificar que a execucao existe e pertence ao agente
   SELECT * INTO v_execution
   FROM job_executions
   WHERE id = p_execution_id
@@ -35,7 +35,7 @@ BEGIN
   FOR UPDATE;
   
   IF NOT FOUND THEN
-    -- Tentar buscar por job_id se execution_id não fornecido
+    -- Tentar buscar por job_id se execution_id nao fornecido
     IF p_execution_id IS NULL THEN
       SELECT * INTO v_execution
       FROM job_executions
@@ -56,7 +56,7 @@ BEGIN
     END IF;
   END IF;
   
-  -- Atualizar execução com resultado e hash chain fields
+  -- Atualizar execucao com resultado e hash chain fields
   UPDATE job_executions
   SET 
     status = p_status,
@@ -73,7 +73,7 @@ BEGIN
     execution_index = COALESCE(p_execution_index, execution_index)
   WHERE id = v_execution.id;
   
-  -- P2.1: CRÍTICO - Limpar current_execution_id do job para liberar para retry
+  -- P2.1: CRITICO - Limpar current_execution_id do job para liberar para retry
   UPDATE jobs
   SET current_execution_id = NULL
   WHERE id = p_job_id

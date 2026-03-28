@@ -7,11 +7,11 @@ SELECT
   p.proname as function_name,
   n.nspname as schema_name,
   CASE 
-    WHEN d.description LIKE '🔒 Essencial%' THEN 'essential'
-    WHEN d.description LIKE '🧪 Legado%' THEN 'legacy'
+    WHEN d.description LIKE '? Essencial%' THEN 'essential'
+    WHEN d.description LIKE '? Legado%' THEN 'legacy'
     ELSE 'unclassified'
   END as category,
-  COALESCE(d.description, 'Sem documentação') as documentation,
+  COALESCE(d.description, 'Sem documentacao') as documentation,
   pg_get_functiondef(p.oid) as definition
 FROM pg_proc p
 JOIN pg_namespace n ON p.pronamespace = n.oid
@@ -20,10 +20,10 @@ WHERE n.nspname = 'public'
   AND p.prosecdef = true
 ORDER BY 
   CASE 
-    WHEN d.description LIKE '🔒 Essencial%' THEN 1
-    WHEN d.description LIKE '🧪 Legado%' THEN 2
+    WHEN d.description LIKE '? Essencial%' THEN 1
+    WHEN d.description LIKE '? Legado%' THEN 2
     ELSE 3
   END,
   p.proname;
 
-COMMENT ON VIEW public.v_security_definer_inventory IS 'Inventário de funções SECURITY DEFINER para auditoria (security_invoker=on)';
+COMMENT ON VIEW public.v_security_definer_inventory IS 'Inventario de funcoes SECURITY DEFINER para auditoria (security_invoker=on)';

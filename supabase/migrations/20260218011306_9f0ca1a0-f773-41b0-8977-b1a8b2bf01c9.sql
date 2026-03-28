@@ -1,5 +1,5 @@
 
--- 1. Limpeza imediata: finalizar zombie executions cujo job já está em estado terminal
+-- 1. Limpeza imediata: finalizar zombie executions cujo job ja esta em estado terminal
 UPDATE job_executions
 SET 
   status = 'failed',
@@ -10,7 +10,7 @@ WHERE status = 'running'
     SELECT id FROM jobs WHERE status IN ('failed', 'completed', 'cancelled')
   );
 
--- 2. Criar RPC reutilizável para limpeza contínua
+-- 2. Criar RPC reutilizavel para limpeza continua
 CREATE OR REPLACE FUNCTION public.cleanup_zombie_executions()
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -21,7 +21,7 @@ DECLARE
   v_orphaned integer := 0;
   v_stale integer := 0;
 BEGIN
-  -- Parte 1: Execuções órfãs (job já finalizado)
+  -- Parte 1: Execucoes orfas (job ja finalizado)
   WITH cleaned AS (
     UPDATE job_executions
     SET 
@@ -36,7 +36,7 @@ BEGIN
   )
   SELECT count(*) INTO v_orphaned FROM cleaned;
 
-  -- Parte 2: Execuções running há mais de 4h (stale, mesmo se job ainda não finalizou)
+  -- Parte 2: Execucoes running ha mais de 4h (stale, mesmo se job ainda nao finalizou)
   WITH stale AS (
     UPDATE job_executions
     SET 
@@ -58,4 +58,4 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION cleanup_zombie_executions() IS 'Limpa job_executions órfãs (running cujo job já finalizou) e stale (running > 4h)';
+COMMENT ON FUNCTION cleanup_zombie_executions() IS 'Limpa job_executions orfas (running cujo job ja finalizou) e stale (running > 4h)';

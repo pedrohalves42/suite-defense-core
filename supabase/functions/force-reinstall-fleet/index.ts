@@ -69,7 +69,7 @@ serveTenant(async (req, ctx) => {
       key_id: keyData?.id,
       expires_at: expiresAt,
       max_uses: 100,
-      warning: 'ANOTE ESTA CHAVE! Ela não pode ser recuperada depois (armazenada apenas como hash).',
+      warning: 'ANOTE ESTA CHAVE! Ela nao pode ser recuperada depois (armazenada apenas como hash).',
       nuclear_reinstall_command: `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $h=$env:COMPUTERNAME; Get-ScheduledTask -TaskName '*CyberShield*' -ErrorAction SilentlyContinue | ForEach-Object { Stop-ScheduledTask $_.TaskName -ErrorAction SilentlyContinue; Unregister-ScheduledTask $_.TaskName -Confirm:$false -ErrorAction SilentlyContinue }; Remove-Item 'C:\\CyberShield' -Recurse -Force -ErrorAction SilentlyContinue; $t=Join-Path $env:TEMP "cs-$(Get-Random).ps1"; irm "${supabaseUrl}/functions/v1/serve-installer/${plaintextKey}?hostname=$h&os_type=windows" -OutFile $t -UseBasicParsing; & $t; Remove-Item $t -Force -ErrorAction SilentlyContinue`
     };
   }
@@ -193,10 +193,10 @@ if ($task) {
       batch_script: batchScript,
       powershell_full: psScript,
       instructions: [
-        '1. Execute o comando PowerShell como Administrador em cada máquina',
+        '1. Execute o comando PowerShell como Administrador em cada maquina',
         '2. Para deploy em massa, use o batch_script via RMM (ConnectWise, Datto, etc.) ou GPO',
-        '3. Após execução, aguarde 2-3 minutos e verifique o dashboard',
-        '4. Agentes devem aparecer online com a versão v' + latestVersion
+        '3. Apos execucao, aguarde 2-3 minutos e verifique o dashboard',
+        '4. Agentes devem aparecer online com a versao v' + latestVersion
       ]
     }
   };

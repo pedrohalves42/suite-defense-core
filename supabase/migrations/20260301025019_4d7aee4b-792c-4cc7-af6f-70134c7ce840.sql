@@ -1,9 +1,9 @@
 
 -- =============================================================================
--- FASE 1: Correções Críticas — V-301, V-302, V-303, V-308
+-- FASE 1: Correcoes Criticas ? V-301, V-302, V-303, V-308
 -- =============================================================================
 
--- V-301: RLS nas partições expostas
+-- V-301: RLS nas particoes expostas
 ALTER TABLE public.agent_system_metrics_2026_03 ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.agent_system_metrics_2026_04 ENABLE ROW LEVEL SECURITY;
 
@@ -52,7 +52,7 @@ BEGIN
 END;
 $function$;
 
--- V-303: Revogar EXECUTE de anon (assinaturas corretas — todas sem args)
+-- V-303: Revogar EXECUTE de anon (assinaturas corretas ? todas sem args)
 REVOKE EXECUTE ON FUNCTION public.alert_long_offline_agents() FROM anon;
 REVOKE EXECUTE ON FUNCTION public.auto_cleanup_stale_operations() FROM anon;
 REVOKE EXECUTE ON FUNCTION public.cleanup_rls_test_results() FROM anon;
@@ -64,7 +64,7 @@ REVOKE EXECUTE ON FUNCTION public.prevent_truncate() FROM anon;
 REVOKE EXECUTE ON FUNCTION public.provision_tenant_baseline_features() FROM anon;
 REVOKE EXECUTE ON FUNCTION public.soar_evaluate_alert() FROM anon;
 
--- V-308: Limpar force_update em agente já atualizado
+-- V-308: Limpar force_update em agente ja atualizado
 UPDATE agents
 SET force_update_version = NULL, force_update_reason = NULL, force_update_at = NULL,
     force_update_override_safe_mode = false, force_update_override_safe_mode_expires_at = NULL

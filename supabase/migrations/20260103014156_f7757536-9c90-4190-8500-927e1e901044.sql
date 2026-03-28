@@ -5,7 +5,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  -- Só criar evento se o alerta foi resolvido
+  -- So criar evento se o alerta foi resolvido
   IF NEW.resolved = true AND (OLD.resolved = false OR OLD.resolved IS NULL) THEN
     INSERT INTO decision_events (
       tenant_id,

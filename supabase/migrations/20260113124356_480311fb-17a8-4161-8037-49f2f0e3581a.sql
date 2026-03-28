@@ -1,13 +1,13 @@
 
 -- ============================================================
--- PLANO DE CORREÇÃO FINAL - FASES RESTANTES (CORRIGIDO)
+-- PLANO DE CORRECAO FINAL - FASES RESTANTES (CORRIGIDO)
 -- ============================================================
 
--- FASE 1: Adicionar índice composto para jobs(agent_id, created_at) se não existir
+-- FASE 1: Adicionar indice composto para jobs(agent_id, created_at) se nao existir
 CREATE INDEX IF NOT EXISTS idx_jobs_agent_id_created 
 ON public.jobs (agent_id, created_at DESC);
 
--- FASE 3: Criar tenant_settings para os 5 tenants sem configuração
+-- FASE 3: Criar tenant_settings para os 5 tenants sem configuracao
 -- Usando colunas corretas da tabela
 INSERT INTO public.tenant_settings (
   tenant_id,
@@ -25,13 +25,13 @@ INSERT INTO public.tenant_settings (
 )
 SELECT 
   t.id,
-  NULL, -- alert_email (será configurado pelo tenant)
+  NULL, -- alert_email (sera configurado pelo tenant)
   5,    -- alert_threshold_virus_positive
   10,   -- alert_threshold_failed_jobs  
   3,    -- alert_threshold_offline_agents
   false,-- virustotal_enabled
   false,-- stripe_enabled
-  false,-- enable_email_alerts (desativado por padrão)
+  false,-- enable_email_alerts (desativado por padrao)
   false,-- enable_webhook_alerts
   false,-- enable_auto_quarantine
   false,-- dns_local_filter_enabled
@@ -41,7 +41,7 @@ LEFT JOIN public.tenant_settings ts ON ts.tenant_id = t.id
 WHERE ts.id IS NULL
 ON CONFLICT (tenant_id) DO NOTHING;
 
--- FASE 3.2: Criar trigger para auto-criar tenant_settings quando um novo tenant é criado
+-- FASE 3.2: Criar trigger para auto-criar tenant_settings quando um novo tenant e criado
 CREATE OR REPLACE FUNCTION public.auto_create_tenant_settings()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -77,7 +77,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Criar trigger apenas se não existir
+-- Criar trigger apenas se nao existir
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -103,14 +103,14 @@ CREATE TABLE IF NOT EXISTS public.token_validation_failures (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Índice para limpeza automática
+-- Indice para limpeza automatica
 CREATE INDEX IF NOT EXISTS idx_token_failures_created_at 
 ON public.token_validation_failures (created_at);
 
 -- RLS para token_validation_failures (apenas service_role pode inserir)
 ALTER TABLE public.token_validation_failures ENABLE ROW LEVEL SECURITY;
 
--- Política para service_role (backend apenas)
+-- Politica para service_role (backend apenas)
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -127,7 +127,7 @@ BEGIN
 END;
 $$;
 
--- FASE 1.2: Criar função helper para queries longas
+-- FASE 1.2: Criar funcao helper para queries longas
 CREATE OR REPLACE FUNCTION public.execute_with_timeout(
   p_sql TEXT,
   p_timeout_ms INTEGER DEFAULT 30000
@@ -148,9 +148,9 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Comentários de documentação
+-- Comentarios de documentacao
 COMMENT ON TABLE public.token_validation_failures IS 
-'Auditoria de falhas de validação de tokens para debugging de 400/401 errors';
+'Auditoria de falhas de validacao de tokens para debugging de 400/401 errors';
 
 COMMENT ON FUNCTION public.auto_create_tenant_settings() IS 
-'Cria automaticamente tenant_settings com valores default quando um novo tenant é criado';
+'Cria automaticamente tenant_settings com valores default quando um novo tenant e criado';

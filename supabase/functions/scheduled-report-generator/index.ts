@@ -269,9 +269,9 @@ async function generateTenantReport(
     blockedSites * 5
   );
 
-  const riskLevel = riskScore >= 70 ? "CRÍTICO" :
+  const riskLevel = riskScore >= 70 ? "CRITICO" :
                     riskScore >= 50 ? "ALTO" :
-                    riskScore >= 25 ? "MÉDIO" : "BAIXO";
+                    riskScore >= 25 ? "MEDIO" : "BAIXO";
 
   // Determine commercial priority
   const commercialPriority = riskScore >= 60 ? "high" :
@@ -289,20 +289,20 @@ async function generateTenantReport(
 
   // Generate commercial summary
   const issues: string[] = [];
-  if (criticalVulns > 0) issues.push(`${criticalVulns} vulnerabilidade(s) crítica(s)`);
+  if (criticalVulns > 0) issues.push(`${criticalVulns} vulnerabilidade(s) critica(s)`);
   if (highVulns > 0) issues.push(`${highVulns} vulnerabilidade(s) alta(s)`);
-  if (totalThreats > 0) issues.push(`${totalThreats} ameaça(s) detectada(s)`);
+  if (totalThreats > 0) issues.push(`${totalThreats} ameaca(s) detectada(s)`);
   if (blockedSites > 0) issues.push(`${blockedSites} site(s) suspeito(s) acessado(s)`);
 
-  const issuesText = issues.length > 0 ? issues.join(", ") : "ambiente estável";
-  const urgencyText = riskLevel === "CRÍTICO" ? "Requer atenção imediata!" :
-                      riskLevel === "ALTO" ? "Recomendamos análise em até 48h." :
-                      riskLevel === "MÉDIO" ? "Sugerimos revisão na próxima semana." : "Situação sob controle.";
+  const issuesText = issues.length > 0 ? issues.join(", ") : "ambiente estavel";
+  const urgencyText = riskLevel === "CRITICO" ? "Requer atencao imediata!" :
+                      riskLevel === "ALTO" ? "Recomendamos analise em ate 48h." :
+                      riskLevel === "MEDIO" ? "Sugerimos revisao na proxima semana." : "Situacao sob controle.";
 
-  const commercialSummary = `🛡️ Laudo Periódico - ${tenantInfo?.name || "Cliente"}\n\n` +
-    `📊 ${agents.length} computador(es) analisado(s)\n` +
-    `⚠️ Encontrado: ${issuesText}\n` +
-    `🎯 Nível de Risco: ${riskLevel} (Score: ${riskScore}/100)\n\n` +
+  const commercialSummary = `?? Laudo Periodico - ${tenantInfo?.name || "Cliente"}\n\n` +
+    `? ${agents.length} computador(es) analisado(s)\n` +
+    `[WARN] ? Encontrado: ${issuesText}\n` +
+    `? Nivel de Risco: ${riskLevel} (Score: ${riskScore}/100)\n\n` +
     `${urgencyText}\n\n` +
     `Posso explicar os detalhes em 10 minutos?`;
 
@@ -339,12 +339,12 @@ async function generateTenantReport(
 
   logger.info(`Created report ${report.id} for tenant ${tenantId}`);
 
-  // Registrar execução na tabela report_executions
+  // Registrar execucao na tabela report_executions
   const { error: execError } = await supabase
     .from("report_executions")
     .insert({
       tenant_id: tenantId,
-      scheduled_report_id: null, // Este é um relatório automático, não de agendamento específico
+      scheduled_report_id: null, // Este e um relatorio automatico, nao de agendamento especifico
       report_type: "full_security",
       status: "completed",
       started_at: new Date().toISOString(),
@@ -359,7 +359,7 @@ async function generateTenantReport(
 
   if (execError) {
     logger.error("Error logging report execution:", execError);
-    // Não lançar erro, apenas logar - o relatório já foi criado
+    // Nao lancar erro, apenas logar - o relatorio ja foi criado
   }
 
   // Queue notification if high priority

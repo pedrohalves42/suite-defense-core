@@ -27,7 +27,7 @@ SET
   resolved = true,
   resolved_at = NOW(),
   resolved_by = '00000000-0000-0000-0000-000000000000'::uuid,
-  resolution_notes = 'Auto-resolvido: condição de CPU normalizada'
+  resolution_notes = 'Auto-resolvido: condicao de CPU normalizada'
 WHERE resolved = false 
   AND alert_type = 'high_cpu'
   AND created_at < NOW() - INTERVAL '7 days';

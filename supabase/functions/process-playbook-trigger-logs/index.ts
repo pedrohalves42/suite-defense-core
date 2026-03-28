@@ -64,7 +64,7 @@ serve(async (req) => {
 
     logger.info(`[process-playbook-trigger-logs] Found ${pendingLogs.length} pending logs`);
 
-    // Marcar como processando para evitar duplicação
+    // Marcar como processando para evitar duplicacao
     const logIds = pendingLogs.map(l => l.id);
     const { error: updateError } = await supabase
       .from('ai_action_logs')
@@ -87,7 +87,7 @@ serve(async (req) => {
     for (const log of pendingLogs) {
       const actionData = log.action_data as Record<string, unknown>;
       
-      // Verificar se o log é muito antigo (> 7 dias) - expirar ao invés de processar
+      // Verificar se o log e muito antigo (> 7 dias) - expirar ao inves de processar
       const createdAt = new Date(log.created_at);
       const daysSinceCreation = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
       

@@ -47,13 +47,13 @@ BEGIN
     -- Set reason based on new state
     CASE new_state
       WHEN 'isolated' THEN
-        NEW.agent_state_reason := COALESCE(NEW.isolation_reason, 'Isolado por segurança');
+        NEW.agent_state_reason := COALESCE(NEW.isolation_reason, 'Isolado por seguranca');
       WHEN 'safe_mode' THEN
-        NEW.agent_state_reason := COALESCE(NEW.safe_mode_reason, 'Modo de proteção ativo');
+        NEW.agent_state_reason := COALESCE(NEW.safe_mode_reason, 'Modo de protecao ativo');
       WHEN 'degraded' THEN
-        NEW.agent_state_reason := COALESCE(NEW.throttle_reason, 'Comunicação restrita');
+        NEW.agent_state_reason := COALESCE(NEW.throttle_reason, 'Comunicacao restrita');
       WHEN 'updating' THEN
-        NEW.agent_state_reason := 'Atualizando para versão ' || COALESCE(NEW.force_update_version, 'desconhecida');
+        NEW.agent_state_reason := 'Atualizando para versao ' || COALESCE(NEW.force_update_version, 'desconhecida');
       WHEN 'offline' THEN
         NEW.agent_state_reason := 'Sem contato';
       WHEN 'healthy' THEN

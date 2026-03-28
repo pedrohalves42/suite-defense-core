@@ -20,14 +20,14 @@ serveTenant<TranslateCveBody>(async (_req, ctx) => {
     );
   }
 
-  const systemPrompt = `Você é um tradutor técnico especializado em segurança da informação.
-Traduza a descrição de vulnerabilidade CVE do inglês para português brasileiro.
-Mantenha termos técnicos importantes em inglês quando apropriado (ex: buffer overflow, SQL injection, XSS).
-Seja conciso e claro. Responda APENAS com a tradução, sem explicações adicionais.`;
+  const systemPrompt = `Voce e um tradutor tecnico especializado em seguranca da informacao.
+Traduza a descricao de vulnerabilidade CVE do ingles para portugues brasileiro.
+Mantenha termos tecnicos importantes em ingles quando apropriado (ex: buffer overflow, SQL injection, XSS).
+Seja conciso e claro. Responda APENAS com a traducao, sem explicacoes adicionais.`;
 
   const response = await aiSimpleComplete(
     systemPrompt,
-    `Traduza para português: "${description}"`,
+    `Traduza para portugues: "${description}"`,
     {
       maxTokens: 500,
       functionName: 'translate-cve',

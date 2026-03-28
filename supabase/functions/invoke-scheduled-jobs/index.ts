@@ -4,7 +4,7 @@ import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 
 /**
- * Invoca todos os scheduled_jobs que estão habilitados e no horário de execução.
+ * Invoca todos os scheduled_jobs que estao habilitados e no horario de execucao.
  */
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {

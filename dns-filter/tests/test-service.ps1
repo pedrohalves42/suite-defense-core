@@ -68,15 +68,15 @@ try {
     Start-Sleep -Seconds 2
     
     if (Test-ServiceExists) {
-        Write-Host "  ✓ Service installed successfully" -ForegroundColor Green
+        Write-Host "  ? Service installed successfully" -ForegroundColor Green
         $results += @{ Test = "Install"; Passed = $true }
     } else {
-        Write-Host "  ✗ Service installation failed" -ForegroundColor Red
+        Write-Host "  ? Service installation failed" -ForegroundColor Red
         $results += @{ Test = "Install"; Passed = $false }
     }
 }
 catch {
-    Write-Host "  ✗ Error: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "  ? Error: $($_.Exception.Message)" -ForegroundColor Red
     $results += @{ Test = "Install"; Passed = $false }
 }
 
@@ -87,15 +87,15 @@ try {
     Start-Sleep -Seconds 3
     
     if (Test-ServiceRunning) {
-        Write-Host "  ✓ Service started successfully" -ForegroundColor Green
+        Write-Host "  ? Service started successfully" -ForegroundColor Green
         $results += @{ Test = "Start"; Passed = $true }
     } else {
-        Write-Host "  ✗ Service failed to start" -ForegroundColor Red
+        Write-Host "  ? Service failed to start" -ForegroundColor Red
         $results += @{ Test = "Start"; Passed = $false }
     }
 }
 catch {
-    Write-Host "  ✗ Error: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "  ? Error: $($_.Exception.Message)" -ForegroundColor Red
     $results += @{ Test = "Start"; Passed = $false }
 }
 
@@ -106,15 +106,15 @@ try {
     $hasRecovery = $recoveryInfo -match "RESTART"
     
     if ($hasRecovery) {
-        Write-Host "  ✓ Recovery actions configured" -ForegroundColor Green
+        Write-Host "  ? Recovery actions configured" -ForegroundColor Green
         $results += @{ Test = "Recovery"; Passed = $true }
     } else {
-        Write-Host "  ⚠ Recovery actions not configured (optional)" -ForegroundColor Yellow
+        Write-Host "  [WARN]  Recovery actions not configured (optional)" -ForegroundColor Yellow
         $results += @{ Test = "Recovery"; Passed = $true }  # Not critical
     }
 }
 catch {
-    Write-Host "  ⚠ Could not check recovery config" -ForegroundColor Yellow
+    Write-Host "  [WARN]  Could not check recovery config" -ForegroundColor Yellow
     $results += @{ Test = "Recovery"; Passed = $true }
 }
 
@@ -131,21 +131,21 @@ try {
         
         # Check if service recovered
         if (Test-ServiceRunning) {
-            Write-Host "  ✓ Service recovered automatically" -ForegroundColor Green
+            Write-Host "  ? Service recovered automatically" -ForegroundColor Green
             $results += @{ Test = "CrashRecovery"; Passed = $true }
         } else {
-            Write-Host "  ⚠ Service did not auto-recover (may need manual config)" -ForegroundColor Yellow
+            Write-Host "  [WARN]  Service did not auto-recover (may need manual config)" -ForegroundColor Yellow
             # Restart manually for remaining tests
             Start-Service -Name $ServiceName -ErrorAction SilentlyContinue
             $results += @{ Test = "CrashRecovery"; Passed = $false }
         }
     } else {
-        Write-Host "  ⚠ Could not get process ID" -ForegroundColor Yellow
+        Write-Host "  [WARN]  Could not get process ID" -ForegroundColor Yellow
         $results += @{ Test = "CrashRecovery"; Passed = $false }
     }
 }
 catch {
-    Write-Host "  ⚠ Error: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "  [WARN]  Error: $($_.Exception.Message)" -ForegroundColor Yellow
     $results += @{ Test = "CrashRecovery"; Passed = $false }
 }
 
@@ -156,15 +156,15 @@ try {
     Start-Sleep -Seconds 2
     
     if (-not (Test-ServiceRunning)) {
-        Write-Host "  ✓ Service stopped successfully" -ForegroundColor Green
+        Write-Host "  ? Service stopped successfully" -ForegroundColor Green
         $results += @{ Test = "Stop"; Passed = $true }
     } else {
-        Write-Host "  ✗ Service failed to stop" -ForegroundColor Red
+        Write-Host "  ? Service failed to stop" -ForegroundColor Red
         $results += @{ Test = "Stop"; Passed = $false }
     }
 }
 catch {
-    Write-Host "  ✗ Error: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "  ? Error: $($_.Exception.Message)" -ForegroundColor Red
     $results += @{ Test = "Stop"; Passed = $false }
 }
 
@@ -175,15 +175,15 @@ try {
     Start-Sleep -Seconds 2
     
     if (-not (Test-ServiceExists)) {
-        Write-Host "  ✓ Service uninstalled successfully" -ForegroundColor Green
+        Write-Host "  ? Service uninstalled successfully" -ForegroundColor Green
         $results += @{ Test = "Uninstall"; Passed = $true }
     } else {
-        Write-Host "  ✗ Service uninstall failed" -ForegroundColor Red
+        Write-Host "  ? Service uninstall failed" -ForegroundColor Red
         $results += @{ Test = "Uninstall"; Passed = $false }
     }
 }
 catch {
-    Write-Host "  ✗ Error: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "  ? Error: $($_.Exception.Message)" -ForegroundColor Red
     $results += @{ Test = "Uninstall"; Passed = $false }
 }
 
@@ -195,15 +195,15 @@ $total = $results.Count
 Write-Host "Passed: $passed / $total" -ForegroundColor $(if ($passed -eq $total) { "Green" } else { "Yellow" })
 
 foreach ($r in $results) {
-    $icon = if ($r.Passed) { "✓" } else { "✗" }
+    $icon = if ($r.Passed) { "?" } else { "?" }
     $color = if ($r.Passed) { "Green" } else { "Red" }
     Write-Host "  $icon $($r.Test)" -ForegroundColor $color
 }
 
 if ($passed -eq $total) {
-    Write-Host "`n✓ All service tests passed" -ForegroundColor Green
+    Write-Host "`n? All service tests passed" -ForegroundColor Green
     exit 0
 } else {
-    Write-Host "`n⚠ Some service tests failed" -ForegroundColor Yellow
+    Write-Host "`n[WARN]  Some service tests failed" -ForegroundColor Yellow
     exit 1
 }

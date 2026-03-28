@@ -6,16 +6,16 @@
 ALTER TABLE public.playbook_executions DROP COLUMN IF EXISTS ignored_reason;
 
 -- ============================================
--- FASE 4: Adicionar métricas de Playbooks
+-- FASE 4: Adicionar metricas de Playbooks
 -- ============================================
 
--- Função para calcular métricas de playbooks
+-- Funcao para calcular metricas de playbooks
 CREATE OR REPLACE FUNCTION public.get_playbook_metrics(
   p_tenant_id UUID,
   p_days_back INTEGER DEFAULT 30
 )
 RETURNS TABLE (
-  -- Métricas gerais
+  -- Metricas gerais
   total_executions BIGINT,
   total_completed BIGINT,
   total_ignored BIGINT,
@@ -33,7 +33,7 @@ RETURNS TABLE (
   most_triggered_playbook_name TEXT,
   most_triggered_count BIGINT,
   
-  -- Período
+  -- Periodo
   period_start TIMESTAMP WITH TIME ZONE,
   period_end TIMESTAMP WITH TIME ZONE
 )
@@ -106,7 +106,7 @@ BEGIN
 END;
 $$;
 
--- Função para métricas por playbook individual
+-- Funcao para metricas por playbook individual
 CREATE OR REPLACE FUNCTION public.get_playbook_execution_breakdown(
   p_tenant_id UUID,
   p_days_back INTEGER DEFAULT 30
@@ -152,9 +152,9 @@ BEGIN
 END;
 $$;
 
--- Comentários para documentação
+-- Comentarios para documentacao
 COMMENT ON FUNCTION public.get_playbook_metrics IS 
-  'Retorna métricas agregadas de execuções de playbooks: taxas, tempos de resposta, playbook mais acionado';
+  'Retorna metricas agregadas de execucoes de playbooks: taxas, tempos de resposta, playbook mais acionado';
 
 COMMENT ON FUNCTION public.get_playbook_execution_breakdown IS 
-  'Retorna breakdown de execuções por playbook individual com estatísticas detalhadas';
+  'Retorna breakdown de execucoes por playbook individual com estatisticas detalhadas';

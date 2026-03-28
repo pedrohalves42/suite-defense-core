@@ -583,11 +583,11 @@ SELECT a.id AS agent_id,
     END AS severity,
     CASE
         WHEN a.last_heartbeat IS NULL THEN 'Agente nunca conectou ao sistema'
-        WHEN a.last_heartbeat < (now() - '00:30:00'::interval) THEN 'Agente offline há mais de 30 minutos'
-        WHEN a.agent_mode = 'SAFE_MODE' THEN 'Agente em modo seguro - execução limitada'
-        WHEN COALESCE(stale_q.stale_queued_jobs, 0::bigint) > 3 THEN 'Agente online mas não está buscando jobs há mais de 1 hora'
-        WHEN COALESCE(stale_d.stale_delivered_jobs, 0::bigint) > 2 THEN 'Agente recebeu jobs mas não está executando há mais de 30 minutos'
-        WHEN je.last_execution_at IS NOT NULL AND je.last_execution_at < (now() - '04:00:00'::interval) AND COALESCE(pending.pending_jobs, 0::bigint) > 0 THEN 'Última execução há mais de 4 horas com jobs pendentes'
+        WHEN a.last_heartbeat < (now() - '00:30:00'::interval) THEN 'Agente offline ha mais de 30 minutos'
+        WHEN a.agent_mode = 'SAFE_MODE' THEN 'Agente em modo seguro - execucao limitada'
+        WHEN COALESCE(stale_q.stale_queued_jobs, 0::bigint) > 3 THEN 'Agente online mas nao esta buscando jobs ha mais de 1 hora'
+        WHEN COALESCE(stale_d.stale_delivered_jobs, 0::bigint) > 2 THEN 'Agente recebeu jobs mas nao esta executando ha mais de 30 minutos'
+        WHEN je.last_execution_at IS NOT NULL AND je.last_execution_at < (now() - '04:00:00'::interval) AND COALESCE(pending.pending_jobs, 0::bigint) > 0 THEN 'Ultima execucao ha mais de 4 horas com jobs pendentes'
         ELSE 'Agente funcionando normalmente'
     END AS health_description,
     now() AS checked_at
@@ -772,7 +772,7 @@ DROP VIEW IF EXISTS v_action_center CASCADE;
 CREATE VIEW v_action_center 
 WITH (security_invoker = true) AS
 SELECT pe.id AS item_id, 'playbook'::text AS source_type, pe.agent_id, a.agent_name, a.hostname,
-    COALESCE(p.name, 'Playbook') AS title, COALESCE(pe.trigger_source, 'Ação pendente') AS description,
+    COALESCE(p.name, 'Playbook') AS title, COALESCE(pe.trigger_source, 'Acao pendente') AS description,
     COALESCE(p.severity, 'medium') AS severity, pe.risk_score, pe.trigger_context AS context,
     pe.triggered_at AS created_at, COALESCE(pe.trigger_source, 'manual') AS trigger_type, pe.playbook_id, pe.tenant_id,
     CASE WHEN p.severity = 'critical' THEN 100 WHEN p.severity = 'high' THEN 75 WHEN p.severity = 'medium' THEN 50 ELSE 25 END::numeric + COALESCE(pe.risk_score, 0::numeric) AS priority_score
@@ -785,7 +785,7 @@ SELECT sa.id AS item_id, 'alert'::text AS source_type, sa.agent_id, ag.agent_nam
 FROM system_alerts sa LEFT JOIN agents ag ON sa.agent_id = ag.id WHERE sa.acknowledged = false
 UNION ALL
 SELECT agt.id AS item_id, 'agent_offline'::text AS source_type, agt.id AS agent_id, agt.agent_name, agt.hostname,
-    'Agente Offline' AS title, COALESCE(agt.offline_reason, 'Sem comunicação') AS description,
+    'Agente Offline' AS title, COALESCE(agt.offline_reason, 'Sem comunicacao') AS description,
     CASE WHEN agt.offline_detected_at < (now() - '24:00:00'::interval) THEN 'critical' WHEN agt.offline_detected_at < (now() - '04:00:00'::interval) THEN 'high' ELSE 'medium' END AS severity,
     NULL::numeric AS risk_score, jsonb_build_object('last_heartbeat', agt.last_heartbeat, 'offline_since', agt.offline_detected_at) AS context,
     COALESCE(agt.offline_detected_at, agt.last_heartbeat) AS created_at, 'agent_offline' AS trigger_type, NULL::uuid AS playbook_id, agt.tenant_id,

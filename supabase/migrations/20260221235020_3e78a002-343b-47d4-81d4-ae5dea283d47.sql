@@ -23,7 +23,7 @@ WHERE created_at > (now() - '24:00:00'::interval)
 GROUP BY function_name
 ORDER BY count(*) DESC;
 
-COMMENT ON VIEW public.v_ai_function_performance IS 'Performance de funções AI por tenant - isolado via security_invoker + tenant filter';
+COMMENT ON VIEW public.v_ai_function_performance IS 'Performance de funcoes AI por tenant - isolado via security_invoker + tenant filter';
 
 CREATE OR REPLACE VIEW public.v_ai_provider_performance
 WITH (security_invoker = on, security_barrier = true)
@@ -59,7 +59,7 @@ WHERE created_at > (now() - '7 days'::interval)
 GROUP BY date_trunc('hour'::text, created_at)
 ORDER BY date_trunc('hour'::text, created_at) DESC;
 
-COMMENT ON VIEW public.v_ai_hourly_trends IS 'Tendências horárias de AI por tenant - isolado via security_invoker + tenant filter';
+COMMENT ON VIEW public.v_ai_hourly_trends IS 'Tendencias horarias de AI por tenant - isolado via security_invoker + tenant filter';
 
 -- 2. Add critical FKs for tables that handle sensitive data
 -- Only adding for the most security-critical tables to avoid breaking existing data

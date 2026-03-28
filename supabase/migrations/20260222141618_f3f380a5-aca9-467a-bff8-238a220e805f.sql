@@ -22,7 +22,7 @@ DECLARE
   v_now timestamptz := now();
   v_thirty_days_ago timestamptz := now() - interval '30 days';
 BEGIN
-  -- 1) Expire jobs past TTL → mark as 'cancelled'
+  -- 1) Expire jobs past TTL ? mark as 'cancelled'
   WITH expired AS (
     UPDATE jobs
     SET status = 'cancelled'
@@ -37,7 +37,7 @@ BEGIN
   )
   SELECT count(*) INTO v_expired_count FROM expired;
 
-  -- 1b) Handle delivered jobs past TTL → mark as 'failed'
+  -- 1b) Handle delivered jobs past TTL ? mark as 'failed'
   WITH expired_delivered AS (
     UPDATE jobs
     SET status = 'failed'
@@ -105,7 +105,7 @@ BEGIN
     INSERT INTO system_alerts (tenant_id, severity, title, message, source)
     SELECT DISTINCT ur.tenant_id, 'critical',
       'Cron Silencioso Detectado',
-      format('Cron "%s" não executou com sucesso nas últimas 4 horas', ch.cron_name),
+      format('Cron "%s" nao executou com sucesso nas ultimas 4 horas', ch.cron_name),
       'zero-gap-monitor'
     FROM cron_health ch
     CROSS JOIN (SELECT DISTINCT tenant_id FROM user_roles WHERE role = 'admin' LIMIT 1) ur
@@ -171,4 +171,4 @@ FROM orphan_tasks ot, zombie_jobs zj, stale_crons sc, secured_views sv, total_vi
 ALTER VIEW public.v_zero_gap_dashboard SET (security_invoker = on);
 
 COMMENT ON VIEW public.v_zero_gap_dashboard IS 
-  'Zero-Gap: Dashboard de monitoramento de integridade sistêmica. Monitora tasks órfãs, jobs zumbis, crons stale, cobertura de security_invoker e falhas silenciosas.';
+  'Zero-Gap: Dashboard de monitoramento de integridade sistemica. Monitora tasks orfas, jobs zumbis, crons stale, cobertura de security_invoker e falhas silenciosas.';

@@ -1,5 +1,5 @@
 -- Adicionar colunas faltantes na tabela decision_events
--- Necessário para o trigger create_decision_event_from_alert funcionar
+-- Necessario para o trigger create_decision_event_from_alert funcionar
 
 ALTER TABLE decision_events 
 ADD COLUMN IF NOT EXISTS actor_type TEXT,

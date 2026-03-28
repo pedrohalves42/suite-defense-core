@@ -159,8 +159,8 @@ BEGIN
         tenant_id, agent_id, alert_type, severity, title, message, details, source
       ) VALUES (
         v_agent.tenant_id, v_agent.id, 'agent_long_offline', 'high',
-        'Agente offline há mais de 48h: ' || v_agent.agent_name,
-        'O agente ' || v_agent.agent_name || ' está sem comunicação há ' || ROUND(v_agent.hours_offline::numeric) || ' horas.',
+        'Agente offline ha mais de 48h: ' || v_agent.agent_name,
+        'O agente ' || v_agent.agent_name || ' esta sem comunicacao ha ' || ROUND(v_agent.hours_offline::numeric) || ' horas.',
         jsonb_build_object('agent_name', v_agent.agent_name, 'hours_offline', ROUND(v_agent.hours_offline::numeric), 'last_heartbeat', v_agent.last_heartbeat),
         'system'
       );
@@ -347,7 +347,7 @@ BEGIN
       expired_task.tenant_id,
       'manual',
       expired_task.id::text,
-      'Reavaliação de Risco: ' || expired_task.title,
+      'Reavaliacao de Risco: ' || expired_task.title,
       'O risco aceito para "' || expired_task.title || '" expirou e precisa ser reavaliado.',
       expired_task.severity,
       'open',

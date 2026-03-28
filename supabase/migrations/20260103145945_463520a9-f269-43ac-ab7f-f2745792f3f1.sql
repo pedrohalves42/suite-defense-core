@@ -1,6 +1,6 @@
 -- =============================================================================
--- FIX: Corrigir cálculo de human_reviewed em get_audit_raw_metrics
--- Bug: estava usando "executed_by IS NOT NULL" ao invés de "human_reviewed = true"
+-- FIX: Corrigir calculo de human_reviewed em get_audit_raw_metrics
+-- Bug: estava usando "executed_by IS NOT NULL" ao inves de "human_reviewed = true"
 -- Impacto: Auditoria via 0% human review quando deveria ser 100%
 -- =============================================================================
 

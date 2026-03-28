@@ -1,4 +1,4 @@
--- Corrigir função get_governance_snapshot (is_enabled -> enabled)
+-- Corrigir funcao get_governance_snapshot (is_enabled -> enabled)
 CREATE OR REPLACE FUNCTION get_governance_snapshot()
 RETURNS jsonb
 LANGUAGE plpgsql

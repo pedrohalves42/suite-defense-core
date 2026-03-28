@@ -1,13 +1,13 @@
 /**
  * check-agent-integrity Edge Function
  * 
- * Verifica periodicamente se agentes ativos ainda estão respondendo corretamente.
- * Detecta agentes que foram removidos após reinício ou por antivírus.
+ * Verifica periodicamente se agentes ativos ainda estao respondendo corretamente.
+ * Detecta agentes que foram removidos apos reinicio ou por antivirus.
  * 
  * MELHORIAS FASE 4:
  * - Alertas imediatos para falhas persistentes (bypass throttling)
  * - Tracking de contagem de falhas por agente
- * - Integração com tabela persistent_failure_alerts
+ * - Integracao com tabela persistent_failure_alerts
  * 
  * Este job deve ser executado via cron a cada 15 minutos.
  */
@@ -21,7 +21,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 // Thresholds para alertas
-const PERSISTENT_FAILURE_THRESHOLD = 3; // Número de falhas para considerar persistente
+const PERSISTENT_FAILURE_THRESHOLD = 3; // Numero de falhas para considerar persistente
 const IMMEDIATE_ALERT_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutos entre alertas imediatos
 
 interface IntegrityCheckResult {
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
     const immediateAlertsToSend: Array<Record<string, unknown>> = [];
     const skippedDueToBusinessHours: string[] = [];
 
-    // Cache de verificação de horário por tenant
+    // Cache de verificacao de horario por tenant
     const tenantBusinessHoursCache: Record<string, { shouldProcess: boolean; reason: string }> = {};
 
     // 2. Buscar alertas persistentes existentes para atualizar contagem
@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
     );
 
     for (const agent of problematicAgents || []) {
-      // Verificar horário de expediente do tenant
+      // Verificar horario de expediente do tenant
       if (!tenantBusinessHoursCache[agent.tenant_id]) {
         tenantBusinessHoursCache[agent.tenant_id] = await shouldProcessAlertsForTenant(supabase, agent.tenant_id);
       }
@@ -120,8 +120,8 @@ Deno.serve(async (req) => {
           (Date.now() - new Date(agent.last_heartbeat).getTime()) / (1000 * 60)
         );
 
-        // Se o último heartbeat foi há mais de 30 minutos mas menos de 24 horas
-        // provavelmente foi removido após reboot
+        // Se o ultimo heartbeat foi ha mais de 30 minutos mas menos de 24 horas
+        // provavelmente foi removido apos reboot
         if (minutesSinceHeartbeat > 30 && minutesSinceHeartbeat < 1440) {
           issueType = 'removed_after_reboot';
         } else {
@@ -193,16 +193,16 @@ Deno.serve(async (req) => {
         failure_count: failureCount,
       });
 
-      // Criar alerta apenas para casos de remoção após reboot (mais crítico)
+      // Criar alerta apenas para casos de remocao apos reboot (mais critico)
       if (issueType === 'removed_after_reboot') {
         alertsToCreate.push({
           tenant_id: agent.tenant_id,
           agent_id: agent.id,
           alert_type: 'agent_integrity_failure',
           severity: 'high',
-          message: `Computador "${agent.agent_name}" parou de responder após possível reinício. ` +
-                   `Último sinal há ${minutesSinceHeartbeat} minutos. ` +
-                   `Possível remoção por antivírus ou falha na Scheduled Task.`,
+          message: `Computador "${agent.agent_name}" parou de responder apos possivel reinicio. ` +
+                   `Ultimo sinal ha ${minutesSinceHeartbeat} minutos. ` +
+                   `Possivel remocao por antivirus ou falha na Scheduled Task.`,
           resolved: false,
           metadata: {
             issue_type: issueType,
@@ -230,11 +230,11 @@ Deno.serve(async (req) => {
             agent_name: immediateAlert.agent.agent_name,
             failure_count: immediateAlert.failureCount,
             minutes_since_heartbeat: immediateAlert.minutesSinceHeartbeat,
-            message: `CRÍTICO: Agente "${immediateAlert.agent.agent_name}" com ${immediateAlert.failureCount} falhas consecutivas. Último heartbeat há ${immediateAlert.minutesSinceHeartbeat} minutos.`,
+            message: `CRITICO: Agente "${immediateAlert.agent.agent_name}" com ${immediateAlert.failureCount} falhas consecutivas. Ultimo heartbeat ha ${immediateAlert.minutesSinceHeartbeat} minutos.`,
           }
         });
 
-        // Atualizar timestamp do último alerta enviado
+        // Atualizar timestamp do ultimo alerta enviado
         await supabase
           .from('persistent_failure_alerts')
           .update({ last_alert_sent_at: new Date().toISOString() })
@@ -249,7 +249,7 @@ Deno.serve(async (req) => {
     // 5. Inserir alertas normais (evitar duplicados verificando existentes)
     if (alertsToCreate.length > 0) {
       for (const alert of alertsToCreate) {
-        // Verificar se já existe alerta não resolvido para este agente
+        // Verificar se ja existe alerta nao resolvido para este agente
         const { data: existingAlert } = await supabase
           .from('system_alerts')
           .select('id')

@@ -3,7 +3,7 @@ import { corsHeaders } from '../_shared/cors.ts'
 import { logger } from '../_shared/logger.ts';
 
 /**
- * Compliance Drift Detection — CMP-004
+ * Compliance Drift Detection ? CMP-004
  * Scans tenants for compliance deviations against baselines
  */
 

@@ -29,14 +29,14 @@ BEGIN
   
   IF v_agent IS NULL THEN
     RETURN QUERY SELECT 'agent_not_found'::text, 'critical'::text,
-      'Agente não encontrado no sistema'::text,
+      'Agente nao encontrado no sistema'::text,
       jsonb_build_object('agent_name', p_agent_name), now(), 'system'::text;
     RETURN;
   END IF;
   
   IF v_agent.archived_at IS NOT NULL THEN
     RETURN QUERY SELECT 'agent_archived'::text, 'info'::text,
-      'Agente está arquivado'::text,
+      'Agente esta arquivado'::text,
       jsonb_build_object('agent_id', v_agent.id), now(), 'system'::text;
     RETURN;
   END IF;
@@ -46,7 +46,7 @@ BEGIN
       'agent_offline'::text,
       CASE WHEN v_agent.minutes_offline > 1440 THEN 'critical' 
            WHEN v_agent.minutes_offline > 120 THEN 'high' ELSE 'medium' END,
-      'Sem comunicação há ' || 
+      'Sem comunicacao ha ' || 
         CASE WHEN v_agent.minutes_offline > 1440 THEN round(v_agent.minutes_offline / 1440) || ' dia(s)'
           WHEN v_agent.minutes_offline > 60 THEN round(v_agent.minutes_offline / 60) || ' hora(s)'
           ELSE round(v_agent.minutes_offline) || ' minutos' END,
@@ -65,8 +65,8 @@ BEGIN
         RETURN QUERY SELECT
           'outdated_version'::text,
           CASE WHEN v_agent.force_update_version IS NOT NULL THEN 'medium' ELSE 'high' END,
-          'Versão ' || v_agent.agent_version || ' desatualizada (atual: ' || v_latest_version || ')' ||
-            CASE WHEN v_agent.force_update_version IS NOT NULL THEN ' — atualização pendente' ELSE '' END,
+          'Versao ' || v_agent.agent_version || ' desatualizada (atual: ' || v_latest_version || ')' ||
+            CASE WHEN v_agent.force_update_version IS NOT NULL THEN ' ? atualizacao pendente' ELSE '' END,
           jsonb_build_object('current_version', v_agent.agent_version, 'latest_version', v_latest_version),
           now(), 'system'::text;
       END IF;
@@ -80,13 +80,13 @@ BEGIN
       jsonb_build_object('reason', v_agent.scheduling_paused_reason), now(), 'system'::text;
   END IF;
 
-  -- Jobs falhados recentes (últimas 24h, agrupados)
+  -- Jobs falhados recentes (ultimas 24h, agrupados)
   RETURN QUERY
   SELECT
     'failed_job'::text,
     CASE WHEN jg.fail_count > 3 THEN 'high' ELSE 'medium' END,
-    jg.jtype || ' falhou ' || jg.fail_count || 'x nas últimas 24h' ||
-      COALESCE(' — ' || jg.last_error, ''),
+    jg.jtype || ' falhou ' || jg.fail_count || 'x nas ultimas 24h' ||
+      COALESCE(' ? ' || jg.last_error, ''),
     jsonb_build_object('job_type', jg.jtype, 'fail_count', jg.fail_count, 'last_failure', jg.last_failure),
     jg.last_failure, 'jobs'::text
   FROM (
@@ -100,13 +100,13 @@ BEGIN
     GROUP BY j.type HAVING COUNT(*) >= 2
   ) jg;
 
-  -- Eventos de segurança críticos (últimas 48h, deduplicados)
+  -- Eventos de seguranca criticos (ultimas 48h, deduplicados)
   RETURN QUERY
   SELECT DISTINCT ON (e.event_type, e.event_data->>'component')
     e.event_type, e.severity,
     CASE e.event_type
-      WHEN 'security_event' THEN 'Evento de segurança: ' || COALESCE(e.event_data->>'component', 'sistema')
-      WHEN 'service_stopped' THEN 'Serviço ' || COALESCE(e.event_data->>'service_name', 'desconhecido') || ' parado'
+      WHEN 'security_event' THEN 'Evento de seguranca: ' || COALESCE(e.event_data->>'component', 'sistema')
+      WHEN 'service_stopped' THEN 'Servico ' || COALESCE(e.event_data->>'service_name', 'desconhecido') || ' parado'
       ELSE COALESCE(e.event_data->>'message', 'Evento: ' || replace(e.event_type, '_', ' '))
     END,
     e.event_data, e.created_at, 'evidence_logs'::text

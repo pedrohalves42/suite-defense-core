@@ -19,7 +19,7 @@ ADD CONSTRAINT decision_events_decision_type_check CHECK (
 -- FASE 1: Trigger de Rastreabilidade
 -- =====================================================
 
--- 1.1 Criar função de auditoria para alertas críticos
+-- 1.1 Criar funcao de auditoria para alertas criticos
 CREATE OR REPLACE FUNCTION create_decision_event_from_alert()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -27,12 +27,12 @@ SECURITY DEFINER
 SET search_path = 'public'
 AS $$
 BEGIN
-  -- Apenas alertas críticos
+  -- Apenas alertas criticos
   IF NEW.severity <> 'critical' THEN
     RETURN NEW;
   END IF;
 
-  -- Apenas mudança real de estado resolved
+  -- Apenas mudanca real de estado resolved
   IF OLD.resolved IS NOT DISTINCT FROM NEW.resolved THEN
     RETURN NEW;
   END IF;
@@ -134,7 +134,7 @@ WHERE sa.severity = 'critical'
   );
 
 -- =====================================================
--- FASE 3: Rollback Simbólico (Prova de Capacidade)
+-- FASE 3: Rollback Simbolico (Prova de Capacidade)
 -- =====================================================
 
 INSERT INTO decision_events (
@@ -154,7 +154,7 @@ SELECT
   'compensating_action',
   'rollback_executed',
   jsonb_build_object(
-    'note', 'Rollback de validação executado para prova de capacidade',
+    'note', 'Rollback de validacao executado para prova de capacidade',
     'scope', 'audit_validation',
     'verified_by', 'system_audit'
   ),
@@ -196,7 +196,7 @@ WHERE sp.enabled = true
 ON CONFLICT DO NOTHING;
 
 -- =====================================================
--- FASE 5: Shadow Validation Visível
+-- FASE 5: Shadow Validation Visivel
 -- =====================================================
 
 -- 5.1 Adicionar coluna

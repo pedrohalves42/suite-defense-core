@@ -17,10 +17,10 @@ serveTenant(async (req, ctx) => {
     const status = subscription?.status || 'unknown';
 
     if (status === 'trialing') {
-      return { error: 'Você está em período de avaliação gratuita.', code: 'TRIAL_USER', trial: true };
+      return { error: 'Voce esta em periodo de avaliacao gratuita.', code: 'TRIAL_USER', trial: true };
     }
     if (status === 'active' && !subscription?.stripe_customer_id) {
-      return { error: 'Você está no plano gratuito.', code: 'FREE_USER', free: true };
+      return { error: 'Voce esta no plano gratuito.', code: 'FREE_USER', free: true };
     }
     return { error: 'Nenhuma assinatura ativa encontrada.', code: 'NO_SUBSCRIPTION' };
   }
@@ -40,7 +40,7 @@ serveTenant(async (req, ctx) => {
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
   if (!stripeKey) {
     return new Response(
-      JSON.stringify({ error: 'Configuração de pagamento incompleta.', code: 'STRIPE_NOT_CONFIGURED' }),
+      JSON.stringify({ error: 'Configuracao de pagamento incompleta.', code: 'STRIPE_NOT_CONFIGURED' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }

@@ -1,10 +1,10 @@
 
 -- ============================================================================
 -- TASK AUTOMATION SYSTEM - ADR-024 Extension
--- Automação inteligente para reduzir as 6.395+ tasks manuais
+-- Automacao inteligente para reduzir as 6.395+ tasks manuais
 -- ============================================================================
 
--- 1. Função de auto-resolução de tasks antigas
+-- 1. Funcao de auto-resolucao de tasks antigas
 CREATE OR REPLACE FUNCTION public.auto_resolve_stale_tasks()
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -18,7 +18,7 @@ DECLARE
   v_old_insights_triaged INTEGER := 0;
   v_result jsonb;
 BEGIN
-  -- 1. Auto-fechar tasks de JOB com severidade medium/low após 14 dias
+  -- 1. Auto-fechar tasks de JOB com severidade medium/low apos 14 dias
   UPDATE tasks SET
     status = 'ignored',
     closed_at = NOW(),
@@ -36,7 +36,7 @@ BEGIN
     AND auto_generated = true;
   GET DIAGNOSTICS v_job_tasks_closed = ROW_COUNT;
 
-  -- 2. Auto-fechar tasks de DLQ com severidade low após 7 dias
+  -- 2. Auto-fechar tasks de DLQ com severidade low apos 7 dias
   UPDATE tasks SET
     status = 'ignored',
     closed_at = NOW(),
@@ -53,7 +53,7 @@ BEGIN
     AND created_at < NOW() - INTERVAL '7 days';
   GET DIAGNOSTICS v_dlq_tasks_closed = ROW_COUNT;
 
-  -- 3. Auto-fechar tasks de system_alert com severity low/info após 3 dias
+  -- 3. Auto-fechar tasks de system_alert com severity low/info apos 3 dias
   UPDATE tasks SET
     status = 'resolved',
     closed_at = NOW(),
@@ -70,7 +70,7 @@ BEGIN
     AND created_at < NOW() - INTERVAL '3 days';
   GET DIAGNOSTICS v_low_alerts_closed = ROW_COUNT;
 
-  -- 4. Auto-triar insights de AI não-críticos após 21 dias
+  -- 4. Auto-triar insights de AI nao-criticos apos 21 dias
   UPDATE tasks SET
     status = 'accepted_risk',
     closed_at = NOW(),
@@ -128,13 +128,13 @@ $$;
 COMMENT ON FUNCTION auto_resolve_stale_tasks IS 
 'ADR-024 Extension: Auto-resolve stale tasks based on severity and age rules.
 Rules:
-- Job tasks (medium/low): 14 days → ignored
-- DLQ tasks (low): 7 days → ignored  
-- System alerts (low/info): 3 days → resolved
-- AI insights (non-critical): 21 days → accepted_risk
+- Job tasks (medium/low): 14 days ? ignored
+- DLQ tasks (low): 7 days ? ignored  
+- System alerts (low/info): 3 days ? resolved
+- AI insights (non-critical): 21 days ? accepted_risk
 Critical tasks are NEVER auto-closed.';
 
--- 2. View para métricas de automação
+-- 2. View para metricas de automacao
 CREATE OR REPLACE VIEW v_task_automation_metrics WITH (security_invoker = on) AS
 SELECT 
   tenant_id,
@@ -153,7 +153,7 @@ GROUP BY tenant_id, DATE_TRUNC('day', closed_at);
 COMMENT ON VIEW v_task_automation_metrics IS 
 'Task automation metrics per tenant. Shows auto-closed vs manual closed tasks.';
 
--- 3. View para tasks prioritárias (críticas não atribuídas)
+-- 3. View para tasks prioritarias (criticas nao atribuidas)
 CREATE OR REPLACE VIEW v_critical_unassigned_tasks WITH (security_invoker = on) AS
 SELECT 
   t.id,

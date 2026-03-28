@@ -142,7 +142,7 @@ serve(async (req) => {
       .eq('agent_id', agentId)
       .lt('collected_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
 
-    // ── Bloco A: Create alert if suspicious processes detected ──
+    // ?? Bloco A: Create alert if suspicious processes detected ??
     if (suspiciousProcesses.length > 0) {
       const suspNames = suspiciousProcesses.map(p => p.name).join(', ');
       await supabase
@@ -162,7 +162,7 @@ serve(async (req) => {
         });
     }
 
-    // ── Bloco A: Trigger process_anomaly automation rules ──
+    // ?? Bloco A: Trigger process_anomaly automation rules ??
     let automationTriggered = 0;
     if (suspiciousProcesses.length > 0 || newProcesses.length > 5) {
       try {

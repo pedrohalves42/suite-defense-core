@@ -7,7 +7,8 @@ on:
     branches: [main, develop]
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   # Lint and Type Check
@@ -25,9 +26,6 @@ jobs:
       
       - name: Install dependencies
         run: npm ci
-      
-      - name: Build ESLint multitenant plugin
-        run: npm run --prefix eslint-plugin-multitenant build
       
       - name: Run ESLint
         run: npm run lint
@@ -185,7 +183,3 @@ jobs:
 
       - name: Run npm audit
         run: npm audit --audit-level=high || true
-
-      - name: Check for known vulnerabilities
-        run: npx better-npm-audit audit --level high || true
-        continue-on-error: true

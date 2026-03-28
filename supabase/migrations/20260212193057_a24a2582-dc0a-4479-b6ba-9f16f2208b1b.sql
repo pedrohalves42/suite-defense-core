@@ -111,7 +111,7 @@ DECLARE
   v_archived_agent_closed integer := 0;
   v_high_closed integer := 0;
 BEGIN
-  -- Rule 1: Tasks stuck in_progress > 14 days → auto-resolved
+  -- Rule 1: Tasks stuck in_progress > 14 days ? auto-resolved
   WITH updated AS (
     UPDATE tasks
     SET status = 'resolved',
@@ -124,7 +124,7 @@ BEGIN
   )
   SELECT count(*) INTO v_in_progress_closed FROM updated;
 
-  -- Rule 2: Critical tasks open > 30 days → auto-resolved with evidence
+  -- Rule 2: Critical tasks open > 30 days ? auto-resolved with evidence
   WITH updated AS (
     UPDATE tasks
     SET status = 'resolved',
@@ -143,7 +143,7 @@ BEGIN
   )
   SELECT count(*) INTO v_critical_closed FROM updated;
 
-  -- Rule 3: High severity open > 21 days → auto-resolved
+  -- Rule 3: High severity open > 21 days ? auto-resolved
   WITH updated AS (
     UPDATE tasks
     SET status = 'resolved',
@@ -157,7 +157,7 @@ BEGIN
   )
   SELECT count(*) INTO v_high_closed FROM updated;
 
-  -- Rule 4: Medium/Low severity open > 14 days → auto-resolved
+  -- Rule 4: Medium/Low severity open > 14 days ? auto-resolved
   WITH updated AS (
     UPDATE tasks
     SET status = 'resolved',
@@ -171,7 +171,7 @@ BEGIN
   )
   SELECT count(*) INTO v_medium_low_closed FROM updated;
 
-  -- Rule 5: Tasks linked to archived agents → auto-resolved immediately
+  -- Rule 5: Tasks linked to archived agents ? auto-resolved immediately
   WITH updated AS (
     UPDATE tasks t
     SET status = 'resolved',

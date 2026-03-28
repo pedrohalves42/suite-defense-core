@@ -245,7 +245,7 @@ Deno.serve(async (req) => {
       const key = `${item.domain}:${item.source}`;
       const existing = uniqueItemsMap.get(key);
       if (existing) {
-        // Soma visit_count e mantém o mais recente visited_at
+        // Soma visit_count e mantem o mais recente visited_at
         existing.visit_count = (existing.visit_count || 1) + (item.visit_count || 1);
         existing.total_duration_seconds = (existing.total_duration_seconds || 0) + (item.total_duration_seconds || 0);
         if (new Date(item.visited_at) > new Date(existing.visited_at)) {
@@ -261,7 +261,7 @@ Deno.serve(async (req) => {
     const dedupedItems = Array.from(uniqueItemsMap.values());
 
     if (dedupedItems.length < itemsToInsert.length) {
-      logger.info(`Deduped ${itemsToInsert.length} → ${dedupedItems.length} items (merged ${itemsToInsert.length - dedupedItems.length} duplicates)`);
+      logger.info(`Deduped ${itemsToInsert.length} ? ${dedupedItems.length} items (merged ${itemsToInsert.length - dedupedItems.length} duplicates)`);
     }
 
     // ========================================

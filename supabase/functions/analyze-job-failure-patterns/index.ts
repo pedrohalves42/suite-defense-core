@@ -167,7 +167,7 @@ serve(async (req) => {
                 tenant_id: tenantId,
                 insight_type: 'job_failure_pattern',
                 title: `Alta taxa de falha em ${jobType}`,
-                description: `O agente ${agentName} está com ${failureRate}% de falha em jobs do tipo ${jobType}. Últimas ${hours_back}h: ${failureCount}/${totalCount} falharam.`,
+                description: `O agente ${agentName} esta com ${failureRate}% de falha em jobs do tipo ${jobType}. Ultimas ${hours_back}h: ${failureCount}/${totalCount} falharam.`,
                 severity: failureRate >= 90 ? 'critical' : 'high',
                 category: 'performance',
                 affected_entity_type: 'agent',
@@ -197,17 +197,17 @@ serve(async (req) => {
       const recommendations: string[] = [];
       
       if (overallFailureRate > 50) {
-        recommendations.push('Taxa de falha geral está muito alta. Considere verificar conectividade dos agentes.');
+        recommendations.push('Taxa de falha geral esta muito alta. Considere verificar conectividade dos agentes.');
       }
 
       const webActivityPatterns = patterns.filter(p => p.job_type.includes('web_activity'));
       if (webActivityPatterns.length > 0) {
-        recommendations.push('Falhas em coleta de atividade web podem indicar problemas de permissão ou navegador não instalado.');
+        recommendations.push('Falhas em coleta de atividade web podem indicar problemas de permissao ou navegador nao instalado.');
       }
 
       const softwarePatterns = patterns.filter(p => p.job_type.includes('software'));
       if (softwarePatterns.length > 0) {
-        recommendations.push('Falhas em inventário de software podem indicar timeout. Considere aumentar o tempo limite.');
+        recommendations.push('Falhas em inventario de software podem indicar timeout. Considere aumentar o tempo limite.');
       }
 
       const vulnPatterns = patterns.filter(p => p.job_type.includes('vuln'));
@@ -221,7 +221,7 @@ serve(async (req) => {
           tenant_id: tenantId,
           alert_type: 'high_job_failure_rate',
           title: `Taxa de falha de jobs em ${overallFailureRate}%`,
-          message: `Nos últimos ${hours_back}h, ${tenantFailedJobs} de ${tenantTotalJobs} jobs falharam. Verifique os agentes afetados.`,
+          message: `Nos ultimos ${hours_back}h, ${tenantFailedJobs} de ${tenantTotalJobs} jobs falharam. Verifique os agentes afetados.`,
           severity: overallFailureRate >= 70 ? 'critical' : 'high',
           status: 'active',
           metadata: {
@@ -305,11 +305,11 @@ serve(async (req) => {
 
 function generateRecommendation(jobType: string, commonErrors: string[]): string {
   const recommendations: Record<string, string> = {
-    'collect_web_activity': 'Verifique se o navegador está instalado e se o agente tem permissão para acessar o histórico.',
-    'software_inventory_collect': 'Aumente o timeout do job ou verifique se há muitos programas instalados causando lentidão.',
-    'light_vuln_scan': 'Verifique conectividade com internet e se o firewall permite acesso às APIs de CVE.',
-    'antivirus_status': 'Verifique se o antivírus está instalado e acessível pelo agente.',
-    'system_metrics': 'Verifique permissões do agente para acessar métricas do sistema.',
+    'collect_web_activity': 'Verifique se o navegador esta instalado e se o agente tem permissao para acessar o historico.',
+    'software_inventory_collect': 'Aumente o timeout do job ou verifique se ha muitos programas instalados causando lentidao.',
+    'light_vuln_scan': 'Verifique conectividade com internet e se o firewall permite acesso as APIs de CVE.',
+    'antivirus_status': 'Verifique se o antivirus esta instalado e acessivel pelo agente.',
+    'system_metrics': 'Verifique permissoes do agente para acessar metricas do sistema.',
   };
 
   let rec = recommendations[jobType] || 'Verifique os logs do agente para mais detalhes sobre as falhas.';
@@ -319,7 +319,7 @@ function generateRecommendation(jobType: string, commonErrors: string[]): string
     rec += ' Considere aumentar o timeout ou verificar a carga do sistema.';
   }
   if (commonErrors.some(e => e.toLowerCase().includes('permission') || e.toLowerCase().includes('access'))) {
-    rec += ' Verifique as permissões do agente no sistema operacional.';
+    rec += ' Verifique as permissoes do agente no sistema operacional.';
   }
   if (commonErrors.some(e => e.toLowerCase().includes('network') || e.toLowerCase().includes('connection'))) {
     rec += ' Verifique a conectividade de rede do computador.';

@@ -11,16 +11,16 @@ CREATE TABLE incident_slo_state (
   slo_target numeric NOT NULL DEFAULT 99.5,
   error_budget numeric NOT NULL DEFAULT 0.005,
   
-  -- Burn Rates em múltiplas janelas
+  -- Burn Rates em multiplas janelas
   burn_rate_1h numeric NOT NULL DEFAULT 0,
   burn_rate_6h numeric NOT NULL DEFAULT 0,
   burn_rate_24h numeric NOT NULL DEFAULT 0,
   
-  -- Orçamento consumido
+  -- Orcamento consumido
   budget_consumed numeric NOT NULL DEFAULT 0,
   budget_remaining numeric NOT NULL DEFAULT 100,
   
-  -- Métricas de contexto
+  -- Metricas de contexto
   occurrences_1h integer NOT NULL DEFAULT 0,
   occurrences_6h integer NOT NULL DEFAULT 0,
   occurrences_24h integer NOT NULL DEFAULT 0,
@@ -37,7 +37,7 @@ CREATE TABLE incident_slo_state (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- Índices
+-- Indices
 CREATE INDEX idx_incident_slo_fingerprint ON incident_slo_state(fingerprint_id);
 CREATE INDEX idx_incident_slo_status ON incident_slo_state(status);
 CREATE INDEX idx_incident_slo_burn_rate ON incident_slo_state(burn_rate_1h DESC);
@@ -45,15 +45,15 @@ CREATE INDEX idx_incident_slo_burn_rate ON incident_slo_state(burn_rate_1h DESC)
 -- 2. RLS Policies
 ALTER TABLE incident_slo_state ENABLE ROW LEVEL SECURITY;
 
--- Leitura global (fingerprints são cross-tenant para análise)
+-- Leitura global (fingerprints sao cross-tenant para analise)
 CREATE POLICY "incident_slo_read" ON incident_slo_state
   FOR SELECT TO authenticated USING (true);
 
--- Write via funções internas (SECURITY DEFINER)
+-- Write via funcoes internas (SECURITY DEFINER)
 CREATE POLICY "incident_slo_service_write" ON incident_slo_state
   FOR ALL USING (true) WITH CHECK (true);
 
--- 3. Função: get_slo_target_for_severity
+-- 3. Funcao: get_slo_target_for_severity
 CREATE OR REPLACE FUNCTION get_slo_target_for_severity(p_severity text)
 RETURNS numeric AS $$
 BEGIN
@@ -67,7 +67,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
--- 4. Função: calculate_incident_burn_rate
+-- 4. Funcao: calculate_incident_burn_rate
 CREATE OR REPLACE FUNCTION calculate_incident_burn_rate(
   p_fingerprint_id uuid
 ) RETURNS void AS $$
@@ -91,7 +91,7 @@ BEGIN
   
   IF NOT FOUND THEN RETURN; END IF;
   
-  -- Contar ocorrências por janela
+  -- Contar ocorrencias por janela
   SELECT COUNT(*) INTO v_occ_1h
   FROM failure_occurrences
   WHERE fingerprint_id = p_fingerprint_id
@@ -111,7 +111,7 @@ BEGIN
   v_slo_target := get_slo_target_for_severity(v_fp.severity_hint);
   v_error_budget := (100 - v_slo_target) / 100;
   
-  -- Taxa esperada baseada em histórico (média por hora desde first_seen)
+  -- Taxa esperada baseada em historico (media por hora desde first_seen)
   v_expected_1h := GREATEST(
     v_fp.total_occurrences::numeric / 
     GREATEST(EXTRACT(EPOCH FROM now() - v_fp.first_seen_at) / 3600, 1),
@@ -119,7 +119,7 @@ BEGIN
   );
   
   -- Calcular burn rates
-  -- Burn rate = (falhas observadas / falhas esperadas no orçamento)
+  -- Burn rate = (falhas observadas / falhas esperadas no orcamento)
   v_burn_1h := CASE 
     WHEN v_expected_1h * v_error_budget > 0 
     THEN v_occ_1h / (v_expected_1h * v_error_budget)
@@ -138,7 +138,7 @@ BEGIN
     ELSE 0 
   END;
   
-  -- Budget consumido (últimas 24h como percentual)
+  -- Budget consumido (ultimas 24h como percentual)
   v_budget_consumed := LEAST(v_burn_24h * 100, 100);
   
   -- Determinar status baseado em burn rate
@@ -183,7 +183,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public;
 
--- 5. Função: refresh_all_incident_slos
+-- 5. Funcao: refresh_all_incident_slos
 CREATE OR REPLACE FUNCTION refresh_all_incident_slos()
 RETURNS integer AS $$
 DECLARE
@@ -201,11 +201,11 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public;
 
--- 6. Trigger: Atualizar SLO quando nova ocorrência
+-- 6. Trigger: Atualizar SLO quando nova ocorrencia
 CREATE OR REPLACE FUNCTION trigger_update_incident_slo()
 RETURNS trigger AS $$
 BEGIN
-  -- Recalcular burn rate quando nova ocorrência
+  -- Recalcular burn rate quando nova ocorrencia
   PERFORM calculate_incident_burn_rate(NEW.fingerprint_id);
   RETURN NEW;
 END;

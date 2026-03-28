@@ -1,6 +1,6 @@
 -- =====================================================
--- FASE 6: Resiliência, Contratos e Prevenção de Regressão
--- + Correções CRITICAL-005/006
+-- FASE 6: Resiliencia, Contratos e Prevencao de Regressao
+-- + Correcoes CRITICAL-005/006
 -- =====================================================
 
 -- 1. CRITICAL-005: DROP e recriar view com novas colunas
@@ -53,7 +53,7 @@ WHERE a.status = 'active';
 
 COMMENT ON VIEW v_agent_lifecycle_state IS 'View de estado do ciclo de vida dos agents - inclui is_stuck para detect-stuck-installations';
 
--- 2. View de Contratos Canônicos (Fase 6.1)
+-- 2. View de Contratos Canonicos (Fase 6.1)
 DROP VIEW IF EXISTS v_system_contracts;
 CREATE VIEW v_system_contracts AS
 SELECT 'task_source_type' AS contract, 
@@ -67,9 +67,9 @@ UNION ALL
 SELECT 'failure_class',
        unnest(ARRAY['TRANSIENT', 'PERMANENT', 'EXPECTED_DROP', 'BUG', 'UNKNOWN']);
 
-COMMENT ON VIEW v_system_contracts IS 'Fonte canônica de enums para validação CI/CD - ADR-021 Fase 6.1';
+COMMENT ON VIEW v_system_contracts IS 'Fonte canonica de enums para validacao CI/CD - ADR-021 Fase 6.1';
 
--- 3. Tabela de Runbooks Obrigatórios (Fase 6.4)
+-- 3. Tabela de Runbooks Obrigatorios (Fase 6.4)
 CREATE TABLE IF NOT EXISTS runbooks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   anomaly_type TEXT UNIQUE NOT NULL,
@@ -93,29 +93,29 @@ DROP POLICY IF EXISTS "Authenticated users can view runbooks" ON runbooks;
 CREATE POLICY "Authenticated users can view runbooks" ON runbooks
 FOR SELECT USING (auth.uid() IS NOT NULL);
 
--- Inserir runbooks mínimos obrigatórios
+-- Inserir runbooks minimos obrigatorios
 INSERT INTO runbooks (anomaly_type, title, steps, severity, sla_minutes) VALUES
-('failed_no_execution', 'Job Falho Sem Execução', 
+('failed_no_execution', 'Job Falho Sem Execucao', 
  '["1. Verificar logs do agent", "2. Checar conectividade do endpoint", "3. Validar payload do job", "4. Recriar job manualmente", "5. Escalar para engenharia se persistir"]'::jsonb,
  'critical', 30),
 ('DLQ_BUG', 'Bug na Dead Letter Queue',
- '["1. Analisar registros com failure_class=BUG", "2. Identificar padrão de falha no código", "3. Abrir issue de correção", "4. Replay manual após fix", "5. Validar que não há reincidência"]'::jsonb,
+ '["1. Analisar registros com failure_class=BUG", "2. Identificar padrao de falha no codigo", "3. Abrir issue de correcao", "4. Replay manual apos fix", "5. Validar que nao ha reincidencia"]'::jsonb,
  'critical', 60),
 ('CASCADE_FAILURE', 'Falha em Cascata',
- '["1. Identificar componente de origem", "2. Isolar componente afetado", "3. Ativar modo degradado se necessário", "4. Rollback se houver deploy recente", "5. RCA obrigatório em 24h"]'::jsonb,
+ '["1. Identificar componente de origem", "2. Isolar componente afetado", "3. Ativar modo degradado se necessario", "4. Rollback se houver deploy recente", "5. RCA obrigatorio em 24h"]'::jsonb,
  'critical', 15),
 ('zombie_delivered', 'Job Zumbi Delivered',
- '["1. Verificar agent_state do agent afetado", "2. Checar last_heartbeat", "3. Cancelar jobs órfãos pendentes", "4. Notificar operador responsável", "5. Investigar causa da desconexão"]'::jsonb,
+ '["1. Verificar agent_state do agent afetado", "2. Checar last_heartbeat", "3. Cancelar jobs orfaos pendentes", "4. Notificar operador responsavel", "5. Investigar causa da desconexao"]'::jsonb,
  'high', 60),
-('stuck_installation', 'Instalação Travada',
- '["1. Verificar se comando foi copiado", "2. Checar logs de enrollment", "3. Validar enrollment_key ativa", "4. Contactar usuário final", "5. Reemitir chave se necessário"]'::jsonb,
+('stuck_installation', 'Instalacao Travada',
+ '["1. Verificar se comando foi copiado", "2. Checar logs de enrollment", "3. Validar enrollment_key ativa", "4. Contactar usuario final", "5. Reemitir chave se necessario"]'::jsonb,
  'high', 120)
 ON CONFLICT (anomaly_type) DO NOTHING;
 
--- 4. Semantic Fingerprint para Deduplicação (Fase 6.3)
+-- 4. Semantic Fingerprint para Deduplicacao (Fase 6.3)
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS semantic_fingerprint TEXT;
 
--- Função para calcular fingerprint
+-- Funcao para calcular fingerprint
 CREATE OR REPLACE FUNCTION calculate_task_fingerprint()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -172,7 +172,7 @@ DROP POLICY IF EXISTS "Anyone can read system state" ON system_state;
 CREATE POLICY "Anyone can read system state" ON system_state
 FOR SELECT USING (true);
 
--- Drop e recriar função get_system_mode com novo tipo
+-- Drop e recriar funcao get_system_mode com novo tipo
 DROP FUNCTION IF EXISTS get_system_mode();
 CREATE OR REPLACE FUNCTION get_system_mode()
 RETURNS system_operational_mode AS $$

@@ -1,4 +1,4 @@
--- Correção: Substituir referência a resource_id inexistente por agent_id
+-- Correcao: Substituir referencia a resource_id inexistente por agent_id
 CREATE OR REPLACE FUNCTION public.get_audit_raw_metrics(p_tenant_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql

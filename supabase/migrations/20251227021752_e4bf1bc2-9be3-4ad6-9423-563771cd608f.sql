@@ -1,12 +1,12 @@
 -- ==============================================
--- SAFE_MODE AUTÔNOMO - FASE 1
--- Entrada automática em SAFE_MODE quando:
--- 1. 3+ falhas críticas em 10 minutos
+-- SAFE_MODE AUTONOMO - FASE 1
+-- Entrada automatica em SAFE_MODE quando:
+-- 1. 3+ falhas criticas em 10 minutos
 -- 2. Mesmo tipo de falha
 -- 3. Agente ainda responde heartbeat
 -- ==============================================
 
--- Função para detectar padrão de falhas repetidas
+-- Funcao para detectar padrao de falhas repetidas
 CREATE OR REPLACE FUNCTION public.detect_critical_failure_pattern(
   p_window_minutes INTEGER DEFAULT 10,
   p_min_failures INTEGER DEFAULT 3
@@ -29,7 +29,7 @@ AS $$
 BEGIN
   RETURN QUERY
   WITH recent_failures AS (
-    -- Buscar execuções falhadas nos últimos N minutos
+    -- Buscar execucoes falhadas nos ultimos N minutos
     SELECT 
       je.agent_id,
       je.agent_name,
@@ -43,7 +43,7 @@ BEGIN
     
     UNION ALL
     
-    -- Incluir jobs falhados também
+    -- Incluir jobs falhados tambem
     SELECT 
       j.agent_id,
       j.agent_name,
@@ -76,21 +76,21 @@ BEGIN
     fp.first_failure,
     fp.last_failure,
     a.last_heartbeat,
-    -- Agente é considerado ativo se teve heartbeat nos últimos 5 minutos
+    -- Agente e considerado ativo se teve heartbeat nos ultimos 5 minutos
     CASE 
       WHEN a.last_heartbeat > NOW() - INTERVAL '5 minutes' THEN TRUE
       ELSE FALSE
     END AS heartbeat_active
   FROM failure_patterns fp
   JOIN agents a ON a.id = fp.agent_id
-  WHERE a.agent_mode IS DISTINCT FROM 'SAFE_MODE'  -- Não já está em SAFE_MODE
+  WHERE a.agent_mode IS DISTINCT FROM 'SAFE_MODE'  -- Nao ja esta em SAFE_MODE
     AND a.status IN ('active', 'pending')
-    -- Só agentes com heartbeat recente (ainda respondendo)
+    -- So agentes com heartbeat recente (ainda respondendo)
     AND a.last_heartbeat > NOW() - INTERVAL '5 minutes';
 END;
 $$;
 
--- Função para entrar em SAFE_MODE autonomamente
+-- Funcao para entrar em SAFE_MODE autonomamente
 CREATE OR REPLACE FUNCTION public.enter_autonomous_safe_mode(
   p_agent_id UUID,
   p_reason TEXT,
@@ -186,7 +186,7 @@ BEGIN
     'safety',
     'critical',
     format('SAFE_MODE ativado automaticamente: %s', v_agent_name),
-    format('O agente %s foi colocado em SAFE_MODE automaticamente após detectar %s falhas do tipo "%s" nos últimos 10 minutos. Apenas jobs de diagnóstico são permitidos.', 
+    format('O agente %s foi colocado em SAFE_MODE automaticamente apos detectar %s falhas do tipo "%s" nos ultimos 10 minutos. Apenas jobs de diagnostico sao permitidos.', 
       v_agent_name, p_failure_count, p_failure_type),
     'Verificar logs do agente, diagnosticar a causa raiz das falhas e resolver antes de desativar o SAFE_MODE.',
     jsonb_build_object(
@@ -230,7 +230,7 @@ BEGIN
 END;
 $$;
 
--- Função principal para processar SAFE_MODE autônomo
+-- Funcao principal para processar SAFE_MODE autonomo
 CREATE OR REPLACE FUNCTION public.process_autonomous_safe_mode()
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -243,15 +243,15 @@ DECLARE
   v_result JSONB;
   v_processed INTEGER := 0;
 BEGIN
-  -- Processar cada agente com padrão de falha detectado
+  -- Processar cada agente com padrao de falha detectado
   FOR v_agent IN 
     SELECT * FROM detect_critical_failure_pattern(10, 3)
-    WHERE heartbeat_active = TRUE  -- Só agentes que ainda respondem
+    WHERE heartbeat_active = TRUE  -- So agentes que ainda respondem
   LOOP
     -- Entrar em SAFE_MODE
     v_result := enter_autonomous_safe_mode(
       v_agent.agent_id,
-      format('Detecção automática: %s falhas do tipo "%s" em 10 minutos', 
+      format('Deteccao automatica: %s falhas do tipo "%s" em 10 minutos', 
         v_agent.failure_count, v_agent.failure_type),
       v_agent.failure_type,
       v_agent.failure_count::INTEGER
@@ -270,10 +270,10 @@ BEGIN
 END;
 $$;
 
--- Comentários
+-- Comentarios
 COMMENT ON FUNCTION public.detect_critical_failure_pattern IS 
-  'Detecta agentes com padrão de falhas repetidas (P0 SAFE_MODE Autônomo)';
+  'Detecta agentes com padrao de falhas repetidas (P0 SAFE_MODE Autonomo)';
 COMMENT ON FUNCTION public.enter_autonomous_safe_mode IS 
   'Coloca um agente em SAFE_MODE autonomamente, com registro e alertas';
 COMMENT ON FUNCTION public.process_autonomous_safe_mode IS 
-  'Função principal que processa entrada autônoma em SAFE_MODE';
+  'Funcao principal que processa entrada autonoma em SAFE_MODE';

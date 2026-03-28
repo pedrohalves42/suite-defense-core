@@ -411,7 +411,7 @@ function dedupeCandidates(candidates: FingerprintCandidate[]): FingerprintCandid
  * 1) SHA-256 dos bytes decodificados (Base64/PEM)
  * 2) SHA-256 da string normalizada (UTF-8)
  * 3) SHA-256 da string normalizada em UTF-16LE (compat .NET)
- * 4) Fallback para conteúdo bruto trimado
+ * 4) Fallback para conteudo bruto trimado
  */
 async function computeAllKeyFingerprints(publicKey: string): Promise<FingerprintCandidate[]> {
   const candidates: FingerprintCandidate[] = []

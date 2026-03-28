@@ -45,7 +45,7 @@ serveTenant(async (_req, ctx) => {
   if (toBlock.length === 0) {
     return {
       success: true,
-      message: 'Todos os itens perigosos já estão bloqueados',
+      message: 'Todos os itens perigosos ja estao bloqueados',
       blocked: 0,
       already_blocked: dangerousNodes.length,
     };
@@ -58,7 +58,7 @@ serveTenant(async (_req, ctx) => {
     return {
       tenant_id: tenantId,
       domain_pattern: node.node_value.toLowerCase(),
-      reason: `Bloqueio automático: ${meta?.threat_type || 'ameaça detectada'} (fonte: ${sourceInfo}, risco: ${node.risk_score}%)`,
+      reason: `Bloqueio automatico: ${meta?.threat_type || 'ameaca detectada'} (fonte: ${sourceInfo}, risco: ${node.risk_score}%)`,
       blocked_by: userId,
       is_active: true,
     };
@@ -140,8 +140,8 @@ serveTenant(async (_req, ctx) => {
       tenant_id: tenantId,
       alert_type: 'security',
       severity: 'high',
-      title: 'Bloqueio Automático de Ameaças',
-      message: `${blockedCount} domínio(s)/IP(s) perigosos foram bloqueados automaticamente e sincronizados com ${syncResult.jobs_created} agente(s).`,
+      title: 'Bloqueio Automatico de Ameacas',
+      message: `${blockedCount} dominio(s)/IP(s) perigosos foram bloqueados automaticamente e sincronizados com ${syncResult.jobs_created} agente(s).`,
       details: {
         blocked_items: toBlock.map((n: Record<string, unknown>) => n.node_value),
         jobs_created: syncResult.jobs_created,

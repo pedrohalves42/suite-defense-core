@@ -128,7 +128,7 @@ BEGIN
       NEW.id, 
       NEW.tenant_id, 
       'decision', 
-      'Decisão de Fechamento',
+      'Decisao de Fechamento',
       jsonb_build_object(
         'final_status', NEW.status,
         'closure_reason', NEW.closure_reason,

@@ -230,12 +230,12 @@ Deno.serve(async (req) => {
 
     if (existingAgent) {
       // CRITICAL FIX: Usar RPC revive_agent_on_reenroll para resetar estado completo
-      // Isso garante que o agente volte a status='active' e limpe flags problemáticas
-      // ADR-029 CRIT-06: Passar p_expected_tenant_id para validação cross-tenant
+      // Isso garante que o agente volte a status='active' e limpe flags problematicas
+      // ADR-029 CRIT-06: Passar p_expected_tenant_id para validacao cross-tenant
       const { data: reviveResult, error: reviveError } = await supabase.rpc('revive_agent_on_reenroll', {
         p_agent_id: existingAgent.id,
         p_new_hmac_secret: hmacSecret,
-        p_expected_tenant_id: keyData.tenant_id  // ADR-029 CRIT-06: Validação cross-tenant
+        p_expected_tenant_id: keyData.tenant_id  // ADR-029 CRIT-06: Validacao cross-tenant
       });
 
       // ADR-029 CRIT-06: Tratamento de tentativa cross-tenant

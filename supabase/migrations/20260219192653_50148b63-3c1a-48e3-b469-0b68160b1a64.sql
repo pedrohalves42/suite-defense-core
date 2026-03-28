@@ -15,13 +15,13 @@ BEGIN
     NEW.scheduling_paused_reason := null;
   END IF;
 
-  -- Agent_state going offline while status is still active → pause scheduling
+  -- Agent_state going offline while status is still active ? pause scheduling
   IF NEW.agent_state = 'offline' AND (OLD.agent_state IS DISTINCT FROM 'offline') THEN
     NEW.scheduling_paused := true;
     NEW.scheduling_paused_reason := 'auto: agent_state went offline at ' || now()::text;
   END IF;
 
-  -- Agent_state recovering from offline → resume scheduling
+  -- Agent_state recovering from offline ? resume scheduling
   IF OLD.agent_state = 'offline' AND NEW.agent_state != 'offline' THEN
     NEW.scheduling_paused := false;
     NEW.scheduling_paused_reason := null;

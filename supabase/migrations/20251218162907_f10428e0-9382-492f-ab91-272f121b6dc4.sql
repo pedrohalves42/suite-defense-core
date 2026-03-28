@@ -1,5 +1,5 @@
 -- ============================================================
--- AJUSTE 1: Telemetria de Decisão de Rollout
+-- AJUSTE 1: Telemetria de Decisao de Rollout
 -- ============================================================
 CREATE TABLE public.agent_update_decisions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -14,7 +14,7 @@ CREATE TABLE public.agent_update_decisions (
   created_at timestamptz DEFAULT now()
 );
 
--- Índices para queries
+-- Indices para queries
 CREATE INDEX idx_update_decisions_agent ON agent_update_decisions(agent_id, created_at DESC);
 CREATE INDEX idx_update_decisions_decision ON agent_update_decisions(decision, created_at DESC);
 CREATE INDEX idx_update_decisions_platform ON agent_update_decisions(platform, created_at DESC);
@@ -27,7 +27,7 @@ CREATE POLICY "super_admin_view_decisions" ON agent_update_decisions
   FOR SELECT TO authenticated
   USING (public.has_role(auth.uid(), 'super_admin'));
 
--- Cleanup automático de decisões antigas (> 30 dias)
+-- Cleanup automatico de decisoes antigas (> 30 dias)
 CREATE OR REPLACE FUNCTION cleanup_old_update_decisions()
 RETURNS void
 LANGUAGE plpgsql
@@ -41,14 +41,14 @@ END;
 $$;
 
 -- ============================================================
--- FASE 2: Assinatura Criptográfica Ed25519
+-- FASE 2: Assinatura Criptografica Ed25519
 -- ============================================================
 ALTER TABLE public.agent_releases
 ADD COLUMN IF NOT EXISTS signature_base64 text,
 ADD COLUMN IF NOT EXISTS signed_at timestamptz,
 ADD COLUMN IF NOT EXISTS signed_by text;
 
--- Comentário explicativo
+-- Comentario explicativo
 COMMENT ON COLUMN agent_releases.signature_base64 IS 'Ed25519 signature of script_content in Base64 format';
 COMMENT ON COLUMN agent_releases.signed_at IS 'Timestamp when the release was cryptographically signed';
 COMMENT ON COLUMN agent_releases.signed_by IS 'Identifier of who signed the release (CI, manual, operator name)';

@@ -4,8 +4,8 @@
 -- V-1500: Views sem isolamento de tenant
 -- ============================================
 
--- 1. hmac_agent_secrets: CRITICAL - expõe hmac_secret de TODOS os tenants sem auth check
--- Esta view é usada apenas por Edge Functions (service_role), mas deve ter guard
+-- 1. hmac_agent_secrets: CRITICAL - expoe hmac_secret de TODOS os tenants sem auth check
+-- Esta view e usada apenas por Edge Functions (service_role), mas deve ter guard
 DROP VIEW IF EXISTS public.hmac_agent_secrets;
 CREATE VIEW public.hmac_agent_secrets
 WITH (security_invoker=on, security_barrier=true) AS
@@ -17,7 +17,7 @@ WHERE status = 'active' AND hmac_secret IS NOT NULL
     OR current_setting('role', true) = 'service_role'
   );
 
--- 2. v_normalized_events: CRITICAL - expõe eventos EDR de TODOS os tenants sem filtro
+-- 2. v_normalized_events: CRITICAL - expoe eventos EDR de TODOS os tenants sem filtro
 DROP VIEW IF EXISTS public.v_normalized_events;
 CREATE VIEW public.v_normalized_events
 WITH (security_invoker=on, security_barrier=true) AS

@@ -1,6 +1,6 @@
 import { requireEnv } from '../_shared/env.ts';
 // Edge Function: Generate Executive Report (Daily Risk Delta Narrative)
-// Fase 2: Narrativa Executiva Contínua
+// Fase 2: Narrativa Executiva Continua
 
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -32,27 +32,27 @@ interface RiskDelta {
 
 async function generateExecutiveSummary(data: RiskDelta): Promise<string> {
   try {
-    const prompt = `Você é um especialista em segurança cibernética. Gere um resumo executivo CURTO (máximo 3 frases) em português brasileiro sobre a situação de segurança do dia.
+    const prompt = `Voce e um especialista em seguranca cibernetica. Gere um resumo executivo CURTO (maximo 3 frases) em portugues brasileiro sobre a situacao de seguranca do dia.
 
 Dados do dia:
-- Score de risco início do dia: ${data.riskScoreStart ?? 'Não disponível'}
-- Score de risco fim do dia: ${data.riskScoreEnd ?? 'Não disponível'}
-- Variação: ${data.delta > 0 ? '+' : ''}${data.delta} pontos
-- Ameaças bloqueadas: ${data.threatsBlocked}
+- Score de risco inicio do dia: ${data.riskScoreStart ?? 'Nao disponivel'}
+- Score de risco fim do dia: ${data.riskScoreEnd ?? 'Nao disponivel'}
+- Variacao: ${data.delta > 0 ? '+' : ''}${data.delta} pontos
+- Ameacas bloqueadas: ${data.threatsBlocked}
 - Incidentes prevenidos: ${data.incidentsPrevented}
-- Ações de segurança executadas: ${data.actionsExecuted}
-- Ações aguardando aprovação: ${data.actionsPendingApproval}
+- Acoes de seguranca executadas: ${data.actionsExecuted}
+- Acoes aguardando aprovacao: ${data.actionsPendingApproval}
 ${data.keyEvents.length > 0 ? `- Eventos principais: ${data.keyEvents.slice(0, 3).map(e => e.description).join('; ')}` : ''}
 
 Regras:
 1. Seja direto e objetivo
-2. Foque no impacto para o negócio
+2. Foque no impacto para o negocio
 3. Use linguagem simples (para donos de empresa)
 4. Se o score melhorou, destaque. Se piorou, explique o risco.
-5. Não use jargões técnicos`;
+5. Nao use jargoes tecnicos`;
 
     const aiResult = await callAISimple(
-      'Você é um especialista em segurança cibernética corporativa.',
+      'Voce e um especialista em seguranca cibernetica corporativa.',
       prompt,
       {
         maxTokens: 200,
@@ -78,26 +78,26 @@ function generateFallbackSummary(data: RiskDelta): string {
 
   // Risk trend
   if (data.delta < 0) {
-    parts.push(`Seu nível de risco melhorou ${Math.abs(data.delta)} pontos hoje.`);
+    parts.push(`Seu nivel de risco melhorou ${Math.abs(data.delta)} pontos hoje.`);
   } else if (data.delta > 0) {
-    parts.push(`Atenção: seu nível de risco aumentou ${data.delta} pontos.`);
+    parts.push(`Atencao: seu nivel de risco aumentou ${data.delta} pontos.`);
   } else {
-    parts.push('Seu nível de risco permaneceu estável hoje.');
+    parts.push('Seu nivel de risco permaneceu estavel hoje.');
   }
 
   // Threats blocked
   if (data.threatsBlocked > 0) {
-    parts.push(`${data.threatsBlocked} ameaça${data.threatsBlocked > 1 ? 's foram bloqueadas' : ' foi bloqueada'} automaticamente.`);
+    parts.push(`${data.threatsBlocked} ameaca${data.threatsBlocked > 1 ? 's foram bloqueadas' : ' foi bloqueada'} automaticamente.`);
   }
 
   // Actions
   if (data.actionsExecuted > 0) {
-    parts.push(`${data.actionsExecuted} ação${data.actionsExecuted > 1 ? 'ões de proteção foram executadas' : ' de proteção foi executada'}.`);
+    parts.push(`${data.actionsExecuted} acao${data.actionsExecuted > 1 ? 'oes de protecao foram executadas' : ' de protecao foi executada'}.`);
   }
 
   // Pending approvals
   if (data.actionsPendingApproval > 0) {
-    parts.push(`${data.actionsPendingApproval} ação${data.actionsPendingApproval > 1 ? 'ões aguardam' : ' aguarda'} sua aprovação.`);
+    parts.push(`${data.actionsPendingApproval} acao${data.actionsPendingApproval > 1 ? 'oes aguardam' : ' aguarda'} sua aprovacao.`);
   }
 
   return parts.join(' ');

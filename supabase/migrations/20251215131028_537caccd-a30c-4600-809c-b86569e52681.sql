@@ -1,5 +1,5 @@
 -- ============================================
--- FASE 4: CORREÇÕES FINAIS DE PRODUÇÃO
+-- FASE 4: CORRECOES FINAIS DE PRODUCAO
 -- ============================================
 
 -- 1. CLEANUP: Desativar enrollment_keys expiradas
@@ -7,7 +7,7 @@ UPDATE public.enrollment_keys
 SET is_active = false
 WHERE expires_at < NOW() AND is_active = true;
 
--- 2. ÍNDICES DE PERFORMANCE para tabelas de alto volume
+-- 2. INDICES DE PERFORMANCE para tabelas de alto volume
 -- agent_web_activity
 CREATE INDEX IF NOT EXISTS idx_agent_web_activity_created_at 
 ON public.agent_web_activity(created_at DESC);
@@ -40,7 +40,7 @@ ON public.anomaly_events(tenant_id, type);
 CREATE INDEX IF NOT EXISTS idx_antivirus_status_collected_at 
 ON public.antivirus_status(collected_at DESC);
 
--- audit_logs (alta frequência de queries)
+-- audit_logs (alta frequencia de queries)
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at 
 ON public.audit_logs(created_at DESC);
 
@@ -54,7 +54,7 @@ ON public.generated_reports(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_generated_reports_commercial 
 ON public.generated_reports(tenant_id, commercial_priority, sales_status);
 
--- jobs (crítico para performance)
+-- jobs (critico para performance)
 CREATE INDEX IF NOT EXISTS idx_jobs_created_at 
 ON public.jobs(created_at DESC);
 
@@ -69,8 +69,8 @@ ON public.system_alerts(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_system_alerts_tenant_resolved 
 ON public.system_alerts(tenant_id, resolved);
 
--- 3. CLEANUP automático via pg_cron (se não existir)
--- Adicionar job para cleanup de enrollment_keys expiradas (diário às 03:00)
+-- 3. CLEANUP automatico via pg_cron (se nao existir)
+-- Adicionar job para cleanup de enrollment_keys expiradas (diario as 03:00)
 SELECT cron.schedule(
   'cleanup-expired-enrollment-keys',
   '0 3 * * *',

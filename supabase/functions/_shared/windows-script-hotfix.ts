@@ -5,8 +5,8 @@ export interface WindowsScriptHotfixResult {
 }
 
 /**
- * Aplica hotfixes críticos de compatibilidade no script Windows do agente.
- * Mantém comportamento idempotente (não reaplica quando já existe marcador HOTFIX).
+ * Aplica hotfixes criticos de compatibilidade no script Windows do agente.
+ * Mantem comportamento idempotente (nao reaplica quando ja existe marcador HOTFIX).
  */
 export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixResult {
   let content = script;
@@ -304,7 +304,7 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
     reasons.push('safe_ecdsa_signature_access');
   }
 
-  // HOTFIX 14: Fail-open signature verification — INCLUDING null signatures
+  // HOTFIX 14: Fail-open signature verification ? INCLUDING null signatures
   // On PowerShell 5.1, Ed25519 is NOT available. When signature is null AND Ed25519 is
   // unavailable, accept update based on SHA256 validation alone. This must run BEFORE
   // the "unsigned updates rejected" check to handle the chicken-and-egg scenario.
@@ -364,7 +364,7 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
 # Prevents permanent TOCTOU crash loop caused by encoding differences between
 # Base64-decoded bytes (WriteAllBytes) and PowerShell's Get-Content re-read
 try {
-    # Resolve script path dynamically — the file is named cybershield-agent-<AgentName>.ps1
+    # Resolve script path dynamically ? the file is named cybershield-agent-<AgentName>.ps1
     $toctouScriptPath = $null
     $toctouCandidates = @(Get-ChildItem "C:\\CyberShield\\cybershield-agent-*.ps1" -ErrorAction SilentlyContinue)
     if ($toctouCandidates.Count -gt 0) { $toctouScriptPath = $toctouCandidates[0].FullName }
@@ -542,8 +542,8 @@ $1    $error_message = "Unknown job type: $($Job.job_type)"`
   }
 
   // HOTFIX 21: "vv" duplicated version prefix in startup log
-  // $Global:AgentVersion already contém "v5.0.14", então "v$($Global:AgentVersion)" vira "vv5.0.14"
-  // IMPORTANT: não inserir marcador dentro da string de log para não vazar no output
+  // $Global:AgentVersion already contem "v5.0.14", entao "v$($Global:AgentVersion)" vira "vv5.0.14"
+  // IMPORTANT: nao inserir marcador dentro da string de log para nao vazar no output
   if (content.includes('Agent v$($Global:AgentVersion)')) {
     const updated = content.replace(
       /Agent v\$\(\$Global:AgentVersion\)/g,
@@ -555,7 +555,7 @@ $1    $error_message = "Unknown job type: $($Job.job_type)"`
     }
   }
 
-  // HOTFIX 22: CNG key creation "Object already exists" — use OverwriteExistingKey flag
+  // HOTFIX 22: CNG key creation "Object already exists" ? use OverwriteExistingKey flag
   // The original code uses $null name (ephemeral) but some Windows versions still persist it.
   // Adding OverwriteExistingKey eliminates the 3 failed attempts on every boot.
   if (content.includes('CngKey]::Create(') && !content.includes('HOTFIX-CNG-CLEANUP')) {
@@ -735,7 +735,7 @@ $1    $error_message = "Unknown job type: $($Job.job_type)"`
     }
   }
 
-  // HOTFIX 25: DNS 403 silenciado — treat "feature disabled" as INFO, not error
+  // HOTFIX 25: DNS 403 silenciado ? treat "feature disabled" as INFO, not error
   // The serve-dns-filter endpoint returns 403 when dns_local_filter_enabled is false.
   // Invoke-SecureRequest logs this as a permanent ERROR. We intercept it in Sync-DnsBlocklist.
   if (content.includes('Sync-DnsBlocklist') && content.includes('serve-dns-filter') && !content.includes('HOTFIX-DNS-403-INFO')) {
@@ -859,7 +859,7 @@ $1    $error_message = "Unknown job type: $($Job.job_type)"`
 
   // HOTFIX 31: Guard null $ecdsa after RSA-2048 fallback (HOTFIX 26)
   // After HOTFIX 26 disposes $ecdsa and sets it to $null, remaining original script code
-  // (fingerprint generation, Dispose() in finally blocks) tries to call methods on $null → FATAL crash
+  // (fingerprint generation, Dispose() in finally blocks) tries to call methods on $null ? FATAL crash
   if (content.includes('HOTFIX-RSA-FALLBACK') && !content.includes('HOTFIX-NULL-ECDSA-GUARD')) {
     // Replace bare $ecdsa.Dispose() calls with null-safe guards (outside of HOTFIX-RSA-FALLBACK block)
     content = content.replace(
@@ -888,10 +888,10 @@ $1    $error_message = "Unknown job type: $($Job.job_type)"`
   }
 
   // HOTFIX 32: Deduplicate 'first_seen' in ProcessBaseline
-  // Error: "O item já foi adicionado. Chave contida no dicionário: 'first_seen'"
+  // Error: "O item ja foi adicionado. Chave contida no dicionario: 'first_seen'"
   // Root cause: Both Add-Member without -Force AND hashtable .Add() with duplicate keys
   if (content.includes('first_seen') && !content.includes('HOTFIX-BASELINE-DEDUP')) {
-    // Fix 1: Add-Member calls for 'first_seen' — add -Force
+    // Fix 1: Add-Member calls for 'first_seen' ? add -Force
     if (content.includes('Add-Member')) {
       content = content.replace(
         /Add-Member\s+-(?:NotePropertyName|MemberType\s+NoteProperty\s+-Name)\s+["']?first_seen["']?\s+-(?:NotePropertyValue|Value)\s+/g,
@@ -902,7 +902,7 @@ $1    $error_message = "Unknown job type: $($Job.job_type)"`
         'Add-Member -NotePropertyName "first_seen" -NotePropertyValue $1 -Force -ErrorAction SilentlyContinue <# HOTFIX-BASELINE-DEDUP #>$2'
       );
     }
-    // Fix 2: Hashtable assignment — use indexer instead of .Add()
+    // Fix 2: Hashtable assignment ? use indexer instead of .Add()
     content = content.replace(
       /\$(?:Global:)?ProcessBaseline\[([^\]]+)\]\s*=\s*\$proc(?!\s*<#\s*HOTFIX)/g,
       '$Global:ProcessBaseline[$1] = $proc <# HOTFIX-BASELINE-DEDUP #>'
@@ -1180,7 +1180,7 @@ try {
   // HOTFIX 36: Remove orphan closing brace left by HOTFIX 33 regex mismatch
   // When HOTFIX 33 replaced the ECDSA signing block, its regex sometimes left behind
   // the original finally block's closing brace, causing "Unexpected token '}'" at parse time.
-  // Pattern in DB: "}\n        }\n        }\n\n    } catch {" → should be "}\n        }\n\n    } catch {"
+  // Pattern in DB: "}\n        }\n        }\n\n    } catch {" ? should be "}\n        }\n\n    } catch {"
   if (content.includes('HOTFIX-ECDSA-RSA-AUTOREGEN')) {
     // Match: close-catch "}" + close-if "}" + ORPHAN "}" + function-catch "} catch {"
     // We need to remove only the ORPHAN brace between if-close and function-catch
@@ -1286,7 +1286,7 @@ try {
     }
   }
 
-  // HOTFIX 38: BUG 2 fix — Ensure keys are generated BEFORE first poll-jobs/heartbeat
+  // HOTFIX 38: BUG 2 fix ? Ensure keys are generated BEFORE first poll-jobs/heartbeat
   // Root cause: Initialize-AgentKeys runs RSA fallback but the first heartbeat/poll-jobs call
   // happens before the key registration completes, leaving jobs unsigned in the first cycle.
   // Fix: Inject a synchronous key-readiness gate after Initialize-AgentKeys returns
@@ -1332,7 +1332,7 @@ try {
     }
   }
 
-  // HOTFIX 39: BUG 5 fix — Normalize poll interval to 600s to match server-side unification
+  // HOTFIX 39: BUG 5 fix ? Normalize poll interval to 600s to match server-side unification
   // Prevents agent-side ping-pong between heartbeat (600s) and poll-jobs (previously 300s)
   if (content.includes('$Global:JobPollIntervalSeconds') && !content.includes('HOTFIX-UNIFIED-POLL')) {
     // Replace any hardcoded 300 poll interval with 600
@@ -1416,9 +1416,9 @@ try {
     }
   }
 
-  // HOTFIX 35: Registry snapshot — send initial baseline + periodic snapshots
+  // HOTFIX 35: Registry snapshot ? send initial baseline + periodic snapshots
   // The original code only sends registry events when EDRInitialized=true AND values change.
-  // On stable machines, registry keys rarely change → ~0 events/day.
+  // On stable machines, registry keys rarely change ? ~0 events/day.
   // Fix: (a) On first cycle, send all values as 'registry_snapshot' events.
   //      (b) Every 15 cycles (~30min), resend full snapshot for visibility.
   if (
@@ -1438,8 +1438,8 @@ try {
     // Replace the registry telemetry block to include snapshot logic
     // Match with optional blank line between $currentRegSnapshot assignment and if ($Global:EDRInitialized)
     const registryHotfix = content.replace(
-      /# ── 4\. REGISTRY TELEMETRY \(persistence keys\) ──\s*\r?\n\s*try \{[\s\S]*?\$currentRegSnapshot\[\$snapKey\] = @\{ key_path = \$regKey; value_name = \$prop\.Name; value_data = \[string\]\$prop\.Value \}\s*\r?\n\s*(?:\r?\n\s*)?if \(\$Global:EDRInitialized\) \{/m,
-      `# ── 4. REGISTRY TELEMETRY (persistence keys) ── # HOTFIX-REGISTRY-SNAPSHOT
+      /# ?? 4\. REGISTRY TELEMETRY \(persistence keys\) ??\s*\r?\n\s*try \{[\s\S]*?\$currentRegSnapshot\[\$snapKey\] = @\{ key_path = \$regKey; value_name = \$prop\.Name; value_data = \[string\]\$prop\.Value \}\s*\r?\n\s*(?:\r?\n\s*)?if \(\$Global:EDRInitialized\) \{/m,
+      `# ?? 4. REGISTRY TELEMETRY (persistence keys) ?? # HOTFIX-REGISTRY-SNAPSHOT
     try {
         $currentRegSnapshot = @{}
         $Global:EDRRegistryCycleCount++
@@ -1479,7 +1479,7 @@ try {
     }
   }
 
-  // HOTFIX 42: Runtime TOCTOU self-heal — intercept the TOCTOU violation EXIT and replace
+  // HOTFIX 42: Runtime TOCTOU self-heal ? intercept the TOCTOU violation EXIT and replace
   // with re-computation of the hash cache. The agent currently calls Exit/Stop when hash
   // mismatches; this converts it to a self-heal + continue pattern.
   if (content.includes('TOCTOU VIOLATION') && !content.includes('HOTFIX-TOCTOU-RUNTIME-SELFHEAL')) {
@@ -1508,7 +1508,7 @@ try {
     reasons.push('toctou_runtime_selfheal');
   }
 
-  // HOTFIX 43: Heartbeat script_sha256 response handler — when heartbeat returns a
+  // HOTFIX 43: Heartbeat script_sha256 response handler ? when heartbeat returns a
   // script_sha256 value, update the local hash cache to match the server's expectation.
   // This ensures the agent stays in sync even if the file was re-written by AV/encoding.
   if (content.includes('script_sha256') && content.includes('expected_script_hash') && !content.includes('HOTFIX-HEARTBEAT-SHA256-SYNC')) {
@@ -1596,8 +1596,8 @@ try {
   // HOTFIX 44: TOCTOU Dual-Hash + Degraded Mode (OP-005 permanent fix)
   // Instead of terminating on hash mismatch, the agent:
   // 1. Keeps a "previous" hash alongside "current"
-  // 2. If actual matches previous → degraded mode (known rollback)
-  // 3. If actual matches neither → attempt self-heal from server
+  // 2. If actual matches previous ? degraded mode (known rollback)
+  // 3. If actual matches neither ? attempt self-heal from server
   // 4. Only terminate after 3 consecutive unknown hash failures
   if (
     content.includes('expected_script_hash.json') &&

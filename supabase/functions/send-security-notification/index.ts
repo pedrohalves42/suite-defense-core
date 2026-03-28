@@ -195,7 +195,7 @@ async function sendEmailNotification(
     const emoji = severityEmoji[payload.severity] || '[INFO] ?';
 
     // Email HTML with CSP nonce for inline styles
-    // ✅ ONE-CLICK APPROVAL: Check if this is a playbook approval request
+    // [OK]  ONE-CLICK APPROVAL: Check if this is a playbook approval request
     const isApprovalRequest = payload.alertType === 'playbook_approval_required';
     const approvalUrl = (payload.details as Record<string, unknown>)?.approval_url as string;
     const playbookName = (payload.details as Record<string, unknown>)?.playbook_name as string;
@@ -238,11 +238,11 @@ async function sendEmailNotification(
       <!-- ONE-CLICK APPROVAL SECTION -->
       <div style="margin: 24px 0; text-align: center;">
         <p style="color: #64748b; font-size: 14px; margin-bottom: 16px;">
-          Clique no botão abaixo para aprovar a execução do playbook:
+          Clique no botao abaixo para aprovar a execucao do playbook:
         </p>
         <a href="${approvalUrl}" 
            style="display: inline-block; padding: 16px 32px; background-color: #22c55e; color: white; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);">
-          ✅ Aprovar Agora
+          [OK]  Aprovar Agora
         </a>
         <p style="color: #94a3b8; font-size: 12px; margin-top: 12px;">
           Este link expira em 24 horas e pode ser usado apenas uma vez.
@@ -251,7 +251,7 @@ async function sendEmailNotification(
       
       ${actions && actions.length > 0 ? `
         <div style="margin: 20px 0; padding: 16px; background-color: #fef3c7; border-radius: 8px; border: 1px solid #fcd34d;">
-          <h4 style="color: #92400e; margin: 0 0 12px 0; font-size: 14px;">⚠️ Ações que serão executadas:</h4>
+          <h4 style="color: #92400e; margin: 0 0 12px 0; font-size: 14px;">[WARN] ? Acoes que serao executadas:</h4>
           <ul style="margin: 0; padding-left: 20px; color: #78350f;">
             ${actions.map(a => `<li style="margin: 4px 0; font-size: 13px;">${a.label} <span style="color: ${a.risk === 'high' ? '#dc2626' : a.risk === 'medium' ? '#ea580c' : '#65a30d'}; font-size: 11px;">(${a.risk})</span></li>`).join('')}
           </ul>
@@ -261,7 +261,7 @@ async function sendEmailNotification(
       ${expiresAtFormatted ? `
         <div style="margin: 16px 0; padding: 12px; background-color: #fef2f2; border-radius: 8px; border: 1px solid #fecaca;">
           <p style="margin: 0; color: #991b1b; font-size: 13px;">
-            ⏰ <strong>Prazo para aprovação:</strong> ${expiresAtFormatted}
+            ? <strong>Prazo para aprovacao:</strong> ${expiresAtFormatted}
           </p>
         </div>
       ` : ''}

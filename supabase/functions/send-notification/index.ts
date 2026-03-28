@@ -1,5 +1,5 @@
 /**
- * send-notification — DEPRECATED REDIRECT (COST-OPT v9)
+ * send-notification ? DEPRECATED REDIRECT (COST-OPT v9)
  * 
  * Redirects all calls to notification-dispatcher.
  * Kept for backward compatibility.

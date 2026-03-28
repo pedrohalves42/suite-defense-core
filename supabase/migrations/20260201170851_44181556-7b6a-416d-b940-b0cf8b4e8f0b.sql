@@ -1,5 +1,5 @@
 -- ============================================================
--- MIGRAÇÃO: 5 Correções Cirúrgicas para Bugs Silenciosos
+-- MIGRACAO: 5 Correcoes Cirurgicas para Bugs Silenciosos
 -- Data: 2026-02-01
 -- ============================================================
 
@@ -18,13 +18,13 @@ SECURITY DEFINER
 SET search_path TO public
 AS $$
 BEGIN
-  -- Permitir deleção de registros arquivados há mais de 30 dias
+  -- Permitir delecao de registros arquivados ha mais de 30 dias
   IF OLD.archived_at IS NOT NULL 
      AND OLD.archived_at < NOW() - INTERVAL '30 days' THEN
     RETURN OLD;
   END IF;
   
-  -- Bloquear deleção de registros não arquivados ou recentes
+  -- Bloquear delecao de registros nao arquivados ou recentes
   RAISE EXCEPTION 'Cannot delete job execution records. Archive first, then wait 30 days.'
     USING ERRCODE = '23514';
 END;
@@ -137,7 +137,7 @@ BEGIN
 END;
 $$;
 
--- 5. View canônica v_agent_state (fonte única de verdade)
+-- 5. View canonica v_agent_state (fonte unica de verdade)
 CREATE OR REPLACE VIEW v_agent_state 
 WITH (security_invoker = on) AS
 SELECT
@@ -152,7 +152,7 @@ SELECT
   a.agent_state_reason,
   a.is_isolated,
   a.is_throttled,
-  -- Estado canônico derivado
+  -- Estado canonico derivado
   CASE
     WHEN a.archived_at IS NOT NULL THEN 'archived'
     WHEN a.is_isolated THEN 'isolated'
@@ -171,7 +171,7 @@ WHERE a.status = 'active'
   AND (a.tenant_id = get_active_tenant_id() OR is_current_super_admin());
 
 COMMENT ON VIEW v_agent_state IS 
-'ADR: View canônica para estado do agente. Toda UI deve ler estado APENAS desta view.';
+'ADR: View canonica para estado do agente. Toda UI deve ler estado APENAS desta view.';
 
 -- 6. Tabela cron_health_checks para monitoramento
 CREATE TABLE IF NOT EXISTS cron_health_checks (
@@ -249,7 +249,7 @@ BEGIN
     RAISE EXCEPTION 'Only super_admin can archive executions';
   END IF;
 
-  -- Etapa 1: Arquivar execuções antigas
+  -- Etapa 1: Arquivar execucoes antigas
   WITH to_archive AS (
     SELECT id FROM job_executions
     WHERE created_at < NOW() - (p_older_than_days || ' days')::INTERVAL
@@ -263,7 +263,7 @@ BEGIN
   
   GET DIAGNOSTICS v_archived = ROW_COUNT;
   
-  -- Etapa 2: Deletar apenas após 30 dias arquivado
+  -- Etapa 2: Deletar apenas apos 30 dias arquivado
   DELETE FROM job_executions
   WHERE archived_at < NOW() - INTERVAL '30 days';
   

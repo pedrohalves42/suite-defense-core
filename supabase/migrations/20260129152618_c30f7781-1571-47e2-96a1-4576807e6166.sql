@@ -2,7 +2,7 @@
 -- P0: Adicionar fallback para JWT vazio nas views agents_safe e agent_snapshots
 -- =============================================================================
 
--- Primeiro, vamos obter a definição atual de agents_safe e recriá-la com fallback
+-- Primeiro, vamos obter a definicao atual de agents_safe e recria-la com fallback
 DROP VIEW IF EXISTS agents_safe CASCADE;
 
 CREATE OR REPLACE VIEW agents_safe 
@@ -54,21 +54,21 @@ SELECT
   revalidation_required_at
 FROM agents
 WHERE 
-  -- Aceita tenant_id do JWT OU fallback para qualquer tenant que o usuário tem acesso
+  -- Aceita tenant_id do JWT OU fallback para qualquer tenant que o usuario tem acesso
   (tenant_id = get_active_tenant_id()) 
   OR 
-  -- Fallback: verifica se usuário tem acesso via user_roles quando JWT está vazio
+  -- Fallback: verifica se usuario tem acesso via user_roles quando JWT esta vazio
   (get_active_tenant_id() IS NULL AND EXISTS (
     SELECT 1 FROM user_roles ur 
     WHERE ur.user_id = auth.uid() 
       AND ur.tenant_id = agents.tenant_id
   ))
   OR
-  -- Super admin vê tudo
+  -- Super admin ve tudo
   is_current_super_admin();
 
--- Comentário para documentar a decisão
-COMMENT ON VIEW agents_safe IS 'ADR-026: View segura de agentes com fallback para JWT sem active_tenant_id. Exclui hmac_secret. Permite acesso via user_roles quando JWT claim está ausente.';
+-- Comentario para documentar a decisao
+COMMENT ON VIEW agents_safe IS 'ADR-026: View segura de agentes com fallback para JWT sem active_tenant_id. Exclui hmac_secret. Permite acesso via user_roles quando JWT claim esta ausente.';
 
 -- Recriar agent_snapshots com o mesmo fallback
 DROP VIEW IF EXISTS agent_snapshots CASCADE;
@@ -97,21 +97,21 @@ WHERE
   a.archived_at IS NULL
   AND a.status = 'active'
   AND (
-    -- Aceita tenant_id do JWT OU fallback para qualquer tenant que o usuário tem acesso
+    -- Aceita tenant_id do JWT OU fallback para qualquer tenant que o usuario tem acesso
     (a.tenant_id = get_active_tenant_id()) 
     OR 
-    -- Fallback: verifica se usuário tem acesso via user_roles quando JWT está vazio
+    -- Fallback: verifica se usuario tem acesso via user_roles quando JWT esta vazio
     (get_active_tenant_id() IS NULL AND EXISTS (
       SELECT 1 FROM user_roles ur 
       WHERE ur.user_id = auth.uid() 
         AND ur.tenant_id = a.tenant_id
     ))
     OR
-    -- Super admin vê tudo
+    -- Super admin ve tudo
     is_current_super_admin()
   );
 
-COMMENT ON VIEW agent_snapshots IS 'ADR-026: View de snapshots de agentes com fallback para JWT sem active_tenant_id. Inclui métricas de latência e status online.';
+COMMENT ON VIEW agent_snapshots IS 'ADR-026: View de snapshots de agentes com fallback para JWT sem active_tenant_id. Inclui metricas de latencia e status online.';
 
 -- =============================================================================
 -- P1: Atualizar RPC get_agents_snapshots_list para usar tabela direta
@@ -145,28 +145,28 @@ AS $function$
   WHERE a.archived_at IS NULL
     AND a.status = 'active'
     AND (
-      -- Parâmetro explícito tem prioridade
+      -- Parametro explicito tem prioridade
       a.tenant_id = p_tenant_id
       OR 
-      -- Fallback para JWT quando parâmetro é NULL
+      -- Fallback para JWT quando parametro e NULL
       (p_tenant_id IS NULL AND a.tenant_id = get_active_tenant_id())
       OR
-      -- Fallback para user_roles quando JWT também está vazio
+      -- Fallback para user_roles quando JWT tambem esta vazio
       (p_tenant_id IS NULL AND get_active_tenant_id() IS NULL AND EXISTS (
         SELECT 1 FROM user_roles ur 
         WHERE ur.user_id = auth.uid() 
           AND ur.tenant_id = a.tenant_id
       ))
       OR
-      -- Super admin vê tudo
+      -- Super admin ve tudo
       is_current_super_admin()
     );
 $function$;
 
-COMMENT ON FUNCTION public.get_agents_snapshots_list IS 'RPC SECURITY DEFINER para lista de snapshots de agentes. Prioriza p_tenant_id explícito, depois JWT, depois user_roles como fallback.';
+COMMENT ON FUNCTION public.get_agents_snapshots_list IS 'RPC SECURITY DEFINER para lista de snapshots de agentes. Prioriza p_tenant_id explicito, depois JWT, depois user_roles como fallback.';
 
 -- =============================================================================
--- P1: Criar RPC get_agents_list para substituir queries diretas à view
+-- P1: Criar RPC get_agents_list para substituir queries diretas a view
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION public.get_agents_list(
@@ -203,4 +203,4 @@ AS $function$
     AND status = 'active';
 $function$;
 
-COMMENT ON FUNCTION public.get_agents_list IS 'RPC SECURITY DEFINER para lista de agentes com parâmetro tenant_id explícito. Não depende de JWT claims.';
+COMMENT ON FUNCTION public.get_agents_list IS 'RPC SECURITY DEFINER para lista de agentes com parametro tenant_id explicito. Nao depende de JWT claims.';

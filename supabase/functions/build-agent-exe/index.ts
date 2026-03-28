@@ -1,5 +1,5 @@
 /**
- * build-agent-exe Edge Function — Modularized & migrated to serveTenant
+ * build-agent-exe Edge Function ? Modularized & migrated to serveTenant
  *
  * Handles:
  * - GET: Health check (pre-auth, handled before serveTenant)
@@ -25,14 +25,14 @@ import { validateGitHubAccess, dispatchBuild } from './github-dispatch.ts';
 const BUILD_GH_TOKEN = Deno.env.get('BUILD_GH_TOKEN');
 const BUILD_GH_REPOSITORY = Deno.env.get('BUILD_GH_REPOSITORY');
 
-// ─── Health Check (pre-auth GET) ────────────────────────────────────────────
+// ??? Health Check (pre-auth GET) ????????????????????????????????????????????
 // Handled inside serveTenant with methods: ['GET', 'POST']
 // GET returns health status; POST triggers build.
 
 serveTenant(async (req, ctx) => {
   const { supabase, userId, requestId, body } = ctx;
 
-  // ── GET: Health check ──
+  // ?? GET: Health check ??
   if (req.method === 'GET') {
     const healthy = !!(
       Deno.env.get('SUPABASE_URL') &&
@@ -57,7 +57,7 @@ serveTenant(async (req, ctx) => {
     );
   }
 
-  // ── POST: Build agent EXE ──
+  // ?? POST: Build agent EXE ??
   if (!userId) {
     return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Authentication required', 401, requestId);
   }
