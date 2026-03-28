@@ -6,7 +6,7 @@ import { TenantId } from '../../../../domain/value-objects/TenantId';
  * Maps between ProcessSnapshot domain entity and Supabase database rows.
  */
 export class ProcessSnapshotMapper {
-  static toDomain(row: Record<string, unknown>): ProcessSnapshot {
+  static toDomain(row: Record<string, any>): ProcessSnapshot {
     const processes: ProcessEntry[] = (row.processes || []).map((p: Record<string, unknown>) => ({
       pid: p.pid,
       name: p.name,

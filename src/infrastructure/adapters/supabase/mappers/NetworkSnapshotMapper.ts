@@ -6,7 +6,7 @@ import { TenantId } from '../../../../domain/value-objects/TenantId';
  * Maps between NetworkSnapshot domain entity and Supabase database rows.
  */
 export class NetworkSnapshotMapper {
-  static toDomain(row: Record<string, unknown>): NetworkSnapshot {
+  static toDomain(row: Record<string, any>): NetworkSnapshot {
     const adapters: NetworkAdapter[] = (row.network_adapters || []).map((a: Record<string, unknown>) => ({
       name: a.name ?? '',
       ipAddress: a.ip_address ?? a.ipAddress ?? '',

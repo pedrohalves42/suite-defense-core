@@ -5,7 +5,7 @@ import { AgentId } from '../../../../domain/value-objects/AgentId';
  * Maps between LightModeConfig domain entity and Supabase database rows.
  */
 export class LightModeConfigMapper {
-  static toDomain(row: Record<string, unknown>): LightModeConfig {
+  static toDomain(row: Record<string, any>): LightModeConfig {
     const agentIdResult = AgentId.create(row.agent_id);
     if (agentIdResult.isFailure) {
       throw new Error(`Invalid agent_id in light_mode_configs: ${row.agent_id}`);
