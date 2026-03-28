@@ -61,7 +61,7 @@ ${weeklyMetrics.critical_open > 0 ? `🔴 ${weeklyMetrics.critical_open} tasks c
         periodStart: format(weekStart, 'yyyy-MM-dd'),
         periodEnd: format(weekEnd, 'yyyy-MM-dd'),
         executiveSummary,
-        keyMetrics: weeklyMetrics as any as import('@/integrations/supabase/types').Json,
+        keyMetrics: weeklyMetrics as unknown as import('@/integrations/supabase/types').Json,
       });
     } finally {
       setGeneratingReport(false);

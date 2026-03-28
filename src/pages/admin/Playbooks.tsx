@@ -299,7 +299,7 @@ export default function Playbooks() {
                             </Badge>
                             {/* Execution Mode Badge */}
                             {(() => {
-                              const mode = (playbook as any).execution_mode || 'assistive';
+                              const mode = (playbook as never).execution_mode || 'assistive';
                               const modeInfo = EXECUTION_MODE_LABELS[mode] || EXECUTION_MODE_LABELS.assistive;
                               return (
                                 <Badge variant="outline" className={modeInfo.color} title={modeInfo.description}>

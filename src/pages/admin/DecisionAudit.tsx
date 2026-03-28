@@ -49,14 +49,14 @@ interface ActionExecuted {
 
 const getEvidence = (event: DecisionEvent): EvidenceData => {
   if (event.evidence && typeof event.evidence === 'object' && !Array.isArray(event.evidence)) {
-    return event.evidence as any as EvidenceData;
+    return event.evidence as unknown as EvidenceData;
   }
   return {};
 };
 
 const getActionsExecuted = (event: DecisionEvent): ActionExecuted[] => {
   if (Array.isArray(event.actions_executed)) {
-    return event.actions_executed as any as ActionExecuted[];
+    return event.actions_executed as unknown as ActionExecuted[];
   }
   return [];
 };

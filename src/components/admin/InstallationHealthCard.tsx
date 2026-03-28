@@ -35,7 +35,7 @@ export function InstallationHealthCard() {
     
     try {
       const { data: result, error: fetchError } = await (supabase
-        .rpc('installation_health_summary') as any as Promise<{ 
+        .rpc('installation_health_summary') as unknown as Promise<{ 
           data: HealthRow[] | null; 
           error: { message: string } | null 
         }>);

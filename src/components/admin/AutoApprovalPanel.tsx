@@ -86,7 +86,7 @@ export function AutoApprovalPanel() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TS2589 workaround
       const { error } = await (supabase
         .from('ai_action_configs')
-        .update({ requires_approval }) as any)
+        .update({ requires_approval }) as never)
         .eq('id', id)
         .eq('tenant_id', tenant?.id);
       if (error) throw error;

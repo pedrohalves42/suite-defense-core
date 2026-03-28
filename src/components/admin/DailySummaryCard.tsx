@@ -66,12 +66,12 @@ export function DailySummaryCard() {
       const [jobsRes, blockedRes, actionsRes, alertsRes] = await Promise.all([
         sb.from('jobs').select('status').eq('tenant_id', tenant.id).gte('created_at', todayISO),
         sb.from('blocked_access_attempts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('attempted_at', todayISO),
-        sb.from('autonomy_actions' as any).select('action_type, status').eq('tenant_id', tenant.id).gte('created_at', todayISO),
+        sb.from('autonomy_actions' as never).select('action_type, status').eq('tenant_id', tenant.id).gte('created_at', todayISO),
         sb.from('system_alerts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('created_at', todayISO),
       ]);
 
       const jobs: Array<{ status: string }> = jobsRes.data || [];
-      const actions: Array<{ action_type: string; status: string }> = (actionsRes.data as any) || [];
+      const actions: Array<{ action_type: string; status: string }> = (actionsRes.data as never) || [];
 
       const jobsSuccess = jobs.filter(j => j.status === 'completed').length;
       const jobsFailed = jobs.filter(j => j.status === 'failed').length;

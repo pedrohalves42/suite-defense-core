@@ -51,7 +51,7 @@ function usePendingCriticalApprovals() {
         .limit(20);
 
       if (error) throw error;
-      return (data || []) as any as PendingApproval[];
+      return (data || []) as unknown as PendingApproval[];
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,
@@ -77,7 +77,7 @@ function ApprovalCard({ approval, onApprove, onReject, isPending }: {
   const createdAgo = formatDistanceToNow(new Date(approval.created_at), { addSuffix: true });
 
   const displayName = approval.playbook_name || 
-    (approval.action_payload as any)?.playbook_name || 
+    (approval.action_payload as never)?.playbook_name || 
     approval.action_type;
 
   return (

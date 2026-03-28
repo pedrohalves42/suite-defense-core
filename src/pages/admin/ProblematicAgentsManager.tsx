@@ -69,7 +69,7 @@ export default function ProblematicAgentsManager() {
         .order('enrolled_at', { ascending: false });
       
       if (error) throw error;
-      return (data || []) as any as ProblematicAgent[];
+      return (data || []) as unknown as ProblematicAgent[];
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,

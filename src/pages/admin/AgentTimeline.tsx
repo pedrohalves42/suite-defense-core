@@ -48,7 +48,7 @@ function securityEventSummary(data: any | undefined): string {
   const alertType = data.alert_type as string | undefined;
   const alertMessage = data.alert_message as string | undefined;
   const severity = data.severity as string | undefined;
-  const details = data.details as any | undefined;
+  const details = data.details as Record<string, unknown> | undefined;
 
   // Build a human-readable summary from the data
   const parts: string[] = [];

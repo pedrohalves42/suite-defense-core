@@ -58,7 +58,7 @@ export default function JobsV3Migration() {
         p_tenant_id: tenant.id,
         p_include_archived: false,
       });
-      const agents = (agentsRaw as any as Array<{ agent_name: string; last_heartbeat: string | null }>) || [];
+      const agents = (agentsRaw as unknown as Array<{ agent_name: string; last_heartbeat: string | null }>) || [];
 
       const agentHeartbeats = new Map(
         agents?.map((a) => [a.agent_name, a.last_heartbeat]) || []

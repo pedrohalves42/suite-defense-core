@@ -56,7 +56,7 @@ export function ValidationJobDispatcher() {
         p_tenant_id: tenant.id,
         p_include_archived: false,
       });
-      const allAgents = (agentsRaw as any as Array<{ id: string; agent_name: string; status: string; agent_version: string | null }>) || [];
+      const allAgents = (agentsRaw as unknown as Array<{ id: string; agent_name: string; status: string; agent_version: string | null }>) || [];
       
       const targetAgents = allAgents.filter(a => 
         a.status === 'active' && a.agent_version && a.agent_version.includes('5.0.14')

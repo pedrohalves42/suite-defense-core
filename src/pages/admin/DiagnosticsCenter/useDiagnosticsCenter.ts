@@ -34,7 +34,7 @@ export function useDiagnosticsCenter() {
         p_include_archived: false,
       });
       if (error) throw error;
-      return ((data || []) as any as RpcAgentRow[]).sort((a, b) => {
+      return ((data || []) as unknown as RpcAgentRow[]).sort((a, b) => {
         if (!a.last_heartbeat && !b.last_heartbeat) return 0;
         if (!a.last_heartbeat) return 1;
         if (!b.last_heartbeat) return -1;
@@ -55,7 +55,7 @@ export function useDiagnosticsCenter() {
         .select('id, agent_name, hostname, os_type, status, agent_version, last_heartbeat, enrolled_at, issue_type, issue_details')
         .order('enrolled_at', { ascending: false });
       if (error) throw error;
-      return (data || []) as any as ProblematicAgent[];
+      return (data || []) as unknown as ProblematicAgent[];
     },
     refetchInterval: adaptiveInterval,
     enabled: !tenantLoading && !!tenant?.id,
@@ -67,7 +67,7 @@ export function useDiagnosticsCenter() {
     queryFn: async () => {
       if (!tenant?.id) return [];
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as never)
         .from('jobs')
         .select('agent_name')
         .eq('tenant_id', tenant.id)

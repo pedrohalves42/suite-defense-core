@@ -41,7 +41,7 @@ export default function ArchivedAgents() {
       });
 
       if (error) throw error;
-      const agents = ((rawData as any as ArchivedAgent[]) || [])
+      const agents = ((rawData as unknown as ArchivedAgent[]) || [])
         .filter(a => a.archived_at !== null)
         .sort((a, b) => new Date(b.archived_at!).getTime() - new Date(a.archived_at!).getTime());
       return agents;

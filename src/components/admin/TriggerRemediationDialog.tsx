@@ -56,7 +56,7 @@ export default function TriggerRemediationDialog() {
         p_tenant_id: tenant.id,
         p_include_archived: false,
       });
-      return ((data || []) as any as Array<Record<string, unknown>>)
+      return ((data || []) as unknown as Array<Record<string, unknown>>)
         .filter(a => a.status === 'active')
         .map(a => ({ id: String(a.id), agent_name: String(a.agent_name), status: String(a.status) }));
     },

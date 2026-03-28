@@ -235,7 +235,7 @@ export default function RealTimeSecurityDashboard() {
       return {
         id: log.id,
         type: log.attack_type || 'info',
-        severity: (log.severity as any) || 'info',
+        severity: (log.severity as never) || 'info',
         title: info.title,
         explanation: info.explanation,
         icon: info.icon,
