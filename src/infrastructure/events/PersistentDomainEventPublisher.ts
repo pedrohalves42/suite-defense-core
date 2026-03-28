@@ -64,13 +64,15 @@ export class PersistentDomainEventPublisher implements DomainEventDispatcher {
   }
 
   private buildPayload(event: DomainEvent): Record<string, unknown> {
-    const { eventType, occurredOn, aggregateId, ...rest } = event as unknown as Record<string, unknown>;
-    return rest;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { eventType, occurredOn, aggregateId, ...rest } = event as any;
+    return rest as Record<string, unknown>;
   }
 
   private extractTenantId(event: DomainEvent): string | null {
-    const e = event as unknown as Record<string, unknown>;
-    if ((e.tenantId as Record<string, unknown>)?.value) return String((e.tenantId as Record<string, unknown>).value);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const e = event as any;
+    if (e.tenantId?.value) return String(e.tenantId.value);
     if (typeof e.tenantId === 'string') return e.tenantId;
     return null;
   }

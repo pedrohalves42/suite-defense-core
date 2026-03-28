@@ -129,7 +129,7 @@ export const ClientDashboard = () => {
       const cutoff = new Date(now.getTime() - thresholdMs);
       
       const onlineAgents = agents?.filter(a => 
-        a.last_heartbeat && new Date(a.last_heartbeat) > cutoff
+        a.last_heartbeat && new Date(String(a.last_heartbeat)) > cutoff
       ).length || 0;
 
       const offlineAgents = (agents?.length || 0) - onlineAgents;

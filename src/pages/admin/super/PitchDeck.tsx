@@ -35,7 +35,8 @@ export default function PitchDeck() {
       const successRate = totalJobs > 0 ? (completedJobs / totalJobs * 100) : 0;
       const activeSubs = subscriptions.data?.filter(s => s.status === 'active' || s.status === 'trialing') || [];
       const mrr = activeSubs.reduce((sum, s) => {
-        const price = (s.subscription_plans as never)?.price || 0;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const price = (s.subscription_plans as any)?.price || 0;
         return sum + (price * (s.device_quantity || 1));
       }, 0);
 

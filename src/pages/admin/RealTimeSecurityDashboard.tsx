@@ -196,16 +196,17 @@ export default function RealTimeSecurityDashboard() {
       });
       if (error) throw error;
 
-      const data = (rpcData as unknown[] || []).map((a: Record<string, unknown>) => ({
-        id: a.id,
-        last_heartbeat: a.last_heartbeat,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = (rpcData as any[] || []).map((a: any) => ({
+        id: a.id as string,
+        last_heartbeat: a.last_heartbeat as unknown,
         is_isolated: !!a.is_isolated,
       }));
 
       const total = data.length;
       const isolated = data.filter(a => a.is_isolated).length;
-      const protectedCount = data.filter(a => !a.is_isolated && isAgentOnline(a.last_heartbeat)).length;
-      const offline = data.filter(a => !a.is_isolated && !isAgentOnline(a.last_heartbeat)).length;
+      const protectedCount = data.filter(a => !a.is_isolated && isAgentOnline(String(a.last_heartbeat || ''))).length;
+      const offline = data.filter(a => !a.is_isolated && !isAgentOnline(String(a.last_heartbeat || ''))).length;
 
       return { total, protected: protectedCount, isolated, offline };
     },
@@ -229,13 +230,13 @@ export default function RealTimeSecurityDashboard() {
   // Transform logs
   useEffect(() => {
     if (!recentLogs) return;
-    const transformed: SecurityEvent[] = recentLogs.map(log => {
+    const transformed = recentLogs.map(log => {
       const info = getEventInfo(String(log.attack_type || ''));
       const details = extractFriendlyDetails(log.details);
       return {
         id: log.id,
         type: log.attack_type || 'info',
-        severity: String(log.severity || 'info'),
+        severity: String(log.severity || 'info') as SecurityEvent['severity'],
         title: info.title,
         explanation: info.explanation,
         icon: info.icon,
@@ -243,7 +244,7 @@ export default function RealTimeSecurityDashboard() {
         ip: details.ip,
         extra: details.extra,
         timestamp: String(log.created_at),
-      };
+      } satisfies SecurityEvent;
     });
     setEvents(transformed.slice(0, 20));
   }, [recentLogs]);
@@ -258,11 +259,11 @@ export default function RealTimeSecurityDashboard() {
         const info = getEventInfo(String(log.attack_type || ''));
         const details = extractFriendlyDetails(log.details);
         setEvents(prev => [{
-          id: String(log.id), type: String(log.attack_type || 'info'), severity: String(log.severity || 'info'),
+          id: String(log.id), type: String(log.attack_type || 'info'), severity: String(log.severity || 'info') as SecurityEvent['severity'],
           title: info.title, explanation: info.explanation, icon: info.icon,
           computer: details.computer, ip: details.ip, extra: details.extra,
           timestamp: String(log.created_at),
-        }, ...prev].slice(0, 20));
+        } satisfies SecurityEvent, ...prev].slice(0, 20));
         refetchPlaybooks(); refetchBlocked();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'approval_requests', filter: `tenant_id=eq.${tenant.id}` }, () => refetchApprovals())

@@ -56,13 +56,14 @@ export default function TestComplianceGenerator() {
           p_tenant_id: tenant.id,
           p_include_archived: false,
         });
-        const data = ((rawData as unknown as unknown[]) || [])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = ((rawData as any[]) || [])
           .sort((a: any, b: any) => (a.agent_name || '').localeCompare(b.agent_name || ''));
         
         if (error) throw error;
-        setAgents((data || []) as unknown as AgentInfo[]);
+        setAgents((data || []) as AgentInfo[]);
 
-        const onlineCount = (data || []).filter(a => a.status === "active").length;
+        const onlineCount = (data || []).filter((a: any) => a.status === "active").length;
         
         // Get vulnerability count
         const { count: vulnCount } = await supabase

@@ -39,8 +39,9 @@ export default function SystemHealth() {
         p_include_archived: false,
       });
       if (error) throw error;
-      const data = ((rpcData || []) as unknown[]).map((a: Record<string, unknown>) => ({
-        id: a.id, status: a.status, last_heartbeat: a.last_heartbeat,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = ((rpcData || []) as any[]).map((a: any) => ({
+        id: String(a.id), status: String(a.status), last_heartbeat: a.last_heartbeat as string | null,
       }));
       
       if (error) throw error;
@@ -55,15 +56,15 @@ export default function SystemHealth() {
         pending: data.filter(a => a.status === 'pending').length,
         inactive: data.filter(a => a.status === 'inactive').length,
         healthy: data.filter(a => 
-          a.last_heartbeat && new Date(a.last_heartbeat) > fiveMinutesAgo
+          a.last_heartbeat && new Date(String(a.last_heartbeat)) > fiveMinutesAgo
         ).length,
         stale: data.filter(a => 
           a.last_heartbeat && 
-          new Date(a.last_heartbeat) <= fiveMinutesAgo && 
-          new Date(a.last_heartbeat) > thirtyMinutesAgo
+          new Date(String(a.last_heartbeat)) <= fiveMinutesAgo && 
+          new Date(String(a.last_heartbeat)) > thirtyMinutesAgo
         ).length,
         offline: data.filter(a => 
-          !a.last_heartbeat || new Date(a.last_heartbeat) <= thirtyMinutesAgo
+          !a.last_heartbeat || new Date(String(a.last_heartbeat)) <= thirtyMinutesAgo
         ).length,
       };
     },
