@@ -47,18 +47,18 @@ export function AgentSelector({ value, onValueChange }: AgentSelectorProps) {
       // Map RPC jsonb response to Agent interface
       // RPC returns untyped JSON — cast is required
       return ((data || []) as Array<Record<string, unknown>>).map((agent): Agent => ({
-        id: agent.id,
-        agent_name: agent.agent_name,
-        status: agent.status,
-        os_type: agent.os_type,
-        is_isolated: agent.is_isolated,
-        is_throttled: agent.is_throttled,
-        safe_mode_reason: agent.safe_mode_reason,
-        safe_mode_entered_at: agent.safe_mode_entered_at,
-        last_heartbeat: agent.last_heartbeat,
-        force_update_version: agent.force_update_version,
-        force_update_at: agent.force_update_at,
-        agent_state: agent.agent_state,
+        id: String(agent.id || ''),
+        agent_name: String(agent.agent_name || ''),
+        status: String(agent.status || ''),
+        os_type: String(agent.os_type || ''),
+        is_isolated: Boolean(agent.is_isolated),
+        is_throttled: Boolean(agent.is_throttled),
+        safe_mode_reason: agent.safe_mode_reason ? String(agent.safe_mode_reason) : '',
+        safe_mode_entered_at: agent.safe_mode_entered_at ? String(agent.safe_mode_entered_at) : '',
+        last_heartbeat: agent.last_heartbeat ? String(agent.last_heartbeat) : '',
+        force_update_version: agent.force_update_version ? String(agent.force_update_version) : '',
+        force_update_at: agent.force_update_at ? String(agent.force_update_at) : '',
+        agent_state: String(agent.agent_state || ''),
       })).sort((a, b) => a.agent_name.localeCompare(b.agent_name));
     },
     // V-301: Guard with !loading to prevent queries before JWT sync completes
