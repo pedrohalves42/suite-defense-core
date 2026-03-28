@@ -1,33 +1,46 @@
 /**
  * AI Router — Consolidated dispatcher for AI edge functions.
  * 
- * Frontend calls this single endpoint with { action, payload }.
- * The router validates auth via serveTenant, then proxies to the
- * corresponding individual AI function internally.
+ * Hybrid approach:
+ * - Direct handlers: For simpler AI functions (< 250 lines), logic is extracted
+ *   into handlers/ and dispatched directly (no HTTP hop).
+ * - Proxy dispatch: For complex functions (full-audit 783L, system-analyzer 833L,
+ *   action-executor 719L) and internal-only functions, routes via HTTP proxy
+ *   to preserve their existing architecture.
  * 
- * This avoids duplicating logic while giving a unified entry point.
- * Original functions remain deployed for backward compatibility
- * and internal/cron callers.
+ * Frontend calls: POST /ai-router with { action, payload }
  */
 
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
+import type { AIHandler } from './types.ts';
+
+// Direct handlers (consolidated logic)
+import { handleCorrelateAlerts } from './handlers/correlate-alerts.ts';
+import { handleExecuteSolution } from './handlers/execute-solution.ts';
+import { handleSecurityCopilot } from './handlers/security-copilot.ts';
+import { handleGetInsights } from './handlers/get-insights.ts';
 
 const RouterSchema = z.object({
   action: z.string().min(1).max(64),
   payload: z.record(z.unknown()).optional().default({}),
 });
 
-// Map action names to their corresponding edge function names
-const ACTION_TO_FUNCTION: Record<string, string> = {
+// ─── Direct handler map (no HTTP proxy) ──────────────────────────────────────
+const DIRECT_HANDLERS: Record<string, AIHandler> = {
+  'correlate-alerts': handleCorrelateAlerts,
+  'execute-solution': handleExecuteSolution,
+  'security-copilot': handleSecurityCopilot,
+  'get-insights': handleGetInsights as AIHandler,
+};
+
+// ─── Proxy targets (complex functions that remain standalone) ────────────────
+const PROXY_TARGETS: Record<string, string> = {
   'analyze-agent': 'ai-analyze-agent',
   'behavioral-anomaly-detector': 'ai-behavioral-anomaly-detector',
-  'correlate-alerts': 'ai-correlate-alerts',
-  'execute-solution': 'ai-execute-solution',
   'quality-check': 'ai-quality-check',
   'red-team-assessment': 'ai-red-team-assessment',
-  'security-copilot': 'ai-security-copilot',
   'system-audit': 'ai-system-audit',
   'agent-assist': 'ai-agent-assist',
   'action-executor': 'ai-action-executor',
@@ -35,7 +48,6 @@ const ACTION_TO_FUNCTION: Record<string, string> = {
   'predict-agent-failure': 'ai-predict-agent-failure',
   'system-analyzer': 'ai-system-analyzer',
   'full-audit': 'ai-full-audit',
-  'get-insights': 'ai-get-insights',
   'provider-status': 'ai-provider-status',
 };
 
@@ -53,36 +65,50 @@ serveTenant(async (req, ctx) => {
   }
 
   const { action, payload } = parsed.data;
-  const functionName = ACTION_TO_FUNCTION[action];
 
+  // ── Try direct handler first ──
+  const directHandler = DIRECT_HANDLERS[action];
+  if (directHandler) {
+    logger.info(`[${requestId}] ai-router: direct dispatch action=${action}`);
+    try {
+      const result = await directHandler(req, ctx, payload);
+      if (result instanceof Response) return result;
+      return new Response(JSON.stringify(result), {
+        status: 200, headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (error) {
+      if (error instanceof Response) return error;
+      logger.error(`[${requestId}] ai-router handler error for ${action}:`, error);
+      return new Response(
+        JSON.stringify({ error: 'Internal error', action, message: error instanceof Error ? error.message : 'Unknown' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+
+  // ── Proxy to standalone function ──
+  const functionName = PROXY_TARGETS[action];
   if (!functionName) {
+    const allActions = [...Object.keys(DIRECT_HANDLERS), ...Object.keys(PROXY_TARGETS)];
     return new Response(
-      JSON.stringify({ error: `Unknown action: ${action}`, available: Object.keys(ACTION_TO_FUNCTION) }),
+      JSON.stringify({ error: `Unknown action: ${action}`, available: allActions }),
       { status: 404, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
-  logger.info(`[${requestId}] ai-router dispatching action=${action} → ${functionName}`);
+  logger.info(`[${requestId}] ai-router: proxy dispatch action=${action} → ${functionName}`);
 
   try {
-    // Forward the request to the individual function with the original auth headers
     const targetUrl = `${SUPABASE_URL}/functions/v1/${functionName}`;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'X-Request-ID': requestId,
     };
 
-    // Forward auth header
     const authHeader = req.headers.get('Authorization');
-    if (authHeader) {
-      headers['Authorization'] = authHeader;
-    }
-
-    // Forward apikey header
+    if (authHeader) headers['Authorization'] = authHeader;
     const apiKey = req.headers.get('apikey');
-    if (apiKey) {
-      headers['apikey'] = apiKey;
-    }
+    if (apiKey) headers['apikey'] = apiKey;
 
     const response = await fetch(targetUrl, {
       method: 'POST',
@@ -90,43 +116,23 @@ serveTenant(async (req, ctx) => {
       body: JSON.stringify(payload),
     });
 
-    // For streaming responses (e.g., security-copilot), pass through directly
     const contentType = response.headers.get('Content-Type') || 'application/json';
     if (contentType.includes('text/event-stream')) {
       return new Response(response.body, {
         status: response.status,
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        },
+        headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
       });
     }
 
-    // For JSON responses, wrap with router metadata
     const responseBody = await response.text();
-    
-    if (!response.ok) {
-      logger.error(`[${requestId}] ai-router: ${functionName} returned ${response.status}`);
-      return new Response(responseBody, {
-        status: response.status,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
     return new Response(responseBody, {
-      status: 200,
+      status: response.status,
       headers: { 'Content-Type': contentType },
     });
-
   } catch (error) {
-    logger.error(`[${requestId}] ai-router dispatch error for ${action}:`, error);
+    logger.error(`[${requestId}] ai-router proxy error for ${action}:`, error);
     return new Response(
-      JSON.stringify({ 
-        error: 'Internal dispatch error', 
-        action,
-        message: error instanceof Error ? error.message : 'Unknown error',
-      }),
+      JSON.stringify({ error: 'Internal dispatch error', action, message: error instanceof Error ? error.message : 'Unknown' }),
       { status: 502, headers: { 'Content-Type': 'application/json' } }
     );
   }
