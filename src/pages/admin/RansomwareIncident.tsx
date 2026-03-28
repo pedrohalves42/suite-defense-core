@@ -57,7 +57,7 @@ export default function RansomwareIncident() {
 
   const stats = {
     totalIncidents: alerts.length,
-    activeIncidents: alerts.filter((a: any) => a.status === "open" || a.status === "in_progress").length,
+    activeIncidents: alerts.filter((a: Record<string, unknown>) => a.status === "open" || a.status === "in_progress").length,
     quarantinedMachines: quarantined.length,
     indicators: indicators.length,
   };
@@ -135,7 +135,7 @@ export default function RansomwareIncident() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {quarantined.map((a: any) => (
+                {quarantined.map((a: Record<string, unknown>) => (
                   <TableRow key={a.id}>
                     <TableCell className="font-medium">{a.hostname}</TableCell>
                     <TableCell>{a.agent_version}</TableCell>

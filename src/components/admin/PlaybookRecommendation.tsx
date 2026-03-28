@@ -74,8 +74,8 @@ export function PlaybookRecommendation({ execution, onExecuted }: PlaybookRecomm
 
   const playbook = execution.playbook;
   const agent = execution.agent;
-  const context = execution.trigger_context as any || {};
-  const agentInfo = context.agent_info as any || {};
+  const context = execution.trigger_context as Record<string, unknown> || {};
+  const agentInfo = context.agent_info as Record<string, unknown> || {};
 
   // ✅ CRÍTICO: Usar actions_snapshot imutável se disponível (auditabilidade)
   const actionsSnapshot = (execution as unknown as never).actions_snapshot as PlaybookAction[] | undefined;
