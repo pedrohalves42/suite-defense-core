@@ -59,21 +59,21 @@ export function FleetHealthDashboard() {
       
       const pendingMap = new Map<string, number>();
       jobCounts?.forEach((j: Record<string, unknown>) => {
-        pendingMap.set(j.agent_name, (pendingMap.get(j.agent_name) || 0) + 1);
+        pendingMap.set(String(j.agent_name), (pendingMap.get(String(j.agent_name)) || 0) + 1);
       });
       
-      return ((agentsRaw || []) as Array<Record<string, unknown>>).map(a => ({
-        id: a.id,
-        agent_name: a.agent_name,
-        agent_version: a.agent_version,
-        status: a.status,
-        last_heartbeat: a.last_heartbeat,
-        os_type: a.os_type,
-        os_version: a.os_version,
-        is_isolated: a.is_isolated ?? false,
-        is_throttled: a.is_throttled ?? false,
+      return ((agentsRaw || []) as unknown as Array<Record<string, unknown>>).map(a => ({
+        id: String(a.id),
+        agent_name: String(a.agent_name),
+        agent_version: String(a.agent_version || ''),
+        status: String(a.status),
+        last_heartbeat: a.last_heartbeat ? String(a.last_heartbeat) : null,
+        os_type: String(a.os_type || ''),
+        os_version: String(a.os_version || ''),
+        is_isolated: Boolean(a.is_isolated ?? false),
+        is_throttled: Boolean(a.is_throttled ?? false),
         is_in_safe_mode: !!a.safe_mode_reason,
-        pending_jobs: pendingMap.get(a.agent_name) || 0,
+        pending_jobs: pendingMap.get(String(a.agent_name)) || 0,
       })) as FleetAgent[];
     },
     enabled: !tenantLoading && !!tenant?.id,

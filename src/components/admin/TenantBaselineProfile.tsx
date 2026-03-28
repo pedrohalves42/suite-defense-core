@@ -83,7 +83,7 @@ export function TenantBaselineProfile() {
       const procData = procRes.data || [];
       const agentProcCounts = new Map<string, number>();
       procData.forEach((p: Record<string, unknown>) => {
-        agentProcCounts.set(p.agent_id, (agentProcCounts.get(p.agent_id) || 0) + 1);
+        agentProcCounts.set(String(p.agent_id), (agentProcCounts.get(String(p.agent_id)) || 0) + 1);
       });
       const avgProcs = agentProcCounts.size > 0
         ? Math.round(Array.from(agentProcCounts.values()).reduce((s, c) => s + c, 0) / agentProcCounts.size)

@@ -204,7 +204,7 @@ export function GeneratedReportsList() {
       csvContent += "VULNERABILIDADES\n";
       csvContent += "Severidade,Título,Descrição\n";
       data.vulnerabilities.forEach((vuln: Record<string, unknown>) => {
-        csvContent += `"${vuln.severity || ''}","${vuln.title || vuln.check_key || ''}","${(vuln.description || '').replace(/"/g, '""')}"\n`;
+        csvContent += `"${vuln.severity || ''}","${vuln.title || vuln.check_key || ''}","${String(vuln.description || '').replace(/"/g, '""')}"\n`;
       });
       csvContent += "\n";
     }

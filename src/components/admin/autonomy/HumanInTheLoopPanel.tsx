@@ -85,7 +85,7 @@ function ApprovalCard({ approval, onApprove, onReject, isPending }: {
         <div className="flex items-center gap-2 min-w-0">
           <ShieldAlert className={cn('h-5 w-5 shrink-0', styles.text)} />
           <div className="min-w-0">
-            <p className="font-semibold truncate">{displayName}</p>
+            <p className="font-semibold truncate">{String(displayName)}</p>
             {approval.agent_name && (
               <p className="text-xs text-muted-foreground truncate">
                 {approval.agent_name} ({approval.hostname})

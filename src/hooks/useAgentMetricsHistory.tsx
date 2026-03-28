@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { subDays } from 'date-fns';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 interface MetricDataPoint {
   collected_at: string;
@@ -17,7 +17,7 @@ interface MetricDataPoint {
 export function useAgentMetricsHistory(daysBack: number = 7) {
   const { activeTenant, loading } = useActiveTenant();
   
-  return useQuery({
+  return useRealtimeQuery({
     queryKey: ['agent-metrics-history', activeTenant?.id, daysBack],
     queryFn: async () => {
       if (!activeTenant?.id) return [];
@@ -39,8 +39,11 @@ export function useAgentMetricsHistory(daysBack: number = 7) {
       if (error) throw error;
       return data as MetricDataPoint[];
     },
-    enabled: !loading && !!activeTenant?.id,  // ADR-029 CRIT-04: Guard with loading state
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    enabled: !loading && !!activeTenant?.id,
+    realtimeTable: 'agent_system_metrics_partitioned',
+    realtimeFilter: activeTenant?.id ? `tenant_id=eq.${activeTenant.id}` : undefined,
+    realtimeEvents: ['INSERT'],
+    fallbackInterval: 300_000,
+    staleTime: 30_000,
   });
 }

@@ -71,7 +71,7 @@ const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
               )}
             >
               <item.icon className="h-5 w-5" />
-              <span>{(item as Record<string, unknown>).label || t(item.labelKey)}</span>
+              <span>{String((item as Record<string, unknown>).label || '') || t(item.labelKey)}</span>
             </Link>
           );
         })}

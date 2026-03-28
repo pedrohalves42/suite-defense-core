@@ -95,7 +95,7 @@ export function ComplianceReportGenerator() {
       toast.success(`Relatório ${selectedTemplate} gerado com sucesso!`);
     } catch (error) {
       logger.error("Error generating compliance report:", error);
-      const errorMessage = error?.message || "Erro desconhecido";
+      const errorMessage = (error as Error)?.message || "Erro desconhecido";
       
       if (errorMessage.includes('NO_TENANT') || errorMessage.includes('não está associado') || errorMessage.includes('User not associated')) {
         toast.error("Você não está associado a nenhum tenant. Contate o administrador.");
@@ -694,7 +694,7 @@ export function ComplianceReportGenerator() {
                   size="lg" 
                 />
                 <p className="text-xs text-muted-foreground text-center mt-3 max-w-[200px]">
-                  {(reportPayload as unknown as Record<string, unknown>).risk_layman_description || reportPayload.risk_description}
+                  {String((reportPayload as unknown as Record<string, unknown>).risk_layman_description || reportPayload.risk_description)}
                 </p>
               </div>
 
@@ -773,7 +773,7 @@ export function ComplianceReportGenerator() {
                 O que isso significa para sua empresa?
               </h4>
               <p className="text-foreground leading-relaxed">
-                {(reportPayload as unknown as Record<string, unknown>).executive_summary?.overallMessage || (
+                {((reportPayload as unknown as Record<string, unknown>).executive_summary as Record<string, unknown> | undefined)?.overallMessage as string || (
                   reportPayload.risk_level === 'BAIXO' || reportPayload.risk_level === 'MÍNIMO' ? (
                     `A empresa "${reportPayload.tenant_name}" está em boa situação de segurança. Todos os sistemas estão protegidos e funcionando corretamente. Continue mantendo as boas práticas de segurança.`
                   ) : reportPayload.risk_level === 'MÉDIO' ? (
@@ -848,12 +848,15 @@ export function ComplianceReportGenerator() {
               <TabsContent value="recomendacoes" className="pt-4">
                 <div className="space-y-4">
                   {/* Actionable Recommendations from backend */}
-                  {(reportPayload as unknown as Record<string, unknown>).executive_summary?.recommendations?.length > 0 ? (
+                  {(() => {
+                    const execSummary = (reportPayload as unknown as Record<string, unknown>).executive_summary as Record<string, unknown> | undefined;
+                    const recs = (execSummary?.recommendations || []) as string[];
+                    return recs.length > 0 ? (
                     <div className="space-y-3">
                       <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
                         Ações Recomendadas
                       </h4>
-                      {(reportPayload as unknown as Record<string, unknown>).executive_summary.recommendations.map((rec: string, idx: number) => (
+                      {recs.map((rec: string, idx: number) => (
                         <div key={idx} className="flex items-start gap-3 p-4 bg-card border rounded-lg">
                           <div className={`p-1.5 rounded-full shrink-0 ${
                             idx === 0 && (reportPayload.statistics?.critical_vulnerabilities || 0) > 0 
@@ -891,8 +894,8 @@ export function ComplianceReportGenerator() {
                         const criticalVulns = reportPayload.statistics?.critical_vulnerabilities || 0;
                         const highVulns = reportPayload.statistics?.high_vulnerabilities || 0;
                         const threats = reportPayload.statistics?.threats_found || 0;
-                        const offlineAgents = (reportPayload.statistics as Record<string, unknown>)?.offline_agents || 0;
-                        const avOutdated = (reportPayload.statistics as Record<string, unknown>)?.av_outdated || 0;
+                        const offlineAgents = Number((reportPayload.statistics as Record<string, unknown>)?.offline_agents || 0);
+                        const avOutdated = Number((reportPayload.statistics as Record<string, unknown>)?.av_outdated || 0);
                         const failedInvariants = reportPayload.invariants.filter(i => i.status === "FAIL");
 
                         if (criticalVulns > 0) {
@@ -973,7 +976,7 @@ export function ComplianceReportGenerator() {
                         ));
                       })()}
                     </div>
-                  )}
+                  )})()}
 
                   {/* Next Steps */}
                   <Separator className="my-4" />

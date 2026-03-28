@@ -17,19 +17,22 @@ export const AgentTagBadges = ({ agentId, maxVisible = 3 }: AgentTagBadgesProps)
 
   return (
     <div className="flex flex-wrap gap-1">
-      {visible.map((a: Record<string, unknown>) => (
+      {visible.map((a: Record<string, unknown>) => {
+        const tag = a.agent_tags as Record<string, unknown> | undefined;
+        return (
         <Badge
-          key={a.id}
+          key={String(a.id)}
           variant="secondary"
           className="text-[10px] px-1.5 py-0"
           style={{
-            backgroundColor: (a.agent_tags?.color || '#3b82f6') + '20',
-            color: a.agent_tags?.color || '#3b82f6',
+            backgroundColor: (String(tag?.color || '#3b82f6')) + '20',
+            color: String(tag?.color || '#3b82f6'),
           }}
         >
-          {a.agent_tags?.name || 'Tag'}
+          {String(tag?.name || 'Tag')}
         </Badge>
-      ))}
+        );
+      })}
       {remaining > 0 && (
         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
           +{remaining}

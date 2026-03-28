@@ -30,25 +30,28 @@ export const AgentTagSelector = ({ agentId }: AgentTagSelectorProps) => {
 
   return (
     <div className="flex flex-wrap items-center gap-1">
-      {assignments?.map((a: Record<string, unknown>) => (
+      {assignments?.map((a: Record<string, unknown>) => {
+        const tag = a.agent_tags as Record<string, unknown> | undefined;
+        return (
         <Badge
-          key={a.id}
+          key={String(a.id)}
           variant="secondary"
           className="text-xs gap-1 pr-1"
           style={{
-            backgroundColor: (a.agent_tags?.color || '#3b82f6') + '20',
-            color: a.agent_tags?.color || '#3b82f6',
+            backgroundColor: (String(tag?.color || '#3b82f6')) + '20',
+            color: String(tag?.color || '#3b82f6'),
           }}
         >
-          {a.agent_tags?.name}
+          {String(tag?.name || '')}
           <button
-            onClick={() => removeTag.mutate({ agentId, tagId: a.tag_id })}
+            onClick={() => removeTag.mutate({ agentId, tagId: String(a.tag_id) })}
             className="hover:bg-black/10 rounded-full p-0.5"
           >
             <X className="h-3 w-3" />
           </button>
         </Badge>
-      ))}
+        );
+      })}
 
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
