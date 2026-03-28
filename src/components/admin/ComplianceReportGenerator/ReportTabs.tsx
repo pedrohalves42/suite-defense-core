@@ -81,7 +81,7 @@ function InvariantsTab({ reportPayload }: { reportPayload: ComplianceReportPaylo
 }
 
 function RecommendationsTab({ reportPayload }: { reportPayload: ComplianceReportPayload }) {
-  const execSummary = (reportPayload as Record<string, unknown>).executive_summary as Record<string, unknown> | undefined;
+  const execSummary = (reportPayload as unknown as Record<string, unknown>).executive_summary as Record<string, unknown> | undefined;
   const recs = (execSummary?.recommendations || []) as string[];
 
   return (

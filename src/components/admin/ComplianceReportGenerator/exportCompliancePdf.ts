@@ -211,8 +211,8 @@ export async function exportCompliancePdf(reportPayload: ComplianceReportPayload
       3: { cellWidth: 25, halign: "center" }
     },
     margin: { left: 14, right: 14 },
-    didParseCell: (data: Record<string, unknown>) => {
-      const cell = data as { column: { index: number }; section: string; cell: { text: string[]; styles: { textColor: number[] } } };
+    didParseCell: (data) => {
+      const cell = data as unknown as { column: { index: number }; section: string; cell: { text: string[]; styles: { textColor: number[] } } };
       if (cell.column.index === 0 && cell.section === "body") {
         const text = cell.cell.text[0];
         if (text === "✓") cell.cell.styles.textColor = [22, 101, 52];

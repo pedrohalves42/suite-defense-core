@@ -9,7 +9,7 @@ interface ReportSummaryCardsProps {
 }
 
 export function ReportSummaryCards({ reportPayload }: ReportSummaryCardsProps) {
-  const riskLaymanDesc = (reportPayload as Record<string, unknown>).risk_layman_description;
+  const riskLaymanDesc = (reportPayload as unknown as Record<string, unknown>).risk_layman_description;
 
   return (
     <>
@@ -89,7 +89,7 @@ export function ReportSummaryCards({ reportPayload }: ReportSummaryCardsProps) {
 }
 
 function ExecutiveSummaryMessage({ reportPayload }: { reportPayload: ComplianceReportPayload }) {
-  const execSummary = (reportPayload as Record<string, unknown>).executive_summary as Record<string, unknown> | undefined;
+  const execSummary = (reportPayload as unknown as Record<string, unknown>).executive_summary as Record<string, unknown> | undefined;
   const overallMessage = execSummary?.overallMessage as string | undefined;
 
   const isLow = reportPayload.risk_level === 'BAIXO' || reportPayload.risk_level === 'MÍNIMO';

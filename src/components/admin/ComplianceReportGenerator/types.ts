@@ -1,4 +1,3 @@
-import type { LucideIcon } from "lucide-react";
 import type {
   ComplianceTemplate,
   ComplianceReportPayload,
@@ -6,24 +5,11 @@ import type {
 
 export type { ComplianceTemplate, ComplianceReportPayload };
 
-export const TEMPLATE_ICONS: Record<ComplianceTemplate, LucideIcon> = {
-  LGPD: () => null, // Will be set in the consuming file
-  ISO_27001: () => null,
-  SOC2_LITE: () => null,
-};
-
 export const TEMPLATE_COLORS: Record<ComplianceTemplate, string> = {
   LGPD: "text-blue-600",
   ISO_27001: "text-green-600",
   SOC2_LITE: "text-purple-600",
 };
-
-export interface Recommendation {
-  icon: React.ReactNode;
-  text: string;
-  priority: string;
-  detail: string;
-}
 
 export interface FriendlyInvariant {
   name: string;
