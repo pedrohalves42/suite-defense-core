@@ -894,8 +894,8 @@ export function ComplianceReportGenerator() {
                         const criticalVulns = reportPayload.statistics?.critical_vulnerabilities || 0;
                         const highVulns = reportPayload.statistics?.high_vulnerabilities || 0;
                         const threats = reportPayload.statistics?.threats_found || 0;
-                        const offlineAgents = (reportPayload.statistics as Record<string, unknown>)?.offline_agents || 0;
-                        const avOutdated = (reportPayload.statistics as Record<string, unknown>)?.av_outdated || 0;
+                        const offlineAgents = Number((reportPayload.statistics as Record<string, unknown>)?.offline_agents || 0);
+                        const avOutdated = Number((reportPayload.statistics as Record<string, unknown>)?.av_outdated || 0);
                         const failedInvariants = reportPayload.invariants.filter(i => i.status === "FAIL");
 
                         if (criticalVulns > 0) {

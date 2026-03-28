@@ -86,7 +86,7 @@ export function DynamicValidationSystem() {
       }
 
       // Check data completeness for each agent
-      const agentsWithStatus = await Promise.all(
+      const agentsWithStatus: AgentStatus[] = await Promise.all(
         agentsData.map(async (agent) => {
           const agentId = agent.id as string;
           // V-1051 FIX: Add tenant_id filter to prevent cross-tenant data leakage
@@ -98,7 +98,10 @@ export function DynamicValidationSystem() {
           ]);
 
           return {
-            ...agent,
+            id: agentId,
+            agent_name: String(agent.agent_name || ''),
+            agent_version: (agent.agent_version as string) || null,
+            last_heartbeat: (agent.last_heartbeat as string) || null,
             hasSoftwareInventory: (softwareInventory.data?.length || 0) > 0,
             hasAntivirusStatus: (antivirusStatus.data?.length || 0) > 0,
             hasWebActivity: (webActivity.data?.length || 0) > 0,
