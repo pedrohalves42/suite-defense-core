@@ -258,7 +258,7 @@ export function InsightInvestigationDrawer({
 
               {/* Evidence */}
               {item.context?.evidence && typeof item.context.evidence === 'object' && (() => {
-                const humanizedItems = humanizeEvidence(item.context.evidence as any);
+                const humanizedItems = humanizeEvidence(item.context.evidence as Record<string, unknown>);
                 if (humanizedItems.length === 0) return null;
                 
                 return (

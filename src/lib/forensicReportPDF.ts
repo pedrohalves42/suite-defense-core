@@ -509,7 +509,7 @@ export async function generateForensicReportPDF(agentIds: string[]): Promise<voi
     }
 
     // Footer
-    const totalPages = (doc as any).internal.getNumberOfPages();
+    const totalPages = (doc as unknown as { internal: { getNumberOfPages(): number } }).internal.getNumberOfPages();
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
       doc.setFontSize(7);

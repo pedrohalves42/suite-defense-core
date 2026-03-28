@@ -64,12 +64,12 @@ export class PersistentDomainEventPublisher implements DomainEventDispatcher {
   }
 
   private buildPayload(event: DomainEvent): Record<string, unknown> {
-    const { eventType, occurredOn, aggregateId, ...rest } = event as any;
+    const { eventType, occurredOn, aggregateId, ...rest } = event as Record<string, unknown>;
     return rest;
   }
 
   private extractTenantId(event: DomainEvent): string | null {
-    const e = event as any;
+    const e = event as Record<string, unknown>;
     if (e.tenantId?.value) return e.tenantId.value;
     if (typeof e.tenantId === 'string') return e.tenantId;
     return null;

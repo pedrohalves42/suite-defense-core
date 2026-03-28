@@ -16,7 +16,7 @@ export function useAgentMonitoring() {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   const getAgentCalculatedStatus = (agent: Agent): 'online' | 'warning' | 'offline' | 'never_connected' => {
-    return getAgentOnlineStatus(agent as any);
+    return getAgentOnlineStatus(agent as unknown as Parameters<typeof getAgentOnlineStatus>[0]);
   };
 
   const handleRefresh = useCallback(() => {

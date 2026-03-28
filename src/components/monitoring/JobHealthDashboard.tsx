@@ -88,7 +88,7 @@ export default function JobHealthDashboard() {
         if (!agentMap[agentId]) {
           agentMap[agentId] = {
             agent_id: agentId,
-            agent_name: String((job.agents as any)?.name || 'Unknown'),
+            agent_name: String((job.agents as Record<string, unknown>)?.name || 'Unknown'),
             failed_jobs: 0,
             total_jobs: 0,
             failure_rate: 0,
