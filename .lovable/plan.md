@@ -1,128 +1,133 @@
 
 
-# Phase 1: Edge Function Middleware Migration — Batch 1
+# Plano: Finalizar Pendencias da Auditoria
 
-## Summary
+## Estado Atual (verificado no código)
 
-156 functions still use raw `Deno.serve()`. After excluding 22 HMAC functions and 57 already-hardened `assertInternalCaller` functions, approximately **77 functions** remain as migration targets. Of those, ~70 are already on middleware, leaving **~77 unmigrated non-HMAC, non-internal functions**.
+| Item | Status Real | Detalhes |
+|---|---|---|
+| Decomposição JobCreator | DONE | 6 arquivos em `src/pages/JobCreator/` |
+| Decomposição RolloutPolicies | DONE | 7 arquivos em `src/pages/super-admin/RolloutPolicies/` |
+| B1: admin-create-user | DONE | Já usa `serveTenant` |
+| B1: send-invite | DONE | Já migrado |
+| B1: delete-invite | DONE | Já usa `serveTenant` |
+| B1: remove-member | DONE | Já migrado |
+| B1: force-reinstall-fleet | DONE | Já migrado |
+| B1: create-job | DONE | Já migrado |
+| B1: quarantine-agent | N/A | Usa `assertInternalCaller` (interno/cron) — deve permanecer |
+| B1: apply-security-patch | N/A | Usa `assertInternalCaller` (interno/cron) — deve permanecer |
+| B1: build-agent-exe | PENDING | 1060 linhas, `Deno.serve`, auth JWT manual |
+| AI Router | PARCIAL | Proxy criado, mas não consolida (16 funções individuais permanecem) |
+| `as any` no frontend | 1.353 ocorrências em 159 arquivos | Nenhuma eliminada |
+| Edge functions Deno.serve | ~148 funções | ~80 migradas, ~57 internal, ~12 HMAC |
 
-These break into 4 sub-categories requiring different treatment:
+---
 
-## Classification of Unmigrated Functions
+## Pendencias Reais a Executar (em ordem)
 
-### Category A: JWT-authenticated admin/UI → `serveTenant` (~65 functions)
+### 1. Migrar `build-agent-exe` para `serveTenant` (B1 final)
 
-Functions that manually do `getUser()` + role check + tenant lookup. Classic `serveTenant` candidates.
+**Problema:** 1060 linhas com `Deno.serve`, auth manual, GET health check + POST build.
 
-Examples: `revoke-enrollment-key`, `rollback-by-decision-event`, `send-notification`, `list-invoices`, `change-password`, `admin-create-user`, `delete-invite`, `quarantine-agent`, `auto-quarantine`, `block-website`, `generate-compliance-report`, `generate-executive-report`, `cohort-analysis`, `fido2-authenticate`, `verify-compliance-report`, `customer-portal`, `list-reports`, `diagnose-agent`, `export-evidence-bundle`, `send-security-notification`, `notification-dispatcher`, `approve-via-token`, etc.
+**Ação:**
+- Modularizar em `build-agent-exe/index.ts` (orquestrador ~100L) + módulos: `validation.ts`, `cache.ts`, `build-executor.ts`, `installer-generator.ts`
+- Migrar para `serveTenant` com opção `methods: ['GET', 'POST']`
+- GET health check pode ser tratado antes do middleware ou via `servePublic` separado
+- Manter a lógica complexa intacta, apenas trocar boilerplate
 
-### Category B: Cross-tenant super_admin → `serveTenant` with `skipTenantValidation` (~8 functions)
+### 2. AI Router — Consolidação Real (16 → 1 função)
 
-Functions that require `super_admin` and access data across tenants. Use `serveTenant` with `skipTenantValidation: true` (pattern already used by `list-all-users-admin`).
+**Estado atual:** `ai-router/index.ts` é um proxy HTTP que reencaminha para as funções individuais. Não consolida.
 
-Examples: `revenue-projections`, `sales-pipeline`, `cohort-analysis`, `unit-economics`, `subscription-analytics`, `create-custom-trial`
+**Ação:** Para cada uma das 16 funções AI que ainda usam `Deno.serve`:
+1. Extrair a lógica de negócio para `ai-router/handlers/<action>.ts`
+2. Cada handler exporta uma função `(ctx, payload) => Promise<Response>`
+3. O roteador importa e despacha diretamente (sem fetch HTTP)
+4. Remover funções individuais após migração
 
-### Category C: API-key authenticated → keep `Deno.serve()` (3 functions)
+**Funções a consolidar:**
+- `auto-execute-ai-actions` (Deno.serve)
+- `auto-triage-insights` (Deno.serve)
+- As 14 já migradas para serveTenant continuam como estão; o router passa a chamá-las diretamente
 
-`api-tenant-info`, `api-tenant-stats`, `api-tenant-features` use `authenticateApiKey()` (not JWT). These use a completely different auth model. **Do not migrate** — they already have Zod validation, rate limiting, and structured logging.
-
-### Category D: Special raw-body requirements → keep `Deno.serve()` (2 functions)
-
-`stripe-webhook` (needs raw body for Stripe signature verification) and `post-installation-telemetry` (HMAC). Cannot migrate.
-
-## Implementation Plan — Batch 1 (20 highest-priority functions)
-
-We'll migrate 20 functions per batch, starting with mutation endpoints that handle sensitive operations.
-
-### For each function, the migration is mechanical:
-
-1. Replace `Deno.serve(async (req) => {` with `serveTenant(async (req, ctx) => {`
-2. Remove manual CORS handling, Supabase client creation, JWT validation, tenant lookup
-3. Use `ctx.supabase`, `ctx.userId`, `ctx.tenantId`, `ctx.requestId`, `ctx.body`
-4. Add Zod schema for input validation where missing
-5. Add `{ methods: ['POST'], skipTenantValidation: true/false }` options as needed
-
-### Batch 1 Priority List (20 functions)
-
-| # | Function | Lines | Auth Pattern | Target |
-|---|----------|-------|-------------|--------|
-| 1 | `revoke-enrollment-key` | 164 | JWT+role | `serveTenant` |
-| 2 | `rollback-by-decision-event` | 198 | JWT+role | `serveTenant` |
-| 3 | `auto-quarantine` | ~150 | JWT+role | `serveTenant` |
-| 4 | `block-website` | ~120 | JWT+role | `serveTenant` |
-| 5 | `quarantine-agent` | ~140 | JWT+role | `serveTenant` |
-| 6 | `verify-compliance-report` | ~160 | JWT | `serveTenant` |
-| 7 | `generate-compliance-report` | ~200 | JWT+role | `serveTenant` |
-| 8 | `generate-executive-report` | ~180 | JWT+role | `serveTenant` |
-| 9 | `fido2-authenticate` | ~150 | JWT | `serveTenant` |
-| 10 | `send-notification` | ~130 | JWT | `serveTenant` |
-| 11 | `list-invoices` | ~100 | JWT | `serveTenant` |
-| 12 | `check-agent-name-availability` | ~80 | JWT | `serveTenant` |
-| 13 | `diagnose-agent` | ~150 | JWT | `serveTenant` |
-| 14 | `customer-portal` | ~100 | JWT | `serveTenant` |
-| 15 | `change-password` | ~120 | JWT | `serveTenant` |
-| 16 | `revenue-projections` | 202 | JWT+super_admin | `serveTenant` skip |
-| 17 | `sales-pipeline` | 194 | JWT+super_admin | `serveTenant` skip |
-| 18 | `cohort-analysis` | ~180 | JWT+super_admin | `serveTenant` skip |
-| 19 | `unit-economics` | ~160 | JWT+super_admin | `serveTenant` skip |
-| 20 | `subscription-analytics` | ~150 | JWT+super_admin | `serveTenant` skip |
-
-### Migration Template
-
+**Estrutura:**
 ```text
-BEFORE (revoke-enrollment-key pattern):
-─────────────────────────────────────
-import { createClient } from '...supabase-js@2.74.0';
-const corsHeaders = { ... };
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return ...
-  const authHeader = req.headers.get('Authorization');
-  const userClient = createClient(URL, ANON, { headers: { Authorization } });
-  const { data: { user } } = await userClient.auth.getUser();
-  const supabase = createClient(URL, SERVICE_KEY);
-  const { keyId } = await req.json();
-  // ... business logic ...
-});
-
-AFTER:
-─────
-import { serveTenant } from '../_shared/serve-tenant.ts';
-import { logger } from '../_shared/logger.ts';
-import { z } from 'https://esm.sh/zod@3.23.8';
-
-const RevokeKeySchema = z.object({
-  keyId: z.string().uuid(),
-});
-
-serveTenant(async (req, ctx) => {
-  const { supabase, userId, tenantId, requestId, body } = ctx;
-  const parsed = RevokeKeySchema.safeParse(body);
-  if (!parsed.success) {
-    return new Response(
-      JSON.stringify({ error: 'Invalid input', details: parsed.error.flatten().fieldErrors }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-  // ... business logic using ctx ...
-}, { methods: ['POST'] });
+supabase/functions/ai-router/
+├── index.ts              (dispatcher, ~80 linhas)
+├── handlers/
+│   ├── analyze-agent.ts
+│   ├── security-copilot.ts
+│   ├── correlate-alerts.ts
+│   └── ... (16 handlers)
+└── shared/
+    └── types.ts
 ```
 
-### What NOT to change
+### 3. Migração Edge Functions Restantes (Batches B2-B8)
 
-- **22 HMAC functions** — stay on `Deno.serve()` (Track B: add Zod only, separate batch)
-- **57 `assertInternalCaller` functions** — already hardened, keep as-is
-- **3 API-key functions** (`api-tenant-*`) — different auth model, keep as-is
-- **`stripe-webhook`** — needs raw body for Stripe signature
-- **70 already-migrated functions** — no changes needed
+**~70 funções** restantes com `Deno.serve` (excluindo internal e HMAC). Executar em batches:
 
-### Estimated effort
+| Batch | Funções | Prioridade |
+|---|---|---|
+| B3: Relatórios/Compliance | `generate-compliance-report`, `generate-security-report`, `generate-executive-report`, etc. (9 funções) | Alta |
+| B5: Agent submit (non-HMAC) | `submit-network-info`, `submit-vuln-findings`, `submit-agent-evidence`, etc. (9 funções) | Alta |
+| B6: Admin reads | `list-all-users-admin`, `get-web-activity`, `block-website`, etc. (7 funções) | Média |
+| B7: Public/Webhook | `submit-contact`, `health`, `build-callback`, etc. (5 funções) | Média |
+| B8: Diversos | `notification-dispatcher`, `send-*`, `sync-*`, etc. (~20 funções) | Baixa |
 
-~20 functions × ~15 min each = ~5 hours of mechanical migration. Each function follows the same pattern: strip boilerplate, add Zod schema, wire to middleware.
+**Padrão por função:**
+1. Substituir `Deno.serve` por `serveTenant`/`serveAgent`/`servePublic`
+2. Remover CORS boilerplate, `createClient()` manual, auth manual
+3. Usar `ctx.supabase`, `ctx.tenantId`, `ctx.userId`, `ctx.body`
+4. Adicionar validação Zod no body
 
-### Risk mitigation
+### 4. Eliminação de `as any` no Frontend
 
-- Each function is independently deployable
-- The middleware is battle-tested across 70+ functions already
-- No changes to the middleware itself
-- Functions that return plain objects get auto-wrapped in JSON response by the middleware
+**1.353 ocorrências em 159 arquivos.** Abordagem por categoria:
+
+| Categoria | ~Ocorrências | Solução |
+|---|---|---|
+| RPC results `(data as any as Type[])` | ~400 | Criar helper `typedRpc<T>()` ou cast via `unknown` |
+| Testes `(mock as any)` | ~300 | Criar factories tipadas, usar `Partial<T>` |
+| Supabase SDK limitation `from('table' as any)` | ~100 | Manter com `// eslint-disable` (limitação SDK) |
+| JSON fields `(data.field as any)` | ~200 | Zod parse ou interfaces explícitas |
+| Componentes admin (views, props) | ~350 | Tipagem explícita |
+
+**Execução em 8 batches de ~20 arquivos:**
+1. `src/hooks/` (44 arquivos, 487 ocorrências) — maior impacto
+2. `src/pages/admin/` (33 arquivos, 255 ocorrências)
+3. `src/components/admin/` 
+4. `src/pages/super-admin/`
+5. `src/infrastructure/`
+6. `src/lib/`
+7. Testes (`*.test.tsx`)
+8. Restantes
+
+### 5. Testes de Integração para Funções Críticas
+
+Criar testes Deno para 30 funções, priorizando:
+- Agent lifecycle: `heartbeat`, `poll-jobs`, `submit-job-result`, `enroll-agent`
+- Telemetry: `submit-system-metrics`, `submit-software-inventory`
+- Security: `scan-vulnerabilities`, `send-security-alert`
+- Admin: `admin-create-user`, `create-job`
+
+### 6. Infraestrutura (Fase 3)
+
+- Dead-letter queue: tabela `dead_letter_jobs` + lógica em `process-failed-jobs`
+- Rate limiting: integrar `checkRateLimit` no `serveTenant` como opt-in
+- Cache: tabela `kv_cache` + helpers `cacheGet/cacheSet`
+- Feature flags: tabela `feature_flags` + helper `isFeatureEnabled`
+- Particionamento: `agent_system_metrics`, `audit_logs`, `job_executions`
+
+---
+
+## Ordem de Execução Recomendada
+
+1. **build-agent-exe** — única função B1 pendente
+2. **Eliminação `as any` batch 1** — `src/hooks/` (maior impacto)
+3. **AI Router consolidação real** — 16 → 1 função
+4. **Batches B3-B8** — migração edge functions
+5. **Eliminação `as any` batches 2-8**
+6. **Testes de integração**
+7. **Infraestrutura** (DLQ, rate limit, cache, flags)
 
