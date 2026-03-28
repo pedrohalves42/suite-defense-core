@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { tenantQuery } from '@/lib/tenantQuery';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface AgentOperationalInfo {
   id: string;
@@ -53,6 +54,8 @@ export interface JobsHealthSummary {
  * ADR-029 CRIT-04: Added loading guard to prevent race conditions
  */
 export const useJobsHealth = () => {
+  const adaptiveInterval = useAdaptivePolling(300000);
+  const adaptiveInterval2 = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant();  // ADR-029 CRIT-04: Add loading
   const tenantId = activeTenant?.id;
 
@@ -74,12 +77,12 @@ export const useJobsHealth = () => {
         total_count: Number(row.total_count) || 0,
         completed_count: Number(row.completed_count) || 0,
         failed_count: Number(row.failed_count) || 0,
-        avg_duration_seconds: row.avg_duration_seconds ? Number(row.avg_duration_seconds) : null,
+        avg_duration_seconds: row.avg_duration_seconds ? Number(row.avg_duration_seconds) : null
       }));
     },
     enabled: !loading && !!tenantId,  // ADR-029 CRIT-04: Guard with loading state
-    refetchInterval: 300000, // COST-OPT: 30s → 5min
-    staleTime: 10000,
+    refetchInterval: adaptiveInterval,
+    staleTime: 10000
   });
 
   const trendsQuery = useQuery({
@@ -98,8 +101,8 @@ export const useJobsHealth = () => {
       return (data || []) as JobHourlyTrend[];
     },
     enabled: !loading && !!tenantId,  // ADR-029 CRIT-04: Guard with loading state
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
-    staleTime: 30000,
+    refetchInterval: adaptiveInterval,
+    staleTime: 30000
   });
 
   const stuckJobsQuery = useQuery({
@@ -118,7 +121,7 @@ export const useJobsHealth = () => {
       return data || [];
     },
     enabled: !loading && !!tenantId,
-    refetchInterval: 300000, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval
   });
 
   // Operational: paused agents & outdated versions
@@ -134,8 +137,8 @@ export const useJobsHealth = () => {
       return (data || []) as AgentOperationalInfo[];
     },
     enabled: !loading && !!tenantId,
-    refetchInterval: 300000, // COST-OPT: 60s → 5min
-    staleTime: 30000,
+    refetchInterval: adaptiveInterval,
+    staleTime: 30000
   });
 
   // Failure breakdown by error category (last 7 days)
@@ -173,7 +176,7 @@ export const useJobsHealth = () => {
         zombie_stalled: 'Zombie/Travado',
         unknown_handler: 'Handler Desconhecido',
         timeout: 'Timeout',
-        other: 'Outros',
+        other: 'Outros'
       };
 
       return Object.entries(categories)
@@ -181,9 +184,8 @@ export const useJobsHealth = () => {
         .sort((a, b) => b.count - a.count);
     },
     enabled: !loading && !!tenantId,
-    refetchInterval: 300_000, // COST-OPT v8: 2min → 5min
-    staleTime: 120_000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval2,
+    staleTime: 120_000
   });
 
   // Compute operational metrics
@@ -206,7 +208,7 @@ export const useJobsHealth = () => {
     executingJobs: 0,
     stuckJobs: stuckJobsQuery.data?.length || 0,
     overallSuccessRate: 0,
-    avgExecutionSeconds: 0,
+    avgExecutionSeconds: 0
   };
 
   if (metricsQuery.data) {
@@ -249,6 +251,6 @@ export const useJobsHealth = () => {
       stuckJobsQuery.refetch();
       agentOpsQuery.refetch();
       failureBreakdownQuery.refetch();
-    },
+    }
   };
 };

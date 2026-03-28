@@ -4,6 +4,7 @@ import { useTenant } from './useTenant';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
 import { logger } from '@/lib/logger';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface PlaybookAction {
   id: string;
@@ -64,6 +65,7 @@ export interface PlaybookExecution {
 }
 
 export function usePlaybooks() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
 
   return useQuery({
@@ -82,7 +84,7 @@ export function usePlaybooks() {
       if (error) throw error;
       return data as Playbook[];
     },
-    enabled: !!tenant?.id,
+    enabled: !!tenant?.id
   });
 }
 
@@ -109,9 +111,8 @@ export function usePendingPlaybookExecutions() {
       return (data || []) as any as PlaybookExecution[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000, // COST-OPT v8: 2min → 5min
-    staleTime: 120_000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
+    staleTime: 120_000
   });
 
   // Subscribe to realtime updates
@@ -126,7 +127,7 @@ export function usePendingPlaybookExecutions() {
           event: '*',
           schema: 'public',
           table: 'playbook_executions',
-          filter: `tenant_id=eq.${tenant.id}`,
+          filter: `tenant_id=eq.${tenant.id}`
         },
         (payload) => {
           logger.debug('[usePlaybooks] Realtime update:', payload);
@@ -169,7 +170,7 @@ export function usePlaybookExecutionHistory(limit = 50) {
       if (error) throw error;
       return (data || []) as any as PlaybookExecution[];
     },
-    enabled: !!tenant?.id,
+    enabled: !!tenant?.id
   });
 }
 
@@ -193,8 +194,8 @@ export function useExecutePlaybook() {
         body: {
           execution_id: executionId,
           action_index: actionIndex,
-          notes,
-        },
+          notes
+        }
       });
 
       if (response.error) throw response.error;
@@ -208,7 +209,7 @@ export function useExecutePlaybook() {
     onError: (error) => {
       logger.error('Execute playbook error:', error);
       toast.error('Erro ao executar playbook');
-    },
+    }
   });
 }
 
@@ -231,7 +232,7 @@ export function useIgnorePlaybookExecution() {
         .update({
           status: 'ignored',
           ignore_reason: reason,
-          completed_at: new Date().toISOString(),
+          completed_at: new Date().toISOString()
         })
         .eq('id', executionId)
         .eq('tenant_id', tenant.id);
@@ -246,7 +247,7 @@ export function useIgnorePlaybookExecution() {
     onError: (error) => {
       logger.error('Ignore playbook error:', error);
       toast.error('Erro ao ignorar recomendação');
-    },
+    }
   });
 }
 
@@ -258,7 +259,7 @@ export function useTriggerManualPlaybook() {
     mutationFn: async ({ 
       playbookId,
       agentId,
-      context = {},
+      context = {}
     }: { 
       playbookId: string;
       agentId?: string;
@@ -275,8 +276,8 @@ export function useTriggerManualPlaybook() {
           context: {
             ...context,
             playbook_id: playbookId, // Forçar playbook específico
-          },
-        },
+          }
+        }
       });
 
       if (response.error) throw response.error;
@@ -294,7 +295,7 @@ export function useTriggerManualPlaybook() {
     onError: (error: Error) => {
       logger.error('Trigger manual playbook error:', error);
       toast.error(error.message || 'Erro ao acionar playbook');
-    },
+    }
   });
 }
 
@@ -328,6 +329,6 @@ export function useTogglePlaybook() {
     onError: (error) => {
       logger.error('Toggle playbook error:', error);
       toast.error('Erro ao alterar status do playbook');
-    },
+    }
   });
 }

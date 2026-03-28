@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface AutonomyMetrics {
   total_decisions: number;
@@ -45,6 +46,7 @@ interface DecisionTimelineItem {
 }
 
 export const useAutonomyMetrics = (days: number = 7) => {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   return useQuery({
@@ -54,15 +56,14 @@ export const useAutonomyMetrics = (days: number = 7) => {
 
       const { data, error } = await supabase.rpc('get_autonomy_metrics', {
         p_tenant_id: tenant.id,
-        p_days: days,
+        p_days: days
       });
 
       if (error) throw error;
       return data as any as AutonomyMetrics;
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval
   });
 };
 
@@ -75,15 +76,14 @@ export const useAuditTrailIntegrity = () => {
       if (!tenant?.id) return null;
 
       const { data, error } = await supabase.rpc('validate_audit_trail_integrity', {
-        p_tenant_id: tenant.id,
+        p_tenant_id: tenant.id
       });
 
       if (error) throw error;
       return data as any as AuditTrailIntegrity;
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval
   });
 };
 
@@ -99,15 +99,14 @@ export const useDecisionTimeline = (options?: { limit?: number; ruleCode?: strin
         p_tenant_id: tenant.id,
         p_limit: options?.limit ?? 50,
         p_rule_code: options?.ruleCode ?? null,
-        p_agent_id: options?.agentId ?? null,
+        p_agent_id: options?.agentId ?? null
       });
 
       if (error) throw error;
       return (data || []) as any as DecisionTimelineItem[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval
   });
 };
 
@@ -138,6 +137,6 @@ export const useActiveRules = () => {
       if (error) throw error;
       return (data || []) as DecisionRule[];
     },
-    enabled: !!tenant?.id,
+    enabled: !!tenant?.id
   });
 };

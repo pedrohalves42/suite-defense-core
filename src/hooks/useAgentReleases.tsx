@@ -2,8 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export const useAgentReleases = () => {
+  const adaptiveInterval = useAdaptivePolling(600_000);
   const queryClient = useQueryClient();
 
   // SECURITY: Use agent_releases_public view (Phase 3 hardening - column privileges block script_content)
@@ -18,10 +20,9 @@ export const useAgentReleases = () => {
       if (error) throw error;
       return data;
     },
-    refetchInterval: 600_000, // COST-OPT v8: 2min → 10min (releases rarely change)
+    refetchInterval: adaptiveInterval,
     refetchOnWindowFocus: true,
-    staleTime: 300_000,
-    refetchIntervalInBackground: false,
+    staleTime: 300_000
   });
 
   const registerRelease = useMutation({
@@ -34,7 +35,7 @@ export const useAgentReleases = () => {
       manual_sha256,
       // SSA-004: Assinatura Ed25519 opcional (auto-gerada no backend se não fornecida)
       signature_base64,
-      signed_by,
+      signed_by
     }: {
       version: string;
       platform: string;
@@ -94,8 +95,8 @@ export const useAgentReleases = () => {
           channel,
           // SSA-004: Pass signature if provided, otherwise backend auto-signs
           signature_base64,
-          signed_by,
-        },
+          signed_by
+        }
       });
 
       if (error) throw error;
@@ -111,7 +112,7 @@ export const useAgentReleases = () => {
     onError: (error) => {
       logger.error('Error registering release:', error);
       toast.error(`Erro ao registrar release: ${error.message || 'Unknown error'}`);
-    },
+    }
   });
 
   return {
@@ -120,6 +121,6 @@ export const useAgentReleases = () => {
     error,
     refetch,
     registerRelease: registerRelease.mutate,
-    isRegistering: registerRelease.isPending,
+    isRegistering: registerRelease.isPending
   };
 };

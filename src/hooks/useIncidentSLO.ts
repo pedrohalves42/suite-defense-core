@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface IncidentSLOState {
   id: string;
@@ -67,6 +68,7 @@ export interface BurnRateInfo {
  * Returns color and label info for a given burn rate value
  */
 export function getBurnRateInfo(rate: number): BurnRateInfo {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   if (rate >= 5) {
     return { level: 'critical', text: 'text-destructive', bg: 'bg-destructive/10', label: 'CRÍTICO', labelEn: 'CRITICAL' };
   }
@@ -138,9 +140,8 @@ export const useIncidentGroupsWithSLO = (limit = 50) => {
       return (data || []) as any as IncidentGroupWithSLO[];
     },
     enabled: !loading && !!activeTenant?.id, // ADR-029 CRIT-04
-    refetchInterval: 300_000, // COST-OPT v8: 2min → 5min
-    staleTime: 120_000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
+    staleTime: 120_000
   });
 };
 
@@ -172,12 +173,11 @@ export const useIncidentSLOSummary = () => {
           : 0,
         avgBudgetConsumed: states.length > 0
           ? states.reduce((sum: number, s: any) => sum + (s.budget_consumed || 0), 0) / states.length
-          : 0,
+          : 0
       };
     },
     enabled: !loading && !!activeTenant?.id, // ADR-029 CRIT-04
-    refetchInterval: 300_000, // COST-OPT v8: 2min → 5min
-    staleTime: 120_000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
+    staleTime: 120_000
   });
 };

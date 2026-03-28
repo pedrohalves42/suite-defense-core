@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface IncidentGroup {
   id: string;
@@ -33,6 +34,7 @@ export interface IncidentStatus {
 }
 
 export const useIncidentGroups = (limit = 50) => {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { activeTenant, loading } = useActiveTenant(); // ADR-030 CRIT-01
 
   return useQuery({
@@ -64,13 +66,12 @@ export const useIncidentGroups = (limit = 50) => {
         is_active: row.is_active ?? false,
         is_trending: row.is_trending ?? false,
         is_ongoing: row.is_ongoing ?? false,
-        occurrences_24h: row.occurrences_24h ?? 0,
+        occurrences_24h: row.occurrences_24h ?? 0
       })) as IncidentGroup[];
     },
     enabled: !loading && !!activeTenant?.id, // ADR-030 CRIT-01
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
-    staleTime: 30000,
+    refetchInterval: adaptiveInterval,
+    staleTime: 30000
   });
 };
 
@@ -98,7 +99,7 @@ export const getIncidentLabel = (group: IncidentGroup): string => {
     'AGENT_INCOMPATIBLE': 'Agente Incompatível',
     'AGENT_OFFLINE': 'Agente Offline',
     'POLICY': 'Violação de Policy',
-    'TIMEOUT': 'Timeout',
+    'TIMEOUT': 'Timeout'
   };
 
   const errorLabel = errorLabels[errorCode] || errorCode;
@@ -135,25 +136,25 @@ export const getSeverityColor = (severity: IncidentGroup['severity_hint']) => {
       return {
         text: 'text-destructive',
         bg: 'bg-destructive/10',
-        border: 'border-destructive',
+        border: 'border-destructive'
       };
     case 'high':
       return {
         text: 'text-[hsl(var(--warning))]',
         bg: 'bg-[hsl(var(--warning))]/10',
-        border: 'border-[hsl(var(--warning))]',
+        border: 'border-[hsl(var(--warning))]'
       };
     case 'medium':
       return {
         text: 'text-[hsl(var(--warning))]',
         bg: 'bg-[hsl(var(--warning))]/10',
-        border: 'border-[hsl(var(--warning))]',
+        border: 'border-[hsl(var(--warning))]'
       };
     default:
       return {
         text: 'text-[hsl(var(--info))]',
         bg: 'bg-[hsl(var(--info))]/10',
-        border: 'border-[hsl(var(--info))]',
+        border: 'border-[hsl(var(--info))]'
       };
   }
 };
@@ -164,7 +165,7 @@ export const getSeverityLabel = (severity: IncidentGroup['severity_hint']) => {
     critical: 'Crítico',
     high: 'Alto',
     medium: 'Médio',
-    low: 'Baixo',
+    low: 'Baixo'
   };
   return labels[severity] || severity;
 };

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useTenant } from '@/hooks/useTenant';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface AgentExecutionHealth {
   agent_id: string;
@@ -48,6 +49,7 @@ export interface NonExecutionAlert {
 
 // V-1026 FIX: Add tenant_id filter to prevent cross-tenant data leakage
 export function useAgentExecutionHealth() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant, loading } = useTenant();
 
   return useQuery({
@@ -64,8 +66,7 @@ export function useAgentExecutionHealth() {
       return (data || []) as any as AgentExecutionHealth[];
     },
     enabled: !loading && !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval
   });
 }
 
@@ -88,8 +89,7 @@ export function useUnhealthyAgents() {
       return (data || []) as AgentExecutionHealth[];
     },
     enabled: !loading && !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval
   });
 }
 
@@ -114,8 +114,7 @@ export function useNonExecutionAlerts() {
       return (data || []) as NonExecutionAlert[];
     },
     enabled: !loading && !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval
   });
 }
 
@@ -136,7 +135,7 @@ export function useResolveAlert() {
   return useMutation({
     mutationFn: async ({ 
       alertId, 
-      resolutionNotes,
+      resolutionNotes
     }: { 
       alertId: string; 
       resolutionNotes?: string;
@@ -168,7 +167,7 @@ export function useResolveAlert() {
         .update({
           resolved: true,
           resolved_at: new Date().toISOString(),
-          resolved_by: user.id,
+          resolved_by: user.id
         })
         .eq('id', alertId)
         .eq('tenant_id', tenant.id);
@@ -187,10 +186,10 @@ export function useResolveAlert() {
             severity: alert.severity,
             resolution_notes: resolutionNotes,
             resolved_by: user.id,
-            user_email: user.email,
+            user_email: user.email
           },
           decision_source: 'human',
-          decision_type: 'alert_resolution',
+          decision_type: 'alert_resolution'
         });
 
         // 6. Update the alert with decision_event reference
@@ -219,16 +218,16 @@ export function useResolveAlert() {
       queryClient.invalidateQueries({ queryKey: ['decision-events'] });
       toast({
         title: 'Alerta resolvido',
-        description: 'O alerta foi marcado como resolvido.',
+        description: 'O alerta foi marcado como resolvido.'
       });
     },
     onError: (error) => {
       toast({
         title: 'Erro ao resolver alerta',
         description: error instanceof Error ? error.message : 'Erro desconhecido',
-        variant: 'destructive',
+        variant: 'destructive'
       });
-    },
+    }
   });
 }
 
@@ -273,7 +272,7 @@ export function useResolveAllAlerts() {
         .update({
           resolved: true,
           resolved_at: new Date().toISOString(),
-          resolved_by: user.id,
+          resolved_by: user.id
         })
         .in('id', alertIds)
         .eq('tenant_id', tenant.id);
@@ -286,16 +285,16 @@ export function useResolveAllAlerts() {
       queryClient.invalidateQueries({ queryKey: ['non-execution-alerts'] });
       toast({
         title: 'Alertas resolvidos',
-        description: `${data.count} alerta(s) marcado(s) como resolvido(s).`,
+        description: `${data.count} alerta(s) marcado(s) como resolvido(s).`
       });
     },
     onError: (error) => {
       toast({
         title: 'Erro ao resolver alertas',
         description: error instanceof Error ? error.message : 'Erro desconhecido',
-        variant: 'destructive',
+        variant: 'destructive'
       });
-    },
+    }
   });
 }
 

@@ -18,10 +18,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { useAgentSnapshots, getAgentStatusCounts } from '@/hooks/useAgentSnapshots';
 import { subDays } from 'date-fns';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 // === Modelo de custo REALISTA para PMEs brasileiras ===
 // Valores conservadores baseados em custo médio de suporte técnico local
 export const COST_MODEL = {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   security_event_critical: 500,   // Incidente crítico real (ransomware, breach)
   security_event_high: 200,       // Ameaça alta real
   security_event_medium: 60,      // Ameaça média
@@ -30,7 +32,7 @@ export const COST_MODEL = {
   policy_drift: 60,               // Correção de conformidade
   blocked_access: 5,              // Bloqueio DNS/domínio (baixo custo unitário, alto volume)
   firewall_enforcement: 40,
-  agent_offline_per_hour: 25,
+  agent_offline_per_hour: 25
 };
 
 export interface UnifiedMetrics {
@@ -152,7 +154,7 @@ export function useUnifiedMetrics() {
       // Evidence summary from server-side RPC (deduplicated, no truncation)
       const evidenceSummary = (evidenceSummaryRes.data || {
         auto_repairs: 0, auto_recoveries: 0, policy_drifts: 0,
-        critical_prevented: 0, high_prevented: 0, medium_prevented: 0, incidents_contained: 0,
+        critical_prevented: 0, high_prevented: 0, medium_prevented: 0, incidents_contained: 0
       }) as Record<string, number>;
 
       const autoRepairs = evidenceSummary.auto_repairs || 0;
@@ -173,7 +175,7 @@ export function useUnifiedMetrics() {
         criticalPrevented: criticalPrevented * COST_MODEL.security_event_critical,
         highPrevented: highPrevented * COST_MODEL.security_event_high,
         policyCorrections: policyDrifts * COST_MODEL.policy_drift,
-        blockedAccess: blockedCount * COST_MODEL.blocked_access,
+        blockedAccess: blockedCount * COST_MODEL.blocked_access
       };
       const totalCostAvoided = Object.values(breakdown).reduce((a, b) => a + b, 0);
       const hoursOfITSaved = (autoRepairs * 0.5) + (autoRecoveries * 1) + (policyDrifts * 0.25) + (criticalPrevented * 2);
@@ -184,11 +186,11 @@ export function useUnifiedMetrics() {
           total: allAlerts.length,
           active: activeAlerts.length,
           critical: criticalAlerts.length,
-          items: activeAlerts,
+          items: activeAlerts
         },
         blocked: {
           last7d: blockedCount,
-          items: (blockedItemsRes.data || []) as Array<{ id: string; agent_name: string; domain: string; attempted_at: string; blocked_by: string }>,
+          items: (blockedItemsRes.data || []) as Array<{ id: string; agent_name: string; domain: string; attempted_at: string; blocked_by: string }>
         },
         evidence: {
           last7d: [],
@@ -199,27 +201,26 @@ export function useUnifiedMetrics() {
           policyDrifts,
           criticalPrevented,
           highPrevented,
-          mediumPrevented,
+          mediumPrevented
         },
         vulnerabilities: {
           total: vulnTotal,
-          critical: vulnCritical,
+          critical: vulnCritical
         },
         insights: {
-          pending: insightsRes.count || 0,
+          pending: insightsRes.count || 0
         },
         financial: {
           totalCostAvoided,
           hoursOfITSaved,
-          breakdown,
+          breakdown
         },
-        lastUpdate: new Date(),
+        lastUpdate: new Date()
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 300_000, // TUNING v11: 60s → 2min (metrics are memoized, less polling needed)
-    staleTime: 60_000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
+    staleTime: 60_000
   });
 
   // PERF-FIX: Memoize agent-dependent computed values to prevent re-render cascade
@@ -232,7 +233,7 @@ export function useUnifiedMetrics() {
       offline: agentCounts.offline,
       warning: agentCounts.warning,
       neverConnected: agentCounts.never_connected,
-      protectionPercent: agentCounts.total > 0 ? Math.round((protectedOnline / agentCounts.total) * 100) : 0,
+      protectionPercent: agentCounts.total > 0 ? Math.round((protectedOnline / agentCounts.total) * 100) : 0
     };
   }, [agentCounts]);
 
@@ -266,7 +267,7 @@ export function useUnifiedMetrics() {
     securityScore,
     globalStatus,
     financial: data.financial,
-    lastUpdate: data.lastUpdate,
+    lastUpdate: data.lastUpdate
   } : null;
 
   return {
@@ -274,6 +275,6 @@ export function useUnifiedMetrics() {
     isLoading: isLoading || snapshotsLoading || tenantLoading,
     isFetched,
     refetch,
-    tenant,
+    tenant
   };
 }

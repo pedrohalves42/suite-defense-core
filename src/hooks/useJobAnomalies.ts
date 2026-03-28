@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { logger } from '@/lib/logger';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface JobAnomaly {
   anomaly_type: string;
@@ -22,6 +23,7 @@ export interface AnomalySummary {
  * Returns the severity level of an anomaly type
  */
 export function getAnomalySeverity(anomalyType: string): 'critical' | 'high' | 'medium' | 'low' {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const criticalTypes = [
     'orphan_approved',
     'terminal_without_completed_at',
@@ -112,9 +114,8 @@ export const useJobAnomalies = () => {
       }));
     },
     enabled: !loading && !!activeTenant?.id,  // ADR-029 CRIT-04: Guard with loading state
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
-    staleTime: 30000,
+    refetchInterval: adaptiveInterval,
+    staleTime: 30000
   });
 
   // Calculate summary
@@ -146,7 +147,7 @@ export const useJobAnomalies = () => {
     ...query,
     summary,
     anomalies: activeAnomalies,
-    allAnomalyTypes: anomalies,
+    allAnomalyTypes: anomalies
   };
 };
 

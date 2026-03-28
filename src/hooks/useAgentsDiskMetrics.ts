@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { DiskMetric } from '@/components/agent/AgentCard';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 /**
  * Hook to fetch disk metrics for multiple agents at once
  */
 export function useAgentsDiskMetrics(agentIds: string[]) {
+  const adaptiveInterval = useAdaptivePolling(300000);
   return useQuery({
     queryKey: ['agents-disk-metrics', agentIds.sort().join(',')],
     queryFn: async () => {
@@ -37,7 +39,7 @@ export function useAgentsDiskMetrics(agentIds: string[]) {
             usage_percent: row.usage_percent,
             total_gb: row.total_gb,
             free_gb: row.free_gb,
-            is_system_drive: row.is_system_drive,
+            is_system_drive: row.is_system_drive
           });
         }
       }
@@ -51,7 +53,6 @@ export function useAgentsDiskMetrics(agentIds: string[]) {
     },
     enabled: agentIds.length > 0,
     staleTime: 30000,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval
   });
 }

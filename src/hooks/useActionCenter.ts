@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useTenant } from './useTenant';
 import { logger } from '@/lib/logger';
 import { useEffect } from 'react';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface ActionItem {
   item_id: string;
@@ -45,6 +46,7 @@ export interface ActionCenterFeed {
 
 
 export function useActionCenter() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   // V-FIX: Use loading guard to prevent race condition during tenant sync
   const { tenant, loading: tenantLoading } = useTenant();
   const queryClient = useQueryClient();
@@ -55,8 +57,8 @@ export function useActionCenter() {
       const { data, error } = await supabase.functions.invoke('action-center-feed', {
         method: 'GET',
         headers: {
-          'x-tenant-id': tenant!.id,
-        },
+          'x-tenant-id': tenant!.id
+        }
       });
 
       if (error) throw error;
@@ -64,9 +66,8 @@ export function useActionCenter() {
     },
     // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 300_000, // COST-OPT v8: 2min → 5min (Edge Function call - expensive)
-    staleTime: 120_000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
+    staleTime: 120_000
   });
 
   // Subscribe to realtime updates for playbook_executions
@@ -81,7 +82,7 @@ export function useActionCenter() {
           event: '*',
           schema: 'public',
           table: 'playbook_executions',
-          filter: `tenant_id=eq.${tenant.id}`,
+          filter: `tenant_id=eq.${tenant.id}`
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['action-center', tenant.id] });
@@ -93,7 +94,7 @@ export function useActionCenter() {
           event: '*',
           schema: 'public',
           table: 'system_alerts',
-          filter: `tenant_id=eq.${tenant.id}`,
+          filter: `tenant_id=eq.${tenant.id}`
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['action-center', tenant.id] });
@@ -105,7 +106,7 @@ export function useActionCenter() {
           event: '*',
           schema: 'public',
           table: 'ai_insights',
-          filter: `tenant_id=eq.${tenant.id}`,
+          filter: `tenant_id=eq.${tenant.id}`
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['action-center', tenant.id] });
@@ -130,7 +131,7 @@ export function useExecuteActionItem() {
       itemId,
       sourceType,
       action,
-      reason,
+      reason
     }: {
       itemId: string;
       sourceType: 'playbook' | 'alert' | 'agent_offline' | 'ai_insight';
@@ -142,14 +143,14 @@ export function useExecuteActionItem() {
       const { data, error } = await supabase.functions.invoke('action-center-feed', {
         method: 'POST',
         headers: {
-          'x-tenant-id': tenant.id,
+          'x-tenant-id': tenant.id
         },
         body: {
           item_id: itemId,
           source_type: sourceType,
           action,
-          reason,
-        },
+          reason
+        }
       });
 
       if (error) throw error;
@@ -167,7 +168,7 @@ export function useExecuteActionItem() {
         const messages: Record<string, string> = {
           execute: sourceType === 'ai_insight' ? 'Recomendação aplicada' : 'Ação executada com sucesso',
           ignore: 'Item ignorado',
-          acknowledge: 'Alerta reconhecido',
+          acknowledge: 'Alerta reconhecido'
         };
         message = messages[action] || 'Operação concluída';
       }
@@ -179,7 +180,7 @@ export function useExecuteActionItem() {
     onError: (error) => {
       logger.error('Execute action error', error instanceof Error ? error : undefined);
       toast.error('Erro ao executar ação');
-    },
+    }
   });
 }
 
@@ -189,6 +190,6 @@ export function useActionCenterCount() {
   return {
     urgentCount: data?.urgent?.length || 0,
     recommendedCount: data?.recommended?.length || 0,
-    totalCount: (data?.urgent?.length || 0) + (data?.recommended?.length || 0),
+    totalCount: (data?.urgent?.length || 0) + (data?.recommended?.length || 0)
   };
 }

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 
 import type { Json } from '@/integrations/supabase/types';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface DecisionEvent {
   id: string;
@@ -24,7 +25,8 @@ interface UseDecisionEventsOptions {
   limit?: number;
 }
 
-export function useDecisionEvents(options: UseDecisionEventsOptions = {}) {
+export function useDecisionEvents(options: UseDecisionEventsOptions = {
+  const adaptiveInterval = useAdaptivePolling(300000);}) {
   const { tenant } = useTenant();
   const { ruleCode, agentId, limit = 100 } = options;
 
@@ -55,8 +57,7 @@ export function useDecisionEvents(options: UseDecisionEventsOptions = {}) {
       return data as DecisionEvent[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval
   });
 }
 
@@ -78,7 +79,7 @@ export function useDecisionEventDetail(eventId: string | null) {
       if (error) throw error;
       return data as DecisionEvent | null;
     },
-    enabled: !!eventId && !!tenant?.id,
+    enabled: !!eventId && !!tenant?.id
   });
 }
 
@@ -93,6 +94,6 @@ export function useDecisionRules() {
 
       if (error) throw error;
       return data;
-    },
+    }
   });
 }

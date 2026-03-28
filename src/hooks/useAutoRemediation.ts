@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export type RemediationActionType =
   | 'kill_process'
@@ -43,6 +44,7 @@ export const ROLLBACK_SUPPORTED: RemediationActionType[] = [
 ];
 
 export const useAutoRemediation = () => {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
@@ -61,9 +63,8 @@ export const useAutoRemediation = () => {
       return data as RemediationAction[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000, // COST-OPT v8: 2min → 5min
-    staleTime: 120_000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
+    staleTime: 120_000
   });
 
   const executeRemediation = useMutation({
@@ -75,7 +76,7 @@ export const useAutoRemediation = () => {
       requires_approval?: boolean;
     }) => {
       const { data, error } = await supabase.functions.invoke('auto-remediate', {
-        body: params,
+        body: params
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.message || data.error);
@@ -91,7 +92,7 @@ export const useAutoRemediation = () => {
     },
     onError: (err: Error) => {
       toast.error('Erro na remediação', { description: err.message });
-    },
+    }
   });
 
   const approveAction = useMutation({
@@ -113,7 +114,7 @@ export const useAutoRemediation = () => {
           status: 'executing',
           approved_by: user?.id || null,
           approved_at: new Date().toISOString(),
-          executed_at: new Date().toISOString(),
+          executed_at: new Date().toISOString()
         })
         .eq('id', actionId)
         .eq('tenant_id', tenant.id);
@@ -127,10 +128,10 @@ export const useAutoRemediation = () => {
           trigger_details: {
             ...(action.trigger_details as Record<string, unknown>),
             original_action_id: actionId,
-            approved: true,
+            approved: true
           },
-          requires_approval: false,
-        },
+          requires_approval: false
+        }
       });
       if (invokeErr) throw invokeErr;
       return data;
@@ -141,13 +142,13 @@ export const useAutoRemediation = () => {
     },
     onError: (err: Error) => {
       toast.error('Erro ao executar ação aprovada', { description: err.message });
-    },
+    }
   });
 
   const rollbackAction = useMutation({
     mutationFn: async (actionId: string) => {
       const { data, error } = await supabase.functions.invoke('rollback-remediation', {
-        body: { action_id: actionId },
+        body: { action_id: actionId }
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.message || data.error);
@@ -159,7 +160,7 @@ export const useAutoRemediation = () => {
     },
     onError: (err: Error) => {
       toast.error('Erro no rollback', { description: err.message });
-    },
+    }
   });
 
   return {
@@ -167,6 +168,6 @@ export const useAutoRemediation = () => {
     isLoading: actions.isLoading,
     executeRemediation,
     approveAction,
-    rollbackAction,
+    rollbackAction
   };
 };

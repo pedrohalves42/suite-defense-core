@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AgentLifecycleState, DashboardAgentCard, LifecycleStage } from '@/types/agent-lifecycle';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export function useAgentLifecycle(tenantId: string | undefined, loading?: boolean) {
+  const adaptiveInterval = useAdaptivePolling(300000);
   return useQuery<DashboardAgentCard[]>({
     queryKey: ['agent-lifecycle', tenantId],
     queryFn: async () => {
@@ -40,27 +42,27 @@ function transformToCard(state: AgentLifecycleState): DashboardAgentCard {
       downloaded: !!state.downloaded_at,
       command_copied: !!state.command_copied_at,
       installed: !!state.installed_at,
-      active: state.lifecycle_stage === 'active',
+      active: state.lifecycle_stage === 'active'
     },
     
     metrics: {
       uptime_minutes: state.minutes_since_enrollment ?? null,
       install_time_seconds: state.installation_time_seconds ?? null,
-      last_seen: state.last_heartbeat ?? null,
+      last_seen: state.last_heartbeat ?? null
     },
     
     flags: {
       is_stuck: state.is_stuck ?? false,
       has_errors: !!state.last_error_message,
       is_offline: state.lifecycle_stage === 'installed_offline' || 
-                  (state.minutes_since_heartbeat !== null && state.minutes_since_heartbeat > 5),
+                  (state.minutes_since_heartbeat !== null && state.minutes_since_heartbeat > 5)
     },
     
     actions: {
       can_retry_install: (state.is_stuck ?? false) || !!state.last_error_message,
       can_view_logs: !!state.installation_metadata,
-      can_delete: true,
-    },
+      can_delete: true
+    }
   };
 }
 
@@ -114,8 +116,7 @@ export function usePipelineMetrics(tenantId: string | undefined, hoursBack: numb
       return data.metrics;
     },
     enabled: !loading && !!tenantId,  // V-503b: Guard para sincronização
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval,
     staleTime: 30000, // Cache por 30s
     retry: 2, // Tentar 2 vezes antes de falhar
     retryDelay: 1000, // Esperar 1s entre tentativas
@@ -139,11 +140,10 @@ export function useFailureRate(tenantId: string | undefined, hoursBack: number =
       return data && data.length > 0 ? data[0] : null;
     },
     enabled: !loading && !!tenantId,  // V-503c: Guard para sincronização
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval,
     staleTime: 30000,
     retry: 2,
-    retryDelay: 1000,
+    retryDelay: 1000
   });
 }
 

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from './useActiveTenant';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface AgentSystemMetrics {
   agent_id: string;
@@ -15,6 +16,7 @@ interface AgentSystemMetrics {
  * P0 CRIT-02: Fixed race condition - waits for tenant sync before querying
  */
 export function useAgentSystemMetrics(agentId: string | undefined) {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { activeTenant, loading: tenantLoading } = useActiveTenant();
   
   return useQuery({
@@ -36,8 +38,7 @@ export function useAgentSystemMetrics(agentId: string | undefined) {
     },
     enabled: !tenantLoading && !!activeTenant?.id && !!agentId, // P0 CRIT-02: Race condition fix
     staleTime: 30000,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval
   });
 }
 
@@ -72,7 +73,7 @@ export function useAgentsSystemMetrics(agentIds: string[]) {
             cpu_usage_percent: row.cpu_usage_percent,
             memory_usage_percent: row.memory_usage_percent,
             disk_usage_percent: row.disk_usage_percent,
-            uptime_seconds: row.uptime_seconds,
+            uptime_seconds: row.uptime_seconds
           };
         }
       }
@@ -81,7 +82,6 @@ export function useAgentsSystemMetrics(agentIds: string[]) {
     },
     enabled: !tenantLoading && !!activeTenant?.id && agentIds.length > 0, // P0 CRIT-02: Race condition fix
     staleTime: 30000,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval
   });
 }
