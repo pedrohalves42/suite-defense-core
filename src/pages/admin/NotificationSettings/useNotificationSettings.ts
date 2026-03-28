@@ -81,7 +81,7 @@ export function useNotificationSettings() {
       ]);
 
       if (channelsRes.data) {
-        setChannels(channelsRes.data);
+        setChannels(channelsRes.data.map(c => ({ ...c, config: (c.config ?? {}) as Record<string, unknown> })));
 
         const channelIds = channelsRes.data.map(c => c.id);
         if (channelIds.length > 0) {
