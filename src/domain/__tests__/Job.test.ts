@@ -26,7 +26,7 @@ describe('Job Entity', () => {
 
     it('fails without agentId', () => {
       const result = Job.create({
-        agentId: null as any,
+        agentId: null as unknown,
         tenantId: makeTenantId(),
         type: JobType.HEALTH_CHECK,
       });
@@ -37,7 +37,7 @@ describe('Job Entity', () => {
       const result = Job.create({
         agentId: AgentId.generate(),
         tenantId: makeTenantId(),
-        type: 'invalid' as any,
+        type: 'invalid' as unknown,
       });
       expect(result.isSuccess).toBe(false);
     });

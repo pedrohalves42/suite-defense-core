@@ -297,7 +297,7 @@ export default function AgentMonitoringAdvanced() {
       });
       
       fetchDashboardData();
-    } catch (error: any) {
+    } catch (error: Record<string, unknown>) {
       logger.error('Error resolving alert group', error);
       toast({
         title: 'Erro ao resolver alertas',

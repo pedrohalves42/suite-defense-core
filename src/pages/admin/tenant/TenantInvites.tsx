@@ -59,7 +59,7 @@ export default function TenantInvites() {
       setNewInviteRole("viewer");
       queryClient.invalidateQueries({ queryKey: ["tenant-invites"] });
     },
-    onError: (error: any) => {
+    onError: (error: Record<string, unknown>) => {
       toast({
         title: "Erro ao enviar convite",
         description: error.message || "Tente novamente",
@@ -84,7 +84,7 @@ export default function TenantInvites() {
       });
       queryClient.invalidateQueries({ queryKey: ["tenant-invites"] });
     },
-    onError: (error: any) => {
+    onError: (error: Record<string, unknown>) => {
       toast({
         title: "Erro ao excluir convite",
         description: error.message,
@@ -127,7 +127,7 @@ export default function TenantInvites() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="role">Funcao</Label>
-              <Select value={newInviteRole} onValueChange={(value: any) => setNewInviteRole(value)}>
+              <Select value={newInviteRole} onValueChange={(value: Record<string, unknown>) => setNewInviteRole(value)}>
                 <SelectTrigger id="role">
                   <SelectValue />
                 </SelectTrigger>

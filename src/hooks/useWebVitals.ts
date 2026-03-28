@@ -65,7 +65,7 @@ export function useWebVitals(): WebVitalsMetrics {
       observers.push(fidObserver);
 
       // CLS
-      // TUNING: Proper LayoutShift type instead of `as any[]`
+      // TUNING: Proper LayoutShift type instead of `as Array<Record<string, unknown>>`
       let clsValue = 0;
       const clsObserver = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {

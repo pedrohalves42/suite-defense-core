@@ -51,7 +51,7 @@ export function StripeExtendedPricesSetup() {
         description: `${data.created?.length || 0} preços foram criados no Stripe.`,
       });
     },
-    onError: (error: any) => {
+    onError: (error: Record<string, unknown>) => {
       toast({
         title: 'Erro ao Criar Preços',
         description: error.message || 'Verifique os logs para mais detalhes.',

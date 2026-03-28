@@ -58,7 +58,7 @@ export function DailySummaryCard() {
       today.setHours(0, 0, 0, 0);
       const todayISO = today.toISOString();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- tables not in generated types
-      const sb = supabase as any;
+      const sb = supabase as unknown;
 
       // Parallel fetches for today's data
       const [jobsRes, blockedRes, actionsRes, alertsRes] = await Promise.all([

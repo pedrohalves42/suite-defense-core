@@ -162,11 +162,11 @@ export const useIncidentSLOSummary = () => {
       const states = data || [];
       return {
         total: states.length,
-        critical: states.filter((s: any) => s.status === 'critical').length,
-        high: states.filter((s: any) => s.status === 'high').length,
-        warning: states.filter((s: any) => s.status === 'warning').length,
-        alert: states.filter((s: any) => s.status === 'alert').length,
-        ok: states.filter((s: any) => s.status === 'ok').length,
+        critical: states.filter((s: Record<string, unknown>) => s.status === 'critical').length,
+        high: states.filter((s: Record<string, unknown>) => s.status === 'high').length,
+        warning: states.filter((s: Record<string, unknown>) => s.status === 'warning').length,
+        alert: states.filter((s: Record<string, unknown>) => s.status === 'alert').length,
+        ok: states.filter((s: Record<string, unknown>) => s.status === 'ok').length,
         avgBurnRate1h: states.length > 0
           ? states.reduce((sum: number, s: any) => sum + (s.burn_rate_1h || 0), 0) / states.length
           : 0,

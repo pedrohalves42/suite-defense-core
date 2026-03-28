@@ -77,7 +77,7 @@ export function DynamicValidationSystem() {
         p_include_archived: false,
       });
       const agentsData = ((agentsRaw as unknown as Array<Record<string, unknown>>) || [])
-        .filter((a: any) => a.status === 'active')
+        .filter((a: Record<string, unknown>) => a.status === 'active')
         .sort((a: any, b: any) => (a.agent_name || '').localeCompare(b.agent_name || ''));
 
       if (!agentsData) {
@@ -87,7 +87,7 @@ export function DynamicValidationSystem() {
 
       // Check data completeness for each agent
       const agentsWithStatus = await Promise.all(
-        agentsData.map(async (agent: any) => {
+        agentsData.map(async (agent: Record<string, unknown>) => {
           const agentId = agent.id as string;
           // V-1051 FIX: Add tenant_id filter to prevent cross-tenant data leakage
           const [softwareInventory, antivirusStatus, webActivity, vulnerabilities] = await Promise.all([
@@ -166,7 +166,7 @@ export function DynamicValidationSystem() {
       });
 
       setValidationJobs(jobs);
-    } catch (error: any) {
+    } catch (error: Record<string, unknown>) {
       logger.error('Error loading agents status:', error);
       toast.error('Erro ao carregar status dos agentes', {
         description: error.message
@@ -248,7 +248,7 @@ export function DynamicValidationSystem() {
 
       // Reload status after a delay
       setTimeout(loadAgentsStatus, 3000);
-    } catch (error: any) {
+    } catch (error: Record<string, unknown>) {
       logger.error('Error creating validation jobs:', error);
       toast.error('Erro ao criar jobs de validação', {
         description: error.message

@@ -81,7 +81,7 @@ export default function JobHealthDashboard() {
       
       const agentMap: Record<string, ProblematicAgent> = {};
       
-      data?.forEach((job: any) => {
+      data?.forEach((job: Record<string, unknown>) => {
         const agentId = job.agent_id;
         if (!agentId) return;
         

@@ -89,7 +89,7 @@ export const ClientDashboard = () => {
         p_tenant_id: tenant.id,
         p_include_archived: false
       });
-      const agents = ((agentsRaw || []) as any[]).map((a: any) => ({
+      const agents = ((agentsRaw || []) as Array<Record<string, unknown>>).map((a: Record<string, unknown>) => ({
         id: a.id, status: a.status, last_heartbeat: a.last_heartbeat, agent_name: a.agent_name
       }));
 
@@ -463,7 +463,7 @@ export const ClientDashboard = () => {
         <CardContent>
           {stats?.recentReports && stats.recentReports.length > 0 ? (
             <div className="space-y-3">
-              {stats.recentReports.map((report: any) => (
+              {stats.recentReports.map((report: Record<string, unknown>) => (
                 <div 
                   key={report.id} 
                   className="flex items-center justify-between p-3 rounded-lg bg-muted/50"

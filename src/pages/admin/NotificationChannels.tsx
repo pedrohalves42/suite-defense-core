@@ -170,17 +170,17 @@ export default function NotificationChannels() {
       };
 
       if (channel.channel_type === 'telegram') {
-        const chatId = (channel.config as any)?.chat_id || '';
+        const chatId = (channel.config as Record<string, unknown>)?.chat_id || '';
         payload.recipient = String(chatId);
         payload.config = { 
           chat_id: String(chatId),
-          bot_token: (channel.config as any)?.bot_token || '',
+          bot_token: (channel.config as Record<string, unknown>)?.bot_token || '',
         };
       } else if (channel.channel_type === 'email') {
-        payload.recipient = (channel.config as any)?.email || '';
+        payload.recipient = (channel.config as Record<string, unknown>)?.email || '';
         payload.config = channel.config;
       } else if (channel.channel_type === 'whatsapp') {
-        payload.recipient = (channel.config as any)?.phone || '';
+        payload.recipient = (channel.config as Record<string, unknown>)?.phone || '';
         payload.config = channel.config;
       } else {
         payload.config = channel.config;

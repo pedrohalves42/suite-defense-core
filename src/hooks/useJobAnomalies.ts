@@ -104,7 +104,7 @@ export const useJobAnomalies = () => {
       }
 
       // Map to our interface
-      return (data || []).map((row: any) => ({
+      return (data || []).map((row: Record<string, unknown>) => ({
         anomaly_type: row.anomaly_type,
         count: row.count || 0,
         oldest_occurrence: row.oldest_occurrence,

@@ -60,7 +60,7 @@ describe('CheckForUpdate Use Case', () => {
 
   it('returns null when not compatible', async () => {
     const pkg = makeMockPackage({ isCompatibleWith: vi.fn().mockReturnValue(false) });
-    vi.mocked(packageRepo.findLatestActive).mockResolvedValue(pkg as any);
+    vi.mocked(packageRepo.findLatestActive).mockResolvedValue(pkg as unknown);
 
     const result = await useCase.execute({
       agentId: AgentId.generate(),
@@ -75,7 +75,7 @@ describe('CheckForUpdate Use Case', () => {
 
   it('returns update when upgrade available', async () => {
     const pkg = makeMockPackage();
-    vi.mocked(packageRepo.findLatestActive).mockResolvedValue(pkg as any);
+    vi.mocked(packageRepo.findLatestActive).mockResolvedValue(pkg as unknown);
 
     const result = await useCase.execute({
       agentId: AgentId.generate(),
@@ -96,7 +96,7 @@ describe('CheckForUpdate Use Case', () => {
       isUpgradeFor: vi.fn().mockReturnValue(false),
       isHotfixFor: vi.fn().mockReturnValue(true),
     });
-    vi.mocked(packageRepo.findLatestActive).mockResolvedValue(pkg as any);
+    vi.mocked(packageRepo.findLatestActive).mockResolvedValue(pkg as unknown);
 
     const result = await useCase.execute({
       agentId: AgentId.generate(),
@@ -115,7 +115,7 @@ describe('CheckForUpdate Use Case', () => {
       isUpgradeFor: vi.fn().mockReturnValue(false),
       isHotfixFor: vi.fn().mockReturnValue(false),
     });
-    vi.mocked(packageRepo.findLatestActive).mockResolvedValue(pkg as any);
+    vi.mocked(packageRepo.findLatestActive).mockResolvedValue(pkg as unknown);
 
     const result = await useCase.execute({
       agentId: AgentId.generate(),

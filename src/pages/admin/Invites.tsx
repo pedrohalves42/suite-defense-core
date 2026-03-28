@@ -128,7 +128,7 @@ export default function Invites() {
               </div>
               <div>
                 <Label>Role</Label>
-                <Select value={role} onValueChange={(value: any) => setRole(value)}>
+                <Select value={role} onValueChange={(value: Record<string, unknown>) => setRole(value)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

@@ -126,7 +126,7 @@ export function PipelineHealthCard({
             <HelpCircle className="h-4 w-4 mt-0.5 text-destructive" />
             <div>
               <p className="font-medium text-destructive">Falha ao ler saúde do pipeline</p>
-              <p className="text-xs text-muted-foreground">{(error as any)?.message ?? 'Erro desconhecido'}</p>
+              <p className="text-xs text-muted-foreground">{(error as never)?.message ?? 'Erro desconhecido'}</p>
             </div>
           </div>
         )}

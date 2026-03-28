@@ -378,7 +378,7 @@ export default function Automations() {
                               <Zap className={`h-4 w-4 ${playbook.is_enabled ? 'text-primary' : 'text-muted-foreground'}`} />
                               <span className="font-medium">{playbook.name}</span>
                               {playbook.severity && (
-                                <Badge variant={getSeverityColor(playbook.severity) as any}>
+                                <Badge variant={getSeverityColor(playbook.severity) as "default" | "destructive" | "outline" | "secondary"}>
                                   {playbook.severity}
                                 </Badge>
                               )}

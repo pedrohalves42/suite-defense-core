@@ -123,7 +123,7 @@ export default function TestComplianceGenerator() {
             hmac_signature: result.payload?.hmac_signature || result.hmac_signature || "",
           } : r
         ));
-      } catch (error: any) {
+      } catch (error: Record<string, unknown>) {
         logger.error(`Error generating ${reportConfig.name}:`, error);
         setReports(prev => prev.map((r, idx) => 
           idx === i ? { ...r, status: "error", error: error.message } : r

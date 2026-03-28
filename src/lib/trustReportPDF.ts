@@ -77,7 +77,7 @@ async function collectTrustData(tenantId: string, startDate: Date, endDate: Date
   // Aggregate detection rules
   const bySeverityRules: Record<string, number> = {};
   const byTactic: Record<string, number> = {};
-  rules.forEach((r: any) => {
+  rules.forEach((r: Record<string, unknown>) => {
     bySeverityRules[r.severity || 'unknown'] = (bySeverityRules[r.severity || 'unknown'] || 0) + 1;
     const tactic = r.mitre_tactic || 'unknown';
     byTactic[tactic] = (byTactic[tactic] || 0) + 1;
@@ -86,7 +86,7 @@ async function collectTrustData(tenantId: string, startDate: Date, endDate: Date
   // Aggregate detections
   const bySeverityDet: Record<string, number> = {};
   const ruleCount: Record<string, number> = {};
-  detections.forEach((d: any) => {
+  detections.forEach((d: Record<string, unknown>) => {
     bySeverityDet[d.severity || 'info'] = (bySeverityDet[d.severity || 'info'] || 0) + 1;
     ruleCount[d.detection_name || 'unknown'] = (ruleCount[d.detection_name || 'unknown'] || 0) + 1;
   });
@@ -106,15 +106,15 @@ async function collectTrustData(tenantId: string, startDate: Date, endDate: Date
   });
 
   // Threat Intel
-  const sources = [...new Set(threatInd.map((t: any) => t.source).filter(Boolean))];
-  const lastSync = feedSync.length > 0 ? (feedSync as any[])[0].sync_completed_at : null;
+  const sources = [...new Set(threatInd.map((t: Record<string, unknown>) => t.source).filter(Boolean))];
+  const lastSync = feedSync.length > 0 ? (feedSync as Array<Record<string, unknown>>)[0].sync_completed_at : null;
 
   // Compliance categories
   const categories: { name: string; score: number }[] = [];
   if (compliance?.category_scores && typeof compliance.category_scores === 'object') {
     const sd = compliance.category_scores as Record<string, unknown>;
     Object.entries(sd).forEach(([name, val]) => {
-      const score = typeof val === 'number' ? val : (val as any)?.score ?? 0;
+      const score = typeof val === 'number' ? val : (val as never)?.score ?? 0;
       categories.push({ name, score });
     });
   }
@@ -130,7 +130,7 @@ async function collectTrustData(tenantId: string, startDate: Date, endDate: Date
     },
     detectionRules: {
       total: rules.length,
-      enabled: rules.filter((r: any) => r.is_enabled).length,
+      enabled: rules.filter((r: Record<string, unknown>) => r.is_enabled).length,
       bySeverity: bySeverityRules,
       byTactic,
     },
@@ -457,7 +457,7 @@ export async function generateTrustReportPDF(
       theme: 'striped',
       headStyles: { fillColor: C.brand, fontSize: 8 },
       bodyStyles: { fontSize: 8 },
-      didParseCell: (hookData: any) => {
+      didParseCell: (hookData: Record<string, unknown>) => {
         if (hookData.section === 'body' && hookData.column.index === 1) {
           const val = hookData.cell.raw as string;
           hookData.cell.styles.textColor = val.startsWith('✓') ? C.green : C.red;
@@ -492,7 +492,7 @@ export async function generateTrustReportPDF(
     headStyles: { fillColor: C.brand, fontSize: 8 },
     bodyStyles: { fontSize: 7.5 },
     columnStyles: { 0: { fontStyle: 'bold' } },
-    didParseCell: (hookData: any) => {
+    didParseCell: (hookData: Record<string, unknown>) => {
       if (hookData.section === 'body' && hookData.column.index === 2) {
         const val = hookData.cell.raw as string;
         if (val.startsWith('✓')) hookData.cell.styles.textColor = C.green;

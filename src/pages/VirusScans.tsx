@@ -363,7 +363,7 @@ export default function VirusScans() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {scans?.data?.map((scan: any) => {
+                    {scans?.data?.map((scan: Record<string, unknown>) => {
                       const status = getStatusBadge(scan.is_malicious, scan.positives);
                       const StatusIcon = status.icon;
                       return (

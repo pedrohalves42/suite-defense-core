@@ -123,7 +123,7 @@ export default function SecurityGraph() {
       queryClient.invalidateQueries({ queryKey: ["security-graph-edges"] });
       toast.success(`Análise concluída: ${data.nodes_created} itens encontrados`);
     },
-    onError: (err: any) => toast.error("Erro ao analisar: " + err.message),
+    onError: (err: Record<string, unknown>) => toast.error("Erro ao analisar: " + err.message),
   });
 
   const autoBlock = useMutation({
@@ -144,7 +144,7 @@ export default function SecurityGraph() {
         toast.info("Nenhum domínio/IP perigoso encontrado para bloquear.");
       }
     },
-    onError: (err: any) => toast.error("Erro ao bloquear: " + err.message),
+    onError: (err: Record<string, unknown>) => toast.error("Erro ao bloquear: " + err.message),
   });
 
   const { data: nodes = [], isLoading: nodesLoading } = useQuery({
@@ -179,7 +179,7 @@ export default function SecurityGraph() {
   const filteredNodes = useMemo(() => {
     if (!searchTerm) return nodes;
     const term = searchTerm.toLowerCase();
-    return nodes.filter((n: any) =>
+    return nodes.filter((n: Record<string, unknown>) =>
       (n.label || "").toLowerCase().includes(term) ||
       (n.node_value || "").toLowerCase().includes(term)
     );
@@ -188,12 +188,12 @@ export default function SecurityGraph() {
   // Group by risk level
   const riskGroups = useMemo(() => {
     const groups = {
-      danger: [] as any[],
-      warning: [] as any[],
-      caution: [] as any[],
-      safe: [] as any[],
+      danger: [] as Array<Record<string, unknown>>,
+      warning: [] as Array<Record<string, unknown>>,
+      caution: [] as Array<Record<string, unknown>>,
+      safe: [] as Array<Record<string, unknown>>,
     };
-    filteredNodes.forEach((n: any) => {
+    filteredNodes.forEach((n: Record<string, unknown>) => {
       const risk = getRiskInfo(n.risk_score);
       groups[risk.level].push(n);
     });
@@ -203,11 +203,11 @@ export default function SecurityGraph() {
   const connectedNodes = useMemo(() => {
     if (!selectedNode) return [];
     const connectedIds = new Set<string>();
-    edges.forEach((e: any) => {
+    edges.forEach((e: Record<string, unknown>) => {
       if (e.source_node_id === selectedNode.id) connectedIds.add(e.target_node_id);
       if (e.target_node_id === selectedNode.id) connectedIds.add(e.source_node_id);
     });
-    return nodes.filter((n: any) => connectedIds.has(n.id));
+    return nodes.filter((n: Record<string, unknown>) => connectedIds.has(n.id));
   }, [selectedNode, edges, nodes]);
 
   const dangerCount = riskGroups.danger.length;
@@ -393,7 +393,7 @@ export default function SecurityGraph() {
                     <CollapsibleContent>
                       <ScrollArea className={items.length > 8 ? "h-[360px]" : ""}>
                         <div className="divide-y divide-border/30">
-                          {items.map((node: any) => {
+                          {items.map((node: Record<string, unknown>) => {
                             const risk = getRiskInfo(node.risk_score);
                             const isSelected = selectedNode?.id === node.id;
                             return (
@@ -413,7 +413,7 @@ export default function SecurityGraph() {
                                   </p>
                                   <p className="text-[11px] text-muted-foreground">
                                     {(() => {
-                                      const meta = node.metadata as any;
+                                      const meta = node.metadata as Record<string, unknown>;
                                       const src = meta?.source;
                                       if (src && sourceExplanations[src]) {
                                         return sourceExplanations[src].name;
@@ -487,7 +487,7 @@ export default function SecurityGraph() {
 
                   {/* WHY it's dangerous — the key missing info */}
                   {(() => {
-                    const meta = selectedNode.metadata as any;
+                    const meta = selectedNode.metadata as Record<string, unknown>;
                     const src = meta?.source;
                     const sourceInfo = src ? sourceExplanations[src] : null;
                     if (!sourceInfo && selectedNode.risk_score < 60) return null;
@@ -524,7 +524,7 @@ export default function SecurityGraph() {
                         Ligado a ({connectedNodes.length})
                       </p>
                       <div className="space-y-1 max-h-40 overflow-y-auto">
-                        {connectedNodes.map((cn: any) => {
+                        {connectedNodes.map((cn: Record<string, unknown>) => {
                           const cnRisk = getRiskInfo(cn.risk_score);
                           return (
                             <button

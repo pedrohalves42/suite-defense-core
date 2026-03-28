@@ -40,7 +40,7 @@ export function HealthTrendChart() {
         p_tenant_id: tenant.id,
         p_include_archived: false
       });
-      const agents = ((agentsRaw || []) as any[]).map((a: any) => ({
+      const agents = ((agentsRaw || []) as Array<Record<string, unknown>>).map((a: Record<string, unknown>) => ({
         id: a.id, status: a.status, last_heartbeat: a.last_heartbeat, enrolled_at: a.enrolled_at
       }));
 

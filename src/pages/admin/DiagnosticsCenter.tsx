@@ -147,7 +147,7 @@ export default function DiagnosticsCenter() {
     queryFn: async () => {
       if (!tenant?.id) return [];
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as never)
         .from('jobs')
         .select('agent_name')
         .eq('tenant_id', tenant.id)
@@ -155,7 +155,7 @@ export default function DiagnosticsCenter() {
         .gte('created_at', since);
       if (error) return [];
       // Unique agent names with failures
-      const names = [...new Set((data || []).map((j: any) => j.agent_name))];
+      const names = [...new Set((data || []).map((j: Record<string, unknown>) => j.agent_name))];
       return names as string[];
     },
     enabled: !tenantLoading && !!tenant?.id,

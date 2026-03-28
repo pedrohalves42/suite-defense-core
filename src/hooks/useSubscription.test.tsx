@@ -50,7 +50,7 @@ describe('useSubscription', () => {
       data: {
         session: {
           access_token: 'test-token',
-        } as any,
+        } as unknown,
       },
       error: null,
     })
@@ -75,7 +75,7 @@ describe('useSubscription', () => {
       data: {
         session: {
           access_token: 'test-token',
-        } as any,
+        } as unknown,
       },
       error: null,
     })

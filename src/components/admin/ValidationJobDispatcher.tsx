@@ -95,7 +95,7 @@ export function ValidationJobDispatcher() {
             } else {
               created.push(`${jobDef.name} → ${agent.agent_name}`);
             }
-          } catch (err: any) {
+          } catch (err: Record<string, unknown>) {
             failed.push(`${jobDef.type} → ${agent.agent_name}: ${err.message}`);
           }
         }
@@ -114,7 +114,7 @@ export function ValidationJobDispatcher() {
           description: "Podem já existir jobs ativos para esses agentes",
         });
       }
-    } catch (error: any) {
+    } catch (error: Record<string, unknown>) {
       logger.error('Error creating validation jobs:', error);
       toast.error('Erro ao criar jobs', { description: error.message });
     } finally {

@@ -233,7 +233,7 @@ export function useAvailableAgents(groupId: string | null) {
       if (agentsError) throw agentsError;
 
       // Map to expected format
-      const mappedAgents = (allAgents || []).map((agent: any) => ({
+      const mappedAgents = (allAgents || []).map((agent: Record<string, unknown>) => ({
         id: agent.id,
         agent_name: agent.agent_name,
         display_name: agent.display_name || agent.agent_name,
@@ -253,7 +253,7 @@ export function useAvailableAgents(groupId: string | null) {
       if (membersError) throw membersError;
 
       const memberIds = new Set(groupMembers?.map(m => m.agent_id) || []);
-      return mappedAgents.filter((agent: any) => !memberIds.has(agent.id));
+      return mappedAgents.filter((agent: Record<string, unknown>) => !memberIds.has(agent.id));
     },
     enabled: !loading && !!tenant?.id,
   });

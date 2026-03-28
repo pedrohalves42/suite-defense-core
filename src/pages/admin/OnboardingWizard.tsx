@@ -85,7 +85,7 @@ const OnboardingWizard = () => {
       }
 
       toast.success('Chave de instalação gerada!');
-    } catch (err: any) {
+    } catch (err: Record<string, unknown>) {
       toast.error('Erro ao gerar chave: ' + (err.message || 'Tente novamente'));
     } finally {
       setLoading(false);
@@ -108,7 +108,7 @@ const OnboardingWizard = () => {
       try {
         const fiveMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString(); // 30min threshold
         const { data } = await supabase
-          .from('agents' as any)
+          .from('agents' as never)
           .select('id')
           .eq('tenant_id', tenant)
           .gte('last_seen', fiveMinAgo)

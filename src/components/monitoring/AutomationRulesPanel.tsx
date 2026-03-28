@@ -144,7 +144,7 @@ export function AutomationRulesPanel() {
       setShowCreateDialog(false);
       setNewRule({ name: '', description: '', trigger_metric: 'cpu_usage_percent', trigger_operator: '>', trigger_value: 90, action_type: 'send_alert', cooldown_minutes: 30, priority: 5 });
       fetchData();
-    } catch (error: any) {
+    } catch (error: Record<string, unknown>) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     }
   };
@@ -160,7 +160,7 @@ export function AutomationRulesPanel() {
 
       if (error) throw error;
       setRules(prev => prev.map(r => r.id === ruleId ? { ...r, is_active: isActive } : r));
-    } catch (error: any) {
+    } catch (error: Record<string, unknown>) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     }
   };
@@ -177,7 +177,7 @@ export function AutomationRulesPanel() {
       if (error) throw error;
       setRules(prev => prev.filter(r => r.id !== ruleId));
       toast({ title: 'Regra removida' });
-    } catch (error: any) {
+    } catch (error: Record<string, unknown>) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     }
   };
@@ -200,7 +200,7 @@ export function AutomationRulesPanel() {
         description: `${data.evaluated} regras avaliadas, ${data.triggered} acionadas`,
       });
       fetchData();
-    } catch (error: any) {
+    } catch (error: Record<string, unknown>) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     }
   };
@@ -391,9 +391,9 @@ export function AutomationRulesPanel() {
                             {rule.trigger_type === 'metric_threshold' ? (
                               <>Se {getMetricLabel(conditions.metric || '')} {conditions.operator} {conditions.value}{conditions.metric?.includes('percent') ? '%' : ''}</>
                             ) : rule.trigger_type === 'anomaly_detection' ? (
-                              <>Detecção: {(conditions as any).eventType === 'suspicious_process' ? 'Processo Suspeito' : (conditions as any).eventType || 'anomalia'} {(conditions as any).severity ? `(${(conditions as any).severity})` : ''}</>
+                              <>Detecção: {(conditions as Record<string, unknown>).eventType === 'suspicious_process' ? 'Processo Suspeito' : (conditions as Record<string, unknown>).eventType || 'anomalia'} {(conditions as Record<string, unknown>).severity ? `(${(conditions as Record<string, unknown>).severity})` : ''}</>
                             ) : rule.trigger_type === 'agent_status' ? (
-                              <>Evento: {(conditions as any).eventType === 'agent_offline' ? `Agente offline > ${(conditions as any).duration_minutes || 10}min` : (conditions as any).eventType || 'status'}</>
+                              <>Evento: {(conditions as Record<string, unknown>).eventType === 'agent_offline' ? `Agente offline > ${(conditions as Record<string, unknown>).duration_minutes || 10}min` : (conditions as Record<string, unknown>).eventType || 'status'}</>
                             ) : (
                               <>Tipo: {rule.trigger_type}</>
                             )}

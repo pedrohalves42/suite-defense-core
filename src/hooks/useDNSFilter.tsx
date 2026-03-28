@@ -185,7 +185,7 @@ export function useDNSFilter() {
       queryClient.invalidateQueries({ queryKey: ['dns-filter-enabled'] });
       toast.success(enabled ? 'DNS Filter habilitado' : 'DNS Filter desabilitado');
     },
-    onError: (error: any) => {
+    onError: (error: Record<string, unknown>) => {
       toast.error(`Erro ao alterar configuração: ${error.message}`);
     },
   });
@@ -216,7 +216,7 @@ export function useDNSFilter() {
 
       const { data, error } = await (supabase
         .from('jobs')
-        .insert(jobs as any) as any)
+        .insert(jobs as never) as never)
         .select('id');
 
       if (error) throw error;
@@ -289,7 +289,7 @@ export function useDNSFilter() {
 
       const { data, error } = await supabase
         .from('jobs')
-        .insert(jobs as any)
+        .insert(jobs as never)
         .select('id');
 
       if (error) throw error;
@@ -302,7 +302,7 @@ export function useDNSFilter() {
         toast.info(result.message || 'Nenhuma coleta agendada');
       }
     },
-    onError: (error: any) => {
+    onError: (error: Record<string, unknown>) => {
       toast.error(`Erro ao agendar coleta: ${error.message}`);
     },
   });

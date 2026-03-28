@@ -264,7 +264,7 @@ export default function RiskAnalysis() {
                     <CardDescription>{risk.description}</CardDescription>
                   </div>
                 </div>
-                <Badge variant={getSeverityColor(risk.severity) as any}>
+                <Badge variant={getSeverityColor(risk.severity) as "default" | "destructive" | "outline" | "secondary"}>
                   {getSeverityLabel(risk.severity)}
                 </Badge>
               </div>

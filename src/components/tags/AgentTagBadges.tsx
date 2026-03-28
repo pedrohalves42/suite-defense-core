@@ -17,7 +17,7 @@ export const AgentTagBadges = ({ agentId, maxVisible = 3 }: AgentTagBadgesProps)
 
   return (
     <div className="flex flex-wrap gap-1">
-      {visible.map((a: any) => (
+      {visible.map((a: Record<string, unknown>) => (
         <Badge
           key={a.id}
           variant="secondary"

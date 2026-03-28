@@ -51,7 +51,7 @@ export function ChainHealthPanel({ tenantId }: ChainHealthPanelProps) {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: Record<string, unknown>) => {
       toast.success(`Cadeia de auditoria reparada: ${data?.links_repaired || 0} links corrigidos`);
       queryClient.invalidateQueries({ queryKey: ['chain-health'] });
       queryClient.invalidateQueries({ queryKey: ['audit-integrity'] });
@@ -67,7 +67,7 @@ export function ChainHealthPanel({ tenantId }: ChainHealthPanelProps) {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: Record<string, unknown>) => {
       toast.success(`Cadeias de execução reancoradas: ${data?.agents_reanchored || 0} agentes`);
       queryClient.invalidateQueries({ queryKey: ['chain-health'] });
     },

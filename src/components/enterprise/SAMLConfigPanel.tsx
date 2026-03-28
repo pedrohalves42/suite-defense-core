@@ -65,7 +65,7 @@ export function SAMLConfigPanel({ tenantId }: SAMLConfigPanelProps) {
       });
       toast.success('Configuração SAML salva');
       loadConfig();
-    } catch (e: any) {
+    } catch (e: Record<string, unknown>) {
       toast.error(e.message || 'Falha ao salvar');
     } finally {
       setLoading(false);
@@ -79,7 +79,7 @@ export function SAMLConfigPanel({ tenantId }: SAMLConfigPanelProps) {
       if (data.redirect_url) {
         window.location.href = data.redirect_url;
       }
-    } catch (e: any) {
+    } catch (e: Record<string, unknown>) {
       toast.error(e.message || 'Falha ao iniciar login');
     } finally {
       setLoading(false);

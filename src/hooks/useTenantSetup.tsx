@@ -155,7 +155,7 @@ export const useTenantSetup = () => {
           .insert([{
             tenant_id: activeTenant.id,
             business_hours: data.businessHours as unknown as Json,
-          }] as any);
+          }] as never);
 
         if (settingsError) throw settingsError;
       }

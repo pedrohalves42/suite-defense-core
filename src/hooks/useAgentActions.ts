@@ -73,7 +73,7 @@ export function useAgentActions() {
           blocked_at: null,
           blocked_by: null,
           blocked_reason: null,
-        }) as any)
+        }) as never)
         .eq('id', versionId)
         .eq('tenant_id', tenantId);
       if (error) throw error;
@@ -101,7 +101,7 @@ export function useAgentActions() {
       // V-5002 FIX: Chain .eq calls directly — the `as any` avoids TS2589 (excessive type depth)
       const { error } = await (supabase
         .from('decision_rules')
-        .update({ is_enabled: isEnabled, updated_at: new Date().toISOString() }) as any)
+        .update({ is_enabled: isEnabled, updated_at: new Date().toISOString() }) as never)
         .eq('id', ruleId)
         .eq('tenant_id', tenantId);
       if (error) throw error;

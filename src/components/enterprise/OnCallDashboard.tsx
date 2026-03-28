@@ -67,7 +67,7 @@ export function OnCallDashboard() {
       });
       toast.success('Alerta reconhecido');
       loadData();
-    } catch (e: any) {
+    } catch (e: Record<string, unknown>) {
       toast.error(e.message);
     }
   };
@@ -82,7 +82,7 @@ export function OnCallDashboard() {
       toast.success('Incidente escalado');
       setEscalateDialog(false);
       loadData();
-    } catch (e: any) {
+    } catch (e: Record<string, unknown>) {
       toast.error(e.message);
     }
   };

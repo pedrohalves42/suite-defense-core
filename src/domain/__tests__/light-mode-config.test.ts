@@ -38,7 +38,7 @@ describe('LightModeConfig', () => {
   });
 
   it('rejects null agentId', () => {
-    const result = LightModeConfig.create(null as any);
+    const result = LightModeConfig.create(null as unknown);
     expect(result.isFailure).toBe(true);
   });
 
@@ -151,7 +151,7 @@ describe('LightModeConfig', () => {
     config.activate('test', ['chrome']);
 
     // Manually set expires_at to the past
-    (config as any).props.expiresAt = new Date(Date.now() - 1000);
+    (config as unknown).props.expiresAt = new Date(Date.now() - 1000);
 
     const expired = config.checkExpiration();
     expect(expired).toBe(true);

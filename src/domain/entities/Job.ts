@@ -182,7 +182,7 @@ export class Job extends Entity<JobId> {
     return Result.success(undefined);
   }
 
-  complete(result: any): Result<void, DomainError> {
+  complete(result: Record<string, unknown>): Result<void, DomainError> {
     if (this._status !== JobStatus.RUNNING) {
       return Result.failure(new DomainError(`Job ${this.id.value} cannot be completed from status ${this._status}`));
     }

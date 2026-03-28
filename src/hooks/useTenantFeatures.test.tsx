@@ -47,7 +47,7 @@ describe('useTenantFeatures', () => {
           error: null,
         }),
       }),
-    } as any)
+    } as unknown)
 
     const { result } = renderHook(() => useTenantFeatures(), {
       wrapper: createWrapper(),
@@ -77,7 +77,7 @@ describe('useTenantFeatures', () => {
           error: null,
         }),
       }),
-    } as any)
+    } as unknown)
 
     const { result } = renderHook(() => useTenantFeatures(), {
       wrapper: createWrapper(),
@@ -115,7 +115,7 @@ describe('useTenantFeatures', () => {
           error: null,
         }),
       }),
-    } as any)
+    } as unknown)
 
     const { result } = renderHook(() => useTenantFeatures(), {
       wrapper: createWrapper(),
@@ -145,7 +145,7 @@ describe('useTenantFeatures', () => {
           error: null,
         }),
       }),
-    } as any)
+    } as unknown)
 
     const { result } = renderHook(() => useTenantFeatures(), {
       wrapper: createWrapper(),

@@ -20,7 +20,7 @@ describe('ScheduleUpdate Use Case', () => {
   });
 
   it('throws when agent already has active update', async () => {
-    vi.mocked(updateRepo.findActiveByAgentId).mockResolvedValue({ id: 'existing' } as any);
+    vi.mocked(updateRepo.findActiveByAgentId).mockResolvedValue({ id: 'existing' } as unknown);
 
     await expect(useCase.execute({
       agentId: AgentId.generate(),
@@ -40,7 +40,7 @@ describe('ScheduleUpdate Use Case', () => {
 
   it('throws when package is inactive', async () => {
     vi.mocked(updateRepo.findActiveByAgentId).mockResolvedValue(null);
-    vi.mocked(packageRepo.findById).mockResolvedValue({ isActive: false } as any);
+    vi.mocked(packageRepo.findById).mockResolvedValue({ isActive: false } as unknown);
 
     await expect(useCase.execute({
       agentId: AgentId.generate(),
@@ -50,7 +50,7 @@ describe('ScheduleUpdate Use Case', () => {
 
   it('creates update and dispatches event', async () => {
     vi.mocked(updateRepo.findActiveByAgentId).mockResolvedValue(null);
-    vi.mocked(packageRepo.findById).mockResolvedValue({ isActive: true } as any);
+    vi.mocked(packageRepo.findById).mockResolvedValue({ isActive: true } as unknown);
     vi.mocked(updateRepo.save).mockResolvedValue();
 
     const result = await useCase.execute({

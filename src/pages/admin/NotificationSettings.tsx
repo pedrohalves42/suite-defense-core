@@ -347,7 +347,7 @@ export default function NotificationSettings() {
         // V-1067 FIX: Add tenant_id filter
         const { error } = await supabase
           .from('notification_preferences')
-          .update(updates as any)
+          .update(updates as never)
           .eq('id', existing.id)
           .eq('tenant_id', tenantId);
 
@@ -579,7 +579,7 @@ export default function NotificationSettings() {
                     <Label>Tipo de Canal</Label>
                     <Select 
                       value={newChannel.type} 
-                      onValueChange={(v) => setNewChannel(prev => ({ ...prev, type: v as any, config: {} }))}
+                      onValueChange={(v) => setNewChannel(prev => ({ ...prev, type: v as Record<string, unknown>, config: {} }))}
                     >
                       <SelectTrigger>
                         <SelectValue />

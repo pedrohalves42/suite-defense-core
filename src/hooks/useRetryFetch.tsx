@@ -6,7 +6,7 @@ interface RetryOptions {
   maxRetries?: number;
   initialDelay?: number;
   onRetry?: (attempt: number, error: any) => void;
-  shouldRetry?: (error: any) => boolean;
+  shouldRetry?: (error: Record<string, unknown>) => boolean;
 }
 
 /**
@@ -37,7 +37,7 @@ export function useRetryFetch() {
         setIsRetrying(false);
         setRetryCount(0);
         return result;
-      } catch (error: any) {
+      } catch (error: Record<string, unknown>) {
         lastError = error;
         
         // Check if we should retry this error

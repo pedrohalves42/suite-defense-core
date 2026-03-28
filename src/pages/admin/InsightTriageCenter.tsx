@@ -65,7 +65,7 @@ export default function InsightTriageCenter() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return (data || []).map((d: any) => ({
+      return (data || []).map((d: Record<string, unknown>) => ({
         ...d,
         suggested_action: d.suggested_action || null,
       })) as AIInsight[];

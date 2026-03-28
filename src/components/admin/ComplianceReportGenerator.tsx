@@ -93,7 +93,7 @@ export function ComplianceReportGenerator() {
       const payload = await fetchComplianceReport(selectedTemplate);
       setReportPayload(payload);
       toast.success(`Relatório ${selectedTemplate} gerado com sucesso!`);
-    } catch (error: any) {
+    } catch (error: Record<string, unknown>) {
       logger.error("Error generating compliance report:", error);
       const errorMessage = error?.message || "Erro desconhecido";
       
@@ -694,7 +694,7 @@ export function ComplianceReportGenerator() {
                   size="lg" 
                 />
                 <p className="text-xs text-muted-foreground text-center mt-3 max-w-[200px]">
-                  {(reportPayload as any).risk_layman_description || reportPayload.risk_description}
+                  {(reportPayload as Record<string, unknown>).risk_layman_description || reportPayload.risk_description}
                 </p>
               </div>
 
@@ -773,7 +773,7 @@ export function ComplianceReportGenerator() {
                 O que isso significa para sua empresa?
               </h4>
               <p className="text-foreground leading-relaxed">
-                {(reportPayload as any).executive_summary?.overallMessage || (
+                {(reportPayload as Record<string, unknown>).executive_summary?.overallMessage || (
                   reportPayload.risk_level === 'BAIXO' || reportPayload.risk_level === 'MÍNIMO' ? (
                     `A empresa "${reportPayload.tenant_name}" está em boa situação de segurança. Todos os sistemas estão protegidos e funcionando corretamente. Continue mantendo as boas práticas de segurança.`
                   ) : reportPayload.risk_level === 'MÉDIO' ? (
@@ -848,12 +848,12 @@ export function ComplianceReportGenerator() {
               <TabsContent value="recomendacoes" className="pt-4">
                 <div className="space-y-4">
                   {/* Actionable Recommendations from backend */}
-                  {(reportPayload as any).executive_summary?.recommendations?.length > 0 ? (
+                  {(reportPayload as Record<string, unknown>).executive_summary?.recommendations?.length > 0 ? (
                     <div className="space-y-3">
                       <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
                         Ações Recomendadas
                       </h4>
-                      {(reportPayload as any).executive_summary.recommendations.map((rec: string, idx: number) => (
+                      {(reportPayload as Record<string, unknown>).executive_summary.recommendations.map((rec: string, idx: number) => (
                         <div key={idx} className="flex items-start gap-3 p-4 bg-card border rounded-lg">
                           <div className={`p-1.5 rounded-full shrink-0 ${
                             idx === 0 && (reportPayload.statistics?.critical_vulnerabilities || 0) > 0 
@@ -891,8 +891,8 @@ export function ComplianceReportGenerator() {
                         const criticalVulns = reportPayload.statistics?.critical_vulnerabilities || 0;
                         const highVulns = reportPayload.statistics?.high_vulnerabilities || 0;
                         const threats = reportPayload.statistics?.threats_found || 0;
-                        const offlineAgents = (reportPayload.statistics as any)?.offline_agents || 0;
-                        const avOutdated = (reportPayload.statistics as any)?.av_outdated || 0;
+                        const offlineAgents = (reportPayload.statistics as Record<string, unknown>)?.offline_agents || 0;
+                        const avOutdated = (reportPayload.statistics as Record<string, unknown>)?.av_outdated || 0;
                         const failedInvariants = reportPayload.invariants.filter(i => i.status === "FAIL");
 
                         if (criticalVulns > 0) {

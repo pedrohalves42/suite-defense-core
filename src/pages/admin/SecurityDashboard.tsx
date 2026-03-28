@@ -146,7 +146,7 @@ export default function SecurityDashboard() {
       queryClient.invalidateQueries({ queryKey: ['blocked-ips'] });
       toast.success('IP desbloqueado com sucesso');
     },
-    onError: (error: any) => {
+    onError: (error: Record<string, unknown>) => {
       toast.error(`Erro ao desbloquear IP: ${error.message}`);
     },
   });
@@ -346,7 +346,7 @@ export default function SecurityDashboard() {
                           </TableCell>
                           <TableCell className="font-mono text-xs">{log.ip_address}</TableCell>
                           <TableCell>
-                            <Badge variant={getSeverityColor(log.severity) as any}>
+                            <Badge variant={getSeverityColor(log.severity) as "default" | "destructive" | "outline" | "secondary"}>
                               {log.severity.toUpperCase()}
                             </Badge>
                           </TableCell>

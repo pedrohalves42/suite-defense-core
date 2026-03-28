@@ -30,7 +30,7 @@ const setupMocks = () => {
     tenants: [mockTenant],
     setActiveTenantById: vi.fn(),
     isSyncing: false,
-  } as any);
+  } as unknown);
 
   vi.mocked(supabase.from).mockImplementation((table: string) => {
     if (table === 'tenant_features') {
@@ -38,9 +38,9 @@ const setupMocks = () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockResolvedValue({ data: mockFeatures, error: null }),
         }),
-      } as any;
+      } as unknown;
     }
-    return {} as any;
+    return {} as unknown;
   });
 };
 

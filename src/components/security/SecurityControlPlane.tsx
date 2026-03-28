@@ -88,7 +88,7 @@ export function SecurityControlPlane() {
         supabase.from('jobs').select('*', { count: 'exact', head: true })
           .eq('tenant_id', tenant.id).eq('status', 'failed').gte('created_at', last1h),
         // V-1094 FIX: Add tenant_id filter to prevent cross-tenant data leak
-        (supabase.from('rls_test_results').select('*', { count: 'exact', head: true }) as any)
+        (supabase.from('rls_test_results').select('*', { count: 'exact', head: true }) as never)
           .eq('tenant_id', tenant.id).eq('passed', false).gte('tested_at', last24h),
         supabase.from('system_global_state').select('mode')
           .order('triggered_at', { ascending: false }).limit(1).maybeSingle()
@@ -106,7 +106,7 @@ export function SecurityControlPlane() {
         failed_jobs_1h: jobsResult.count || 0,
         rls_failures_24h: rlsTestsResult.count || 0,
         last_rls_test: null,
-        current_system_mode: (systemModeResult.data as any)?.mode || 'normal'
+        current_system_mode: (systemModeResult.data as Record<string, unknown>)?.mode || 'normal'
       };
     },
     refetchInterval: 300000,
@@ -126,7 +126,7 @@ export function SecurityControlPlane() {
       toast.success(`Testes RLS executados: ${data.passed}/${data.total} passaram`);
       queryClient.invalidateQueries({ queryKey: ['security-control-plane'] });
     },
-    onError: (error: any) => {
+    onError: (error: Record<string, unknown>) => {
       toast.error(`Erro ao executar testes: ${error.message}`);
     }
   });
@@ -145,7 +145,7 @@ export function SecurityControlPlane() {
       toast.warning('Kill Switch ativado! Sistema em modo de emergência.');
       queryClient.invalidateQueries({ queryKey: ['security-control-plane'] });
     },
-    onError: (error: any) => {
+    onError: (error: Record<string, unknown>) => {
       toast.error(`Erro ao ativar Kill Switch: ${error.message}`);
     }
   });
@@ -164,7 +164,7 @@ export function SecurityControlPlane() {
       toast.success('Sistema normalizado.');
       queryClient.invalidateQueries({ queryKey: ['security-control-plane'] });
     },
-    onError: (error: any) => {
+    onError: (error: Record<string, unknown>) => {
       toast.error(`Erro ao normalizar sistema: ${error.message}`);
     }
   });

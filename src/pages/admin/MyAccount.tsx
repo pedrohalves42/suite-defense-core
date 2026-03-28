@@ -62,7 +62,7 @@ export default function MyAccount() {
         description: 'Seu nome foi alterado com sucesso.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: Record<string, unknown>) => {
       toast({
         title: 'Erro ao atualizar',
         description: error.message,
@@ -89,7 +89,7 @@ export default function MyAccount() {
         description: 'Sua senha foi atualizada com sucesso.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: Record<string, unknown>) => {
       toast({
         title: 'Erro ao alterar senha',
         description: error.message,

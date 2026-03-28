@@ -155,7 +155,7 @@ export const useJobsHealth = () => {
       
       // Categorize failures
       const categories: Record<string, number> = {};
-      (data || []).forEach((job: any) => {
+      (data || []).forEach((job: Record<string, unknown>) => {
         const msg = (job.error_message || '').toLowerCase();
         let cat = 'other';
         if (msg.includes('agent_offline') || msg.includes('auto_cancelled')) cat = 'agent_offline';
