@@ -20,9 +20,11 @@ import {
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 // Health Score Gauge Component
 const HealthGauge = ({ score }: { score: number }) => {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const getColor = () => {
     if (score >= 80) return 'text-green-500';
     if (score >= 50) return 'text-yellow-500';
@@ -173,8 +175,7 @@ export const ClientDashboard = () => {
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 300_000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 2min
+    refetchInterval: adaptiveInterval,
   });
 
   // Generate next steps based on current status

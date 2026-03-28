@@ -67,6 +67,7 @@ import { toast } from 'sonner';
 import { formatRelativeTime } from '@/lib/date-utils';
 import { getOsIcon } from '@/lib/os-utils';
 import { deriveAgentState, getStateColorClasses, type AgentState } from '@/lib/agent-state-machine';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface ProblematicAgent {
   id: string;
@@ -86,6 +87,7 @@ interface ProblematicAgent {
 }
 
 export default function DiagnosticsCenter() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const [searchParams, setSearchParams] = useSearchParams();
   const preSelectedAgentId = searchParams.get('agent');
   const viewMode = searchParams.get('view') as 'default' | 'soc' | null;
@@ -119,8 +121,7 @@ export default function DiagnosticsCenter() {
         });
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 300_000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 2min
+    refetchInterval: adaptiveInterval,
   });
 
   // Query problematic agents
@@ -136,8 +137,7 @@ export default function DiagnosticsCenter() {
       if (error) throw error;
       return (data || []) as any as ProblematicAgent[];
     },
-    refetchInterval: 300_000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 2min
+    refetchInterval: adaptiveInterval,
     enabled: !tenantLoading && !!tenant?.id,
   });
 
@@ -159,8 +159,7 @@ export default function DiagnosticsCenter() {
       return names as string[];
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 300_000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
   });
 
   // Get selected agent data

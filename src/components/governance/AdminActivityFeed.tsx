@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Shield, Trash2, UserMinus, Key, AlertTriangle, Settings } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 /**
  * AdminActivityFeed — HUM-003 mitigation
@@ -45,7 +46,8 @@ interface AuditEntry {
   details: any | null;
 }
 
-export function AdminActivityFeed({ limit = 20 }: { limit?: number }) {
+export function AdminActivityFeed({
+  const adaptiveInterval = useAdaptivePolling(300_000); limit = 20 }: { limit?: number }) {
   const { tenant } = useTenant();
 
   const { data: activities, isLoading } = useQuery({
@@ -62,8 +64,7 @@ export function AdminActivityFeed({ limit = 20 }: { limit?: number }) {
       return (data || []) as AuditEntry[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000, // COST-OPT: 60s → 5min
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
     staleTime: 120_000,
   });
 

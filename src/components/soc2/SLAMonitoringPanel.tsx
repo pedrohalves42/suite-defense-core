@@ -11,6 +11,7 @@ import { Activity, Clock, Server, Shield, Zap, AlertTriangle, CheckCircle2, Tren
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface SLAMetric {
   name: string;
@@ -24,6 +25,7 @@ interface SLAMetric {
 }
 
 function getMetricStatus(current: number, slo: number, sla: number, isLatency: boolean): 'healthy' | 'warning' | 'critical' {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   if (isLatency) {
     if (current <= slo) return 'healthy';
     if (current <= sla) return 'warning';
@@ -157,9 +159,8 @@ export function SLAMonitoringPanel() {
       ];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000, // TUNING v11: 60s → 5min (SLA checks don't need 1min polling)
+    refetchInterval: adaptiveInterval,
     staleTime: 120_000,
-    refetchIntervalInBackground: false,
   });
 
   const statusConfig = {

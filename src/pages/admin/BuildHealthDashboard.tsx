@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Activity, AlertCircle, CheckCircle2, Clock, XCircle, Trash2 } from "lucide-react";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import { toast } from "sonner";
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export default function BuildHealthDashboard() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const queryClient = useQueryClient();
   
   const { data: builds, isLoading } = useQuery({
@@ -23,8 +25,7 @@ export default function BuildHealthDashboard() {
       if (error) throw error;
       return data || [];
     },
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 15s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   const cleanupMutation = useMutation({

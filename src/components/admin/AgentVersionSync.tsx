@@ -11,6 +11,7 @@ import { useState } from "react";
 import { prepareJobForInsert } from "@/lib/job-utils";
 import { useActiveTenant } from "@/hooks/useActiveTenant";
 import {
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -38,7 +39,8 @@ interface AgentVersionSyncProps {
   latestVersions: LatestVersions;
 }
 
-export function AgentVersionSync({ latestVersions }: AgentVersionSyncProps) {
+export function AgentVersionSync({
+  const adaptiveInterval = useAdaptivePolling(300000); latestVersions }: AgentVersionSyncProps) {
   const queryClient = useQueryClient();
   const { activeTenant: tenant, loading: tenantLoading } = useActiveTenant();
   const [syncingAll, setSyncingAll] = useState(false);
@@ -78,8 +80,7 @@ export function AgentVersionSync({ latestVersions }: AgentVersionSyncProps) {
         .sort((a: Agent, b: Agent) => a.agent_name.localeCompare(b.agent_name));
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   const getLatestVersionForAgent = (agent: Agent): string => {

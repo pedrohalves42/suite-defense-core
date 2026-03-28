@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { prepareJobForInsert } from "@/lib/job-utils";
 import { logger } from '@/lib/logger';
 import { 
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
   FlaskConical, 
   Play, 
   CheckCircle2, 
@@ -47,6 +48,7 @@ type TestState = 'idle' | 'creating' | 'polling' | 'completed' | 'failed' | 'tim
 const STATUS_STEPS = ['queued', 'delivered', 'completed'];
 
 export default function JobTestRunner() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
@@ -76,8 +78,7 @@ export default function JobTestRunner() {
         .sort((a: Agent, b: Agent) => a.agent_name.localeCompare(b.agent_name));
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   // Create test job mutation

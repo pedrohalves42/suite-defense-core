@@ -10,6 +10,7 @@ import { callEdgeFunction } from '@/lib/edge-function-client';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 /**
  * TokenAlerts — SEC-008 mitigation
@@ -23,6 +24,7 @@ interface ExpiringToken {
 }
 
 export function TokenAlerts() {
+  const adaptiveInterval = useAdaptivePolling(60);
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -34,7 +36,7 @@ export function TokenAlerts() {
       }>('token-rotate', { action: 'needs-rotation' });
       return result;
     },
-    refetchInterval: 60 * 60 * 1000, // 1 hour
+    refetchInterval: adaptiveInterval * 60 * 1000, // 1 hour
     staleTime: 30 * 60 * 1000,
   });
 

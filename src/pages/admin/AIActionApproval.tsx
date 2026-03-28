@@ -20,6 +20,7 @@ import { AutoApprovalPanel } from '@/components/admin/AutoApprovalPanel';
 import { RollbackTestPanel } from '@/components/admin/RollbackTestPanel';
 import { useTenant } from '@/hooks/useTenant';
 import { logger } from '@/lib/logger';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface AIAction {
   id: string;
@@ -64,6 +65,7 @@ interface AIInsight {
 }
 
 export default function AIActionApproval() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { tenant, loading: tenantLoading } = useTenant();
@@ -105,8 +107,7 @@ export default function AIActionApproval() {
       return data as AIAction[];
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 300_000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
   });
 
   // Buscar insights recentes (últimos 30 dias) - FIX: add tenant_id filter

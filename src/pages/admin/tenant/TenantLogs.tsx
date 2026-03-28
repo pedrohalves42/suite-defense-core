@@ -10,8 +10,10 @@ import { useTenant } from "@/hooks/useTenant";
 import { Search, FileText } from "lucide-react";
 import { formatRelativeTime } from '@/lib/date-utils';
 import { useDebounce } from "@/hooks/useDebounce";
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export default function TenantLogs() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant, loading: tenantLoading } = useTenant();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterAction, setFilterAction] = useState<string>("all");
@@ -69,8 +71,7 @@ export default function TenantLogs() {
     },
     // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   if (tenantLoading || isLoading) {

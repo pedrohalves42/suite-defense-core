@@ -22,8 +22,11 @@ import JobTestRunner from "@/components/admin/JobTestRunner";
 import { format, ptBR } from '@/lib/date-utils';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useTenant } from "@/hooks/useTenant";
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export default function SystemHealth() {
+  const adaptiveInterval = useAdaptivePolling(300000);
+  const adaptiveInterval2 = useAdaptivePolling(300_000);
   const { tenant, loading: tenantLoading } = useTenant();
 
   const { data: agentStats, isLoading: loadingAgents } = useQuery({
@@ -65,8 +68,7 @@ export default function SystemHealth() {
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   const { data: jobStats, isLoading: loadingJobs } = useQuery({
@@ -113,8 +115,7 @@ export default function SystemHealth() {
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   const { data: jobsOverTime, isLoading: loadingTimeline } = useQuery({
@@ -148,9 +149,8 @@ export default function SystemHealth() {
       return Object.values(hourlyData).slice(-12);
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 300_000, // TUNING v11: 60s → 5min
+    refetchInterval: adaptiveInterval2,
     staleTime: 120_000,
-    refetchIntervalInBackground: false,
   });
 
   const { data: aiInsightsStats, isLoading: loadingInsights } = useQuery({
@@ -175,9 +175,8 @@ export default function SystemHealth() {
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 300_000, // TUNING v11: 60s → 5min
+    refetchInterval: adaptiveInterval2,
     staleTime: 120_000,
-    refetchIntervalInBackground: false,
   });
 
   const { data: performanceMetrics, isLoading: loadingPerformance } = useQuery({
@@ -219,9 +218,8 @@ export default function SystemHealth() {
         .sort((a, b) => b.avgDuration - a.avgDuration)
         .slice(0, 5);
     },
-    refetchInterval: 300_000, // TUNING v11: 60s → 5min
+    refetchInterval: adaptiveInterval2,
     staleTime: 120_000,
-    refetchIntervalInBackground: false,
   });
 
   const isLoading = loadingAgents || loadingJobs || loadingPerformance || loadingTimeline || loadingInsights;

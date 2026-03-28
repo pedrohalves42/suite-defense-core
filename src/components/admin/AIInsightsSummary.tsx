@@ -9,8 +9,10 @@ import { useNavigate } from 'react-router-dom';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export function AIInsightsSummary() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const navigate = useNavigate();
 
@@ -31,8 +33,7 @@ export function AIInsightsSummary() {
       return data;
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   const { data: stats } = useQuery({

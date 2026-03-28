@@ -24,6 +24,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface Process {
   name: string;
@@ -53,6 +54,7 @@ interface AgentProcessesPanelProps {
 }
 
 function formatMemory(mb: number): string {
+  const adaptiveInterval = useAdaptivePolling(300000);
   if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`;
   return `${Math.round(mb)} MB`;
 }
@@ -136,8 +138,7 @@ export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelPr
     },
     enabled: !!agentId,
     staleTime: 30000,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
   });
 
   if (isLoading) {

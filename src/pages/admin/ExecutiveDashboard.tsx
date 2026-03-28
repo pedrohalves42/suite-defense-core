@@ -25,8 +25,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { logger } from '@/lib/logger';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export default function ExecutiveDashboard() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { metrics, isLoading: unifiedLoading, refetch: refetchUnified, tenant } = useUnifiedMetrics();
   const tenantId = tenant?.id;
   const { data: riskDelta } = useTodayRiskDelta();
@@ -69,9 +71,8 @@ export default function ExecutiveDashboard() {
       };
     },
     enabled: !!tenantId,
-    refetchInterval: 300_000, // COST-OPT v8: 60s → 5min (executive dashboard is not real-time)
+    refetchInterval: adaptiveInterval,
     staleTime: 120_000,
-    refetchIntervalInBackground: false,
   });
 
   // Auto-trigger compliance calculation when no data exists OR data is stale (>1h)

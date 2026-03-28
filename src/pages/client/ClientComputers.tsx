@@ -23,9 +23,11 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DiskMetricsPanel } from '@/components/agent/DiskMetricsPanel';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 // Health indicator component
 const HealthIndicator = ({ cpu, memory, disk }: { cpu?: number; memory?: number; disk?: number }) => {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const getHealthStatus = () => {
     const hasData = cpu !== undefined || memory !== undefined || disk !== undefined;
     if (!hasData) return { status: 'unknown', color: 'text-muted-foreground', bg: 'bg-muted', label: 'Sem dados' };
@@ -118,8 +120,7 @@ export const ClientComputers = () => {
       })) || [];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 2min
+    refetchInterval: adaptiveInterval,
   });
 
   const requestVerificationMutation = useMutation({

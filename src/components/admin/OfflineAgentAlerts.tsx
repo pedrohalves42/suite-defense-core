@@ -12,6 +12,7 @@ import { formatRelativeTime } from '@/lib/date-utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { logger } from '@/lib/logger';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface OfflineAgent {
   agent_id: string;
@@ -84,6 +85,7 @@ const severityConfig = {
  * Verifica se o horário atual está dentro do horário de expediente configurado
  */
 function isWithinBusinessHours(businessHours: BusinessHours): boolean {
+  const adaptiveInterval = useAdaptivePolling(300000);
   if (!businessHours.enabled) return true; // Se desabilitado, considera sempre como expediente
   
   try {
@@ -204,8 +206,7 @@ export function OfflineAgentAlerts() {
       });
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   // Realtime subscription for agent status changes

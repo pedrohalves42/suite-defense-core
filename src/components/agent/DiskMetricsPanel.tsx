@@ -4,6 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { HardDrive, Server, Database } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface DiskMetric {
   drive_letter: string;
@@ -23,6 +24,7 @@ interface DiskMetricsPanelProps {
 }
 
 const getDiskIcon = (driveType: string | null, isSystemDrive: boolean) => {
+  const adaptiveInterval = useAdaptivePolling(300000);
   if (isSystemDrive) return Server;
   if (driveType === 'Network') return Database;
   return HardDrive;
@@ -54,8 +56,7 @@ export const DiskMetricsPanel = ({ agentId, compact = false }: DiskMetricsPanelP
       return data as DiskMetric[];
     },
     enabled: !!agentId,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval,
     staleTime: 30000,
   });
 

@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ShieldAlert, CheckCircle, XCircle, Clock, UserCheck, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from '@/lib/date-utils';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface PendingApproval {
   id: string;
@@ -35,6 +36,7 @@ interface PendingApproval {
 }
 
 function usePendingCriticalApprovals() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   return useQuery({
@@ -52,8 +54,7 @@ function usePendingCriticalApprovals() {
       return (data || []) as any as PendingApproval[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 15s → 5min
+    refetchInterval: adaptiveInterval,
   });
 }
 

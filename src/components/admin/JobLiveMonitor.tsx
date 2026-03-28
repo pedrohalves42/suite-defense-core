@@ -31,6 +31,7 @@ import { JOB_TYPE_LABELS } from '@/lib/job-labels';
 import { getFailureExplanation, formatErrorForUser } from '@/lib/leigo-translator';
 import { useSimplifiedMessage } from '@/hooks/useSimplifiedMessage';
 import { getJobStatusInfo } from '@/components/admin/JobStatusSimplified';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface LiveJob {
   id: string;
@@ -109,6 +110,7 @@ const STATUS_VISUALS: Record<string, StatusVisual> = {
 };
 
 function getJobVisual(status: string) {
+  const adaptiveInterval = useAdaptivePolling(300000);
   return STATUS_VISUALS[status as keyof typeof STATUS_VISUALS] || STATUS_VISUALS.queued;
 }
 
@@ -143,8 +145,7 @@ export function JobLiveMonitor({
       return (data || []) as LiveJob[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min (fallback)
+    refetchInterval: adaptiveInterval,
   });
   
   // Merge initial jobs with realtime updates

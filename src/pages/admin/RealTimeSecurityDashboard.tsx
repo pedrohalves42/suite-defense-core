@@ -26,6 +26,7 @@ import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { RiskScoreCard } from '@/components/admin/RiskScoreCard';
 import { TenantBaselineProfile } from '@/components/admin/TenantBaselineProfile';
 import { SecurityImpactFeed } from '@/components/admin/SecurityImpactFeed';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 // ─── Friendly labels for raw event types ───
 const EVENT_LABELS: Record<string, { title: string; explanation: string; icon: string }> = {
@@ -50,7 +51,8 @@ const EVENT_LABELS: Record<string, { title: string; explanation: string; icon: s
   invalid_input:       { title: 'Dados inválidos rejeitados', explanation: 'Informações com formato incorreto foram recusadas', icon: '❌' },
 };
 
-function getEventInfo(raw: string): { title: string; explanation: string; icon: string } {
+function getEventInfo(raw: string): {
+  const adaptiveInterval = useAdaptivePolling(300_000); title: string; explanation: string; icon: string } {
   if (EVENT_LABELS[raw]) return EVENT_LABELS[raw];
   for (const [key, info] of Object.entries(EVENT_LABELS)) {
     if (raw.toLowerCase().includes(key.toLowerCase())) return info;
@@ -148,9 +150,8 @@ export default function RealTimeSecurityDashboard() {
         pending: data?.filter(e => e.status === 'pending').length || 0,
       };
     },
-    enabled: !!tenant?.id, refetchInterval: 300_000, // COST-OPT: 2min → 5min
+    enabled: !!tenant?.id, refetchInterval: adaptiveInterval,
     staleTime: 120_000,
-    refetchIntervalInBackground: false,
   });
 
   const { data: blockedStats, refetch: refetchBlocked } = useQuery({
@@ -162,9 +163,8 @@ export default function RealTimeSecurityDashboard() {
         .eq('tenant_id', tenant.id).gte('created_at', today.toISOString());
       return { today: count || 0 };
     },
-    enabled: !!tenant?.id, refetchInterval: 300_000, // COST-OPT: 2min → 5min
+    enabled: !!tenant?.id, refetchInterval: adaptiveInterval,
     staleTime: 120_000,
-    refetchIntervalInBackground: false,
   });
 
   const { data: approvalStats, refetch: refetchApprovals } = useQuery({
@@ -181,9 +181,8 @@ export default function RealTimeSecurityDashboard() {
         expired: data?.filter(a => a.status === 'expired').length || 0,
       };
     },
-    enabled: !!tenant?.id, refetchInterval: 300_000, // COST-OPT: 2min → 5min
+    enabled: !!tenant?.id, refetchInterval: adaptiveInterval,
     staleTime: 120_000,
-    refetchIntervalInBackground: false,
   });
 
   const { data: agentStats, refetch: refetchAgents } = useQuery({
@@ -210,9 +209,8 @@ export default function RealTimeSecurityDashboard() {
       return { total, protected: protectedCount, isolated, offline };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 300_000, // COST-OPT: 2min → 5min
+    refetchInterval: adaptiveInterval,
     staleTime: 120_000,
-    refetchIntervalInBackground: false,
   });
 
   const { data: recentLogs } = useQuery({
@@ -223,9 +221,8 @@ export default function RealTimeSecurityDashboard() {
         .eq('tenant_id', tenant.id).order('created_at', { ascending: false }).limit(50);
       return data || [];
     },
-    enabled: !!tenant?.id, refetchInterval: 300_000, // COST-OPT: 2min → 5min
+    enabled: !!tenant?.id, refetchInterval: adaptiveInterval,
     staleTime: 120_000,
-    refetchIntervalInBackground: false,
   });
 
   // Transform logs

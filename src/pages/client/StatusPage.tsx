@@ -7,8 +7,10 @@ import { Shield, CheckCircle2, XCircle, Clock, Monitor, Activity, Wifi, WifiOff 
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 const StatusPage = () => {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
 
   const { data: agents, isLoading } = useQuery({
@@ -25,8 +27,7 @@ const StatusPage = () => {
       return data || [];
     },
     enabled: !!tenant,
-    refetchInterval: 300_000, // COST-OPT: 30s → 5min
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
     staleTime: 120_000,
   });
 

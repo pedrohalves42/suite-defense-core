@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatBrazilDateTime } from '@/lib/date-utils';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface ClaimHealthData {
   period: string;
@@ -39,6 +40,7 @@ interface TenantClaimSummary {
 }
 
 export function TenantClaimAlerts() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { data: claimHealth, isLoading, refetch } = useQuery({
     queryKey: ['tenant-claim-health'],
     queryFn: async (): Promise<TenantClaimSummary> => {
@@ -68,8 +70,7 @@ export function TenantClaimAlerts() {
         last_period: rows[0]?.period || null
       };
     },
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   const hasCriticalIssues = (claimHealth?.total_missing_24h || 0) > 0 || 

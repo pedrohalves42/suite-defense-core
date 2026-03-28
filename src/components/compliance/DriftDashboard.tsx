@@ -10,6 +10,7 @@ import { TrendingDown, TrendingUp, CheckCircle2, AlertTriangle, ShieldAlert } fr
 import { callEdgeFunction } from '@/lib/edge-function-client';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 /**
  * DriftDashboard — CMP-004 mitigation
@@ -36,6 +37,7 @@ const severityConfig = {
 } as const;
 
 export function DriftDashboard() {
+  const adaptiveInterval = useAdaptivePolling(5);
   const { tenant } = useTenant();
 
   const { data: events, isLoading } = useQuery({
@@ -53,7 +55,7 @@ export function DriftDashboard() {
       return (data || []) as DriftEvent[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 5 * 60 * 1000,
+    refetchInterval: adaptiveInterval * 60 * 1000,
   });
 
   if (isLoading) {

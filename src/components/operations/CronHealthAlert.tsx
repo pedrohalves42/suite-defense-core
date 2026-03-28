@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface CronHealthEntry {
   cron_name: string;
@@ -23,6 +24,7 @@ interface CronHealthEntry {
  * Read-only component showing cron job health status.
  */
 export function CronHealthAlert() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
 
   const { data: cronJobs, isLoading, refetch } = useQuery({
@@ -37,7 +39,7 @@ export function CronHealthAlert() {
       return (data || []) as any as CronHealthEntry[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000,
+    refetchInterval: adaptiveInterval,
   });
 
   const unhealthyJobs = cronJobs?.filter(j => (j.consecutive_failures || 0) > 0 || j.status === 'failing') || [];

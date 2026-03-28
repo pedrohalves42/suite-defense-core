@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface CycleHealth {
   label: string;
@@ -23,6 +24,7 @@ interface CycleHealth {
 }
 
 export function SystemCyclesHealthCard() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   const { data: cycles, isLoading } = useQuery({
@@ -80,8 +82,7 @@ export function SystemCyclesHealthCard() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 60s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   if (isLoading) {

@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTenant } from "@/hooks/useTenant";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
   BarChart,
   Bar,
   XAxis,
@@ -47,6 +48,7 @@ const CRON_LABELS: Record<string, { label: string; description: string; icon: ty
 };
 
 function getStatusInfo(record: CronHealthRecord) {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   if (record.consecutive_failures >= 5) return { status: 'critical', color: 'text-destructive', bg: 'bg-destructive/10', label: 'Crítico' };
   if (record.consecutive_failures >= 2) return { status: 'warning', color: 'text-warning', bg: 'bg-warning/10', label: 'Atenção' };
   if (!record.last_success_at) return { status: 'unknown', color: 'text-muted-foreground', bg: 'bg-muted', label: 'Sem dados' };
@@ -115,9 +117,8 @@ export default function CronHealthDashboard() {
       return (data || []) as any as CronHealthRecord[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000,
+    refetchInterval: adaptiveInterval,
     staleTime: 120_000,
-    refetchIntervalInBackground: false,
   });
 
   // Tenant-scoped job stats for cross-reference
@@ -142,9 +143,8 @@ export default function CronHealthDashboard() {
       return { total, completed, failed, successRate: total > 0 ? Math.round((completed / total) * 100) : 100 };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000,
+    refetchInterval: adaptiveInterval,
     staleTime: 120_000,
-    refetchIntervalInBackground: false,
   });
 
   const healthyCrons = records.filter(r => getStatusInfo(r).status === 'healthy').length;

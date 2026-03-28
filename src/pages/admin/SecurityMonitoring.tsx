@@ -25,6 +25,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTenant } from '@/hooks/useTenant';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 const alertTypeLabels: Record<string, string> = {
   firewall_disabled: 'Firewall desativado',
@@ -61,6 +62,7 @@ const severityConfig: Record<string, { label: string; dotColor: string; badgeBg:
 };
 
 export default function SecurityMonitoring() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const [timeRange, setTimeRange] = useState<'1h' | '6h' | '24h' | '7d'>('24h');
   const [eventFilter, setEventFilter] = useState<string>('all');
   const { tenant } = useTenant();
@@ -275,8 +277,7 @@ export default function SecurityMonitoring() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
   });
 
   const handleUnblockIP = async (id: string, ip: string) => {

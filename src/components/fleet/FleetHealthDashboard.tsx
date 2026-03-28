@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { AgentDetailsDrawer } from '@/components/agent/AgentDetailsDrawer';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface FleetAgent {
   id: string;
@@ -32,6 +33,7 @@ interface FleetAgent {
 }
 
 export function FleetHealthDashboard() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant, loading: tenantLoading } = useTenant();
   const queryClient = useQueryClient();
   const [selectedAgent, setSelectedAgent] = useState<{ id: string; name: string } | null>(null);
@@ -77,9 +79,8 @@ export function FleetHealthDashboard() {
       })) as FleetAgent[];
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: 300_000, // TUNING v11: 60s → 2min (fleet view not critical path)
+    refetchInterval: adaptiveInterval,
     staleTime: 60_000,
-    refetchIntervalInBackground: false,
   });
 
   // Realtime subscription

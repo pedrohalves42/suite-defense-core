@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Zap, CheckCircle, XCircle, Clock, AlertTriangle, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from '@/lib/date-utils';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface SoarSummary {
   status: string;
@@ -45,6 +46,7 @@ const statusConfig: Record<string, { label: string; icon: React.ElementType; cla
 };
 
 export function SoarExecutionsCard() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
 
   const { data: summaryData, isLoading } = useQuery({
@@ -63,8 +65,7 @@ export function SoarExecutionsCard() {
       return data || [];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 2min
+    refetchInterval: adaptiveInterval,
   });
 
   const executions = summaryData || [];

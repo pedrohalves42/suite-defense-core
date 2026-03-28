@@ -12,6 +12,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { AdminPageLayout } from '@/components/AdminPageLayout';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { formatBrazilTime } from '@/lib/date-utils';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface RateLimitSummary {
   endpoint: string;
@@ -42,6 +43,7 @@ interface RateLimitStats {
 }
 
 export default function RateLimitingStats() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const [hoursBack, setHoursBack] = useState('24');
 
   const { data, isLoading, refetch, isFetching } = useQuery({
@@ -78,8 +80,7 @@ export default function RateLimitingStats() {
       
       return stats;
     },
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   const formatEndpoint = (endpoint: string) => {

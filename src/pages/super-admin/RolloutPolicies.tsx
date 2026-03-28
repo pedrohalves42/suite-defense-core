@@ -30,6 +30,7 @@ import {
 import { format, ptBR } from '@/lib/date-utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface RolloutPolicy {
   id: string;
@@ -49,6 +50,7 @@ const PLATFORMS = [
 ];
 
 export default function RolloutPolicies() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const queryClient = useQueryClient();
   const [editingPolicy, setEditingPolicy] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<RolloutPolicy>>({});
@@ -561,8 +563,7 @@ function RolloutTelemetryDashboard() {
       if (error) throw error;
       return data;
     },
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   // Calcular estatísticas
@@ -689,7 +690,7 @@ function RollbackEventsDashboard() {
       if (error) throw error;
       return data;
     },
-    refetchInterval: 300000 // COST-OPT: 30s → 5min
+    refetchInterval: adaptiveInterval,
   });
 
   const safeModeAgents = rollbacks?.filter(r => r.safe_mode_triggered) || [];

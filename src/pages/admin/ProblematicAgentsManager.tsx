@@ -21,6 +21,7 @@ import { useState } from 'react';
 import { AgentStatusBadges } from '@/components/agents/AgentStatusBadges';
 import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface ProblematicAgent {
   id: string | null;
@@ -47,6 +48,7 @@ interface ProblematicAgent {
 }
 
 export default function ProblematicAgentsManager() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -70,8 +72,7 @@ export default function ProblematicAgentsManager() {
       return (data || []) as any as ProblematicAgent[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000,
-    refetchIntervalInBackground: false, // COST-OPT: 30s → 2min
+    refetchInterval: adaptiveInterval,
   });
 
   // Cleanup single agent mutation
