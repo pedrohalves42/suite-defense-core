@@ -40,8 +40,6 @@ async function createJob(tenantId: string, agent: RpcAgentRow, type: string, pay
   await supabase.from('jobs').insert([job]);
   toast.success(successMsg);
 }
-  toast.success(successMsg);
-}
 
 const toolCards = [
   { icon: Activity, color: 'text-green-500', title: 'Testar Conectividade', desc: 'Envia ping ao agente para confirmar comunicação', type: 'ping', payload: { source: 'diagnostics_center' }, msg: 'Ping enviado! Aguarde resultado.', btnIcon: Zap, btnLabel: 'Testar Agora' },
