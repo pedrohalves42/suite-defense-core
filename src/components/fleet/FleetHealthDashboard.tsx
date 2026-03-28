@@ -58,11 +58,11 @@ export function FleetHealthDashboard() {
         .in('status', ['pending', 'in_progress']);
       
       const pendingMap = new Map<string, number>();
-      jobCounts?.forEach((j: Record<string, unknown>) => {
+      jobCounts?.forEach((j: any) => {
         pendingMap.set(String(j.agent_name), (pendingMap.get(String(j.agent_name)) || 0) + 1);
       });
       
-      return ((agentsRaw || []) as unknown as Array<Record<string, unknown>>).map(a => ({
+      return ((agentsRaw || []) as any as Array<Record<string, unknown>>).map(a => ({
         id: String(a.id),
         agent_name: String(a.agent_name),
         agent_version: String(a.agent_version || ''),

@@ -215,7 +215,7 @@ export default function EnrollmentKeys() {
 
   // FASE 2: Usar Edge Function para revogar ao inves de acesso direto
   const revokeKey = useMutation({
-    mutationFn: async (key: Record<string, unknown>) => {
+    mutationFn: async (key: any) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
       
@@ -512,7 +512,7 @@ export default function EnrollmentKeys() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {keys?.data?.map((key: Record<string, unknown>) => {
+                    {keys?.data?.map((key: any) => {
                       const isExpired = new Date(key.expires_at) < new Date();
                       const isMaxUsed = key.current_uses >= key.max_uses;
                       

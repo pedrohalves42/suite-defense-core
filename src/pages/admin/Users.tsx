@@ -162,7 +162,7 @@ export default function Users() {
 
   // CORRECAO: Funcao movida para src/lib/badges.ts (centralizada)
 
-  const handleStatusChange = (user: Record<string, unknown>) => {
+  const handleStatusChange = (user: any) => {
     setSelectedUser(user);
     setStatusDialogOpen(true);
   };

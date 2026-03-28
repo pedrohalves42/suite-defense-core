@@ -19,7 +19,7 @@ interface PendingApproval {
   id: string;
   tenant_id: string;
   action_type: string;
-  action_payload: Record<string, unknown>;
+  action_payload: any;
   status: string;
   required_approvers: number;
   current_approvers: number;
@@ -49,7 +49,7 @@ function usePendingCriticalApprovals() {
         .limit(20);
 
       if (error) throw error;
-      return (data || []) as unknown as PendingApproval[];
+      return (data || []) as any as PendingApproval[];
     },
     enabled: !!tenant?.id,
     refetchInterval: 300000,
@@ -76,7 +76,7 @@ function ApprovalCard({ approval, onApprove, onReject, isPending }: {
   const createdAgo = formatDistanceToNow(new Date(approval.created_at), { addSuffix: true });
 
   const displayName = approval.playbook_name || 
-    (approval.action_payload as Record<string, unknown>)?.playbook_name || 
+    (approval.action_payload as any)?.playbook_name || 
     approval.action_type;
 
   return (

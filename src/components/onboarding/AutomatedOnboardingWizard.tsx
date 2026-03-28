@@ -78,7 +78,7 @@ export const AutomatedOnboardingWizard = ({
         p_tenant_id: tenant.id,
         p_include_archived: false,
       });
-      const agents = (agentsRaw as unknown as Array<{ id: string; last_heartbeat: string | null }>) || [];
+      const agents = (agentsRaw as any as Array<{ id: string; last_heartbeat: string | null }>) || [];
       
       if (agents && agents.length > 0) {
         setHasAgent(true);

@@ -79,8 +79,8 @@ export function sanitizeForLog(obj: unknown, depth: number = 0): unknown {
   }
 
   if (typeof obj === 'object') {
-    const sanitized: Record<string, unknown> = {};
-    const entries = Object.entries(obj as Record<string, unknown>);
+    const sanitized: any = {};
+    const entries = Object.entries(obj as any);
 
     for (const [key, value] of entries.slice(0, 50)) {
       if (isSensitiveKey(key)) {
@@ -99,7 +99,7 @@ export function sanitizeForLog(obj: unknown, depth: number = 0): unknown {
 /**
  * Sanitize an error for safe logging
  */
-export function sanitizeError(error: unknown): Record<string, unknown> {
+export function sanitizeError(error: unknown): any {
   if (error instanceof Error) {
     return {
       name: error.name,

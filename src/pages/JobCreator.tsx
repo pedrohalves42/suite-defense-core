@@ -73,7 +73,7 @@ const JobCreator = () => {
       });
 
       if (error) throw error;
-      const mapped = ((data || []) as unknown as RpcAgentRow[]).map((agent): Agent => ({
+      const mapped = ((data || []) as any as RpcAgentRow[]).map((agent): Agent => ({
         id: agent.id,
         agent_name: agent.agent_name,
         hostname: agent.hostname,
@@ -778,7 +778,7 @@ const JobCreator = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           {getStatusBadge(job.status)}
-                          <span className="font-medium truncate">{getAgentDisplayName({ agent_name: job.agent_name } as never)}</span>
+                          <span className="font-medium truncate">{getAgentDisplayName({ agent_name: job.agent_name } as any)}</span>
                         </div>
                         <div className="flex items-center gap-3 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">

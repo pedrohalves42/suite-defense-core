@@ -23,7 +23,7 @@ interface DLQEntry {
   tenant_id: string;
   agent_name: string;
   job_type: string;
-  payload: Record<string, unknown> | null;
+  payload: any | null;
   error_message: string | null;
   error_count: number;
   retry_count: number;
@@ -35,7 +35,7 @@ interface DLQEntry {
   resolution_notes: string | null;
   resolved_at: string | null;
   resolved_by: string | null;
-  metadata: Record<string, unknown> | null;
+  metadata: any | null;
 }
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode }> = {

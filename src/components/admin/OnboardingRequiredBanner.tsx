@@ -59,7 +59,7 @@ export function OnboardingRequiredBanner() {
       ]);
 
       const hasKey = (keyResult.count || 0) > 0;
-      const agents = ((agentResult.data as unknown as Array<{ id: string; last_heartbeat: string | null }>) || []);
+      const agents = ((agentResult.data as any as Array<{ id: string; last_heartbeat: string | null }>) || []);
       const hasAgent = agents.length > 0;
       const hasOnlineAgent = agents.some(a => a.last_heartbeat && 
         new Date(a.last_heartbeat) > new Date(Date.now() - 30 * 60 * 1000)); // 30min threshold

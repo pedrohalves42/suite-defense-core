@@ -90,13 +90,13 @@ export default function SecurityMonitoring() {
 
       const secLogEvents = (securityEventsRes.data || []) as Array<{
         id: string; attack_type: string; severity: string; ip_address: string;
-        endpoint: string; details: Record<string, unknown>; created_at: string; blocked: boolean;
+        endpoint: string; details: any; created_at: string; blocked: boolean;
       }>;
       const blockedAttempts = (blockedAttemptsRes.data || []) as Array<{
         id: string; agent_name: string; domain: string; attempted_at: string; blocked_by: string;
       }>;
       const evidenceLogs = (evidenceRes.data || []) as Array<{
-        id: string; event_type: string; severity: string; agent_name: string; created_at: string; event_data: Record<string, unknown>;
+        id: string; event_type: string; severity: string; agent_name: string; created_at: string; event_data: any;
       }>;
       const activeAlerts = (alertsRes.data || []) as Array<{
         id: string; title: string; severity: string; status: string; alert_type: string; created_at: string;
@@ -130,9 +130,9 @@ export default function SecurityMonitoring() {
         .filter(e => e.severity !== 'info' && e.severity !== 'debug')
         .forEach(e => {
         const eventData = e.event_data || {};
-        const alertType = (eventData as Record<string, unknown>).alert_type as string || '';
-        const alertMsg = (eventData as Record<string, unknown>).alert_message as string || '';
-        const details = (eventData as Record<string, unknown>).details || {};
+        const alertType = (eventData as any).alert_type as string || '';
+        const alertMsg = (eventData as any).alert_message as string || '';
+        const details = (eventData as any).details || {};
         const skipRemediation = details?.skip_remediation === true;
 
         // Build a descriptive label using the actual alert data
@@ -165,8 +165,8 @@ export default function SecurityMonitoring() {
           if (details.expected !== undefined && details.actual !== undefined) {
             parts.push(`Esperado: ${details.expected} → Atual: ${details.actual}`);
           }
-          if ((eventData as Record<string, unknown>).state_before && (eventData as Record<string, unknown>).state_after) {
-            parts.push(`${(eventData as Record<string, unknown>).state_before} → ${(eventData as Record<string, unknown>).state_after}`);
+          if ((eventData as any).state_before && (eventData as any).state_after) {
+            parts.push(`${(eventData as any).state_before} → ${(eventData as any).state_after}`);
           }
           detail = parts.join(' · ') || '';
         }
@@ -174,7 +174,7 @@ export default function SecurityMonitoring() {
         unifiedEvents.push({
           id: e.id, type: alertType || e.event_type, label, 
           detail,
-          severity: (eventData as Record<string, unknown>).severity || e.severity, 
+          severity: (eventData as any).severity || e.severity, 
           created_at: e.created_at, source: 'evidence_logs',
           agentName: e.agent_name, alertType,
           remediable: !skipRemediation && remediableAlerts.has(alertType),
@@ -204,7 +204,7 @@ export default function SecurityMonitoring() {
       // Metrics
       const criticalCount = dedupedEvents.filter(e => e.severity === 'high' || e.severity === 'critical').length;
       const offlineThreshold = subHours(new Date(), AGENT_STATUS_THRESHOLDS.OFFLINE_ALERT_HOURS).toISOString();
-      const allAgents = (agentsRes.data as unknown as Array<{ last_heartbeat: string | null; status: string }>) || [];
+      const allAgents = (agentsRes.data as any as Array<{ last_heartbeat: string | null; status: string }>) || [];
       const offlineAgents = allAgents.filter(a => a.status === 'active' && a.last_heartbeat && a.last_heartbeat < offlineThreshold).length;
 
       const failedLogins = (failedLoginsRes.data || []) as Array<{ ip_address: string; created_at: string }>;
@@ -315,7 +315,7 @@ export default function SecurityMonitoring() {
         policy_violation: 'enforce_policy',
       };
       const jobType = jobTypeMap[event.alertType || ''] || 'security_remediation';
-      const { error } = await (supabase as Record<string, unknown>).from('jobs').insert({
+      const { error } = await (supabase as any).from('jobs').insert({
         tenant_id: tenant.id,
         agent_name: event.agentName,
         type: jobType,
@@ -618,9 +618,9 @@ export default function SecurityMonitoring() {
                                     <span className="text-muted-foreground font-normal"> em {event.agentName}</span>
                                   )}
                                 </p>
-                                {(event as Record<string, unknown>).count > 1 && (
+                                {(event as any).count > 1 && (
                                   <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 shrink-0">
-                                    ×{(event as Record<string, unknown>).count}
+                                    ×{(event as any).count}
                                   </Badge>
                                 )}
                               </div>

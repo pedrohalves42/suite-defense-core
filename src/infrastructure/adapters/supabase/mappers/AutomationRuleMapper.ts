@@ -5,7 +5,8 @@ import { TenantId } from '../../../../domain/value-objects/TenantId';
  * Maps between AutomationRule domain entity and Supabase database rows.
  */
 export class AutomationRuleMapper {
-  static toDomain(row: Record<string, unknown>): AutomationRule {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static toDomain(row: any): AutomationRule {
     const conditions = row.trigger_conditions || {};
     const actionConfig = row.action_config || {};
 

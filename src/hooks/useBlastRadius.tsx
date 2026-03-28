@@ -39,7 +39,7 @@ export const useBlastRadiusPolicies = () => {
         .order('action_type');
 
       if (error) throw error;
-      return (data || []) as unknown as BlastRadiusPolicy[];
+      return (data || []) as any as BlastRadiusPolicy[];
     },
     enabled: !!tenant?.id
   });
@@ -60,15 +60,15 @@ export const useCheckBlastRadius = () => {
         throw new Error('Tenant not found');
       }
 
-      const { data, error } = await supabase
-        .rpc('check_blast_radius' as never, {
+      const { data, error } = await (supabase as any)
+        .rpc('check_blast_radius', {
           p_tenant_id: tenant.id,
           p_action_type: actionType,
           p_affected_count: affectedCount
         });
 
       if (error) throw error;
-      return data as unknown as BlastRadiusCheck;
+      return data as any as BlastRadiusCheck;
     }
   });
 };

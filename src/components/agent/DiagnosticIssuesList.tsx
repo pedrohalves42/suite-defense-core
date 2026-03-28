@@ -116,7 +116,7 @@ function formatValue(key: string, value: unknown): string {
   return String(value);
 }
 
-function IssueDetails({ details }: { details: Record<string, unknown> }) {
+function IssueDetails({ details }: { details: any }) {
   const entries = Object.entries(details).filter(([, v]) => v !== null && v !== undefined);
   if (entries.length === 0) return null;
   

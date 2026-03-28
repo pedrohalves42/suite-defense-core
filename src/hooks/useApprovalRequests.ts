@@ -207,7 +207,7 @@ export function useCreateApprovalRequest() {
       const { data, error } = await supabase.rpc('create_approval_request', {
         p_action_type: actionType,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        p_action_payload: actionPayload as unknown as Json,
+        p_action_payload: actionPayload as any,
         p_target_agent_id: targetAgentId || null,
         p_playbook_execution_id: playbookExecutionId || null,
       });

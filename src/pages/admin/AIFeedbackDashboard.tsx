@@ -65,7 +65,7 @@ export default function AIFeedbackDashboard() {
       if (error) throw error;
 
       // Fetch feedback for these insights
-      const insightIds = (insightsData || []).map((i: Record<string, unknown>) => i.id);
+      const insightIds = (insightsData || []).map((i: any) => i.id);
       if (insightIds.length === 0) return [];
 
       const { data: feedbackData } = await supabase
@@ -75,10 +75,10 @@ export default function AIFeedbackDashboard() {
         .in('insight_id', insightIds);
 
       const feedbackMap = new Map(
-        (feedbackData || []).map((f: Record<string, unknown>) => [f.insight_id, { type: f.feedback_type, comment: f.comment }])
+        (feedbackData || []).map((f: any) => [f.insight_id, { type: f.feedback_type, comment: f.comment }])
       );
 
-      return (insightsData || []).map((insight: Record<string, unknown>) => ({
+      return (insightsData || []).map((insight: any) => ({
         id: insight.id,
         insight_type: insight.insight_type,
         severity: insight.severity,
@@ -107,9 +107,9 @@ export default function AIFeedbackDashboard() {
       if (error) throw error;
 
       const total = data.length;
-      const useful = data.filter((f: Record<string, unknown>) => f.feedback_type === 'useful').length;
-      const noise = data.filter((f: Record<string, unknown>) => f.feedback_type === 'noise').length;
-      const falsePositive = data.filter((f: Record<string, unknown>) => f.feedback_type === 'false_positive').length;
+      const useful = data.filter((f: any) => f.feedback_type === 'useful').length;
+      const noise = data.filter((f: any) => f.feedback_type === 'noise').length;
+      const falsePositive = data.filter((f: any) => f.feedback_type === 'false_positive').length;
       const pending = (insights?.filter(i => !i.feedback_type).length) || 0;
 
       return { total, useful, noise, falsePositive, pending };

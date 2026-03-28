@@ -89,7 +89,7 @@ export function explainDecisionForAudit(
     title: string;
     description?: string | null;
     severity: string;
-    evidence?: Record<string, unknown> | null;
+    evidence?: any | null;
   },
   executedBy: string,
   policyName?: string
@@ -128,7 +128,7 @@ ${JSON.stringify(insight.evidence || {}, null, 2)}
 export function explainEffectiveness(
   status: EffectivenessStatus,
   insightType: string,
-  evidence?: Record<string, unknown>,
+  evidence?: any,
   reason?: string
 ): EffectivenessExplanation {
   const baseExplanations: Record<EffectivenessStatus, { badge_label: string; badge_variant: EffectivenessExplanation['badge_variant']; base_text: string }> = {

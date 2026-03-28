@@ -36,7 +36,7 @@ export function useDetectionEvents(options?: { agentId?: string; status?: string
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []) as unknown as EndpointDetectionEvent[];
+      return (data || []) as any as EndpointDetectionEvent[];
     },
     enabled: !loading && !!activeTenant?.id,
     staleTime: 120_000,
@@ -67,7 +67,7 @@ export function useProcessEvents(agentId: string, options?: { limit?: number; su
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []) as unknown as EndpointProcessEvent[];
+      return (data || []) as any as EndpointProcessEvent[];
     },
     enabled: !loading && !!activeTenant?.id && !!agentId,
     staleTime: 15_000,
@@ -96,7 +96,7 @@ export function useFileEvents(agentId: string, options?: { limit?: number; suspi
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []) as unknown as EndpointFileEvent[];
+      return (data || []) as any as EndpointFileEvent[];
     },
     enabled: !loading && !!activeTenant?.id && !!agentId,
     staleTime: 15_000,
@@ -125,7 +125,7 @@ export function useNetworkEvents(agentId: string, options?: { limit?: number; su
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []) as unknown as EndpointNetworkEvent[];
+      return (data || []) as any as EndpointNetworkEvent[];
     },
     enabled: !loading && !!activeTenant?.id && !!agentId,
     staleTime: 15_000,
@@ -154,7 +154,7 @@ export function useRegistryEvents(agentId: string, options?: { limit?: number; s
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []) as unknown as EndpointRegistryEvent[];
+      return (data || []) as any as EndpointRegistryEvent[];
     },
     enabled: !loading && !!activeTenant?.id && !!agentId,
     staleTime: 15_000,

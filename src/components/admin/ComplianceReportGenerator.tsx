@@ -694,7 +694,7 @@ export function ComplianceReportGenerator() {
                   size="lg" 
                 />
                 <p className="text-xs text-muted-foreground text-center mt-3 max-w-[200px]">
-                  {String((reportPayload as unknown as Record<string, unknown>).risk_layman_description || reportPayload.risk_description)}
+                  {String((reportPayload as any).risk_layman_description || reportPayload.risk_description)}
                 </p>
               </div>
 
@@ -773,7 +773,7 @@ export function ComplianceReportGenerator() {
                 O que isso significa para sua empresa?
               </h4>
               <p className="text-foreground leading-relaxed">
-                {((reportPayload as unknown as Record<string, unknown>).executive_summary as Record<string, unknown> | undefined)?.overallMessage as string || (
+                {((reportPayload as any).executive_summary as any | undefined)?.overallMessage as string || (
                   reportPayload.risk_level === 'BAIXO' || reportPayload.risk_level === 'MÍNIMO' ? (
                     `A empresa "${reportPayload.tenant_name}" está em boa situação de segurança. Todos os sistemas estão protegidos e funcionando corretamente. Continue mantendo as boas práticas de segurança.`
                   ) : reportPayload.risk_level === 'MÉDIO' ? (
@@ -849,7 +849,7 @@ export function ComplianceReportGenerator() {
                 <div className="space-y-4">
                   {/* Actionable Recommendations from backend */}
                   {(() => {
-                    const execSummary = (reportPayload as unknown as Record<string, unknown>).executive_summary as Record<string, unknown> | undefined;
+                    const execSummary = (reportPayload as any).executive_summary as any | undefined;
                     const recs = (execSummary?.recommendations || []) as string[];
                     return recs.length > 0 ? (
                     <div className="space-y-3">
@@ -894,8 +894,8 @@ export function ComplianceReportGenerator() {
                         const criticalVulns = reportPayload.statistics?.critical_vulnerabilities || 0;
                         const highVulns = reportPayload.statistics?.high_vulnerabilities || 0;
                         const threats = reportPayload.statistics?.threats_found || 0;
-                        const offlineAgents = Number((reportPayload.statistics as Record<string, unknown>)?.offline_agents || 0);
-                        const avOutdated = Number((reportPayload.statistics as Record<string, unknown>)?.av_outdated || 0);
+                        const offlineAgents = Number((reportPayload.statistics as any)?.offline_agents || 0);
+                        const avOutdated = Number((reportPayload.statistics as any)?.av_outdated || 0);
                         const failedInvariants = reportPayload.invariants.filter(i => i.status === "FAIL");
 
                         if (criticalVulns > 0) {

@@ -32,7 +32,7 @@ export const usePlatformConfigs = () => {
         p_include_archived: false,
       });
       if (error) throw error;
-      const data = (rawData as unknown as Array<{ os_type: string | null }>) || [];
+      const data = (rawData as any as Array<{ os_type: string | null }>) || [];
       const counts = { windows: 0, macos: 0, linux: 0 };
       for (const a of data || []) {
         const os = (a.os_type || 'windows').toLowerCase();

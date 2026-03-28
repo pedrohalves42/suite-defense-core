@@ -486,7 +486,7 @@ export function useAgentInstaller() {
         return data;
       }, {
         maxRetries: 3,
-        shouldRetry: (error: Error) => error.message?.includes('Failed to fetch') || error.message?.includes('Network request failed'),
+        shouldRetry: (error: any) => error.message?.includes('Failed to fetch') || error.message?.includes('Network request failed'),
       });
 
       if (buildResult.cached) {

@@ -64,7 +64,7 @@ export function useIncidentTimelines(status?: string) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []) as unknown as IncidentTimeline[];
+      return (data || []) as any as IncidentTimeline[];
     },
     enabled: !!tenant?.id,
   });
@@ -82,7 +82,7 @@ export function useIncidentTimeline(incidentId: string) {
 
       if (error) throw error;
       if (!data) return null;
-      return data as unknown as IncidentTimeline;
+      return data as any as IncidentTimeline;
     },
     enabled: !!incidentId,
   });

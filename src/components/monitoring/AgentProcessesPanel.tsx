@@ -63,7 +63,7 @@ export function AgentProcessesPanel({ agentId, agentName }: Props) {
         .maybeSingle();
 
       if (error) throw error;
-      setSnapshot(data as unknown as ProcessSnapshot | null);
+      setSnapshot(data as any as ProcessSnapshot | null);
     } catch (error) {
       logger.error('Error fetching process data', error);
     } finally {

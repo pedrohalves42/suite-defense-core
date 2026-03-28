@@ -38,7 +38,7 @@ export function useAgentSyncStatus() {
       const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
       // RPC returns jsonb objects, map to expected interface
-      return ((data || []) as unknown as Array<Record<string, unknown>>).map((agent) => {
+      return ((data || []) as any as Array<Record<string, unknown>>).map((agent) => {
         const lastHeartbeat = agent.last_heartbeat ? new Date(String(agent.last_heartbeat)) : null;
         const lastBlockSync = agent.last_block_sync_at ? new Date(String(agent.last_block_sync_at)) : null;
 

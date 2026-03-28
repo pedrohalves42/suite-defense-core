@@ -40,10 +40,10 @@ export const OnboardingProgress = () => {
     try {
       // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
       const { data: agentsRaw } = await supabase.rpc('get_agents_list', {
-        p_tenant_id: user?.id ? (undefined as never) : '', // fallback
+        p_tenant_id: user?.id ? (undefined as any) : '', // fallback
         p_include_archived: false,
       });
-      const agents = (agentsRaw as unknown as Array<{ id: string; status: string; last_heartbeat: string | null }>) || [];
+      const agents = (agentsRaw as any as Array<{ id: string; status: string; last_heartbeat: string | null }>) || [];
       
       if (agents) {
         setAgentCount(agents.length);

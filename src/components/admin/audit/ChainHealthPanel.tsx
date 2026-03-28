@@ -37,7 +37,7 @@ export function ChainHealthPanel({ tenantId }: ChainHealthPanelProps) {
         p_tenant_id: tenantId,
       });
       if (error) throw error;
-      return data as unknown as ChainDiagnosis;
+      return data as any as ChainDiagnosis;
     },
     staleTime: 5 * 60 * 1000,
     enabled: !!tenantId,
@@ -49,9 +49,9 @@ export function ChainHealthPanel({ tenantId }: ChainHealthPanelProps) {
         p_tenant_id: tenantId,
       });
       if (error) throw error;
-      return data as unknown as Record<string, unknown>;
+      return data as any as any;
     },
-    onSuccess: (data: Record<string, unknown>) => {
+    onSuccess: (data: any) => {
       toast.success(`Cadeia de auditoria reparada: ${data?.links_repaired || 0} links corrigidos`);
       queryClient.invalidateQueries({ queryKey: ['chain-health'] });
       queryClient.invalidateQueries({ queryKey: ['audit-integrity'] });
@@ -65,9 +65,9 @@ export function ChainHealthPanel({ tenantId }: ChainHealthPanelProps) {
     mutationFn: async () => {
       const { data, error } = await supabase.rpc('reanchor_execution_chains');
       if (error) throw error;
-      return data as unknown as Record<string, unknown>;
+      return data as any as any;
     },
-    onSuccess: (data: Record<string, unknown>) => {
+    onSuccess: (data: any) => {
       toast.success(`Cadeias de execução reancoradas: ${data?.agents_reanchored || 0} agentes`);
       queryClient.invalidateQueries({ queryKey: ['chain-health'] });
     },

@@ -19,7 +19,7 @@ interface EventMeta {
   color: string;       // tailwind text color token
   dot: string;         // tailwind bg color token for the dot
   label: string;
-  summary: (data: Record<string, unknown>) => string;
+  summary: (data: any) => string;
 }
 
 const fallbackSummary = () => '';
@@ -42,13 +42,13 @@ const ALERT_TYPE_LABELS: Record<string, string> = {
   unauthorized_access: '🚷 Acesso não autorizado',
 };
 
-function securityEventSummary(data: Record<string, unknown> | undefined): string {
+function securityEventSummary(data: any | undefined): string {
   if (!data) return '';
 
   const alertType = data.alert_type as string | undefined;
   const alertMessage = data.alert_message as string | undefined;
   const severity = data.severity as string | undefined;
-  const details = data.details as Record<string, unknown> | undefined;
+  const details = data.details as any | undefined;
 
   // Build a human-readable summary from the data
   const parts: string[] = [];
@@ -83,7 +83,7 @@ function securityEventSummary(data: Record<string, unknown> | undefined): string
   return parts.join(' ');
 }
 
-function forceUpdateSummary(data: Record<string, unknown> | undefined): string {
+function forceUpdateSummary(data: any | undefined): string {
   if (!data) return 'Atualização forçada';
   const oldV = data.old_version as string | undefined;
   const newV = data.new_version as string | undefined;
@@ -92,7 +92,7 @@ function forceUpdateSummary(data: Record<string, unknown> | undefined): string {
   return 'Atualização forçada aplicada';
 }
 
-function stateChangeSummary(data: Record<string, unknown> | undefined): string {
+function stateChangeSummary(data: any | undefined): string {
   if (!data) return '';
   const from = data.old_status || data.from_state;
   const to = data.new_status || data.to_state;

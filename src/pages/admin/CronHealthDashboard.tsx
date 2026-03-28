@@ -34,7 +34,7 @@ interface CronHealthRecord {
   total_failures: number;
   avg_duration_ms: number | null;
   last_duration_ms: number | null;
-  metadata: Record<string, unknown> | null;
+  metadata: any | null;
   updated_at: string;
 }
 
@@ -112,7 +112,7 @@ export default function CronHealthDashboard() {
         toast.error('Erro ao carregar saúde dos crons');
         return [];
       }
-      return (data || []) as unknown as CronHealthRecord[];
+      return (data || []) as any as CronHealthRecord[];
     },
     enabled: !!tenant?.id,
     refetchInterval: 300_000,

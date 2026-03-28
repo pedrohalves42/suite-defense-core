@@ -56,7 +56,7 @@ export function useCorrelatedIncidents(options?: { status?: string; limit?: numb
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []) as unknown as CorrelatedIncident[];
+      return (data || []) as any as CorrelatedIncident[];
     },
     enabled: !loading && !!activeTenant?.id,
     refetchInterval: 300_000, // COST-OPT v8: 2min → 5min
@@ -78,7 +78,7 @@ export function useIncidentEvents(incidentId: string) {
         .eq('tenant_id', activeTenant!.id)
         .order('event_time', { ascending: true });
       if (error) throw error;
-      return (data || []) as unknown as IncidentEvent[];
+      return (data || []) as any as IncidentEvent[];
     },
     enabled: !loading && !!activeTenant?.id && !!incidentId,
   });

@@ -97,11 +97,11 @@ export default function SecurityPolicies() {
   // Calculate total impact for selected policy
   const getPolicyImpact = () => {
     if (!selectedPolicy) return { groups: 0, agents: 0 };
-    const assignedGroups = groupPolicies.filter((gp: Record<string, unknown>) => gp.policy_id === selectedPolicy.id);
+    const assignedGroups = groupPolicies.filter((gp: any) => gp.policy_id === selectedPolicy.id);
     let totalAgents = 0;
-    assignedGroups.forEach((gp: Record<string, unknown>) => {
+    assignedGroups.forEach((gp: any) => {
       const group = agentGroups.find(g => g.id === gp.group_id);
-      if (group) totalAgents += (group as Record<string, unknown>).memberCount || 0;
+      if (group) totalAgents += (group as any).memberCount || 0;
     });
     return { groups: assignedGroups.length, agents: totalAgents };
   };
@@ -148,7 +148,7 @@ export default function SecurityPolicies() {
     if (!selectedPolicy?.id) return;
     
     const group = agentGroups.find(g => g.id === groupId);
-    const memberCount = (group as never)?.memberCount || 0;
+    const memberCount = (group as any)?.memberCount || 0;
     
     // Check if high impact confirmation is needed
     if (needsHighImpactConfirmation(memberCount)) {

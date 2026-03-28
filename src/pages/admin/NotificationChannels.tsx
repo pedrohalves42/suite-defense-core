@@ -24,7 +24,7 @@ interface NotificationChannel {
   tenant_id: string;
   channel_type: 'email' | 'telegram' | 'whatsapp' | 'webhook';
   name: string;
-  config: Record<string, unknown>;
+  config: any;
   is_verified: boolean;
   is_active: boolean;
   verified_at: string | null;
@@ -157,7 +157,7 @@ export default function NotificationChannels() {
       const functionName = `send-${channel.channel_type}-notification`;
       
       // Build payload matching the expected format for each channel type
-      let payload: Record<string, unknown> = {
+      let payload: any = {
         channel_id: channel.id,
         tenant_id: tenant?.id || '',
         alert: {
@@ -170,17 +170,17 @@ export default function NotificationChannels() {
       };
 
       if (channel.channel_type === 'telegram') {
-        const chatId = (channel.config as Record<string, unknown>)?.chat_id || '';
+        const chatId = (channel.config as any)?.chat_id || '';
         payload.recipient = String(chatId);
         payload.config = { 
           chat_id: String(chatId),
-          bot_token: (channel.config as Record<string, unknown>)?.bot_token || '',
+          bot_token: (channel.config as any)?.bot_token || '',
         };
       } else if (channel.channel_type === 'email') {
-        payload.recipient = (channel.config as Record<string, unknown>)?.email || '';
+        payload.recipient = (channel.config as any)?.email || '';
         payload.config = channel.config;
       } else if (channel.channel_type === 'whatsapp') {
-        payload.recipient = (channel.config as Record<string, unknown>)?.phone || '';
+        payload.recipient = (channel.config as any)?.phone || '';
         payload.config = channel.config;
       } else {
         payload.config = channel.config;

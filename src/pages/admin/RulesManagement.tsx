@@ -128,7 +128,7 @@ export default function RulesManagement() {
       {/* Rules Grid */}
       <div className="grid gap-4 md:grid-cols-2">
         {rules?.map((rule) => {
-          const definition = rule.definition as Record<string, unknown> | null;
+          const definition = rule.definition as any | null;
           const isToggling = togglingRuleId === rule.id;
           
           return (

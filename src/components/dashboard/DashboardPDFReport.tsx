@@ -70,7 +70,7 @@ export function DashboardPDFReport({
         ['Falhas (24h)', `${failedJobs}`],
       ];
 
-      (doc as unknown as Record<string, unknown> & { autoTable: Function }).autoTable({
+      (doc as any as any & { autoTable: Function }).autoTable({
         startY: y,
         head: [['Métrica', 'Valor']],
         body: kpis,
@@ -95,7 +95,7 @@ export function DashboardPDFReport({
         return acc;
       }, {} as Record<string, number>);
 
-      (doc as unknown as Record<string, unknown> & { autoTable: Function }).autoTable({
+      (doc as any as any & { autoTable: Function }).autoTable({
         startY: y,
         head: [['Status', 'Quantidade', '% do Total']],
         body: Object.entries(statusCounts).map(([status, count]) => [
@@ -126,7 +126,7 @@ export function DashboardPDFReport({
         .sort((a, b) => b.jobs - a.jobs)
         .slice(0, 10);
 
-      (doc as unknown as Record<string, unknown> & { autoTable: Function }).autoTable({
+      (doc as any as any & { autoTable: Function }).autoTable({
         startY: y,
         head: [['Computador', 'Verificações', 'Status']],
         body: agentJobCounts.map(a => [a.name, a.jobs.toString(), a.online ? 'Online' : 'Offline']),

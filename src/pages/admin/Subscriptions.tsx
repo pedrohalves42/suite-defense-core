@@ -221,25 +221,25 @@ export default function Subscriptions() {
             )}
 
             {/* Billing Period Display */}
-            {(subscription as never)?.billing_period && (subscription as never)?.billing_period !== 'monthly' && (
+            {(subscription as any)?.billing_period && (subscription as any)?.billing_period !== 'monthly' && (
               <div>
                 <p className="text-sm text-muted-foreground">Período</p>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary" className="text-sm">
-                    {(subscription as Record<string, unknown>).billing_period === '6m' && '6 meses'}
-                    {(subscription as Record<string, unknown>).billing_period === '12m' && '12 meses'}
-                    {(subscription as Record<string, unknown>).billing_period === '24m' && '24 meses'}
+                    {(subscription as any).billing_period === '6m' && '6 meses'}
+                    {(subscription as any).billing_period === '12m' && '12 meses'}
+                    {(subscription as any).billing_period === '24m' && '24 meses'}
                   </Badge>
                 </div>
               </div>
             )}
 
             {/* Discount Applied */}
-            {(subscription as never)?.discount_pct > 0 && (
+            {(subscription as any)?.discount_pct > 0 && (
               <div>
                 <p className="text-sm text-muted-foreground">Desconto Aplicado</p>
                 <Badge variant="outline" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                  -{(subscription as Record<string, unknown>).discount_pct}%
+                  -{(subscription as any).discount_pct}%
                 </Badge>
               </div>
             )}
@@ -334,7 +334,7 @@ export default function Subscriptions() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {invoices.map((invoice: Record<string, unknown>) => (
+                  {invoices.map((invoice: any) => (
                     <TableRow key={invoice.id}>
                       <TableCell>{formatDate(invoice.created)}</TableCell>
                       <TableCell className="font-mono text-sm">{invoice.number}</TableCell>

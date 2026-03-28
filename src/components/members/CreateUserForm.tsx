@@ -93,9 +93,9 @@ export function CreateUserForm({ open, onOpenChange }: CreateUserFormProps) {
         // Extract actual error message from edge function response
         let msg = error.message;
         try {
-          if ('context' in error && typeof ((error as Record<string, unknown>).context as Record<string, unknown>)?.json === 'function') {
-            const body = await ((error as Record<string, unknown>).context as { json: () => Promise<Record<string, unknown>> }).json();
-            msg = (body?.error as string) || ((body?.error as Record<string, unknown>)?.message as string) || msg;
+          if ('context' in error && typeof ((error as any).context as any)?.json === 'function') {
+            const body = await ((error as any).context as { json: () => Promise<Record<string, unknown>> }).json();
+            msg = (body?.error as string) || ((body?.error as any)?.message as string) || msg;
           }
         } catch {}
         throw new Error(msg);

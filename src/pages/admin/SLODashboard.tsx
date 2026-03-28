@@ -96,7 +96,7 @@ export default function SLODashboard() {
         p_tenant_id: tenantId,
         p_include_archived: false,
       });
-      const agents = (agentsRaw as unknown as Array<{ id: string; status: string; last_heartbeat: string | null }>) || [];
+      const agents = (agentsRaw as any as Array<{ id: string; status: string; last_heartbeat: string | null }>) || [];
 
       const now = new Date();
       const cutoff = new Date(now.getTime() - 30 * 60 * 1000); // 30min - matches AGENT_STATUS_THRESHOLDS

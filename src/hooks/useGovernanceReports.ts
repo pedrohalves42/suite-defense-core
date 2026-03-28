@@ -69,7 +69,7 @@ export function useWeeklyMetrics(weekStart?: string) {
       });
 
       if (error) throw error;
-      return data as unknown as WeeklyMetrics;
+      return data as any as WeeklyMetrics;
     },
     enabled: !!tenant?.id,
   });

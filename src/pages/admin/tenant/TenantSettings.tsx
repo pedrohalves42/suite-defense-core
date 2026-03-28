@@ -53,7 +53,7 @@ export default function TenantSettings() {
         p_include_archived: false,
       });
       if (error) throw error;
-      return ((data as unknown[]) || []).length;
+      return ((data as any[]) || []).length;
     },
     // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
     enabled: !tenantLoading && !!tenant?.id,
@@ -147,7 +147,7 @@ export default function TenantSettings() {
 
   // Update settings mutation
   const updateSettings = useMutation({
-    mutationFn: async (newSettings: Record<string, unknown>) => {
+    mutationFn: async (newSettings: any) => {
       if (!tenant?.id) throw new Error("Tenant ID not found");
       
       const { error } = await supabase

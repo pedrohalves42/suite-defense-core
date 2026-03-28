@@ -36,7 +36,7 @@ export default function SystemHealth() {
         p_include_archived: false,
       });
       if (error) throw error;
-      const data = ((rpcData || []) as Array<Record<string, unknown>>).map((a: Record<string, unknown>) => ({
+      const data = ((rpcData || []) as any[]).map((a: any) => ({
         id: a.id, status: a.status, last_heartbeat: a.last_heartbeat,
       }));
       

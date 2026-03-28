@@ -91,7 +91,7 @@ export function RollbackTestPanel() {
         p_dry_run: dryRun,
       });
       if (error) throw error;
-      return data as unknown as RollbackTestResult;
+      return data as any as RollbackTestResult;
     },
     onSuccess: (data) => {
       setLatestResult(data);

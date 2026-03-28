@@ -13,7 +13,7 @@ const formatMetricValue = (value: unknown): ReactNode => {
 
   // Handle nested objects (e.g., { total: 3, online: 2, offline: 1 })
   if (typeof value === 'object' && !Array.isArray(value)) {
-    const obj = value as Record<string, unknown>;
+    const obj = value as any;
     const entries = Object.entries(obj);
     
     if (entries.length === 0) return '—';

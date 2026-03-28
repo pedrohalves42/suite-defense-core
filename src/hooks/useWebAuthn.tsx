@@ -93,7 +93,7 @@ export const useWebAuthn = () => {
             response: {
               clientDataJSON: bufferToBase64Url(response.clientDataJSON),
               attestationObject: bufferToBase64Url(response.attestationObject),
-              transports: (credential as unknown as Record<string, unknown>).transports || [],
+              transports: (credential as any as Record<string, unknown>).transports || [],
             },
           },
           expectedChallenge: options.challenge,

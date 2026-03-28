@@ -27,7 +27,7 @@ interface AutomationRule {
     duration_minutes?: number;
   };
   action_type: string;
-  action_config: Record<string, unknown>;
+  action_config: any;
   target_scope: string;
   cooldown_minutes: number;
   last_triggered_at: string | null;
@@ -40,9 +40,9 @@ interface AutomationExecution {
   id: string;
   rule_id: string;
   agent_id: string | null;
-  trigger_data: Record<string, unknown>;
+  trigger_data: any;
   action_taken: string;
-  action_result: Record<string, unknown> | null;
+  action_result: any | null;
   status: string;
   triggered_at: string;
 }
@@ -101,8 +101,8 @@ export function AutomationRulesPanel() {
           .limit(50),
       ]);
 
-      if (rulesRes.data) setRules(rulesRes.data as unknown as AutomationRule[]);
-      if (execRes.data) setExecutions(execRes.data as unknown as AutomationExecution[]);
+      if (rulesRes.data) setRules(rulesRes.data as any as AutomationRule[]);
+      if (execRes.data) setExecutions(execRes.data as any as AutomationExecution[]);
     } catch (error) {
       logger.error('Error fetching automation data', error);
     } finally {
@@ -391,9 +391,9 @@ export function AutomationRulesPanel() {
                             {rule.trigger_type === 'metric_threshold' ? (
                               <>Se {getMetricLabel(conditions.metric || '')} {conditions.operator} {conditions.value}{conditions.metric?.includes('percent') ? '%' : ''}</>
                             ) : rule.trigger_type === 'anomaly_detection' ? (
-                              <>Detecção: {(conditions as Record<string, unknown>).eventType === 'suspicious_process' ? 'Processo Suspeito' : (conditions as Record<string, unknown>).eventType || 'anomalia'} {(conditions as Record<string, unknown>).severity ? `(${(conditions as Record<string, unknown>).severity})` : ''}</>
+                              <>Detecção: {(conditions as any).eventType === 'suspicious_process' ? 'Processo Suspeito' : (conditions as any).eventType || 'anomalia'} {(conditions as any).severity ? `(${(conditions as any).severity})` : ''}</>
                             ) : rule.trigger_type === 'agent_status' ? (
-                              <>Evento: {(conditions as Record<string, unknown>).eventType === 'agent_offline' ? `Agente offline > ${(conditions as Record<string, unknown>).duration_minutes || 10}min` : (conditions as Record<string, unknown>).eventType || 'status'}</>
+                              <>Evento: {(conditions as any).eventType === 'agent_offline' ? `Agente offline > ${(conditions as any).duration_minutes || 10}min` : (conditions as any).eventType || 'status'}</>
                             ) : (
                               <>Tipo: {rule.trigger_type}</>
                             )}

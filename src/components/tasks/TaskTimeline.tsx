@@ -89,7 +89,7 @@ export function TaskTimeline({ taskId }: TaskTimelineProps) {
 
         <div className="space-y-4">
           {events.map((event) => {
-            const metadata = event.metadata as Record<string, unknown> || {};
+            const metadata = event.metadata as any || {};
             
             return (
               <div key={event.id} className="relative flex gap-3 pl-0">

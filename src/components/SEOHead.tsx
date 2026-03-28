@@ -8,7 +8,7 @@ interface SEOHeadProps {
   ogImage?: string;
   ogType?: "website" | "article" | "product";
   noIndex?: boolean;
-  jsonLd?: Record<string, unknown>;
+  jsonLd?: any;
 }
 
 const DEFAULT_TITLE = "CyberShield - Segurança Cibernética Inteligente para PMEs Brasileiras";

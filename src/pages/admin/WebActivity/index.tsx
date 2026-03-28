@@ -86,12 +86,12 @@ export default function WebActivity() {
       if (!tenantId) throw new Error('Tenant não identificado');
       const agentIds = onlineAgents.map(a => a.agent_id);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as Record<string, unknown>).from('jobs').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('tenant_id', tenantId).eq('type', 'collect_web_activity').in('status', ['queued', 'pending']).in('agent_id', agentIds);
+      await (supabase as any).from('jobs').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('tenant_id', tenantId).eq('type', 'collect_web_activity').in('status', ['queued', 'pending']).in('agent_id', agentIds);
       const jobs = await Promise.all(
         onlineAgents.map(agent => prepareJobForInsert({ tenant_id: tenantId, agent_id: agent.agent_id, agent_name: agent.hostname || 'unknown', type: 'collect_web_activity', status: 'queued', priority: 8, payload: { max_domains: 500, browsers: ['chrome', 'firefox', 'edge', 'brave', 'opera', 'vivaldi'], days_back: 30, source: 'manual-bulk' }, approved: true }))
       );
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: insertError } = await (supabase as Record<string, unknown>).from('jobs').insert(jobs);
+      const { error: insertError } = await (supabase as any).from('jobs').insert(jobs);
       if (insertError) throw insertError;
       toast.success(`Coleta disparada para ${onlineAgents.length} computador${onlineAgents.length > 1 ? 'es' : ''}`);
     } catch (err) {
@@ -170,7 +170,7 @@ export default function WebActivity() {
 
   const syncBlockedWebsitesMutation = useMutation({
     mutationFn: async () => { const { data, error } = await supabase.functions.invoke('sync-blocked-websites', { body: {} }); if (error) throw error; return data; },
-    onSuccess: (data: Record<string, unknown>) => { toast.success((data?.message as string) || 'Sincronização agendada com sucesso'); },
+    onSuccess: (data: any) => { toast.success((data?.message as string) || 'Sincronização agendada com sucesso'); },
     onError: (error: Error) => { toast.error(`Erro ao sincronizar: ${error.message}`); },
   });
 

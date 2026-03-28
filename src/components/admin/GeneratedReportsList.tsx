@@ -194,7 +194,7 @@ export function GeneratedReportsList() {
     if (data.software_inventory && data.software_inventory.length > 0) {
       csvContent += "INVENTÁRIO DE SOFTWARE\n";
       csvContent += "Nome,Versão,Fornecedor,Risco\n";
-      data.software_inventory.forEach((sw: Record<string, unknown>) => {
+      data.software_inventory.forEach((sw: any) => {
         csvContent += `"${sw.name || ''}","${sw.version || ''}","${sw.vendor || ''}","${sw.risk_level || ''}"\n`;
       });
       csvContent += "\n";
@@ -203,7 +203,7 @@ export function GeneratedReportsList() {
     if (data.vulnerabilities && data.vulnerabilities.length > 0) {
       csvContent += "VULNERABILIDADES\n";
       csvContent += "Severidade,Título,Descrição\n";
-      data.vulnerabilities.forEach((vuln: Record<string, unknown>) => {
+      data.vulnerabilities.forEach((vuln: any) => {
         csvContent += `"${vuln.severity || ''}","${vuln.title || vuln.check_key || ''}","${String(vuln.description || '').replace(/"/g, '""')}"\n`;
       });
       csvContent += "\n";
@@ -212,7 +212,7 @@ export function GeneratedReportsList() {
     if (data.antivirus_status && data.antivirus_status.length > 0) {
       csvContent += "STATUS ANTIVÍRUS\n";
       csvContent += "Engine,Versão,Status,Ameaças\n";
-      data.antivirus_status.forEach((av: Record<string, unknown>) => {
+      data.antivirus_status.forEach((av: any) => {
         csvContent += `"${av.engine_name || ''}","${av.engine_version || ''}","${av.status || ''}","${av.threats_found || 0}"\n`;
       });
       csvContent += "\n";
@@ -221,7 +221,7 @@ export function GeneratedReportsList() {
     if (data.web_activity && data.web_activity.length > 0) {
       csvContent += "ATIVIDADE WEB\n";
       csvContent += "Domínio,Fonte,Data\n";
-      data.web_activity.forEach((web: Record<string, unknown>) => {
+      data.web_activity.forEach((web: any) => {
         csvContent += `"${web.domain || ''}","${web.source || ''}","${web.visited_at || ''}"\n`;
       });
     }
@@ -403,7 +403,7 @@ export function GeneratedReportsList() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open(`/verificar/${(report as unknown as Record<string, unknown>).audit_id || report.id}`, '_blank')}
+                          onClick={() => window.open(`/verificar/${(report as any).audit_id || report.id}`, '_blank')}
                           title="Verificar autenticidade (abre em nova aba)"
                         >
                           <ExternalLink className="h-4 w-4 mr-1" />

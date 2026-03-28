@@ -72,9 +72,9 @@ const SLOStatusBadge = ({ status }: { status: string }) => {
 };
 
 const IncidentRow = ({ incident }: { incident: IncidentGroupWithSLO }) => {
-  const status = getIncidentStatus(incident as never);
+  const status = getIncidentStatus(incident as any);
   const severityColors = getSeverityColor(incident.severity_hint);
-  const label = getIncidentLabel(incident as never);
+  const label = getIncidentLabel(incident as any);
   const burnRateStatus = getOverallBurnRateStatus(
     incident.burn_rate_1h,
     incident.burn_rate_6h,

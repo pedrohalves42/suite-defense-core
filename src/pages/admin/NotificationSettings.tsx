@@ -579,7 +579,7 @@ export default function NotificationSettings() {
                     <Label>Tipo de Canal</Label>
                     <Select 
                       value={newChannel.type} 
-                      onValueChange={(v) => setNewChannel(prev => ({ ...prev, type: v as Record<string, unknown>, config: {} }))}
+                      onValueChange={(v) => setNewChannel(prev => ({ ...prev, type: v as any, config: {} }))}
                     >
                       <SelectTrigger>
                         <SelectValue />

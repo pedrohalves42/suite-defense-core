@@ -41,7 +41,7 @@ export default function AgentVersionMonitor() {
       });
       
       if (error) throw error;
-      return ((data || []) as unknown as AgentWithCapabilities[]).sort((a, b) => 
+      return ((data || []) as any as AgentWithCapabilities[]).sort((a, b) => 
         (a.agent_name || '').localeCompare(b.agent_name || '')
       );
     },

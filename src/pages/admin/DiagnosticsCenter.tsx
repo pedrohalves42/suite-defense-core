@@ -110,7 +110,7 @@ export default function DiagnosticsCenter() {
       });
 
       if (error) throw error;
-      return ((data || []) as unknown as RpcAgentRow[])
+      return ((data || []) as any as RpcAgentRow[])
         .sort((a, b) => {
           if (!a.last_heartbeat && !b.last_heartbeat) return 0;
           if (!a.last_heartbeat) return 1;
@@ -134,7 +134,7 @@ export default function DiagnosticsCenter() {
         .order('enrolled_at', { ascending: false });
 
       if (error) throw error;
-      return (data || []) as unknown as ProblematicAgent[];
+      return (data || []) as any as ProblematicAgent[];
     },
     refetchInterval: 300_000,
     refetchIntervalInBackground: false, // COST-OPT: 30s → 2min
@@ -155,7 +155,7 @@ export default function DiagnosticsCenter() {
         .gte('created_at', since);
       if (error) return [];
       // Unique agent names with failures
-      const names = [...new Set((data || []).map((j: Record<string, unknown>) => j.agent_name))];
+      const names = [...new Set((data || []).map((j: any) => j.agent_name))];
       return names as string[];
     },
     enabled: !tenantLoading && !!tenant?.id,

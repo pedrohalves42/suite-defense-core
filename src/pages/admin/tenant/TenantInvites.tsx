@@ -127,7 +127,7 @@ export default function TenantInvites() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="role">Funcao</Label>
-              <Select value={newInviteRole} onValueChange={(value: Record<string, unknown>) => setNewInviteRole(value)}>
+              <Select value={newInviteRole} onValueChange={(value: any) => setNewInviteRole(value)}>
                 <SelectTrigger id="role">
                   <SelectValue />
                 </SelectTrigger>

@@ -62,7 +62,7 @@ export class SupabaseAgentRepository implements AgentRepository {
     const persistence = AgentMapper.toPersistence(agent);
     const { error } = await supabase
       .from('agents')
-      .upsert(persistence as never);
+      .upsert(persistence as any);
 
     if (error) {
       throw new Error(`Failed to save agent: ${error.message}`);

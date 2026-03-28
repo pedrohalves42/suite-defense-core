@@ -37,7 +37,7 @@ export const IntegrityScoreCard = () => {
       
       if (data) {
         // Cast to unknown first since the view schema has been updated
-        const record = data as unknown as Record<string, unknown>;
+        const record = data as any as any;
         setMetrics({
           supply_chain_score: Number(record.supply_chain_score) || 100,
           job_integrity_score: Number(record.job_integrity_score) || 100,
