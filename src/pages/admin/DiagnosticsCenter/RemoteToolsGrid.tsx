@@ -36,7 +36,7 @@ async function createJob(tenantId: string, agent: RpcAgentRow, type: string, pay
     status: 'queued',
     payload,
   });
-  await supabase.from('jobs').insert(job);
+  await supabase.from('jobs').insert([job]);
   toast.success(successMsg);
 }
 
