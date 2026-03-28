@@ -1,11 +1,25 @@
+/**
+ * Quarantine Agent - Cleaned up to use assertInternalCaller + Zod validation
+ * Auth: X-Internal-Secret (internal/cron only)
+ */
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { handleException } from '../_shared/error-handler.ts';
 import { logger } from '../_shared/logger.ts';
 import { createAuditLog } from '../_shared/audit.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const QuarantineSchema = z.object({
+  agent_id: z.string().uuid(),
+  quarantine_reason: z.string().min(1).max(1000),
+  severity: z.enum(['low', 'medium', 'high', 'critical']).default('high'),
+  duration_hours: z.number().min(1).max(720).default(24),
+  restrict_network: z.boolean().default(true),
+  restrict_processes: z.boolean().default(true),
+  restrict_file_access: z.boolean().default(true),
+});
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -15,32 +29,26 @@ Deno.serve(async (req: Request) => {
   const requestId = crypto.randomUUID();
 
   try {
-    const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
-    const authHeader = req.headers.get('X-Internal-Secret');
-    if (!authHeader || authHeader !== internalSecret) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Auth: internal only
+    const authError = await assertInternalCaller(req);
+    if (authError) return authError;
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const {
-      agent_id,
-      quarantine_reason,
-      severity = 'high',
-      duration_hours = 24,
-      restrict_network = true,
-      restrict_processes = true,
-      restrict_file_access = true,
-    } = await req.json();
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
 
-    if (!agent_id || !quarantine_reason) {
+    // Validate input
+    const rawBody = await req.json();
+    const parsed = QuarantineSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return new Response(
-        JSON.stringify({ error: 'agent_id and quarantine_reason are required' }),
+        JSON.stringify({ error: parsed.error.flatten().fieldErrors }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const { agent_id, quarantine_reason, severity, duration_hours, restrict_network, restrict_processes, restrict_file_access } = parsed.data;
 
     // Validate agent exists
     const { data: agent, error: agentError } = await supabase
@@ -57,10 +65,7 @@ Deno.serve(async (req: Request) => {
     }
 
     logger.info('[quarantine-agent] Quarantining agent', {
-      requestId,
-      agentId: agent_id,
-      agentName: agent.agent_name,
-      reason: quarantine_reason,
+      requestId, agentId: agent_id, agentName: agent.agent_name, reason: quarantine_reason,
     });
 
     const quarantineEnd = new Date(Date.now() + duration_hours * 60 * 60 * 1000);
@@ -86,13 +91,13 @@ Deno.serve(async (req: Request) => {
 
     if (qError) throw new Error(`Failed to create quarantine: ${qError.message}`);
 
-    // Update agent status to quarantined
+    // Update agent status
     await supabase
       .from('agents')
       .update({ status: 'quarantined', updated_at: new Date().toISOString() })
       .eq('id', agent_id);
 
-    // Cancel all pending/queued jobs for this agent
+    // Cancel pending/queued jobs
     await supabase
       .from('jobs')
       .update({
@@ -133,7 +138,7 @@ Deno.serve(async (req: Request) => {
       success: true,
     });
 
-    // Dispatch domain event
+    // Domain event
     await supabase.from('domain_events').insert({
       aggregate_id: agent_id,
       aggregate_type: 'agent',

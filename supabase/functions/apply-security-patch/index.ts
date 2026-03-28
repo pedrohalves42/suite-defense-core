@@ -1,11 +1,21 @@
+/**
+ * Apply Security Patch - Cleaned up to use assertInternalCaller + Zod validation
+ * Auth: X-Internal-Secret (internal/cron only)
+ */
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { handleException } from '../_shared/error-handler.ts';
 import { logger } from '../_shared/logger.ts';
 import { createAuditLog } from '../_shared/audit.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const PatchSchema = z.object({
+  cve_id: z.string().min(1).max(50),
+  agent_ids: z.array(z.string().uuid()).optional(),
+  patch_method: z.enum(['automatic', 'manual', 'scheduled']).default('automatic'),
+});
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -15,24 +25,26 @@ Deno.serve(async (req: Request) => {
   const requestId = crypto.randomUUID();
 
   try {
-    const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
-    const authHeader = req.headers.get('X-Internal-Secret');
-    if (!authHeader || authHeader !== internalSecret) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Auth: internal only
+    const authError = await assertInternalCaller(req);
+    if (authError) return authError;
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { cve_id, agent_ids, patch_method = 'automatic' } = await req.json();
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
 
-    if (!cve_id) {
+    // Validate input
+    const rawBody = await req.json();
+    const parsed = PatchSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return new Response(
-        JSON.stringify({ error: 'cve_id is required' }),
+        JSON.stringify({ error: parsed.error.flatten().fieldErrors }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const { cve_id, agent_ids, patch_method } = parsed.data;
 
     logger.info('[apply-security-patch] Starting patch deployment', { requestId, cve_id, patch_method });
 
@@ -65,7 +77,7 @@ Deno.serve(async (req: Request) => {
 
     const agentIdList = vulnAgents.map(v => v.agent_id);
 
-    // Get agent details
+    // Get active agent details
     const { data: agents } = await supabase
       .from('agents')
       .select('id, agent_name, tenant_id')
@@ -88,7 +100,7 @@ Deno.serve(async (req: Request) => {
           agent_id: agent.id,
           agent_name: agent.agent_name,
           tenant_id: agent.tenant_id,
-          type: 'service_health_check', // Supported type - agent will check and remediate
+          type: 'service_health_check',
           status: 'pending',
           payload: {
             action: 'apply_security_patch',
@@ -115,8 +127,9 @@ Deno.serve(async (req: Request) => {
       .eq('cve_id', cve_id)
       .in('agent_id', agentIdList);
 
-    // Create alert
     const tenantId = agents[0]?.tenant_id;
+
+    // Create alert
     await supabase.from('system_alerts').insert({
       tenant_id: tenantId,
       alert_type: 'security_patch',
