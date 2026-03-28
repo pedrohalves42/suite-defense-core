@@ -148,7 +148,7 @@ serve(async (req) => {
             const lastFailure = failedJobs
               .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
-            const agentName = (typeJobs[0] as Record<string, unknown>).agents as Record<string, unknown> | undefined)?.agent_name || 'Unknown';
+            const agentName = (((typeJobs[0] as Record<string, unknown>).agents as Record<string, unknown> | undefined)?.agent_name as string) || 'Unknown';
 
             patterns.push({
               agent_id: agentId,
