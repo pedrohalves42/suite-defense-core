@@ -1,95 +1,128 @@
 
 
-# Plan: Fix All TypeScript Build Errors
+# Phase 1: Edge Function Middleware Migration — Batch 1
 
-These errors stem from the aggressive `as any` → `as unknown` migration that left many casts incomplete. The fix is straightforward: replace `as unknown` with proper type assertions or add missing type annotations.
+## Summary
 
-## Error Categories & Fixes
+156 functions still use raw `Deno.serve()`. After excluding 22 HMAC functions and 57 already-hardened `assertInternalCaller` functions, approximately **77 functions** remain as migration targets. Of those, ~70 are already on middleware, leaving **~77 unmigrated non-HMAC, non-internal functions**.
 
-### 1. Test files: `as unknown` needs to be `as any` or properly typed (12 files)
+These break into 4 sub-categories requiring different treatment:
 
-Test mocks inherently create partial objects. Using `as unknown` breaks type assignment. The pragmatic fix is to restore `as any` in test mocks (tests are not production code) or use proper partial types.
+## Classification of Unmigrated Functions
 
-**Files:**
-- `src/hooks/useAuth.test.tsx` — 6 instances of `} as unknown` → `} as any` (lines 62, 78, 102, 121, 152, 196, 203)
-- `src/hooks/__tests__/useAuth.test.tsx` — line 72: `} as unknown` → `} as AuthError`, line 100: `session as unknown` → `session as Session`  
-- `src/hooks/useSuperAdmin.test.tsx` — 7 instances: `mockUser as unknown` → `mockUser as any` (lines 58, 83, 105, 139, 160, 185, 203)
-- `src/hooks/useSubscription.test.tsx` — 2 instances: `} as unknown` → `} as any` (lines 51, 76)
-- `src/domain/__tests__/Job.test.ts` — line 40: `'invalid' as unknown` → `'invalid' as JobType`
-- `src/domain/__tests__/light-mode-config.test.ts` — line 154: `(config as unknown).props` → `(config as any).props`
+### Category A: JWT-authenticated admin/UI → `serveTenant` (~65 functions)
 
-### 2. Component error handling: `error.message` on `unknown` (5 files)
+Functions that manually do `getUser()` + role check + tenant lookup. Classic `serveTenant` candidates.
 
-**Fix pattern:** Add `(error as Error).message` or use `error instanceof Error` guard.
+Examples: `revoke-enrollment-key`, `rollback-by-decision-event`, `send-notification`, `list-invoices`, `change-password`, `admin-create-user`, `delete-invite`, `quarantine-agent`, `auto-quarantine`, `block-website`, `generate-compliance-report`, `generate-executive-report`, `cohort-analysis`, `fido2-authenticate`, `verify-compliance-report`, `customer-portal`, `list-reports`, `diagnose-agent`, `export-evidence-bundle`, `send-security-notification`, `notification-dispatcher`, `approve-via-token`, etc.
 
-- `src/components/admin/AgentSyncStatusCard.tsx` line 31: `error.message` → `(error as Error).message`
-- `src/components/admin/AgentVersionSync.tsx` line 197: `error.message` → `(error as Error).message`
-- `src/components/admin/ComplianceReportGenerator.tsx` line 98: already has `(error as Error)` — OK
-- `src/components/admin/DynamicValidationSystem.tsx` lines 172, 254: `(error as Error).message` — already correct per code, but TS sees `unknown` from catch. Ensure `(error as Error).message`.
+### Category B: Cross-tenant super_admin → `serveTenant` with `skipTenantValidation` (~8 functions)
 
-### 3. AgentQuickActions.tsx — `description` type issue (lines 98, 131)
+Functions that require `super_admin` and access data across tenants. Use `serveTenant` with `skipTenantValidation: true` (pattern already used by `list-all-users-admin`).
 
-The `onError` callback parameter is typed `(error: Error)` but `useMutation` infers error as `Error` by default. The issue is likely that `error?.message` returns `string | undefined` which is valid for ReactNode. Need to check if the actual error type annotation conflicts. Fix: ensure `onError: (error: Error) => {` is consistent, or cast `error.message as string`.
+Examples: `revenue-projections`, `sales-pipeline`, `cohort-analysis`, `unit-economics`, `subscription-analytics`, `create-custom-trial`
 
-### 4. Supabase RPC calls with `as never` workaround (3 files)
+### Category C: API-key authenticated → keep `Deno.serve()` (3 functions)
 
-- `src/hooks/useBlastRadius.tsx` line 64: `.rpc('check_blast_radius' as never, {...})` — the `as never` on the function name makes params type `never`. Fix: remove `as never` or use `as any` on the params object.
-- `src/hooks/useForensicSnapshots.tsx` line 74: same pattern with `'create_forensic_snapshot' as never`
-- `src/components/admin/DailySummaryCard.tsx` line 67: `.from('autonomy_actions' as never)` — table not in generated types. Fix: use `as any` for the entire query or keep `as never` and cast data.
+`api-tenant-info`, `api-tenant-stats`, `api-tenant-features` use `authenticateApiKey()` (not JWT). These use a completely different auth model. **Do not migrate** — they already have Zod validation, rate limiting, and structured logging.
 
-### 5. Repository files: `Record<string, unknown>` not assignable to typed insert (4 files)
+### Category D: Special raw-body requirements → keep `Deno.serve()` (2 functions)
 
-- `SupabaseCertificateRepository.ts` line 18: `rows as Array<Record<string, unknown>>` → `rows as never`
-- `SupabaseFileIntegrityRepository.ts` line 18: same fix
-- `SupabaseNetworkMetricsRepository.ts` line 17: same fix  
-- `SupabaseJobRepository.ts` lines 66, 77: `persistence as Record<string, unknown>` → `persistence as never`
+`stripe-webhook` (needs raw body for Stripe signature verification) and `post-installation-telemetry` (HMAC). Cannot migrate.
 
-### 6. AutoApprovalPanel.tsx — TS2589 deep instantiation (line 86)
+## Implementation Plan — Batch 1 (20 highest-priority functions)
 
-Already has `as any` workaround comment. The error is at line 86 with the `supabase.from('ai_action_configs').update(...)` chain. Keep the existing `as any` cast — this is a known Supabase SDK limitation.
+We'll migrate 20 functions per batch, starting with mutation endpoints that handle sensitive operations.
 
-### 7. ComplianceReportGenerator.tsx — multiple type issues (lines 697, 776, 851, 856, 922, 930)
+### For each function, the migration is mechanical:
 
-- Lines with `(reportPayload as unknown as Record<string, unknown>)` — change to `(reportPayload as any)` since `ComplianceReportPayload` doesn't have index signature
-- Lines 922, 930: operator `>` on `unknown` — need to cast the compared values to `number`
+1. Replace `Deno.serve(async (req) => {` with `serveTenant(async (req, ctx) => {`
+2. Remove manual CORS handling, Supabase client creation, JWT validation, tenant lookup
+3. Use `ctx.supabase`, `ctx.userId`, `ctx.tenantId`, `ctx.requestId`, `ctx.body`
+4. Add Zod schema for input validation where missing
+5. Add `{ methods: ['POST'], skipTenantValidation: true/false }` options as needed
 
-### 8. GeneratedReportsList.tsx — lines 207, 406
+### Batch 1 Priority List (20 functions)
 
-- Line 207: `.replace` on `unknown` — cast to `string`
-- Line 406: `report as unknown as Record<string, unknown>` → `(report as any)`
+| # | Function | Lines | Auth Pattern | Target |
+|---|----------|-------|-------------|--------|
+| 1 | `revoke-enrollment-key` | 164 | JWT+role | `serveTenant` |
+| 2 | `rollback-by-decision-event` | 198 | JWT+role | `serveTenant` |
+| 3 | `auto-quarantine` | ~150 | JWT+role | `serveTenant` |
+| 4 | `block-website` | ~120 | JWT+role | `serveTenant` |
+| 5 | `quarantine-agent` | ~140 | JWT+role | `serveTenant` |
+| 6 | `verify-compliance-report` | ~160 | JWT | `serveTenant` |
+| 7 | `generate-compliance-report` | ~200 | JWT+role | `serveTenant` |
+| 8 | `generate-executive-report` | ~180 | JWT+role | `serveTenant` |
+| 9 | `fido2-authenticate` | ~150 | JWT | `serveTenant` |
+| 10 | `send-notification` | ~130 | JWT | `serveTenant` |
+| 11 | `list-invoices` | ~100 | JWT | `serveTenant` |
+| 12 | `check-agent-name-availability` | ~80 | JWT | `serveTenant` |
+| 13 | `diagnose-agent` | ~150 | JWT | `serveTenant` |
+| 14 | `customer-portal` | ~100 | JWT | `serveTenant` |
+| 15 | `change-password` | ~120 | JWT | `serveTenant` |
+| 16 | `revenue-projections` | 202 | JWT+super_admin | `serveTenant` skip |
+| 17 | `sales-pipeline` | 194 | JWT+super_admin | `serveTenant` skip |
+| 18 | `cohort-analysis` | ~180 | JWT+super_admin | `serveTenant` skip |
+| 19 | `unit-economics` | ~160 | JWT+super_admin | `serveTenant` skip |
+| 20 | `subscription-analytics` | ~150 | JWT+super_admin | `serveTenant` skip |
 
-### 9. DynamicValidationSystem.tsx — AgentStatus mapping (line 110)
+### Migration Template
 
-The `map` callback returns objects missing `id`, `agent_name`, etc. But looking at the code (lines 100-109), the return object includes all required fields. The error claims otherwise — this might be a stale error or the `setAgents` call at line 113 is receiving the wrong type. The `agentsWithStatus` is typed as `AgentStatus[]` already. This should be fine. May need to verify this is a real error.
+```text
+BEFORE (revoke-enrollment-key pattern):
+─────────────────────────────────────
+import { createClient } from '...supabase-js@2.74.0';
+const corsHeaders = { ... };
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return ...
+  const authHeader = req.headers.get('Authorization');
+  const userClient = createClient(URL, ANON, { headers: { Authorization } });
+  const { data: { user } } = await userClient.auth.getUser();
+  const supabase = createClient(URL, SERVICE_KEY);
+  const { keyId } = await req.json();
+  // ... business logic ...
+});
 
-### 10. HealthTrendChart.tsx — getAgentStatusInfo param type (line 48)
+AFTER:
+─────
+import { serveTenant } from '../_shared/serve-tenant.ts';
+import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-The mapped object `{ id, status, last_heartbeat, enrolled_at }` has all `unknown` values from `Record<string, unknown>`. Fix: the map already does `String(...)` casts, but the object literal still has `unknown` properties. Cast properly: `getAgentStatusInfo({ status: String(a.status), last_heartbeat: String(a.last_heartbeat) })`.
+const RevokeKeySchema = z.object({
+  keyId: z.string().uuid(),
+});
 
-### 11. useApprovalRequests.ts — `Json` type (line 210)
+serveTenant(async (req, ctx) => {
+  const { supabase, userId, tenantId, requestId, body } = ctx;
+  const parsed = RevokeKeySchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(
+      JSON.stringify({ error: 'Invalid input', details: parsed.error.flatten().fieldErrors }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+  // ... business logic using ctx ...
+}, { methods: ['POST'] });
+```
 
-`Cannot find name 'Json'` — need to import `Json` from `@/integrations/supabase/types`.
+### What NOT to change
 
-### 12. ProcessJobResult.ts — string not assignable to Record (line 65)
+- **22 HMAC functions** — stay on `Deno.serve()` (Track B: add Zod only, separate batch)
+- **57 `assertInternalCaller` functions** — already hardened, keep as-is
+- **3 API-key functions** (`api-tenant-*`) — different auth model, keep as-is
+- **`stripe-webhook`** — needs raw body for Stripe signature
+- **70 already-migrated functions** — no changes needed
 
-`job.complete({ stdout: String(...) })` — `complete()` expects `Record<string, unknown>` and `{ stdout: string }` satisfies that. Actually, `{ stdout: string }` IS assignable to `Record<string, unknown>`. This may be a different issue — the method signature might use a stricter type. The actual error says `Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'`. So perhaps the call is `job.complete(someString)` not `job.complete({...})`. Let me re-read: line 65 is `job.complete({ stdout: String(command.stdout || "") })`. This should work. Unless `complete` takes a single arg that's `Record<string, unknown>` and the `{ stdout: string }` doesn't have an index signature. Fix: `job.complete({ stdout: String(command.stdout || "") } as Record<string, unknown>)`.
+### Estimated effort
 
-## Implementation Approach
+~20 functions × ~15 min each = ~5 hours of mechanical migration. Each function follows the same pattern: strip boilerplate, add Zod schema, wire to middleware.
 
-Fix files in batches, prioritizing:
-1. **Test files** (restore `as any` for mocks — ~6 files)
-2. **Component error handling** (`error.message` casts — ~5 files)  
-3. **Repository `as never` casts** (~4 files)
-4. **RPC/Supabase workarounds** (~3 files)
-5. **ComplianceReportGenerator complex casts** (1 file, ~10 fixes)
-6. **Remaining individual fixes** (~5 files)
+### Risk mitigation
 
-Total: ~25 files, ~50 individual fixes.
-
-## Technical Details
-
-- In test files, `as any` is acceptable since test mocks are intentionally partial objects
-- For Supabase SDK type issues (deep instantiation, unknown table names), `as never` or `as any` are standard workarounds
-- For catch blocks, `(error as Error).message` is the standard pattern
-- Import `Json` type from generated types where needed
+- Each function is independently deployable
+- The middleware is battle-tested across 70+ functions already
+- No changes to the middleware itself
+- Functions that return plain objects get auto-wrapped in JSON response by the middleware
 
