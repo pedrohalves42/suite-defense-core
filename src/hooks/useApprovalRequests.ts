@@ -68,7 +68,7 @@ export function usePendingApprovalRequests() {
       return (data || []) as ApprovalRequest[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval
+    refetchInterval: adaptiveInterval,
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
   });

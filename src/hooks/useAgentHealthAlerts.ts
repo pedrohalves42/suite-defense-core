@@ -66,7 +66,7 @@ export function useAgentExecutionHealth() {
       return (data || []) as unknown as AgentExecutionHealth[];
     },
     enabled: !loading && !!tenant?.id,
-    refetchInterval: adaptiveInterval
+    refetchInterval: adaptiveInterval,
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
@@ -92,7 +92,7 @@ export function useUnhealthyAgents() {
       return (data || []) as AgentExecutionHealth[];
     },
     enabled: !loading && !!tenant?.id,
-    refetchInterval: adaptiveInterval
+    refetchInterval: adaptiveInterval,
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
@@ -120,7 +120,7 @@ export function useNonExecutionAlerts() {
       return (data || []) as NonExecutionAlert[];
     },
     enabled: !loading && !!tenant?.id,
-    refetchInterval: adaptiveInterval
+    refetchInterval: adaptiveInterval,
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
   });

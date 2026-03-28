@@ -33,7 +33,7 @@ export function useCoverageGates() {
       return data as unknown as CoverageResult;
     },
     enabled: !loading && !!tenant?.id, // ADR-030 CRIT-01
-    refetchInterval: adaptiveInterval
+    refetchInterval: adaptiveInterval,
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
