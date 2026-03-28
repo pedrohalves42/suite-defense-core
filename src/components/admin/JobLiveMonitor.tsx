@@ -123,6 +123,7 @@ export function JobLiveMonitor({
   showSummary = true,
   compact = false 
 }: JobLiveMonitorProps) {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const [realtimeJobs, setRealtimeJobs] = useState<LiveJob[]>([]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);

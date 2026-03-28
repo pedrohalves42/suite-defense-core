@@ -123,7 +123,7 @@ export function TenantRiskScore() {
     },
     enabled: !!tenant?.id,
     staleTime: 5 * 60 * 1000,
-    refetchInterval: adaptiveInterval * 60 * 1000,
+    refetchInterval: adaptiveInterval,
   });
 
   if (isLoading || !riskData) {

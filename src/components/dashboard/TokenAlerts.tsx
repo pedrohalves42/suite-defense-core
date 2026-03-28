@@ -24,7 +24,7 @@ interface ExpiringToken {
 }
 
 export function TokenAlerts() {
-  const adaptiveInterval = useAdaptivePolling(60_000);
+  const adaptiveInterval = useAdaptivePolling(3_600_000);
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -36,7 +36,7 @@ export function TokenAlerts() {
       }>('token-rotate', { action: 'needs-rotation' });
       return result;
     },
-    refetchInterval: adaptiveInterval * 60 * 1000, // 1 hour
+    refetchInterval: adaptiveInterval,
     staleTime: 30 * 60 * 1000,
   });
 

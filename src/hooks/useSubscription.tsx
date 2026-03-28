@@ -23,7 +23,7 @@ interface SubscriptionData {
 }
 
 export const useSubscription = () => {
-  const adaptiveInterval = useAdaptivePolling(5_000);
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { user } = useAuth();
 
   const { data: subscription, isLoading, refetch } = useQuery<SubscriptionData>({
@@ -42,7 +42,7 @@ export const useSubscription = () => {
     },
     enabled: !!user,
     staleTime: 2 * 60 * 1000, // 2 minutes - subscription data doesn't change frequently
-    refetchInterval: adaptiveInterval * 60 * 1000
+    refetchInterval: adaptiveInterval,
   });
 
   return {

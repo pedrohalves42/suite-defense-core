@@ -37,7 +37,7 @@ const severityConfig = {
 } as const;
 
 export function DriftDashboard() {
-  const adaptiveInterval = useAdaptivePolling(5_000);
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
 
   const { data: events, isLoading } = useQuery({
@@ -55,7 +55,7 @@ export function DriftDashboard() {
       return (data || []) as DriftEvent[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval * 60 * 1000,
+    refetchInterval: adaptiveInterval,
   });
 
   if (isLoading) {
