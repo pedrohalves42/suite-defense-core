@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { logger } from '@/lib/logger';
 
-const SESSION_ID_KEY = 'cybershield_session_id';
+// SEC: Session ID kept in memory only (useRef), never persisted to localStorage
 
 /**
  * ADR-026 P2.2: Session Manager Hook
@@ -45,7 +45,6 @@ export const useSessionManager = () => {
 
       if (sessionId) {
         sessionIdRef.current = sessionId;
-        localStorage.setItem(SESSION_ID_KEY, sessionId);
         logger.info('[SessionManager] Session started', { sessionId });
       }
 
@@ -57,7 +56,7 @@ export const useSessionManager = () => {
   }, [user]);
 
   const updateActivity = useCallback(async () => {
-    const sessionId = sessionIdRef.current || localStorage.getItem(SESSION_ID_KEY);
+    const sessionId = sessionIdRef.current;
     
     if (!sessionId || !user) return;
 
@@ -74,7 +73,7 @@ export const useSessionManager = () => {
   }, [user]);
 
   const endSession = useCallback(async () => {
-    const sessionId = sessionIdRef.current || localStorage.getItem(SESSION_ID_KEY);
+    const sessionId = sessionIdRef.current;
     
     if (sessionId) {
       try {
@@ -95,16 +94,12 @@ export const useSessionManager = () => {
     }
 
     sessionIdRef.current = null;
-    localStorage.removeItem(SESSION_ID_KEY);
   }, []);
 
   useEffect(() => {
     if (user) {
       // Check if we already have a session
-      const existingSessionId = localStorage.getItem(SESSION_ID_KEY);
-      
-      if (existingSessionId) {
-        sessionIdRef.current = existingSessionId;
+      if (sessionIdRef.current) {
         // Update activity for existing session
         updateActivity();
       } else {

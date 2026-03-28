@@ -84,17 +84,43 @@ if ([string]::IsNullOrEmpty($EnrollmentKey)) {
     exit 0
 }
 
-# Execute fresh install
-Write-Host "  Downloading and executing installer..." -ForegroundColor Gray
+# Execute fresh install via download-verify-execute (SEC: no Invoke-Expression)
+Write-Host "  Downloading installer to temp file..." -ForegroundColor Gray
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $installUrl = "$ServerUrl/functions/v1/serve-installer/$EnrollmentKey`?os_type=windows"
+$tempScript = Join-Path $env:TEMP "cybershield-installer-$(Get-Random).ps1"
 try {
-    Invoke-RestMethod -Uri $installUrl | Invoke-Expression
+    Invoke-RestMethod -Uri $installUrl -OutFile $tempScript -UseBasicParsing
+
+    # Verify file was downloaded and is non-empty
+    if (-not (Test-Path $tempScript) -or (Get-Item $tempScript).Length -eq 0) {
+        throw "Downloaded installer is empty or missing"
+    }
+
+    # Fetch expected SHA-256 hash from server
+    $hashUrl = "$ServerUrl/functions/v1/serve-installer/$EnrollmentKey`?os_type=windows&format=sha256"
+    $expectedHash = (Invoke-RestMethod -Uri $hashUrl -UseBasicParsing).Trim().ToUpper()
+
+    # Compute local hash
+    $localHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash.ToUpper()
+
+    if ($localHash -ne $expectedHash) {
+        throw "SECURITY: Installer hash mismatch. Expected=$expectedHash Got=$localHash"
+    }
+
+    Write-Host "  [OK] Hash verified: $localHash" -ForegroundColor Green
+    Write-Host "  Executing installer..." -ForegroundColor Gray
+    & $tempScript
     Write-Host "  [OK] Installation completed" -ForegroundColor Green
 } catch {
     Write-Host "  [ERROR] Installation failed: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
+} finally {
+    # Always clean up temp file
+    if (Test-Path $tempScript) {
+        Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+    }
 }
 
 Write-Host ""
