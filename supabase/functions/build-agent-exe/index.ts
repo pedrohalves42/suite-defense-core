@@ -13,13 +13,6 @@ import { WINDOWS_INSTALLER_TEMPLATE } from '../_shared/installer-template.ts';
 import { createErrorResponse, ErrorCode } from '../_shared/error-handler.ts';
 import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
 import { BuildTelemetry } from '../_shared/build-telemetry.ts';
-import { z } from 'https://esm.sh/zod@3.23.8';
-
-const BuildRequestSchema = z.object({
-  agent_name: z.string().min(1, 'agent_name is required').max(255),
-  enrollment_key: z.string().min(1, 'enrollment_key is required').max(255),
-});
-import { BuildTelemetry } from '../_shared/build-telemetry.ts';
 
 const SUPABASE_URL = requireEnv('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
@@ -109,13 +102,12 @@ Deno.serve(async (req) => {
       return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Invalid token', 401, requestId);
     }
 
-    // 3. Parse and validate request body
-    const rawBody = await req.json();
-    const parsed = BuildRequestSchema.safeParse(rawBody);
-    if (!parsed.success) {
-      return createErrorResponse(ErrorCode.BAD_REQUEST, `Validation failed: ${JSON.stringify(parsed.error.flatten().fieldErrors)}`, 400, requestId);
+    // 3. Parse request body
+    const { agent_name, enrollment_key } = await req.json();
+    
+    if (!agent_name || !enrollment_key) {
+      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Missing agent_name or enrollment_key', 400, requestId);
     }
-    const { agent_name, enrollment_key } = parsed.data;
 
     logger.info('Build EXE request received', { requestId, agent_name, user_id: user.id });
 

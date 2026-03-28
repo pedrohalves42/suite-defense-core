@@ -4,24 +4,17 @@
 
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
-import { z } from 'https://esm.sh/zod@3.23.8';
-
-const DeleteInviteSchema = z.object({
-  inviteId: z.string().uuid('Invalid inviteId'),
-});
 
 serveTenant(async (_req, ctx) => {
   const { supabase, userId, requestId, body } = ctx;
 
-  const parsed = DeleteInviteSchema.safeParse(body);
-  if (!parsed.success) {
+  const inviteId = body?.inviteId;
+  if (!inviteId) {
     return new Response(
-      JSON.stringify({ error: 'Validation failed', details: parsed.error.flatten().fieldErrors }),
+      JSON.stringify({ error: 'Missing inviteId' }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
-
-  const { inviteId } = parsed.data;
 
   logger.info(`[delete-invite][${requestId}] User ${userId} attempting to delete invite ${inviteId}`);
 
