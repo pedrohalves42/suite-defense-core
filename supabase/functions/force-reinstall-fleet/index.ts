@@ -70,7 +70,7 @@ serveTenant(async (req, ctx) => {
       expires_at: expiresAt,
       max_uses: 100,
       warning: 'ANOTE ESTA CHAVE! Ela não pode ser recuperada depois (armazenada apenas como hash).',
-      nuclear_reinstall_command: `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $h=$env:COMPUTERNAME; Get-ScheduledTask -TaskName '*CyberShield*' -ErrorAction SilentlyContinue | ForEach-Object { Stop-ScheduledTask $_.TaskName -ErrorAction SilentlyContinue; Unregister-ScheduledTask $_.TaskName -Confirm:$false -ErrorAction SilentlyContinue }; Remove-Item 'C:\\CyberShield' -Recurse -Force -ErrorAction SilentlyContinue; irm "${supabaseUrl}/functions/v1/serve-installer/${plaintextKey}?hostname=$h&os_type=windows" | iex`
+      nuclear_reinstall_command: `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $h=$env:COMPUTERNAME; Get-ScheduledTask -TaskName '*CyberShield*' -ErrorAction SilentlyContinue | ForEach-Object { Stop-ScheduledTask $_.TaskName -ErrorAction SilentlyContinue; Unregister-ScheduledTask $_.TaskName -Confirm:$false -ErrorAction SilentlyContinue }; Remove-Item 'C:\\CyberShield' -Recurse -Force -ErrorAction SilentlyContinue; $t=Join-Path $env:TEMP "cs-$(Get-Random).ps1"; irm "${supabaseUrl}/functions/v1/serve-installer/${plaintextKey}?hostname=$h&os_type=windows" -OutFile $t -UseBasicParsing; & $t; Remove-Item $t -Force -ErrorAction SilentlyContinue`
     };
   }
 
@@ -120,7 +120,7 @@ serveTenant(async (req, ctx) => {
   const serverUrl = supabaseUrl;
   const ek = enrollmentKey.key;
 
-  const singleCommand = `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $ek="${ek}"; $h=$env:COMPUTERNAME; Get-ScheduledTask -TaskName '*CyberShield*' -ErrorAction SilentlyContinue | ForEach-Object { Stop-ScheduledTask $_.TaskName -ErrorAction SilentlyContinue; Unregister-ScheduledTask $_.TaskName -Confirm:$false -ErrorAction SilentlyContinue }; Remove-Item 'C:\\CyberShield' -Recurse -Force -ErrorAction SilentlyContinue; irm "${serverUrl}/functions/v1/serve-installer/$ek?hostname=$h&os_type=windows" -UseBasicParsing | iex`;
+  const singleCommand = `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $ek="${ek}"; $h=$env:COMPUTERNAME; Get-ScheduledTask -TaskName '*CyberShield*' -ErrorAction SilentlyContinue | ForEach-Object { Stop-ScheduledTask $_.TaskName -ErrorAction SilentlyContinue; Unregister-ScheduledTask $_.TaskName -Confirm:$false -ErrorAction SilentlyContinue }; Remove-Item 'C:\\CyberShield' -Recurse -Force -ErrorAction SilentlyContinue; $t=Join-Path $env:TEMP "cs-$(Get-Random).ps1"; irm "${serverUrl}/functions/v1/serve-installer/$ek?hostname=$h&os_type=windows" -UseBasicParsing -OutFile $t; & $t; Remove-Item $t -Force -ErrorAction SilentlyContinue`;
 
   const batchScript = `@echo off
 REM CyberShield Fleet Nuclear Reinstall - Generated ${new Date().toISOString()}
@@ -159,8 +159,10 @@ if (Test-Path "C:\\CyberShield") {
 
 Write-Host "[3/4] Downloading fresh installer..." -ForegroundColor Yellow
 $installerUrl = "${serverUrl}/functions/v1/serve-installer/${ek}?hostname=$($env:COMPUTERNAME)&os_type=windows"
-$installerScript = Invoke-RestMethod -Uri $installerUrl -UseBasicParsing
-Invoke-Expression $installerScript
+$tempInstaller = Join-Path $env:TEMP "cybershield-installer-$(Get-Random).ps1"
+Invoke-RestMethod -Uri $installerUrl -OutFile $tempInstaller -UseBasicParsing
+& $tempInstaller
+Remove-Item $tempInstaller -Force -ErrorAction SilentlyContinue
 
 Write-Host "[4/4] Verifying..." -ForegroundColor Yellow
 Start-Sleep -Seconds 10
