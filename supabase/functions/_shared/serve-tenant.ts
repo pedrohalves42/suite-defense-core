@@ -56,6 +56,17 @@ export interface TenantContext<T = unknown> {
   req: Request;
 }
 
+export interface RateLimitOption {
+  /** Endpoint key for rate limit lookup (e.g. 'create-job') */
+  endpoint: string;
+  /** Max requests per window. Default: 60 */
+  maxRequests?: number;
+  /** Window in minutes. Default: 1 */
+  windowMinutes?: number;
+  /** Block duration in minutes when exceeded. Default: 5 */
+  blockMinutes?: number;
+}
+
 export interface ServeOptions {
   /** 
    * How to extract tenant_id. Default: 'auto' 
@@ -83,6 +94,12 @@ export interface ServeOptions {
    * Default: false
    */
   skipTenantValidation?: boolean;
+
+  /**
+   * Optional rate limiting. When set, requests are checked against
+   * the check_rate_limit_atomic RPC before processing.
+   */
+  rateLimit?: RateLimitOption;
 }
 
 type TenantHandler<T = unknown> = (req: Request, ctx: TenantContext<T>) => Promise<Response | Record<string, unknown> | unknown>;
@@ -133,6 +150,7 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
     allowFallback = true,
     methods = ['POST'],
     skipTenantValidation = false,
+    rateLimit: rateLimitConfig,
   } = options || {};
 
   Deno.serve(async (req: Request) => {
@@ -240,7 +258,28 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
         }
       }
 
-      // 7. Build context and call handler
+      // 7. Rate limiting (optional)
+      if (rateLimitConfig && tenantId) {
+        const { checkRateLimit } = await import('./rate-limit.ts');
+        const identifier = userId ? `user:${userId}` : `tenant:${tenantId}`;
+        const rlResult = await checkRateLimit(supabase, identifier, rateLimitConfig.endpoint, {
+          maxRequests: rateLimitConfig.maxRequests ?? 60,
+          windowMinutes: rateLimitConfig.windowMinutes ?? 1,
+          blockMinutes: rateLimitConfig.blockMinutes ?? 5,
+        });
+        if (!rlResult.allowed) {
+          const retryAfter = rlResult.resetAt
+            ? Math.max(1, Math.ceil((rlResult.resetAt.getTime() - Date.now()) / 1000))
+            : 60;
+          return jsonResponse(
+            { error: { message: 'Rate limit exceeded', code: 'RATE_LIMITED' } },
+            429,
+            { 'X-Request-ID': requestId, 'Retry-After': String(retryAfter) },
+          );
+        }
+      }
+
+      // 8. Build context and call handler
       const ctx: TenantContext<T> = {
         tenantId: tenantId!,
         userId,

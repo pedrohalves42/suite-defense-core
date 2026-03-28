@@ -13306,6 +13306,71 @@ export type Database = {
           },
         ]
       }
+      dead_letter_jobs: {
+        Row: {
+          failure_count: number
+          id: string
+          job_id: string
+          last_error: string | null
+          moved_at: string
+          original_data: Json
+          reprocessed_at: string | null
+          reprocessed_by: string | null
+          tenant_id: string
+        }
+        Insert: {
+          failure_count?: number
+          id?: string
+          job_id: string
+          last_error?: string | null
+          moved_at?: string
+          original_data: Json
+          reprocessed_at?: string | null
+          reprocessed_by?: string | null
+          tenant_id: string
+        }
+        Update: {
+          failure_count?: number
+          id?: string
+          job_id?: string
+          last_error?: string | null
+          moved_at?: string
+          original_data?: Json
+          reprocessed_at?: string | null
+          reprocessed_by?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dead_letter_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dead_letter_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "dead_letter_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "dead_letter_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       decision_events: {
         Row: {
           action: string
