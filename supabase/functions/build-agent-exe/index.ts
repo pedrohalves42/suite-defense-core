@@ -109,12 +109,13 @@ Deno.serve(async (req) => {
       return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Invalid token', 401, requestId);
     }
 
-    // 3. Parse request body
-    const { agent_name, enrollment_key } = await req.json();
-    
-    if (!agent_name || !enrollment_key) {
-      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Missing agent_name or enrollment_key', 400, requestId);
+    // 3. Parse and validate request body
+    const rawBody = await req.json();
+    const parsed = BuildRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return createErrorResponse(ErrorCode.BAD_REQUEST, `Validation failed: ${JSON.stringify(parsed.error.flatten().fieldErrors)}`, 400, requestId);
     }
+    const { agent_name, enrollment_key } = parsed.data;
 
     logger.info('Build EXE request received', { requestId, agent_name, user_id: user.id });
 
