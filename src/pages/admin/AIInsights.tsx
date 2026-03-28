@@ -216,8 +216,8 @@ export default function AIInsights() {
 
   // Fix: Use status-based filtering instead of acknowledged flag
   // "Aguardando" = open insights (not yet resolved), "Resolvidos" = resolved/rejected
-  const pendingInsights = insights.filter(i => !['resolved', 'rejected'].includes((i as any).status || 'open'));
-  const acknowledgedInsights = insights.filter(i => ['resolved', 'rejected'].includes((i as any).status || ''));
+  const pendingInsights = insights.filter(i => !['resolved', 'rejected'].includes((i as Record<string, unknown>).status || 'open'));
+  const acknowledgedInsights = insights.filter(i => ['resolved', 'rejected'].includes((i as Record<string, unknown>).status || ''));
 
   // Get global status
   const getGlobalStatus = () => {

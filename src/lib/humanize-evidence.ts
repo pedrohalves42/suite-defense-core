@@ -217,7 +217,7 @@ export function humanizeEvidence(evidence: any): HumanizedEvidence[] {
     );
     
     if (agentProblemEntry && typeof agentProblemEntry.value === 'object' && agentProblemEntry.value !== null) {
-      const agentMetrics = agentProblemEntry.value as any;
+      const agentMetrics = agentProblemEntry.value as Record<string, unknown>;
       const agentName = (agentProblemEntry.data_point as string).replace('Agente com Problema: ', '');
       
       items.push({

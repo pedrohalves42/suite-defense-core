@@ -65,7 +65,7 @@ function toErrorMessage(value: unknown): string {
   if (value instanceof Error) return value.message;
 
   if (typeof value === 'object') {
-    const obj = value as any;
+    const obj = value as Record<string, unknown>;
     const nested = obj.message ?? obj.description ?? obj.error ?? obj.details ?? obj.hint;
     if (nested && nested !== value) {
       return toErrorMessage(nested);

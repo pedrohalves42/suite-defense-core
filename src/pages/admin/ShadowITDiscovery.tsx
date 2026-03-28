@@ -85,10 +85,10 @@ export default function ShadowITDiscovery() {
 
   const stats = {
     total: catalog.length,
-    approved: catalog.filter((a: any) => a.risk_level === "approved").length,
-    review: catalog.filter((a: any) => a.risk_level === "review").length,
-    blocked: catalog.filter((a: any) => a.risk_level === "blocked").length,
-    unknown: catalog.filter((a: any) => a.risk_level === "unknown").length,
+    approved: catalog.filter((a: Record<string, unknown>) => a.risk_level === "approved").length,
+    review: catalog.filter((a: Record<string, unknown>) => a.risk_level === "review").length,
+    blocked: catalog.filter((a: Record<string, unknown>) => a.risk_level === "blocked").length,
+    unknown: catalog.filter((a: Record<string, unknown>) => a.risk_level === "unknown").length,
   };
 
   return (

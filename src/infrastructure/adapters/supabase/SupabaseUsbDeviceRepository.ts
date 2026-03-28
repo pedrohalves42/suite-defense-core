@@ -8,7 +8,7 @@ import { UsbDeviceMapper } from './mappers/UsbDeviceMapper';
 export class SupabaseUsbDeviceRepository implements UsbDeviceRepository {
   async save(device: UsbDevice): Promise<void> {
     const row = UsbDeviceMapper.toPersistence(device);
-    const { error } = await supabase.from('agent_usb_devices').upsert(row as any);
+    const { error } = await supabase.from('agent_usb_devices').upsert(row as never);
     if (error) throw new Error(`Failed to save USB device: ${error.message}`);
   }
 

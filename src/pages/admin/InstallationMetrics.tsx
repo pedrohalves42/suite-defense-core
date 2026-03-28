@@ -74,7 +74,7 @@ export default function InstallationMetrics() {
         .select('tenant_id, platform, total_generated, total_downloaded, total_copied, total_installed, successful_events, failed_events, avg_install_time_seconds, with_network, without_network, last_event_at');
 
       if (error) throw error;
-      return data as any as AgentInstallationMetrics[];
+      return data as unknown as AgentInstallationMetrics[];
     }
   });
 
@@ -88,7 +88,7 @@ export default function InstallationMetrics() {
         .limit(20);
 
       if (error) throw error;
-      return data as any as InstallationErrorSummary[];
+      return data as unknown as InstallationErrorSummary[];
     }
   });
 
@@ -101,7 +101,7 @@ export default function InstallationMetrics() {
         .select('tenant_id, total_agents, active_agents, pending_agents, stuck_agents, activation_rate_pct, window_interval');
 
       if (error) throw error;
-      return data as any as InstallationHealthStatus[];
+      return data as unknown as InstallationHealthStatus[];
     }
   });
 

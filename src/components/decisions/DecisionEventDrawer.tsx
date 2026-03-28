@@ -49,11 +49,11 @@ export function DecisionEventDrawer({ event, open, onOpenChange }: DecisionEvent
 
   // Safe type guards
   const evidence = (event.evidence && typeof event.evidence === 'object' && !Array.isArray(event.evidence)) 
-    ? event.evidence as any as EvidenceData 
+    ? event.evidence as unknown as EvidenceData 
     : {} as EvidenceData;
   
   const actionsExecuted = Array.isArray(event.actions_executed) 
-    ? (event.actions_executed as any as ActionExecuted[])
+    ? (event.actions_executed as unknown as ActionExecuted[])
     : [];
 
   const getActionIcon = (type: string) => {

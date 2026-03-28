@@ -121,7 +121,7 @@ export function GlobalSearch() {
           p_tenant_id: activeTenant.id,
           p_include_archived: false,
         });
-        const allAgents = (rawData as any as Array<{ id: string; agent_name: string; agent_state: string; last_heartbeat: string | null }>) || [];
+        const allAgents = (rawData as unknown as Array<{ id: string; agent_name: string; agent_state: string; last_heartbeat: string | null }>) || [];
         const filtered = allAgents
           .filter(a => a.agent_name.toLowerCase().includes(debouncedQuery.toLowerCase()))
           .slice(0, 5);

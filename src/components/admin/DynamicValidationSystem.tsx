@@ -76,8 +76,8 @@ export function DynamicValidationSystem() {
         p_tenant_id: tenant.id,
         p_include_archived: false,
       });
-      const agentsData = ((agentsRaw as any as Array<Record<string, unknown>>) || [])
-        .filter((a: any) => a.status === 'active')
+      const agentsData = ((agentsRaw as unknown as Array<Record<string, unknown>>) || [])
+        .filter((a: Record<string, unknown>) => a.status === 'active')
         .sort((a: any, b: any) => (a.agent_name || '').localeCompare(b.agent_name || ''));
 
       if (!agentsData) {

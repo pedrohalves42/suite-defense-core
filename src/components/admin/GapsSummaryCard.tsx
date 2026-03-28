@@ -82,7 +82,7 @@ export function GapsSummaryCard() {
         p_tenant_id: tenant.id,
         p_include_archived: false,
       });
-      const agents = (agentsRaw as any as Array<{ last_heartbeat: string | null }>) || [];
+      const agents = (agentsRaw as unknown as Array<{ last_heartbeat: string | null }>) || [];
       return agents.filter(a => a.last_heartbeat && a.last_heartbeat < threshold).length;
     },
     enabled: !!tenant?.id,

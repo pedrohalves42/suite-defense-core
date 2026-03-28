@@ -82,7 +82,7 @@ export default function AgentTest() {
       });
       
       if (error) throw error;
-      return ((data || []) as any[]).sort((a: any, b: any) => a.agent_name.localeCompare(b.agent_name));
+      return ((data || []) as unknown[]).sort((a: any, b: any) => a.agent_name.localeCompare(b.agent_name));
     },
     enabled: !!tenant?.id
   });

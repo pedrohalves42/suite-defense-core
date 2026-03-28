@@ -37,7 +37,7 @@ export function OrphanedJobsAlert({ tenantId, onRefresh }: OrphanedJobsAlertProp
           p_include_archived: false,
         });
         const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-        const offlineAgents = ((agentsRaw as any as Array<{ id: string; agent_name: string; last_heartbeat: string | null }>) || [])
+        const offlineAgents = ((agentsRaw as unknown as Array<{ id: string; agent_name: string; last_heartbeat: string | null }>) || [])
           .filter(a => !a.last_heartbeat || a.last_heartbeat < thirtyMinutesAgo);
 
         if (!offlineAgents || offlineAgents.length === 0) {

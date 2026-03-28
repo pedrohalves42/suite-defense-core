@@ -57,7 +57,7 @@ export default function RansomwareIncident() {
 
   const stats = {
     totalIncidents: alerts.length,
-    activeIncidents: alerts.filter((a: any) => a.status === "open" || a.status === "in_progress").length,
+    activeIncidents: alerts.filter((a: Record<string, unknown>) => a.status === "open" || a.status === "in_progress").length,
     quarantinedMachines: quarantined.length,
     indicators: indicators.length,
   };
@@ -135,13 +135,13 @@ export default function RansomwareIncident() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {quarantined.map((a: any) => (
-                  <TableRow key={a.id}>
-                    <TableCell className="font-medium">{a.hostname}</TableCell>
-                    <TableCell>{a.agent_version}</TableCell>
-                    <TableCell className="text-sm">{a.isolation_reason || "Ransomware detectado"}</TableCell>
+                {quarantined.map((a: Record<string, unknown>) => (
+                  <TableRow key={String(a.id)}>
+                    <TableCell className="font-medium">{String(a.hostname)}</TableCell>
+                    <TableCell>{String(a.agent_version)}</TableCell>
+                    <TableCell className="text-sm">{String(a.isolation_reason || "Ransomware detectado")}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {a.isolated_at ? new Date(a.isolated_at).toLocaleString("pt-BR") : "—"}
+                      {a.isolated_at ? new Date(String(a.isolated_at)).toLocaleString("pt-BR") : "—"}
                     </TableCell>
                   </TableRow>
                 ))}

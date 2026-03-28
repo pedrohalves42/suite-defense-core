@@ -60,7 +60,7 @@ export function TenantClaimAlerts() {
         };
       }
 
-      const rows = (data || []) as any as ClaimHealthData[];
+      const rows = (data || []) as unknown as ClaimHealthData[];
       
       return {
         total_valid_24h: rows.reduce((sum, r) => sum + (r.valid_claims || 0), 0),

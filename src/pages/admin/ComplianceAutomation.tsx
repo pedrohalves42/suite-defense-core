@@ -131,11 +131,11 @@ export default function ComplianceAutomation() {
       const [agentsRes, alertsRes, vulnsRes] = await Promise.all([
         supabase.rpc('get_agents_list', { p_tenant_id: tenantId, p_include_archived: false }),
         supabase.from('system_alerts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'active'),
-        supabase.from('vulnerability_scans' as any).select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('remediation_status', 'pending'),
+        supabase.from('vulnerability_scans' as never).select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('remediation_status', 'pending'),
       ]);
 
       return {
-        agents: ((agentsRes.data as any[]) || []).length,
+        agents: ((agentsRes.data as unknown[]) || []).length,
         alerts: alertsRes.count || 0,
         vulns: vulnsRes.count || 0,
       };

@@ -47,8 +47,8 @@ export const OutdatedAgentsBanner = () => {
           p_include_archived: false
         });
         const agents = ((agentsRaw || []) as Array<Record<string, unknown>>)
-          .filter((a: any) => a.status === 'active' && a.agent_version)
-          .map((a: any) => ({ agent_name: String(a.agent_name), agent_version: String(a.agent_version) }));
+          .filter((a: Record<string, unknown>) => a.status === 'active' && a.agent_version)
+          .map((a: Record<string, unknown>) => ({ agent_name: String(a.agent_name), agent_version: String(a.agent_version) }));
 
         // Filter agents that need manual reinstallation (v3.10.21 and below have bootstrap problem)
         const outdated = (agents || []).filter(agent => {

@@ -114,7 +114,7 @@ export default function CronHealthDashboard() {
         toast.error('Erro ao carregar saúde dos crons');
         return [];
       }
-      return (data || []) as any as CronHealthRecord[];
+      return (data || []) as unknown as CronHealthRecord[];
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,

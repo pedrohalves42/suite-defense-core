@@ -90,7 +90,7 @@ export function SecurityControlPlane() {
         supabase.from('jobs').select('*', { count: 'exact', head: true })
           .eq('tenant_id', tenant.id).eq('status', 'failed').gte('created_at', last1h),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (supabase.from('rls_test_results' as any).select('*', { count: 'exact', head: true }) )
+        (supabase.from('rls_test_results' as never).select('*', { count: 'exact', head: true }) )
           .eq('tenant_id', tenant.id).eq('passed', false).gte('tested_at', last24h),
         supabase.from('system_global_state').select('mode')
           .order('triggered_at', { ascending: false }).limit(1).maybeSingle()
@@ -108,7 +108,7 @@ export function SecurityControlPlane() {
         failed_jobs_1h: jobsResult.count || 0,
         rls_failures_24h: rlsTestsResult.count || 0,
         last_rls_test: null,
-        current_system_mode: String((systemModeResult.data as any)?.mode || 'normal')
+        current_system_mode: String((systemModeResult.data as Record<string, unknown>)?.mode || 'normal')
       };
     },
     refetchInterval: adaptiveInterval,

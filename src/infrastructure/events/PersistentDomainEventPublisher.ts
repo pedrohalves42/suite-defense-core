@@ -17,7 +17,7 @@ export class PersistentDomainEventPublisher implements DomainEventDispatcher {
           aggregate_id: event.aggregateId,
           aggregate_type: this.inferAggregateType(event.eventType),
           event_type: event.eventType,
-          payload: this.buildPayload(event) as any as Json,
+          payload: this.buildPayload(event) as unknown as Json,
           occurred_on: event.occurredOn.toISOString(),
           tenant_id: this.extractTenantId(event),
         });
@@ -39,7 +39,7 @@ export class PersistentDomainEventPublisher implements DomainEventDispatcher {
         aggregate_id: event.aggregateId,
         aggregate_type: this.inferAggregateType(event.eventType),
         event_type: event.eventType,
-        payload: this.buildPayload(event) as any as Json,
+        payload: this.buildPayload(event) as unknown as Json,
         occurred_on: event.occurredOn.toISOString(),
         tenant_id: this.extractTenantId(event),
       }));
@@ -64,13 +64,13 @@ export class PersistentDomainEventPublisher implements DomainEventDispatcher {
   }
 
   private buildPayload(event: DomainEvent): Record<string, unknown> {
-    const { eventType, occurredOn, aggregateId, ...rest } = event as any;
+    const { eventType, occurredOn, aggregateId, ...rest } = event as unknown as Record<string, unknown>;
     return rest;
   }
 
   private extractTenantId(event: DomainEvent): string | null {
-    const e = event as any;
-    if (e.tenantId?.value) return e.tenantId.value;
+    const e = event as unknown as Record<string, unknown>;
+    if ((e.tenantId as Record<string, unknown>)?.value) return String((e.tenantId as Record<string, unknown>).value);
     if (typeof e.tenantId === 'string') return e.tenantId;
     return null;
   }

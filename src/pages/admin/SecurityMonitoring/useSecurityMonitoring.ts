@@ -30,7 +30,7 @@ export function useSecurityMonitoring() {
       const sb = supabase;
 
       const [rateLimitsRes, failedLoginsRes, blockedIpsRes, securityEventsRes, agentsRes, blockedAttemptsRes, evidenceRes, alertsRes] = await Promise.all([
-        (sb as any).from('rate_limits').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('window_start', since).not('blocked_until', 'is', null),
+        (sb as never).from('rate_limits').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('window_start', since).not('blocked_until', 'is', null),
         sb.from('failed_login_attempts').select('ip_address, created_at').eq('tenant_id', tenant.id).gte('created_at', since),
         sb.from('ip_blocklist').select('id, ip_address, reason, blocked_until, created_at').eq('tenant_id', tenant.id).gte('blocked_until', new Date().toISOString()).order('created_at', { ascending: false }).limit(20),
         sb.from('security_logs').select('id, attack_type, severity, ip_address, endpoint, details, created_at, blocked').eq('tenant_id', tenant.id).gte('created_at', since).order('created_at', { ascending: false }).limit(50),
@@ -78,9 +78,9 @@ export function useSecurityMonitoring() {
         .filter(e => e.severity !== 'info' && e.severity !== 'debug')
         .forEach(e => {
         const eventData = e.event_data || {};
-        const alertType = (eventData as any).alert_type as string || '';
-        const alertMsg = (eventData as any).alert_message as string || '';
-        const details = (eventData as any).details || {};
+        const alertType = (eventData as Record<string, unknown>).alert_type as string || '';
+        const alertMsg = (eventData as Record<string, unknown>).alert_message as string || '';
+        const details = (eventData as Record<string, unknown>).details || {};
         const skipRemediation = details?.skip_remediation === true;
 
         let label: string;
@@ -110,15 +110,15 @@ export function useSecurityMonitoring() {
           if (details.expected !== undefined && details.actual !== undefined) {
             parts.push(`Esperado: ${details.expected} → Atual: ${details.actual}`);
           }
-          if ((eventData as any).state_before && (eventData as any).state_after) {
-            parts.push(`${(eventData as any).state_before} → ${(eventData as any).state_after}`);
+          if ((eventData as Record<string, unknown>).state_before && (eventData as Record<string, unknown>).state_after) {
+            parts.push(`${(eventData as Record<string, unknown>).state_before} → ${(eventData as Record<string, unknown>).state_after}`);
           }
           detail = parts.join(' · ') || '';
         }
 
         unifiedEvents.push({
           id: e.id, type: alertType || e.event_type, label, detail,
-          severity: (eventData as any).severity || e.severity,
+          severity: (eventData as Record<string, unknown>).severity || e.severity,
           created_at: e.created_at, source: 'evidence_logs',
           agentName: e.agent_name, alertType,
           remediable: !skipRemediation && remediableAlerts.has(alertType),
@@ -148,7 +148,7 @@ export function useSecurityMonitoring() {
       // Metrics
       const criticalCount = dedupedEvents.filter(e => e.severity === 'high' || e.severity === 'critical').length;
       const offlineThreshold = subHours(new Date(), AGENT_STATUS_THRESHOLDS.OFFLINE_ALERT_HOURS).toISOString();
-      const allAgents = (agentsRes.data as any as Array<{ last_heartbeat: string | null; status: string }>) || [];
+      const allAgents = (agentsRes.data as unknown as Array<{ last_heartbeat: string | null; status: string }>) || [];
       const offlineAgents = allAgents.filter(a => a.status === 'active' && a.last_heartbeat && a.last_heartbeat < offlineThreshold).length;
 
       const failedLogins = (failedLoginsRes.data || []) as Array<{ ip_address: string; created_at: string }>;
@@ -252,7 +252,7 @@ export function useSecurityMonitoring() {
         policy_violation: 'enforce_policy',
       };
       const jobType = jobTypeMap[event.alertType || ''] || 'security_remediation';
-      const { error } = await (supabase as any).from('jobs').insert({
+      const { error } = await (supabase as never).from('jobs').insert({
         tenant_id: tenant.id,
         agent_name: event.agentName,
         type: jobType,

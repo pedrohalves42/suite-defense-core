@@ -80,7 +80,7 @@ export function AgentSystemInfo({ agentId, tenantId }: AgentSystemInfoProps) {
         p_tenant_id: tenantId,
         p_include_archived: true,
       });
-      const agents = (agentsRaw as any as Array<Record<string, unknown>>) || [];
+      const agents = (agentsRaw as unknown as Array<Record<string, unknown>>) || [];
       const agent = agents.find(a => a.id === agentId);
 
       if (!agent) return null;

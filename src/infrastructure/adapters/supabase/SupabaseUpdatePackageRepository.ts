@@ -39,7 +39,7 @@ export class SupabaseUpdatePackageRepository implements UpdatePackageRepository 
     const persistence = UpdatePackageMapper.toPersistence(pkg);
     const { error } = await supabase
       .from('update_packages')
-      .upsert(persistence as any);
+      .upsert(persistence as never);
 
     if (error) {
       throw new Error(`Failed to save update package: ${error.message}`);

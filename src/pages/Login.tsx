@@ -171,7 +171,7 @@ export default function Login() {
     if (error) {
       // Check if MFA is required
       if (error.message?.includes('mfa_required') || 
-          (error as any)?.code === 'mfa_required') {
+          (error as unknown as Record<string, unknown>)?.code === 'mfa_required') {
         setShowMFADialog(true);
         setLoading(false);
         return;

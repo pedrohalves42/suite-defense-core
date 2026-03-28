@@ -77,7 +77,7 @@ export function useApprovalMetrics() {
 
       // Count reviews that have approval_notes or forced_review
       const reviewsWithNotes = decisionData?.filter(d => {
-        const evidence = d.evidence as any | null;
+        const evidence = d.evidence as Record<string, unknown> | null;
         return evidence?.approval_notes || evidence?.forced_review;
       }).length || 0;
 

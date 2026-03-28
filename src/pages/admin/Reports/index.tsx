@@ -38,7 +38,7 @@ export default function Reports() {
         p_include_archived: false,
       });
       if (error) throw error;
-      return ((data || []) as any as RpcAgentRow[])
+      return ((data || []) as unknown as RpcAgentRow[])
         .filter((a) => a.status === 'active')
         .map((a) => ({ id: a.id, agent_name: a.agent_name, status: a.status } as Agent))
         .sort((a, b) => a.agent_name.localeCompare(b.agent_name));

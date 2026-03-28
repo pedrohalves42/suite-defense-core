@@ -65,7 +65,7 @@ export function AgentVersionSync({
       });
       
       if (error) throw error;
-      return ((data || []) as any as RpcAgentRow[])
+      return ((data || []) as unknown as RpcAgentRow[])
         .filter((a) => a.status === 'active')
         .map((a): Agent => ({
           id: a.id,

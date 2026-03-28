@@ -36,7 +36,7 @@ export function CronHealthAlert() {
         .order('cron_name');
 
       if (error) throw error;
-      return (data || []) as any as CronHealthEntry[];
+      return (data || []) as unknown as CronHealthEntry[];
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,

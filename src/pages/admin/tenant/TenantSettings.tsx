@@ -53,7 +53,7 @@ export default function TenantSettings() {
         p_include_archived: false,
       });
       if (error) throw error;
-      return ((data as any[]) || []).length;
+      return ((data as unknown[]) || []).length;
     },
     // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
     enabled: !tenantLoading && !!tenant?.id,
