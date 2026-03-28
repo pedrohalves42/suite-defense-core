@@ -1,150 +1,95 @@
 
 
-# Plan: Migrate Heartbeat to serveAgent, Decompose submit-job-result, Fix SECURITY DEFINER
+# Plan: Fix All TypeScript Build Errors
 
-## Context
+These errors stem from the aggressive `as any` → `as unknown` migration that left many casts incomplete. The fix is straightforward: replace `as unknown` with proper type assertions or add missing type annotations.
 
-Three critical refactors remain from the audit. Each requires careful, surgical work to preserve existing business logic.
+## Error Categories & Fixes
 
-## 1. Migrate `heartbeat` to `serveAgent` (805 lines)
+### 1. Test files: `as unknown` needs to be `as any` or properly typed (12 files)
 
-### Problem
-`heartbeat` uses raw `Deno.serve()` with manual token auth (lines 32-76) that duplicates what `serveAgent` already provides. However, heartbeat needs **extra agent fields** not returned by `serveAgent`'s `authenticateAgent()` — specifically `status`, `skip_firewall_remediation`, `agent_version`, and all `force_update_*` fields (lines 62-95).
+Test mocks inherently create partial objects. Using `as unknown` breaks type assignment. The pragmatic fix is to restore `as any` in test mocks (tests are not production code) or use proper partial types.
 
-### Approach
-**Cannot use `serveAgent` as-is.** The `AuthenticatedAgent` interface only returns `{ id, agent_name, tenant_id, hmac_secret }`. Heartbeat needs 12+ additional agent fields for force-update logic. Two options:
+**Files:**
+- `src/hooks/useAuth.test.tsx` — 6 instances of `} as unknown` → `} as any` (lines 62, 78, 102, 121, 152, 196, 203)
+- `src/hooks/__tests__/useAuth.test.tsx` — line 72: `} as unknown` → `} as AuthError`, line 100: `session as unknown` → `session as Session`  
+- `src/hooks/useSuperAdmin.test.tsx` — 7 instances: `mockUser as unknown` → `mockUser as any` (lines 58, 83, 105, 139, 160, 185, 203)
+- `src/hooks/useSubscription.test.tsx` — 2 instances: `} as unknown` → `} as any` (lines 51, 76)
+- `src/domain/__tests__/Job.test.ts` — line 40: `'invalid' as unknown` → `'invalid' as JobType`
+- `src/domain/__tests__/light-mode-config.test.ts` — line 154: `(config as unknown).props` → `(config as any).props`
 
-**Option A (chosen): Extend `serveAgent` context** — Add an `options.extraAgentFields` parameter to `serveAgent` that enriches the agent query with additional columns. This keeps backward compatibility while allowing heartbeat to request the fields it needs.
+### 2. Component error handling: `error.message` on `unknown` (5 files)
 
-**Option B (alternative): Use `serveAgent` + re-query** — Accept the minimal agent context from `serveAgent`, then do a second query for the extra fields. This adds latency to a hot path.
+**Fix pattern:** Add `(error as Error).message` or use `error instanceof Error` guard.
 
-### Changes
+- `src/components/admin/AgentSyncStatusCard.tsx` line 31: `error.message` → `(error as Error).message`
+- `src/components/admin/AgentVersionSync.tsx` line 197: `error.message` → `(error as Error).message`
+- `src/components/admin/ComplianceReportGenerator.tsx` line 98: already has `(error as Error)` — OK
+- `src/components/admin/DynamicValidationSystem.tsx` lines 172, 254: `(error as Error).message` — already correct per code, but TS sees `unknown` from catch. Ensure `(error as Error).message`.
 
-**File: `supabase/functions/_shared/agent-auth.ts`**
-- Add optional `selectFields` parameter to `authenticateAgent()` that appends extra columns to the `agents!inner(...)` select
-- Default remains `id, agent_name, tenant_id, hmac_secret`
-- Return extra fields as `agentData: Record<string, unknown>` in the result
+### 3. AgentQuickActions.tsx — `description` type issue (lines 98, 131)
 
-**File: `supabase/functions/_shared/serve-tenant.ts`**
-- Add `extraAgentFields?: string[]` to a new `ServeAgentOptions` parameter on `serveAgent()`
-- Pass through to `authenticateAgent()`
-- Extend `AgentContext` with `agentData: Record<string, unknown>`
+The `onError` callback parameter is typed `(error: Error)` but `useMutation` infers error as `Error` by default. The issue is likely that `error?.message` returns `string | undefined` which is valid for ReactNode. Need to check if the actual error type annotation conflicts. Fix: ensure `onError: (error: Error) => {` is consistent, or cast `error.message as string`.
 
-**File: `supabase/functions/heartbeat/index.ts`**
-- Replace `Deno.serve()` with `serveAgent()`, passing `extraAgentFields` for force-update fields
-- Remove lines 1-76 (manual auth boilerplate) — replaced by middleware
-- Remove manual `createClient()` — use `ctx.supabase`
-- Remove manual CORS/OPTIONS handling — handled by middleware
-- **Preserve all business logic intact**: HMAC version gating (V-702), rate limiting, force-update delivery, script hotfix, self-heal hash, parallel ops
-- The HMAC verification block (lines 106-170) stays because heartbeat has custom legacy/modern agent version gating that goes beyond the standard HMAC check
-- Body parsing moves to `ctx.body` (serveAgent already parses JSON, including gzip)
+### 4. Supabase RPC calls with `as never` workaround (3 files)
 
-### Risk: Medium
-- Must preserve the expanded agent_tokens join (line 62-69) which fetches force_update fields
-- Must verify that `serveAgent`'s body parsing doesn't conflict with HMAC's `rawBody` requirement
+- `src/hooks/useBlastRadius.tsx` line 64: `.rpc('check_blast_radius' as never, {...})` — the `as never` on the function name makes params type `never`. Fix: remove `as never` or use `as any` on the params object.
+- `src/hooks/useForensicSnapshots.tsx` line 74: same pattern with `'create_forensic_snapshot' as never`
+- `src/components/admin/DailySummaryCard.tsx` line 67: `.from('autonomy_actions' as never)` — table not in generated types. Fix: use `as any` for the entire query or keep `as never` and cast data.
 
----
+### 5. Repository files: `Record<string, unknown>` not assignable to typed insert (4 files)
 
-## 2. Decompose `submit-job-result` into modules (1,893 lines)
+- `SupabaseCertificateRepository.ts` line 18: `rows as Array<Record<string, unknown>>` → `rows as never`
+- `SupabaseFileIntegrityRepository.ts` line 18: same fix
+- `SupabaseNetworkMetricsRepository.ts` line 17: same fix  
+- `SupabaseJobRepository.ts` lines 66, 77: `persistence as Record<string, unknown>` → `persistence as never`
 
-### Problem
-Single monolithic function handling: auth, validation, HMAC, rate limiting, payload parsing, execution_id normalization, job ownership verification, cross-tenant checks, payload tamper detection, duplicate submission, side-effect processing for **8 different job types** (software inventory, web activity, antivirus, network info, certificates, disk metrics, DNS blocks, blocked websites), job update with integrity triggers, audit trail, report triggering, and more.
+### 6. AutoApprovalPanel.tsx — TS2589 deep instantiation (line 86)
 
-### Approach
-Extract into logical modules **within the same function directory** (Edge Functions support local imports from sibling files). Keep `index.ts` as the orchestrator.
+Already has `as any` workaround comment. The error is at line 86 with the `supabase.from('ai_action_configs').update(...)` chain. Keep the existing `as any` cast — this is a known Supabase SDK limitation.
 
-### New files in `supabase/functions/submit-job-result/`:
+### 7. ComplianceReportGenerator.tsx — multiple type issues (lines 697, 776, 851, 856, 922, 930)
 
-**`types.ts`** — Interfaces for agent, job, payload, side-effect context
+- Lines with `(reportPayload as unknown as Record<string, unknown>)` — change to `(reportPayload as any)` since `ComplianceReportPayload` doesn't have index signature
+- Lines 922, 930: operator `>` on `unknown` — need to cast the compared values to `number`
 
-**`validation.ts`** — Payload schema validation (job_id, status, execution_id normalization, execution_time validation, V-203 transition date check)
+### 8. GeneratedReportsList.tsx — lines 207, 406
 
-**`security.ts`** — Job ownership check, cross-tenant check, payload tamper detection, duplicate submission check, logSecurityEvent calls
+- Line 207: `.replace` on `unknown` — cast to `string`
+- Line 406: `report as unknown as Record<string, unknown>` → `(report as any)`
 
-**`side-effects/software-inventory.ts`** — Lines 582-637 (software_inventory_collect processing)
+### 9. DynamicValidationSystem.tsx — AgentStatus mapping (line 110)
 
-**`side-effects/web-activity.ts`** — Lines 640-793 (collect_web_activity processing, domain map, batch insert)
+The `map` callback returns objects missing `id`, `agent_name`, etc. But looking at the code (lines 100-109), the return object includes all required fields. The error claims otherwise — this might be a stale error or the `setAgents` call at line 113 is receiving the wrong type. The `agentsWithStatus` is typed as `AgentStatus[]` already. This should be fine. May need to verify this is a real error.
 
-**`side-effects/antivirus.ts`** — Lines 796-857 (collect_antivirus_status processing, WMI state decode)
+### 10. HealthTrendChart.tsx — getAgentStatusInfo param type (line 48)
 
-**`side-effects/network-info.ts`** — Lines 860-947 (collect_network_info processing, IP classification)
+The mapped object `{ id, status, last_heartbeat, enrolled_at }` has all `unknown` values from `Record<string, unknown>`. Fix: the map already does `String(...)` casts, but the object literal still has `unknown` properties. Cast properly: `getAgentStatusInfo({ status: String(a.status), last_heartbeat: String(a.last_heartbeat) })`.
 
-**`side-effects/certificates.ts`** — Lines 950-1001 (collect_certificates processing)
+### 11. useApprovalRequests.ts — `Json` type (line 210)
 
-**`side-effects/disk-metrics.ts`** — Lines 1003-1056 (collect_disk_metrics processing)
+`Cannot find name 'Json'` — need to import `Json` from `@/integrations/supabase/types`.
 
-**`side-effects/index.ts`** — Router that dispatches to the correct handler based on `job.type`
+### 12. ProcessJobResult.ts — string not assignable to Record (line 65)
 
-**`execution.ts`** — Lines 1059-1307 (execution finalization, output hash, signature verification, retroactive execution creation)
+`job.complete({ stdout: String(...) })` — `complete()` expects `Record<string, unknown>` and `{ stdout: string }` satisfies that. Actually, `{ stdout: string }` IS assignable to `Record<string, unknown>`. This may be a different issue — the method signature might use a stricter type. The actual error says `Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'`. So perhaps the call is `job.complete(someString)` not `job.complete({...})`. Let me re-read: line 65 is `job.complete({ stdout: String(command.stdout || "") })`. This should work. Unless `complete` takes a single arg that's `Record<string, unknown>` and the `{ stdout: string }` doesn't have an index signature. Fix: `job.complete({ stdout: String(command.stdout || "") } as Record<string, unknown>)`.
 
-**`post-completion.ts`** — Lines 1309-1877 (governance validation, update_agent version check, report trigger, blocked access analysis, DNS block events)
+## Implementation Approach
 
-**`index.ts`** (rewritten as orchestrator) — ~100 lines: auth → validate → security checks → side effects → execution → job update → post-completion
+Fix files in batches, prioritizing:
+1. **Test files** (restore `as any` for mocks — ~6 files)
+2. **Component error handling** (`error.message` casts — ~5 files)  
+3. **Repository `as never` casts** (~4 files)
+4. **RPC/Supabase workarounds** (~3 files)
+5. **ComplianceReportGenerator complex casts** (1 file, ~10 fixes)
+6. **Remaining individual fixes** (~5 files)
 
-### Risk: Medium
-- Many side-effect handlers share the `sideEffectsInserted` and `insertedRecordsCount` state — need a shared accumulator object passed through
-- The ZERO TRUST pattern (side effects BEFORE job update) must be preserved exactly
-- Domain matching logic is duplicated between web-activity and post-completion blocked analysis — can be extracted to a shared `domain-matcher.ts`
+Total: ~25 files, ~50 individual fixes.
 
----
+## Technical Details
 
-## 3. Fix remaining SECURITY DEFINER without search_path
-
-### Problem
-A previous migration (20260111) fixed 9 functions. But the codebase has grown since then. Need to find and fix any remaining functions.
-
-### Approach
-Create a migration that queries `pg_proc` for SECURITY DEFINER functions in the `public` schema that don't have `search_path` set, and applies `SET search_path = public` to each.
-
-### Migration SQL
-```sql
-DO $$
-DECLARE
-  r RECORD;
-BEGIN
-  FOR r IN
-    SELECT n.nspname, p.proname, 
-           pg_get_function_identity_arguments(p.oid) as args
-    FROM pg_proc p
-    JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE p.prosecdef = true
-      AND n.nspname = 'public'
-      AND NOT EXISTS (
-        SELECT 1 FROM pg_options_to_table(p.proconfig) 
-        WHERE option_name = 'search_path'
-      )
-  LOOP
-    EXECUTE format(
-      'ALTER FUNCTION %I.%I(%s) SET search_path = public',
-      r.nspname, r.proname, r.args
-    );
-    RAISE NOTICE 'Fixed: %.%(%)', r.nspname, r.proname, r.args;
-  END LOOP;
-END $$;
-```
-
-### Risk: Low
-- Only targets `public` schema functions (never touches reserved schemas)
-- `ALTER FUNCTION ... SET search_path` is non-destructive
-- Idempotent — safe to run multiple times
-
----
-
-## Execution Order
-
-| Step | Task | Files Changed | Risk |
-|------|------|---------------|------|
-| 1 | SECURITY DEFINER migration | 1 migration file | Low |
-| 2 | Extend `serveAgent` with `extraAgentFields` | `agent-auth.ts`, `serve-tenant.ts` | Low |
-| 3 | Migrate heartbeat to `serveAgent` | `heartbeat/index.ts` | Medium |
-| 4 | Create submit-job-result modules | 10+ new files, rewrite `index.ts` | Medium |
-
-Steps 1-2 are independent and safe. Step 3 depends on step 2. Step 4 is independent of steps 2-3.
-
-## Constraints
-
-- No changes to `serveTenant`/`servePublic`/`serveAgent` function signatures — backward compatibility per memory policy
-- All business logic preserved exactly — per migration safety policy
-- No mass sed/grep — manual file-by-file per safety policy
-- `heartbeat` HMAC version gating (V-702) must remain even after `serveAgent` migration
+- In test files, `as any` is acceptable since test mocks are intentionally partial objects
+- For Supabase SDK type issues (deep instantiation, unknown table names), `as never` or `as any` are standard workarounds
+- For catch blocks, `(error as Error).message` is the standard pattern
+- Import `Json` type from generated types where needed
 
