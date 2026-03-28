@@ -1,9 +1,8 @@
 /**
- * send-notification ? DEPRECATED REDIRECT (COST-OPT v9)
- * 
- * Redirects all calls to notification-dispatcher.
- * Kept for backward compatibility.
+ * send-notification - DEPRECATED REDIRECT (COST-OPT v9)
+ * Migrated to assertInternalCaller
  */
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 
@@ -12,18 +11,12 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
+
   const requestId = crypto.randomUUID();
 
   try {
-    const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
-    const authHeader = req.headers.get('X-Internal-Secret');
-    if (!authHeader || authHeader !== internalSecret) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -38,40 +31,27 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Redirect to notification-dispatcher
+    const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET') || '';
     const { data, error } = await supabase.functions.invoke('notification-dispatcher', {
-      headers: { 'X-Internal-Secret': internalSecret || '' },
+      headers: { 'X-Internal-Secret': internalSecret },
       body: {
         channel: channel === 'slack' ? 'in_app' : channel,
-        type: 'alert',
-        tenant_id: tenant_id || '',
-        subject,
-        message,
+        type: 'alert', tenant_id: tenant_id || '', subject, message,
         severity: 'info',
         metadata: { alert_id, recipient, original_channel: channel, requestId },
       },
     });
 
-    // Record delivery for backward compat
     await supabase.from('notification_deliveries').insert({
-      tenant_id: tenant_id || null,
-      alert_id: alert_id || null,
-      channel,
-      recipient,
-      subject,
-      message,
+      tenant_id: tenant_id || null, alert_id: alert_id || null,
+      channel, recipient, subject, message,
       status: error ? 'failed' : 'delivered',
       delivered_at: error ? null : new Date().toISOString(),
       error_message: error ? error.message : null,
     });
 
     return new Response(
-      JSON.stringify({
-        success: !error,
-        channel,
-        recipient,
-        redirected_to: 'notification-dispatcher',
-      }),
+      JSON.stringify({ success: !error, channel, recipient, redirected_to: 'notification-dispatcher' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

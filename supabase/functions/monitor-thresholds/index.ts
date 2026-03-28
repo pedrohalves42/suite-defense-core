@@ -1,3 +1,8 @@
+/**
+ * Monitor Thresholds - Migrated to assertInternalCaller
+ * Monitors alert thresholds per tenant and dispatches notifications.
+ */
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
@@ -24,45 +29,30 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const authError = assertInternalCaller(req);
+  if (authError) return authError;
+
   const requestId = crypto.randomUUID();
-
-  // SECURITY: Validate internal function secret for internal-only endpoint
-  const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
-  const providedSecret = req.headers.get('X-Internal-Secret');
-
-  if (!INTERNAL_SECRET || providedSecret !== INTERNAL_SECRET) {
-    logger.warn(`[${requestId}] Unauthorized access attempt to monitor-thresholds`);
-    return new Response(
-      JSON.stringify({ error: 'Unauthorized' }),
-      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-
   logger.info(`[${requestId}] Starting threshold monitoring`);
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
 
     const now = new Date();
     const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
     const last5Minutes = new Date(now.getTime() - 5 * 60 * 1000).toISOString();
 
-    // Get all tenants with their settings
     const { data: tenants, error: tenantsError } = await supabase
       .from('tenants')
       .select(`
-        id,
-        name,
+        id, name,
         tenant_settings!tenant_settings_tenant_id_fkey (
-          alert_threshold_virus_positive,
-          alert_threshold_failed_jobs,
-          alert_threshold_offline_agents,
-          enable_email_alerts,
-          enable_webhook_alerts,
-          alert_email,
-          alert_webhook_url
+          alert_threshold_virus_positive, alert_threshold_failed_jobs,
+          alert_threshold_offline_agents, enable_email_alerts,
+          enable_webhook_alerts, alert_email, alert_webhook_url
         )
       `);
 
@@ -76,102 +66,52 @@ Deno.serve(async (req) => {
     const alerts: TenantAlert[] = [];
 
     for (const tenant of tenants || []) {
-      // Skip if no settings configured
-      if (!tenant.tenant_settings || tenant.tenant_settings.length === 0) {
-        logger.info(`[${requestId}] No settings found for tenant ${tenant.name}, skipping`);
-        continue;
-      }
-
+      if (!tenant.tenant_settings || tenant.tenant_settings.length === 0) continue;
       const settings = tenant.tenant_settings[0];
-      
-      // Skip if settings object is invalid
-      if (!settings || typeof settings !== 'object') {
-        logger.info(`[${requestId}] Invalid settings for tenant ${tenant.name}, skipping`);
-        continue;
-      }
+      if (!settings || typeof settings !== 'object') continue;
+      if (!settings.enable_email_alerts && !settings.enable_webhook_alerts) continue;
 
-      // Skip if alerts are disabled
-      if (!settings.enable_email_alerts && !settings.enable_webhook_alerts) {
-        continue;
-      }
-
-      // Count virus detections in last 24 hours
-      const { count: virusCount, error: virusError } = await supabase
+      const { count: virusCount } = await supabase
         .from('virus_scans')
         .select('*', { count: 'exact', head: true })
         .eq('tenant_id', tenant.id)
         .eq('is_malicious', true)
         .gte('scanned_at', last24Hours);
 
-      if (virusError) {
-        logger.error(`[${requestId}] Error counting virus scans for tenant ${tenant.id}:`, virusError);
-        continue;
-      }
-
-      // Count failed jobs in last 24 hours
-      const { count: failedJobsCount, error: failedJobsError } = await supabase
+      const { count: failedJobsCount } = await supabase
         .from('jobs')
         .select('*', { count: 'exact', head: true })
         .eq('tenant_id', tenant.id)
         .eq('status', 'failed')
         .gte('created_at', last24Hours);
 
-      if (failedJobsError) {
-        logger.error(`[${requestId}] Error counting failed jobs for tenant ${tenant.id}:`, failedJobsError);
-        continue;
-      }
-
-      // Count offline agents (no heartbeat in last 5 minutes)
-      // Only count agents that have had at least one heartbeat (ignore newly enrolled agents)
-      const { count: offlineAgentsCount, error: offlineAgentsError } = await supabase
+      const { count: offlineAgentsCount } = await supabase
         .from('agents')
         .select('*', { count: 'exact', head: true })
         .eq('tenant_id', tenant.id)
         .not('last_heartbeat', 'is', null)
         .lt('last_heartbeat', last5Minutes);
 
-      if (offlineAgentsError) {
-        logger.error(`[${requestId}] Error counting offline agents for tenant ${tenant.id}:`, offlineAgentsError);
-        continue;
-      }
-
       const virus = virusCount || 0;
       const failed = failedJobsCount || 0;
       const offline = offlineAgentsCount || 0;
 
-      // Check if any threshold is exceeded
-      const virusThresholdExceeded = virus >= settings.alert_threshold_virus_positive;
-      const failedJobsThresholdExceeded = failed >= settings.alert_threshold_failed_jobs;
-      const offlineAgentsThresholdExceeded = offline >= settings.alert_threshold_offline_agents;
+      const virusExceeded = virus >= settings.alert_threshold_virus_positive;
+      const failedExceeded = failed >= settings.alert_threshold_failed_jobs;
+      const offlineExceeded = offline >= settings.alert_threshold_offline_agents;
 
-      if (virusThresholdExceeded || failedJobsThresholdExceeded || offlineAgentsThresholdExceeded) {
+      if (virusExceeded || failedExceeded || offlineExceeded) {
         alerts.push({
-          tenant_id: tenant.id,
-          tenant_name: tenant.name,
-          virus_count: virus,
-          failed_jobs_count: failed,
-          offline_agents_count: offline,
-          settings
-        });
-
-        logger.info(`[${requestId}] Alert triggered for tenant ${tenant.name}:`, {
-          virus,
-          failed,
-          offline,
-          thresholds: {
-            virus: settings.alert_threshold_virus_positive,
-            failed: settings.alert_threshold_failed_jobs,
-            offline: settings.alert_threshold_offline_agents
-          }
+          tenant_id: tenant.id, tenant_name: tenant.name,
+          virus_count: virus, failed_jobs_count: failed, offline_agents_count: offline,
+          settings,
         });
       }
     }
 
-    // Send alerts
     const alertResults = [];
     for (const alert of alerts) {
       try {
-        // Build alert message
         const issues = [];
         if (alert.virus_count >= alert.settings.alert_threshold_virus_positive) {
           issues.push(`${alert.virus_count} virus detectados (threshold: ${alert.settings.alert_threshold_virus_positive})`);
@@ -183,57 +123,19 @@ Deno.serve(async (req) => {
           issues.push(`${alert.offline_agents_count} agentes offline (threshold: ${alert.settings.alert_threshold_offline_agents})`);
         }
 
-        const message = `Alertas de threshold excedidos para ${alert.tenant_name}`;
-        const details = {
-          timeframe: 'Ultimas 24 horas',
-          issues,
-          virus_count: alert.virus_count,
-          failed_jobs_count: alert.failed_jobs_count,
-          offline_agents_count: alert.offline_agents_count,
-          thresholds: {
-            virus: alert.settings.alert_threshold_virus_positive,
-            failed_jobs: alert.settings.alert_threshold_failed_jobs,
-            offline_agents: alert.settings.alert_threshold_offline_agents
-          }
-        };
-
-        // Call notification-dispatcher (consolidated from send-system-alert)
-        const { data: alertData, error: alertError } = await supabase.functions.invoke('notification-dispatcher', {
-          headers: {
-            'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '',
-          },
+        const { error: alertError } = await supabase.functions.invoke('notification-dispatcher', {
+          headers: { 'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '' },
           body: {
-            channel: 'email',
-            type: 'system',
-            severity: 'high',
-            message,
-            metadata: details,
-            tenant_id: alert.tenant_id
-          }
+            channel: 'email', type: 'system', severity: 'high',
+            message: `Alertas de threshold excedidos para ${alert.tenant_name}`,
+            metadata: { timeframe: 'Ultimas 24 horas', issues },
+            tenant_id: alert.tenant_id,
+          },
         });
 
-        if (alertError) {
-          logger.error(`[${requestId}] Error sending alert for tenant ${alert.tenant_id}:`, alertError);
-          alertResults.push({
-            tenant_id: alert.tenant_id,
-            success: false,
-            error: alertError.message
-          });
-        } else {
-          logger.info(`[${requestId}] Alert sent successfully for tenant ${alert.tenant_name}`);
-          alertResults.push({
-            tenant_id: alert.tenant_id,
-            success: true,
-            data: alertData
-          });
-        }
+        alertResults.push({ tenant_id: alert.tenant_id, success: !alertError, error: alertError?.message });
       } catch (error) {
-        logger.error(`[${requestId}] Error processing alert for tenant ${alert.tenant_id}:`, error);
-        alertResults.push({
-          tenant_id: alert.tenant_id,
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        });
+        alertResults.push({ tenant_id: alert.tenant_id, success: false, error: error instanceof Error ? error.message : 'Unknown' });
       }
     }
 
@@ -242,35 +144,19 @@ Deno.serve(async (req) => {
       monitored_tenants: tenants?.length || 0,
       alerts_triggered: alerts.length,
       alerts_sent: alertResults.filter(r => r.success).length,
-      alert_results: alertResults,
-      timestamp: now.toISOString()
+      timestamp: now.toISOString(),
     };
 
     logger.info(`[${requestId}] Monitoring completed:`, result);
 
-    return new Response(
-      JSON.stringify(result),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
-
+    return new Response(JSON.stringify(result), {
+      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     logger.error(`[${requestId}] Fatal error:`, error);
-    
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
     return new Response(
-      JSON.stringify({ 
-        success: false,
-        error: errorMessage,
-        timestamp: new Date().toISOString()
-      }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
