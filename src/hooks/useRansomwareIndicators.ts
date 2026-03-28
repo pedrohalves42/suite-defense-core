@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
+import { useRealtimeQuery } from './useRealtimeQuery';
 
 export interface RansomwareIndicator {
   id: string;
@@ -37,9 +37,9 @@ export interface RansomwareSummary {
 export function useRansomwareIndicators() {
   const { tenant } = useTenant();
 
-  return useQuery({
+  return useRealtimeQuery<RansomwareSummary>({
     queryKey: ['ransomware-indicators', tenant?.id],
-    queryFn: async (): Promise<RansomwareSummary> => {
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('ransomware_indicators')
         .select('id, agent_id, tenant_id, indicator_type, severity, process_name, process_path, affected_path, affected_files_count, status, auto_response_taken, contained_at, detected_at')
@@ -49,7 +49,7 @@ export function useRansomwareIndicators() {
 
       if (error) throw error;
 
-      const indicators = (data || []) as any as RansomwareIndicator[];
+      const indicators = (data || []) as unknown as RansomwareIndicator[];
       const active = indicators.filter(i => i.status === 'active');
       const contained = indicators.filter(i => i.status === 'contained');
       const critical = indicators.filter(i => i.severity === 'critical' && i.status === 'active');
@@ -64,8 +64,9 @@ export function useRansomwareIndicators() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: 300_000, // COST-OPT: 15s → 5min
-    refetchIntervalInBackground: false,
+    realtimeTable: 'ransomware_indicators',
+    realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
+    realtimeEvents: ['INSERT', 'UPDATE'],
     staleTime: 120_000,
   });
 }

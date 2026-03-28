@@ -5,6 +5,7 @@ import { tenantQuery } from '@/lib/tenantQuery';
 import { toast } from 'sonner';
 import type { Json } from '@/integrations/supabase/types';
 import { logger } from '@/lib/logger';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 export type TaskStatus = 'open' | 'in_progress' | 'blocked' | 'resolved' | 'ignored' | 'accepted_risk';
 export type TaskSeverity = 'critical' | 'high' | 'medium' | 'low' | 'info';
@@ -65,7 +66,7 @@ export interface TaskStats {
 export function useTasks(filters?: TaskFilters) {
   const { tenant, loading } = useTenant();
 
-  return useQuery({
+  return useRealtimeQuery<Task[]>({
     queryKey: ['tasks', tenant?.id, filters],
     queryFn: async () => {
       let query = tenantQuery('tasks', tenant!.id)
@@ -103,8 +104,8 @@ export function useTasks(filters?: TaskFilters) {
       return data as Task[];
     },
     enabled: !loading && !!tenant?.id,
-    refetchInterval: 300_000,
-    refetchIntervalInBackground: false,
+    realtimeTable: 'tasks',
+    realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
 }
 
@@ -112,7 +113,7 @@ export function useTasks(filters?: TaskFilters) {
 export function useTaskStats() {
   const { tenant, loading } = useTenant();
 
-  return useQuery({
+  return useRealtimeQuery<TaskStats>({
     queryKey: ['task-stats', tenant?.id],
     queryFn: async () => {
       const { data, error } = await tenantQuery('tasks', tenant!.id)
@@ -133,7 +134,6 @@ export function useTaskStats() {
       const high_open = active.filter(t => t.severity === 'high').length;
       const sla_breached = active.filter(t => t.sla_breached_at != null).length;
 
-      // Avg resolution hours for resolved tasks
       const resolved = tasks.filter(t => t.closed_at);
       let avg_resolution_hours: number | null = null;
       if (resolved.length > 0) {
@@ -164,8 +164,8 @@ export function useTaskStats() {
       } as TaskStats;
     },
     enabled: !loading && !!tenant?.id,
-    refetchInterval: 300_000,
-    refetchIntervalInBackground: false,
+    realtimeTable: 'tasks',
+    realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
 }
 
@@ -284,7 +284,7 @@ export function useAssignTask() {
 export function useOpenTasksCount() {
   const { tenant, loading } = useTenant();
 
-  return useQuery({
+  return useRealtimeQuery<number>({
     queryKey: ['open-tasks-count', tenant?.id],
     queryFn: async () => {
       const { count, error } = await tenantQuery('tasks', tenant!.id)
@@ -295,8 +295,8 @@ export function useOpenTasksCount() {
       return count || 0;
     },
     enabled: !loading && !!tenant?.id,
-    refetchInterval: 300000,
-    refetchIntervalInBackground: false,
+    realtimeTable: 'tasks',
+    realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
     staleTime: 30000,
   });
 }
