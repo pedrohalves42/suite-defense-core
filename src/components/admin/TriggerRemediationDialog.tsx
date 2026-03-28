@@ -47,7 +47,8 @@ export default function TriggerRemediationDialog() {
   const { tenant } = useTenant();
   const { executeRemediation } = useAutoRemediation();
 
-  const { data: agents = [] } = useQuery({
+  interface AgentItem { id: string; agent_name: string; status: string }
+  const { data: agents = [] } = useQuery<AgentItem[]>({
     queryKey: ['agents-for-remediation', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
@@ -55,7 +56,9 @@ export default function TriggerRemediationDialog() {
         p_tenant_id: tenant.id,
         p_include_archived: false,
       });
-      return (data || []).filter((a: Record<string, unknown>) => a.status === 'active');
+      return ((data || []) as unknown as Array<Record<string, unknown>>)
+        .filter(a => a.status === 'active')
+        .map(a => ({ id: String(a.id), agent_name: String(a.agent_name), status: String(a.status) }));
     },
     enabled: !!tenant?.id && open,
   });
@@ -107,7 +110,7 @@ export default function TriggerRemediationDialog() {
                 <SelectValue placeholder="Selecionar agente..." />
               </SelectTrigger>
               <SelectContent>
-                {agents.map((agent: Record<string, unknown>) => (
+                {agents.map((agent) => (
                   <SelectItem key={agent.id} value={agent.id}>
                     <span className="flex items-center gap-2">
                       <span className="h-2 w-2 rounded-full bg-green-500" />

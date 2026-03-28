@@ -72,7 +72,7 @@ const CopilotMarkdown = ({ content }: { content: string }) => {
             return (
               <li className="flex items-start gap-1.5 text-muted-foreground">
                 {ordered ? (
-                  <span className="text-primary font-bold text-xs mt-0.5 shrink-0 min-w-[1.2rem]">{(index ?? 0) + 1}.</span>
+                  <span className="text-primary font-bold text-xs mt-0.5 shrink-0 min-w-[1.2rem]">{(Number(index ?? 0)) + 1}.</span>
                 ) : (
                   <span className="text-primary mt-1.5 shrink-0">•</span>
                 )}

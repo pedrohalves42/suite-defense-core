@@ -59,7 +59,7 @@ export function FIDO2LoginButton({ email, onSuccess, disabled }: FIDO2LoginButto
         challenge: base64UrlToBuffer(options.challenge),
         rpId: options.rpId,
         allowCredentials: options.allowCredentials?.map((cred: Record<string, unknown>) => ({
-          id: base64UrlToBuffer(cred.id),
+          id: base64UrlToBuffer(cred.id as string),
           type: cred.type as PublicKeyCredentialType,
           transports: cred.transports as AuthenticatorTransport[],
         })),
