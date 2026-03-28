@@ -159,7 +159,7 @@ function formatEvidenceKey(key: string): string {
 }
 
 // Format value for display
-function formatValue(value: any): string {
+function formatValue(value: unknown): string {
   if (typeof value === "number") {
     if (Number.isInteger(value)) {
       return value.toString();

@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     let keyRotationDeadline: string | null = null
     
     if (token?.agents) {
-      const agentId = (token.agents as any).id
+      const agentId = (token.agents as Record<string, unknown>).id
       const { data: signingKey } = await supabase
         .from('agent_signing_keys')
         .select('id, expires_at, rotation_signaled_at')
@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      archivedHeartbeatAction = (reactivationResult as any)?.action === 'reactivated'
+      archivedHeartbeatAction = (reactivationResult as Record<string, unknown>)?.action === 'reactivated'
         ? 'reactivated'
         : 'alert_only'
 
@@ -304,8 +304,8 @@ Deno.serve(async (req) => {
     }
     
     // Capturar Ed25519 capability flags do payload
-    const ed25519Supported = (osInfo as any).ed25519_supported as boolean | undefined;
-    const signatureMode = (osInfo as any).signature_mode as string | undefined;
+    const ed25519Supported = (osInfo as Record<string, unknown>).ed25519_supported as boolean | undefined;
+    const signatureMode = (osInfo as Record<string, unknown>).signature_mode as string | undefined;
     if (ed25519Supported !== undefined) {
       updateData.ed25519_supported = ed25519Supported;
     }
@@ -476,7 +476,7 @@ Deno.serve(async (req) => {
         const privateKey = Deno.env.get('ED25519_PRIVATE_KEY');
         
         jobsResponse = await Promise.all(
-          claimedJobs.filter((j: any) => j && j.job_id && j.job_type && j.execution_id).map(async (j: any) => {
+          claimedJobs.filter((j: Record<string, unknown>) => j && j.job_id && j.job_type && j.execution_id).map(async (j: Record<string, unknown>) => {
             let signatureInfo: Record<string, string> = {};
             if (privateKey) {
               try {
@@ -544,7 +544,7 @@ Deno.serve(async (req) => {
       timestamp: new Date().toISOString(),
       proxy: true,
       script_sha256: expectedScriptSha256,
-      skip_firewall_remediation: (agent as any).skip_firewall_remediation || false,
+      skip_firewall_remediation: (agent as Record<string, unknown>).skip_firewall_remediation || false,
       aggregation: null,
       // COST-OPT-V6: Heartbeat = 600s, poll = 600s (same interval, jobs come via heartbeat)
       heartbeat_interval_seconds: 600,

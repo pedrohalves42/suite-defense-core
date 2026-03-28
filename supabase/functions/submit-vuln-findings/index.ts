@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const agent = tokenData.agents as any;
+    const agent = tokenData.agents as Record<string, unknown>;
 
     // Validar HMAC
     if (agent.hmac_secret) {

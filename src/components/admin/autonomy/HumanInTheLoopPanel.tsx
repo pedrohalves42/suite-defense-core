@@ -43,7 +43,7 @@ function usePendingCriticalApprovals() {
       if (!tenant?.id) return [];
 
       const { data, error } = await supabase
-        .from('v_pending_critical_approvals' as any)
+        .from('v_pending_critical_approvals' )
         .select('*')
         .order('created_at', { ascending: false })
         .limit(20);
@@ -76,7 +76,7 @@ function ApprovalCard({ approval, onApprove, onReject, isPending }: {
   const createdAgo = formatDistanceToNow(new Date(approval.created_at), { addSuffix: true });
 
   const displayName = approval.playbook_name || 
-    (approval.action_payload as any)?.playbook_name || 
+    (approval.action_payload as Record<string, unknown>)?.playbook_name || 
     approval.action_type;
 
   return (

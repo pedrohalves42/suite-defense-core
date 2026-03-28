@@ -164,7 +164,7 @@ Deno.serve(async (req: Request) => {
         stats.evaluated += events.length;
         if (events.length < BATCH_SIZE) hasMore = false;
 
-      const newDetections: any[] = [];
+      const newDetections: Array<Record<string, unknown>> = [];
       const matchedEventIds: string[] = [];
       // V-2010: Track tags per event for merge instead of overwrite
       const eventTagsMap = new Map<string, string[]>();

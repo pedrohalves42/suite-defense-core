@@ -41,7 +41,7 @@ export default function ExecutiveDashboard() {
       const today = new Date(now); today.setHours(0,0,0,0);
       const todayISO = today.toISOString();
       const thirtyDaysAgo = subDays(now, 30).toISOString();
-      const sb = supabase as any;
+      const sb = supabase;
 
       const [jobsTodayRes, jobs30dRes, complianceRes] = await Promise.all([
         sb.from('jobs').select('status, type').eq('tenant_id', tenantId).gte('created_at', todayISO),

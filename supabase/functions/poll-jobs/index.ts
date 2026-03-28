@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
 
     // V-702 FIX: HMAC enforcement for modern agents (v5.0.12+)
     const HMAC_REQUIRED_MIN_VERSION = '5.0.12'
-    const agentVersionStr = (agent as any).agent_version || ''
+    const agentVersionStr = (agent as Record<string, unknown>).agent_version || ''
     const currentNormV = normalizeVersion(agentVersionStr)
     const hmacMinNormV = normalizeVersion(HMAC_REQUIRED_MIN_VERSION)
     const isModernAgent = !!(currentNormV && hmacMinNormV && currentNormV >= hmacMinNormV)
@@ -100,10 +100,10 @@ Deno.serve(async (req) => {
     // TUNING: agentData now comes from initial join — zero extra queries
     const agentData = {
       id: token.agent_id,
-      tenant_id: (agent as any).tenant_id || null,
-      last_heartbeat: (agent as any).last_heartbeat || null,
-      status: (agent as any).status || null,
-      agent_version: (agent as any).agent_version || null,
+      tenant_id: (agent as Record<string, unknown>).tenant_id || null,
+      last_heartbeat: (agent as Record<string, unknown>).last_heartbeat || null,
+      status: (agent as Record<string, unknown>).status || null,
+      agent_version: (agent as Record<string, unknown>).agent_version || null,
     }
 
     if (hasAnyHmacHeader) {

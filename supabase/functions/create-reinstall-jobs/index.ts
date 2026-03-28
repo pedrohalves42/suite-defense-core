@@ -61,7 +61,7 @@ serveTenant(async (req, ctx) => {
 
   // ADR-VELLUM V-310: Blast radius governance
   const { data: blastCheck, error: blastError } = await supabase
-    .rpc('check_blast_radius' as any, {
+    .rpc('check_blast_radius' as never, {
       p_tenant_id: tenantId,
       p_action_type: 'force_update_agents',
       p_affected_count: agentsToReinstall.length,

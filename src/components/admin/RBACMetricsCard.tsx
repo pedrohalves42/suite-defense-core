@@ -145,7 +145,7 @@ export function RBACMetricsCard() {
                   >
                     {getRoleIcon(m.role)}
                     <span className="text-sm font-medium">{getRoleLabel(m.role)}</span>
-                    <Badge variant={getRoleBadgeVariant(m.role) as any}>
+                    <Badge variant={getRoleBadgeVariant(m.role) as "default" | "destructive" | "outline" | "secondary"}>
                       {m.user_count}
                     </Badge>
                   </div>

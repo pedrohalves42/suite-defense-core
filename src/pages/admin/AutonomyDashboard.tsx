@@ -22,11 +22,11 @@ export default function AutonomyDashboard() {
   const transformedRules = (rules || []).map(rule => ({
     id: rule.id,
     code: rule.code,
-    name: (rule.definition as any)?.name || rule.code,
+    name: (rule.definition as Record<string, unknown>)?.name || rule.code,
     description: rule.description,
-    severity: (rule.definition as any)?.severity || 'medium',
-    risk_level: (rule.definition as any)?.risk_level || 'low',
-    auto_execute: (rule.definition as any)?.auto_execute || false,
+    severity: (rule.definition as Record<string, unknown>)?.severity || 'medium',
+    risk_level: (rule.definition as Record<string, unknown>)?.risk_level || 'low',
+    auto_execute: (rule.definition as Record<string, unknown>)?.auto_execute || false,
     is_active: rule.is_enabled,
     created_at: rule.created_at,
   }));

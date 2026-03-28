@@ -121,8 +121,8 @@ serveTenant(async (req, ctx) => {
   const users = tenantUsers.map(tu => {
     const profile = profiles?.find(p => p.user_id === tu.user_id);
     const authUser = filteredAuthUsers.find(au => au.id === tu.user_id);
-    const isBanned = authUser && (authUser as any).banned_until &&
-      new Date((authUser as any).banned_until) > new Date();
+    const isBanned = authUser && (authUser as Record<string, unknown>).banned_until &&
+      new Date((authUser as Record<string, unknown>).banned_until) > new Date();
 
     return {
       user_id: tu.user_id,

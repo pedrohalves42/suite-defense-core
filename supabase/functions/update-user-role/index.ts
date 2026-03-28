@@ -18,7 +18,7 @@ const UpdateRoleSchema = z.object({
     .refine((roles) => new Set(roles).size === roles.length, {
       message: 'Roles must be unique',
     })
-    .refine((roles) => !roles.includes('super_admin' as any), {
+    .refine((roles) => !roles.includes('super_admin' as never), {
       message: 'Cannot assign super_admin role through this endpoint.',
     }),
 }).refine(data => data.userId || data.user_id, {

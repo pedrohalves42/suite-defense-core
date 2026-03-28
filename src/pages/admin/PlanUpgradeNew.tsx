@@ -102,7 +102,7 @@ export default function PlanUpgradeNew() {
         window.location.href = data.url;
       }
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: 'Erro ao criar checkout',
         description: error.message,
@@ -125,7 +125,7 @@ export default function PlanUpgradeNew() {
       });
       window.location.reload();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: 'Erro ao criar produtos',
         description: error.message,
@@ -166,7 +166,7 @@ export default function PlanUpgradeNew() {
         });
       }
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: 'Erro ao abrir portal',
         description: error.message,

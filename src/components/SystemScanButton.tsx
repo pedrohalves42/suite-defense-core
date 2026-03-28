@@ -45,9 +45,9 @@ export function SystemScanButton() {
         p_include_archived: false,
       });
       if (error) throw error;
-      return ((data || []) as any[])
-        .filter((a: any) => a.status === 'active')
-        .map((a: any): Agent => ({ id: a.id, agent_name: a.agent_name, status: a.status }))
+      return ((data || []) as Array<Record<string, unknown>>)
+        .filter((a: Record<string, unknown>) => a.status === 'active')
+        .map((a: Record<string, unknown>): Agent => ({ id: String(a.id), agent_name: String(a.agent_name), status: String(a.status) }))
         .sort((a: Agent, b: Agent) => a.agent_name.localeCompare(b.agent_name));
     },
     enabled: !!tenant?.id,

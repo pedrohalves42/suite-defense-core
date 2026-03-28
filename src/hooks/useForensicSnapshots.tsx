@@ -71,7 +71,7 @@ export const useCreateForensicSnapshot = () => {
       if (!tenant?.id) throw new Error('Tenant not found');
 
       const { data, error } = await supabase
-        .rpc('create_forensic_snapshot' as any, {
+        .rpc('create_forensic_snapshot' as never, {
           p_agent_id: agentId,
           p_tenant_id: tenant.id,
           p_trigger_reason: triggerReason,

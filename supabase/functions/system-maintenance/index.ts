@@ -72,8 +72,8 @@ async function cleanStaleUpdates(supabase: ReturnType<typeof createClient>): Pro
       .gte('force_update_delivery_count', MAX_DELIVERY_COUNT);
 
     const allIds = new Set([
-      ...(byTime || []).map((a: any) => a.id),
-      ...(byCount || []).map((a: any) => a.id),
+      ...(byTime || []).map((a: Record<string, unknown>) => a.id),
+      ...(byCount || []).map((a: Record<string, unknown>) => a.id),
     ]);
 
     result.processed = allIds.size;
@@ -116,7 +116,7 @@ async function cleanStaleReports(supabase: ReturnType<typeof createClient>): Pro
     if (error) { result.errors.push(error.message); }
     else if (data && data.length > 0) {
       result.processed = data.length;
-      const ids = data.map((r: any) => r.id);
+      const ids = data.map((r: Record<string, unknown>) => r.id);
 
       const { error: updateErr } = await supabase
         .from('security_reports')
@@ -150,7 +150,7 @@ async function cleanStalePlaybooks(supabase: ReturnType<typeof createClient>): P
     if (error) { result.errors.push(error.message); }
     else if (data && data.length > 0) {
       result.processed = data.length;
-      const ids = data.map((r: any) => r.id);
+      const ids = data.map((r: Record<string, unknown>) => r.id);
 
       const { error: updateErr } = await supabase
         .from('playbook_executions')
@@ -184,7 +184,7 @@ async function cleanStuckBuilds(supabase: ReturnType<typeof createClient>): Prom
     if (error) { result.errors.push(error.message); }
     else if (data && data.length > 0) {
       result.processed = data.length;
-      const ids = data.map((r: any) => r.id);
+      const ids = data.map((r: Record<string, unknown>) => r.id);
 
       const { error: updateErr } = await supabase
         .from('agent_builds')
@@ -219,7 +219,7 @@ async function cleanStuckJobs(supabase: ReturnType<typeof createClient>): Promis
     if (error) { result.errors.push(error.message); }
     else if (data && data.length > 0) {
       result.processed = data.length;
-      const ids = data.map((r: any) => r.id);
+      const ids = data.map((r: Record<string, unknown>) => r.id);
 
       const { error: updateErr } = await supabase
         .from('jobs')
@@ -252,7 +252,7 @@ async function cleanOfflineAgentsJobs(supabase: ReturnType<typeof createClient>)
       .lt('last_heartbeat', offlineThreshold);
 
     if (offlineAgents && offlineAgents.length > 0) {
-      const agentIds = offlineAgents.map((a: any) => a.id);
+      const agentIds = offlineAgents.map((a: Record<string, unknown>) => a.id);
 
       const { data: pendingJobs, error } = await supabase
         .from('jobs')
@@ -263,7 +263,7 @@ async function cleanOfflineAgentsJobs(supabase: ReturnType<typeof createClient>)
       if (error) { result.errors.push(error.message); }
       else if (pendingJobs && pendingJobs.length > 0) {
         result.processed = pendingJobs.length;
-        const ids = pendingJobs.map((j: any) => j.id);
+        const ids = pendingJobs.map((j: Record<string, unknown>) => j.id);
 
         const { error: updateErr } = await supabase
           .from('jobs')

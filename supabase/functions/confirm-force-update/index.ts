@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const agent = (tokenData as any).agents as { 
+    const agent = (tokenData as Record<string, unknown>).agents as { 
       id: string; 
       agent_name: string; 
       hmac_secret: string | null;

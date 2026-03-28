@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
     let currentMrr = 0;
     let currentCustomers = 0;
 
-    subscriptions?.forEach((sub: any) => {
+    subscriptions?.forEach((sub: Record<string, unknown>) => {
       const pricePerDeviceCents = sub.subscription_plans?.price_per_device || 0;
       const quantity = sub.device_quantity || 1;
       currentMrr += (pricePerDeviceCents / 100) * quantity; // centavos -> reais

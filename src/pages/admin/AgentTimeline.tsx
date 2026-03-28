@@ -19,7 +19,7 @@ interface EventMeta {
   color: string;       // tailwind text color token
   dot: string;         // tailwind bg color token for the dot
   label: string;
-  summary: (data: any) => string;
+  summary: (data: Record<string, unknown>) => string;
 }
 
 const fallbackSummary = () => '';

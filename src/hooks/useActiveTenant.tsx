@@ -110,7 +110,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
       // Filter out any null tenants and deduplicate by tenant_id
       const uniqueTenants = new Map<string, UserTenantRole>();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (data || []).forEach((role: any) => {
+      (data || []).forEach((role: Record<string, unknown>) => {
         if (role.tenant && !uniqueTenants.has(role.tenant_id as string)) {
           uniqueTenants.set(role.tenant_id as string, {
             tenant_id: role.tenant_id as string,

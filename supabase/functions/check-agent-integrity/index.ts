@@ -78,8 +78,8 @@ Deno.serve(async (req) => {
     logger.info(`[${requestId}] Found ${problematicAgents?.length || 0} agents with potential integrity issues`);
 
     const issues: IntegrityCheckResult[] = [];
-    const alertsToCreate: any[] = [];
-    const immediateAlertsToSend: any[] = [];
+    const alertsToCreate: Array<Record<string, unknown>> = [];
+    const immediateAlertsToSend: Array<Record<string, unknown>> = [];
     const skippedDueToBusinessHours: string[] = [];
 
     // Cache de verificação de horário por tenant

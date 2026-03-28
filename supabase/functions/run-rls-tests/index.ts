@@ -85,7 +85,7 @@ Deno.serve(async (req: Request) => {
         table_name: null,
         passed: !data || data.length === 0,
         failure_reason: data && data.length > 0 
-          ? `Tables without RLS: ${data.map((t: any) => t.table_name).join(', ')}`
+          ? `Tables without RLS: ${data.map((t: Record<string, unknown>) => t.table_name).join(', ')}`
           : null
       });
     } else {
@@ -94,7 +94,7 @@ Deno.serve(async (req: Request) => {
         table_name: null,
         passed: !tablesWithoutRls || tablesWithoutRls.length === 0,
         failure_reason: tablesWithoutRls && tablesWithoutRls.length > 0
-          ? `Tables without RLS: ${tablesWithoutRls.map((t: any) => t.table_name).join(', ')}`
+          ? `Tables without RLS: ${tablesWithoutRls.map((t: Record<string, unknown>) => t.table_name).join(', ')}`
           : null
       });
     }

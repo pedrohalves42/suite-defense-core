@@ -59,7 +59,7 @@ describe('useAuth', () => {
     vi.mocked(supabase.auth.onAuthStateChange).mockImplementation((callback) => {
       return {
         data: { subscription: { unsubscribe: unsubscribeMock } },
-      } as any
+      } as unknown
     })
   })
 
@@ -75,7 +75,7 @@ describe('useAuth', () => {
       setTimeout(() => callback('INITIAL_SESSION', null), 0)
       return {
         data: { subscription: { unsubscribe: unsubscribeMock } },
-      } as any
+      } as unknown
     })
 
     const { result } = renderHook(() => useAuth())
@@ -99,7 +99,7 @@ describe('useAuth', () => {
       setTimeout(() => callback('SIGNED_IN', mockSession), 0)
       return {
         data: { subscription: { unsubscribe: unsubscribeMock } },
-      } as any
+      } as unknown
     })
 
     const { result } = renderHook(() => useAuth())
@@ -118,7 +118,7 @@ describe('useAuth', () => {
       authCallback = callback
       return {
         data: { subscription: { unsubscribe: unsubscribeMock } },
-      } as any
+      } as unknown
     })
 
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
@@ -149,7 +149,7 @@ describe('useAuth', () => {
       authCallback = callback
       return {
         data: { subscription: { unsubscribe: unsubscribeMock } },
-      } as any
+      } as unknown
     })
 
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
@@ -193,14 +193,14 @@ describe('useAuth', () => {
     
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
       data: { session: null },
-      error: { message: 'issued in the future 1000 2000 3000' } as any,
+      error: { message: 'issued in the future 1000 2000 3000' } as unknown,
     })
 
     vi.mocked(supabase.auth.onAuthStateChange).mockImplementation((callback) => {
       setTimeout(() => callback('INITIAL_SESSION', null), 0)
       return {
         data: { subscription: { unsubscribe: unsubscribeMock } },
-      } as any
+      } as unknown
     })
 
     renderHook(() => useAuth())

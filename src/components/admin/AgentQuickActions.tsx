@@ -92,7 +92,7 @@ export function AgentQuickActions({
       setShowDeleteDialog(false);
       onAgentDeleted?.();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: 'Erro ao arquivar',
         description: error?.message || 'Tente novamente.',
@@ -125,7 +125,7 @@ export function AgentQuickActions({
       setShowDeleteDialog(false);
       onAgentDeleted?.();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: 'Não foi possível excluir',
         description: error?.message || 'Tente arquivar em vez de excluir.',

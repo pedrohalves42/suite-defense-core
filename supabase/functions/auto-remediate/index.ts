@@ -104,7 +104,7 @@ Deno.serve(async (req: Request) => {
     // SPRINT 13: Blast Radius Check (max 10% fleet simultaneous)
     // ═══════════════════════════════════════════════════════
     try {
-      const { data: blastCheck, error: blastError } = await supabase.rpc('check_blast_radius' as any, {
+      const { data: blastCheck, error: blastError } = await supabase.rpc('check_blast_radius' as never, {
         p_tenant_id: tenantId,
         p_action_type: action_type,
         p_severity: trigger_details.severity || 'medium',
@@ -143,7 +143,7 @@ Deno.serve(async (req: Request) => {
     // SPRINT 13: Global Circuit Breaker
     // ═══════════════════════════════════════════════════════
     try {
-      const { data: globalBreaker } = await supabase.rpc('check_global_circuit_breaker' as any, {
+      const { data: globalBreaker } = await supabase.rpc('check_global_circuit_breaker' as never, {
         p_tenant_id: tenantId,
         p_max_impact_percent: 30,
         p_window_minutes: 10,

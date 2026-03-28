@@ -45,7 +45,7 @@ serveAgent(async (_req, ctx) => {
   const blockedVendors = new Set<string>();
   const blockedDeviceTypes = new Set<string>();
   for (const policy of blockPolicies || []) {
-    const data = policy.policy_data as any;
+    const data = policy.policy_data as Record<string, unknown>;
     if (data?.blocked_vendors) {
       for (const v of data.blocked_vendors) blockedVendors.add(v.toLowerCase());
     }

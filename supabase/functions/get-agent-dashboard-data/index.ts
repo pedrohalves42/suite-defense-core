@@ -47,7 +47,7 @@ serveTenant(async (_req, ctx) => {
   let totalDisk = 0;
   let metricsCount = 0;
 
-  const agents = (agentsWithMetrics || []).map((agent: any) => {
+  const agents = (agentsWithMetrics || []).map((agent: Record<string, unknown>) => {
     totalAgents++;
     
     const lastHeartbeat = agent.last_heartbeat ? new Date(agent.last_heartbeat) : null;
@@ -95,8 +95,8 @@ serveTenant(async (_req, ctx) => {
   });
 
   // Contar alertas por severidade
-  const criticalAlerts = (recentAlerts || []).filter((a: any) => a.severity === 'critical').length;
-  const highAlerts = (recentAlerts || []).filter((a: any) => a.severity === 'high').length;
+  const criticalAlerts = (recentAlerts || []).filter((a: Record<string, unknown>) => a.severity === 'critical').length;
+  const highAlerts = (recentAlerts || []).filter((a: Record<string, unknown>) => a.severity === 'high').length;
 
   const summary = {
     total_agents: totalAgents,

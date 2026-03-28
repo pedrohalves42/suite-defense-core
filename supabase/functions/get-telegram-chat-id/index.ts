@@ -31,7 +31,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const chats = data.result.map((update: any) => {
+    const chats = data.result.map((update: Record<string, unknown>) => {
       const msg = update.message || update.channel_post;
       if (!msg) return null;
       return {
@@ -44,7 +44,7 @@ Deno.serve(async (req: Request) => {
     }).filter(Boolean);
 
     // Deduplicate by chat_id
-    const unique = [...new Map(chats.map((c: any) => [c.chat_id, c])).values()];
+    const unique = [...new Map(chats.map((c: Record<string, unknown>) => [c.chat_id, c])).values()];
 
     return new Response(JSON.stringify({ chats: unique }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -35,11 +35,11 @@ serveTenant(async (_req, ctx) => {
     .eq('is_active', true);
 
   const alreadyBlocked = new Set(
-    (existingBlocked || []).map((b: any) => b.domain_pattern.toLowerCase())
+    (existingBlocked || []).map((b: Record<string, unknown>) => b.domain_pattern.toLowerCase())
   );
 
   const toBlock = dangerousNodes.filter(
-    (n: any) => !alreadyBlocked.has(n.node_value.toLowerCase())
+    (n: Record<string, unknown>) => !alreadyBlocked.has(n.node_value.toLowerCase())
   );
 
   if (toBlock.length === 0) {
@@ -52,8 +52,8 @@ serveTenant(async (_req, ctx) => {
   }
 
   // Insert into blocked_websites
-  const insertData = toBlock.map((node: any) => {
-    const meta = node.metadata as any;
+  const insertData = toBlock.map((node: Record<string, unknown>) => {
+    const meta = node.metadata as Record<string, unknown>;
     const sourceInfo = meta?.source || 'threat_intelligence';
     return {
       tenant_id: tenantId,
@@ -100,8 +100,8 @@ serveTenant(async (_req, ctx) => {
           .eq('tenant_id', tenantId)
           .eq('is_active', true);
 
-        const blockedDomains = (allBlocked || []).map((s: any) => s.domain_pattern);
-        const agentIds = agents.map((a: any) => a.id);
+        const blockedDomains = (allBlocked || []).map((s: Record<string, unknown>) => s.domain_pattern);
+        const agentIds = agents.map((a: Record<string, unknown>) => a.id);
 
         await supabase
           .from('jobs')
@@ -111,7 +111,7 @@ serveTenant(async (_req, ctx) => {
           .in('agent_id', agentIds)
           .in('status', ['pending', 'queued', 'delivered']);
 
-        const jobsToCreate = agents.map((agent: any) => ({
+        const jobsToCreate = agents.map((agent: Record<string, unknown>) => ({
           agent_id: agent.id,
           agent_name: agent.agent_name,
           tenant_id: tenantId,
@@ -143,7 +143,7 @@ serveTenant(async (_req, ctx) => {
       title: 'Bloqueio Automático de Ameaças',
       message: `${blockedCount} domínio(s)/IP(s) perigosos foram bloqueados automaticamente e sincronizados com ${syncResult.jobs_created} agente(s).`,
       details: {
-        blocked_items: toBlock.map((n: any) => n.node_value),
+        blocked_items: toBlock.map((n: Record<string, unknown>) => n.node_value),
         jobs_created: syncResult.jobs_created,
       },
     });
@@ -154,7 +154,7 @@ serveTenant(async (_req, ctx) => {
     blocked: blockedCount,
     already_blocked: dangerousNodes.length - toBlock.length,
     synced_agents: syncResult.jobs_created,
-    blocked_items: toBlock.map((n: any) => ({
+    blocked_items: toBlock.map((n: Record<string, unknown>) => ({
       value: n.node_value,
       type: n.node_type,
       risk_score: n.risk_score,

@@ -16,7 +16,7 @@ const StatusPage = () => {
     queryFn: async () => {
       if (!tenant) return [];
       const { data, error } = await supabase
-        .from('agents' as any)
+        .from('agents' )
         .select('id, hostname, status, last_seen, agent_version')
         .eq('tenant_id', tenant)
         .eq('is_archived', false)
@@ -30,8 +30,8 @@ const StatusPage = () => {
     staleTime: 120_000,
   });
 
-  const onlineCount = agents?.filter((a: any) => a.status === 'online').length || 0;
-  const offlineCount = agents?.filter((a: any) => a.status === 'offline').length || 0;
+  const onlineCount = agents?.filter((a: Record<string, unknown>) => a.status === 'online').length || 0;
+  const offlineCount = agents?.filter((a: Record<string, unknown>) => a.status === 'offline').length || 0;
   const totalCount = agents?.length || 0;
   const uptimePercent = totalCount > 0 ? Math.round((onlineCount / totalCount) * 100) : 0;
 
@@ -123,7 +123,7 @@ const StatusPage = () => {
             </div>
           ) : agents && agents.length > 0 ? (
             <div className="space-y-2">
-              {agents.map((agent: any) => {
+              {agents.map((agent: Record<string, unknown>) => {
                 const isOnline = agent.status === 'online';
                 const lastSeen = agent.last_seen
                   ? formatDistanceToNow(new Date(agent.last_seen), { addSuffix: true, locale: ptBR })

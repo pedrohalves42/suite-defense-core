@@ -67,8 +67,8 @@ const CopilotMarkdown = ({ content }: { content: string }) => {
             <ol className="space-y-1 mb-2 ml-1 list-none counter-reset-item">{children}</ol>
           ),
           li: ({ children, ...props }) => {
-            const ordered = (props as any).ordered;
-            const index = (props as any).index;
+            const ordered = (props as Record<string, unknown>).ordered;
+            const index = (props as Record<string, unknown>).index;
             return (
               <li className="flex items-start gap-1.5 text-muted-foreground">
                 {ordered ? (

@@ -71,7 +71,7 @@ serveTenant(async (req, ctx) => {
   }
 
   // Get profiles for this page's users only
-  const userIds = allUserRoles.map((ur: any) => ur.user_id);
+  const userIds = allUserRoles.map((ur: Record<string, unknown>) => ur.user_id);
   const { data: allProfiles, error: profilesError } = await supabase
     .from('profiles')
     .select('user_id, full_name')
@@ -97,10 +97,10 @@ serveTenant(async (req, ctx) => {
   logger.info(`Found ${authUsers.length} auth users`, { requestId });
 
   // Combine all data
-  const users = allUserRoles.map((ur: any) => {
-    const profile = allProfiles?.find((p: any) => p.user_id === ur.user_id);
-    const authUser = authUsers.find((au: any) => au.id === ur.user_id);
-    const tenant = allTenants?.find((t: any) => t.id === ur.tenant_id);
+  const users = allUserRoles.map((ur: Record<string, unknown>) => {
+    const profile = allProfiles?.find((p: Record<string, unknown>) => p.user_id === ur.user_id);
+    const authUser = authUsers.find((au: Record<string, unknown>) => au.id === ur.user_id);
+    const tenant = allTenants?.find((t: Record<string, unknown>) => t.id === ur.tenant_id);
 
     return {
       user_id: ur.user_id,

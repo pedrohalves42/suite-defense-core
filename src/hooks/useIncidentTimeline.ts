@@ -110,7 +110,7 @@ export function useReconstructTimeline() {
       if (error) throw error;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = data as any as {
+      const result = data as Record<string, unknown> as {
         success: boolean;
         error?: string;
         timeline?: TimelineEvent[];

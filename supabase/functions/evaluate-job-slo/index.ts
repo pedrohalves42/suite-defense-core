@@ -58,8 +58,8 @@ serve(async (req) => {
 
     // Log results
     const results = data || [];
-    const tasksCreated = results.filter((r: any) => r.out_task_created).length;
-    const highBurnRates = results.filter((r: any) => r.out_burn_rate >= 2);
+    const tasksCreated = results.filter((r: Record<string, unknown>) => r.out_task_created).length;
+    const highBurnRates = results.filter((r: Record<string, unknown>) => r.out_burn_rate >= 2);
 
     logger.info(`[evaluate-job-slo] Evaluation complete:`, {
       tenantsEvaluated: results.length,
@@ -99,7 +99,7 @@ serve(async (req) => {
         evaluated: results.length,
         tasksCreated,
         highBurnRates: highBurnRates.length,
-        results: results.map((r: any) => ({
+        results: results.map((r: Record<string, unknown>) => ({
           tenantId: r.out_tenant_id,
           window: r.out_time_window,
           burnRate: Number(r.out_burn_rate).toFixed(2),

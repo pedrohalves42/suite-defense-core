@@ -98,7 +98,7 @@ export function RegisterLatestRelease() {
         version: data?.version || version,
         sha256: data?.sha256,
       };
-    } catch (err: any) {
+    } catch (err) {
       return {
         platform,
         success: false,
@@ -147,7 +147,7 @@ export function RegisterLatestRelease() {
         toast.info(`Registrando ${platform} (${(scriptContent.length / 1024).toFixed(1)}KB)...`);
         const result = await registerPlatform(platform, scriptContent);
         platformResults.push(result);
-      } catch (err: any) {
+      } catch (err) {
         platformResults.push({
           platform,
           success: false,

@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
       return acc;
     }, {} as Record<string, PendingAgent[]>);
 
-    const notifications: any[] = [];
+    const notifications: Array<Record<string, unknown>> = [];
 
     // Create system alerts and send emails for each tenant
     for (const [tenantId, agentsList] of Object.entries(tenantGroups)) {

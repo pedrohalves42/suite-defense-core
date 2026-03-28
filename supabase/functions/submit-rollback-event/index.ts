@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const agent = tokenData.agents as any;
+    const agent = tokenData.agents as Record<string, unknown>;
     const hmacSecret = agent.hmac_secret;
 
     // Verify HMAC signature

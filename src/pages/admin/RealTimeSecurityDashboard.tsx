@@ -62,7 +62,7 @@ function getEventInfo(raw: string): { title: string; explanation: string; icon: 
   };
 }
 
-function extractFriendlyDetails(raw: any): { computer?: string; ip?: string; extra?: string } {
+function extractFriendlyDetails(raw: Record<string, unknown>): { computer?: string; ip?: string; extra?: string } {
   try {
     const obj = typeof raw === 'string' ? JSON.parse(raw) : raw;
     if (!obj || typeof obj !== 'object') return {};
@@ -196,7 +196,7 @@ export default function RealTimeSecurityDashboard() {
       });
       if (error) throw error;
 
-      const data = (rpcData as any[] || []).map((a: any) => ({
+      const data = (rpcData as Array<Record<string, unknown>> || []).map((a: Record<string, unknown>) => ({
         id: a.id,
         last_heartbeat: a.last_heartbeat,
         is_isolated: !!a.is_isolated,
@@ -237,7 +237,7 @@ export default function RealTimeSecurityDashboard() {
       return {
         id: log.id,
         type: log.attack_type || 'info',
-        severity: (log.severity as any) || 'info',
+        severity: (log.severity as never) || 'info',
         title: info.title,
         explanation: info.explanation,
         icon: info.icon,
@@ -256,7 +256,7 @@ export default function RealTimeSecurityDashboard() {
     const channel = supabase
       .channel('realtime-security-dashboard')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'security_logs', filter: `tenant_id=eq.${tenant.id}` }, (payload) => {
-        const log = payload.new as any;
+        const log = payload.new as Record<string, unknown>;
         const info = getEventInfo(log.attack_type || '');
         const details = extractFriendlyDetails(log.details);
         setEvents(prev => [{

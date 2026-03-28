@@ -255,7 +255,7 @@ export default function Quarantine() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {quarantinedFiles?.data?.map((file: any) => (
+                  {quarantinedFiles?.data?.map((file: Record<string, unknown>) => (
                     <TableRow key={file.id}>
                       <TableCell className="font-mono text-sm">{file.file_path}</TableCell>
                       <TableCell>{file.agent_name}</TableCell>

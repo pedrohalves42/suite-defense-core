@@ -198,7 +198,7 @@ const JobCreator = () => {
       toast.success("Tarefas pendentes limpas com sucesso");
       loadJobs();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Erro ao limpar tarefas: ${error.message}`);
     }
   });
@@ -345,7 +345,7 @@ const JobCreator = () => {
       
       // Reload jobs
       loadJobs();
-    } catch (error: any) {
+    } catch (error) {
       logger.error("Erro inesperado ao criar job", error);
       toast.error("Erro inesperado ao criar job. Tente novamente.");
     } finally {
@@ -778,7 +778,7 @@ const JobCreator = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           {getStatusBadge(job.status)}
-                          <span className="font-medium truncate">{getAgentDisplayName({ agent_name: job.agent_name } as any)}</span>
+                          <span className="font-medium truncate">{getAgentDisplayName({ agent_name: job.agent_name } as never)}</span>
                         </div>
                         <div className="flex items-center gap-3 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">

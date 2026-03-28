@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
       const dealsByStage: Record<string, SalesDeal[]> = {};
       
       stages.forEach(stage => {
-        dealsByStage[stage] = deals?.filter((d: any) => d.stage === stage) || [];
+        dealsByStage[stage] = deals?.filter((d: Record<string, unknown>) => d.stage === stage) || [];
       });
 
       const totalValue = deals?.reduce((sum: number, d: any) => sum + Number(d.value || 0), 0) || 0;
@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
 
       const openDeals = (deals?.length || 0) - closedDeals;
       const openValue = deals
-        ?.filter((d: any) => d.stage !== 'won' && d.stage !== 'lost')
+        ?.filter((d: Record<string, unknown>) => d.stage !== 'won' && d.stage !== 'lost')
         .reduce((sum: number, d: any) => sum + Number(d.value || 0), 0) || 0;
 
       const response = {

@@ -187,7 +187,7 @@ serve(async (req: Request): Promise<Response> => {
                 `,
               });
               success = true;
-            } catch (emailError: any) {
+            } catch (emailError: Record<string, unknown>) {
               errorMessage = `Email error: ${emailError.message}`;
               logger.error("Email send error:", emailError);
             }
@@ -229,7 +229,7 @@ serve(async (req: Request): Promise<Response> => {
           failedCount++;
         }
 
-      } catch (notifError: any) {
+      } catch (notifError: Record<string, unknown>) {
         logger.error(`Error processing notification ${notification.id}:`, notifError);
         await supabase
           .from("notification_queue")
@@ -257,7 +257,7 @@ serve(async (req: Request): Promise<Response> => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
-  } catch (error: any) {
+  } catch (error: Record<string, unknown>) {
     logger.error("Error in send-report-notification:", error);
     return new Response(JSON.stringify({ 
       success: false, 

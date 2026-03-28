@@ -205,7 +205,7 @@ Deno.serve(async (req) => {
     }
     
     // FASE 4: Capturar agent_version do payload (somente quando realmente mudou)
-    const agentVersion = (osInfo as any).agent_version as string | undefined;
+    const agentVersion = (osInfo as Record<string, unknown>).agent_version as string | undefined;
     if (agentVersion) {
       const incomingNorm = normalizeVersion(agentVersion)
       const currentNorm = normalizeVersion(agent.agent_version || undefined)
@@ -215,8 +215,8 @@ Deno.serve(async (req) => {
     }
     
     // FASE 5: Capturar Ed25519 capability flags do payload
-    const ed25519Supported = (osInfo as any).ed25519_supported as boolean | undefined;
-    const signatureMode = (osInfo as any).signature_mode as string | undefined;
+    const ed25519Supported = (osInfo as Record<string, unknown>).ed25519_supported as boolean | undefined;
+    const signatureMode = (osInfo as Record<string, unknown>).signature_mode as string | undefined;
     if (ed25519Supported !== undefined) {
       updateData.ed25519_supported = ed25519Supported;
     }
@@ -249,7 +249,7 @@ Deno.serve(async (req) => {
     // System metrics insert, process insert, and token update
     // are independent of each other — run them concurrently
     // ============================================================
-    const systemMetrics = (osInfo as any).system_metrics
+    const systemMetrics = (osInfo as Record<string, unknown>).system_metrics
     
     // TUNING: tenant_id already available from initial join — zero extra queries
     const cachedTenantId = agent.tenant_id || null
@@ -312,15 +312,15 @@ Deno.serve(async (req) => {
     }
 
     // 3. Process data insert
-    const processesPayload = (osInfo as any).processes
-    const processAnomalies = (osInfo as any).process_anomalies
+    const processesPayload = (osInfo as Record<string, unknown>).processes
+    const processAnomalies = (osInfo as Record<string, unknown>).process_anomalies
     if (processesPayload && typeof processesPayload === 'object' && !processesPayload.error) {
       parallelOps.push((async () => {
         const tenantId = await getTenantId()
         if (!tenantId) return
 
         // Flatten top_by_cpu + top_by_memory into deduplicated array
-        const allProcs: any[] = []
+        const allProcs: Array<Record<string, unknown>> = []
         const seenPids = new Set<number>()
         for (const p of [...(processesPayload.top_by_cpu || []), ...(processesPayload.top_by_memory || [])]) {
           if (p.pid && !seenPids.has(p.pid)) {
@@ -483,10 +483,10 @@ Deno.serve(async (req) => {
       // Guard contra limpeza prematura da mesma versão: a string de versão sozinha
       // não prova que o novo payload/script realmente entrou em execução.
       const currentVersion = agentVersion || updateData.agent_version
-      const forceTriggeredAt = (forceCheck as any)?.force_update_at
+      const forceTriggeredAt = (forceCheck as Record<string, unknown>)?.force_update_at
       const currentNorm = normalizeVersion(currentVersion)
       const targetNorm = normalizeVersion(effectiveForceVersion)
-      const lastForcedUpdateApplied = (forceCheck as any)?.last_forced_update_applied
+      const lastForcedUpdateApplied = (forceCheck as Record<string, unknown>)?.last_forced_update_applied
       const forceTriggeredAtMs = forceTriggeredAt ? new Date(forceTriggeredAt).getTime() : null
       const lastAppliedMs = lastForcedUpdateApplied ? new Date(lastForcedUpdateApplied).getTime() : null
       const sameVersionReported = !!currentNorm && !!targetNorm && currentNorm === targetNorm
@@ -524,7 +524,7 @@ Deno.serve(async (req) => {
           })
         }
         // PARTE 1: Verificar delivered_count - se > 50, limpar flag (agente não suporta)
-        const deliveredCount = (forceCheck as any).force_update_delivered_count || 0
+        const deliveredCount = (forceCheck as Record<string, unknown>).force_update_delivered_count || 0
         
         if (deliveredCount >= 50) {
           logger.warn('Agent does not support force_update after 50 deliveries, clearing flag', {
@@ -550,7 +550,7 @@ Deno.serve(async (req) => {
             .from('agents')
             .update({ 
               force_update_delivered_count: deliveredCount + 1,
-              force_update_first_delivered_at: (forceCheck as any).force_update_first_delivered_at || now
+              force_update_first_delivered_at: (forceCheck as Record<string, unknown>).force_update_first_delivered_at || now
             })
             .eq('id', agent.id)
 
@@ -672,7 +672,7 @@ Deno.serve(async (req) => {
                   skip_firewall_remediation: agent.skip_firewall_remediation || false,
                   reason: effectiveForceReason || 'Forced update via backend',
                   force_update_reason: effectiveForceReason || 'Forced update via backend',
-                  override_safe_mode: !!(forceCheck as any)?.force_update_override_safe_mode && (!(forceCheck as any)?.force_update_override_safe_mode_expires_at || new Date((forceCheck as any).force_update_override_safe_mode_expires_at) > new Date()),
+                  override_safe_mode: !!(forceCheck as Record<string, unknown>)?.force_update_override_safe_mode && (!(forceCheck as Record<string, unknown>)?.force_update_override_safe_mode_expires_at || new Date((forceCheck as Record<string, unknown>).force_update_override_safe_mode_expires_at) > new Date()),
                   // CONFIRMATION METADATA (closed-loop)
                   confirm_url: `${supabaseUrl}/functions/v1/confirm-force-update`,
                   confirm_method: 'POST',

@@ -40,7 +40,7 @@ const corsHeaders = {
  * REGRA 3: Revisão humana só exigida em volume significativo
  * REGRA 4: Rollback = 0 NÃO é penalidade (nunca precisou reverter)
  */
-function calculateDeterministicScore(metrics: any): number {
+function calculateDeterministicScore(metrics: Record<string, unknown>): number {
   let score = 70;
   
   const agents = metrics?.agents || {};
@@ -71,7 +71,7 @@ function calculateRiskFactor(redScore: number): number {
   return Math.max(0.7, 1 - (redScore / 333));
 }
 
-function calculateBinaryCriteria(metrics: any): Record<string, boolean> {
+function calculateBinaryCriteria(metrics: Record<string, unknown>): Record<string, boolean> {
   const agents = metrics?.agents || {};
   const aiActions = metrics?.ai_actions || {};
   const rollbacks = metrics?.rollbacks || {};
@@ -373,7 +373,7 @@ serveTenant(async (req, ctx) => {
 CONTEXTO RED TEAM (para calibrar sua análise):
 - Red Score: ${redResult.red_score}/100 (quanto maior, mais vulnerável)
 - Threat Level: ${redResult.threat_level}
-- Principais vetores de ataque identificados: ${redResult.attack_vectors?.slice(0, 3).map((v: any) => v.name).join(', ') || 'nenhum'}
+- Principais vetores de ataque identificados: ${redResult.attack_vectors?.slice(0, 3).map((v: Record<string, unknown>) => v.name).join(', ') || 'nenhum'}
 - Pior cenário: ${redResult.worst_case_scenario || 'não especificado'}
 - Challenge à análise otimista: ${redResult.challenge_to_ana || 'nenhum'}
 

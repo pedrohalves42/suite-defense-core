@@ -417,7 +417,7 @@ export async function exportLaudo(
       headStyles: { fillColor: [220, 38, 38] },
       styles: { fontSize: 8 },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      didParseCell: (data: any) => {
+      didParseCell: (data: Record<string, unknown>) => {
         if (data.column.index === 0 && data.section === 'body') {
           const sev = data.cell.raw?.toString().toLowerCase();
           if (sev === 'critical') data.cell.styles.textColor = [220, 38, 38];

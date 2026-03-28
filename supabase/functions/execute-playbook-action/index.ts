@@ -418,7 +418,7 @@ async function executeAction(
         .insert({
           tenant_id: tenantId,
           agent_id: agentId,
-          agent_name: (context.agent_info as any)?.agent_name || 'system',
+          agent_name: (context.agent_info as Record<string, unknown>)?.agent_name || 'system',
           event_type: 'playbook_report_generated',
           event_data: {
             report_type: payload.report_type,

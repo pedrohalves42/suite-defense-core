@@ -26,7 +26,7 @@ export const Navbar = () => {
 
   const handleNavClick = (link: typeof navLinks[0]) => {
     setMobileOpen(false);
-    if ((link as any).isRoute) {
+    if ((link as Record<string, unknown>).isRoute) {
       navigate(link.href);
     } else {
       const el = document.querySelector(link.href);

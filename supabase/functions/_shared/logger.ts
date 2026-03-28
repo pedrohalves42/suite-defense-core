@@ -5,8 +5,10 @@
  * Supports X-Request-ID correlation
  */
 
-const isDev = Deno.env.get('ENVIRONMENT') === 'development';
-const forceLogging = Deno.env.get('FORCE_LOGGING') === 'true';
+declare const Deno: { env: { get(key: string): string | undefined } } | undefined;
+
+const isDev = typeof Deno !== 'undefined' ? Deno.env.get('ENVIRONMENT') === 'development' : false;
+const forceLogging = typeof Deno !== 'undefined' ? Deno.env.get('FORCE_LOGGING') === 'true' : false;
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'success';
 

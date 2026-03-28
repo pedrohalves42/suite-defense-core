@@ -108,20 +108,20 @@ async function syncMitreRules(supabase: ReturnType<typeof createClient>) {
   const stix = await resp.json();
 
   const mitreVersion =
-    stix.objects?.find((o: any) => o.type === 'x-mitre-collection')?.x_mitre_version ??
+    stix.objects?.find((o: Record<string, unknown>) => o.type === 'x-mitre-collection')?.x_mitre_version ??
     stix.spec_version ??
     'unknown';
 
-  const techniques = stix.objects.filter((o: any) => o.type === 'attack-pattern' && !o.revoked);
+  const techniques = stix.objects.filter((o: Record<string, unknown>) => o.type === 'attack-pattern' && !o.revoked);
   let synced = 0;
   let updated = 0;
 
   const BATCH = 50;
   for (let i = 0; i < techniques.length; i += BATCH) {
     const batch = techniques.slice(i, i + BATCH);
-    const rows = batch.map((t: any) => ({
+    const rows = batch.map((t: Record<string, unknown>) => ({
       technique_id:
-        t.external_references?.find((r: any) => r.source_name === 'mitre-attack')?.external_id ?? t.id,
+        t.external_references?.find((r: Record<string, unknown>) => r.source_name === 'mitre-attack')?.external_id ?? t.id,
       name: t.name,
       description: (t.description ?? '').slice(0, 4000),
       tactic: t.kill_chain_phases?.[0]?.phase_name ?? 'unknown',

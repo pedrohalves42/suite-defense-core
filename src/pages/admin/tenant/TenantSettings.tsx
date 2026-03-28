@@ -136,7 +136,7 @@ export default function TenantSettings() {
       });
       queryClient.invalidateQueries({ queryKey: ["tenant"] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Erro ao atualizar tenant",
         description: error.message,
@@ -147,7 +147,7 @@ export default function TenantSettings() {
 
   // Update settings mutation
   const updateSettings = useMutation({
-    mutationFn: async (newSettings: any) => {
+    mutationFn: async (newSettings: Record<string, unknown>) => {
       if (!tenant?.id) throw new Error("Tenant ID not found");
       
       const { error } = await supabase
@@ -166,7 +166,7 @@ export default function TenantSettings() {
       });
       queryClient.invalidateQueries({ queryKey: ["tenant-settings"] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Erro ao salvar configuracoes",
         description: error.message,

@@ -892,7 +892,7 @@ try {
             await new Promise(resolve => setTimeout(resolve, backoffMs));
           }
         }
-      } catch (dispatchError: any) {
+      } catch (dispatchError: Record<string, unknown>) {
         lastError = dispatchError.message;
         
         telemetry?.failStep(`github_dispatch_attempt_${dispatchAttempt}`, dispatchError, {

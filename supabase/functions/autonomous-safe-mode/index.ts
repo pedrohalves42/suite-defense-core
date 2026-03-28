@@ -865,7 +865,7 @@ async function processSilentFailureDetection(supabase: any, rule: any): Promise<
       severity: 'critical',
       message: `${tenantFailures.length} jobs marcados como completed SEM efeito colateral real detectados`,
       data: {
-        violations: tenantFailures.map((f: any) => ({
+        violations: tenantFailures.map((f: Record<string, unknown>) => ({
           job_id: f.job_id,
           job_type: f.job_type,
           agent_id: f.agent_id,
@@ -890,12 +890,12 @@ async function processSilentFailureDetection(supabase: any, rule: any): Promise<
     const { error: insightError } = await supabase.from('ai_insights').insert({
       tenant_id: tenantId,
       title: `Falhas silenciosas detectadas: ${tenantFailures.length} jobs`,
-      description: `Jobs do tipo ${tenantFailures.map((f: any) => f.job_type).join(', ')} foram marcados como completed mas não produziram dados esperados. Isso indica uma possível falha no pipeline ou dados corrompidos.`,
+      description: `Jobs do tipo ${tenantFailures.map((f: Record<string, unknown>) => f.job_type).join(', ')} foram marcados como completed mas não produziram dados esperados. Isso indica uma possível falha no pipeline ou dados corrompidos.`,
       severity: 'high',
       insight_type: 'integrity_violation',
       evidence: {
         job_count: tenantFailures.length,
-        job_types: [...new Set(tenantFailures.map((f: any) => f.job_type))],
+        job_types: [...new Set(tenantFailures.map((f: Record<string, unknown>) => f.job_type))],
         sample_job_id: firstFailure.job_id,
         detected_at: new Date().toISOString()
       },
@@ -1383,7 +1383,7 @@ async function processProgressiveDegradationRule(supabase: any, rule: any): Prom
     .limit(2000);
 
   // Calcular success rate por agente
-  const calcSuccessRate = (jobs: any[]) => {
+  const calcSuccessRate = (jobs: Array<Record<string, unknown>>) => {
     const agentRates = new Map<string, { success: number; total: number; tenant_id: string }>();
     for (const job of jobs || []) {
       if (!agentRates.has(job.agent_id)) {

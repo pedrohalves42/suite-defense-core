@@ -35,14 +35,14 @@ export async function processNetworkInfo(ctx: SubmitContext): Promise<void> {
           mac_address: String(a.MacAddress || a.mac_address || ''),
           speed: String(a.LinkSpeed || a.link_speed || ''),
           status: String(a.Status || a.status || 'up').toLowerCase(),
-          ip_address: idx < privateIps.length ? String((privateIps[idx] as any).ip) : '',
+          ip_address: idx < privateIps.length ? String((privateIps[idx] as Record<string, unknown>).ip) : '',
         }))
       : (outputData.network_adapters || []) as Array<Record<string, unknown>>
 
     const derivedPublicIp = outputData.public_ip 
-      || (publicIps.length > 0 ? String((publicIps[0] as any).ip) : null)
+      || (publicIps.length > 0 ? String((publicIps[0] as Record<string, unknown>).ip) : null)
     const derivedGateway = outputData.gateway_ip 
-      || (privateIps.length > 0 ? String((privateIps[0] as any).ip) : null)
+      || (privateIps.length > 0 ? String((privateIps[0] as Record<string, unknown>).ip) : null)
 
     const networkRecord = {
       agent_id: job.agent_id,

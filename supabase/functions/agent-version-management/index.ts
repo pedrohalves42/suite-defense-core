@@ -52,7 +52,7 @@ function versionGap(current: string, latest: string): number {
   return (l[0] - c[0]) * 100 + (l[1] - c[1]) * 10 + (l[2] - c[2]);
 }
 
-async function latestActiveVersion(supabase: any): Promise<string> {
+async function latestActiveVersion(supabase: Record<string, unknown>): Promise<string> {
   const { data } = await supabase
     .from('agent_releases_public')
     .select('version')
@@ -76,7 +76,7 @@ async function getFleetCompliance(supabase: any, tenantId?: string) {
 
   const latest = await latestActiveVersion(supabase);
   const byVersion: Record<string, number> = {};
-  const outdated: any[] = [];
+  const outdated: Array<Record<string, unknown>> = [];
 
   for (const a of agents ?? []) {
     const ver = a.agent_version ?? 'unknown';
@@ -106,7 +106,7 @@ async function enforceUpdate(supabase: any, tenantId?: string, dryRun = true) {
   const latest = compliance.latest_version;
   let scheduled = 0;
   let failed = 0;
-  const details: any[] = [];
+  const details: Array<Record<string, unknown>> = [];
 
   for (const agent of compliance.agents_needing_update) {
     if (dryRun) {
@@ -124,7 +124,7 @@ async function enforceUpdate(supabase: any, tenantId?: string, dryRun = true) {
       });
       scheduled++;
       details.push({ agent_id: agent.agent_id, action: 'scheduled' });
-    } catch (e: any) {
+    } catch (e: Record<string, unknown>) {
       failed++;
       details.push({ agent_id: agent.agent_id, action: 'failed', error: e.message });
     }

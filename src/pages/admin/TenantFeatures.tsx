@@ -122,7 +122,7 @@ export default function TenantFeatures() {
       // V-1074 FIX: Add tenant_id filter
       const { error } = await supabase
         .from('tenant_features')
-        .update(updates as any)
+        .update(updates )
         .eq('id', id)
         .eq('tenant_id', tenant!.id);
 

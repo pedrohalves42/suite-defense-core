@@ -35,7 +35,7 @@ describe('batch utilities', () => {
       };
       const items = Array.from({ length: 5 }, (_, i) => ({ id: i }));
 
-      const result = await batchUpsert(mockSupabase as any, 'tbl', items, 'id', 2);
+      const result = await batchUpsert(mockSupabase as unknown, 'tbl', items, 'id', 2);
 
       expect(result.success).toBe(5);
       expect(result.failed).toBe(0);
@@ -56,7 +56,7 @@ describe('batch utilities', () => {
       };
       const items = Array.from({ length: 6 }, (_, i) => ({ id: i }));
 
-      const result = await batchUpsert(mockSupabase as any, 'tbl', items, 'id', 2);
+      const result = await batchUpsert(mockSupabase as unknown, 'tbl', items, 'id', 2);
 
       expect(result.failed).toBe(2); // second batch of 2 items
       expect(result.success).toBe(4);
@@ -74,7 +74,7 @@ describe('batch utilities', () => {
         }),
       };
 
-      const result = await batchFetchByIds(mockSupabase as any, 'tbl', 'id', ['a', 'b'], '*', 10);
+      const result = await batchFetchByIds(mockSupabase as unknown, 'tbl', 'id', ['a', 'b'], '*', 10);
       expect(result).toEqual([{ id: 'a' }, { id: 'b' }]);
     });
 
@@ -93,7 +93,7 @@ describe('batch utilities', () => {
         }),
       };
 
-      const result = await batchFetchByIds(mockSupabase as any, 'tbl', 'id', ['a', 'b', 'c'], '*', 2);
+      const result = await batchFetchByIds(mockSupabase as unknown, 'tbl', 'id', ['a', 'b', 'c'], '*', 2);
       expect(result).toEqual([{ id: 'z' }]);
     });
   });

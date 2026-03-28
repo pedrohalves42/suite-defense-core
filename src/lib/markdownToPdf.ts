@@ -686,7 +686,7 @@ export async function generatePDFFromMarkdown(
   renderMarkdownContent(ctx, markdownContent);
 
   // Apply headers & footers to all pages (skip cover)
-  const totalPages = (doc as any).getNumberOfPages();
+  const totalPages = (doc as Record<string, unknown>).getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
     if (p === 1) continue; // skip cover
@@ -770,7 +770,7 @@ export async function generateConsolidatedPDF(
   }
 
   // Apply headers & footers (skip cover page = page 1)
-  const totalPages = (doc as any).getNumberOfPages();
+  const totalPages = (doc as Record<string, unknown>).getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
     if (p === 1) continue;

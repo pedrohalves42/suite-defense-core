@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     }
 
     // Type guard for agents data - using type assertion since we know the structure
-    const agentName = (buildData.agents as any)?.agent_name;
+    const agentName = (buildData.agents as Record<string, unknown>)?.agent_name;
       
     if (!agentName) {
       logger.error('Agent name not found', { requestId, build_id });

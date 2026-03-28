@@ -55,7 +55,7 @@ export default function TriggerRemediationDialog() {
         p_tenant_id: tenant.id,
         p_include_archived: false,
       });
-      return (data || []).filter((a: any) => a.status === 'active');
+      return (data || []).filter((a: Record<string, unknown>) => a.status === 'active');
     },
     enabled: !!tenant?.id && open,
   });
@@ -107,7 +107,7 @@ export default function TriggerRemediationDialog() {
                 <SelectValue placeholder="Selecionar agente..." />
               </SelectTrigger>
               <SelectContent>
-                {agents.map((agent: any) => (
+                {agents.map((agent: Record<string, unknown>) => (
                   <SelectItem key={agent.id} value={agent.id}>
                     <span className="flex items-center gap-2">
                       <span className="h-2 w-2 rounded-full bg-green-500" />

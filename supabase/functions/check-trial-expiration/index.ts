@@ -66,8 +66,8 @@ Deno.serve(async (req) => {
       await supabase.functions.invoke("send-trial-reminder", {
         body: {
           tenant_id: sub.tenant_id,
-          tenant_name: (sub as any).tenants.name,
-          owner_user_id: (sub as any).tenants.owner_user_id,
+          tenant_name: (sub as Record<string, unknown>).tenants.name,
+          owner_user_id: (sub as Record<string, unknown>).tenants.owner_user_id,
           trial_end: sub.trial_end,
           days_remaining: 7,
         },
@@ -86,8 +86,8 @@ Deno.serve(async (req) => {
       await supabase.functions.invoke("send-trial-reminder", {
         body: {
           tenant_id: sub.tenant_id,
-          tenant_name: (sub as any).tenants.name,
-          owner_user_id: (sub as any).tenants.owner_user_id,
+          tenant_name: (sub as Record<string, unknown>).tenants.name,
+          owner_user_id: (sub as Record<string, unknown>).tenants.owner_user_id,
           trial_end: sub.trial_end,
           days_remaining: 1,
         },

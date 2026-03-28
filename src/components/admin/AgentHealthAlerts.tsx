@@ -100,7 +100,7 @@ function AgentHealthCard({ agent }: AgentHealthCardProps) {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant={getSeverityBadgeVariant(agent.severity) as any}>
+              <Badge variant={getSeverityBadgeVariant(agent.severity) as "default" | "destructive" | "outline" | "secondary"}>
                 {agent.severity}
               </Badge>
               <Badge variant="outline">{statusLabel}</Badge>
@@ -196,7 +196,7 @@ function AlertCard({ alert, onResolve, isResolving }: AlertCardProps) {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant={getSeverityBadgeVariant(alert.severity) as any}>
+              <Badge variant={getSeverityBadgeVariant(alert.severity) as "default" | "destructive" | "outline" | "secondary"}>
                 {alert.severity}
               </Badge>
               <Button 

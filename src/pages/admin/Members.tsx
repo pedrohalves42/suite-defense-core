@@ -50,7 +50,7 @@ export default function Members() {
       
       if (error) throw error;
       // Map edge function response to Member type (profiles wrapper)
-      return (data.users || []).map((u: any) => ({
+      return (data.users || []).map((u: Record<string, unknown>) => ({
         ...u,
         id: u.user_id,
         profiles: u.profiles || { full_name: u.full_name || null },

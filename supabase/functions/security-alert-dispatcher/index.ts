@@ -90,7 +90,7 @@ Deno.serve(async (req: Request) => {
 
     // Group by IP to find spikes
     const ipCounts: Record<string, number> = {};
-    failedLoginData?.forEach((attempt: any) => {
+    failedLoginData?.forEach((attempt: Record<string, unknown>) => {
       ipCounts[attempt.ip_address] = (ipCounts[attempt.ip_address] || 0) + 1;
     });
     
@@ -162,7 +162,7 @@ Deno.serve(async (req: Request) => {
 
       if (!sjError && silentJobs && silentJobs.length > 0) {
         // Filter jobs with silence > 2x expected interval
-        const criticalSilentJobs = silentJobs.filter((job: any) => {
+        const criticalSilentJobs = silentJobs.filter((job: Record<string, unknown>) => {
           // Parse interval string to compare
           const silenceMs = parseInterval(job.silence_duration);
           const expectedMs = parseInterval(job.expected_interval);
@@ -170,7 +170,7 @@ Deno.serve(async (req: Request) => {
         });
 
         if (criticalSilentJobs.length > 0) {
-          const jobNames = criticalSilentJobs.map((j: any) => j.job_key).join(', ');
+          const jobNames = criticalSilentJobs.map((j: Record<string, unknown>) => j.job_key).join(', ');
           alerts.push(`Silent cron jobs detected: ${jobNames}`);
           await createSystemAlert(supabase, 'cron_silence', 'critical',
             `${criticalSilentJobs.length} scheduled jobs have stopped executing: ${jobNames}`);

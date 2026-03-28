@@ -94,7 +94,7 @@ export const ClientComputers = () => {
       if (error) throw error;
 
       // Fetch latest metrics for each agent
-      const agentIds = agentsData?.map((a: any) => a.id as string) || [];
+      const agentIds = agentsData?.map((a: Record<string, unknown>) => a.id as string) || [];
       
       if (agentIds.length === 0) return [];
 
@@ -112,7 +112,7 @@ export const ClientComputers = () => {
         }
       });
 
-      return agentsData?.map((agent: any) => ({
+      return agentsData?.map((agent: Record<string, unknown>) => ({
         ...agent,
         metrics: latestMetrics[agent.id] || null
       })) || [];

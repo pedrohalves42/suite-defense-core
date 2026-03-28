@@ -66,7 +66,7 @@ serve(async (req) => {
     }
 
     const agentId = tokenData.agent_id;
-    const tenantId = (tokenData.agents as any).tenant_id;
+    const tenantId = (tokenData.agents as Record<string, unknown>).tenant_id;
 
     const payload: ProcessPayload = await req.json();
 

@@ -108,7 +108,7 @@ export async function callEdgeFunction<T = any>(
     logger.info(`[${requestId}] Edge Function executada com sucesso`);
     
     return data as T;
-  } catch (error: any) {
+  } catch (error) {
     logger.error(`[${requestId}] Erro ao chamar Edge Function`, {
       function: functionName,
       error: error.message,

@@ -18,7 +18,7 @@ export const AgentTagSelector = ({ agentId }: AgentTagSelectorProps) => {
   const { tenant } = useTenant();
   const [open, setOpen] = useState(false);
 
-  const assignedTagIds = new Set(assignments?.map((a: any) => a.tag_id) || []);
+  const assignedTagIds = new Set(assignments?.map((a: Record<string, unknown>) => a.tag_id) || []);
 
   const handleToggle = async (tagId: string) => {
     if (assignedTagIds.has(tagId)) {
@@ -30,7 +30,7 @@ export const AgentTagSelector = ({ agentId }: AgentTagSelectorProps) => {
 
   return (
     <div className="flex flex-wrap items-center gap-1">
-      {assignments?.map((a: any) => (
+      {assignments?.map((a: Record<string, unknown>) => (
         <Badge
           key={a.id}
           variant="secondary"

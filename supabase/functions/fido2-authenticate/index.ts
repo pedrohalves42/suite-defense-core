@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
       const options = {
         challenge,
         rpId: RP_ID,
-        allowCredentials: credentials.map((cred: any) => ({
+        allowCredentials: credentials.map((cred: Record<string, unknown>) => ({
           id: cred.credential_id,
           type: 'public-key',
           transports: cred.transports || [],

@@ -178,7 +178,7 @@ export function useAgentInstaller() {
           if (isMounted) {
             setAgentNameError(!data.available ? `[ERROR]  ${data.reason || 'Nome indisponivel'}` : '[OK]  Nome disponivel');
           }
-        } catch (err: unknown) {
+        } catch (err) {
           const error = err as Error & { name?: string };
           if (error.name === 'AbortError') {
             if (isMounted) setAgentNameError('?? Timeout - tente novamente');
@@ -341,7 +341,7 @@ export function useAgentInstaller() {
 
       trackInstallationEvent({ agent_name: agentName.trim(), event_type: 'generated', platform, installation_method: 'one_click' });
       toast.success("[OK]  Comando gerado!", { description: "Copie e execute no servidor" });
-    } catch (error: unknown) {
+    } catch (error) {
       const err = error as Error & { context?: { requestId?: string } };
       logger.error('Generate command error', err);
       let description = err.message || "Erro desconhecido";
@@ -398,7 +398,7 @@ export function useAgentInstaller() {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-    } catch (error: unknown) {
+    } catch (error) {
       const err = error as Error;
       logger.error('Script download/validation error', err);
       toast.error("Erro ao baixar/validar script", { description: err.message });
@@ -416,7 +416,7 @@ export function useAgentInstaller() {
       if (!credentials) return;
       await downloadAndVerifyScript(credentials.enrollmentKey, platform);
       trackInstallationEvent({ agent_name: agentName.trim(), event_type: 'downloaded', platform, installation_method: 'download' });
-    } catch (error: unknown) {
+    } catch (error) {
       const err = error as Error & { context?: { requestId?: string } };
       logger.error('Generate installer error', err);
       let description = err.message || "Erro desconhecido";
@@ -454,7 +454,7 @@ export function useAgentInstaller() {
       setExeBuildStatus('completed');
       setBuildProgress({ currentStep: 'completed', status: 'completed', message: 'Instalador pronto!' });
       toast.success('✅ Instalador portátil gerado com sucesso!');
-    } catch (error: unknown) {
+    } catch (error) {
       const err = error as Error;
       logger.error('[Portable] Erro', err);
       toast.error(`Erro: ${err.message}`);
@@ -506,7 +506,7 @@ export function useAgentInstaller() {
       setGithubActionsUrl(github_actions_url || null);
       setBuildProgress({ currentStep: 'compiling', status: 'active', message: 'Compilando PS1 → EXE...', githubRunUrl: github_actions_url });
       storage.set('current-build', { build_id, agent_name: agentName.trim(), started_at: Date.now() }, 30 * 60 * 1000);
-    } catch (error: unknown) {
+    } catch (error) {
       const err = error as Error;
       logger.error('Build EXE failed', err);
       setExeBuildStatus('failed');
@@ -572,7 +572,7 @@ export function useAgentInstaller() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       toast.success("? Download concluido com seguranca!");
-    } catch (error: unknown) {
+    } catch (error) {
       const err = error as Error;
       toast.dismiss();
       toast.error("Erro ao verificar integridade", { description: err.message, duration: 6000 });

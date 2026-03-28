@@ -97,7 +97,7 @@ export default function Pricing() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
             {plans.map((plan) => {
               const Icon = plan.icon;
-              const planData = t(`pricingPage.${plan.key}`, { returnObjects: true }) as any;
+              const planData = t(`pricingPage.${plan.key}`, { returnObjects: true }) as Record<string, string>;
               const features = t(`pricingPage.features.${plan.key}`, { returnObjects: true }) as string[];
               const cta = t(`pricingPage.cta.${plan.key}`);
               

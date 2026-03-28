@@ -114,8 +114,8 @@ serve(async (req) => {
 
     // Analyze patterns
     const tenantAnalyses: TenantAnalysis[] = [];
-    const insightsToCreate: any[] = [];
-    const alertsToCreate: any[] = [];
+    const insightsToCreate: Array<Record<string, unknown>> = [];
+    const alertsToCreate: Array<Record<string, unknown>> = [];
 
     for (const [tenantId, agentGroups] of tenantGroups) {
       const patterns: FailurePattern[] = [];
@@ -148,7 +148,7 @@ serve(async (req) => {
             const lastFailure = failedJobs
               .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
-            const agentName = (typeJobs[0] as any).agents?.agent_name || 'Unknown';
+            const agentName = (typeJobs[0] as Record<string, unknown>).agents as Record<string, unknown> | undefined)?.agent_name || 'Unknown';
 
             patterns.push({
               agent_id: agentId,

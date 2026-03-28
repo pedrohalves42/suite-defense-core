@@ -592,7 +592,7 @@ Deno.serve(async (req) => {
 
     // Add evidence refs to sections
     sections.forEach((sec, idx) => {
-      (sec as any).evidence_refs = [sha256Hash.substring(idx * 4, idx * 4 + 8)];
+      (sec as Record<string, unknown>).evidence_refs = [sha256Hash.substring(idx * 4, idx * 4 + 8)];
     });
 
     // Security description based on inverted score (high = good)

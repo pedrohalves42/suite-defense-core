@@ -30,7 +30,7 @@ interface ThreatIndicator {
   confidence_score: number;
 }
 
-async function loadThreatIntel(supabase: any): Promise<{
+async function loadThreatIntel(supabase: Record<string, unknown>): Promise<{
   ips: Map<string, ThreatIndicator>;
   hashes: Map<string, ThreatIndicator>;
   domains: Map<string, ThreatIndicator>;
@@ -71,7 +71,7 @@ interface BaselineData {
   threshold_multiplier: number;
 }
 
-async function loadBaselines(supabase: any): Promise<Map<string, BaselineData>> {
+async function loadBaselines(supabase: Record<string, unknown>): Promise<Map<string, BaselineData>> {
   const baselines = new Map<string, BaselineData>();
   try {
     const { data } = await supabase
@@ -155,13 +155,13 @@ Deno.serve(async (req) => {
     ]);
 
     // ── Step 3: Group by category & enrich ──
-    const processEvents: any[] = [];
-    const fileEvents: any[] = [];
-    const networkEvents: any[] = [];
-    const registryEvents: any[] = [];
+    const processEvents: Array<Record<string, unknown>> = [];
+    const fileEvents: Array<Record<string, unknown>> = [];
+    const networkEvents: Array<Record<string, unknown>> = [];
+    const registryEvents: Array<Record<string, unknown>> = [];
     const processedIds: string[] = [];
-    const threatMatches: any[] = [];
-    const anomalyAlerts: any[] = [];
+    const threatMatches: Array<Record<string, unknown>> = [];
+    const anomalyAlerts: Array<Record<string, unknown>> = [];
 
     // Track per-agent event counts for behavioral anomaly
     const agentNetworkCounts = new Map<string, number>();

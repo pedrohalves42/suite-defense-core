@@ -6,27 +6,27 @@ import { TenantId } from '../../../../domain/value-objects/TenantId';
  * Maps between NetworkSnapshot domain entity and Supabase database rows.
  */
 export class NetworkSnapshotMapper {
-  static toDomain(row: any): NetworkSnapshot {
-    const adapters: NetworkAdapter[] = (row.network_adapters || []).map((a: any) => ({
+  static toDomain(row: Record<string, unknown>): NetworkSnapshot {
+    const adapters: NetworkAdapter[] = (row.network_adapters || []).map((a: Record<string, unknown>) => ({
       name: a.name ?? '',
       ipAddress: a.ip_address ?? a.ipAddress ?? '',
       macAddress: a.mac_address ?? a.macAddress ?? '',
       status: a.status ?? 'Unknown',
     }));
 
-    const openPorts: OpenPort[] = (row.open_ports || []).map((p: any) => ({
+    const openPorts: OpenPort[] = (row.open_ports || []).map((p: Record<string, unknown>) => ({
       port: p.port,
       process: p.process ?? '',
       protocol: p.protocol ?? 'TCP',
     }));
 
-    const connections: ActiveConnection[] = (row.active_connections || []).map((c: any) => ({
+    const connections: ActiveConnection[] = (row.active_connections || []).map((c: Record<string, unknown>) => ({
       remoteAddress: c.remote_address ?? c.remoteAddress ?? '',
       remotePort: c.remote_port ?? c.remotePort ?? 0,
       state: c.state ?? '',
     }));
 
-    const dnsServers: string[] = (row.dns_servers || []).map((d: any) =>
+    const dnsServers: string[] = (row.dns_servers || []).map((d: Record<string, unknown>) =>
       typeof d === 'string' ? d : d.address ?? ''
     );
 

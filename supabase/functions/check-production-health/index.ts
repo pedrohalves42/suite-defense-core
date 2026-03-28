@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
 
-  const alerts: any[] = [];
+  const alerts: Array<Record<string, unknown>> = [];
   const now = new Date();
   const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -215,7 +215,7 @@ Deno.serve(async (req) => {
       }
     );
 
-  } catch (error: any) {
+  } catch (error: Record<string, unknown>) {
     logger.error('[check-production-health] Unexpected error:', error);
     
     // Log error observability

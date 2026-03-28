@@ -150,7 +150,7 @@ Deno.serve(async (request) => {
           .select("stripe_price_id")
           .eq("plan_type", "addon");
         
-        const ADDON_PRICE_IDS = addonMappings?.map((m: any) => m.stripe_price_id) || [];
+        const ADDON_PRICE_IDS = addonMappings?.map((m: Record<string, unknown>) => m.stripe_price_id) || [];
         logger.info(`[STRIPE-WEBHOOK] Loaded ${ADDON_PRICE_IDS.length} addon price IDs from DB`);
         
         // V4: Process ALL line items to separate base plan from addons

@@ -137,7 +137,7 @@ export default function AIInsights() {
         description: JSON.stringify(data.result)
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error('Erro ao executar solucao', {
         description: error.message
       });
@@ -215,8 +215,8 @@ export default function AIInsights() {
 
   // Fix: Use status-based filtering instead of acknowledged flag
   // "Aguardando" = open insights (not yet resolved), "Resolvidos" = resolved/rejected
-  const pendingInsights = insights.filter(i => !['resolved', 'rejected'].includes((i as any).status || 'open'));
-  const acknowledgedInsights = insights.filter(i => ['resolved', 'rejected'].includes((i as any).status || ''));
+  const pendingInsights = insights.filter(i => !['resolved', 'rejected'].includes((i as Record<string, unknown>).status || 'open'));
+  const acknowledgedInsights = insights.filter(i => ['resolved', 'rejected'].includes((i as Record<string, unknown>).status || ''));
 
   // Get global status
   const getGlobalStatus = () => {
@@ -410,7 +410,7 @@ export default function AIInsights() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-2 items-end">
-                      <Badge variant={getSeverityColor(insight.severity) as any}>
+                      <Badge variant={getSeverityColor(insight.severity) as "default" | "destructive" | "outline" | "secondary"}>
                         {insight.severity}
                       </Badge>
                       <Badge variant="outline">

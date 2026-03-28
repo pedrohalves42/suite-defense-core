@@ -123,7 +123,7 @@ export default function SoftwareRiskDashboard() {
 
   const filteredSoftware = software?.filter(item => {
     if (selectedAgent !== 'all' && item.agent_id !== selectedAgent) return false;
-    if (selectedCategory && (item as any).software_category !== selectedCategory) return false;
+    if (selectedCategory && (item as Record<string, unknown>).software_category !== selectedCategory) return false;
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     return (

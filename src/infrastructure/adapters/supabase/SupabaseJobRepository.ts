@@ -63,7 +63,7 @@ export class SupabaseJobRepository implements JobRepository {
     const persistence = JobMapper.toPersistence(job);
     const { error } = await supabase
       .from('jobs')
-      .upsert(persistence as any, { onConflict: 'id' });
+      .upsert(persistence as Record<string, unknown>, { onConflict: 'id' });
 
     if (error) {
       throw new Error(`Failed to save job: ${error.message}`);
@@ -74,7 +74,7 @@ export class SupabaseJobRepository implements JobRepository {
     const persistence = JobMapper.executionToPersistence(execution);
     const { error } = await supabase
       .from('job_executions')
-      .upsert(persistence as any, { onConflict: 'id' });
+      .upsert(persistence as Record<string, unknown>, { onConflict: 'id' });
 
     if (error) {
       throw new Error(`Failed to save job execution: ${error.message}`);

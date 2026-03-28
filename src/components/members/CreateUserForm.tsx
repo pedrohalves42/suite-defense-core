@@ -93,8 +93,8 @@ export function CreateUserForm({ open, onOpenChange }: CreateUserFormProps) {
         // Extract actual error message from edge function response
         let msg = error.message;
         try {
-          if ('context' in error && typeof (error as any).context?.json === 'function') {
-            const body = await (error as any).context.json();
+          if ('context' in error && typeof (error as Record<string, unknown>).context?.json === 'function') {
+            const body = await (error as Record<string, unknown>).context.json();
             msg = body?.error || body?.error?.message || msg;
           }
         } catch {}

@@ -52,7 +52,7 @@ const translations: Record<string, I18nStrings> = {
     footer1: 'CyberShield - Proteção que você pode confiar',
     footer2: 'Esta é uma mensagem automática. Por favor, não responda este email.',
     headerSubtitle: 'Proteção Avançada para seus Dispositivos',
-  } as any,
+  } as Record<string, unknown>,
   en: {
     subject7: (days: number) => `⏳ Your trial expires in ${days} days`,
     subject1: '⚠️ Your trial expires tomorrow!',
@@ -77,7 +77,7 @@ const translations: Record<string, I18nStrings> = {
     footer1: 'CyberShield - Protection you can trust',
     footer2: 'This is an automated message. Please do not reply to this email.',
     headerSubtitle: 'Advanced Protection for your Devices',
-  } as any,
+  } as Record<string, unknown>,
   es: {
     subject7: (days: number) => `⏳ Tu trial expira en ${days} días`,
     subject1: '⚠️ ¡Tu trial expira mañana!',
@@ -102,7 +102,7 @@ const translations: Record<string, I18nStrings> = {
     footer1: 'CyberShield - Protección en la que puedes confiar',
     footer2: 'Este es un mensaje automático. Por favor, no respondas a este email.',
     headerSubtitle: 'Protección Avanzada para tus Dispositivos',
-  } as any,
+  } as Record<string, unknown>,
 };
 
 function getStrings(lang: string): any {
@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
       .eq('id', tenant_id)
       .maybeSingle();
 
-    const lang = (tenantData?.settings as any)?.language || 'pt-BR';
+    const lang = ((tenantData?.settings as Record<string, unknown>)?.language as string) || 'pt-BR';
     const t = getStrings(lang);
 
     const resend = new Resend(Deno.env.get("RESEND_API_KEY"));

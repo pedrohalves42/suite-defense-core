@@ -76,10 +76,10 @@ export default function DataExport() {
           });
           const agentsList = (agentsRaw as unknown as Array<Record<string, unknown>>) || [];
           const agentsSorted = dateFilter 
-            ? agentsList.filter((a: any) => a.enrolled_at >= dateFilter)
+            ? agentsList.filter((a: Record<string, unknown>) => a.enrolled_at >= dateFilter)
             : agentsList;
 
-          data = agentsSorted.map((a: any) => ({
+          data = agentsSorted.map((a: Record<string, unknown>) => ({
             'Nome do Agente': a.agent_name,
             'Status': a.status,
             'Data de Registro': formatBrazilDateTime(a.enrolled_at, 'datetime'),

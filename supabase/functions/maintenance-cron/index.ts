@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
       // Zombie executions
       try {
         const { data: zombieResult } = await supabase.rpc('cleanup_zombie_executions');
-        if (zombieResult) result.stuck_jobs.zombies = (zombieResult as any).total || 0;
+        if (zombieResult) result.stuck_jobs.zombies = (zombieResult as Record<string, unknown>).total || 0;
       } catch { /* non-critical */ }
     } catch (e) { logger.warn('[maintenance] Phase 2 error:', e); }
 
@@ -360,7 +360,7 @@ Deno.serve(async (req) => {
           batch.map(tenantId =>
             supabase.rpc('summarize_telemetry_hourly', { p_tenant_id: tenantId, p_hours_ago: 2 })
               .then(() => { result.telemetry.tenants_summarized++; })
-              .catch((e: any) => logger.warn(`[maintenance] Telemetry summary error for ${tenantId}:`, e))
+              .catch((e: Record<string, unknown>) => logger.warn(`[maintenance] Telemetry summary error for ${tenantId}:`, e))
           )
         );
       }

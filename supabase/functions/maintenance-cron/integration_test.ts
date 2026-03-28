@@ -23,7 +23,7 @@ function createMockSupabase(overrides: Record<string, any> = {}) {
   };
 
   // Chainable mock builder
-  const chainable = (data: any = null, list: any[] = []) => {
+  const chainable = (data: any = null, list: Array<Record<string, unknown>> = []) => {
     const chain: any = {
       select: () => chain,
       eq: () => chain,
@@ -43,12 +43,12 @@ function createMockSupabase(overrides: Record<string, any> = {}) {
       const tableData = defaultData[table] || [];
       return {
         select: (_cols?: string) => chainable(tableData[0] || null, tableData),
-        update: (_data: any) => ({
+        update: (_data: Record<string, unknown>) => ({
           eq: () => Promise.resolve({ error: null }),
           in: () => Promise.resolve({ error: null }),
         }),
-        insert: (_data: any) => Promise.resolve({ error: null }),
-        upsert: (_data: any) => Promise.resolve({ error: null }),
+        insert: (_data: Record<string, unknown>) => Promise.resolve({ error: null }),
+        upsert: (_data: Record<string, unknown>) => Promise.resolve({ error: null }),
       };
     },
     rpc(_fn: string, _params: Record<string, unknown>) {
@@ -109,7 +109,7 @@ Deno.test("UpdateDecisionService - force legacy delivery bypasses checks", async
 
 Deno.test("ProcessHeartbeat - returns ok with agent name", async () => {
   const mockSupabase = createMockSupabase();
-  const useCase = new ProcessHeartbeatUseCase(mockSupabase as any);
+  const useCase = new ProcessHeartbeatUseCase(mockSupabase as unknown);
 
   const result = await useCase.execute({
     agentId: "agent-1",
@@ -127,7 +127,7 @@ Deno.test("ProcessHeartbeat - returns ok with agent name", async () => {
 
 Deno.test("RunMaintenance - returns result with all counters", async () => {
   const mockSupabase = createMockSupabase();
-  const useCase = new RunMaintenanceUseCase(mockSupabase as any);
+  const useCase = new RunMaintenanceUseCase(mockSupabase as unknown);
 
   const result = await useCase.execute();
 

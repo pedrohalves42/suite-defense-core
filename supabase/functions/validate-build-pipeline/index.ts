@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
         if (workflowsResponse.ok) {
           const workflowsData = await workflowsResponse.json();
           const targetWorkflow = workflowsData.workflows?.find(
-            (w: any) => w.name === 'Build Agent EXE' || w.path.includes('build-agent-exe')
+            (w: Record<string, unknown>) => w.name === 'Build Agent EXE' || w.path.includes('build-agent-exe')
           );
 
           if (targetWorkflow) {
@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
               status: 'fail',
               message: 'Build Agent EXE workflow not found',
               details: { 
-                available_workflows: workflowsData.workflows?.map((w: any) => w.name) 
+                available_workflows: workflowsData.workflows?.map((w: Record<string, unknown>) => w.name) 
               }
             });
           }
