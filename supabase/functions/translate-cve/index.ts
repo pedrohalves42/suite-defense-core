@@ -1,83 +1,57 @@
+import { serveTenant } from '../_shared/serve-tenant.ts';
 import { aiSimpleComplete, getProviderStatus } from '../_shared/ai-multi-provider.ts';
 import { logger } from '../_shared/logger.ts';
+import { corsHeaders } from '../_shared/cors.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
+interface TranslateCveBody {
+  tenant_id?: string;
+  cve_id?: string;
+  description: string;
+}
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+serveTenant<TranslateCveBody>(async (_req, ctx) => {
+  const { body, requestId } = ctx;
+  const { cve_id, description } = body;
+
+  if (!description) {
+    return new Response(
+      JSON.stringify({ error: 'Description required' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  try {
-    const { cve_id, description } = await req.json();
-
-    if (!description) {
-      return new Response(JSON.stringify({ error: 'Description required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const systemPrompt = `Você é um tradutor técnico especializado em segurança da informação.
+  const systemPrompt = `Você é um tradutor técnico especializado em segurança da informação.
 Traduza a descrição de vulnerabilidade CVE do inglês para português brasileiro.
 Mantenha termos técnicos importantes em inglês quando apropriado (ex: buffer overflow, SQL injection, XSS).
 Seja conciso e claro. Responda APENAS com a tradução, sem explicações adicionais.`;
 
-    const response = await aiSimpleComplete(
-      systemPrompt,
-      `Traduza para português: "${description}"`,
-      {
-        maxTokens: 500,
-        functionName: 'translate-cve',
-      }
-    );
-
-    if (response.error) {
-      logger.error('AI translation error:', response.error);
-      return new Response(JSON.stringify({ 
-        translated: description, // Fallback to original
-        error: response.error,
-        provider: response.provider,
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+  const response = await aiSimpleComplete(
+    systemPrompt,
+    `Traduza para português: "${description}"`,
+    {
+      maxTokens: 500,
+      functionName: 'translate-cve',
     }
+  );
 
-    logger.info(`[translate-cve] CVE ${cve_id} translated via ${response.provider} in ${response.latencyMs}ms`);
-
-    return new Response(JSON.stringify({ 
-      cve_id,
-      translated: response.content,
-      original: description,
+  if (response.error) {
+    logger.error(`[translate-cve][${requestId}] AI translation error:`, response.error);
+    return {
+      translated: description,
+      error: response.error,
       provider: response.provider,
-      model: response.model,
-      latencyMs: response.latencyMs,
-      usedFallback: response.usedFallback,
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Translation error:', errorMessage);
-    return new Response(JSON.stringify({ 
-      error: errorMessage,
-      translated: null,
-      providers: getProviderStatus(),
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    };
   }
+
+  logger.info(`[translate-cve][${requestId}] CVE ${cve_id} translated via ${response.provider} in ${response.latencyMs}ms`);
+
+  return {
+    cve_id,
+    translated: response.content,
+    original: description,
+    provider: response.provider,
+    model: response.model,
+    latencyMs: response.latencyMs,
+    usedFallback: response.usedFallback,
+  };
 });
