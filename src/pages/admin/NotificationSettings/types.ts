@@ -5,7 +5,7 @@ export interface NotificationChannel {
   tenant_id: string;
   channel_type: string;
   name: string;
-  config: Record<string, string>;
+  config: Record<string, unknown>;
   is_verified: boolean;
   is_active: boolean;
   created_at: string;
