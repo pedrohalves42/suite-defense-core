@@ -70,7 +70,8 @@ export const useCreateForensicSnapshot = () => {
     }) => {
       if (!tenant?.id) throw new Error('Tenant not found');
 
-      const { data, error } = await (supabase as never)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
         .rpc('create_forensic_snapshot', {
           p_agent_id: agentId,
           p_tenant_id: tenant.id,

@@ -135,13 +135,14 @@ export default function RansomwareIncident() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {quarantined.map((a: Record<string, unknown>) => (
-                  <TableRow key={String(a.id)}>
-                    <TableCell className="font-medium">{String(a.hostname)}</TableCell>
-                    <TableCell>{String(a.agent_version)}</TableCell>
-                    <TableCell className="text-sm">{String(a.isolation_reason || "Ransomware detectado")}</TableCell>
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {quarantined.map((a: any) => (
+                  <TableRow key={a.id}>
+                    <TableCell className="font-medium">{a.hostname}</TableCell>
+                    <TableCell>{a.agent_version}</TableCell>
+                    <TableCell className="text-sm">{a.isolation_reason || "Ransomware detectado"}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {a.isolated_at ? new Date(String(a.isolated_at)).toLocaleString("pt-BR") : "—"}
+                      {a.isolated_at ? new Date(a.isolated_at).toLocaleString("pt-BR") : "—"}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -377,7 +377,8 @@ export default function AgentTest() {
           <CardContent>
             <ScrollArea className="h-[300px]">
               <div className="space-y-2">
-                {agents?.map((agent) => (
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {agents?.map((agent: any) => (
                   <Button
                     key={agent.id}
                     variant={selectedAgent === agent.agent_name ? "default" : "outline"}

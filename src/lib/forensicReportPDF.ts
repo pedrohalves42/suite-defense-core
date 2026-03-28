@@ -159,7 +159,7 @@ async function fetchForensicData(agentId: string): Promise<ForensicData> {
     .order('created_at', { ascending: false })
     .limit(20);
 
-  const alerts = ((alertsRaw || []) as unknown[]).map((a: Record<string, unknown>) => ({
+  const alerts = ((alertsRaw || []) as Array<{ alert_type: string; severity: string; title: string; message: string; created_at: string }>).map(a => ({
     type: a.alert_type, severity: a.severity,
     title: a.title, message: a.message, created_at: a.created_at,
   }));
@@ -173,7 +173,7 @@ async function fetchForensicData(agentId: string): Promise<ForensicData> {
     .limit(50);
 
   const domainsMap = new Map<string, boolean>();
-  for (const d of (domainsRaw || []) as Array<Record<string, unknown>>) {
+  for (const d of (domainsRaw || []) as Array<{ domain: string; is_blocked: boolean }>) {
     if (d.domain && !domainsMap.has(d.domain)) {
       domainsMap.set(d.domain, d.is_blocked === true);
     }

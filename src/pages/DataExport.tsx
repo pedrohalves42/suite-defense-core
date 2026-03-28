@@ -79,12 +79,13 @@ export default function DataExport() {
             ? agentsList.filter((a: Record<string, unknown>) => a.enrolled_at >= dateFilter)
             : agentsList;
 
-          data = agentsSorted.map((a: Record<string, unknown>) => ({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          data = agentsSorted.map((a: any) => ({
             'Nome do Agente': a.agent_name,
             'Status': a.status,
-            'Data de Registro': formatBrazilDateTime(a.enrolled_at, 'datetime'),
+            'Data de Registro': formatBrazilDateTime(String(a.enrolled_at), 'datetime'),
             'Ultimo Heartbeat': a.last_heartbeat 
-              ? formatBrazilDateTime(a.last_heartbeat, 'datetime')
+              ? formatBrazilDateTime(String(a.last_heartbeat), 'datetime')
               : 'Nunca',
             'Tenant ID': a.tenant_id,
           }));

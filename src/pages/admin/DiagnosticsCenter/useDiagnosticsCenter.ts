@@ -67,7 +67,8 @@ export function useDiagnosticsCenter() {
     queryFn: async () => {
       if (!tenant?.id) return [];
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data, error } = await (supabase as never)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
         .from('jobs')
         .select('agent_name')
         .eq('tenant_id', tenant.id)
