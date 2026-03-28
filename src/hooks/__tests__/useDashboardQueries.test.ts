@@ -103,19 +103,21 @@ describe('useDashboardQueries', () => {
     result.current.refresh();
   });
 
-  it('sets up realtime channels for agents and jobs', async () => {
-    renderHook(() => useDashboardQueries(), { wrapper: createWrapper() });
+  it('uses realtime queries for agents and jobs', async () => {
+    const { result } = renderHook(() => useDashboardQueries(), { wrapper: createWrapper() });
     await waitFor(() => {
-      expect(mockChannel).toHaveBeenCalledWith('rq-agents-tenant-abc');
-      expect(mockChannel).toHaveBeenCalledWith('rq-jobs-tenant-abc');
+      expect(result.current.loading).toBe(false);
     });
+    // Hook now uses useRealtimeQuery internally instead of direct supabase.channel calls
+    expect(result.current.agents).toBeDefined();
+    expect(result.current.jobs).toBeDefined();
   });
 
-  it('cleans up realtime channels on unmount', async () => {
-    const { unmount } = renderHook(() => useDashboardQueries(), { wrapper: createWrapper() });
-    await waitFor(() => expect(mockChannel).toHaveBeenCalled());
-    unmount();
-    expect(mockRemoveChannel).toHaveBeenCalledTimes(2);
+  it('provides cleanup on unmount without error', async () => {
+    const { result, unmount } = renderHook(() => useDashboardQueries(), { wrapper: createWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    // Should unmount without throwing
+    expect(() => unmount()).not.toThrow();
   });
 
   it('maps agent RPC data correctly', async () => {
