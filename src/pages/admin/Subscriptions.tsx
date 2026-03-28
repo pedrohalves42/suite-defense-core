@@ -222,7 +222,7 @@ export default function Subscriptions() {
 
             {/* Billing Period Display */}
             {(() => {
-              const sub = subscription as Record<string, unknown> | undefined;
+              const sub = subscription as unknown as Record<string, unknown> | undefined;
               const billingPeriod = sub?.billing_period as string | undefined;
               if (!billingPeriod || billingPeriod === 'monthly') return null;
               return (
@@ -241,7 +241,7 @@ export default function Subscriptions() {
 
             {/* Discount Applied */}
             {(() => {
-              const sub = subscription as Record<string, unknown> | undefined;
+              const sub = subscription as unknown as Record<string, unknown> | undefined;
               const discountPct = sub?.discount_pct as number | undefined;
               if (!discountPct || discountPct <= 0) return null;
               return (

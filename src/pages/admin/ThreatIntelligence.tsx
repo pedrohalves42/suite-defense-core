@@ -127,7 +127,7 @@ export default function ThreatIntelligence() {
     baselineFeeds.push({
       id: group.ids[0],
       cveId: v.check_key || key,
-      severity: v.severity || 'medium',
+      severity: (v.severity || 'medium') as ThreatFeed['severity'],
       cvssScore: severityMap[v.severity] || 5.0,
       description: v.title || v.description || '',
       publishedAt: v.first_seen_at || v.last_seen_at,
@@ -155,7 +155,7 @@ export default function ThreatIntelligence() {
       acc.push({
         id: v.id,
         cveId: v.cve_id,
-        severity: v.severity || 'medium',
+        severity: (v.severity || 'medium') as ThreatFeed['severity'],
         cvssScore: v.cvss_score || 0,
         description: `Vulnerabilidade detectada em ${v.software_name}`,
         publishedAt: v.detected_at,

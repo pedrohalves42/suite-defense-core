@@ -106,7 +106,7 @@ function getRiskInfo(score: number) {
 export default function SecurityGraph() {
   const { tenant } = useTenant();
   const [searchTerm, setSearchTerm] = useState("");
-  type GraphNode = { id: string; tenant_id: string; node_type: string; node_value: string; label: string; risk_score: number; first_seen_at: string; last_seen_at: string; metadata: Record<string, unknown> | null };
+  type GraphNode = typeof nodes[number];
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ danger: true, warning: true });
   const queryClient = useQueryClient();
@@ -414,7 +414,7 @@ export default function SecurityGraph() {
                                   </p>
                                   <p className="text-[11px] text-muted-foreground">
                                     {(() => {
-                                      const meta = node.metadata as Record<string, unknown> | null;
+                                     const meta = (node.metadata ?? {}) as Record<string, string>;
                                       const src = meta?.source;
                                       if (src && sourceExplanations[src]) {
                                         return sourceExplanations[src].name;
@@ -488,7 +488,7 @@ export default function SecurityGraph() {
 
                   {/* WHY it's dangerous — the key missing info */}
                   {(() => {
-                    const meta = selectedNode.metadata as Record<string, unknown> | null;
+                    const meta = (selectedNode.metadata ?? {}) as Record<string, string>;
                     const src = meta?.source;
                     const sourceInfo = src ? sourceExplanations[src] : null;
                     if (!sourceInfo && selectedNode.risk_score < 60) return null;
