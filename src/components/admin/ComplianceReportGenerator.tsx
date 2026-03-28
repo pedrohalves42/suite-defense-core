@@ -976,7 +976,7 @@ export function ComplianceReportGenerator() {
                         ));
                       })()}
                     </div>
-                  )}
+                  )})()}
 
                   {/* Next Steps */}
                   <Separator className="my-4" />
