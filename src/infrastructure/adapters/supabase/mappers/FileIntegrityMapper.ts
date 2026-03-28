@@ -3,7 +3,7 @@ import { AgentId } from '@/domain/value-objects/AgentId';
 import { TenantId } from '@/domain/value-objects/TenantId';
 
 export class FileIntegrityMapper {
-  static toDomain(row: Record<string, unknown>): FileIntegrityCheck {
+  static toDomain(row: Record<string, any>): FileIntegrityCheck {
     return FileIntegrityCheck.reconstitute({
       id: row.id as string,
       agentId: AgentId.create(row.agent_id as string).value,

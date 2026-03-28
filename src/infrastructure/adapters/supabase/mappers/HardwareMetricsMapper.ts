@@ -6,7 +6,7 @@ import { TenantId } from '../../../../domain/value-objects/TenantId';
  * Maps between HardwareMetrics domain entity and Supabase database rows.
  */
 export class HardwareMetricsMapper {
-  static toDomain(row: Record<string, unknown>): HardwareMetrics {
+  static toDomain(row: Record<string, any>): HardwareMetrics {
     const cpu = CpuMetrics.create({
       usagePercent: row.cpu_usage_percent ?? 0,
       cores: row.cpu_cores ?? 1,
