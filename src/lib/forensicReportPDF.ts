@@ -159,7 +159,7 @@ async function fetchForensicData(agentId: string): Promise<ForensicData> {
     .order('created_at', { ascending: false })
     .limit(20);
 
-  const alerts = ((alertsRaw || []) as any[]).map((a: Record<string, unknown>) => ({
+  const alerts = ((alertsRaw || []) as any[]).map((a: any) => ({
     type: a.alert_type, severity: a.severity,
     title: a.title, message: a.message, created_at: a.created_at,
   }));
