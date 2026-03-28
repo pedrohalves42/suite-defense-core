@@ -68,13 +68,12 @@ export function usePipelineHealth(
   }
 ) {
   const enabled = opts?.enabled ?? true;
-  const refetchIntervalMs = opts?.refetchIntervalMs ?? 300000;
+  const adaptiveInterval = useAdaptivePolling(opts?.refetchIntervalMs ?? 300000);
 
   return useQuery({
     queryKey: ['pipeline-health', tenantId],
     enabled: enabled && !!tenantId,
-    refetchInterval: refetchIntervalMs,
-    refetchIntervalInBackground: false,
+    refetchInterval: adaptiveInterval,
     staleTime: 30000,
     queryFn: async (): Promise<PipelineHealth> => {
       if (!tenantId) throw new Error('tenantId is required');
