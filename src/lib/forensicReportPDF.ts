@@ -173,7 +173,7 @@ async function fetchForensicData(agentId: string): Promise<ForensicData> {
     .limit(50);
 
   const domainsMap = new Map<string, boolean>();
-  for (const d of (domainsRaw || []) as unknown[]) {
+  for (const d of (domainsRaw || []) as Array<Record<string, unknown>>) {
     if (d.domain && !domainsMap.has(d.domain)) {
       domainsMap.set(d.domain, d.is_blocked === true);
     }

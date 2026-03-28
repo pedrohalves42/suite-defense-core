@@ -70,7 +70,7 @@ export class PersistentDomainEventPublisher implements DomainEventDispatcher {
 
   private extractTenantId(event: DomainEvent): string | null {
     const e = event as unknown as Record<string, unknown>;
-    if (e.tenantId?.value) return e.tenantId.value;
+    if ((e.tenantId as Record<string, unknown>)?.value) return String((e.tenantId as Record<string, unknown>).value);
     if (typeof e.tenantId === 'string') return e.tenantId;
     return null;
   }
