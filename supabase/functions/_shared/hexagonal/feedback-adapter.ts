@@ -29,31 +29,33 @@ export class SupabaseFeedbackAdapter implements FeedbackAggregationPort {
       if (error || !data || data.length === 0) return null;
 
       // Filter by function name from the joined insight
-      const relevant = data.filter((d: any) => {
-        const fn = d.ai_insights?.source_function || '';
+      const relevant = data.filter((d: Record<string, unknown>) => {
+        const insights = d.ai_insights as Record<string, unknown> | null;
+        const fn = (insights?.source_function as string) || '';
         return fn.includes(functionName) || functionName === '*';
       });
 
       if (relevant.length === 0) return null;
 
-      const ratings = relevant.map((d: any) => d.rating || 3);
+      const ratings = relevant.map((d: Record<string, unknown>) => (d.rating as number) || 3);
       const avgRating = ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length;
       const positiveCount = ratings.filter((r: number) => r >= 4).length;
       const negativeCount = ratings.filter((r: number) => r <= 2).length;
 
       // Extract issues from negative feedback comments
       const issues = relevant
-        .filter((d: any) => (d.rating || 3) <= 2 && d.comment)
-        .map((d: any) => d.comment as string)
+        .filter((d: Record<string, unknown>) => ((d.rating as number) || 3) <= 2 && d.comment)
+        .map((d: Record<string, unknown>) => d.comment as string)
         .slice(0, 5);
 
       // Find best/worst provider
       const providerRatings: Record<string, number[]> = {};
-      for (const d of relevant as any[]) {
-        const provider = d.ai_insights?.provider;
+      for (const d of relevant) {
+        const insights = d.ai_insights as Record<string, unknown> | null;
+        const provider = insights?.provider as string | undefined;
         if (provider) {
           if (!providerRatings[provider]) providerRatings[provider] = [];
-          providerRatings[provider].push(d.rating || 3);
+          providerRatings[provider].push((d.rating as number) || 3);
         }
       }
 
@@ -98,10 +100,11 @@ export class SupabaseFeedbackAdapter implements FeedbackAggregationPort {
       if (error || !data) return [];
 
       const byProvider: Record<string, number[]> = {};
-      for (const d of data as any[]) {
-        const provider = d.ai_insights?.provider || 'unknown';
+      for (const d of data) {
+        const insights = d.ai_insights as Record<string, unknown> | null;
+        const provider = (insights?.provider as string) || 'unknown';
         if (!byProvider[provider]) byProvider[provider] = [];
-        byProvider[provider].push(d.rating || 3);
+        byProvider[provider].push((d.rating as number) || 3);
       }
 
       return Object.entries(byProvider).map(([provider, ratings]) => ({

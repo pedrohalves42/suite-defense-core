@@ -78,7 +78,7 @@ export class ProcessHeartbeatUseCase {
     }
 
     // 2. Persist system metrics if present
-    if (command.systemMetrics && typeof command.systemMetrics === 'object' && !(command.systemMetrics as any).error) {
+    if (command.systemMetrics && typeof command.systemMetrics === 'object' && !((command.systemMetrics as Record<string, unknown>).error)) {
       await this.persistMetrics(command.agentId, command.tenantId, command.systemMetrics);
     }
 

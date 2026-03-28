@@ -118,7 +118,7 @@ export class ProcessAgentUpdatesUseCase {
     let outdatedAgents: OutdatedAgentInfo[];
     try {
       outdatedAgents = await this.versionQuery.findOutdatedAgents(
-        platform as any,
+        platform as Platform,
         latestVersion,
       );
     } catch (err) {
