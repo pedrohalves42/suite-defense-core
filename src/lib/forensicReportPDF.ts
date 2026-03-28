@@ -87,15 +87,15 @@ async function fetchForensicData(agentId: string): Promise<ForensicData> {
     .limit(5);
 
   const latestSnapshot = processRows?.[0];
-  const processes: ProcessEntry[] = ((latestSnapshot?.processes as Array<Record<string, unknown>>) || []).map((p: Record<string, unknown>) => ({
+  const processes: ProcessEntry[] = ((latestSnapshot?.processes as any[]) || []).map((p: any) => ({
     pid: p.pid, name: p.name, cpu_percent: p.cpu_percent,
     memory_mb: p.memory_mb, user: p.user, command_line: p.command_line,
   }));
 
   // Collect all suspicious process names from recent snapshots
   const suspiciousProcesses: string[][] = (processRows || [])
-    .filter((r: Record<string, unknown>) => r.suspicious_processes && (r.suspicious_processes as string[]).length > 0)
-    .map((r: Record<string, unknown>) => [
+    .filter(( r: any) => r.suspicious_processes && (r.suspicious_processes as string[]).length > 0)
+    .map(( r: any) => [
       new Date(r.collected_at).toLocaleString('pt-BR'),
       ...(r.suspicious_processes as string[]),
     ]);
@@ -109,7 +109,7 @@ async function fetchForensicData(agentId: string): Promise<ForensicData> {
     .order('received_at', { ascending: false })
     .limit(500);
 
-  const networkEvents: NetworkEvent[] = ((netRaw || []) as Array<Record<string, unknown>>).map((r: Record<string, unknown>) => ({
+  const networkEvents: NetworkEvent[] = ((netRaw || []) as any[]).map(( r: any) => ({
     remote_address: r.payload?.remote_address || '',
     remote_port: Number(r.payload?.remote_port) || 0,
     process_name: r.payload?.process_name || '',
@@ -144,7 +144,7 @@ async function fetchForensicData(agentId: string): Promise<ForensicData> {
     .order('received_at', { ascending: false })
     .limit(50);
 
-  const fileEvents: FileEvent[] = ((fileRaw || []) as Array<Record<string, unknown>>).map((r: Record<string, unknown>) => ({
+  const fileEvents: FileEvent[] = ((fileRaw || []) as any[]).map(( r: any) => ({
     file_path: r.payload?.file_path || '',
     event_type: r.payload?.event_type || '',
     process_name: r.payload?.process_name || undefined,
@@ -159,7 +159,7 @@ async function fetchForensicData(agentId: string): Promise<ForensicData> {
     .order('created_at', { ascending: false })
     .limit(20);
 
-  const alerts = ((alertsRaw || []) as Array<Record<string, unknown>>).map((a: Record<string, unknown>) => ({
+  const alerts = ((alertsRaw || []) as any[]).map((a: Record<string, unknown>) => ({
     type: a.alert_type, severity: a.severity,
     title: a.title, message: a.message, created_at: a.created_at,
   }));
@@ -173,7 +173,7 @@ async function fetchForensicData(agentId: string): Promise<ForensicData> {
     .limit(50);
 
   const domainsMap = new Map<string, boolean>();
-  for (const d of (domainsRaw || []) as Array<Record<string, unknown>>) {
+  for (const d of (domainsRaw || []) as any[]) {
     if (d.domain && !domainsMap.has(d.domain)) {
       domainsMap.set(d.domain, d.is_blocked === true);
     }
@@ -399,7 +399,7 @@ export async function generateForensicReportPDF(agentIds: string[]): Promise<voi
         styles: { fontSize: 7, cellPadding: 1.5 },
         headStyles: { fillColor: [59, 130, 246], textColor: 255 },
         margin: { left: 14, right: 14 },
-        didParseCell: (hookData: Record<string, unknown>) => {
+        didParseCell: (hookData: any) => {
           if (hookData.column.index === 3 && hookData.section === 'body') {
             const val = hookData.cell.raw;
             if (val === 'Atenção') hookData.cell.styles.textColor = [220, 20, 60];
@@ -498,7 +498,7 @@ export async function generateForensicReportPDF(agentIds: string[]): Promise<voi
         styles: { fontSize: 7, cellPadding: 1.5 },
         headStyles: { fillColor: [220, 38, 38], textColor: 255 },
         margin: { left: 14, right: 14 },
-        didParseCell: (hookData: Record<string, unknown>) => {
+        didParseCell: (hookData: any) => {
           if (hookData.column.index === 1 && hookData.section === 'body') {
             const val = String(hookData.cell.raw);
             if (val === 'CRITICAL') hookData.cell.styles.textColor = [220, 20, 60];
@@ -509,7 +509,7 @@ export async function generateForensicReportPDF(agentIds: string[]): Promise<voi
     }
 
     // Footer
-    const totalPages = doc.internal.getNumberOfPages();
+    const totalPages = (doc as any).internal.getNumberOfPages();
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
       doc.setFontSize(7);

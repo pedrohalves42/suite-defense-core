@@ -69,7 +69,7 @@ const AgentMonitoring = () => {
       if (error) throw error;
       // RPC retorna jsonb objects com nomes de campos corretos, ordenar por enrolled_at
       return ((data || []) as Array<Record<string, unknown>>)
-        .map((agent: Record<string, unknown>) => ({
+        .map((agent: any) => ({
           id: agent.id,
           agent_name: agent.agent_name,
           status: agent.status,
@@ -157,7 +157,7 @@ const AgentMonitoring = () => {
       
       if (error) throw error;
       // RPC retorna jsonb objects com nomes de campos corretos
-      return (data || []).map((agent: Record<string, unknown>) => ({
+      return (data || []).map((agent: any) => ({
         agent_name: agent.agent_name,
         last_heartbeat: agent.last_heartbeat,
         enrolled_at: agent.enrolled_at,
