@@ -18,8 +18,8 @@ import type {
 // ── Detection Events ──
 
 export function useDetectionEvents(options?: {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   agentId?: string; status?: string; limit?: number }) {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant();
   const limit = options?.limit ?? 100;
 

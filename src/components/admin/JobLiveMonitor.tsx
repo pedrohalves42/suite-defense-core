@@ -118,7 +118,6 @@ function getJobTypeLabel(type: string): string {
 }
 
 export function JobLiveMonitor({ 
-  const adaptiveInterval = useAdaptivePolling(300000);
   className, 
   maxJobs = 10, 
   showSummary = true,
