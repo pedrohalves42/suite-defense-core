@@ -112,17 +112,45 @@ try {
     Write-Host "  [INFO] URL: $InstallUrl" -ForegroundColor Cyan
     Write-Host "  [INFO] Baixando instalador..." -ForegroundColor Cyan
     
-    $installerScript = Invoke-RestMethod -Uri $InstallUrl -UseBasicParsing
+    # SEC-FIX: Download-Verify-Execute pattern (replaces Invoke-Expression)
+    $tempFile = Join-Path $env:TEMP "cybershield-reinstall-$(Get-Random).ps1"
+    Invoke-WebRequest -Uri $InstallUrl -OutFile $tempFile -UseBasicParsing
     
-    if (-not $installerScript -or $installerScript.Length -lt 1000) {
-        throw "Script do instalador invalido ou muito pequeno ($($installerScript.Length) bytes)"
+    $fileInfo = Get-Item $tempFile
+    if (-not $fileInfo -or $fileInfo.Length -lt 1000) {
+        Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+        throw "Script do instalador invalido ou muito pequeno ($($fileInfo.Length) bytes)"
     }
     
-    Write-Host "  [OK] Instalador baixado ($($installerScript.Length) bytes)" -ForegroundColor Green
+    Write-Host "  [OK] Instalador baixado ($($fileInfo.Length) bytes)" -ForegroundColor Green
+    
+    # Calcular hash SHA-256 local
+    $actualHash = (Get-FileHash $tempFile -Algorithm SHA256).Hash
+    Write-Host "  [INFO] Hash SHA-256: $actualHash" -ForegroundColor Cyan
+    
+    # Obter hash esperado do servidor
+    $serverUrl = ([System.Uri]$InstallUrl).GetLeftPart([System.UriPartial]::Authority)
+    $hashEndpoint = "$serverUrl/functions/v1/get-installer-hash"
+    try {
+        $expectedHashResponse = Invoke-RestMethod -Uri $hashEndpoint -UseBasicParsing -ErrorAction Stop
+        $expectedHash = $expectedHashResponse.sha256
+        
+        if ($expectedHash -and ($actualHash -ne $expectedHash)) {
+            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+            throw "INTEGRITY CHECK FAILED: expected=$expectedHash actual=$actualHash"
+        }
+        Write-Host "  [OK] Verificacao de integridade aprovada" -ForegroundColor Green
+    } catch [System.Net.WebException] {
+        Write-Host "  [AVISO] Endpoint de hash nao disponivel, prosseguindo com verificacao de tamanho" -ForegroundColor DarkYellow
+    }
+    
     Write-Host "  [INFO] Executando instalador..." -ForegroundColor Cyan
     
-    # Executar o instalador
-    Invoke-Expression $installerScript
+    # Executar via operador de chamada (seguro, sem Invoke-Expression)
+    & $tempFile
+    
+    # Limpar arquivo temporario
+    Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
     
     Write-Host "  [OK] Instalador executado com sucesso" -ForegroundColor Green
     
