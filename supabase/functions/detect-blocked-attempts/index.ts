@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
       setTimeout(() => reject(new Error('RPC timeout after 20s')), timeoutMs)
     );
 
-    const { data, error } = await Promise.race([rpcPromise, timeoutPromise]) as any;
+    const { data, error } = await Promise.race([rpcPromise, timeoutPromise]) as { data: unknown; error: unknown };
 
     if (error) {
       const isTimeout = error.code === '57014' || error.message?.includes('timeout');

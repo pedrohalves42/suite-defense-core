@@ -117,7 +117,7 @@ serve(async (req) => {
       );
     }
 
-    const agent = agentToken.agents as any;
+    const agent = agentToken.agents as Record<string, unknown>;
     
     // Verify HMAC signature — REQUIRED for data integrity
     const hmacResult = await verifyHmacSignature(
@@ -284,7 +284,7 @@ serve(async (req) => {
         .maybeSingle();
 
       if (adminRole) {
-        const profiles = adminRole.profiles as any;
+        const profiles = adminRole.profiles as Record<string, unknown>;
         logger.info(`[${requestId}] Admin found for notification`, {
           adminEmail: profiles?.email,
         });

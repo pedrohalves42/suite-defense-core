@@ -483,10 +483,10 @@ Deno.serve(async (req) => {
       // Guard contra limpeza prematura da mesma versão: a string de versão sozinha
       // não prova que o novo payload/script realmente entrou em execução.
       const currentVersion = agentVersion || updateData.agent_version
-      const forceTriggeredAt = (forceCheck as any)?.force_update_at
+      const forceTriggeredAt = (forceCheck as Record<string, unknown>)?.force_update_at
       const currentNorm = normalizeVersion(currentVersion)
       const targetNorm = normalizeVersion(effectiveForceVersion)
-      const lastForcedUpdateApplied = (forceCheck as any)?.last_forced_update_applied
+      const lastForcedUpdateApplied = (forceCheck as Record<string, unknown>)?.last_forced_update_applied
       const forceTriggeredAtMs = forceTriggeredAt ? new Date(forceTriggeredAt).getTime() : null
       const lastAppliedMs = lastForcedUpdateApplied ? new Date(lastForcedUpdateApplied).getTime() : null
       const sameVersionReported = !!currentNorm && !!targetNorm && currentNorm === targetNorm
@@ -672,7 +672,7 @@ Deno.serve(async (req) => {
                   skip_firewall_remediation: agent.skip_firewall_remediation || false,
                   reason: effectiveForceReason || 'Forced update via backend',
                   force_update_reason: effectiveForceReason || 'Forced update via backend',
-                  override_safe_mode: !!(forceCheck as any)?.force_update_override_safe_mode && (!(forceCheck as any)?.force_update_override_safe_mode_expires_at || new Date((forceCheck as Record<string, unknown>).force_update_override_safe_mode_expires_at) > new Date()),
+                  override_safe_mode: !!(forceCheck as Record<string, unknown>)?.force_update_override_safe_mode && (!(forceCheck as Record<string, unknown>)?.force_update_override_safe_mode_expires_at || new Date((forceCheck as Record<string, unknown>).force_update_override_safe_mode_expires_at) > new Date()),
                   // CONFIRMATION METADATA (closed-loop)
                   confirm_url: `${supabaseUrl}/functions/v1/confirm-force-update`,
                   confirm_method: 'POST',

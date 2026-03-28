@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
       .eq('id', tenant_id)
       .maybeSingle();
 
-    const lang = (tenantData?.settings as any)?.language || 'pt-BR';
+    const lang = ((tenantData?.settings as Record<string, unknown>)?.language as string) || 'pt-BR';
     const t = getStrings(lang);
 
     const resend = new Resend(Deno.env.get("RESEND_API_KEY"));

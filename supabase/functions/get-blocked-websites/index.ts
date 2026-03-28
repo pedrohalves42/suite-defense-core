@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const agent = tokenData.agents as any;
+    const agent = tokenData.agents as Record<string, unknown>;
 
     logger.info(`[get-blocked-websites] Agent authenticated: ${agent.agent_name}, tenant: ${agent.tenant_id}`);
 
@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
     // From security policies (filter by tenant)
     if (policyRules && !rulesError) {
       for (const rule of policyRules) {
-        const policy = rule.security_policies as any;
+        const policy = rule.security_policies as Record<string, unknown>;
         if (policy?.tenant_id === agent.tenant_id && policy?.is_active && rule.target) {
           blockedWebsites.push({
             domain_pattern: rule.target,

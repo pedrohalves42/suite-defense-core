@@ -349,7 +349,7 @@ async function executeAction(
   triggerData: any,
   agents: Array<Record<string, unknown>>
 ): Promise<{ status: string; result: any }> {
-  const actionConfig = rule.action_config as any;
+  const actionConfig = rule.action_config as Record<string, unknown>;
 
   try {
     if (rule.action_type === 'send_alert' || rule.action_type === 'create_alert') {
@@ -465,7 +465,7 @@ interface TriggerCandidate {
 async function evaluateMetricThreshold(
   supabase: any, rule: any, tenantId: string, agents: Array<Record<string, unknown>>, latestMetrics: Map<string, any>
 ): Promise<TriggerCandidate[]> {
-  const conditions = rule.trigger_conditions as any;
+  const conditions = rule.trigger_conditions as Record<string, unknown>;
   const candidates: TriggerCandidate[] = [];
 
   for (const [agentId, m] of latestMetrics) {
@@ -503,7 +503,7 @@ async function evaluateMetricThreshold(
 async function evaluateProcessAnomaly(
   supabase: any, rule: any, tenantId: string, agents: Array<Record<string, unknown>>
 ): Promise<TriggerCandidate[]> {
-  const conditions = rule.trigger_conditions as any;
+  const conditions = rule.trigger_conditions as Record<string, unknown>;
   const candidates: TriggerCandidate[] = [];
   const agentIds = agents.map((a: Record<string, unknown>) => a.id);
 
@@ -563,7 +563,7 @@ async function evaluateProcessAnomaly(
 async function evaluateAgentStatus(
   supabase: any, rule: any, tenantId: string, agents: Array<Record<string, unknown>>
 ): Promise<TriggerCandidate[]> {
-  const conditions = rule.trigger_conditions as any;
+  const conditions = rule.trigger_conditions as Record<string, unknown>;
   const candidates: TriggerCandidate[] = [];
   const eventType = conditions.eventType || conditions.event_type || 'agent_offline';
   const durationMinutes = conditions.duration_minutes || 10;
@@ -605,7 +605,7 @@ async function evaluateAgentStatus(
 async function evaluateSecurityCheck(
   supabase: any, rule: any, tenantId: string, agents: Array<Record<string, unknown>>
 ): Promise<TriggerCandidate[]> {
-  const conditions = rule.trigger_conditions as any;
+  const conditions = rule.trigger_conditions as Record<string, unknown>;
   const candidates: TriggerCandidate[] = [];
   const checkType = conditions.check;
   const agentIds = agents.map((a: Record<string, unknown>) => a.id);

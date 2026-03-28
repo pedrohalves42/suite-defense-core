@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const agent = tokenData.agents as any;
+    const agent = tokenData.agents as Record<string, unknown>;
 
     // 3. Verificar HMAC
     const hmacResult = await verifyHmacSignature(

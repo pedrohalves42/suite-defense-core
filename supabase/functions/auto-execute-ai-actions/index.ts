@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
       result.actions_processed++
       
       const config = configMap.get(action.action_type)
-      const insight = action.ai_insights as any
+      const insight = action.ai_insights as Record<string, unknown>
       
       // Skip se não está na whitelist ou está desabilitado
       if (!config || !config.is_enabled) {
@@ -273,7 +273,7 @@ Deno.serve(async (req) => {
         
         switch (action.action_type) {
           case 'create_system_alert': {
-            const payload = action.action_payload as any
+            const payload = action.action_payload as Record<string, unknown>
             // Mapear para tipos de alerta válidos
             const validAlertTypes = [
               'agent_offline', 'high_cpu', 'high_memory', 'high_disk', 

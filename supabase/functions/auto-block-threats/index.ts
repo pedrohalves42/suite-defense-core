@@ -53,7 +53,7 @@ serveTenant(async (_req, ctx) => {
 
   // Insert into blocked_websites
   const insertData = toBlock.map((node: Record<string, unknown>) => {
-    const meta = node.metadata as any;
+    const meta = node.metadata as Record<string, unknown>;
     const sourceInfo = meta?.source || 'threat_intelligence';
     return {
       tenant_id: tenantId,

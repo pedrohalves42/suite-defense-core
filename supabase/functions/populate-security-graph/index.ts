@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
       const agentNid = agentNodeIds[ev.agent_id];
 
       // Extract IPs, domains, hashes from event_data
-      const data = ev.event_data as any;
+      const data = ev.event_data as Record<string, unknown>;
       if (!data) continue;
 
       const jsonStr = JSON.stringify(data);
