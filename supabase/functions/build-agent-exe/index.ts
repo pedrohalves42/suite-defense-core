@@ -13,6 +13,13 @@ import { WINDOWS_INSTALLER_TEMPLATE } from '../_shared/installer-template.ts';
 import { createErrorResponse, ErrorCode } from '../_shared/error-handler.ts';
 import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
 import { BuildTelemetry } from '../_shared/build-telemetry.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const BuildRequestSchema = z.object({
+  agent_name: z.string().min(1, 'agent_name is required').max(255),
+  enrollment_key: z.string().min(1, 'enrollment_key is required').max(255),
+});
+import { BuildTelemetry } from '../_shared/build-telemetry.ts';
 
 const SUPABASE_URL = requireEnv('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
