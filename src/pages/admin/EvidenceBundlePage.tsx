@@ -38,7 +38,7 @@ const EVIDENCE_OPTIONS = [
   { key: 'auditLogs', label: 'Logs de Auditoria', icon: '📝', description: 'Trilha de auditoria imutável completa' },
 ] as const;
 
-function generatePDF(bundleData: any, result: ExportResult, logoDataUrl?: string | null) {
+function generatePDF(bundleData: Record<string, unknown>, result: ExportResult, logoDataUrl?: string | null) {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -67,7 +67,7 @@ function generatePDF(bundleData: any, result: ExportResult, logoDataUrl?: string
   doc.text('Informações do Bundle', 20, y);
   y += 8;
 
-  const metadata = bundleData.metadata as any || {};
+  const metadata = (bundleData.metadata ?? {}) as Record<string, unknown>;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
 
@@ -119,21 +119,22 @@ function generatePDF(bundleData: any, result: ExportResult, logoDataUrl?: string
   y += 12;
 
   // Evidence summary
-  const evidence = bundleData.evidence as Record<string, unknown[]> || {};
+  const evidence = (bundleData.evidence ?? {}) as Record<string, unknown[]>;
 
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('Resumo das Evidências', 20, y);
   y += 8;
 
+  const countItems = (key: string): string => String(Array.isArray(evidence[key]) ? evidence[key].length : 0);
   const summaryRows: string[][] = [];
-  if (evidence.securityEvents) summaryRows.push(['Eventos de Segurança', String((evidence.securityEvents as any[]).length)]);
-  if (evidence.jobs) summaryRows.push(['Jobs Executados', String((evidence.jobs as any[]).length)]);
-  if (evidence.signedExecutions) summaryRows.push(['Execuções Assinadas', String((evidence.signedExecutions as any[]).length)]);
+  if (evidence.securityEvents) summaryRows.push(['Eventos de Segurança', countItems('securityEvents')]);
+  if (evidence.jobs) summaryRows.push(['Jobs Executados', countItems('jobs')]);
+  if (evidence.signedExecutions) summaryRows.push(['Execuções Assinadas', countItems('signedExecutions')]);
   if (evidence.hashChain) summaryRows.push(['Cadeia de Hash', evidence.hashChain ? '1 (ativa)' : '0']);
-  if (evidence.riskDecisions) summaryRows.push(['Decisões de Risco', String((evidence.riskDecisions as any[]).length)]);
-  if (evidence.playbookExecutions) summaryRows.push(['Execuções de Playbook', String((evidence.playbookExecutions as any[]).length)]);
-  if (evidence.auditLogs) summaryRows.push(['Logs de Auditoria', String((evidence.auditLogs as any[]).length)]);
+  if (evidence.riskDecisions) summaryRows.push(['Decisões de Risco', countItems('riskDecisions')]);
+  if (evidence.playbookExecutions) summaryRows.push(['Execuções de Playbook', countItems('playbookExecutions')]);
+  if (evidence.auditLogs) summaryRows.push(['Logs de Auditoria', countItems('auditLogs')]);
 
   if (summaryRows.length > 0) {
     autoTable(doc, {
@@ -173,7 +174,7 @@ interface ExportResult {
   verificationUrl: string;
   recordCount: number;
   sizeBytes: number;
-  bundle?: any;
+  bundle?: Record<string, unknown>;
 }
 
 export default function EvidenceBundlePage() {
@@ -211,7 +212,7 @@ export default function EvidenceBundlePage() {
         verificationUrl: result.verificationUrl,
         recordCount: result.recordCount,
         sizeBytes: result.sizeBytes,
-        bundle: result.bundle as any,
+        bundle: result.bundle as Record<string, unknown> | undefined,
       });
     } finally {
       setIsExporting(false);

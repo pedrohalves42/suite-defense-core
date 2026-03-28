@@ -106,7 +106,8 @@ function getRiskInfo(score: number) {
 export default function SecurityGraph() {
   const { tenant } = useTenant();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedNode, setSelectedNode] = useState<any>(null);
+  type GraphNode = { id: string; tenant_id: string; node_type: string; node_value: string; label: string; risk_score: number; first_seen_at: string; last_seen_at: string; metadata: Record<string, unknown> | null };
+  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ danger: true, warning: true });
   const queryClient = useQueryClient();
 
@@ -179,7 +180,7 @@ export default function SecurityGraph() {
   const filteredNodes = useMemo(() => {
     if (!searchTerm) return nodes;
     const term = searchTerm.toLowerCase();
-    return nodes.filter((n: any) =>
+    return nodes.filter((n) =>
       (n.label || "").toLowerCase().includes(term) ||
       (n.node_value || "").toLowerCase().includes(term)
     );
@@ -188,12 +189,12 @@ export default function SecurityGraph() {
   // Group by risk level
   const riskGroups = useMemo(() => {
     const groups = {
-      danger: [] as any[],
-      warning: [] as any[],
-      caution: [] as any[],
-      safe: [] as any[],
+      danger: [] as typeof nodes,
+      warning: [] as typeof nodes,
+      caution: [] as typeof nodes,
+      safe: [] as typeof nodes,
     };
-    filteredNodes.forEach((n: any) => {
+    filteredNodes.forEach((n) => {
       const risk = getRiskInfo(n.risk_score);
       groups[risk.level].push(n);
     });
@@ -203,11 +204,11 @@ export default function SecurityGraph() {
   const connectedNodes = useMemo(() => {
     if (!selectedNode) return [];
     const connectedIds = new Set<string>();
-    edges.forEach((e: any) => {
+    edges.forEach((e) => {
       if (e.source_node_id === selectedNode.id) connectedIds.add(e.target_node_id);
       if (e.target_node_id === selectedNode.id) connectedIds.add(e.source_node_id);
     });
-    return nodes.filter((n: any) => connectedIds.has(n.id));
+    return nodes.filter((n) => connectedIds.has(n.id));
   }, [selectedNode, edges, nodes]);
 
   const dangerCount = riskGroups.danger.length;
@@ -393,7 +394,7 @@ export default function SecurityGraph() {
                     <CollapsibleContent>
                       <ScrollArea className={items.length > 8 ? "h-[360px]" : ""}>
                         <div className="divide-y divide-border/30">
-                          {items.map((node: any) => {
+                          {items.map((node) => {
                             const risk = getRiskInfo(node.risk_score);
                             const isSelected = selectedNode?.id === node.id;
                             return (
@@ -413,7 +414,7 @@ export default function SecurityGraph() {
                                   </p>
                                   <p className="text-[11px] text-muted-foreground">
                                     {(() => {
-                                      const meta = node.metadata as any;
+                                      const meta = node.metadata as Record<string, unknown> | null;
                                       const src = meta?.source;
                                       if (src && sourceExplanations[src]) {
                                         return sourceExplanations[src].name;
@@ -487,7 +488,7 @@ export default function SecurityGraph() {
 
                   {/* WHY it's dangerous — the key missing info */}
                   {(() => {
-                    const meta = selectedNode.metadata as any;
+                    const meta = selectedNode.metadata as Record<string, unknown> | null;
                     const src = meta?.source;
                     const sourceInfo = src ? sourceExplanations[src] : null;
                     if (!sourceInfo && selectedNode.risk_score < 60) return null;
@@ -524,7 +525,7 @@ export default function SecurityGraph() {
                         Ligado a ({connectedNodes.length})
                       </p>
                       <div className="space-y-1 max-h-40 overflow-y-auto">
-                        {connectedNodes.map((cn: any) => {
+                        {connectedNodes.map((cn) => {
                           const cnRisk = getRiskInfo(cn.risk_score);
                           return (
                             <button
