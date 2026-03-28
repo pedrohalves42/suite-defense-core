@@ -65,7 +65,7 @@ export const useTenantBranding = () => {
       } else {
         ({ data, error } = await supabase
           .from('tenant_branding')
-          .insert(payload )
+          .insert(payload as never)
           .select()
           .single());
       }
