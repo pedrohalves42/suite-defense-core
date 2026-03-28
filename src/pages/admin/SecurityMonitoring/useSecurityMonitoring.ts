@@ -255,7 +255,8 @@ export function useSecurityMonitoring() {
         policy_violation: 'enforce_policy',
       };
       const jobType = jobTypeMap[event.alertType || ''] || 'security_remediation';
-      const { error } = await (supabase as never).from('jobs').insert({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any).from('jobs').insert({
         tenant_id: tenant.id,
         agent_name: event.agentName,
         type: jobType,
