@@ -1,6 +1,7 @@
 import type { RpcAgentRow } from '@/types/rpc';
 import type { QueryClient } from '@tanstack/react-query';
 import type { NavigateFunction } from 'react-router-dom';
+import type { Json } from '@/integrations/supabase/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DiagnosticTestRunner } from '@/components/admin/DiagnosticTestRunner';
