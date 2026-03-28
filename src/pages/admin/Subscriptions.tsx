@@ -221,28 +221,38 @@ export default function Subscriptions() {
             )}
 
             {/* Billing Period Display */}
-            {(subscription as any)?.billing_period && (subscription as any)?.billing_period !== 'monthly' && (
-              <div>
-                <p className="text-sm text-muted-foreground">Período</p>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="text-sm">
-                    {(subscription as any).billing_period === '6m' && '6 meses'}
-                    {(subscription as any).billing_period === '12m' && '12 meses'}
-                    {(subscription as any).billing_period === '24m' && '24 meses'}
-                  </Badge>
+            {(() => {
+              const sub = subscription as unknown as Record<string, unknown> | undefined;
+              const billingPeriod = sub?.billing_period as string | undefined;
+              if (!billingPeriod || billingPeriod === 'monthly') return null;
+              return (
+                <div>
+                  <p className="text-sm text-muted-foreground">Período</p>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-sm">
+                      {billingPeriod === '6m' && '6 meses'}
+                      {billingPeriod === '12m' && '12 meses'}
+                      {billingPeriod === '24m' && '24 meses'}
+                    </Badge>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Discount Applied */}
-            {(subscription as any)?.discount_pct > 0 && (
-              <div>
-                <p className="text-sm text-muted-foreground">Desconto Aplicado</p>
-                <Badge variant="outline" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                  -{(subscription as any).discount_pct}%
-                </Badge>
-              </div>
-            )}
+            {(() => {
+              const sub = subscription as unknown as Record<string, unknown> | undefined;
+              const discountPct = sub?.discount_pct as number | undefined;
+              if (!discountPct || discountPct <= 0) return null;
+              return (
+                <div>
+                  <p className="text-sm text-muted-foreground">Desconto Aplicado</p>
+                  <Badge variant="outline" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                    -{discountPct}%
+                  </Badge>
+                </div>
+              );
+            })()}
           </div>
 
           {isOnFreePlan && (
@@ -334,7 +344,7 @@ export default function Subscriptions() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {invoices.map((invoice: any) => (
+                  {invoices.map((invoice: { id: string; created: number; number: string; amount_due: number; status: string; invoice_pdf?: string }) => (
                     <TableRow key={invoice.id}>
                       <TableCell>{formatDate(invoice.created)}</TableCell>
                       <TableCell className="font-mono text-sm">{invoice.number}</TableCell>

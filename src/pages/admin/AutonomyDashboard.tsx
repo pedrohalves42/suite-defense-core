@@ -19,17 +19,20 @@ export default function AutonomyDashboard() {
   const { data: rules, isLoading: rulesLoading } = useActiveRules();
 
   // Transform rules data to match RuleStatusPanel expected format
-  const transformedRules = (rules || []).map(rule => ({
-    id: rule.id,
-    code: rule.code,
-    name: String((rule.definition as any)?.name || rule.code),
-    description: rule.description,
-    severity: String((rule.definition as any)?.severity || 'medium'),
-    risk_level: String((rule.definition as any)?.risk_level || 'low'),
-    auto_execute: Boolean((rule.definition as any)?.auto_execute),
-    is_active: rule.is_enabled,
-    created_at: rule.created_at,
-  }));
+  const transformedRules = (rules || []).map(rule => {
+    const def = rule.definition as Record<string, unknown> | null;
+    return {
+      id: rule.id,
+      code: rule.code,
+      name: String(def?.name || rule.code),
+      description: rule.description,
+      severity: String(def?.severity || 'medium'),
+      risk_level: String(def?.risk_level || 'low'),
+      auto_execute: Boolean(def?.auto_execute),
+      is_active: rule.is_enabled,
+      created_at: rule.created_at,
+    };
+  });
 
   return (
     <div className="space-y-6">

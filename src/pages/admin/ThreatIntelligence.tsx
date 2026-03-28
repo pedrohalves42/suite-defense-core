@@ -75,13 +75,13 @@ export default function ThreatIntelligence() {
         .order('last_seen_at', { ascending: false });
 
       // Get agent names for correlation
-      const agentIds = [...new Set((vulns || []).map((v: any) => v.agent_id))];
+      const agentIds = [...new Set((vulns || []).map((v) => v.agent_id))];
       const { data: agents } = await supabase
         .from('agents')
         .select('id, agent_name')
         .in('id', agentIds.length > 0 ? agentIds : ['none']);
 
-      const agentMap = new Map((agents || []).map((a: any) => [a.id, a.agent_name]));
+      const agentMap = new Map((agents || []).map((a) => [a.id, a.agent_name]));
 
       // Also get CVE-based scans from agent_vulnerability_scans
       const { data: cveScans } = await supabase
@@ -105,19 +105,19 @@ export default function ThreatIntelligence() {
   });
 
   // Generate threat feed from vuln_findings (baseline checks)
+  type VulnFinding = { id: string; agent_id: string; severity: string; check_key: string; title: string; description: string; remediation: string; first_seen_at: string; last_seen_at: string };
   const baselineFeeds: ThreatFeed[] = [];
-  const vulnsByKey = new Map<string, { ids: string[]; agents: Set<string>; finding: any }>();
+  const vulnsByKey = new Map<string, { ids: string[]; agents: Set<string>; finding: VulnFinding }>();
   
-  for (const v of (vulnData?.vulns || [])) {
-    // Group by check_key (same vuln across agents)
-    const baseKey = (v as any).check_key?.replace(/^baseline-/, '') || (v as any).title;
+  for (const v of (vulnData?.vulns || []) as VulnFinding[]) {
+    const baseKey = v.check_key?.replace(/^baseline-/, '') || v.title;
     const existing = vulnsByKey.get(baseKey);
-    const agentName = vulnData?.agentMap?.get((v as any).agent_id) || 'Desconhecido';
+    const agentName = vulnData?.agentMap?.get(v.agent_id) || 'Desconhecido';
     if (existing) {
-      existing.ids.push((v as any).id);
+      existing.ids.push(v.id);
       existing.agents.add(agentName);
     } else {
-      vulnsByKey.set(baseKey, { ids: [(v as any).id], agents: new Set([agentName]), finding: v });
+      vulnsByKey.set(baseKey, { ids: [v.id], agents: new Set([agentName]), finding: v });
     }
   }
 
@@ -127,7 +127,7 @@ export default function ThreatIntelligence() {
     baselineFeeds.push({
       id: group.ids[0],
       cveId: v.check_key || key,
-      severity: v.severity || 'medium',
+      severity: (v.severity || 'medium') as ThreatFeed['severity'],
       cvssScore: severityMap[v.severity] || 5.0,
       description: v.title || v.description || '',
       publishedAt: v.first_seen_at || v.last_seen_at,
@@ -141,9 +141,10 @@ export default function ThreatIntelligence() {
   }
 
   // Add CVE-based scans
-  const cveFeeds: ThreatFeed[] = (vulnData?.cveScans || [])
-    .filter((v: any) => v.cve_id)
-    .reduce((acc: ThreatFeed[], v: any) => {
+  type CveScan = { id: string; agent_id: string; cve_id: string; software_name: string; severity: string; cvss_score: number; remediation_status: string; detected_at: string };
+  const cveFeeds: ThreatFeed[] = ((vulnData?.cveScans || []) as CveScan[])
+    .filter((v) => v.cve_id)
+    .reduce((acc: ThreatFeed[], v) => {
       const existing = acc.find(f => f.cveId === v.cve_id);
       const agentName = vulnData?.agentMap?.get(v.agent_id) || 'Desconhecido';
       if (existing) {
@@ -154,7 +155,7 @@ export default function ThreatIntelligence() {
       acc.push({
         id: v.id,
         cveId: v.cve_id,
-        severity: v.severity || 'medium',
+        severity: (v.severity || 'medium') as ThreatFeed['severity'],
         cvssScore: v.cvss_score || 0,
         description: `Vulnerabilidade detectada em ${v.software_name}`,
         publishedAt: v.detected_at,
@@ -176,7 +177,7 @@ export default function ThreatIntelligence() {
 
   // Correlate alerts with MITRE tactics
   const mitreTactics = MITRE_TACTICS.map(tactic => {
-    const relatedAlerts = (vulnData?.alerts || []).filter((a: any) => {
+    const relatedAlerts = (vulnData?.alerts || []).filter((a) => {
       const desc = (a.message || '').toLowerCase();
       if (tactic.id === 'T1059' && (desc.includes('script') || desc.includes('powershell'))) return true;
       if (tactic.id === 'T1486' && desc.includes('ransomware')) return true;

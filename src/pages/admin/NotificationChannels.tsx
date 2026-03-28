@@ -24,7 +24,7 @@ interface NotificationChannel {
   tenant_id: string;
   channel_type: 'email' | 'telegram' | 'whatsapp' | 'webhook';
   name: string;
-  config: any;
+  config: Record<string, string>;
   is_verified: boolean;
   is_active: boolean;
   verified_at: string | null;
@@ -157,7 +157,8 @@ export default function NotificationChannels() {
       const functionName = `send-${channel.channel_type}-notification`;
       
       // Build payload matching the expected format for each channel type
-      let payload: any = {
+      const cfg = channel.config;
+      const basePayload = {
         channel_id: channel.id,
         tenant_id: tenant?.id || '',
         alert: {
@@ -167,24 +168,23 @@ export default function NotificationChannels() {
           message: 'Este é um teste de notificação. Se você recebeu esta mensagem, o canal está funcionando corretamente!',
           agent_name: 'CyberShield System',
         },
+        recipient: '',
+        config: cfg as Record<string, string>,
       };
 
       if (channel.channel_type === 'telegram') {
-        const chatId = (channel.config as any)?.chat_id || '';
-        payload.recipient = String(chatId);
-        payload.config = { 
+        const chatId = cfg?.chat_id || '';
+        basePayload.recipient = String(chatId);
+        basePayload.config = { 
           chat_id: String(chatId),
-          bot_token: (channel.config as any)?.bot_token || '',
+          bot_token: cfg?.bot_token || '',
         };
       } else if (channel.channel_type === 'email') {
-        payload.recipient = (channel.config as any)?.email || '';
-        payload.config = channel.config;
+        basePayload.recipient = cfg?.email || '';
       } else if (channel.channel_type === 'whatsapp') {
-        payload.recipient = (channel.config as any)?.phone || '';
-        payload.config = channel.config;
-      } else {
-        payload.config = channel.config;
+        basePayload.recipient = cfg?.phone || '';
       }
+      const payload = basePayload;
 
       const { data, error: fnError } = await supabase.functions.invoke(functionName, {
         body: payload,
