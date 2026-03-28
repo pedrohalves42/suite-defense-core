@@ -27,7 +27,6 @@ export const useAdminAgentReleases = () => {
     refetchInterval: adaptiveInterval,
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
-    refetchOnWindowFocus: true
   });
 
   return {
