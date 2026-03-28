@@ -21,8 +21,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { logger } from '@/lib/logger';
-import {
 import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import {
   Table,
   TableBody,
   TableCell,

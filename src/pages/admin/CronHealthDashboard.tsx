@@ -13,8 +13,8 @@ import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTenant } from "@/hooks/useTenant";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
 import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import {
   BarChart,
   Bar,
   XAxis,

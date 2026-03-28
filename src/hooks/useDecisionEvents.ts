@@ -25,8 +25,8 @@ interface UseDecisionEventsOptions {
   limit?: number;
 }
 
-export function useDecisionEvents(options: UseDecisionEventsOptions = {
-  const adaptiveInterval = useAdaptivePolling(300000);}) {
+export function useDecisionEvents(options: UseDecisionEventsOptions = {}) {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const { ruleCode, agentId, limit = 100 } = options;
 

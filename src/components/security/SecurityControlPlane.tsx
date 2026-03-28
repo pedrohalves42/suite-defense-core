@@ -31,8 +31,8 @@ import { formatBrazilDateTime } from '@/lib/date-utils';
 import { TenantClaimAlerts } from './TenantClaimAlerts';
 import { useTenant } from '@/hooks/useTenant';
 import { PipelineHealthInline } from '@/components/pipeline/PipelineHealthInline';
-import {
 import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,

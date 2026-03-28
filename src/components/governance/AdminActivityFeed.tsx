@@ -47,7 +47,8 @@ interface AuditEntry {
 }
 
 export function AdminActivityFeed({
-  const adaptiveInterval = useAdaptivePolling(300_000); limit = 20 }: { limit?: number }) {
+  limit = 20 }: { limit?: number }) {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
 
   const { data: activities, isLoading } = useQuery({
