@@ -74,11 +74,11 @@ export function PlaybookRecommendation({ execution, onExecuted }: PlaybookRecomm
 
   const playbook = execution.playbook;
   const agent = execution.agent;
-  const context = execution.trigger_context as Record<string, unknown> || {};
-  const agentInfo = context.agent_info as Record<string, unknown> || {};
+  const context = execution.trigger_context as any || {};
+  const agentInfo = context.agent_info as any || {};
 
   // ✅ CRÍTICO: Usar actions_snapshot imutável se disponível (auditabilidade)
-  const actionsSnapshot = (execution as unknown as Record<string, unknown>).actions_snapshot as PlaybookAction[] | undefined;
+  const actionsSnapshot = (execution as unknown as any).actions_snapshot as PlaybookAction[] | undefined;
   const actions = actionsSnapshot?.length 
     ? [...actionsSnapshot].sort((a, b) => a.order_index - b.order_index)
     : playbook?.actions?.sort((a, b) => a.order_index - b.order_index) || [];

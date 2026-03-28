@@ -42,7 +42,7 @@ const AgentMonitoring = () => {
 
   // Helper function - usa getAgentOnlineStatus centralizado
   const getAgentCalculatedStatus = (agent: Agent & { agent_state?: string }): 'online' | 'warning' | 'offline' | 'never_connected' => {
-    return getAgentOnlineStatus(agent as never);
+    return getAgentOnlineStatus(agent as any);
   };
 
   // Manual refresh function

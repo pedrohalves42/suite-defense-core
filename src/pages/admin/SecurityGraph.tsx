@@ -413,7 +413,7 @@ export default function SecurityGraph() {
                                   </p>
                                   <p className="text-[11px] text-muted-foreground">
                                     {(() => {
-                                      const meta = node.metadata as Record<string, unknown>;
+                                      const meta = node.metadata as any;
                                       const src = meta?.source;
                                       if (src && sourceExplanations[src]) {
                                         return sourceExplanations[src].name;
@@ -487,7 +487,7 @@ export default function SecurityGraph() {
 
                   {/* WHY it's dangerous — the key missing info */}
                   {(() => {
-                    const meta = selectedNode.metadata as Record<string, unknown>;
+                    const meta = selectedNode.metadata as any;
                     const src = meta?.source;
                     const sourceInfo = src ? sourceExplanations[src] : null;
                     if (!sourceInfo && selectedNode.risk_score < 60) return null;

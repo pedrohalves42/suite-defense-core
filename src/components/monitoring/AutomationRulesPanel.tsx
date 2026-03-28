@@ -391,9 +391,9 @@ export function AutomationRulesPanel() {
                             {rule.trigger_type === 'metric_threshold' ? (
                               <>Se {getMetricLabel(conditions.metric || '')} {conditions.operator} {conditions.value}{conditions.metric?.includes('percent') ? '%' : ''}</>
                             ) : rule.trigger_type === 'anomaly_detection' ? (
-                              <>Detecção: {(conditions as Record<string, unknown>).eventType === 'suspicious_process' ? 'Processo Suspeito' : (conditions as Record<string, unknown>).eventType || 'anomalia'} {(conditions as Record<string, unknown>).severity ? `(${(conditions as Record<string, unknown>).severity})` : ''}</>
+                              <>Detecção: {(conditions as any).eventType === 'suspicious_process' ? 'Processo Suspeito' : (conditions as any).eventType || 'anomalia'} {(conditions as any).severity ? `(${(conditions as any).severity})` : ''}</>
                             ) : rule.trigger_type === 'agent_status' ? (
-                              <>Evento: {(conditions as Record<string, unknown>).eventType === 'agent_offline' ? `Agente offline > ${(conditions as Record<string, unknown>).duration_minutes || 10}min` : (conditions as Record<string, unknown>).eventType || 'status'}</>
+                              <>Evento: {(conditions as any).eventType === 'agent_offline' ? `Agente offline > ${(conditions as any).duration_minutes || 10}min` : (conditions as any).eventType || 'status'}</>
                             ) : (
                               <>Tipo: {rule.trigger_type}</>
                             )}

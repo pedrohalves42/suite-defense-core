@@ -31,7 +31,7 @@ export const AgentTagSelector = ({ agentId }: AgentTagSelectorProps) => {
   return (
     <div className="flex flex-wrap items-center gap-1">
       {assignments?.map((a: Record<string, unknown>) => {
-        const tag = a.agent_tags as Record<string, unknown> | undefined;
+        const tag = a.agent_tags as any | undefined;
         return (
         <Badge
           key={String(a.id)}

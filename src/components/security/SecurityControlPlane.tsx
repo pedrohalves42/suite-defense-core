@@ -106,7 +106,7 @@ export function SecurityControlPlane() {
         failed_jobs_1h: jobsResult.count || 0,
         rls_failures_24h: rlsTestsResult.count || 0,
         last_rls_test: null,
-        current_system_mode: String((systemModeResult.data as Record<string, unknown>)?.mode || 'normal')
+        current_system_mode: String((systemModeResult.data as any)?.mode || 'normal')
       };
     },
     refetchInterval: 300000,

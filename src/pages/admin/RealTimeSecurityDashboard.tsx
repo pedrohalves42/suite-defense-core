@@ -237,7 +237,7 @@ export default function RealTimeSecurityDashboard() {
       return {
         id: log.id,
         type: log.attack_type || 'info',
-        severity: (log.severity as never) || 'info',
+        severity: (log.severity as any) || 'info',
         title: info.title,
         explanation: info.explanation,
         icon: info.icon,
@@ -256,7 +256,7 @@ export default function RealTimeSecurityDashboard() {
     const channel = supabase
       .channel('realtime-security-dashboard')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'security_logs', filter: `tenant_id=eq.${tenant.id}` }, (payload) => {
-        const log = payload.new as Record<string, unknown>;
+        const log = payload.new as any;
         const info = getEventInfo(log.attack_type || '');
         const details = extractFriendlyDetails(log.details);
         setEvents(prev => [{

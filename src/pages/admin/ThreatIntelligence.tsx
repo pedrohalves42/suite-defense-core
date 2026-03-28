@@ -110,14 +110,14 @@ export default function ThreatIntelligence() {
   
   for (const v of (vulnData?.vulns || [])) {
     // Group by check_key (same vuln across agents)
-    const baseKey = (v as Record<string, unknown>).check_key?.replace(/^baseline-/, '') || (v as Record<string, unknown>).title;
+    const baseKey = (v as any).check_key?.replace(/^baseline-/, '') || (v as any).title;
     const existing = vulnsByKey.get(baseKey);
-    const agentName = vulnData?.agentMap?.get((v as Record<string, unknown>).agent_id) || 'Desconhecido';
+    const agentName = vulnData?.agentMap?.get((v as any).agent_id) || 'Desconhecido';
     if (existing) {
-      existing.ids.push((v as Record<string, unknown>).id);
+      existing.ids.push((v as any).id);
       existing.agents.add(agentName);
     } else {
-      vulnsByKey.set(baseKey, { ids: [(v as Record<string, unknown>).id], agents: new Set([agentName]), finding: v });
+      vulnsByKey.set(baseKey, { ids: [(v as any).id], agents: new Set([agentName]), finding: v });
     }
   }
 

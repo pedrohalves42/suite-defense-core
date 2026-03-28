@@ -80,7 +80,7 @@ export function sanitizeForLog(obj: unknown, depth: number = 0): unknown {
 
   if (typeof obj === 'object') {
     const sanitized: any = {};
-    const entries = Object.entries(obj as Record<string, unknown>);
+    const entries = Object.entries(obj as any);
 
     for (const [key, value] of entries.slice(0, 50)) {
       if (isSensitiveKey(key)) {

@@ -218,10 +218,10 @@ export default function DNSFilter() {
                             {site.reason || '-'}
                           </TableCell>
                           <TableCell>
-                            {(site as Record<string, unknown>).agent_groups ? (
+                            {(site as any).agent_groups ? (
                               <Badge variant="outline" className="gap-1">
                                 <Users className="h-3 w-3" />
-                                {(site as Record<string, unknown>).agent_groups.name}
+                                {(site as any).agent_groups.name}
                               </Badge>
                             ) : (
                               <Badge variant="secondary">Todos</Badge>

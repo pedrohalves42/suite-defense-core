@@ -67,7 +67,7 @@ function generatePDF(bundleData: any, result: ExportResult, logoDataUrl?: string
   doc.text('Informações do Bundle', 20, y);
   y += 8;
 
-  const metadata = bundleData.metadata as Record<string, unknown> || {};
+  const metadata = bundleData.metadata as any || {};
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
 
@@ -211,7 +211,7 @@ export default function EvidenceBundlePage() {
         verificationUrl: result.verificationUrl,
         recordCount: result.recordCount,
         sizeBytes: result.sizeBytes,
-        bundle: result.bundle as Record<string, unknown>,
+        bundle: result.bundle as any,
       });
     } finally {
       setIsExporting(false);

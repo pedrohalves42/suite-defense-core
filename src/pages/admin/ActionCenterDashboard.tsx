@@ -60,7 +60,7 @@ function HistoryItemCard({ item }: { item: ActionHistoryItem }) {
   // Get effectiveness data from first action (if exists)
   const action = item.ai_actions?.[0];
   const effectivenessStatus = (action?.effectiveness_status || item.final_outcome || 'pending') as EffectivenessStatus;
-  const effectivenessEvidence = action?.effectiveness_evidence as Record<string, unknown> | null;
+  const effectivenessEvidence = action?.effectiveness_evidence as any | null;
   const effectivenessExplanation = explainEffectiveness(
     effectivenessStatus,
     item.insight_type,

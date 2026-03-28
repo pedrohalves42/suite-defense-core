@@ -83,7 +83,7 @@ export default function SystemAudit() {
   // Extract falsification criteria from latest audit metrics snapshot
   const falsificationCriteria: FalsificationCriterion[] = useMemo(() => {
     if (!currentAudit?.metrics_snapshot) return [];
-    const snapshot = currentAudit.metrics_snapshot as Record<string, unknown>;
+    const snapshot = currentAudit.metrics_snapshot as any;
     return (snapshot.falsification_criteria as FalsificationCriterion[]) || [];
   }, [currentAudit]);
 

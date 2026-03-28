@@ -144,7 +144,7 @@ export function SecurityImpactFeed() {
       e.auto_executed && (e.status === 'completed' || e.status === 'success')
     ).length;
     const agentsRecovered = (automationExecs || []).filter(e => {
-      const data = e.trigger_data as Record<string, unknown> | null;
+      const data = e.trigger_data as any | null;
       return data && (data.event_type === 'agent_offline' || data.action === 'restart_service');
     }).length;
     const threatsPrevented = (remediationActions || []).filter(a =>

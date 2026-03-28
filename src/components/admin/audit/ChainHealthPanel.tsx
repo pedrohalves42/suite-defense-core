@@ -49,7 +49,7 @@ export function ChainHealthPanel({ tenantId }: ChainHealthPanelProps) {
         p_tenant_id: tenantId,
       });
       if (error) throw error;
-      return data as unknown as Record<string, unknown>;
+      return data as unknown as any;
     },
     onSuccess: (data: Record<string, unknown>) => {
       toast.success(`Cadeia de auditoria reparada: ${data?.links_repaired || 0} links corrigidos`);
@@ -65,7 +65,7 @@ export function ChainHealthPanel({ tenantId }: ChainHealthPanelProps) {
     mutationFn: async () => {
       const { data, error } = await supabase.rpc('reanchor_execution_chains');
       if (error) throw error;
-      return data as unknown as Record<string, unknown>;
+      return data as unknown as any;
     },
     onSuccess: (data: Record<string, unknown>) => {
       toast.success(`Cadeias de execução reancoradas: ${data?.agents_reanchored || 0} agentes`);

@@ -365,8 +365,8 @@ export default function AuditLogs() {
                                   </DialogDescription>
                                 </DialogHeader>
                                 <StateDiffViewer 
-                                  stateBefore={log.state_before as Record<string, unknown> | null} 
-                                  stateAfter={log.state_after as Record<string, unknown> | null} 
+                                  stateBefore={log.state_before as any | null} 
+                                  stateAfter={log.state_after as any | null} 
                                 />
                               </DialogContent>
                             </Dialog>
