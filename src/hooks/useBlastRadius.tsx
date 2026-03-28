@@ -65,7 +65,7 @@ export const useCheckBlastRadius = () => {
           p_tenant_id: tenant.id,
           p_action_type: actionType,
           p_affected_count: affectedCount
-        });
+        } as never);
 
       if (error) throw error;
       return data as unknown as BlastRadiusCheck;

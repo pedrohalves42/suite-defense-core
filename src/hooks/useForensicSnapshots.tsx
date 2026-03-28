@@ -80,7 +80,7 @@ export const useCreateForensicSnapshot = () => {
           p_network_snapshot: networkSnapshot || {},
           p_system_liveness_snapshot: systemLivenessSnapshot || {},
           p_metadata: metadata || {}
-        });
+        } as never);
 
       if (error) throw error;
       return data;
