@@ -58,6 +58,7 @@ export function getBurnRateStatus(burnRate: number): BurnRateStatus {
  * ADR-029 CRIT-04: Added loading guard to prevent race conditions
  */
 export const useJobsSLO = () => {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant();  // ADR-029 CRIT-04: Add loading
   
   const query = useQuery({

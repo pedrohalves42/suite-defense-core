@@ -85,7 +85,6 @@ const severityConfig = {
  * Verifica se o horário atual está dentro do horário de expediente configurado
  */
 function isWithinBusinessHours(businessHours: BusinessHours): boolean {
-  const adaptiveInterval = useAdaptivePolling(300000);
   if (!businessHours.enabled) return true; // Se desabilitado, considera sempre como expediente
   
   try {
@@ -130,6 +129,7 @@ function isWithinBusinessHours(businessHours: BusinessHours): boolean {
 }
 
 export function OfflineAgentAlerts() {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
   const [acknowledgedAgents, setAcknowledgedAgents] = useState<Set<string>>(new Set());

@@ -27,7 +27,6 @@ import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 // Health indicator component
 const HealthIndicator = ({ cpu, memory, disk }: { cpu?: number; memory?: number; disk?: number }) => {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const getHealthStatus = () => {
     const hasData = cpu !== undefined || memory !== undefined || disk !== undefined;
     if (!hasData) return { status: 'unknown', color: 'text-muted-foreground', bg: 'bg-muted', label: 'Sem dados' };
@@ -71,6 +70,7 @@ const HealthIndicator = ({ cpu, memory, disk }: { cpu?: number; memory?: number;
 };
 
 export const ClientComputers = () => {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
 

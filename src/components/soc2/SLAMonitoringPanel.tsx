@@ -25,7 +25,6 @@ interface SLAMetric {
 }
 
 function getMetricStatus(current: number, slo: number, sla: number, isLatency: boolean): 'healthy' | 'warning' | 'critical' {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   if (isLatency) {
     if (current <= slo) return 'healthy';
     if (current <= sla) return 'warning';
@@ -37,6 +36,7 @@ function getMetricStatus(current: number, slo: number, sla: number, isLatency: b
 }
 
 export function SLAMonitoringPanel() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
 
   const { data: metrics, isLoading } = useQuery({

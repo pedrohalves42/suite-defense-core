@@ -89,6 +89,7 @@ export function usePlaybooks() {
 }
 
 export function usePendingPlaybookExecutions() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
 

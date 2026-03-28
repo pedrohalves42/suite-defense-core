@@ -45,6 +45,7 @@ export function getAnomalySeverity(anomalyType: string): 'critical' | 'high' | '
  * Returns display configuration for anomaly severity
  */
 export function getAnomalySeverityConfig(severity: 'critical' | 'high' | 'medium' | 'low') {
+  const adaptiveInterval = useAdaptivePolling(300000);
   switch (severity) {
     case 'critical':
       return {
@@ -87,6 +88,7 @@ export function getAnomalySeverityConfig(severity: 'critical' | 'high' | 'medium
  * ADR-029 CRIT-04: Added loading guard to prevent race conditions
  */
 export const useJobAnomalies = () => {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { activeTenant, loading } = useActiveTenant();  // ADR-029 CRIT-04: Add loading
 
   const query = useQuery({

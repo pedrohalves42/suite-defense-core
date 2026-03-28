@@ -24,7 +24,6 @@ interface DiskMetricsPanelProps {
 }
 
 const getDiskIcon = (driveType: string | null, isSystemDrive: boolean) => {
-  const adaptiveInterval = useAdaptivePolling(300000);
   if (isSystemDrive) return Server;
   if (driveType === 'Network') return Database;
   return HardDrive;
@@ -45,6 +44,7 @@ const getProgressColor = (percent: number) => {
 };
 
 export const DiskMetricsPanel = ({ agentId, compact = false }: DiskMetricsPanelProps) => {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { data: disks, isLoading, error } = useQuery({
     queryKey: ['agent-disks', agentId],
     queryFn: async () => {

@@ -18,6 +18,7 @@ import type {
 // ── Detection Events ──
 
 export function useDetectionEvents(options?: {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   agentId?: string; status?: string; limit?: number }) {
   const { activeTenant, loading } = useActiveTenant();
   const limit = options?.limit ?? 100;
@@ -49,6 +50,7 @@ export function useDetectionEvents(options?: {
 // ── Process Events ──
 
 export function useProcessEvents(agentId: string, options?: { limit?: number; suspiciousOnly?: boolean }) {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant();
   const limit = options?.limit ?? 200;
 
@@ -78,6 +80,7 @@ export function useProcessEvents(agentId: string, options?: { limit?: number; su
 // ── File Events ──
 
 export function useFileEvents(agentId: string, options?: { limit?: number; suspiciousOnly?: boolean }) {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant();
   const limit = options?.limit ?? 200;
 
@@ -107,6 +110,7 @@ export function useFileEvents(agentId: string, options?: { limit?: number; suspi
 // ── Network Events ──
 
 export function useNetworkEvents(agentId: string, options?: { limit?: number; suspiciousOnly?: boolean }) {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant();
   const limit = options?.limit ?? 200;
 
@@ -136,6 +140,7 @@ export function useNetworkEvents(agentId: string, options?: { limit?: number; su
 // ── Registry Events ──
 
 export function useRegistryEvents(agentId: string, options?: { limit?: number; suspiciousOnly?: boolean }) {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant();
   const limit = options?.limit ?? 200;
 
@@ -165,6 +170,7 @@ export function useRegistryEvents(agentId: string, options?: { limit?: number; s
 // ── Telemetry Stats ──
 
 export function useTelemetryStats() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant();
 
   return useQuery({

@@ -68,6 +68,7 @@ export const useAutonomyMetrics = (days: number = 7) => {
 };
 
 export const useAuditTrailIntegrity = () => {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   return useQuery({
@@ -88,6 +89,7 @@ export const useAuditTrailIntegrity = () => {
 };
 
 export const useDecisionTimeline = (options?: { limit?: number; ruleCode?: string; agentId?: string }) => {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   return useQuery({

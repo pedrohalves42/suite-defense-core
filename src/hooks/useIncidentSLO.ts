@@ -92,6 +92,7 @@ export function getOverallBurnRateStatus(
   burn6h: number,
   burn24h: number
 ): BurnRateInfo {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   // Use the 1h rate as primary indicator, but check compound conditions
   if (burn1h >= 5 && burn6h >= 2) {
     return getBurnRateInfo(5); // Critical
@@ -112,6 +113,7 @@ export function getOverallBurnRateStatus(
  * Returns color for error budget bar based on consumption percentage
  */
 export function getErrorBudgetColor(consumed: number): string {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   if (consumed >= 80) return 'bg-destructive';
   if (consumed >= 50) return 'bg-[hsl(var(--warning))]';
   if (consumed >= 30) return 'bg-[hsl(var(--warning))]';
@@ -122,6 +124,7 @@ export function getErrorBudgetColor(consumed: number): string {
  * Hook to fetch incident groups with SLO data
  */
 export const useIncidentGroupsWithSLO = (limit = 50) => {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant(); // ADR-029 CRIT-04
 
   return useQuery({
@@ -149,6 +152,7 @@ export const useIncidentGroupsWithSLO = (limit = 50) => {
  * Hook to fetch SLO summary stats
  */
 export const useIncidentSLOSummary = () => {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant(); // ADR-029 CRIT-04
 
   return useQuery({

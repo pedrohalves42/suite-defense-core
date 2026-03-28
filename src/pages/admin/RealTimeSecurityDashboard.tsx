@@ -132,6 +132,7 @@ interface SecurityEvent {
 }
 
 export default function RealTimeSecurityDashboard() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant, loading: tenantLoading } = useTenant();
   const [events, setEvents] = useState<SecurityEvent[]>([]);
   const [isLive, setIsLive] = useState(true);

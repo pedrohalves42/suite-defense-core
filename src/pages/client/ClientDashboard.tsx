@@ -24,7 +24,6 @@ import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 // Health Score Gauge Component
 const HealthGauge = ({ score }: { score: number }) => {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const getColor = () => {
     if (score >= 80) return 'text-green-500';
     if (score >= 50) return 'text-yellow-500';
@@ -79,6 +78,7 @@ const HealthGauge = ({ score }: { score: number }) => {
 };
 
 export const ClientDashboard = () => {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant: tenant, loading: tenantLoading } = useActiveTenant();
 
   const { data: stats, isLoading } = useQuery({

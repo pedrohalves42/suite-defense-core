@@ -121,6 +121,7 @@ export const useSLOData = () => {
 
 // Calculate real-time SLO metrics from actual data
 export const useCalculatedSLOs = () => {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   return useQuery({

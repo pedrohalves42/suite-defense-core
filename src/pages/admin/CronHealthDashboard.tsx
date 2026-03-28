@@ -48,7 +48,6 @@ const CRON_LABELS: Record<string, { label: string; description: string; icon: ty
 };
 
 function getStatusInfo(record: CronHealthRecord) {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   if (record.consecutive_failures >= 5) return { status: 'critical', color: 'text-destructive', bg: 'bg-destructive/10', label: 'Crítico' };
   if (record.consecutive_failures >= 2) return { status: 'warning', color: 'text-warning', bg: 'bg-warning/10', label: 'Atenção' };
   if (!record.last_success_at) return { status: 'unknown', color: 'text-muted-foreground', bg: 'bg-muted', label: 'Sem dados' };
@@ -99,6 +98,7 @@ function DurationBar({ current, avg }: { current: number | null; avg: number | n
 }
 
 export default function CronHealthDashboard() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
   const [expandedCron, setExpandedCron] = useState<string | null>(null);
 

@@ -24,7 +24,6 @@ interface TenantRiskData {
 }
 
 function classifyLevel(score: number): TenantRiskData['level'] {
-  const adaptiveInterval = useAdaptivePolling(5);
   if (score >= 80) return 'low';
   if (score >= 60) return 'medium';
   if (score >= 40) return 'high';
@@ -39,6 +38,7 @@ const levelConfig = {
 };
 
 export function TenantRiskScore() {
+  const adaptiveInterval = useAdaptivePolling(5);
   const { tenant } = useTenant();
 
   const { data: riskData, isLoading } = useQuery({

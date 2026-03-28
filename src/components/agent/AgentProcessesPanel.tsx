@@ -54,7 +54,6 @@ interface AgentProcessesPanelProps {
 }
 
 function formatMemory(mb: number): string {
-  const adaptiveInterval = useAdaptivePolling(300000);
   if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`;
   return `${Math.round(mb)} MB`;
 }
@@ -72,6 +71,7 @@ function getCpuColor(val: number): string {
 }
 
 export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelProps) {
+  const adaptiveInterval = useAdaptivePolling(300000);
   const { data, isLoading, isError } = useQuery({
     queryKey: ['agent-processes', agentId],
     queryFn: async () => {

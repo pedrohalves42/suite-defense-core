@@ -96,6 +96,7 @@ export interface UnifiedMetrics {
 }
 
 export function useUnifiedMetrics() {
+  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant, loading: tenantLoading } = useTenant();
   const { data: snapshots, isLoading: snapshotsLoading } = useAgentSnapshots();
   const agentCounts = getAgentStatusCounts(snapshots);

@@ -110,7 +110,6 @@ const STATUS_VISUALS: Record<string, StatusVisual> = {
 };
 
 function getJobVisual(status: string) {
-  const adaptiveInterval = useAdaptivePolling(300000);
   return STATUS_VISUALS[status as keyof typeof STATUS_VISUALS] || STATUS_VISUALS.queued;
 }
 
@@ -119,6 +118,7 @@ function getJobTypeLabel(type: string): string {
 }
 
 export function JobLiveMonitor({ 
+  const adaptiveInterval = useAdaptivePolling(300000);
   className, 
   maxJobs = 10, 
   showSummary = true,
