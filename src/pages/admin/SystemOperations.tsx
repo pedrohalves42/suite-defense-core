@@ -89,6 +89,8 @@ export default function SystemOperations() {
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch stuck jobs
@@ -105,6 +107,8 @@ export default function SystemOperations() {
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch Edge Function stats
@@ -120,6 +124,8 @@ export default function SystemOperations() {
       return data as EdgeFunctionStat[];
     },
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Cleanup stuck jobs mutation

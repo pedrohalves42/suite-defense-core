@@ -78,6 +78,8 @@ export function OnboardingRequiredBanner() {
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Auto-refresh when focus returns

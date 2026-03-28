@@ -46,6 +46,8 @@ export function JobsMonitor() {
       })) as StuckJob[];
     },
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const cancelJob = useMutation({

@@ -67,6 +67,8 @@ export function useAgentExecutionHealth() {
     },
     enabled: !loading && !!tenant?.id,
     refetchInterval: adaptiveInterval
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -91,6 +93,8 @@ export function useUnhealthyAgents() {
     },
     enabled: !loading && !!tenant?.id,
     refetchInterval: adaptiveInterval
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -117,6 +121,8 @@ export function useNonExecutionAlerts() {
     },
     enabled: !loading && !!tenant?.id,
     refetchInterval: adaptiveInterval
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
 

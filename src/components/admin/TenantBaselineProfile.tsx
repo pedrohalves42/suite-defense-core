@@ -49,6 +49,8 @@ export function TenantBaselineProfile() {
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch current metrics for comparison
@@ -98,6 +100,8 @@ export function TenantBaselineProfile() {
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch active hours pattern
@@ -135,6 +139,8 @@ export function TenantBaselineProfile() {
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const profiles: BaselineProfile[] = useMemo(() => {

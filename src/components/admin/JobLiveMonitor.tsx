@@ -146,6 +146,8 @@ export function JobLiveMonitor({
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
   
   // Merge initial jobs with realtime updates

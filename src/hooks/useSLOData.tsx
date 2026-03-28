@@ -202,5 +202,7 @@ export const useCalculatedSLOs = () => {
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 };

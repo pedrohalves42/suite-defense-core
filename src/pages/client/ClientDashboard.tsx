@@ -176,6 +176,8 @@ export const ClientDashboard = () => {
     },
     enabled: !tenantLoading && !!tenant?.id,
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Generate next steps based on current status

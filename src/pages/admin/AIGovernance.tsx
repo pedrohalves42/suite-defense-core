@@ -73,6 +73,8 @@ export default function AIGovernance() {
       return data || [];
     },
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Calculate aggregated metrics

@@ -64,6 +64,8 @@ export const useAutonomyMetrics = (days: number = 7) => {
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -85,6 +87,8 @@ export const useAuditTrailIntegrity = () => {
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -109,6 +113,8 @@ export const useDecisionTimeline = (options?: { limit?: number; ruleCode?: strin
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 };
 

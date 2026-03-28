@@ -26,6 +26,8 @@ export default function BuildHealthDashboard() {
       return data || [];
     },
     refetchInterval: adaptiveInterval,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const cleanupMutation = useMutation({

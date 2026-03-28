@@ -34,5 +34,7 @@ export function useCoverageGates() {
     },
     enabled: !loading && !!tenant?.id, // ADR-030 CRIT-01
     refetchInterval: adaptiveInterval
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
