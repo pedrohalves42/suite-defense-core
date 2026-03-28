@@ -852,6 +852,11 @@ export function ComplianceReportGenerator() {
                     const execSummary = (reportPayload as unknown as Record<string, unknown>).executive_summary as Record<string, unknown> | undefined;
                     const recs = (execSummary?.recommendations || []) as string[];
                     return recs.length > 0 ? (
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                        Ações Recomendadas
+                      </h4>
+                      {recs.map((rec: string, idx: number) => (
                         <div key={idx} className="flex items-start gap-3 p-4 bg-card border rounded-lg">
                           <div className={`p-1.5 rounded-full shrink-0 ${
                             idx === 0 && (reportPayload.statistics?.critical_vulnerabilities || 0) > 0 
