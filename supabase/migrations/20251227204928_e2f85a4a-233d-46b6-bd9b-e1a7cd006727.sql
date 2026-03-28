@@ -1,4 +1,4 @@
--- Fix: Recriar view com SECURITY INVOKER (padrão seguro)
+-- Fix: Recriar view com SECURITY INVOKER (padrao seguro)
 DROP VIEW IF EXISTS public.v_pipeline_health_metrics;
 
 CREATE VIEW public.v_pipeline_health_metrics 
@@ -38,4 +38,4 @@ GROUP BY DATE_TRUNC('hour', j.created_at), j.type
 ORDER BY hour DESC;
 
 COMMENT ON VIEW public.v_pipeline_health_metrics IS 
-  'Métricas de saúde do pipeline de jobs por hora. Usa security_invoker para respeitar RLS.';
+  'Metricas de saude do pipeline de jobs por hora. Usa security_invoker para respeitar RLS.';

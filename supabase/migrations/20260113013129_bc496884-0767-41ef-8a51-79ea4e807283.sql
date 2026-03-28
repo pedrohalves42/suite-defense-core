@@ -2,7 +2,7 @@
 -- FASE 2: Corrigir RLS da tabela agent_releases
 -- =====================================================
 
--- Remover política problemática e recriar
+-- Remover politica problematica e recriar
 DROP POLICY IF EXISTS "agent_releases_select_active" ON agent_releases;
 
 CREATE POLICY "agent_releases_select_authenticated"
@@ -14,7 +14,7 @@ CREATE POLICY "agent_releases_select_authenticated"
   );
 
 -- =====================================================
--- FASE 3: Corrigir 8 Views Públicas com autenticação
+-- FASE 3: Corrigir 8 Views Publicas com autenticacao
 -- =====================================================
 
 -- 1. Recriar agents_safe com filtro de tenant
@@ -47,7 +47,7 @@ WHERE tenant_id IN (
 )
 OR is_current_super_admin();
 
--- 2. Recriar agents_public com filtro de tenant E sem campos sensíveis
+-- 2. Recriar agents_public com filtro de tenant E sem campos sensiveis
 DROP VIEW IF EXISTS agents_public CASCADE;
 CREATE VIEW agents_public 
 WITH (security_invoker = on) AS
@@ -148,7 +148,7 @@ WHERE tenant_id IN (
 )
 OR is_current_super_admin();
 
--- 5. Recriar dlq_risk_overview com verificação de admin
+-- 5. Recriar dlq_risk_overview com verificacao de admin
 DROP VIEW IF EXISTS dlq_risk_overview CASCADE;
 CREATE VIEW dlq_risk_overview 
 WITH (security_invoker = on) AS
@@ -262,7 +262,7 @@ OR is_current_super_admin()
 GROUP BY ai.insight_type, f.tenant_id;
 
 -- =====================================================
--- FASE 4: Adicionar índices para performance
+-- FASE 4: Adicionar indices para performance
 -- =====================================================
 
 CREATE INDEX IF NOT EXISTS idx_agents_tenant_archived 

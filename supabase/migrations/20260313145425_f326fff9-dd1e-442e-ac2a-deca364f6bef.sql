@@ -117,7 +117,7 @@ CREATE TABLE public.endpoint_detection_events (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- ── Indexes ──
+-- ?? Indexes ??
 
 CREATE INDEX idx_proc_events_tenant_agent ON public.endpoint_process_events(tenant_id, agent_id, event_time DESC);
 CREATE INDEX idx_proc_events_suspicious ON public.endpoint_process_events(tenant_id, event_time DESC) WHERE is_suspicious = true;
@@ -138,7 +138,7 @@ CREATE INDEX idx_detection_events_severity ON public.endpoint_detection_events(t
 CREATE INDEX idx_detection_events_mitre ON public.endpoint_detection_events(tenant_id, mitre_technique_id) WHERE mitre_technique_id IS NOT NULL;
 CREATE INDEX idx_detection_events_agent ON public.endpoint_detection_events(agent_id, event_time DESC);
 
--- ── RLS ──
+-- ?? RLS ??
 
 ALTER TABLE public.endpoint_process_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.endpoint_file_events ENABLE ROW LEVEL SECURITY;

@@ -29,7 +29,7 @@ FOR ALL USING (
   )
 );
 
--- Função de verificação de IP
+-- Funcao de verificacao de IP
 CREATE OR REPLACE FUNCTION check_super_admin_ip_access(
   _user_id UUID,
   _ip_address TEXT
@@ -42,13 +42,13 @@ DECLARE
   _ip_allowed BOOLEAN;
   _has_whitelist BOOLEAN;
 BEGIN
-  -- Verificar se é super_admin
+  -- Verificar se e super_admin
   SELECT EXISTS(
     SELECT 1 FROM user_roles 
     WHERE user_id = _user_id AND role = 'super_admin'
   ) INTO _is_super_admin;
 
-  -- Se não é super_admin, permite acesso normal
+  -- Se nao e super_admin, permite acesso normal
   IF NOT _is_super_admin THEN
     RETURN TRUE;
   END IF;
@@ -58,7 +58,7 @@ BEGIN
     SELECT 1 FROM admin_ip_whitelist WHERE is_active = true
   ) INTO _has_whitelist;
 
-  -- Se não existe whitelist, permite acesso (para não bloquear durante setup)
+  -- Se nao existe whitelist, permite acesso (para nao bloquear durante setup)
   IF NOT _has_whitelist THEN
     RETURN TRUE;
   END IF;
@@ -75,7 +75,7 @@ BEGIN
 END;
 $$;
 
--- Inserir IPs padrão para desenvolvimento
+-- Inserir IPs padrao para desenvolvimento
 INSERT INTO admin_ip_whitelist (ip_address, description, tenant_id) 
 VALUES 
   ('127.0.0.1/32', 'Localhost IPv4', NULL),
@@ -92,7 +92,7 @@ ALTER TABLE tenants
 ADD COLUMN IF NOT EXISTS session_timeout_minutes JSONB 
 DEFAULT '{"super_admin": 15, "admin": 60, "user": 480}'::jsonb;
 
--- Função para obter timeout de sessão por role
+-- Funcao para obter timeout de sessao por role
 CREATE OR REPLACE FUNCTION get_session_timeout_minutes(_role TEXT)
 RETURNS INTEGER
 LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS public.active_sessions (
   metadata JSONB DEFAULT '{}'
 );
 
--- Índices para performance
+-- Indices para performance
 CREATE INDEX IF NOT EXISTS idx_active_sessions_user ON active_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_active_sessions_expires ON active_sessions(expires_at);
 CREATE INDEX IF NOT EXISTS idx_active_sessions_tenant ON active_sessions(tenant_id);
@@ -155,7 +155,7 @@ FOR SELECT USING (
   )
 );
 
--- Função para registrar início de sessão
+-- Funcao para registrar inicio de sessao
 CREATE OR REPLACE FUNCTION log_session_start(
   _ip_address TEXT,
   _user_agent TEXT
@@ -175,7 +175,7 @@ BEGIN
     RETURN NULL;
   END IF;
 
-  -- Verificar se é super_admin
+  -- Verificar se e super_admin
   SELECT EXISTS(
     SELECT 1 FROM user_roles 
     WHERE user_id = _user_id AND role = 'super_admin'
@@ -184,12 +184,12 @@ BEGIN
   -- Calcular timeout
   _timeout_minutes := CASE WHEN _is_super_admin THEN 15 ELSE 480 END;
 
-  -- Limpar sessões antigas do mesmo usuário
+  -- Limpar sessoes antigas do mesmo usuario
   DELETE FROM active_sessions 
   WHERE user_id = _user_id 
     AND (expires_at < now() OR last_activity_at < now() - interval '1 day');
 
-  -- Inserir nova sessão
+  -- Inserir nova sessao
   INSERT INTO active_sessions (
     user_id, 
     tenant_id,
@@ -210,7 +210,7 @@ BEGIN
 END;
 $$;
 
--- Função para atualizar atividade da sessão
+-- Funcao para atualizar atividade da sessao
 CREATE OR REPLACE FUNCTION update_session_activity(_session_id UUID)
 RETURNS VOID
 LANGUAGE plpgsql SECURITY DEFINER
@@ -233,7 +233,7 @@ BEGIN
 END;
 $$;
 
--- Função para cleanup de sessões expiradas
+-- Funcao para cleanup de sessoes expiradas
 CREATE OR REPLACE FUNCTION cleanup_expired_sessions()
 RETURNS INTEGER
 LANGUAGE plpgsql SECURITY DEFINER

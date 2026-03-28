@@ -4,11 +4,11 @@
 -- Adicionar coluna priority
 ALTER TABLE public.jobs ADD COLUMN IF NOT EXISTS priority smallint DEFAULT 2;
 
--- Criar índice para ordenação eficiente
+-- Criar indice para ordenacao eficiente
 CREATE INDEX IF NOT EXISTS idx_jobs_priority_created ON public.jobs (priority ASC, created_at ASC) 
 WHERE status = 'queued';
 
--- Função para definir prioridade automaticamente baseado no tipo de job
+-- Funcao para definir prioridade automaticamente baseado no tipo de job
 CREATE OR REPLACE FUNCTION public.set_job_priority()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -44,5 +44,5 @@ UPDATE public.jobs SET priority = 1 WHERE type IN ('enroll', 'heartbeat', 'updat
 UPDATE public.jobs SET priority = 3 WHERE type IN ('light_vuln_scan', 'report', 'full_scan') AND priority IS NULL;
 UPDATE public.jobs SET priority = 2 WHERE priority IS NULL;
 
--- Comentário para documentação
+-- Comentario para documentacao
 COMMENT ON COLUMN public.jobs.priority IS 'Job priority: 1=critical (immediate), 2=standard, 3=heavy (can wait)';

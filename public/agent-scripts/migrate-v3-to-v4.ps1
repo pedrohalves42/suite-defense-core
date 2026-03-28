@@ -1,8 +1,8 @@
 <#
-    CyberShield Agent Migration Script v3 → v4
+    CyberShield Agent Migration Script v3 ? v4
     
-    Este script realiza a migração segura de agentes v3.x para v4.x
-    Preserva configurações, logs e estado durante a migração
+    Este script realiza a migracao segura de agentes v3.x para v4.x
+    Preserva configuracoes, logs e estado durante a migracao
     
     Uso:
     powershell.exe -ExecutionPolicy Bypass -File .\migrate-v3-to-v4.ps1 `
@@ -60,27 +60,27 @@ function Write-MigrationLog {
 #  PRE-FLIGHT CHECKS
 # ============================================
 function Test-PreFlightChecks {
-    Write-MigrationLog "Iniciando verificações de pré-voo..." "INFO"
+    Write-MigrationLog "Iniciando verificacoes de pre-voo..." "INFO"
     
     # Check 1: Admin privileges
     $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
     if (-not $isAdmin) {
-        Write-MigrationLog "ERRO: Este script requer privilégios de administrador" "ERROR"
+        Write-MigrationLog "ERRO: Este script requer privilegios de administrador" "ERROR"
         return $false
     }
-    Write-MigrationLog "✓ Privilégios de administrador confirmados" "SUCCESS"
+    Write-MigrationLog "? Privilegios de administrador confirmados" "SUCCESS"
     
     # Check 2: CyberShield directory exists
     if (-not (Test-Path $BaseDir)) {
-        Write-MigrationLog "ERRO: Diretório CyberShield não encontrado em $BaseDir" "ERROR"
+        Write-MigrationLog "ERRO: Diretorio CyberShield nao encontrado em $BaseDir" "ERROR"
         return $false
     }
-    Write-MigrationLog "✓ Diretório CyberShield encontrado" "SUCCESS"
+    Write-MigrationLog "? Diretorio CyberShield encontrado" "SUCCESS"
     
     # Check 3: Detect current version
     $currentScript = Get-ChildItem "$BaseDir\cybershield-agent-*.ps1" -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not $currentScript) {
-        Write-MigrationLog "WARN: Script do agente não encontrado. Instalação limpa será realizada." "WARN"
+        Write-MigrationLog "WARN: Script do agente nao encontrado. Instalacao limpa sera realizada." "WARN"
         $script:IsCleanInstall = $true
     } else {
         $script:CurrentScriptPath = $currentScript.FullName
@@ -90,11 +90,11 @@ function Test-PreFlightChecks {
         $content = Get-Content $currentScript.FullName -Raw
         if ($content -match 'AgentVersion\s*=\s*"([^"]+)"') {
             $script:CurrentVersion = $matches[1]
-            Write-MigrationLog "✓ Versão atual detectada: $($script:CurrentVersion)" "SUCCESS"
+            Write-MigrationLog "? Versao atual detectada: $($script:CurrentVersion)" "SUCCESS"
             
             if ($script:CurrentVersion -like "v4.*") {
                 if (-not $Force) {
-                    Write-MigrationLog "Agente já está na versão v4.x. Use -Force para forçar reinstalação." "WARN"
+                    Write-MigrationLog "Agente ja esta na versao v4.x. Use -Force para forcar reinstalacao." "WARN"
                     return $false
                 }
             }
@@ -105,18 +105,18 @@ function Test-PreFlightChecks {
     $drive = (Get-Item $BaseDir).PSDrive
     $freeSpace = (Get-PSDrive $drive.Name).Free / 1MB
     if ($freeSpace -lt 100) {
-        Write-MigrationLog "ERRO: Espaço em disco insuficiente. Necessário: 100MB, Disponível: ${freeSpace}MB" "ERROR"
+        Write-MigrationLog "ERRO: Espaco em disco insuficiente. Necessario: 100MB, Disponivel: ${freeSpace}MB" "ERROR"
         return $false
     }
-    Write-MigrationLog "✓ Espaço em disco suficiente: ${freeSpace}MB disponíveis" "SUCCESS"
+    Write-MigrationLog "? Espaco em disco suficiente: ${freeSpace}MB disponiveis" "SUCCESS"
     
     # Check 5: Network connectivity
     try {
         $testUrl = "$ServerUrl/functions/v1/heartbeat"
         $null = Invoke-WebRequest -Uri $testUrl -Method HEAD -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
-        Write-MigrationLog "✓ Conectividade com servidor confirmada" "SUCCESS"
+        Write-MigrationLog "? Conectividade com servidor confirmada" "SUCCESS"
     } catch {
-        Write-MigrationLog "WARN: Não foi possível verificar conectividade. Migração pode falhar." "WARN"
+        Write-MigrationLog "WARN: Nao foi possivel verificar conectividade. Migracao pode falhar." "WARN"
     }
     
     return $true
@@ -126,7 +126,7 @@ function Test-PreFlightChecks {
 #  BACKUP
 # ============================================
 function Backup-CurrentInstallation {
-    Write-MigrationLog "Criando backup da instalação atual..." "INFO"
+    Write-MigrationLog "Criando backup da instalacao atual..." "INFO"
     
     # Create backup directory with timestamp
     $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
@@ -166,7 +166,7 @@ function Backup-CurrentInstallation {
     }
     $configBackup | ConvertTo-Json | Out-File "$backupPath\migration-config.json" -Encoding UTF8
     
-    Write-MigrationLog "✓ Backup criado em: $backupPath" "SUCCESS"
+    Write-MigrationLog "? Backup criado em: $backupPath" "SUCCESS"
     $script:BackupPath = $backupPath
     return $true
 }
@@ -175,7 +175,7 @@ function Backup-CurrentInstallation {
 #  STOP SERVICES
 # ============================================
 function Stop-AgentServices {
-    Write-MigrationLog "Parando serviços do agente..." "INFO"
+    Write-MigrationLog "Parando servicos do agente..." "INFO"
     
     # Stop Scheduled Task
     $taskName = "CyberShield Agent"
@@ -208,7 +208,7 @@ function Stop-AgentServices {
         } catch { }
     }
     
-    Write-MigrationLog "✓ Serviços parados" "SUCCESS"
+    Write-MigrationLog "? Servicos parados" "SUCCESS"
     return $true
 }
 
@@ -216,7 +216,7 @@ function Stop-AgentServices {
 #  DOWNLOAD NEW VERSION
 # ============================================
 function Get-NewAgentVersion {
-    Write-MigrationLog "Baixando nova versão do agente v4..." "INFO"
+    Write-MigrationLog "Baixando nova versao do agente v4..." "INFO"
     
     try {
         $downloadUrl = "$ServerUrl/functions/v1/serve-agent-update"
@@ -241,20 +241,20 @@ function Get-NewAgentVersion {
             # Validate SHA256
             $fileHash = (Get-FileHash -Path $newScriptPath -Algorithm SHA256).Hash.ToLower()
             if ($response.sha256 -and $fileHash -ne $response.sha256.ToLower()) {
-                Write-MigrationLog "ERRO: Hash SHA256 não corresponde!" "ERROR"
+                Write-MigrationLog "ERRO: Hash SHA256 nao corresponde!" "ERROR"
                 return $false
             }
             
             $script:NewScriptPath = $newScriptPath
             $script:NewVersion = $response.version
-            Write-MigrationLog "✓ Nova versão baixada: $($response.version)" "SUCCESS"
+            Write-MigrationLog "? Nova versao baixada: $($response.version)" "SUCCESS"
             return $true
         } else {
-            Write-MigrationLog "WARN: Nenhuma atualização disponível. Usando script local." "WARN"
+            Write-MigrationLog "WARN: Nenhuma atualizacao disponivel. Usando script local." "WARN"
             return $false
         }
     } catch {
-        Write-MigrationLog "ERRO ao baixar nova versão: $_" "ERROR"
+        Write-MigrationLog "ERRO ao baixar nova versao: $_" "ERROR"
         return $false
     }
 }
@@ -263,7 +263,7 @@ function Get-NewAgentVersion {
 #  CREATE V4 DIRECTORIES
 # ============================================
 function Initialize-V4Directories {
-    Write-MigrationLog "Inicializando estrutura de diretórios v4..." "INFO"
+    Write-MigrationLog "Inicializando estrutura de diretorios v4..." "INFO"
     
     $v4Dirs = @(
         "$BaseDir\logs",
@@ -280,7 +280,7 @@ function Initialize-V4Directories {
         }
     }
     
-    Write-MigrationLog "✓ Estrutura de diretórios v4 pronta" "SUCCESS"
+    Write-MigrationLog "? Estrutura de diretorios v4 pronta" "SUCCESS"
     return $true
 }
 
@@ -288,7 +288,7 @@ function Initialize-V4Directories {
 #  MIGRATE CONFIGURATIONS
 # ============================================
 function Migrate-Configurations {
-    Write-MigrationLog "Migrando configurações..." "INFO"
+    Write-MigrationLog "Migrando configuracoes..." "INFO"
     
     # Migrate blocked websites if exists
     $oldBlockedPath = "$BaseDir\blocked_websites.json"
@@ -313,7 +313,7 @@ function Migrate-Configurations {
     $initialState | ConvertTo-Json | Out-File "$BaseDir\agent-state.json" -Encoding UTF8
     Write-MigrationLog "  Criado: agent-state.json" "INFO"
     
-    Write-MigrationLog "✓ Configurações migradas" "SUCCESS"
+    Write-MigrationLog "? Configuracoes migradas" "SUCCESS"
     return $true
 }
 
@@ -355,7 +355,7 @@ function Update-ScheduledTask {
     
     Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $triggers -Settings $settings -Principal $principal -Force | Out-Null
     
-    Write-MigrationLog "✓ Scheduled Task atualizada para v4" "SUCCESS"
+    Write-MigrationLog "? Scheduled Task atualizada para v4" "SUCCESS"
     return $true
 }
 
@@ -373,10 +373,10 @@ function Start-NewAgent {
     
     $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
     if ($task.State -eq "Running") {
-        Write-MigrationLog "✓ Agente v4 iniciado com sucesso" "SUCCESS"
+        Write-MigrationLog "? Agente v4 iniciado com sucesso" "SUCCESS"
         return $true
     } else {
-        Write-MigrationLog "WARN: Agente pode não ter iniciado corretamente. Verifique os logs." "WARN"
+        Write-MigrationLog "WARN: Agente pode nao ter iniciado corretamente. Verifique os logs." "WARN"
         return $false
     }
 }
@@ -387,7 +387,7 @@ function Start-NewAgent {
 function Send-MigrationReport {
     param([bool]$Success, [string]$Error = "")
     
-    Write-MigrationLog "Enviando relatório de migração..." "INFO"
+    Write-MigrationLog "Enviando relatorio de migracao..." "INFO"
     
     try {
         $reportUrl = "$ServerUrl/functions/v1/track-installation-event"
@@ -410,9 +410,9 @@ function Send-MigrationReport {
         } | ConvertTo-Json -Depth 5
         
         $null = Invoke-RestMethod -Uri $reportUrl -Method POST -Headers $headers -Body $body -TimeoutSec 30
-        Write-MigrationLog "✓ Relatório de migração enviado" "SUCCESS"
+        Write-MigrationLog "? Relatorio de migracao enviado" "SUCCESS"
     } catch {
-        Write-MigrationLog "WARN: Falha ao enviar relatório: $_" "WARN"
+        Write-MigrationLog "WARN: Falha ao enviar relatorio: $_" "WARN"
     }
 }
 
@@ -442,7 +442,7 @@ function Invoke-Rollback {
     Enable-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
     Start-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
     
-    Write-MigrationLog "Rollback concluído. Agente v3 restaurado." "WARN"
+    Write-MigrationLog "Rollback concluido. Agente v3 restaurado." "WARN"
 }
 
 # ============================================
@@ -451,23 +451,23 @@ function Invoke-Rollback {
 function Start-Migration {
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Cyan
-    Write-Host "  CyberShield Migration v3 → v4" -ForegroundColor Cyan
+    Write-Host "  CyberShield Migration v3 ? v4" -ForegroundColor Cyan
     Write-Host "  Version: $MigrationVersion" -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
     
     if ($DryRun) {
-        Write-MigrationLog "MODO DRY-RUN: Nenhuma alteração será feita" "WARN"
+        Write-MigrationLog "MODO DRY-RUN: Nenhuma alteracao sera feita" "WARN"
     }
     
     try {
         # Step 1: Pre-flight checks
         if (-not (Test-PreFlightChecks)) {
-            throw "Verificações de pré-voo falharam"
+            throw "Verificacoes de pre-voo falharam"
         }
         
         if ($DryRun) {
-            Write-MigrationLog "DRY-RUN: Migração seria executada com sucesso" "SUCCESS"
+            Write-MigrationLog "DRY-RUN: Migracao seria executada com sucesso" "SUCCESS"
             return
         }
         
@@ -478,23 +478,23 @@ function Start-Migration {
         
         # Step 3: Stop services
         if (-not (Stop-AgentServices)) {
-            throw "Falha ao parar serviços"
+            throw "Falha ao parar servicos"
         }
         
         # Step 4: Download new version
         $downloaded = Get-NewAgentVersion
         if (-not $downloaded) {
-            Write-MigrationLog "Usando script local para instalação" "WARN"
+            Write-MigrationLog "Usando script local para instalacao" "WARN"
         }
         
         # Step 5: Initialize directories
         if (-not (Initialize-V4Directories)) {
-            throw "Falha ao inicializar diretórios"
+            throw "Falha ao inicializar diretorios"
         }
         
         # Step 6: Migrate configurations
         if (-not (Migrate-Configurations)) {
-            throw "Falha ao migrar configurações"
+            throw "Falha ao migrar configuracoes"
         }
         
         # Step 7: Update Scheduled Task
@@ -504,7 +504,7 @@ function Start-Migration {
         
         # Step 8: Start new agent
         if (-not (Start-NewAgent)) {
-            Write-MigrationLog "WARN: Agente pode precisar de início manual" "WARN"
+            Write-MigrationLog "WARN: Agente pode precisar de inicio manual" "WARN"
         }
         
         # Step 9: Report success
@@ -512,24 +512,24 @@ function Start-Migration {
         
         Write-Host ""
         Write-Host "========================================" -ForegroundColor Green
-        Write-Host "  MIGRAÇÃO CONCLUÍDA COM SUCESSO!" -ForegroundColor Green
+        Write-Host "  MIGRACAO CONCLUIDA COM SUCESSO!" -ForegroundColor Green
         Write-Host "========================================" -ForegroundColor Green
         Write-Host ""
-        Write-Host "Versão anterior: $($script:CurrentVersion)" -ForegroundColor White
-        Write-Host "Nova versão: $($script:NewVersion ?? 'v4.0.1')" -ForegroundColor White
+        Write-Host "Versao anterior: $($script:CurrentVersion)" -ForegroundColor White
+        Write-Host "Nova versao: $($script:NewVersion ?? 'v4.0.1')" -ForegroundColor White
         Write-Host "Backup em: $($script:BackupPath)" -ForegroundColor White
         Write-Host ""
         
     } catch {
         $errorMsg = $_.Exception.Message
-        Write-MigrationLog "ERRO CRÍTICO: $errorMsg" "ERROR"
+        Write-MigrationLog "ERRO CRITICO: $errorMsg" "ERROR"
         
         Invoke-Rollback
         Send-MigrationReport -Success $false -Error $errorMsg
         
         Write-Host ""
         Write-Host "========================================" -ForegroundColor Red
-        Write-Host "  MIGRAÇÃO FALHOU - ROLLBACK EXECUTADO" -ForegroundColor Red
+        Write-Host "  MIGRACAO FALHOU - ROLLBACK EXECUTADO" -ForegroundColor Red
         Write-Host "========================================" -ForegroundColor Red
         Write-Host ""
         Write-Host "Erro: $errorMsg" -ForegroundColor Red

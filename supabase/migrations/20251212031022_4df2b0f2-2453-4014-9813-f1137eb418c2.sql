@@ -1,7 +1,7 @@
 -- ============================================================================
 -- FASE 3: Corrigir v_agent_lifecycle_state para usar agent_name nos JOINs
 -- Problema: installation_analytics tem agent_id = NULL, mas agent_name preenchido
--- Solução: Alterar LEFT JOINs para usar agent_name + tenant_id
+-- Solucao: Alterar LEFT JOINs para usar agent_name + tenant_id
 -- ============================================================================
 
 DROP VIEW IF EXISTS public.v_agent_lifecycle_state;
@@ -52,7 +52,7 @@ SELECT
     END AS is_stuck
 FROM public.agents a
     LEFT JOIN public.enrollment_keys ek ON ek.agent_id = a.id
-    -- CORRIGIDO: Usar agent_name + tenant_id ao invés de agent_id
+    -- CORRIGIDO: Usar agent_name + tenant_id ao inves de agent_id
     LEFT JOIN LATERAL (
         SELECT ia.created_at
         FROM public.installation_analytics ia
@@ -62,7 +62,7 @@ FROM public.agents a
         ORDER BY ia.created_at DESC
         LIMIT 1
     ) ia_copy ON true
-    -- CORRIGIDO: Usar agent_name + tenant_id ao invés de agent_id
+    -- CORRIGIDO: Usar agent_name + tenant_id ao inves de agent_id
     LEFT JOIN LATERAL (
         SELECT 
             ia.created_at,
@@ -83,6 +83,6 @@ WHERE a.tenant_id IN (
     SELECT tenant_id FROM public.user_roles WHERE user_id = auth.uid()
 );
 
--- Comentário explicativo
+-- Comentario explicativo
 COMMENT ON VIEW public.v_agent_lifecycle_state IS 
 'View do ciclo de vida do agente. Corrigida em 2025-01-12 para usar agent_name nos JOINs com installation_analytics (agent_id era NULL nos eventos de telemetria).';

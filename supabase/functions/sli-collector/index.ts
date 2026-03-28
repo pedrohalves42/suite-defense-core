@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}))
     const action = body.action || 'dashboard'
 
-    // ─── RECORD METRIC ───
+    // ??? RECORD METRIC ???
     if (action === 'record') {
       const { tenantId, endpoint, statusCode, latencyMs } = body
       if (!endpoint || statusCode === undefined) {
@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ─── GET SLI ───
+    // ??? GET SLI ???
     if (action === 'sli') {
       const tid = body.tenantId || 'global'
       const startOfDay = new Date()
@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ─── GET SLO ───
+    // ??? GET SLO ???
     if (action === 'slo') {
       const tid = body.tenantId || 'global'
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
@@ -185,7 +185,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ─── DASHBOARD ───
+    // ??? DASHBOARD ???
     if (action === 'dashboard') {
       const tid = body.tenantId || 'global'
 

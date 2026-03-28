@@ -70,42 +70,42 @@ INSERT INTO public.software_knowledge_base (software_pattern, match_type, catego
   ('Brave', 'contains', 'browser', 'low', 'Navegador focado em privacidade'),
   
   -- Security Tools (Low Risk)
-  ('Windows Defender', 'contains', 'security', 'low', 'Antivírus Microsoft'),
+  ('Windows Defender', 'contains', 'security', 'low', 'Antivirus Microsoft'),
   ('Malwarebytes', 'contains', 'security', 'low', 'Anti-malware'),
-  ('Avast', 'contains', 'security', 'low', 'Antivírus'),
-  ('AVG', 'contains', 'security', 'low', 'Antivírus'),
-  ('Kaspersky', 'contains', 'security', 'low', 'Antivírus'),
-  ('Norton', 'contains', 'security', 'low', 'Antivírus'),
-  ('Bitdefender', 'contains', 'security', 'low', 'Antivírus'),
+  ('Avast', 'contains', 'security', 'low', 'Antivirus'),
+  ('AVG', 'contains', 'security', 'low', 'Antivirus'),
+  ('Kaspersky', 'contains', 'security', 'low', 'Antivirus'),
+  ('Norton', 'contains', 'security', 'low', 'Antivirus'),
+  ('Bitdefender', 'contains', 'security', 'low', 'Antivirus'),
   
   -- Utilities (Low Risk)
   ('7-Zip', 'contains', 'utility', 'low', 'Compactador de arquivos'),
   ('WinRAR', 'contains', 'utility', 'low', 'Compactador de arquivos'),
   ('CCleaner', 'contains', 'utility', 'low', 'Limpeza de sistema'),
   ('Notepad++', 'contains', 'utility', 'low', 'Editor de texto'),
-  ('VLC', 'contains', 'utility', 'low', 'Player de mídia'),
+  ('VLC', 'contains', 'utility', 'low', 'Player de midia'),
   
   -- Business Apps (Low Risk)
   ('Microsoft Office', 'contains', 'business', 'low', 'Suite Office Microsoft'),
   ('Microsoft 365', 'contains', 'business', 'low', 'Suite Office Microsoft'),
   ('LibreOffice', 'contains', 'business', 'low', 'Suite Office open-source'),
-  ('Slack', 'contains', 'business', 'low', 'Comunicação empresarial'),
-  ('Zoom', 'contains', 'meeting', 'low', 'Videoconferência'),
-  ('Microsoft Teams', 'contains', 'meeting', 'low', 'Comunicação Microsoft'),
-  ('Skype', 'contains', 'meeting', 'low', 'Comunicação'),
+  ('Slack', 'contains', 'business', 'low', 'Comunicacao empresarial'),
+  ('Zoom', 'contains', 'meeting', 'low', 'Videoconferencia'),
+  ('Microsoft Teams', 'contains', 'meeting', 'low', 'Comunicacao Microsoft'),
+  ('Skype', 'contains', 'meeting', 'low', 'Comunicacao'),
   
   -- Messaging (Low Risk)
   ('Telegram', 'contains', 'messaging', 'low', 'Mensageiro'),
-  ('Discord', 'contains', 'messaging', 'low', 'Comunicação para comunidades'),
+  ('Discord', 'contains', 'messaging', 'low', 'Comunicacao para comunidades'),
   ('WhatsApp', 'contains', 'messaging', 'low', 'Mensageiro'),
   ('Signal', 'contains', 'messaging', 'low', 'Mensageiro seguro'),
   
   -- Development (Low Risk)
-  ('Visual Studio Code', 'contains', 'development', 'low', 'Editor de código'),
-  ('Git', 'exact', 'development', 'low', 'Controle de versão'),
+  ('Visual Studio Code', 'contains', 'development', 'low', 'Editor de codigo'),
+  ('Git', 'exact', 'development', 'low', 'Controle de versao'),
   ('Node.js', 'contains', 'development', 'low', 'Runtime JavaScript'),
-  ('Python', 'contains', 'development', 'low', 'Linguagem de programação'),
-  ('Docker', 'contains', 'development', 'low', 'Containerização'),
+  ('Python', 'contains', 'development', 'low', 'Linguagem de programacao'),
+  ('Docker', 'contains', 'development', 'low', 'Containerizacao'),
   
   -- Potentially Unwanted (Medium-High Risk)
   ('Hola VPN', 'contains', 'vpn_free', 'high', 'VPN gratuita com riscos de privacidade'),

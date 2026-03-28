@@ -1,7 +1,7 @@
 import { logger } from "./logger.ts";
 /**
  * Two-tier cache: in-memory (per-invocation) + Supabase kv_cache table (cross-invocation)
- * No Redis dependency — works on existing Supabase infrastructure.
+ * No Redis dependency ? works on existing Supabase infrastructure.
  *
  * Usage:
  *   import { getCached, invalidateCache } from '../_shared/cache.ts';
@@ -10,7 +10,7 @@ import { logger } from "./logger.ts";
 // SupabaseClient type used loosely to avoid Deno-only import issues in build
 type SupabaseClient = any;
 
-// ─── Tier 1: In-Memory Cache (per Edge Function invocation) ───
+// ??? Tier 1: In-Memory Cache (per Edge Function invocation) ???
 
 interface CacheEntry<T = unknown> {
   value: T;
@@ -61,10 +61,10 @@ class MemoryCache {
   }
 }
 
-// Singleton — lives for the duration of one Edge Function invocation
+// Singleton ? lives for the duration of one Edge Function invocation
 export const memoryCache = new MemoryCache();
 
-// ─── Cache Options ───
+// ??? Cache Options ???
 
 export interface CacheOptions {
   ttlSeconds?: number;
@@ -74,10 +74,10 @@ export interface CacheOptions {
 
 const DEFAULT_TTL = 300; // 5 minutes
 
-// ─── Tier 2: Supabase kv_cache table (cross-invocation) ───
+// ??? Tier 2: Supabase kv_cache table (cross-invocation) ???
 
 /**
- * Get a value from cache (memory → kv_cache RPC → fetcher).
+ * Get a value from cache (memory ? kv_cache RPC ? fetcher).
  * Stores result back into both tiers on miss.
  */
 export async function getCached<T>(
@@ -107,11 +107,11 @@ export async function getCached<T>(
         return value;
       }
     } catch {
-      // Table read failed — fall through to fetcher
+      // Table read failed ? fall through to fetcher
     }
   }
 
-  // 3. Cache miss — call fetcher
+  // 3. Cache miss ? call fetcher
   const freshValue = await fetcher();
 
   // Store in memory
@@ -186,7 +186,7 @@ export async function cleanupExpiredCache(
   return (data as number) || 0;
 }
 
-// ─── Domain-specific helpers ───
+// ??? Domain-specific helpers ???
 
 export async function getTenantConfig(
   supabase: SupabaseClient,

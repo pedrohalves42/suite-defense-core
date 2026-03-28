@@ -2,7 +2,7 @@
 -- ZERO TRUST 100% - ENFORCE FAILED JOBS REQUIRE ERROR_MESSAGE
 -- =============================================================================
 
--- 1. Criar função de validação SECURITY DEFINER
+-- 1. Criar funcao de validacao SECURITY DEFINER
 CREATE OR REPLACE FUNCTION public.enforce_failed_job_requires_error()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -37,7 +37,7 @@ BEFORE UPDATE OF status ON jobs
 FOR EACH ROW
 EXECUTE FUNCTION public.enforce_failed_job_requires_error();
 
--- 3. Corrigir jobs históricos que violam a regra
+-- 3. Corrigir jobs historicos que violam a regra
 UPDATE jobs
 SET error_message = 'RETROACTIVE_INTEGRITY_FIX: error_message was missing at ' || NOW()::text
 WHERE status = 'failed'
@@ -48,7 +48,7 @@ DROP VIEW IF EXISTS v_integrity_score CASCADE;
 DROP VIEW IF EXISTS job_integrity_violations CASCADE;
 
 -- 5. Recriar job_integrity_violations com MISSING_ERROR_MESSAGE
--- CORRIGIDO: software_inventory usa first_seen_at, não created_at
+-- CORRIGIDO: software_inventory usa first_seen_at, nao created_at
 CREATE OR REPLACE VIEW job_integrity_violations AS
 SELECT 
   j.id AS job_id, 
@@ -193,7 +193,7 @@ FROM supply_chain_stats scs
 CROSS JOIN job_integrity_stats jis
 CROSS JOIN failed_job_stats fjs;
 
--- 7. Comentários de documentação
+-- 7. Comentarios de documentacao
 COMMENT ON FUNCTION public.enforce_failed_job_requires_error() IS 
 'Zero Trust: Impede jobs marcados como failed sem error_message explicativo. ERRCODE 23514.';
 

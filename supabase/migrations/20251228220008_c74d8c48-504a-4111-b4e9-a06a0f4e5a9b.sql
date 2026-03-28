@@ -1,9 +1,9 @@
 -- =====================================================
--- MIGRAÇÃO: Corrigir RLS para Multi-Tenant
+-- MIGRACAO: Corrigir RLS para Multi-Tenant
 -- Substituir current_user_tenant_id() por checagem IN
 -- =====================================================
 
--- Função auxiliar para verificar se usuário pertence a um tenant
+-- Funcao auxiliar para verificar se usuario pertence a um tenant
 CREATE OR REPLACE FUNCTION public.user_belongs_to_tenant(_tenant_id uuid)
 RETURNS boolean
 LANGUAGE sql
@@ -20,17 +20,17 @@ AS $$
 $$;
 
 -- =====================================================
--- AGENTS - Atualizar políticas para multi-tenant
+-- AGENTS - Atualizar politicas para multi-tenant
 -- =====================================================
 
--- Remover políticas antigas que usam current_user_tenant_id()
+-- Remover politicas antigas que usam current_user_tenant_id()
 DROP POLICY IF EXISTS "Admins and operators can manage agents" ON public.agents;
 DROP POLICY IF EXISTS "Users can view agents in their tenant" ON public.agents;
 DROP POLICY IF EXISTS "Admins can manage agents" ON public.agents;
 DROP POLICY IF EXISTS "Operators can manage agents" ON public.agents;
 DROP POLICY IF EXISTS "Viewers can read agents" ON public.agents;
 
--- Criar novas políticas usando user_belongs_to_tenant()
+-- Criar novas politicas usando user_belongs_to_tenant()
 CREATE POLICY "Users can view agents in their tenants"
 ON public.agents
 FOR SELECT
@@ -56,7 +56,7 @@ TO authenticated
 USING (public.user_belongs_to_tenant(tenant_id) AND public.has_role(auth.uid(), 'admin'));
 
 -- =====================================================
--- JOBS - Atualizar políticas para multi-tenant
+-- JOBS - Atualizar politicas para multi-tenant
 -- =====================================================
 
 DROP POLICY IF EXISTS "Admins and operators can manage jobs" ON public.jobs;
@@ -90,7 +90,7 @@ TO authenticated
 USING (public.user_belongs_to_tenant(tenant_id) AND public.has_role(auth.uid(), 'admin'));
 
 -- =====================================================
--- REPORTS - Atualizar políticas para multi-tenant
+-- REPORTS - Atualizar politicas para multi-tenant
 -- =====================================================
 
 DROP POLICY IF EXISTS "Users can view reports in their tenant" ON public.reports;
@@ -109,7 +109,7 @@ TO authenticated
 USING (public.user_belongs_to_tenant(tenant_id));
 
 -- =====================================================
--- VIRUS_SCANS - Atualizar políticas para multi-tenant
+-- VIRUS_SCANS - Atualizar politicas para multi-tenant
 -- =====================================================
 
 DROP POLICY IF EXISTS "Users can view virus_scans in their tenant" ON public.virus_scans;
@@ -128,7 +128,7 @@ TO authenticated
 WITH CHECK (public.user_belongs_to_tenant(tenant_id));
 
 -- =====================================================
--- AUDIT_LOGS - Atualizar políticas para multi-tenant
+-- AUDIT_LOGS - Atualizar politicas para multi-tenant
 -- =====================================================
 
 DROP POLICY IF EXISTS "Admins can read audit logs" ON public.audit_logs;
@@ -141,7 +141,7 @@ TO authenticated
 USING (public.user_belongs_to_tenant(tenant_id) AND public.has_role(auth.uid(), 'admin'));
 
 -- =====================================================
--- SYSTEM_ALERTS - Atualizar políticas para multi-tenant
+-- SYSTEM_ALERTS - Atualizar politicas para multi-tenant
 -- =====================================================
 
 DROP POLICY IF EXISTS "Users can view alerts in their tenant" ON public.system_alerts;
@@ -160,7 +160,7 @@ TO authenticated
 USING (public.user_belongs_to_tenant(tenant_id));
 
 -- =====================================================
--- AGENT_SYSTEM_METRICS - Atualizar políticas
+-- AGENT_SYSTEM_METRICS - Atualizar politicas
 -- =====================================================
 
 DROP POLICY IF EXISTS "Users can view metrics in their tenant" ON public.agent_system_metrics;
@@ -172,7 +172,7 @@ TO authenticated
 USING (public.user_belongs_to_tenant(tenant_id));
 
 -- =====================================================
--- AGENT_SYSTEM_METRICS_PARTITIONED - Atualizar políticas
+-- AGENT_SYSTEM_METRICS_PARTITIONED - Atualizar politicas
 -- =====================================================
 
 DROP POLICY IF EXISTS "Users can view partitioned metrics in their tenant" ON public.agent_system_metrics_partitioned;

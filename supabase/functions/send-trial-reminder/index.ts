@@ -29,37 +29,37 @@ interface I18nStrings {
 
 const translations: Record<string, I18nStrings> = {
   'pt-BR': {
-    subject7: (days: number) => `⏳ Seu trial expira em ${days} dias`,
-    subject1: '⚠️ Seu trial expira amanhã!',
-    greeting: 'Olá',
-    trialEnding7: (days, date) => `Seu período de trial está chegando ao fim e expira em <strong>${days} dias</strong>, no dia <strong>${date}</strong>.`,
-    enjoying: 'Esperamos que você esteja aproveitando todos os recursos premium do CyberShield!',
-    warningLabel: '⚠️ Atenção:',
-    trialEnding1: (date) => `Seu trial expira <strong>amanhã, ${date}</strong>!`,
-    choosePlan: 'Para continuar aproveitando todos os recursos de proteção avançada, escolha um plano agora.',
-    featuresTitle: 'O que você tem acesso no trial:',
+    subject7: (days: number) => `? Seu trial expira em ${days} dias`,
+    subject1: '[WARN] ? Seu trial expira amanha!',
+    greeting: 'Ola',
+    trialEnding7: (days, date) => `Seu periodo de trial esta chegando ao fim e expira em <strong>${days} dias</strong>, no dia <strong>${date}</strong>.`,
+    enjoying: 'Esperamos que voce esteja aproveitando todos os recursos premium do CyberShield!',
+    warningLabel: '[WARN] ? Atencao:',
+    trialEnding1: (date) => `Seu trial expira <strong>amanha, ${date}</strong>!`,
+    choosePlan: 'Para continuar aproveitando todos os recursos de protecao avancada, escolha um plano agora.',
+    featuresTitle: 'O que voce tem acesso no trial:',
     features: [
       'Monitoramento em tempo real de dispositivos',
-      'Scans de vírus ilimitados',
-      'Dashboard de segurança avançado',
-      'Alertas e notificações automáticas',
+      'Scans de virus ilimitados',
+      'Dashboard de seguranca avancado',
+      'Alertas e notificacoes automaticas',
       'Suporte por email',
     ],
-    dontLose: 'Não perca acesso a esses recursos!',
-    cta7: 'Ver Planos Disponíveis',
-    cta1: '🚀 Assinar Agora',
-    afterTrial: 'Após o trial, você será automaticamente migrado para o plano gratuito com recursos limitados, a menos que escolha um dos nossos planos pagos.',
-    footer1: 'CyberShield - Proteção que você pode confiar',
-    footer2: 'Esta é uma mensagem automática. Por favor, não responda este email.',
-    headerSubtitle: 'Proteção Avançada para seus Dispositivos',
+    dontLose: 'Nao perca acesso a esses recursos!',
+    cta7: 'Ver Planos Disponiveis',
+    cta1: '? Assinar Agora',
+    afterTrial: 'Apos o trial, voce sera automaticamente migrado para o plano gratuito com recursos limitados, a menos que escolha um dos nossos planos pagos.',
+    footer1: 'CyberShield - Protecao que voce pode confiar',
+    footer2: 'Esta e uma mensagem automatica. Por favor, nao responda este email.',
+    headerSubtitle: 'Protecao Avancada para seus Dispositivos',
   } as Record<string, unknown>,
   en: {
-    subject7: (days: number) => `⏳ Your trial expires in ${days} days`,
-    subject1: '⚠️ Your trial expires tomorrow!',
+    subject7: (days: number) => `? Your trial expires in ${days} days`,
+    subject1: '[WARN] ? Your trial expires tomorrow!',
     greeting: 'Hello',
     trialEnding7: (days, date) => `Your trial period is ending and expires in <strong>${days} days</strong>, on <strong>${date}</strong>.`,
     enjoying: 'We hope you are enjoying all the premium features of CyberShield!',
-    warningLabel: '⚠️ Attention:',
+    warningLabel: '[WARN] ? Attention:',
     trialEnding1: (date) => `Your trial expires <strong>tomorrow, ${date}</strong>!`,
     choosePlan: 'To continue enjoying all advanced protection features, choose a plan now.',
     featuresTitle: 'What you have access to during the trial:',
@@ -72,36 +72,36 @@ const translations: Record<string, I18nStrings> = {
     ],
     dontLose: "Don't lose access to these features!",
     cta7: 'View Available Plans',
-    cta1: '🚀 Subscribe Now',
+    cta1: '? Subscribe Now',
     afterTrial: 'After the trial, you will be automatically moved to the free plan with limited features, unless you choose one of our paid plans.',
     footer1: 'CyberShield - Protection you can trust',
     footer2: 'This is an automated message. Please do not reply to this email.',
     headerSubtitle: 'Advanced Protection for your Devices',
   } as Record<string, unknown>,
   es: {
-    subject7: (days: number) => `⏳ Tu trial expira en ${days} días`,
-    subject1: '⚠️ ¡Tu trial expira mañana!',
+    subject7: (days: number) => `? Tu trial expira en ${days} dias`,
+    subject1: '[WARN] ? ?Tu trial expira ma?ana!',
     greeting: 'Hola',
-    trialEnding7: (days, date) => `Tu período de prueba está llegando a su fin y expira en <strong>${days} días</strong>, el <strong>${date}</strong>.`,
-    enjoying: '¡Esperamos que estés disfrutando de todas las funciones premium de CyberShield!',
-    warningLabel: '⚠️ Atención:',
-    trialEnding1: (date) => `¡Tu trial expira <strong>mañana, ${date}</strong>!`,
-    choosePlan: 'Para seguir disfrutando de todas las funciones de protección avanzada, elige un plan ahora.',
+    trialEnding7: (days, date) => `Tu periodo de prueba esta llegando a su fin y expira en <strong>${days} dias</strong>, el <strong>${date}</strong>.`,
+    enjoying: '?Esperamos que estes disfrutando de todas las funciones premium de CyberShield!',
+    warningLabel: '[WARN] ? Atencion:',
+    trialEnding1: (date) => `?Tu trial expira <strong>ma?ana, ${date}</strong>!`,
+    choosePlan: 'Para seguir disfrutando de todas las funciones de proteccion avanzada, elige un plan ahora.',
     featuresTitle: 'Lo que tienes acceso durante el trial:',
     features: [
       'Monitoreo en tiempo real de dispositivos',
       'Escaneos de virus ilimitados',
       'Dashboard de seguridad avanzado',
-      'Alertas y notificaciones automáticas',
+      'Alertas y notificaciones automaticas',
       'Soporte por email',
     ],
-    dontLose: '¡No pierdas acceso a estas funciones!',
+    dontLose: '?No pierdas acceso a estas funciones!',
     cta7: 'Ver Planes Disponibles',
-    cta1: '🚀 Suscribirse Ahora',
-    afterTrial: 'Después del trial, serás migrado automáticamente al plan gratuito con funciones limitadas, a menos que elijas uno de nuestros planes pagos.',
-    footer1: 'CyberShield - Protección en la que puedes confiar',
-    footer2: 'Este es un mensaje automático. Por favor, no respondas a este email.',
-    headerSubtitle: 'Protección Avanzada para tus Dispositivos',
+    cta1: '? Suscribirse Ahora',
+    afterTrial: 'Despues del trial, seras migrado automaticamente al plan gratuito con funciones limitadas, a menos que elijas uno de nuestros planes pagos.',
+    footer1: 'CyberShield - Proteccion en la que puedes confiar',
+    footer2: 'Este es un mensaje automatico. Por favor, no respondas a este email.',
+    headerSubtitle: 'Proteccion Avanzada para tus Dispositivos',
   } as Record<string, unknown>,
 };
 
@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
       ? t.subject7(days_remaining)
       : t.subject1;
 
-    const featuresHtml = t.features.map((f: string) => `<li>✅ ${f}</li>`).join('\n                ');
+    const featuresHtml = t.features.map((f: string) => `<li>[OK]  ${f}</li>`).join('\n                ');
 
     const html = `
       <!DOCTYPE html>
@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="margin: 0;">🛡️ CyberShield</h1>
+              <h1 style="margin: 0;">?? CyberShield</h1>
               <p style="margin: 10px 0 0 0; opacity: 0.9;">${t.headerSubtitle}</p>
             </div>
             <div class="content">

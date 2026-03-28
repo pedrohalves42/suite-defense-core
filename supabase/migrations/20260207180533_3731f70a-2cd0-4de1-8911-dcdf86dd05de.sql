@@ -1,5 +1,5 @@
 -- =======================================================
--- SINCRONIZAÇÃO DE THRESHOLDS: get_agent_health_metrics
+-- SINCRONIZACAO DE THRESHOLDS: get_agent_health_metrics
 -- =======================================================
 -- Atualiza a RPC para incluir estado 'warning' entre 'healthy' e 'critical'
 
@@ -45,7 +45,7 @@ BEGIN
       WHEN a.last_heartbeat IS NULL THEN 'never_connected'::TEXT
       -- OFFLINE: mais de 10 minutos
       WHEN a.last_heartbeat < NOW() - INTERVAL '10 minutes' THEN 'offline'::TEXT
-      -- CRITICAL: tem alertas críticos não resolvidos
+      -- CRITICAL: tem alertas criticos nao resolvidos
       WHEN EXISTS (
         SELECT 1 FROM system_alerts sa 
         WHERE sa.agent_id = a.id 
@@ -78,4 +78,4 @@ END;
 $function$;
 
 COMMENT ON FUNCTION public.get_agent_health_metrics IS 
-'Retorna métricas de saúde dos agentes. Thresholds: healthy < 2min, warning 2-10min, offline > 10min.';
+'Retorna metricas de saude dos agentes. Thresholds: healthy < 2min, warning 2-10min, offline > 10min.';

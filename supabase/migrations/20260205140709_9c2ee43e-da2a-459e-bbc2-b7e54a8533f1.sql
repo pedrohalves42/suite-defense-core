@@ -1,10 +1,10 @@
 
 -- ===========================================
--- FIX: Corrigir RLS policies para múltiplos problemas
+-- FIX: Corrigir RLS policies para multiplos problemas
 -- ===========================================
 
 -- 1. ai_insight_feedback: Adicionar unique constraint e corrigir INSERT policy
--- Primeiro, adicionar unique constraint se não existir
+-- Primeiro, adicionar unique constraint se nao existir
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -16,7 +16,7 @@ BEGIN
   END IF;
 END$$;
 
--- 2. Corrigir INSERT policy de ai_insight_feedback (remover exigência de get_active_tenant_id() IS NOT NULL)
+-- 2. Corrigir INSERT policy de ai_insight_feedback (remover exigencia de get_active_tenant_id() IS NOT NULL)
 DROP POLICY IF EXISTS ai_insight_feedback_insert_active_tenant ON ai_insight_feedback;
 CREATE POLICY ai_insight_feedback_insert_active_tenant ON ai_insight_feedback
 FOR INSERT TO authenticated
@@ -38,7 +38,7 @@ WITH CHECK (
   AND tenant_id IN (SELECT tenant_id FROM user_roles WHERE user_id = auth.uid())
 );
 
--- 4. decision_events: Adicionar INSERT policy para authenticated (permite auditoria de rejeições)
+-- 4. decision_events: Adicionar INSERT policy para authenticated (permite auditoria de rejeicoes)
 DROP POLICY IF EXISTS decision_events_insert_authenticated ON decision_events;
 CREATE POLICY decision_events_insert_authenticated ON decision_events
 FOR INSERT TO authenticated
@@ -46,7 +46,7 @@ WITH CHECK (
   tenant_id IN (SELECT tenant_id FROM user_roles WHERE user_id = auth.uid())
 );
 
--- 5. ai_insights: Corrigir UPDATE policy para permitir rejeição (estava exigindo get_active_tenant_id())
+-- 5. ai_insights: Corrigir UPDATE policy para permitir rejeicao (estava exigindo get_active_tenant_id())
 DROP POLICY IF EXISTS ai_insights_update_active_tenant ON ai_insights;
 CREATE POLICY ai_insights_update_active_tenant ON ai_insights
 FOR UPDATE TO authenticated

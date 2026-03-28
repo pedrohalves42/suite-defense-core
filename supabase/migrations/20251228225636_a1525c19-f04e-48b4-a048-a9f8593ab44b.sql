@@ -12,7 +12,7 @@ DECLARE
   v_action_type text;
   v_action_payload jsonb;
 BEGIN
-  -- Processa insights críticos não reconhecidos sem ação associada
+  -- Processa insights criticos nao reconhecidos sem acao associada
   FOR v_insight IN
     SELECT i.*
     FROM ai_insights i
@@ -32,7 +32,7 @@ BEGIN
   LOOP
     v_insights_processed := v_insights_processed + 1;
     
-    -- Determina tipo de ação baseado na categoria do insight
+    -- Determina tipo de acao baseado na categoria do insight
     CASE 
       WHEN v_insight.insight_type ILIKE '%agent%' OR v_insight.insight_type ILIKE '%health%' THEN
         v_action_type := 'suggest_agent_restart';
@@ -46,7 +46,7 @@ BEGIN
         v_action_type := 'create_system_alert';
         v_action_payload := jsonb_build_object(
           'insight_id', v_insight.id,
-          'title', 'Alerta de Segurança: ' || v_insight.title,
+          'title', 'Alerta de Seguranca: ' || v_insight.title,
           'message', v_insight.description,
           'severity', v_insight.severity,
           'category', 'security'
@@ -56,14 +56,14 @@ BEGIN
         v_action_payload := jsonb_build_object(
           'insight_id', v_insight.id,
           'insight_title', v_insight.title,
-          'suggested_action', 'Limpar jobs travados ou cancelar jobs problemáticos'
+          'suggested_action', 'Limpar jobs travados ou cancelar jobs problematicos'
         );
       WHEN v_insight.insight_type ILIKE '%config%' OR v_insight.insight_type ILIKE '%policy%' THEN
         v_action_type := 'suggest_config_change';
         v_action_payload := jsonb_build_object(
           'insight_id', v_insight.id,
           'insight_title', v_insight.title,
-          'suggested_action', 'Revisar configuração do sistema'
+          'suggested_action', 'Revisar configuracao do sistema'
         );
       ELSE
         v_action_type := 'create_system_alert';
@@ -75,7 +75,7 @@ BEGIN
         );
     END CASE;
     
-    -- Cria a ação
+    -- Cria a acao
     INSERT INTO ai_actions (
       tenant_id,
       insight_id,
@@ -150,9 +150,9 @@ BEGIN
               AND j.created_at < NOW() - INTERVAL '30 minutes'
           )
       LOOP
-        -- Verifica se não executou jobs recentemente
+        -- Verifica se nao executou jobs recentemente
         IF v_agent.last_execution < NOW() - INTERVAL '60 minutes' THEN
-          -- Cria evento de decisão
+          -- Cria evento de decisao
           INSERT INTO decision_events (
             tenant_id, rule_code, agent_id, agent_name, action,
             evidence, executed_actions
@@ -178,7 +178,7 @@ BEGIN
             'high',
             'agent_health',
             'Agente improdutivo: ' || v_agent.agent_name,
-            'O agente ' || v_agent.agent_name || ' está online mas não executou jobs nas últimas horas. Última execução: ' || 
+            'O agente ' || v_agent.agent_name || ' esta online mas nao executou jobs nas ultimas horas. Ultima execucao: ' || 
             COALESCE(v_agent.last_execution::text, 'nunca')
           );
           
@@ -187,9 +187,9 @@ BEGIN
       END LOOP;
     END IF;
     
-    -- Regra INSIGHT_IGNORED_009: Insights críticos ignorados
+    -- Regra INSIGHT_IGNORED_009: Insights criticos ignorados
     IF v_rule.code = 'INSIGHT_IGNORED_009' THEN
-      -- Escala insights ignorados há mais de 72h
+      -- Escala insights ignorados ha mais de 72h
       UPDATE ai_insights
       SET 
         severity = 'critical',
@@ -199,7 +199,7 @@ BEGIN
         AND created_at < NOW() - INTERVAL '72 hours'
         AND title NOT LIKE '[ESCALADO]%';
         
-      -- Registra evento se houve escalações
+      -- Registra evento se houve escalacoes
       IF FOUND THEN
         INSERT INTO decision_events (
           tenant_id, rule_code, action, evidence, executed_actions
@@ -218,7 +218,7 @@ BEGIN
     END IF;
   END LOOP;
   
-  -- Gera AI Actions para insights não processados
+  -- Gera AI Actions para insights nao processados
   PERFORM generate_ai_actions_from_insights();
   
   RETURN jsonb_build_object(

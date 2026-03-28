@@ -2,11 +2,11 @@ import { logger } from "./logger.ts";
 /**
  * AI Anomaly Detector
  * 
- * Detecta comportamentos anômalos em respostas de IA:
- * - Desvio de score além do esperado
- * - Mudanças bruscas de recomendação
- * - Token overflow (possível prompt leaking)
- * - Padrões suspeitos de output
+ * Detecta comportamentos anomalos em respostas de IA:
+ * - Desvio de score alem do esperado
+ * - Mudancas bruscas de recomendacao
+ * - Token overflow (possivel prompt leaking)
+ * - Padroes suspeitos de output
  */
 
 export interface AIContext {
@@ -40,13 +40,13 @@ export interface BehaviorValidation {
   requiresReview: boolean;
 }
 
-// Thresholds de detecção
-const SCORE_DEVIATION_THRESHOLD = 25; // ±25 pontos do histórico
+// Thresholds de deteccao
+const SCORE_DEVIATION_THRESHOLD = 25; // ?25 pontos do historico
 const EXTREME_SCORE_LOW = 15;
 const EXTREME_SCORE_HIGH = 95;
 const TOKEN_OVERFLOW_MULTIPLIER = 2.0; // 2x do esperado
 
-// Padrões suspeitos em respostas
+// Padroes suspeitos em respostas
 const SUSPICIOUS_PATTERNS = [
   /\[SYSTEM\]/gi,
   /\[IGNORE\]/gi,
@@ -76,7 +76,7 @@ export function validateAIBehavior(
       anomalies.push({
         type: 'score_deviation',
         severity: deviation > 40 ? 'critical' : 'warning',
-        description: `Score ${response.score} desviou ${deviation.toFixed(1)} pontos da média histórica ${context.historicalAvg.toFixed(1)}`,
+        description: `Score ${response.score} desviou ${deviation.toFixed(1)} pontos da media historica ${context.historicalAvg.toFixed(1)}`,
         value: response.score,
         threshold: context.historicalAvg,
       });
@@ -89,7 +89,7 @@ export function validateAIBehavior(
       anomalies.push({
         type: 'extreme_score',
         severity: 'warning',
-        description: `Score extremamente baixo: ${response.score}. Verificar se análise está correta.`,
+        description: `Score extremamente baixo: ${response.score}. Verificar se analise esta correta.`,
         value: response.score,
         threshold: EXTREME_SCORE_LOW,
       });
@@ -97,14 +97,14 @@ export function validateAIBehavior(
       anomalies.push({
         type: 'extreme_score',
         severity: 'info',
-        description: `Score muito alto: ${response.score}. Pode indicar análise superficial.`,
+        description: `Score muito alto: ${response.score}. Pode indicar analise superficial.`,
         value: response.score,
         threshold: EXTREME_SCORE_HIGH,
       });
     }
   }
 
-  // 3. Verificar mudança brusca de recomendação
+  // 3. Verificar mudanca brusca de recomendacao
   if (
     response.recommendation &&
     context.lastRecommendation &&
@@ -117,7 +117,7 @@ export function validateAIBehavior(
       anomalies.push({
         type: 'recommendation_flip',
         severity: 'warning',
-        description: `Recomendação mudou de "${context.lastRecommendation}" para "${response.recommendation}" sem mudança nos dados.`,
+        description: `Recomendacao mudou de "${context.lastRecommendation}" para "${response.recommendation}" sem mudanca nos dados.`,
         value: response.recommendation,
         threshold: context.lastRecommendation,
       });
@@ -134,29 +134,29 @@ export function validateAIBehavior(
       anomalies.push({
         type: 'token_overflow',
         severity: 'critical',
-        description: `Resposta com ${response.tokenCount} tokens excede o limite esperado de ${threshold.toFixed(0)}. Possível prompt leaking.`,
+        description: `Resposta com ${response.tokenCount} tokens excede o limite esperado de ${threshold.toFixed(0)}. Possivel prompt leaking.`,
         value: response.tokenCount,
         threshold: threshold,
       });
     }
   }
 
-  // 5. Verificar padrões suspeitos na resposta
+  // 5. Verificar padroes suspeitos na resposta
   if (response.rawResponse) {
     for (const pattern of SUSPICIOUS_PATTERNS) {
       if (pattern.test(response.rawResponse)) {
         anomalies.push({
           type: 'suspicious_pattern',
           severity: 'warning',
-          description: `Padrão suspeito detectado na resposta: ${pattern.source.substring(0, 30)}`,
+          description: `Padrao suspeito detectado na resposta: ${pattern.source.substring(0, 30)}`,
           value: pattern.source,
         });
-        break; // Apenas registrar um padrão por resposta
+        break; // Apenas registrar um padrao por resposta
       }
     }
   }
 
-  // Determinar ações
+  // Determinar acoes
   const criticalAnomalies = anomalies.filter((a) => a.severity === 'critical');
   const warningAnomalies = anomalies.filter((a) => a.severity === 'warning');
 
@@ -250,7 +250,7 @@ export async function processAnomalies(
   additionalContext: Record<string, any> = {}
 ): Promise<void> {
   for (const anomaly of validation.anomalies) {
-    // Rate limiting: verificar ocorrências recentes
+    // Rate limiting: verificar ocorrencias recentes
     const recent = await checkRecentAnomalies(
       supabase,
       context.tenantId,
@@ -258,7 +258,7 @@ export async function processAnomalies(
       anomaly.type
     );
     
-    // Skip se 10+ ocorrências (alert fatigue prevention)
+    // Skip se 10+ ocorrencias (alert fatigue prevention)
     if (recent.count >= SKIP_THRESHOLD) {
       logger.info(
         `[ai-anomaly-detector] Rate limit: Skipping anomaly log for ${anomaly.type} - ${recent.count} occurrences in last ${RATE_LIMIT_HOURS}h`
@@ -266,7 +266,7 @@ export async function processAnomalies(
       continue;
     }
     
-    // Downgrade se 3+ ocorrências em 24h
+    // Downgrade se 3+ ocorrencias em 24h
     if (recent.count >= DOWNGRADE_THRESHOLD && anomaly.severity === 'critical') {
       anomaly.severity = 'warning';
       anomaly.description += ' [Downgraded: repeated occurrence]';
@@ -294,7 +294,7 @@ export async function processAnomalies(
 
 /**
  * Calcula estimativa de tokens baseado no tamanho do texto
- * Aproximação: 1 token ≈ 4 caracteres para inglês/português
+ * Aproximacao: 1 token ? 4 caracteres para ingles/portugues
  */
 export function estimateTokenCount(text: string): number {
   if (!text) return 0;

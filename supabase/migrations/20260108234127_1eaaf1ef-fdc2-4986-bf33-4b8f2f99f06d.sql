@@ -73,4 +73,4 @@ REVOKE UPDATE ON chaos_test_results FROM authenticated;
 
 -- Add documentation comment
 COMMENT ON TABLE chaos_test_results IS 
-  'Tabela de resultados de testes de caos. IMUTÁVEL - apenas super admin pode SELECT/INSERT/DELETE. UPDATE revogado explicitamente para auditoria SOC2/ISO27001.';
+  'Tabela de resultados de testes de caos. IMUTAVEL - apenas super admin pode SELECT/INSERT/DELETE. UPDATE revogado explicitamente para auditoria SOC2/ISO27001.';

@@ -3,11 +3,11 @@
 -- P0 Security Validation - Investor-Grade Proof of Isolation
 -- ============================================================
 -- 
--- Este script valida que o Row Level Security está funcionando
+-- Este script valida que o Row Level Security esta funcionando
 -- corretamente, garantindo que um tenant NUNCA pode acessar
 -- dados de outro tenant.
 --
--- Execução: Via Supabase SQL Editor ou psql
+-- Execucao: Via Supabase SQL Editor ou psql
 -- Resultado esperado: 100% dos testes devem PASSAR
 -- ============================================================
 
@@ -34,7 +34,7 @@ DECLARE
 BEGIN
     RAISE NOTICE '============================================================';
     RAISE NOTICE 'CyberShield RLS Cross-Tenant Isolation Test Suite';
-    RAISE NOTICE 'Iniciando validação de segurança multi-tenant...';
+    RAISE NOTICE 'Iniciando validacao de seguranca multi-tenant...';
     RAISE NOTICE '============================================================';
     RAISE NOTICE '';
 
@@ -46,10 +46,10 @@ BEGIN
     SELECT id INTO v_tenant_b_id FROM tenants WHERE id != COALESCE(v_tenant_a_id, '00000000-0000-0000-0000-000000000000') LIMIT 1;
     
     IF v_tenant_a_id IS NULL OR v_tenant_b_id IS NULL THEN
-        RAISE NOTICE '[SKIP] Não há 2 tenants diferentes para testar isolamento cross-tenant';
-        RAISE NOTICE 'Criando tenants de teste temporários...';
+        RAISE NOTICE '[SKIP] Nao ha 2 tenants diferentes para testar isolamento cross-tenant';
+        RAISE NOTICE 'Criando tenants de teste temporarios...';
         
-        -- Criar tenants temporários para teste
+        -- Criar tenants temporarios para teste
         INSERT INTO tenants (id, name, slug, subscription_plan_id)
         VALUES (gen_random_uuid(), 'RLS_Test_Tenant_A', 'rls-test-a-' || extract(epoch from now())::text, NULL)
         RETURNING id INTO v_tenant_a_id;
@@ -64,10 +64,10 @@ BEGIN
     RAISE NOTICE '';
 
     -- ===========================================
-    -- TEST 1: Verificar RLS está habilitado em tabelas críticas
+    -- TEST 1: Verificar RLS esta habilitado em tabelas criticas
     -- ===========================================
     
-    v_test_name := 'RLS Habilitado em Tabelas Críticas';
+    v_test_name := 'RLS Habilitado em Tabelas Criticas';
     v_total_tests := v_total_tests + 1;
     
     SELECT COUNT(*) INTO v_query_result
@@ -80,7 +80,7 @@ BEGIN
     IF v_query_result = 0 THEN
         v_test_passed := true;
         v_passed_tests := v_passed_tests + 1;
-        RAISE NOTICE '[PASS] %: Todas as tabelas críticas têm RLS habilitado', v_test_name;
+        RAISE NOTICE '[PASS] %: Todas as tabelas criticas tem RLS habilitado', v_test_name;
     ELSE
         v_test_passed := false;
         v_failed_tests := v_failed_tests + 1;
@@ -91,10 +91,10 @@ BEGIN
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
 
     -- ===========================================
-    -- TEST 2: Verificar função current_user_tenant_id() existe
+    -- TEST 2: Verificar funcao current_user_tenant_id() existe
     -- ===========================================
     
-    v_test_name := 'Função current_user_tenant_id() Existe';
+    v_test_name := 'Funcao current_user_tenant_id() Existe';
     v_total_tests := v_total_tests + 1;
     
     SELECT COUNT(*) INTO v_query_result
@@ -110,16 +110,16 @@ BEGIN
     ELSE
         v_test_passed := false;
         v_failed_tests := v_failed_tests + 1;
-        RAISE NOTICE '[FAIL] %: Função não encontrada', v_test_name;
+        RAISE NOTICE '[FAIL] %: Funcao nao encontrada', v_test_name;
     END IF;
     
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
 
     -- ===========================================
-    -- TEST 3: Verificar função has_role() existe
+    -- TEST 3: Verificar funcao has_role() existe
     -- ===========================================
     
-    v_test_name := 'Função has_role() Existe';
+    v_test_name := 'Funcao has_role() Existe';
     v_total_tests := v_total_tests + 1;
     
     SELECT COUNT(*) INTO v_query_result
@@ -135,16 +135,16 @@ BEGIN
     ELSE
         v_test_passed := false;
         v_failed_tests := v_failed_tests + 1;
-        RAISE NOTICE '[FAIL] %: Função não encontrada', v_test_name;
+        RAISE NOTICE '[FAIL] %: Funcao nao encontrada', v_test_name;
     END IF;
     
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
 
     -- ===========================================
-    -- TEST 4: Verificar função is_super_admin() existe
+    -- TEST 4: Verificar funcao is_super_admin() existe
     -- ===========================================
     
-    v_test_name := 'Função is_super_admin() Existe';
+    v_test_name := 'Funcao is_super_admin() Existe';
     v_total_tests := v_total_tests + 1;
     
     SELECT COUNT(*) INTO v_query_result
@@ -160,19 +160,19 @@ BEGIN
     ELSE
         v_test_passed := false;
         v_failed_tests := v_failed_tests + 1;
-        RAISE NOTICE '[FAIL] %: Função não encontrada', v_test_name;
+        RAISE NOTICE '[FAIL] %: Funcao nao encontrada', v_test_name;
     END IF;
     
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
 
     -- ===========================================
-    -- TEST 5: Verificar policies usam SECURITY INVOKER (não DEFINER)
+    -- TEST 5: Verificar policies usam SECURITY INVOKER (nao DEFINER)
     -- ===========================================
     
-    v_test_name := 'Views Críticas Usam SECURITY INVOKER';
+    v_test_name := 'Views Criticas Usam SECURITY INVOKER';
     v_total_tests := v_total_tests + 1;
     
-    -- Verificar views críticas com security_invoker
+    -- Verificar views criticas com security_invoker
     SELECT COUNT(*) INTO v_query_result
     FROM pg_class c
     JOIN pg_namespace n ON c.relnamespace = n.oid
@@ -184,19 +184,19 @@ BEGIN
         WHERE option_name = 'security_invoker' AND option_value = 'true'
     );
     
-    -- Nota: Esta verificação pode não funcionar perfeitamente em todas as versões
-    -- Vamos considerar como PASS se não encontrar violações óbvias
+    -- Nota: Esta verificacao pode nao funcionar perfeitamente em todas as versoes
+    -- Vamos considerar como PASS se nao encontrar violacoes obvias
     v_test_passed := true;
     v_passed_tests := v_passed_tests + 1;
-    RAISE NOTICE '[PASS] %: Views críticas verificadas', v_test_name;
+    RAISE NOTICE '[PASS] %: Views criticas verificadas', v_test_name;
     
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
 
     -- ===========================================
-    -- TEST 6: Verificar tenant_id em tabelas críticas
+    -- TEST 6: Verificar tenant_id em tabelas criticas
     -- ===========================================
     
-    v_test_name := 'Tabelas Críticas Têm tenant_id';
+    v_test_name := 'Tabelas Criticas Tem tenant_id';
     v_total_tests := v_total_tests + 1;
     
     SELECT COUNT(*) INTO v_query_result
@@ -317,10 +317,10 @@ BEGIN
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
 
     -- ===========================================
-    -- TEST 11: Verificar políticas NÃO usam USING (true) sem restrição
+    -- TEST 11: Verificar politicas NAO usam USING (true) sem restricao
     -- ===========================================
     
-    v_test_name := 'Nenhuma Policy Crítica Usa USING (true) Sem Filtro tenant_id';
+    v_test_name := 'Nenhuma Policy Critica Usa USING (true) Sem Filtro tenant_id';
     v_total_tests := v_total_tests + 1;
     
     SELECT COUNT(*) INTO v_query_result
@@ -343,10 +343,10 @@ BEGIN
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
 
     -- ===========================================
-    -- TEST 12: Verificar índice em tenant_id para performance
+    -- TEST 12: Verificar indice em tenant_id para performance
     -- ===========================================
     
-    v_test_name := 'Índices em tenant_id Existem';
+    v_test_name := 'Indices em tenant_id Existem';
     v_total_tests := v_total_tests + 1;
     
     SELECT COUNT(DISTINCT tablename) INTO v_query_result
@@ -357,20 +357,20 @@ BEGIN
     IF v_query_result >= 5 THEN
         v_test_passed := true;
         v_passed_tests := v_passed_tests + 1;
-        RAISE NOTICE '[PASS] %: % tabelas com índice em tenant_id', v_test_name, v_query_result;
+        RAISE NOTICE '[PASS] %: % tabelas com indice em tenant_id', v_test_name, v_query_result;
     ELSE
         v_test_passed := false;
         v_failed_tests := v_failed_tests + 1;
-        RAISE NOTICE '[WARN] %: Apenas % tabelas com índice em tenant_id', v_test_name, v_query_result;
+        RAISE NOTICE '[WARN] %: Apenas % tabelas com indice em tenant_id', v_test_name, v_query_result;
     END IF;
     
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
 
     -- ===========================================
-    -- TEST 13: Verificar que agent_tokens não expõe tokens completos
+    -- TEST 13: Verificar que agent_tokens nao expoe tokens completos
     -- ===========================================
     
-    v_test_name := 'agent_tokens Usa token_hash (não expõe tokens)';
+    v_test_name := 'agent_tokens Usa token_hash (nao expoe tokens)';
     v_total_tests := v_total_tests + 1;
     
     SELECT COUNT(*) INTO v_query_result
@@ -386,16 +386,16 @@ BEGIN
     ELSE
         v_test_passed := false;
         v_failed_tests := v_failed_tests + 1;
-        RAISE NOTICE '[FAIL] %: Coluna token_hash não encontrada', v_test_name;
+        RAISE NOTICE '[FAIL] %: Coluna token_hash nao encontrada', v_test_name;
     END IF;
     
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
 
     -- ===========================================
-    -- TEST 14: Verificar que hmac_secret não está em views públicas
+    -- TEST 14: Verificar que hmac_secret nao esta em views publicas
     -- ===========================================
     
-    v_test_name := 'hmac_secret Não Exposto em Views';
+    v_test_name := 'hmac_secret Nao Exposto em Views';
     v_total_tests := v_total_tests + 1;
     
     SELECT COUNT(*) INTO v_query_result
@@ -420,7 +420,7 @@ BEGIN
     -- TEST 15: Contar dados por tenant (validar isolamento)
     -- ===========================================
     
-    v_test_name := 'Dados Existem em Múltiplos Tenants (Isolamento Testável)';
+    v_test_name := 'Dados Existem em Multiplos Tenants (Isolamento Testavel)';
     v_total_tests := v_total_tests + 1;
     
     SELECT COUNT(DISTINCT tenant_id) INTO v_query_result FROM agents;
@@ -452,16 +452,16 @@ BEGIN
     RAISE NOTICE '';
     
     IF v_failed_tests = 0 THEN
-        RAISE NOTICE '✅ RESULTADO: TODOS OS TESTES PASSARAM';
-        RAISE NOTICE '   O sistema está configurado corretamente para isolamento multi-tenant.';
-        RAISE NOTICE '   Nenhuma brecha de segurança detectada.';
+        RAISE NOTICE '[OK]  RESULTADO: TODOS OS TESTES PASSARAM';
+        RAISE NOTICE '   O sistema esta configurado corretamente para isolamento multi-tenant.';
+        RAISE NOTICE '   Nenhuma brecha de seguranca detectada.';
     ELSIF v_isolation_breach THEN
-        RAISE NOTICE '❌ RESULTADO: FALHA CRÍTICA - BRECHA DE ISOLAMENTO DETECTADA';
+        RAISE NOTICE '[ERROR]  RESULTADO: FALHA CRITICA - BRECHA DE ISOLAMENTO DETECTADA';
         RAISE NOTICE '   O sistema pode permitir acesso cross-tenant.';
-        RAISE NOTICE '   AÇÃO IMEDIATA NECESSÁRIA!';
+        RAISE NOTICE '   ACAO IMEDIATA NECESSARIA!';
     ELSE
-        RAISE NOTICE '⚠️ RESULTADO: ALGUNS TESTES FALHARAM';
-        RAISE NOTICE '   Verifique os detalhes acima para correções.';
+        RAISE NOTICE '[WARN] ? RESULTADO: ALGUNS TESTES FALHARAM';
+        RAISE NOTICE '   Verifique os detalhes acima para correcoes.';
     END IF;
     
     RAISE NOTICE '';
@@ -474,7 +474,7 @@ BEGIN
 END $$;
 
 -- ===========================================
--- QUERY DE VERIFICAÇÃO ADICIONAL
+-- QUERY DE VERIFICACAO ADICIONAL
 -- Lista todas as policies RLS por tabela
 -- ===========================================
 
@@ -485,11 +485,11 @@ SELECT
     roles,
     cmd,
     CASE 
-        WHEN qual::text = 'true' THEN '⚠️ USING (true)'
-        WHEN qual::text LIKE '%tenant_id%' THEN '✅ tenant_id filtered'
-        WHEN qual::text LIKE '%has_role%' THEN '✅ role-based'
-        WHEN qual::text LIKE '%is_super_admin%' THEN '✅ super_admin check'
-        ELSE '🔍 Custom policy'
+        WHEN qual::text = 'true' THEN '[WARN] ? USING (true)'
+        WHEN qual::text LIKE '%tenant_id%' THEN '[OK]  tenant_id filtered'
+        WHEN qual::text LIKE '%has_role%' THEN '[OK]  role-based'
+        WHEN qual::text LIKE '%is_super_admin%' THEN '[OK]  super_admin check'
+        ELSE '[SCAN]  Custom policy'
     END as policy_type,
     LEFT(qual::text, 100) as using_clause
 FROM pg_policies
@@ -497,8 +497,8 @@ WHERE schemaname = 'public'
 ORDER BY tablename, policyname;
 
 -- ===========================================
--- RELATÓRIO DE COMPLIANCE
--- Gera JSON para documentação
+-- RELATORIO DE COMPLIANCE
+-- Gera JSON para documentacao
 -- ===========================================
 
 SELECT jsonb_pretty(jsonb_build_object(

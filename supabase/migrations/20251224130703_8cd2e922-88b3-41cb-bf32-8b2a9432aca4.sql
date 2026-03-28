@@ -26,14 +26,14 @@ DECLARE
   v_nonce UUID;
   v_payload_hash TEXT;
 BEGIN
-  -- Buscar versão do agente
+  -- Buscar versao do agente
   SELECT agent_version INTO v_agent_version
   FROM agents
   WHERE id = p_agent_id;
   
   v_agent_version := COALESCE(v_agent_version, 'unknown');
   
-  -- Loop através dos jobs elegíveis
+  -- Loop atraves dos jobs elegiveis
   FOR v_job IN
     SELECT 
       j.id,
@@ -50,13 +50,13 @@ BEGIN
     LIMIT p_limit
     FOR UPDATE SKIP LOCKED
   LOOP
-    -- Gerar nonce único para esta execução
+    -- Gerar nonce unico para esta execucao
     v_nonce := gen_random_uuid();
     
     -- Calcular hash do payload
     v_payload_hash := encode(sha256(convert_to(COALESCE(v_job.payload::text, '{}'), 'UTF8')), 'hex');
     
-    -- Criar registro de execução (prova imutável)
+    -- Criar registro de execucao (prova imutavel)
     -- P2.2: Incluir started_at = NOW() no momento do claim
     INSERT INTO job_executions (
       job_id,
@@ -91,7 +91,7 @@ BEGIN
       current_execution_id = v_execution_id
     WHERE id = v_job.id;
     
-    -- Retornar job com dados da execução
+    -- Retornar job com dados da execucao
     job_id := v_job.id;
     job_type := v_job.type;
     payload := v_job.payload;
@@ -126,7 +126,7 @@ DECLARE
   v_execution RECORD;
   v_result JSONB;
 BEGIN
-  -- Verificar que a execução existe e pertence ao agente
+  -- Verificar que a execucao existe e pertence ao agente
   SELECT * INTO v_execution
   FROM job_executions
   WHERE id = p_execution_id
@@ -136,7 +136,7 @@ BEGIN
   FOR UPDATE;
   
   IF NOT FOUND THEN
-    -- Tentar buscar por job_id se execution_id não fornecido
+    -- Tentar buscar por job_id se execution_id nao fornecido
     IF p_execution_id IS NULL THEN
       SELECT * INTO v_execution
       FROM job_executions
@@ -157,7 +157,7 @@ BEGIN
     END IF;
   END IF;
   
-  -- Atualizar execução com resultado
+  -- Atualizar execucao com resultado
   UPDATE job_executions
   SET 
     status = p_status,
@@ -170,7 +170,7 @@ BEGIN
     signature_verified = p_signature_verified
   WHERE id = v_execution.id;
   
-  -- P2.1: CRÍTICO - Limpar current_execution_id do job para liberar para retry
+  -- P2.1: CRITICO - Limpar current_execution_id do job para liberar para retry
   UPDATE jobs
   SET current_execution_id = NULL
   WHERE id = p_job_id

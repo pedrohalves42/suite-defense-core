@@ -192,12 +192,12 @@ BEGIN
   -- Step 5: Simulate rollback event creation (dry-run only logs, real creates event)
   v_step_count := v_step_count + 1;
   IF p_dry_run THEN
-    v_steps := v_steps || jsonb_build_object('step', v_step_count, 'name', 'rollback_simulation', 'status', 'passed', 'detail', format('DRY RUN: Would rollback %s → %s', v_from_version, v_to_version));
+    v_steps := v_steps || jsonb_build_object('step', v_step_count, 'name', 'rollback_simulation', 'status', 'passed', 'detail', format('DRY RUN: Would rollback %s ? %s', v_from_version, v_to_version));
   ELSE
     -- Real rollback: create rollback event
     INSERT INTO agent_rollback_events (agent_id, tenant_id, from_version, to_version, reason, status)
     VALUES (COALESCE(p_agent_id, v_agent.id), p_tenant_id, v_from_version, v_to_version, 'Manual rollback test', 'initiated');
-    v_steps := v_steps || jsonb_build_object('step', v_step_count, 'name', 'rollback_execution', 'status', 'passed', 'detail', format('Rollback event created: %s → %s', v_from_version, v_to_version));
+    v_steps := v_steps || jsonb_build_object('step', v_step_count, 'name', 'rollback_execution', 'status', 'passed', 'detail', format('Rollback event created: %s ? %s', v_from_version, v_to_version));
   END IF;
 
   -- Finalize test result

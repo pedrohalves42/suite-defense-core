@@ -1,12 +1,12 @@
 -- =============================================================================
--- FASE 4A: Políticas finais para fechar gaps de isolamento multi-tenant
+-- FASE 4A: Politicas finais para fechar gaps de isolamento multi-tenant
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
 -- 1. agents_groups - Link entre agentes e grupos (herda tenant via group_id)
 -- -----------------------------------------------------------------------------
 
--- SELECT: Usuários podem ver links de grupos do tenant ativo
+-- SELECT: Usuarios podem ver links de grupos do tenant ativo
 CREATE POLICY agents_groups_select_active_tenant 
 ON agents_groups FOR SELECT
 USING (
@@ -17,7 +17,7 @@ USING (
   )
 );
 
--- INSERT: Usuários podem criar links para grupos do tenant ativo
+-- INSERT: Usuarios podem criar links para grupos do tenant ativo
 CREATE POLICY agents_groups_insert_active_tenant 
 ON agents_groups FOR INSERT
 WITH CHECK (
@@ -28,7 +28,7 @@ WITH CHECK (
   )
 );
 
--- UPDATE: Usuários podem atualizar links de grupos do tenant ativo
+-- UPDATE: Usuarios podem atualizar links de grupos do tenant ativo
 CREATE POLICY agents_groups_update_active_tenant 
 ON agents_groups FOR UPDATE
 USING (
@@ -46,7 +46,7 @@ WITH CHECK (
   )
 );
 
--- DELETE: Usuários podem remover links de grupos do tenant ativo
+-- DELETE: Usuarios podem remover links de grupos do tenant ativo
 CREATE POLICY agents_groups_delete_active_tenant 
 ON agents_groups FOR DELETE
 USING (

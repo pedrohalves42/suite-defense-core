@@ -35,7 +35,7 @@ export async function checkBuildCache(
     const hoursUntilExpiry = (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60);
 
     if (hoursUntilExpiry > 1) {
-      logger.info(`[${requestId}] ✅ BUILD CACHE HIT`, {
+      logger.info(`[${requestId}] [OK]  BUILD CACHE HIT`, {
         build_id: cachedBuild.id,
         expires_in_hours: hoursUntilExpiry.toFixed(1),
       });
@@ -49,7 +49,7 @@ export async function checkBuildCache(
           sha256_hash: cachedBuild.sha256_hash,
           file_size_bytes: cachedBuild.file_size_bytes,
           cached: true,
-          message: 'Build recuperado do cache (mesmo tenant/script/versão)',
+          message: 'Build recuperado do cache (mesmo tenant/script/versao)',
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

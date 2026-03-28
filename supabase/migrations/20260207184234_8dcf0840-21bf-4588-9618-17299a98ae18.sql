@@ -1,14 +1,14 @@
 
 -- ============================================================
--- CORREÇÃO ROBUSTA: SISTEMA DE MONITORAMENTO E MANUTENÇÃO
+-- CORRECAO ROBUSTA: SISTEMA DE MONITORAMENTO E MANUTENCAO
 -- ============================================================
 
--- 1. Adicionar coluna last_result em cron_health_checks se não existir
+-- 1. Adicionar coluna last_result em cron_health_checks se nao existir
 ALTER TABLE cron_health_checks 
 ADD COLUMN IF NOT EXISTS last_result jsonb;
 
 -- ============================================================
--- FUNÇÃO: Atualizar status de agentes offline
+-- FUNCAO: Atualizar status de agentes offline
 -- ============================================================
 CREATE OR REPLACE FUNCTION update_offline_agent_status()
 RETURNS jsonb
@@ -20,7 +20,7 @@ DECLARE
   inactive_count integer := 0;
   result jsonb;
 BEGIN
-  -- Marcar agentes offline há >2h como inactive (trigger derivará agent_state)
+  -- Marcar agentes offline ha >2h como inactive (trigger derivara agent_state)
   UPDATE agents 
   SET 
     status = 'inactive',
@@ -63,7 +63,7 @@ END;
 $$;
 
 -- ============================================================
--- FUNÇÃO: Limpar jobs pendentes para agentes offline
+-- FUNCAO: Limpar jobs pendentes para agentes offline
 -- ============================================================
 CREATE OR REPLACE FUNCTION cleanup_jobs_for_offline_agents()
 RETURNS jsonb
@@ -75,7 +75,7 @@ DECLARE
   cancelled_count integer := 0;
   result jsonb;
 BEGIN
-  -- Cancelar jobs pendentes para agentes que estão offline
+  -- Cancelar jobs pendentes para agentes que estao offline
   UPDATE jobs 
   SET 
     status = 'cancelled',
@@ -123,7 +123,7 @@ END;
 $$;
 
 -- ============================================================
--- FUNÇÃO: Resolver DLQ pendentes de agentes offline
+-- FUNCAO: Resolver DLQ pendentes de agentes offline
 -- ============================================================
 CREATE OR REPLACE FUNCTION resolve_stale_dlq_entries()
 RETURNS jsonb
@@ -178,7 +178,7 @@ END;
 $$;
 
 -- ============================================================
--- FUNÇÃO: Avaliação de risco de software (corrigida)
+-- FUNCAO: Avaliacao de risco de software (corrigida)
 -- ============================================================
 CREATE OR REPLACE FUNCTION evaluate_software_risk_with_reporting()
 RETURNS jsonb
@@ -196,7 +196,7 @@ BEGIN
   FROM agents 
   WHERE archived_at IS NULL;
   
-  -- Contar agentes de alto risco (versão antiga ou offline)
+  -- Contar agentes de alto risco (versao antiga ou offline)
   SELECT COUNT(*) INTO high_risk_count
   FROM agents
   WHERE archived_at IS NULL
@@ -240,7 +240,7 @@ END;
 $$;
 
 -- ============================================================
--- FUNÇÃO: Orquestrador de manutenção (executa todas as funções)
+-- FUNCAO: Orquestrador de manutencao (executa todas as funcoes)
 -- ============================================================
 CREATE OR REPLACE FUNCTION run_system_maintenance()
 RETURNS jsonb
@@ -255,7 +255,7 @@ DECLARE
   r4 jsonb;
   result jsonb;
 BEGIN
-  -- Executar todas as funções de manutenção
+  -- Executar todas as funcoes de manutencao
   SELECT update_offline_agent_status() INTO r1;
   SELECT cleanup_jobs_for_offline_agents() INTO r2;
   SELECT resolve_stale_dlq_entries() INTO r3;
@@ -302,10 +302,10 @@ ADD COLUMN IF NOT EXISTS resolved_at timestamptz,
 ADD COLUMN IF NOT EXISTS resolution_notes text;
 
 -- ============================================================
--- COMENTÁRIOS PARA DOCUMENTAÇÃO
+-- COMENTARIOS PARA DOCUMENTACAO
 -- ============================================================
-COMMENT ON FUNCTION update_offline_agent_status() IS 'Atualiza status de agentes offline há >2h para inactive';
+COMMENT ON FUNCTION update_offline_agent_status() IS 'Atualiza status de agentes offline ha >2h para inactive';
 COMMENT ON FUNCTION cleanup_jobs_for_offline_agents() IS 'Cancela jobs pendentes para agentes offline';
 COMMENT ON FUNCTION resolve_stale_dlq_entries() IS 'Resolve entradas DLQ de AGENT_OFFLINE com >24h';
 COMMENT ON FUNCTION evaluate_software_risk_with_reporting() IS 'Avalia risco de software e reporta para cron_health_checks';
-COMMENT ON FUNCTION run_system_maintenance() IS 'Orquestra todas as funções de manutenção do sistema';
+COMMENT ON FUNCTION run_system_maintenance() IS 'Orquestra todas as funcoes de manutencao do sistema';

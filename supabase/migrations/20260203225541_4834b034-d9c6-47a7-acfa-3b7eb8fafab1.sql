@@ -1,6 +1,6 @@
 
--- Corrigir função create_decision_event_from_ai_action
--- Remove referências a colunas que não existem (rule_code, agent_id, agent_name)
+-- Corrigir funcao create_decision_event_from_ai_action
+-- Remove referencias a colunas que nao existem (rule_code, agent_id, agent_name)
 
 CREATE OR REPLACE FUNCTION create_decision_event_from_ai_action()
 RETURNS TRIGGER
@@ -11,7 +11,7 @@ AS $$
 DECLARE
   v_insight_record RECORD;
 BEGIN
-  -- Buscar informações do insight associado (que tem agent_id e agent_name)
+  -- Buscar informacoes do insight associado (que tem agent_id e agent_name)
   SELECT 
     agent_id,
     agent_name,

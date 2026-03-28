@@ -1,5 +1,5 @@
 
--- Corrigir search_path das funções criadas
+-- Corrigir search_path das funcoes criadas
 ALTER FUNCTION public.auto_create_tenant_settings() 
 SET search_path = public;
 

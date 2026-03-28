@@ -842,16 +842,16 @@ function Test-RuntimeIntegrity {
         if ($currentHash -ne $expectedHash.ToLower()) {
             # v5.0.15-hotfix-toctou: SELF-HEAL instead of terminating.
             # The server may have sent a hash computed with different normalization.
-            # If this is the same hash we've seen since boot, the file hasn't actually changed — 
+            # If this is the same hash we've seen since boot, the file hasn't actually changed ? 
             # the cache is just stale/wrong. Update it to match reality.
             if (-not $Global:BootScriptHash) {
-                # First check — record the boot hash
+                # First check ? record the boot hash
                 $Global:BootScriptHash = $currentHash
             }
             
             if ($currentHash -eq $Global:BootScriptHash) {
-                # File unchanged since boot — cache is stale, self-heal
-                Write-Log "[INTEGRITY] Hash mismatch (cached: $($expectedHash.Substring(0,16))... vs actual: $($currentHash.Substring(0,16))...) — self-healing cache to match running script" "WARN"
+                # File unchanged since boot ? cache is stale, self-heal
+                Write-Log "[INTEGRITY] Hash mismatch (cached: $($expectedHash.Substring(0,16))... vs actual: $($currentHash.Substring(0,16))...) ? self-healing cache to match running script" "WARN"
                 try {
                     $cacheDir = Join-Path $Global:BaseDir "data"
                     $healData = @{
@@ -1560,7 +1560,7 @@ function Initialize-AgentKeys {
         Generates or loads ECDSA P-256 keypair for result signing.
         v5.0.15-hotfix-keygen: Detects .NET capability BEFORE attempting ECDSA.
         On .NET Framework 4.x (PS 5.1), ExportPkcs8PrivateKey() does not exist,
-        so we skip directly to RSACryptoServiceProvider — zero wasted attempts.
+        so we skip directly to RSACryptoServiceProvider ? zero wasted attempts.
     #>
     try {
         if (Test-Path $Global:KeyStorePath) {
@@ -4052,7 +4052,7 @@ function Get-TopProcesses {
         $allProcesses = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.WorkingSet -gt 0 }
         $procArray = @($allProcesses)
         
-        # Sort once by CPU (descending), take top 5 — safe CPU access via try/catch per process
+        # Sort once by CPU (descending), take top 5 ? safe CPU access via try/catch per process
         $topByCpu = New-Object System.Collections.ArrayList
         $cpuSorted = @($procArray | ForEach-Object {
             $cpuVal = 0
@@ -4185,7 +4185,7 @@ function Get-SafeBaselineProp {
     <#
     .SYNOPSIS
         v5.0.15-hotfix-baseline: Safely extracts a property from a baseline entry.
-        Uses PSObject.Properties to avoid PS 5.1 "O item já foi adicionado" crash
+        Uses PSObject.Properties to avoid PS 5.1 "O item ja foi adicionado" crash
         when a PSCustomObject has duplicate NoteProperties from corrupted JSON.
     #>
     param($Entry, [string]$PropName)
@@ -4193,7 +4193,7 @@ function Get-SafeBaselineProp {
     if ($Entry -is [hashtable] -or $Entry -is [System.Collections.Specialized.OrderedDictionary]) {
         return $Entry[$PropName]
     }
-    # Safe access via PSObject.Properties — never throws on duplicate keys
+    # Safe access via PSObject.Properties ? never throws on duplicate keys
     $prop = $Entry.PSObject.Properties.Match($PropName)
     if ($prop.Count -gt 0) { return $prop[0].Value }
     return $null
@@ -4385,7 +4385,7 @@ function Get-ProcessAnomalies {
                 }
             }
             
-            # Save updated baseline — normalize to hashtables first (HOTFIX-BASELINE-NORMALIZE-SAVE)
+            # Save updated baseline ? normalize to hashtables first (HOTFIX-BASELINE-NORMALIZE-SAVE)
             try {
                 $normalizedForSave = @()
                 foreach ($be in $Global:ProcessBaseline) {
@@ -4413,7 +4413,7 @@ function Get-ProcessAnomalies {
         $errMsg = $_.Exception.Message
         Write-Log "[BASELINE] Failed to detect process anomalies: $errMsg" "WARN"
 
-        if ($errMsg -like "*já foi adicionado*" -or $errMsg -like "*already been added*" -or $errMsg -like "*first_seen*" -or $errMsg -like "*name*") {
+        if ($errMsg -like "*ja foi adicionado*" -or $errMsg -like "*already been added*" -or $errMsg -like "*first_seen*" -or $errMsg -like "*name*") {
             Write-Log "[BASELINE] Corrupted baseline detected (duplicate key). Rebuilding baseline..." "WARN"
             try {
                 if (Test-Path $Global:ProcessBaselinePath) {
@@ -6435,7 +6435,7 @@ function Invoke-EDRTelemetryCollection {
     $registryEvents = @()
     $nowStr = (Get-Date).ToUniversalTime().ToString("o")
     
-    # ── 1. PROCESS TELEMETRY ──
+    # ?? 1. PROCESS TELEMETRY ??
     try {
         $currentProcs = @{}
         $cimProcs = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
@@ -6509,7 +6509,7 @@ function Invoke-EDRTelemetryCollection {
         Write-Log "[EDR-COLLECT] Process collection error: $($_.Exception.Message)" "WARN"
     }
     
-    # ── 2. NETWORK TELEMETRY ──
+    # ?? 2. NETWORK TELEMETRY ??
     try {
         $currentConns = @{}
         $tcpConns = Get-NetTCPConnection -ErrorAction SilentlyContinue |
@@ -6560,7 +6560,7 @@ function Invoke-EDRTelemetryCollection {
         Write-Log "[EDR-COLLECT] Network collection error: $($_.Exception.Message)" "WARN"
     }
     
-    # ── 3. FILE TELEMETRY (monitored paths - recently modified) ──
+    # ?? 3. FILE TELEMETRY (monitored paths - recently modified) ??
     try {
         foreach ($monPath in $Global:EDRMonitoredPaths) {
             if (-not (Test-Path $monPath -ErrorAction SilentlyContinue)) { continue }
@@ -6590,7 +6590,7 @@ function Invoke-EDRTelemetryCollection {
         Write-Log "[EDR-COLLECT] File collection error: $($_.Exception.Message)" "WARN"
     }
     
-    # ── 4. REGISTRY TELEMETRY (persistence keys) ──
+    # ?? 4. REGISTRY TELEMETRY (persistence keys) ??
     try {
         $currentRegSnapshot = @{}
         foreach ($regKey in $Global:EDRRegistryKeys) {
@@ -6671,7 +6671,7 @@ function Invoke-EDRTelemetryCollection {
         Write-Log "[EDR-COLLECT] Registry collection error: $($_.Exception.Message)" "WARN"
     }
     
-    # ── 5. SUBMIT TO BACKEND ──
+    # ?? 5. SUBMIT TO BACKEND ??
     $totalEvents = $processEvents.Count + $networkEvents.Count + $fileEvents.Count + $registryEvents.Count
     
     if ($totalEvents -eq 0) {

@@ -1,6 +1,6 @@
 
--- FIX: Adicionar search_path à função enforce_job_state_transitions
--- Esta é uma função trigger, não SECURITY DEFINER, mas precisa de search_path para o linter
+-- FIX: Adicionar search_path a funcao enforce_job_state_transitions
+-- Esta e uma funcao trigger, nao SECURITY DEFINER, mas precisa de search_path para o linter
 
 CREATE OR REPLACE FUNCTION public.enforce_job_state_transitions()
 RETURNS trigger

@@ -141,7 +141,7 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error) {
     logger.error("Rate limit check error:", error);
-    // Fail open — don't block requests if rate limiter errors
+    // Fail open ? don't block requests if rate limiter errors
     return new Response(
       JSON.stringify({ allowed: true, error: "Rate limiter unavailable" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -4,7 +4,7 @@
 -- ============================================================================
 
 -- ============================================================================
--- FIX 1: Corrigir função check_security_thresholds() (coluna ambígua)
+-- FIX 1: Corrigir funcao check_security_thresholds() (coluna ambigua)
 -- ============================================================================
 DROP FUNCTION IF EXISTS check_security_thresholds();
 

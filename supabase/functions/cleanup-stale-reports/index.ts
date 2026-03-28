@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
             .from('security_reports')
             .update({
               status: 'failed',
-              error_message: `Relatório expirado após ${ageHours} horas sem conclusão`,
+              error_message: `Relatorio expirado apos ${ageHours} horas sem conclusao`,
               updated_at: new Date().toISOString(),
             })
             .eq('id', report.id);
@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
             .from('security_reports')
             .update({
               status: 'failed',
-              error_message: `Relatório travado em status "${report.status}" por ${ageHours} horas`,
+              error_message: `Relatorio travado em status "${report.status}" por ${ageHours} horas`,
               updated_at: new Date().toISOString(),
             })
             .eq('id', report.id);

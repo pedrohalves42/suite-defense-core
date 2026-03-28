@@ -4,7 +4,7 @@
 import { TenantContext } from '../../_shared/serve-tenant.ts';
 
 /**
- * AI Handler function signature — receives tenant context and parsed payload.
+ * AI Handler function signature ? receives tenant context and parsed payload.
  */
 export type AIHandler = (
   req: Request,

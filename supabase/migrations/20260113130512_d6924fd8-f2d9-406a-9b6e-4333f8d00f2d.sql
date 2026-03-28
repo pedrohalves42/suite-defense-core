@@ -1,19 +1,19 @@
 
 -- =====================================================
--- CORREÇÕES DO SISTEMA - SEM ENROLLMENT KEYS
--- (Enrollment keys devem ser criadas via API por segurança)
+-- CORRECOES DO SISTEMA - SEM ENROLLMENT KEYS
+-- (Enrollment keys devem ser criadas via API por seguranca)
 -- =====================================================
 
 -- =====================================================
 -- FASE 1: Corrigir Playbook Executions Pendentes/Travadas
 -- =====================================================
 
--- Cancelar execuções antigas que estão travadas (mais de 1 hora)
+-- Cancelar execucoes antigas que estao travadas (mais de 1 hora)
 UPDATE playbook_executions
 SET 
   status = 'cancelled',
   completed_at = NOW(),
-  notes = COALESCE(notes || ' | ', '') || 'Cancelado automaticamente: execução travada por mais de 1 hora'
+  notes = COALESCE(notes || ' | ', '') || 'Cancelado automaticamente: execucao travada por mais de 1 hora'
 WHERE status IN ('pending', 'in_progress')
   AND started_at < NOW() - INTERVAL '1 hour';
 
@@ -21,7 +21,7 @@ WHERE status IN ('pending', 'in_progress')
 -- FASE 2: Verificar/criar estrutura de antivirus_status
 -- =====================================================
 
--- Adicionar coluna raw_data se não existir
+-- Adicionar coluna raw_data se nao existir
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -36,7 +36,7 @@ END;
 $$;
 
 -- =====================================================
--- FASE 3: Criar função para processar evidências de antivirus
+-- FASE 3: Criar funcao para processar evidencias de antivirus
 -- =====================================================
 
 CREATE OR REPLACE FUNCTION public.process_antivirus_evidence()
@@ -52,7 +52,7 @@ DECLARE
   v_definitions_status TEXT;
   v_scan_status TEXT;
 BEGIN
-  -- Só processar evidências de antivirus
+  -- So processar evidencias de antivirus
   IF NEW.event_type NOT IN ('antivirus_status', 'collect_antivirus_status') THEN
     RETURN NEW;
   END IF;
@@ -118,7 +118,7 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
--- Criar trigger se não existir
+-- Criar trigger se nao existir
 DROP TRIGGER IF EXISTS trg_process_antivirus_evidence ON agent_evidence_logs;
 CREATE TRIGGER trg_process_antivirus_evidence
   AFTER INSERT ON agent_evidence_logs
@@ -126,7 +126,7 @@ CREATE TRIGGER trg_process_antivirus_evidence
   EXECUTE FUNCTION process_antivirus_evidence();
 
 -- =====================================================
--- FASE 4: Criar função melhorada para executar playbooks
+-- FASE 4: Criar funcao melhorada para executar playbooks
 -- =====================================================
 
 CREATE OR REPLACE FUNCTION public.execute_playbook_actions(
@@ -146,7 +146,7 @@ DECLARE
   v_action_result JSONB;
   v_error_message TEXT;
 BEGIN
-  -- Buscar execução
+  -- Buscar execucao
   SELECT * INTO v_execution
   FROM playbook_executions
   WHERE id = p_execution_id;
@@ -155,7 +155,7 @@ BEGIN
     RETURN jsonb_build_object('error', 'Execution not found');
   END IF;
   
-  -- Verificar se já está em execução ou finalizada
+  -- Verificar se ja esta em execucao ou finalizada
   IF v_execution.status NOT IN ('pending', 'in_progress') THEN
     RETURN jsonb_build_object('error', 'Execution already processed', 'status', v_execution.status);
   END IF;
@@ -177,7 +177,7 @@ BEGIN
     RETURN jsonb_build_object('error', 'Playbook not found');
   END IF;
   
-  -- Processar cada ação do playbook
+  -- Processar cada acao do playbook
   FOR v_action IN 
     SELECT * FROM playbook_actions 
     WHERE playbook_id = v_playbook.id AND is_enabled = true
@@ -206,7 +206,7 @@ BEGIN
     END;
   END LOOP;
   
-  -- Marcar como concluído
+  -- Marcar como concluido
   UPDATE playbook_executions
   SET 
     status = 'completed',
@@ -229,7 +229,7 @@ END;
 $$;
 
 -- =====================================================
--- FASE 5: Criar índices para melhorar performance
+-- FASE 5: Criar indices para melhorar performance
 -- =====================================================
 
 CREATE INDEX IF NOT EXISTS idx_enrollment_keys_active 
@@ -245,7 +245,7 @@ ON playbook_executions (status, started_at)
 WHERE status IN ('pending', 'in_progress');
 
 -- =====================================================
--- FASE 6: Criar job de limpeza automática de execuções travadas
+-- FASE 6: Criar job de limpeza automatica de execucoes travadas
 -- =====================================================
 
 CREATE OR REPLACE FUNCTION public.cleanup_stale_playbook_executions()
@@ -261,7 +261,7 @@ BEGIN
   SET 
     status = 'failed',
     completed_at = NOW(),
-    notes = COALESCE(notes || ' | ', '') || 'Timeout automático: execução excedeu 30 minutos sem conclusão'
+    notes = COALESCE(notes || ' | ', '') || 'Timeout automatico: execucao excedeu 30 minutos sem conclusao'
   WHERE status IN ('pending', 'in_progress')
     AND started_at < NOW() - INTERVAL '30 minutes'
     AND completed_at IS NULL;

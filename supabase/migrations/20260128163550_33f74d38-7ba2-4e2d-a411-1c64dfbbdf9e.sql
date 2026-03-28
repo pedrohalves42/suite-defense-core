@@ -1,4 +1,4 @@
--- Função para detectar múltiplos bloqueios DNS e criar evento de playbook
+-- Funcao para detectar multiplos bloqueios DNS e criar evento de playbook
 CREATE OR REPLACE FUNCTION trigger_playbook_on_multiple_dns_blocks()
 RETURNS TRIGGER 
 SECURITY DEFINER
@@ -9,12 +9,12 @@ DECLARE
   v_tenant_id UUID;
   v_existing_pending INTEGER;
 BEGIN
-  -- Só processar bloqueios
+  -- So processar bloqueios
   IF NOT NEW.is_blocked THEN
     RETURN NEW;
   END IF;
   
-  -- Contar bloqueios na última hora para este agente
+  -- Contar bloqueios na ultima hora para este agente
   SELECT COUNT(*) INTO v_blocked_count
   FROM agent_web_activity aw
   WHERE aw.agent_id = NEW.agent_id
@@ -26,12 +26,12 @@ BEGIN
   FROM agents a
   WHERE a.id = NEW.agent_id;
   
-  -- Se não atingiu threshold, retornar
+  -- Se nao atingiu threshold, retornar
   IF v_blocked_count < 10 OR v_tenant_id IS NULL THEN
     RETURN NEW;
   END IF;
   
-  -- Anti-loop: Verificar se já existe evento pendente para este agente nas últimas 2 horas
+  -- Anti-loop: Verificar se ja existe evento pendente para este agente nas ultimas 2 horas
   SELECT COUNT(*) INTO v_existing_pending
   FROM ai_action_logs
   WHERE tenant_id = v_tenant_id
@@ -42,7 +42,7 @@ BEGIN
     AND created_at > NOW() - INTERVAL '2 hours';
   
   IF v_existing_pending > 0 THEN
-    RETURN NEW; -- Já existe evento pendente, não criar duplicado
+    RETURN NEW; -- Ja existe evento pendente, nao criar duplicado
   END IF;
   
   -- Criar evento para playbook
@@ -68,7 +68,7 @@ BEGIN
   
   RETURN NEW;
 EXCEPTION WHEN OTHERS THEN
-  -- Não falhar a inserção por causa do trigger
+  -- Nao falhar a insercao por causa do trigger
   RAISE WARNING 'trigger_playbook_on_multiple_dns_blocks failed: %', SQLERRM;
   RETURN NEW;
 END;

@@ -8,7 +8,7 @@ import { TaskComplexity } from './smart-router-port.ts';
 import type { AIProviderName } from '../ai-multi-provider.ts';
 import { logger } from '../logger.ts';
 
-// Provider → supported complexity tiers (static config)
+// Provider ? supported complexity tiers (static config)
 const PROVIDER_TIERS: Record<AIProviderName, TaskComplexity[]> = {
   'cerebras': [TaskComplexity.SIMPLE, TaskComplexity.MODERATE],
   'groq': [TaskComplexity.SIMPLE, TaskComplexity.MODERATE, TaskComplexity.COMPLEX],

@@ -1,23 +1,23 @@
 -- ============================================================
--- MIGRAÇÃO: Correção dos Findings do Security Scanner
+-- MIGRACAO: Correcao dos Findings do Security Scanner
 -- ============================================================
 
 -- 1. Revogar grant de anon em active_agents
 REVOKE ALL ON active_agents FROM anon;
 REVOKE ALL ON active_agents FROM PUBLIC;
 
--- Garantir que apenas authenticated e service_role têm acesso
+-- Garantir que apenas authenticated e service_role tem acesso
 GRANT SELECT ON active_agents TO authenticated;
 GRANT SELECT ON active_agents TO service_role;
 
--- 2. Habilitar RLS na partição de métricas
+-- 2. Habilitar RLS na particao de metricas
 ALTER TABLE agent_system_metrics_2026_03 ENABLE ROW LEVEL SECURITY;
 
--- Política para service_role (backend)
+-- Politica para service_role (backend)
 CREATE POLICY "service_role_full_access" ON agent_system_metrics_2026_03
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 
--- Política para leitura autenticada
+-- Politica para leitura autenticada
 CREATE POLICY "authenticated_read_own_tenant" ON agent_system_metrics_2026_03
   FOR SELECT TO authenticated
   USING (tenant_id = get_active_tenant_id() OR is_current_super_admin());
@@ -49,4 +49,4 @@ GRANT SELECT ON v_cron_health TO authenticated;
 GRANT SELECT ON v_cron_health TO service_role;
 
 COMMENT ON VIEW v_cron_health IS 
-'View de saúde dos crons com security_invoker=on. Usada para monitoramento.';
+'View de saude dos crons com security_invoker=on. Usada para monitoramento.';

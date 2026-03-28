@@ -1,6 +1,6 @@
 
 -- =============================================================================
--- AUDITORIA PÓS-REMEDIAÇÃO: Correção de 3 problemas encontrados
+-- AUDITORIA POS-REMEDIACAO: Correcao de 3 problemas encontrados
 -- =============================================================================
 
 -- FIX 1: Atualizar constraint de event_type para incluir tipos gerados por triggers
@@ -22,7 +22,7 @@ REVOKE EXECUTE ON FUNCTION public.emit_agent_status_domain_event() FROM anon, pu
 REVOKE EXECUTE ON FUNCTION public.emit_alert_domain_event() FROM anon, public;
 REVOKE EXECUTE ON FUNCTION public.emit_job_domain_event() FROM anon, public;
 
--- FIX 3: Corrigir trigger de evidence para usar event_type válido
+-- FIX 3: Corrigir trigger de evidence para usar event_type valido
 CREATE OR REPLACE FUNCTION public.auto_create_evidence_from_execution()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -54,7 +54,7 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- FIX 3b: Corrigir trigger de playbook para não violar NOT NULL em system_alerts
+-- FIX 3b: Corrigir trigger de playbook para nao violar NOT NULL em system_alerts
 CREATE OR REPLACE FUNCTION public.auto_evaluate_playbook_on_alert()
 RETURNS TRIGGER AS $$
 DECLARE

@@ -1,6 +1,6 @@
 -- ============================================================
 -- ARQUITETURA ZERO TRUST - CAMADA 1: DATABASE CONSTRAINTS
--- Impossível marcar job como completed sem side effects reais
+-- Impossivel marcar job como completed sem side effects reais
 -- ============================================================
 
 -- 1.1 View permanente para auditoria de integridade
@@ -39,7 +39,7 @@ WHERE j.status = 'completed'
     ))
   );
 
--- 1.2 Função de validação HARD (BEFORE UPDATE trigger)
+-- 1.2 Funcao de validacao HARD (BEFORE UPDATE trigger)
 CREATE OR REPLACE FUNCTION enforce_job_side_effects()
 RETURNS trigger AS $$
 BEGIN
@@ -47,7 +47,7 @@ BEGIN
   IF OLD.status IS DISTINCT FROM 'completed'
      AND NEW.status = 'completed' THEN
 
-    -- VALIDAÇÃO: collect_web_activity
+    -- VALIDACAO: collect_web_activity
     IF NEW.type = 'collect_web_activity' THEN
       IF NOT EXISTS (
         SELECT 1
@@ -62,7 +62,7 @@ BEGIN
       END IF;
     END IF;
 
-    -- VALIDAÇÃO: collect_system_metrics
+    -- VALIDACAO: collect_system_metrics
     IF NEW.type = 'collect_system_metrics' THEN
       IF NOT EXISTS (
         SELECT 1
@@ -77,7 +77,7 @@ BEGIN
       END IF;
     END IF;
 
-    -- VALIDAÇÃO: software_inventory_collect (usa last_seen_at)
+    -- VALIDACAO: software_inventory_collect (usa last_seen_at)
     IF NEW.type = 'software_inventory_collect' THEN
       IF NOT EXISTS (
         SELECT 1
@@ -105,7 +105,7 @@ BEFORE UPDATE OF status ON jobs
 FOR EACH ROW
 EXECUTE FUNCTION enforce_job_side_effects();
 
--- 1.4 Função de validação Supply Chain (SHA256)
+-- 1.4 Funcao de validacao Supply Chain (SHA256)
 CREATE OR REPLACE FUNCTION validate_agent_release_integrity()
 RETURNS TABLE(
   version text,
@@ -137,7 +137,7 @@ JOIN agent_versions av ON av.version = ar.version AND av.platform = ar.platform
 WHERE av.is_latest = true;
 $$ LANGUAGE sql SECURITY DEFINER SET search_path = public;
 
--- 1.5 Índices para performance das validações
+-- 1.5 Indices para performance das validacoes
 CREATE INDEX IF NOT EXISTS idx_agent_web_activity_agent_created 
 ON agent_web_activity(agent_id, created_at DESC);
 

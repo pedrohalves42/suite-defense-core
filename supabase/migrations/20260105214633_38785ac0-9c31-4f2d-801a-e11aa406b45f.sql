@@ -169,15 +169,15 @@ SELECT
   p.file_path
 FROM tenants t
 CROSS JOIN (VALUES
-  ('ISP-001', 'Política de Segurança da Informação', ARRAY['CC1', 'CC3'], 'docs/policies/01_information_security_policy.md'),
-  ('ACP-001', 'Política de Controle de Acesso', ARRAY['CC1', 'CC6'], 'docs/policies/02_access_control_policy.md'),
-  ('CMP-001', 'Política de Gestão de Mudanças', ARRAY['CC8'], 'docs/policies/03_change_management_policy.md'),
-  ('IRP-001', 'Política de Resposta a Incidentes', ARRAY['CC7'], 'docs/policies/04_incident_response_policy.md'),
-  ('LMP-001', 'Política de Logs e Monitoramento', ARRAY['CC4', 'CC7'], 'docs/policies/05_logging_monitoring_policy.md'),
-  ('DRP-001', 'Política de Retenção de Dados', ARRAY['CC5'], 'docs/policies/06_data_retention_policy.md'),
-  ('VRP-001', 'Política de Risco de Fornecedores', ARRAY['CC9'], 'docs/policies/07_vendor_risk_policy.md'),
-  ('BCP-001', 'Política de Continuidade de Negócios', ARRAY['CC7', 'CC9'], 'docs/policies/08_business_continuity_policy.md'),
-  ('SDP-001', 'Política de Desenvolvimento Seguro', ARRAY['CC5', 'CC8'], 'docs/policies/09_secure_development_policy.md')
+  ('ISP-001', 'Politica de Seguranca da Informacao', ARRAY['CC1', 'CC3'], 'docs/policies/01_information_security_policy.md'),
+  ('ACP-001', 'Politica de Controle de Acesso', ARRAY['CC1', 'CC6'], 'docs/policies/02_access_control_policy.md'),
+  ('CMP-001', 'Politica de Gestao de Mudancas', ARRAY['CC8'], 'docs/policies/03_change_management_policy.md'),
+  ('IRP-001', 'Politica de Resposta a Incidentes', ARRAY['CC7'], 'docs/policies/04_incident_response_policy.md'),
+  ('LMP-001', 'Politica de Logs e Monitoramento', ARRAY['CC4', 'CC7'], 'docs/policies/05_logging_monitoring_policy.md'),
+  ('DRP-001', 'Politica de Retencao de Dados', ARRAY['CC5'], 'docs/policies/06_data_retention_policy.md'),
+  ('VRP-001', 'Politica de Risco de Fornecedores', ARRAY['CC9'], 'docs/policies/07_vendor_risk_policy.md'),
+  ('BCP-001', 'Politica de Continuidade de Negocios', ARRAY['CC7', 'CC9'], 'docs/policies/08_business_continuity_policy.md'),
+  ('SDP-001', 'Politica de Desenvolvimento Seguro', ARRAY['CC5', 'CC8'], 'docs/policies/09_secure_development_policy.md')
 ) AS p(code, name, criteria, file_path)
 ON CONFLICT DO NOTHING;
 

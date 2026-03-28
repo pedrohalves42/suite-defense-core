@@ -1,10 +1,10 @@
--- ADR-VELLUM V-201: Correções de Isolamento Multi-Tenant em Views
+-- ADR-VELLUM V-201: Correcoes de Isolamento Multi-Tenant em Views
 -- Data: 2026-01-20
 -- Objetivo: Adicionar filtro get_active_tenant_id() OR is_current_super_admin() em 3 views
 --           e documentar 8 views intencionalmente globais
 
 -- ============================================================================
--- FASE 1: CORREÇÃO DE VIEWS SEM FILTRO DE TENANT ADEQUADO
+-- FASE 1: CORRECAO DE VIEWS SEM FILTRO DE TENANT ADEQUADO
 -- ============================================================================
 
 -- V-201.1: v_job_execution_health - Adicionar filtro de tenant no WHERE
@@ -68,8 +68,8 @@ SELECT a.id AS agent_id,
   WHERE (a.archived_at IS NULL)
     AND (a.tenant_id = get_active_tenant_id() OR is_current_super_admin());
 
--- V-201.3: v_agent_lifecycle_state - Já tem filtro via user_roles, mas vamos padronizar
--- usando get_active_tenant_id() para consistência com outras views
+-- V-201.3: v_agent_lifecycle_state - Ja tem filtro via user_roles, mas vamos padronizar
+-- usando get_active_tenant_id() para consistencia com outras views
 DROP VIEW IF EXISTS public.v_agent_lifecycle_state;
 CREATE VIEW public.v_agent_lifecycle_state WITH (security_invoker = on) AS
 SELECT a.id,
@@ -107,30 +107,30 @@ SELECT a.id,
     AND (a.tenant_id = get_active_tenant_id() OR is_current_super_admin());
 
 -- ============================================================================
--- FASE 2: DOCUMENTAÇÃO DE VIEWS INTENCIONALMENTE GLOBAIS (SUPER_ADMIN ONLY)
+-- FASE 2: DOCUMENTACAO DE VIEWS INTENCIONALMENTE GLOBAIS (SUPER_ADMIN ONLY)
 -- ============================================================================
 
--- v_integrity_score: Métricas globais de integridade
+-- v_integrity_score: Metricas globais de integridade
 COMMENT ON VIEW public.v_integrity_score IS 
   'ADR-VELLUM V-201: Global integrity metrics - super_admin only via is_current_super_admin(). Intentionally global for cross-tenant monitoring.';
 
--- v_job_health: Métricas globais de saúde de jobs
+-- v_job_health: Metricas globais de saude de jobs
 COMMENT ON VIEW public.v_job_health IS 
   'ADR-VELLUM V-201: Global job health metrics - super_admin only via is_current_super_admin(). Intentionally global for cross-tenant monitoring.';
 
--- v_rls_continuous_check: Monitoramento contínuo de RLS
+-- v_rls_continuous_check: Monitoramento continuo de RLS
 COMMENT ON VIEW public.v_rls_continuous_check IS 
   'ADR-VELLUM V-201: RLS continuous monitoring - super_admin only via is_current_super_admin(). Security audit view.';
 
--- v_rls_security_status: Status de segurança RLS
+-- v_rls_security_status: Status de seguranca RLS
 COMMENT ON VIEW public.v_rls_security_status IS 
   'ADR-VELLUM V-201: RLS security test results - super_admin only via is_current_super_admin(). Security audit view.';
 
--- v_security_dashboard: Dashboard de segurança global
+-- v_security_dashboard: Dashboard de seguranca global
 COMMENT ON VIEW public.v_security_dashboard IS 
   'ADR-VELLUM V-201: Global security summary - super_admin only via is_current_super_admin(). Intentionally global for platform monitoring.';
 
--- v_security_invariants: Invariantes de segurança
+-- v_security_invariants: Invariantes de seguranca
 COMMENT ON VIEW public.v_security_invariants IS 
   'ADR-VELLUM V-201: Security invariants check - super_admin only via is_current_super_admin(). Platform-wide security validation.';
 
@@ -143,7 +143,7 @@ COMMENT ON VIEW public.hmac_agent_secrets IS
   'ADR-VELLUM V-201: HMAC secrets access - super_admin only via is_current_super_admin(). Critical security view for agent authentication.';
 
 -- ============================================================================
--- VALIDAÇÃO: Confirmar que views foram recriadas com filtros corretos
+-- VALIDACAO: Confirmar que views foram recriadas com filtros corretos
 -- ============================================================================
 
 DO $$

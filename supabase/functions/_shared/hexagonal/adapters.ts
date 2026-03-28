@@ -14,7 +14,7 @@ import type {
 import { Platform, type DomainEvent } from './types.ts';
 import { logger } from '../logger.ts';
 
-// ─── Helpers ────────────────────────────────────────────
+// ??? Helpers ????????????????????????????????????????????
 const normalizeVersion = (v: string | null): string => v?.replace(/^v/i, '') || '';
 
 /** Returns true if version `a` is strictly newer than `b` (semver comparison) */
@@ -30,7 +30,7 @@ const isNewerThan = (a: string, b: string): boolean => {
   return false; // equal
 };
 
-// ─── VersionQueryAdapter ────────────────────────────────
+// ??? VersionQueryAdapter ????????????????????????????????
 export class SupabaseVersionQueryAdapter implements VersionQueryPort {
   constructor(private readonly client: SupabaseClient) {}
 
@@ -84,7 +84,7 @@ export class SupabaseVersionQueryAdapter implements VersionQueryPort {
   }
 }
 
-// ─── UpdateJobAdapter ───────────────────────────────────
+// ??? UpdateJobAdapter ???????????????????????????????????
 export class SupabaseUpdateJobAdapter implements UpdateJobPort {
   constructor(private readonly client: SupabaseClient) {}
 
@@ -149,7 +149,7 @@ export class SupabaseUpdateJobAdapter implements UpdateJobPort {
   }
 }
 
-// ─── ObservabilityAdapter ───────────────────────────────
+// ??? ObservabilityAdapter ???????????????????????????????
 export class SupabaseObservabilityAdapter implements ObservabilityPort {
   constructor(private readonly client: SupabaseClient) {}
 
@@ -180,7 +180,7 @@ export class SupabaseObservabilityAdapter implements ObservabilityPort {
   }
 }
 
-// ─── EventDispatcherAdapter ─────────────────────────────
+// ??? EventDispatcherAdapter ?????????????????????????????
 export class LoggingEventDispatcherAdapter implements EventDispatcherPort {
   async dispatch(event: DomainEvent): Promise<void> {
     logger.info(`[DomainEvent] ${event.eventType}`, {
@@ -206,7 +206,7 @@ export class PersistingEventDispatcherAdapter implements EventDispatcherPort {
       occurredOn: event.occurredOn.toISOString(),
     });
 
-    // Persist (best-effort — never break business logic)
+    // Persist (best-effort ? never break business logic)
     try {
       const { error } = await this.supabase.from('domain_events').insert({
         aggregate_id: event.aggregateId,

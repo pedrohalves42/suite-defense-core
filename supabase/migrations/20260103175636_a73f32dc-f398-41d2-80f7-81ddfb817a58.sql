@@ -1,4 +1,4 @@
--- Ajustar handle_new_user para não criar tenant/role quando usuário é provisionado por admin
+-- Ajustar handle_new_user para nao criar tenant/role quando usuario e provisionado por admin
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -35,7 +35,7 @@ BEGIN
     username = COALESCE(EXCLUDED.username, profiles.username),
     updated_at = now();
   
-  -- Se foi provisionado por admin, parar aqui (não criar tenant/role)
+  -- Se foi provisionado por admin, parar aqui (nao criar tenant/role)
   -- O admin-create-user vai criar o user_role no tenant correto
   IF v_is_admin_provisioned THEN
     RAISE NOTICE 'User % provisioned by admin - skipping auto tenant/role creation', NEW.id;

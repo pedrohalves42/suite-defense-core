@@ -8,7 +8,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// ── Feed Fetchers ──
+// ?? Feed Fetchers ??
 
 interface RawIndicator {
   type: 'ip_address' | 'domain' | 'url' | 'file_hash_sha256' | 'file_hash_md5';
@@ -259,7 +259,7 @@ async function fetchFeodoTracker(): Promise<RawIndicator[]> {
   return indicators;
 }
 
-// ── Main Handler ──
+// ?? Main Handler ??
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -286,7 +286,7 @@ serve(async (req: Request) => {
       // No body
     }
 
-    // Fallback: get all tenants (no status/state filter — just get all)
+    // Fallback: get all tenants (no status/state filter ? just get all)
     if (tenantIds.length === 0) {
       const { data: tenants } = await supabase.from('tenants').select('id').limit(50);
       tenantIds = (tenants || []).map((t: { id: string }) => t.id);
@@ -300,7 +300,7 @@ serve(async (req: Request) => {
 
     const results: Record<string, unknown>[] = [];
 
-    // V-3008 FIX: Fetch each feed ONCE, then upsert per tenant (was: fetch N×M times)
+    // V-3008 FIX: Fetch each feed ONCE, then upsert per tenant (was: fetch N?M times)
     const feedResults = await Promise.all(
       feedConfigs.map(async (feed) => {
         try {

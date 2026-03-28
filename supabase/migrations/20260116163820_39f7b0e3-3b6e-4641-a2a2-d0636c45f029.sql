@@ -38,14 +38,14 @@ CREATE POLICY "authenticated_select_jobs" ON public.jobs
   FOR SELECT TO authenticated
   USING (tenant_id = public.get_active_tenant_id() OR public.is_current_super_admin());
 
--- agents: garantir RLS com tenant ativo (hmac_secret já protegido via views)
+-- agents: garantir RLS com tenant ativo (hmac_secret ja protegido via views)
 DROP POLICY IF EXISTS "authenticated_select_agents" ON public.agents;
 DROP POLICY IF EXISTS "Users can view agents from their tenant" ON public.agents;
 CREATE POLICY "authenticated_select_agents" ON public.agents
   FOR SELECT TO authenticated
   USING (tenant_id = public.get_active_tenant_id() OR public.is_current_super_admin());
 
--- profiles: restringir a próprio usuário OU super admin
+-- profiles: restringir a proprio usuario OU super admin
 DROP POLICY IF EXISTS "authenticated_select_profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 CREATE POLICY "authenticated_select_profiles" ON public.profiles
@@ -59,7 +59,7 @@ CREATE POLICY "authenticated_select_vuln_findings" ON public.vuln_findings
   FOR SELECT TO authenticated
   USING (tenant_id = public.get_active_tenant_id() OR public.is_current_super_admin());
 
--- Garantir que anon não tem acesso às tabelas sensíveis
+-- Garantir que anon nao tem acesso as tabelas sensiveis
 REVOKE ALL ON public.invites FROM anon;
 REVOKE ALL ON public.jobs FROM anon;
 REVOKE ALL ON public.agents FROM anon;

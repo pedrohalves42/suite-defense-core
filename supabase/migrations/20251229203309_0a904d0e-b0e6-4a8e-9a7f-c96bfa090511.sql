@@ -2,7 +2,7 @@
 -- SAFE MODE OVERRIDE - EXPIRATION GUARDRAIL
 -- ============================================
 
--- Adicionar coluna de expiração para evitar override esquecido
+-- Adicionar coluna de expiracao para evitar override esquecido
 ALTER TABLE agents 
 ADD COLUMN IF NOT EXISTS force_update_override_safe_mode_expires_at timestamptz;
 

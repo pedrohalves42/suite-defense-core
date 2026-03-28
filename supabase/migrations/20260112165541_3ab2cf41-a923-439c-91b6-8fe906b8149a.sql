@@ -1,4 +1,4 @@
--- FASE 4: Adicionar coluna metadata à tabela tasks
+-- FASE 4: Adicionar coluna metadata a tabela tasks
 ALTER TABLE tasks 
 ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';
 

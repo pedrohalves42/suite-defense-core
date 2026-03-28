@@ -124,7 +124,7 @@ serveTenant(async (_req, ctx) => {
 
   if (currentUsers >= maxUsers) {
     return new Response(
-      JSON.stringify({ success: false, error: `Limite de usuários atingido (${currentUsers}/${maxUsers}). Faça upgrade do plano.` }),
+      JSON.stringify({ success: false, error: `Limite de usuarios atingido (${currentUsers}/${maxUsers}). Faca upgrade do plano.` }),
       { status: 403, headers: { 'Content-Type': 'application/json' } }
     );
   }
@@ -198,7 +198,7 @@ serveTenant(async (_req, ctx) => {
     decision_source: 'human',
     decision_type: 'user_management',
     action: 'admin_user_created',
-    justification: `Usuário ${username} (${role}) criado manualmente por admin via admin-create-user`,
+    justification: `Usuario ${username} (${role}) criado manualmente por admin via admin-create-user`,
     human_reviewed: true,
     created_at: new Date().toISOString(),
     evidence: { username, role, created_by: userId, method: 'username_password', adr_reference: 'ADR-008' },

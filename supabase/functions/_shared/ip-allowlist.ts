@@ -56,7 +56,7 @@ export async function enforceIPAllowlist(
   const activeEntries = entries.filter(e => !e.expires_at || new Date(e.expires_at) > now)
 
   if (activeEntries.length === 0) {
-    // All entries expired — treat as no restriction
+    // All entries expired ? treat as no restriction
     return null
   }
 
@@ -74,7 +74,7 @@ export async function enforceIPAllowlist(
     return null
   }
 
-  // Blocked — log security event
+  // Blocked ? log security event
   logger.warn(`[SECURITY] IP ${ip} denied access for user ${userId} on tenant ${tenantId}`)
 
   await supabase.from('audit_logs').insert({

@@ -263,8 +263,8 @@ Seja especifico e tecnico, focando em seguranca cibernetica.`;
     const confidence = calculateConfidence(evidenceArray, true);
     const reasoning_summary = generateReasoningSummary(
       evidenceArray,
-      `análise de rede das últimas ${timeRangeHours} horas`,
-      'Análise de comportamento de rede e detecção de anomalias realizada pela IA.'
+      `analise de rede das ultimas ${timeRangeHours} horas`,
+      'Analise de comportamento de rede e deteccao de anomalias realizada pela IA.'
     );
 
     return new Response(

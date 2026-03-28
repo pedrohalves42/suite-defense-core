@@ -1,13 +1,13 @@
 /**
  * SSA-007: Output Sanitization
  * Sanitiza dados de texto provenientes do agente antes de gravar no DB
- * Previne Stored XSS e injeção de logs
+ * Previne Stored XSS e injecao de logs
  */
 
 // Caracteres de controle perigosos
 const CONTROL_CHAR_REGEX = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
 
-// Padrões de script injection
+// Padroes de script injection
 const SCRIPT_PATTERNS = [
   /<script\b[^>]*>[\s\S]*?<\/script>/gi,
   /javascript:/gi,
@@ -22,7 +22,7 @@ const SCRIPT_PATTERNS = [
 /**
  * Sanitiza uma string para armazenamento seguro
  * @param input String a sanitizar
- * @param maxLength Tamanho máximo (default: 500)
+ * @param maxLength Tamanho maximo (default: 500)
  * @returns String sanitizada
  */
 export function sanitizeForStorage(input: unknown, maxLength: number = 500): string {
@@ -35,12 +35,12 @@ export function sanitizeForStorage(input: unknown, maxLength: number = 500): str
   // 1. Remover caracteres de controle
   str = str.replace(CONTROL_CHAR_REGEX, '');
 
-  // 2. Remover padrões de script injection
+  // 2. Remover padroes de script injection
   for (const pattern of SCRIPT_PATTERNS) {
     str = str.replace(pattern, '[SANITIZED]');
   }
 
-  // 3. Escapar HTML entities básicas
+  // 3. Escapar HTML entities basicas
   str = str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -48,7 +48,7 @@ export function sanitizeForStorage(input: unknown, maxLength: number = 500): str
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#x27;');
 
-  // 4. Truncar para tamanho máximo
+  // 4. Truncar para tamanho maximo
   if (str.length > maxLength) {
     str = str.substring(0, maxLength) + '... [truncated]';
   }
@@ -59,8 +59,8 @@ export function sanitizeForStorage(input: unknown, maxLength: number = 500): str
 /**
  * Sanitiza um objeto recursivamente
  * @param obj Objeto a sanitizar
- * @param maxDepth Profundidade máxima (default: 5)
- * @param maxStringLength Tamanho máximo de strings (default: 500)
+ * @param maxDepth Profundidade maxima (default: 5)
+ * @param maxStringLength Tamanho maximo de strings (default: 500)
  * @returns Objeto sanitizado
  */
 export function sanitizeObject(
@@ -95,12 +95,12 @@ export function sanitizeObject(
     const result: Record<string, unknown> = {};
     const keys = Object.keys(obj as Record<string, unknown>);
     
-    // Limitar número de chaves
+    // Limitar numero de chaves
     const maxKeys = 100;
     const trimmedKeys = keys.slice(0, maxKeys);
 
     for (const key of trimmedKeys) {
-      // Sanitizar chave também
+      // Sanitizar chave tambem
       const safeKey = sanitizeForStorage(key, 50);
       result[safeKey] = sanitizeObject(
         (obj as Record<string, unknown>)[key],
@@ -116,9 +116,9 @@ export function sanitizeObject(
 }
 
 /**
- * Valida se um JSON output é seguro para armazenamento
+ * Valida se um JSON output e seguro para armazenamento
  * @param output Output do job
- * @returns Output sanitizado ou null se inválido
+ * @returns Output sanitizado ou null se invalido
  */
 export function sanitizeJobOutput(output: unknown): Record<string, unknown> | null {
   if (!output) {

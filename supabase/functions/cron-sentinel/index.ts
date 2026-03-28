@@ -160,8 +160,8 @@ Deno.serve(async (req) => {
       .insert({
         tenant_id: unhealthyJobs[0]?.tenant_id || null,
         source_type: 'system_alert',
-        title: `🚨 Cron Jobs Silent Failure - ${unhealthyJobs.length} jobs`,
-        description: `Jobs sem execução detectados: ${jobNames}${moreCount}. Consulte o Runbook INC-CRON-001 para resolução.`,
+        title: `? Cron Jobs Silent Failure - ${unhealthyJobs.length} jobs`,
+        description: `Jobs sem execucao detectados: ${jobNames}${moreCount}. Consulte o Runbook INC-CRON-001 para resolucao.`,
         severity: 'critical',
         status: 'open',
         auto_generated: true,

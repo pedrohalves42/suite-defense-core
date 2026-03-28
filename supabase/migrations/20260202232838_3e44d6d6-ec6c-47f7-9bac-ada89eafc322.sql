@@ -1,5 +1,5 @@
 -- ============================================================
--- MIGRAÇÃO: Correção dos 3 Problemas Críticos Restantes
+-- MIGRACAO: Correcao dos 3 Problemas Criticos Restantes
 -- ============================================================
 
 -- 1. Corrigir cleanup_old_data_scheduled (arquivar antes de deletar)
@@ -49,7 +49,7 @@ BEGIN
   
   GET DIAGNOSTICS v_executions_archived = ROW_COUNT;
   
-  -- ETAPA 2: Deletar jobs apenas se TODAS as execuções já foram arquivadas há 30+ dias
+  -- ETAPA 2: Deletar jobs apenas se TODAS as execucoes ja foram arquivadas ha 30+ dias
   WITH deletable_jobs AS (
     SELECT j.id 
     FROM public.jobs j
@@ -87,7 +87,7 @@ $$;
 COMMENT ON FUNCTION cleanup_old_data_scheduled IS 
 'Limpa dados antigos. Arquiva job_executions ANTES de deletar jobs para respeitar trigger de imutabilidade.';
 
--- 2. Criar RPC para verificar políticas (usado por run-rls-tests)
+-- 2. Criar RPC para verificar politicas (usado por run-rls-tests)
 CREATE OR REPLACE FUNCTION count_policies_for_table(p_table_name TEXT)
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -106,7 +106,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION count_policies_for_table IS 
-'Retorna número de políticas RLS para uma tabela. Usado por run-rls-tests.';
+'Retorna numero de politicas RLS para uma tabela. Usado por run-rls-tests.';
 
 -- 3. Resetar falhas do RLS tests
 UPDATE cron_health_checks

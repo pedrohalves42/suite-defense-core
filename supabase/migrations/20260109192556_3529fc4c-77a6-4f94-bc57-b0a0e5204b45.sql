@@ -2,7 +2,7 @@
 -- Conecta o Job Engine ao Task Engine eliminando falhas silenciosas
 
 -- ============================================
--- 1. Trigger: Job Falho → Task
+-- 1. Trigger: Job Falho ? Task
 -- ============================================
 CREATE OR REPLACE FUNCTION public.create_task_from_failed_job()
 RETURNS TRIGGER AS $$
@@ -11,7 +11,7 @@ DECLARE
   severity_level text;
   task_title text;
 BEGIN
-  -- Só atuar quando job transita PARA failed
+  -- So atuar quando job transita PARA failed
   IF OLD.status IS DISTINCT FROM 'failed' AND NEW.status = 'failed' THEN
     
     -- Mapear failure_class para severity
@@ -32,10 +32,10 @@ BEGIN
       ELSE 72
     END;
     
-    -- Título descritivo
+    -- Titulo descritivo
     task_title := '[Job Falho] ' || COALESCE(NEW.type, 'unknown') || ': ' || COALESCE(NEW.failure_class, 'UNKNOWN');
     
-    -- Criar task apenas para falhas não-esperadas
+    -- Criar task apenas para falhas nao-esperadas
     IF COALESCE(NEW.failure_class, '') NOT IN ('EXPECTED_DROP', 'TRANSIENT') THEN
       INSERT INTO public.tasks (
         tenant_id, 
@@ -87,14 +87,14 @@ CREATE TRIGGER tr_create_task_from_failed_job
   EXECUTE FUNCTION public.create_task_from_failed_job();
 
 -- ============================================
--- 2. Trigger: Job Falho → DLQ (automático)
+-- 2. Trigger: Job Falho ? DLQ (automatico)
 -- ============================================
 CREATE OR REPLACE FUNCTION public.auto_insert_failed_job_to_dlq()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Só atuar quando job transita PARA failed
+  -- So atuar quando job transita PARA failed
   IF OLD.status IS DISTINCT FROM 'failed' AND NEW.status = 'failed' THEN
-    -- Inserir na DLQ se não existir
+    -- Inserir na DLQ se nao existir
     INSERT INTO public.failed_jobs_dlq (
       original_job_id, 
       tenant_id, 
@@ -140,7 +140,7 @@ CREATE TRIGGER tr_auto_insert_dlq
   EXECUTE FUNCTION public.auto_insert_failed_job_to_dlq();
 
 -- ============================================
--- 3. Trigger: DLQ Item → Task
+-- 3. Trigger: DLQ Item ? Task
 -- ============================================
 CREATE OR REPLACE FUNCTION public.create_task_from_dlq_item()
 RETURNS TRIGGER AS $$
@@ -165,8 +165,8 @@ BEGIN
       NEW.tenant_id,
       'dlq',
       NEW.id::text,
-      '[DLQ] ' || COALESCE(NEW.job_type, 'unknown') || ': Requer Revisão Manual',
-      'Item na Dead Letter Queue requer revisão manual.' ||
+      '[DLQ] ' || COALESCE(NEW.job_type, 'unknown') || ': Requer Revisao Manual',
+      'Item na Dead Letter Queue requer revisao manual.' ||
       E'\n\nMotivo: ' || CASE 
         WHEN NEW.flagged_suspicious THEN 'Marcado como suspeito'
         ELSE 'Excedeu limite de retries (' || COALESCE(NEW.retry_count, 0)::text || ')'
@@ -200,7 +200,7 @@ CREATE TRIGGER tr_create_task_from_dlq_item
   EXECUTE FUNCTION public.create_task_from_dlq_item();
 
 -- ============================================
--- 4. Trigger: DLQ Resolved → Task Resolved
+-- 4. Trigger: DLQ Resolved ? Task Resolved
 -- ============================================
 CREATE OR REPLACE FUNCTION public.sync_task_on_dlq_resolution()
 RETURNS TRIGGER AS $$
@@ -229,7 +229,7 @@ CREATE TRIGGER tr_sync_task_on_dlq_resolution
   EXECUTE FUNCTION public.sync_task_on_dlq_resolution();
 
 -- ============================================
--- 5. Adicionar índice único em DLQ (se não existir)
+-- 5. Adicionar indice unico em DLQ (se nao existir)
 -- ============================================
 DO $$
 BEGIN
@@ -245,16 +245,16 @@ EXCEPTION
 END $$;
 
 -- ============================================
--- 6. Adicionar índices para performance
+-- 6. Adicionar indices para performance
 -- ============================================
 CREATE INDEX IF NOT EXISTS idx_tasks_source_job ON public.tasks(source_type, source_id) WHERE source_type = 'job';
 CREATE INDEX IF NOT EXISTS idx_tasks_source_dlq ON public.tasks(source_type, source_id) WHERE source_type = 'dlq';
 CREATE INDEX IF NOT EXISTS idx_jobs_status_failed ON public.jobs(status, tenant_id) WHERE status = 'failed';
 
 -- ============================================
--- 7. Comentários para documentação
+-- 7. Comentarios para documentacao
 -- ============================================
 COMMENT ON FUNCTION public.create_task_from_failed_job() IS 'ADR-031: Cria task automaticamente quando job falha';
 COMMENT ON FUNCTION public.auto_insert_failed_job_to_dlq() IS 'ADR-031: Insere job falho na DLQ automaticamente';
 COMMENT ON FUNCTION public.create_task_from_dlq_item() IS 'ADR-031: Cria task para itens DLQ suspeitos ou com muitos retries';
-COMMENT ON FUNCTION public.sync_task_on_dlq_resolution() IS 'ADR-031: Sincroniza status da task quando DLQ item é resolvido';
+COMMENT ON FUNCTION public.sync_task_on_dlq_resolution() IS 'ADR-031: Sincroniza status da task quando DLQ item e resolvido';

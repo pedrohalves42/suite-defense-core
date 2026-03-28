@@ -1,4 +1,4 @@
--- Corrigir função get_latest_agent_metrics para usar tabela particionada
+-- Corrigir funcao get_latest_agent_metrics para usar tabela particionada
 CREATE OR REPLACE FUNCTION public.get_latest_agent_metrics(p_tenant_id uuid)
  RETURNS TABLE(
    agent_id uuid,

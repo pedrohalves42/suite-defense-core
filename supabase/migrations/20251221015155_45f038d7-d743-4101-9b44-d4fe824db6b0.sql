@@ -1,4 +1,4 @@
--- Tabela principal: histórico de Risk Scores
+-- Tabela principal: historico de Risk Scores
 CREATE TABLE public.tenant_risk_scores (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -10,10 +10,10 @@ CREATE TABLE public.tenant_risk_scores (
   -- Score calculado (0-100)
   score integer NOT NULL CHECK (score BETWEEN 0 AND 100),
   
-  -- Breakdown explicável em JSONB
+  -- Breakdown explicavel em JSONB
   breakdown jsonb NOT NULL DEFAULT '{}'::jsonb,
   
-  -- Tendência
+  -- Tendencia
   previous_score integer,
   trend text CHECK (trend IN ('up', 'down', 'stable')),
   
@@ -21,14 +21,14 @@ CREATE TABLE public.tenant_risk_scores (
   calculated_at timestamptz NOT NULL DEFAULT now(),
   calculation_version text NOT NULL DEFAULT 'v1',
   
-  -- Constraint: agent_id só pode existir se scope = 'agent'
+  -- Constraint: agent_id so pode existir se scope = 'agent'
   CONSTRAINT scope_agent_check CHECK (
     (scope = 'tenant' AND agent_id IS NULL) OR
     (scope = 'agent' AND agent_id IS NOT NULL)
   )
 );
 
--- Índices para performance
+-- Indices para performance
 CREATE INDEX idx_risk_scores_tenant_time ON public.tenant_risk_scores (tenant_id, calculated_at DESC);
 CREATE INDEX idx_risk_scores_agent_time ON public.tenant_risk_scores (agent_id, calculated_at DESC) WHERE agent_id IS NOT NULL;
 CREATE INDEX idx_risk_scores_scope ON public.tenant_risk_scores (tenant_id, scope);
@@ -36,7 +36,7 @@ CREATE INDEX idx_risk_scores_scope ON public.tenant_risk_scores (tenant_id, scop
 -- Enable RLS
 ALTER TABLE public.tenant_risk_scores ENABLE ROW LEVEL SECURITY;
 
--- RLS Policy: Tenants podem ler seus próprios scores
+-- RLS Policy: Tenants podem ler seus proprios scores
 CREATE POLICY tenant_read_scores ON public.tenant_risk_scores
 FOR SELECT USING (
   tenant_id IN (

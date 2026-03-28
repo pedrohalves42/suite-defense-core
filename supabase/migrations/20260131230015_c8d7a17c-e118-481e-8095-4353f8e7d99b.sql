@@ -13,11 +13,11 @@ DECLARE
   v_decision_source text;
   v_event_id uuid;
 BEGIN
-  -- Só processa quando status muda para 'resolved' ou 'failed'
+  -- So processa quando status muda para 'resolved' ou 'failed'
   IF (TG_OP = 'UPDATE' AND NEW.status IN ('resolved', 'failed') AND OLD.status = 'pending') THEN
     v_tenant_id := NEW.tenant_id;
     
-    -- Mapear resolution_source para decision_source válido
+    -- Mapear resolution_source para decision_source valido
     v_decision_source := CASE 
       WHEN NEW.resolution_source = 'auto_cleanup' THEN 'system'
       WHEN NEW.resolution_source = 'human' THEN 'human'
@@ -65,7 +65,7 @@ COMMENT ON FUNCTION public.create_dlq_decision_event() IS
   'ADR-026/V-603/V-610: Trigger com search_path fixo e RETURNING para atribuir decision_event_id.';
 
 -- ============================================================================
--- V-609 FIX: Adicionar filtro explícito de tenant em v_risk_debt_summary
+-- V-609 FIX: Adicionar filtro explicito de tenant em v_risk_debt_summary
 -- ============================================================================
 
 DROP VIEW IF EXISTS v_risk_debt_summary;
@@ -82,6 +82,6 @@ WHERE (tenant_id = public.get_active_tenant_id() OR public.is_current_super_admi
 GROUP BY tenant_id;
 
 COMMENT ON VIEW v_risk_debt_summary IS 
-  'ADR-026/V-609: Tenant-isolated risk debt summary com filtro EXPLÍCITO. Não depende apenas de herança.';
+  'ADR-026/V-609: Tenant-isolated risk debt summary com filtro EXPLICITO. Nao depende apenas de heranca.';
 
 GRANT SELECT ON v_risk_debt_summary TO authenticated;

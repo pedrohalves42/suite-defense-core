@@ -127,9 +127,9 @@ BEGIN
       'failure_count', p_failure_count, 'safe_mode_event_id', v_event_id, 'triggered_at', NOW()));
   INSERT INTO ai_insights (tenant_id, agent_id, insight_type, severity, title, description, recommended_action, data)
   VALUES (v_tenant_id, p_agent_id, 'anomaly', 'high',
-    format('SAFE_MODE Autônomo: %s', v_agent_name),
-    format('Agente entrou em modo seguro automaticamente após %s falhas (%s)', p_failure_count, p_failure_type),
-    'Investigar causa raiz e resetar modo seguro quando estável',
+    format('SAFE_MODE Autonomo: %s', v_agent_name),
+    format('Agente entrou em modo seguro automaticamente apos %s falhas (%s)', p_failure_count, p_failure_type),
+    'Investigar causa raiz e resetar modo seguro quando estavel',
     jsonb_build_object('safe_mode_event_id', v_event_id, 'failure_type', p_failure_type, 'failure_count', p_failure_count));
   RETURN jsonb_build_object('success', true, 'agent', v_agent_name, 'mode', 'SAFE_MODE', 'event_id', v_event_id);
 END;

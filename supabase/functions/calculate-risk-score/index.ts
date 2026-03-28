@@ -37,7 +37,7 @@ serveTenant<RiskScoreBody>(async (_req, ctx) => {
   };
   const explanation: RiskExplanation = {};
 
-  // 1️⃣ Antivirus issues
+  // 1?? Antivirus issues
   const { count: avIssuesCount } = await supabase
     .from('antivirus_status')
     .select('*', { count: 'exact', head: true })
@@ -46,11 +46,11 @@ serveTenant<RiskScoreBody>(async (_req, ctx) => {
 
   if ((avIssuesCount ?? 0) > 0) {
     breakdown.antivirus_issues = -20;
-    explanation.antivirus_issues = `${avIssuesCount} computador(es) com antivírus desativado ou desatualizado`;
+    explanation.antivirus_issues = `${avIssuesCount} computador(es) com antivirus desativado ou desatualizado`;
     score -= 20;
   }
 
-  // 2️⃣ Critical vulnerabilities
+  // 2?? Critical vulnerabilities
   const { count: criticalVulnsCount } = await supabase
     .from('vuln_findings')
     .select('*', { count: 'exact', head: true })
@@ -59,11 +59,11 @@ serveTenant<RiskScoreBody>(async (_req, ctx) => {
 
   if ((criticalVulnsCount ?? 0) > 0) {
     breakdown.critical_vulnerabilities = -30;
-    explanation.critical_vulnerabilities = `${criticalVulnsCount} vulnerabilidade(s) crítica(s) encontrada(s)`;
+    explanation.critical_vulnerabilities = `${criticalVulnsCount} vulnerabilidade(s) critica(s) encontrada(s)`;
     score -= 30;
   }
 
-  // 3️⃣ Offline agents (last_heartbeat > 30 minutes ago)
+  // 3?? Offline agents (last_heartbeat > 30 minutes ago)
   const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
   const { data: offlineAgentsData } = await supabase
     .from('agents')
@@ -76,11 +76,11 @@ serveTenant<RiskScoreBody>(async (_req, ctx) => {
   if (offlineCount > 0) {
     const penalty = Math.min(offlineCount * 5, 20);
     breakdown.offline_agents = -penalty;
-    explanation.offline_agents = `${offlineCount} computador(es) offline há mais de 30 minutos`;
+    explanation.offline_agents = `${offlineCount} computador(es) offline ha mais de 30 minutos`;
     score -= penalty;
   }
 
-  // 4️⃣ Critical security events (last 24h)
+  // 4?? Critical security events (last 24h)
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { count: criticalEventsCount } = await supabase
     .from('security_events')
@@ -91,11 +91,11 @@ serveTenant<RiskScoreBody>(async (_req, ctx) => {
 
   if ((criticalEventsCount ?? 0) > 0) {
     breakdown.critical_events = -40;
-    explanation.critical_events = `${criticalEventsCount} evento(s) crítico(s) nas últimas 24h`;
+    explanation.critical_events = `${criticalEventsCount} evento(s) critico(s) nas ultimas 24h`;
     score -= 40;
   }
 
-  // 5️⃣ Job failure rate (last 24h)
+  // 5?? Job failure rate (last 24h)
   const { data: jobsData } = await supabase
     .from('jobs')
     .select('status')

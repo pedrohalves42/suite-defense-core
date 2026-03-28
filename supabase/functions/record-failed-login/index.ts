@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
         block_count: 0,
       });
 
-    // P1 Fix: Usar função de bloqueio progressivo em vez de lógica hardcoded
+    // P1 Fix: Usar funcao de bloqueio progressivo em vez de logica hardcoded
     // 5 tentativas = 5min, 10 = 15min, 15+ = 60min
     const { data: blockResult, error: blockError } = await supabaseAdmin
       .rpc('check_and_block_ip', {
@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     if (blockData?.is_blocked) {
       logger.info(`[BRUTE-FORCE] IP ${ipAddress} blocked until ${blockData.blocked_until} (level ${blockData.block_level})`);
       
-      // Enviar alerta apenas para bloqueios de nível 2+ (10+ tentativas)
+      // Enviar alerta apenas para bloqueios de nivel 2+ (10+ tentativas)
 
       if (blockData.block_level >= 2) {
         // Enviar alerta em tempo real para admins

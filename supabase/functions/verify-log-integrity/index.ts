@@ -111,8 +111,8 @@ serve(async (req) => {
       // Create alert if integrity issue found
       if (!chainValid || missingHashes > 0) {
         const message = !chainValid 
-          ? `Cadeia de hash quebrada em ${brokenLinks.length} log(s). Possível adulteração detectada.`
-          : `${missingHashes} log(s) sem hash de evidência. Integridade comprometida.`;
+          ? `Cadeia de hash quebrada em ${brokenLinks.length} log(s). Possivel adulteracao detectada.`
+          : `${missingHashes} log(s) sem hash de evidencia. Integridade comprometida.`;
         
         alerts.push({ tenant_id: tenant.id, message });
 
@@ -121,7 +121,7 @@ serve(async (req) => {
           tenant_id: tenant.id,
           alert_type: 'integrity_violation',
           severity: 'critical',
-          title: 'Violação de Integridade de Logs',
+          title: 'Violacao de Integridade de Logs',
           message,
           metadata: {
             broken_links: brokenLinks,
@@ -139,9 +139,9 @@ serve(async (req) => {
           description: message,
           evidence: {
             check_result: result,
-            action_required: 'Investigar imediatamente possível adulteração de logs',
+            action_required: 'Investigar imediatamente possivel adulteracao de logs',
           },
-          suggested_action: 'Revisar logs de acesso, verificar permissões de banco de dados e investigar possíveis acessos não autorizados.',
+          suggested_action: 'Revisar logs de acesso, verificar permissoes de banco de dados e investigar possiveis acessos nao autorizados.',
         });
 
         logger.info(`[verify-log-integrity] CRITICAL: Integrity issue found for tenant ${tenant.id}`);

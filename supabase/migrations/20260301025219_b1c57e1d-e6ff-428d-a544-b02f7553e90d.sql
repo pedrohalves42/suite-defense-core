@@ -1,6 +1,6 @@
 
 -- =============================================================================
--- FASE 2: V-304 + V-305 — Views com security_barrier e remoção de crypto cols
+-- FASE 2: V-304 + V-305 ? Views com security_barrier e remocao de crypto cols
 -- =============================================================================
 
 -- Drop and recreate all 5 views with security_barrier=true, security_invoker=on
@@ -30,7 +30,7 @@ WHERE auth.uid() IS NOT NULL
   AND archived_at IS NULL
   AND (tenant_id = get_active_tenant_id() OR is_current_super_admin());
 
--- 2. agents_public (V-304 only — already clean of crypto cols)
+-- 2. agents_public (V-304 only ? already clean of crypto cols)
 DROP VIEW IF EXISTS public.agents_public CASCADE;
 CREATE VIEW public.agents_public
 WITH (security_barrier=true, security_invoker=on) AS

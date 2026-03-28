@@ -1,9 +1,9 @@
 -- =============================================
--- FASE 3: AJUSTAR FUNÇÃO DE PARTICIONAMENTO
--- Dr. Atlas Verus - Otimização CyberShield
+-- FASE 3: AJUSTAR FUNCAO DE PARTICIONAMENTO
+-- Dr. Atlas Verus - Otimizacao CyberShield
 -- =============================================
 
--- Modificar função para criar apenas mês atual + 1 futuro (não 11)
+-- Modificar funcao para criar apenas mes atual + 1 futuro (nao 11)
 CREATE OR REPLACE FUNCTION public.create_metrics_partition_if_needed()
 RETURNS void
 LANGUAGE plpgsql
@@ -14,8 +14,8 @@ DECLARE
   partition_name TEXT;
   start_date DATE;
   end_date DATE;
-  -- OTIMIZAÇÃO: Apenas mês atual (0) + próximo mês (1)
-  -- Evita criação prematura de partições vazias
+  -- OTIMIZACAO: Apenas mes atual (0) + proximo mes (1)
+  -- Evita criacao prematura de particoes vazias
   check_months INTEGER[] := ARRAY[0, 1];
   m INTEGER;
 BEGIN
@@ -24,7 +24,7 @@ BEGIN
     end_date := (start_date + INTERVAL '1 month')::DATE;
     partition_name := 'agent_system_metrics_' || to_char(start_date, 'YYYY_MM');
     
-    -- Verificar se partição existe
+    -- Verificar se particao existe
     IF NOT EXISTS (
       SELECT 1 FROM pg_class c
       JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -35,18 +35,18 @@ BEGIN
           'CREATE TABLE IF NOT EXISTS public.%I PARTITION OF public.agent_system_metrics_partitioned FOR VALUES FROM (%L) TO (%L)',
           partition_name, start_date, end_date
         );
-        RAISE NOTICE 'Partição criada: %', partition_name;
+        RAISE NOTICE 'Particao criada: %', partition_name;
       EXCEPTION WHEN OTHERS THEN
-        RAISE NOTICE 'Erro ao criar partição %: %', partition_name, SQLERRM;
+        RAISE NOTICE 'Erro ao criar particao %: %', partition_name, SQLERRM;
       END;
     END IF;
   END LOOP;
 END;
 $function$;
 
--- Log da operação
+-- Log da operacao
 DO $$
 BEGIN
-  RAISE NOTICE 'Fase 3 concluída: Função ajustada para criar apenas 2 meses (atual + próximo)';
-  RAISE NOTICE 'Benefício: Evita overhead de partições vazias com índices';
+  RAISE NOTICE 'Fase 3 concluida: Funcao ajustada para criar apenas 2 meses (atual + proximo)';
+  RAISE NOTICE 'Beneficio: Evita overhead de particoes vazias com indices';
 END $$;

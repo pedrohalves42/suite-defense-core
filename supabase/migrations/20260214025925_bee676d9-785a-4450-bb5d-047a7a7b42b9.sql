@@ -1,7 +1,7 @@
 
 -- =============================================================================
 -- ZERO-GAP FIX #1: run_system_maintenance() uses created_at on hmac_signatures
--- but the column is actually called "used_at" → 120 consecutive failures
+-- but the column is actually called "used_at" ? 120 consecutive failures
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION public.run_system_maintenance()

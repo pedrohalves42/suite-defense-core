@@ -2,7 +2,7 @@
  * Hexagonal Use Case: Smart AI Router
  * 
  * Task-aware, latency-aware provider selection.
- * Pure domain logic — only depends on SmartRouterPort.
+ * Pure domain logic ? only depends on SmartRouterPort.
  */
 
 import type { SmartRouterPort, ProviderCapability, RoutingDecision } from './smart-router-port.ts';
@@ -10,7 +10,7 @@ import { TaskComplexity } from './smart-router-port.ts';
 import type { AIProviderName } from '../ai-multi-provider.ts';
 import { logger } from '../logger.ts';
 
-// ─── Task Classification (Pure) ────────────────────────
+// ??? Task Classification (Pure) ????????????????????????
 
 export function classifyTaskComplexity(functionName: string, messageLength: number): TaskComplexity {
   const name = functionName.toLowerCase();
@@ -44,13 +44,13 @@ export function classifyTaskComplexity(functionName: string, messageLength: numb
   return TaskComplexity.SIMPLE;
 }
 
-// ─── Scoring Weights ───────────────────────────────────
+// ??? Scoring Weights ???????????????????????????????????
 const WEIGHT_LATENCY = 0.40;
 const WEIGHT_FAILURE = 0.35;
 const WEIGHT_COST = 0.15;
 const WEIGHT_CONTEXT = 0.10;
 
-// ─── Use Case ──────────────────────────────────────────
+// ??? Use Case ??????????????????????????????????????????
 
 export class SmartRouterUseCase {
   private cachedCapabilities: ProviderCapability[] | null = null;

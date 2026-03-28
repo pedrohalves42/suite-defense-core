@@ -2,7 +2,7 @@
 -- P0 CRITICAL FIXES: v_job_execution_health + agent_signing_keys
 -- ============================================================
 
--- 1. Corrigir view v_job_execution_health (bug lógico na contagem de duplicatas)
+-- 1. Corrigir view v_job_execution_health (bug logico na contagem de duplicatas)
 DROP VIEW IF EXISTS v_job_execution_health;
 
 CREATE OR REPLACE VIEW v_job_execution_health 
@@ -13,7 +13,7 @@ SELECT
   COUNT(*) FILTER (WHERE j.status = 'completed') as completed_count,
   COUNT(*) FILTER (WHERE j.status = 'failed') as failed_count,
   COUNT(*) FILTER (WHERE j.status = 'completed' AND j.finished_at > j.expires_at) as expired_completed_count,
-  -- FIX: Contagem correta de jobs com execuções duplicadas
+  -- FIX: Contagem correta de jobs com execucoes duplicadas
   COUNT(*) FILTER (
     WHERE j.id IN (
       SELECT je2.job_id
@@ -30,7 +30,7 @@ LEFT JOIN job_executions je ON j.current_execution_id = je.id
 WHERE j.created_at > NOW() - INTERVAL '24 hours'
 GROUP BY j.tenant_id;
 
--- 2. Criar tabela agent_signing_keys para rotação de chaves (N + N-1)
+-- 2. Criar tabela agent_signing_keys para rotacao de chaves (N + N-1)
 CREATE TABLE IF NOT EXISTS agent_signing_keys (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
@@ -43,11 +43,11 @@ CREATE TABLE IF NOT EXISTS agent_signing_keys (
   revoked_reason TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   
-  -- Unique: apenas uma chave por versão por agente
+  -- Unique: apenas uma chave por versao por agente
   UNIQUE(agent_id, version)
 );
 
--- 3. Índices para performance
+-- 3. Indices para performance
 CREATE INDEX IF NOT EXISTS idx_agent_signing_keys_agent_id ON agent_signing_keys(agent_id);
 CREATE INDEX IF NOT EXISTS idx_agent_signing_keys_fingerprint ON agent_signing_keys(key_fingerprint);
 CREATE INDEX IF NOT EXISTS idx_agent_signing_keys_valid ON agent_signing_keys(agent_id, revoked_at) WHERE revoked_at IS NULL;
@@ -76,7 +76,7 @@ CREATE POLICY "Service role can revoke signing keys"
   USING (true)
   WITH CHECK (true);
 
--- 5. Função para buscar chave válida (aceita N ou N-1)
+-- 5. Funcao para buscar chave valida (aceita N ou N-1)
 CREATE OR REPLACE FUNCTION get_valid_agent_signing_key(
   p_agent_id UUID,
   p_fingerprint TEXT
@@ -91,7 +91,7 @@ RETURNS TABLE (
 DECLARE
   v_max_version INT;
 BEGIN
-  -- Buscar versão máxima ativa do agente
+  -- Buscar versao maxima ativa do agente
   SELECT COALESCE(MAX(ask.version), 0) INTO v_max_version
   FROM agent_signing_keys ask
   WHERE ask.agent_id = p_agent_id 
@@ -108,14 +108,14 @@ BEGIN
   WHERE ask.agent_id = p_agent_id
     AND ask.key_fingerprint = p_fingerprint
     AND ask.revoked_at IS NULL
-    -- Aceitar N (atual) e N-1 (anterior) para rotação sem downtime
+    -- Aceitar N (atual) e N-1 (anterior) para rotacao sem downtime
     AND ask.version >= GREATEST(v_max_version - 1, 1)
   ORDER BY ask.version DESC
   LIMIT 1;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- 6. Função para registrar nova chave do agente
+-- 6. Funcao para registrar nova chave do agente
 CREATE OR REPLACE FUNCTION register_agent_signing_key(
   p_agent_id UUID,
   p_public_key TEXT,
@@ -132,7 +132,7 @@ DECLARE
   v_key_id UUID;
   v_valid_from TIMESTAMPTZ;
 BEGIN
-  -- Calcular próxima versão
+  -- Calcular proxima versao
   SELECT COALESCE(MAX(ask.version), 0) + 1 INTO v_new_version
   FROM agent_signing_keys ask
   WHERE ask.agent_id = p_agent_id;
@@ -169,7 +169,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- 7. Função para revogar chave específica
+-- 7. Funcao para revogar chave especifica
 CREATE OR REPLACE FUNCTION revoke_agent_signing_key(
   p_key_id UUID,
   p_reason TEXT DEFAULT 'manual_revocation'
@@ -187,7 +187,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- 8. Trigger para prevenir modificação de chaves (exceto revogação)
+-- 8. Trigger para prevenir modificacao de chaves (exceto revogacao)
 CREATE OR REPLACE FUNCTION prevent_signing_key_modification()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -202,7 +202,7 @@ BEGIN
       USING ERRCODE = '23514';
   END IF;
   
-  -- Não permitir "des-revogar" uma chave
+  -- Nao permitir "des-revogar" uma chave
   IF OLD.revoked_at IS NOT NULL AND NEW.revoked_at IS NULL THEN
     RAISE EXCEPTION 'IMMUTABLE_VIOLATION: Cannot unrevoke a signing key. Key: %', OLD.id
       USING ERRCODE = '23514';

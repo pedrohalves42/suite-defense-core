@@ -1,5 +1,5 @@
 /**
- * Insight → Action Mapping
+ * Insight ? Action Mapping
  * 
  * This is the source of truth for how AI insights should be handled.
  * Used by:
@@ -25,13 +25,13 @@ const INSIGHT_MAPPINGS: Record<string, InsightActionMapping> = {
     mode: 'auto',
     handler: 'force_enable_antivirus',
     risk: 'high',
-    human_label: 'Antivírus desativado — reativar automaticamente'
+    human_label: 'Antivirus desativado ? reativar automaticamente'
   },
   antivirus_outdated: {
     mode: 'auto',
     handler: 'update_antivirus',
     risk: 'medium',
-    human_label: 'Antivírus desatualizado — atualizar'
+    human_label: 'Antivirus desatualizado ? atualizar'
   },
 
   // Security - Vulnerabilities
@@ -39,13 +39,13 @@ const INSIGHT_MAPPINGS: Record<string, InsightActionMapping> = {
     mode: 'approval',
     handler: 'apply_patch',
     risk: 'critical',
-    human_label: 'Vulnerabilidade crítica — aplicar correção'
+    human_label: 'Vulnerabilidade critica ? aplicar correcao'
   },
   vulnerability_high: {
     mode: 'approval',
     handler: 'apply_patch',
     risk: 'high',
-    human_label: 'Vulnerabilidade alta — aplicar correção'
+    human_label: 'Vulnerabilidade alta ? aplicar correcao'
   },
 
   // Security - Threats
@@ -53,25 +53,25 @@ const INSIGHT_MAPPINGS: Record<string, InsightActionMapping> = {
     mode: 'approval',
     handler: 'isolate_agent',
     risk: 'high',
-    human_label: 'Software P2P detectado — isolar máquina'
+    human_label: 'Software P2P detectado ? isolar maquina'
   },
   dns_malicious_activity: {
     mode: 'auto',
     handler: 'block_domain',
     risk: 'critical',
-    human_label: 'Atividade DNS maliciosa — bloquear domínio'
+    human_label: 'Atividade DNS maliciosa ? bloquear dominio'
   },
   process_anomaly: {
     mode: 'approval',
     handler: 'kill_process',
     risk: 'high',
-    human_label: 'Processo suspeito — encerrar'
+    human_label: 'Processo suspeito ? encerrar'
   },
   suspicious_network_activity: {
     mode: 'approval',
     handler: 'isolate_agent',
     risk: 'high',
-    human_label: 'Atividade de rede suspeita — isolar agente'
+    human_label: 'Atividade de rede suspeita ? isolar agente'
   },
 
   // Agent Health
@@ -79,19 +79,19 @@ const INSIGHT_MAPPINGS: Record<string, InsightActionMapping> = {
     mode: 'auto',
     handler: 'lock_user_sessions',
     risk: 'medium',
-    human_label: 'Agente offline suspeito — bloquear sessões'
+    human_label: 'Agente offline suspeito ? bloquear sessoes'
   },
   safe_mode_prolonged: {
     mode: 'approval',
     handler: 'reset_safe_mode',
     risk: 'high',
-    human_label: 'Safe Mode ativo por muito tempo — resetar'
+    human_label: 'Safe Mode ativo por muito tempo ? resetar'
   },
   agent_version_outdated: {
     mode: 'auto',
     handler: 'force_update_agent',
     risk: 'medium',
-    human_label: 'Agente desatualizado — forçar atualização'
+    human_label: 'Agente desatualizado ? forcar atualizacao'
   },
 
   // System Health
@@ -99,25 +99,25 @@ const INSIGHT_MAPPINGS: Record<string, InsightActionMapping> = {
     mode: 'auto',
     handler: 'cleanup_stuck_jobs',
     risk: 'medium',
-    human_label: 'Jobs travados detectados — limpar'
+    human_label: 'Jobs travados detectados ? limpar'
   },
   job_failed_recurring: {
     mode: 'auto',
     handler: 'alert_admin',
     risk: 'medium',
-    human_label: 'Falhas recorrentes em jobs — alertar administrador'
+    human_label: 'Falhas recorrentes em jobs ? alertar administrador'
   },
   disk_usage_critical: {
     mode: 'suggest',
     handler: 'notify_user',
     risk: 'high',
-    human_label: 'Uso de disco crítico — notificar usuário'
+    human_label: 'Uso de disco critico ? notificar usuario'
   },
   memory_usage_high: {
     mode: 'suggest',
     handler: 'notify_user',
     risk: 'medium',
-    human_label: 'Uso de memória alto — notificar usuário'
+    human_label: 'Uso de memoria alto ? notificar usuario'
   },
 
   // Compliance
@@ -125,13 +125,13 @@ const INSIGHT_MAPPINGS: Record<string, InsightActionMapping> = {
     mode: 'approval',
     handler: 'uninstall_software',
     risk: 'medium',
-    human_label: 'Software não autorizado — desinstalar'
+    human_label: 'Software nao autorizado ? desinstalar'
   },
   policy_violation: {
     mode: 'suggest',
     handler: 'notify_admin',
     risk: 'medium',
-    human_label: 'Violação de política — notificar administrador'
+    human_label: 'Violacao de politica ? notificar administrador'
   },
 };
 
@@ -139,7 +139,7 @@ const DEFAULT_MAPPING: InsightActionMapping = {
   mode: 'suggest',
   handler: null,
   risk: 'low',
-  human_label: 'Ação sugerida — aguarda decisão manual'
+  human_label: 'Acao sugerida ? aguarda decisao manual'
 };
 
 /**

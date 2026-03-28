@@ -1,5 +1,5 @@
 /**
- * ai-analyze-agent — Migrated to serveTenant() (V-1097)
+ * ai-analyze-agent ? Migrated to serveTenant() (V-1097)
  * Previously had NO authentication at all.
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
@@ -66,7 +66,7 @@ serveTenant(async (_req, ctx) => {
         context.metrics.cpu_usage_percent > 80 ? 'critical' : context.metrics.cpu_usage_percent > 60 ? 'warning' : 'info'));
     }
     if (context.metrics.memory_usage_percent !== null) {
-      evidence.push(buildEvidence('Uso de Memória', 'agent_system_metrics_partitioned', context.metrics.memory_usage_percent, agent.id,
+      evidence.push(buildEvidence('Uso de Memoria', 'agent_system_metrics_partitioned', context.metrics.memory_usage_percent, agent.id,
         context.metrics.memory_usage_percent > 85 ? 'critical' : context.metrics.memory_usage_percent > 70 ? 'warning' : 'info'));
     }
     if (context.metrics.disk_usage_percent !== null) {
@@ -77,7 +77,7 @@ serveTenant(async (_req, ctx) => {
 
   const criticalVulns = context.vulnerabilities.filter(v => v.severity === 'critical' || v.severity === 'high');
   if (criticalVulns.length > 0) {
-    evidence.push(buildEvidence('Vulnerabilidades Críticas/Altas', 'vulnerabilities', criticalVulns.length, agent.id, 'critical'));
+    evidence.push(buildEvidence('Vulnerabilidades Criticas/Altas', 'vulnerabilities', criticalVulns.length, agent.id, 'critical'));
   }
   if (context.software.length > 0) {
     evidence.push(buildEvidence('Softwares Instalados', 'software_inventory', context.software.length, agent.id, 'info'));
@@ -133,8 +133,8 @@ Responda APENAS com JSON valido no formato:
   const data_sources = extractDataSources(evidence);
   const confidence = calculateConfidence(evidence, true);
   const reasoning_summary = generateReasoningSummary(evidence,
-    `análise do agente ${agent.hostname || agent.agent_name}`,
-    'Análise de IA aplicada para avaliação de saúde e recomendações de segurança.');
+    `analise do agente ${agent.hostname || agent.agent_name}`,
+    'Analise de IA aplicada para avaliacao de saude e recomendacoes de seguranca.');
 
   return {
     healthScore: Math.min(100, Math.max(0, parsedAnalysis.healthScore || 50)),
@@ -156,7 +156,7 @@ function buildContextSummary(agent: Agent, context: AgentContext): string {
   return `
 Computador: ${displayName}
 Sistema Operacional: ${agent.os_type}
-Hostname: ${agent.hostname || 'Não definido'}
+Hostname: ${agent.hostname || 'Nao definido'}
 
 METRICAS DE SISTEMA:
 - CPU: ${metrics?.cpu_usage_percent ?? 'N/A'}%
@@ -223,7 +223,7 @@ function generateBasicAnalysis(context: AgentContext, evidence: AIEvidence[]): A
   return {
     healthScore: Math.max(0, healthScore), suggestions, insights, riskFactors, evidence,
     data_sources: extractDataSources(evidence),
-    reasoning_summary: generateReasoningSummary(evidence, 'análise básica de métricas do sistema', undefined),
+    reasoning_summary: generateReasoningSummary(evidence, 'analise basica de metricas do sistema', undefined),
     confidence: calculateConfidence(evidence, false),
   };
 }

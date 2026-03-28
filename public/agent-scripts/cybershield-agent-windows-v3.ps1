@@ -2341,7 +2341,7 @@ function Execute-Job {
                         -StartedAt $startTimeISO
                     
                     Write-Log "[SUCCESS] Resultado submetido - agente continua rodando (NO-EXIT-EVER)" "SUCCESS"
-                    # NÃO FAZ EXIT - agente continua operando normalmente
+                    # NAO FAZ EXIT - agente continua operando normalmente
                 }
                 catch {
                     throw $_.Exception.Message
@@ -2417,10 +2417,10 @@ function Execute-Job {
                         -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$targetScript`""
                     
                     # CRITICAL FIX v3.10.42: Triggers duplos para auto-recovery
-                    # FIX: Usar RepetitionDuration explícito para evitar erro Duration:P999999990T23H59M59S
+                    # FIX: Usar RepetitionDuration explicito para evitar erro Duration:P999999990T23H59M59S
                     $startupTrigger = New-ScheduledTaskTrigger -AtStartup
                     
-                    # Trigger de repetição com duração explícita (365 dias - máximo seguro)
+                    # Trigger de repeticao com duracao explicita (365 dias - maximo seguro)
                     $repetitionTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1)
                     $repetitionTrigger.Repetition.Interval = "PT5M"   # 5 minutos
                     $repetitionTrigger.Repetition.Duration = "P365D"  # 365 dias (valor seguro)

@@ -3,7 +3,7 @@
 -- ============================================
 
 -- ============================================
--- GAP 1: Kill Switch Global Multi-Nível
+-- GAP 1: Kill Switch Global Multi-Nivel
 -- ============================================
 
 -- 1.1 Expand system_kill_switch with explicit modes
@@ -77,7 +77,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- ============================================
--- GAP 2: Task Debt Explícito (accepted_risk)
+-- GAP 2: Task Debt Explicito (accepted_risk)
 -- ============================================
 
 -- 2.1 Add accepted_risk status
@@ -114,7 +114,7 @@ BEGIN
       expired_task.tenant_id,
       'manual',
       expired_task.id::text,
-      'Reavaliação de Risco: ' || expired_task.title,
+      'Reavaliacao de Risco: ' || expired_task.title,
       'O risco aceito para "' || expired_task.title || '" expirou e precisa ser reavaliado.',
       expired_task.severity,
       'open',

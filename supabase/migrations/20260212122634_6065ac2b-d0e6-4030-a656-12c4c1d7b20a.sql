@@ -1,15 +1,15 @@
 
 -- =====================================================
 -- SSA-SEC-008: Blindar RPCs SECURITY DEFINER sem guard
--- Remediação V-401: Adicionar validação de autorização
+-- Remediacao V-401: Adicionar validacao de autorizacao
 -- =====================================================
 
 -- =====================================================
--- CATEGORIA 1: Funções ADMINISTRATIVAS (requerem super_admin)
--- Estas funções têm impacto global cross-tenant
+-- CATEGORIA 1: Funcoes ADMINISTRATIVAS (requerem super_admin)
+-- Estas funcoes tem impacto global cross-tenant
 -- =====================================================
 
--- 1. apply_version_block - Bloqueia versões para TODOS os tenants
+-- 1. apply_version_block - Bloqueia versoes para TODOS os tenants
 CREATE OR REPLACE FUNCTION public.apply_version_block(
   p_version text, 
   p_platform text, 
@@ -83,7 +83,7 @@ BEGIN
   
   v_payload := jsonb_build_object(
     'agent_id', p_agent_id,
-    'transition', 'SAFE_MODE → RECOVERY',
+    'transition', 'SAFE_MODE ? RECOVERY',
     'issued_at', NOW(),
     'expires_at', NOW() + (p_expires_in_minutes || ' minutes')::INTERVAL,
     'approved_by', p_approved_by
@@ -103,7 +103,7 @@ BEGIN
 END;
 $function$;
 
--- 3. backfill_audit_log_hashes - Operação administrativa sensível
+-- 3. backfill_audit_log_hashes - Operacao administrativa sensivel
 CREATE OR REPLACE FUNCTION public.backfill_audit_log_hashes(p_tenant_id uuid DEFAULT NULL::uuid)
 RETURNS TABLE(updated_count integer, tenant_id uuid)
 LANGUAGE plpgsql
@@ -166,12 +166,12 @@ END;
 $function$;
 
 -- =====================================================
--- CATEGORIA 2: Funções de CRON/manutenção
+-- CATEGORIA 2: Funcoes de CRON/manutencao
 -- Restringir para que apenas service_role possa chamar
 -- Qualquer authenticated user que tente chamar recebe erro
 -- =====================================================
 
--- Helper: Verifica se chamador é service_role (via current_setting)
+-- Helper: Verifica se chamador e service_role (via current_setting)
 CREATE OR REPLACE FUNCTION public._assert_service_role_or_super_admin()
 RETURNS void
 LANGUAGE plpgsql
@@ -325,7 +325,7 @@ BEGIN
 END;
 $function$;
 
--- 8. auto_resolve_stale_tasks (já tem lógica complexa, apenas adicionar guard)
+-- 8. auto_resolve_stale_tasks (ja tem logica complexa, apenas adicionar guard)
 CREATE OR REPLACE FUNCTION public.auto_resolve_stale_tasks()
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -577,7 +577,7 @@ BEGIN
 END;
 $function$;
 
--- 20. calculate_incident_burn_rate - Operação de SLO
+-- 20. calculate_incident_burn_rate - Operacao de SLO
 CREATE OR REPLACE FUNCTION public.calculate_incident_burn_rate(p_fingerprint_id uuid)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
 AS $function$

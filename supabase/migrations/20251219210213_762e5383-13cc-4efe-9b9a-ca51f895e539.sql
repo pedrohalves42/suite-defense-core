@@ -10,7 +10,7 @@ CREATE OR REPLACE VIEW v_integrity_score
 WITH (security_invoker = false)
 AS
 WITH supply_chain_stats AS (
-  -- Contar APENAS releases ativas (não histórico)
+  -- Contar APENAS releases ativas (nao historico)
   SELECT 
     COUNT(*) FILTER (WHERE is_active = true) AS active_releases,
     COUNT(*) FILTER (
@@ -22,7 +22,7 @@ WITH supply_chain_stats AS (
         ELSE LENGTH(script_content) >= 30000
       END
     ) AS valid_active_releases,
-    -- Manter contagem total para referência
+    -- Manter contagem total para referencia
     COUNT(*) AS total_releases,
     COUNT(*) FILTER (WHERE is_active = false) AS archived_releases
   FROM agent_releases
@@ -74,7 +74,7 @@ SELECT
     ELSE ROUND((fj.failed_with_error::numeric / fj.failed_jobs::numeric) * 100, 1)
   END AS failed_jobs_score,
   
-  -- Global Integrity Score (média ponderada)
+  -- Global Integrity Score (media ponderada)
   ROUND(
     (
       CASE WHEN sc.active_releases = 0 THEN 100.0
@@ -86,13 +86,13 @@ SELECT
     ) / 3, 1
   ) AS global_integrity_score,
   
-  -- Métricas de Supply Chain (detalhes)
+  -- Metricas de Supply Chain (detalhes)
   sc.active_releases,
   sc.valid_active_releases,
   sc.archived_releases,
   sc.total_releases,
   
-  -- Métricas de Jobs (detalhes)
+  -- Metricas de Jobs (detalhes)
   ji.total_jobs,
   ji.completed_jobs,
   ji.valid_completed_jobs,
@@ -106,11 +106,11 @@ FROM supply_chain_stats sc
 CROSS JOIN job_integrity_stats ji
 CROSS JOIN failed_job_stats fj;
 
--- Comentário de documentação
+-- Comentario de documentacao
 COMMENT ON VIEW v_integrity_score IS 
 'Zero Trust Integrity Score Dashboard.
-Supply Chain Score: Calcula APENAS releases ativas (não histórico).
-Job Integrity Score: Jobs completados com output válido.
+Supply Chain Score: Calcula APENAS releases ativas (nao historico).
+Job Integrity Score: Jobs completados com output valido.
 Failed Jobs Score: Jobs falhados com mensagem de erro.
-Global Score: Média dos três scores.
+Global Score: Media dos tres scores.
 SECURITY: Read-only audit view, no data modification possible.';

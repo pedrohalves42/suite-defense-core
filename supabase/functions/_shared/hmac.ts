@@ -84,7 +84,7 @@ export async function verifyHmacSignature(
   const signatureRaw = request.headers.get('X-HMAC-Signature')?.trim()
   const signature = signatureRaw?.toLowerCase()
 
-  // Padronização: priorizar headers explícitos X-HMAC-* e aceitar legacy X-*
+  // Padronizacao: priorizar headers explicitos X-HMAC-* e aceitar legacy X-*
   const timestampCandidates = uniqueNonEmpty([
     request.headers.get('X-HMAC-Timestamp'),
     request.headers.get('X-Timestamp'),
@@ -124,7 +124,7 @@ export async function verifyHmacSignature(
     }
   }
 
-  // Body idempotente para não consumir req original
+  // Body idempotente para nao consumir req original
   let body = ''
   try {
     body = await request.clone().text()
@@ -423,8 +423,8 @@ async function logAuthFailure(supabase: SupabaseClient, data: AuthFailureLogData
       event_data: {
         errorCode: data.errorCode,
         errorMessage: data.errorCode === 'AUTH_TIMESTAMP_OUT_OF_RANGE' 
-          ? `Relógio do computador fora de sincronia (${data.skewSeconds?.toFixed(1) || '?'}s de diferença)`
-          : 'Falha de autenticação HMAC',
+          ? `Relogio do computador fora de sincronia (${data.skewSeconds?.toFixed(1) || '?'}s de diferenca)`
+          : 'Falha de autenticacao HMAC',
         skewSeconds: data.skewSeconds,
         serverTimeMs: data.serverTimeMs,
         receivedTimestamp: data.receivedTimestamp,

@@ -1,8 +1,8 @@
 -- =====================================================
 -- REFINEMENT: Production-grade triggers
--- - Triggers por colunas específicas (evita updates desnecessários)
--- - Idempotência nas atualizações (AND status <> 'resolved')
--- - COALESCE pattern para segurança
+-- - Triggers por colunas especificas (evita updates desnecessarios)
+-- - Idempotencia nas atualizacoes (AND status <> 'resolved')
+-- - COALESCE pattern para seguranca
 -- =====================================================
 
 -- AI INSIGHTS trigger (refinado com column specificity)

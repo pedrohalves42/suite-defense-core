@@ -1,8 +1,8 @@
 -- ADR-027: Final Policy Corrections
--- Elimina políticas legadas e normaliza agent_tokens
+-- Elimina politicas legadas e normaliza agent_tokens
 
 -- =============================================================================
--- FASE P0: Remoção de Políticas Permissivas Duplicadas
+-- FASE P0: Remocao de Politicas Permissivas Duplicadas
 -- =============================================================================
 
 -- 1. score_governance_log - remover policy duplicada com public + true
@@ -24,10 +24,10 @@ DROP POLICY IF EXISTS compliance_policies_insert_admin ON compliance_policies;
 DROP POLICY IF EXISTS vendor_risk_insert_admin ON vendor_risk_registry;
 
 -- =============================================================================
--- FASE P1: Normalização agent_tokens (consistência arquitetural)
+-- FASE P1: Normalizacao agent_tokens (consistencia arquitetural)
 -- =============================================================================
 
--- SELECT - normalizar estrutura para padrão ADR-026
+-- SELECT - normalizar estrutura para padrao ADR-026
 DROP POLICY IF EXISTS agent_tokens_select_active_tenant ON agent_tokens;
 CREATE POLICY agent_tokens_select_active_tenant ON agent_tokens
 FOR SELECT USING (
@@ -39,7 +39,7 @@ FOR SELECT USING (
   OR is_current_super_admin()
 );
 
--- INSERT - normalizar estrutura para padrão ADR-026
+-- INSERT - normalizar estrutura para padrao ADR-026
 DROP POLICY IF EXISTS agent_tokens_insert_active_tenant ON agent_tokens;
 CREATE POLICY agent_tokens_insert_active_tenant ON agent_tokens
 FOR INSERT WITH CHECK (
@@ -51,7 +51,7 @@ FOR INSERT WITH CHECK (
   OR is_current_super_admin()
 );
 
--- UPDATE - normalizar estrutura para padrão ADR-026
+-- UPDATE - normalizar estrutura para padrao ADR-026
 DROP POLICY IF EXISTS agent_tokens_update_active_tenant ON agent_tokens;
 CREATE POLICY agent_tokens_update_active_tenant ON agent_tokens
 FOR UPDATE
@@ -72,7 +72,7 @@ WITH CHECK (
   OR is_current_super_admin()
 );
 
--- DELETE - normalizar estrutura para padrão ADR-026
+-- DELETE - normalizar estrutura para padrao ADR-026
 DROP POLICY IF EXISTS agent_tokens_delete_active_tenant ON agent_tokens;
 CREATE POLICY agent_tokens_delete_active_tenant ON agent_tokens
 FOR DELETE USING (

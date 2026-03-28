@@ -7,7 +7,7 @@
 --   Offline: > 30 min
 -- =============================================
 
--- 1. v_agent_state: was 10min offline, 5min warning → 30min offline, 20min warning, 12min online
+-- 1. v_agent_state: was 10min offline, 5min warning ? 30min offline, 20min warning, 12min online
 CREATE OR REPLACE VIEW public.v_agent_state
 WITH (security_invoker = on, security_barrier = true) AS
 SELECT 
@@ -42,7 +42,7 @@ WHERE status = 'active' AND archived_at IS NULL
   AND auth.uid() IS NOT NULL
   AND (tenant_id = get_active_tenant_id() OR is_current_super_admin());
 
--- 2. v_agent_health_summary: was 15min online, 1hr offline → 12min online, 30min offline
+-- 2. v_agent_health_summary: was 15min online, 1hr offline ? 12min online, 30min offline
 CREATE OR REPLACE VIEW public.v_agent_health_summary
 WITH (security_invoker = on, security_barrier = true) AS
 SELECT 
@@ -59,7 +59,7 @@ WHERE archived_at IS NULL
   AND (tenant_id = get_active_tenant_id() OR is_current_super_admin())
 GROUP BY tenant_id;
 
--- 3. v_agent_health_by_node: was 15min → 12min
+-- 3. v_agent_health_by_node: was 15min ? 12min
 CREATE OR REPLACE VIEW public.v_agent_health_by_node
 WITH (security_invoker = on, security_barrier = true) AS
 SELECT 
@@ -75,7 +75,7 @@ WHERE archived_at IS NULL
   AND (tenant_id = get_active_tenant_id() OR is_current_super_admin())
 GROUP BY tenant_id, hostname;
 
--- 4. v_problematic_agents: was 15min degraded, 1hr offline → 12min degraded, 30min offline
+-- 4. v_problematic_agents: was 15min degraded, 1hr offline ? 12min degraded, 30min offline
 CREATE OR REPLACE VIEW public.v_problematic_agents
 WITH (security_invoker = on, security_barrier = true) AS
 SELECT 
@@ -105,7 +105,7 @@ WHERE archived_at IS NULL
   AND auth.uid() IS NOT NULL
   AND (tenant_id = get_active_tenant_id() OR is_current_super_admin());
 
--- 5. v_agent_lifecycle_state: was 1hr offline → 30min offline
+-- 5. v_agent_lifecycle_state: was 1hr offline ? 30min offline
 CREATE OR REPLACE VIEW public.v_agent_lifecycle_state
 WITH (security_invoker = on, security_barrier = true) AS
 SELECT 

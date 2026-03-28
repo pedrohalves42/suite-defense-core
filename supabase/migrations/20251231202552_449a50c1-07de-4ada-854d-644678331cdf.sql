@@ -1,6 +1,6 @@
 
 -- =====================================================
--- MIGRATION: Atualizar get_audit_raw_metrics() com métricas de governança
+-- MIGRATION: Atualizar get_audit_raw_metrics() com metricas de governanca
 -- =====================================================
 
 DROP FUNCTION IF EXISTS get_audit_raw_metrics(uuid);
@@ -58,7 +58,7 @@ BEGIN
     WHERE tenant_id = p_tenant_id
       AND created_at >= now() - interval '30 days'
   ),
-  -- APPROVALS (Governança)
+  -- APPROVALS (Governanca)
   approval_stats AS (
     SELECT
       COUNT(*) AS total,
@@ -91,7 +91,7 @@ BEGIN
     'dlq_review_rate', CASE WHEN dlq_stats.total > 0 
       THEN ROUND(dlq_stats.reviewed::numeric / dlq_stats.total * 100, 2) ELSE 0 END,
     
-    -- INSIGHTS → ACTIONS
+    -- INSIGHTS ? ACTIONS
     'ai_insights_30d', insight_stats.total,
     'insights_resolved_30d', insight_stats.resolved,
     'insights_resolution_rate', CASE WHEN insight_stats.total > 0 
@@ -126,7 +126,7 @@ END;
 $$;
 
 -- =====================================================
--- TRIGGER: Policy Enforcement → Decision Events
+-- TRIGGER: Policy Enforcement ? Decision Events
 -- =====================================================
 
 CREATE OR REPLACE FUNCTION trg_decision_event_from_policy()
@@ -163,7 +163,7 @@ FOR EACH ROW
 EXECUTE FUNCTION trg_decision_event_from_policy();
 
 -- =====================================================
--- TRIGGER: AI Actions → Decision Events
+-- TRIGGER: AI Actions ? Decision Events
 -- =====================================================
 
 CREATE OR REPLACE FUNCTION trg_decision_event_from_ai_action()
@@ -173,7 +173,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  -- Evitar duplicação
+  -- Evitar duplicacao
   IF EXISTS (SELECT 1 FROM decision_events WHERE evidence->>'action_id' = NEW.id::text) THEN
     RETURN NEW;
   END IF;

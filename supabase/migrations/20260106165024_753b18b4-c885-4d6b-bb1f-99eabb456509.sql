@@ -1,4 +1,4 @@
--- Criar função para notificar edge function de avaliação de playbooks
+-- Criar funcao para notificar edge function de avaliacao de playbooks
 CREATE OR REPLACE FUNCTION public.trigger_playbook_evaluation_on_job_failure()
 RETURNS TRIGGER
 SECURITY DEFINER
@@ -13,12 +13,12 @@ BEGIN
     RETURN NEW;
   END IF;
   
-  -- Buscar informações do job
+  -- Buscar informacoes do job
   SELECT type, tenant_id INTO job_record
   FROM jobs
   WHERE id = NEW.job_id;
   
-  -- Contar falhas nas últimas 24 horas para este job
+  -- Contar falhas nas ultimas 24 horas para este job
   SELECT COUNT(*) INTO failure_count_24h
   FROM job_executions
   WHERE job_id = NEW.job_id
@@ -61,7 +61,7 @@ FOR EACH ROW
 WHEN (NEW.status = 'failed')
 EXECUTE FUNCTION public.trigger_playbook_evaluation_on_job_failure();
 
--- Criar função para verificar agentes offline periodicamente
+-- Criar funcao para verificar agentes offline periodicamente
 CREATE OR REPLACE FUNCTION public.check_offline_agents_for_playbook()
 RETURNS void
 SECURITY DEFINER
@@ -83,7 +83,7 @@ BEGIN
       AND a.last_seen < NOW() - INTERVAL '24 hours'
       AND a.last_seen > NOW() - INTERVAL '48 hours' -- Apenas agentes que ficaram offline recentemente
   LOOP
-    -- Verificar se já existe um log recente para este agente
+    -- Verificar se ja existe um log recente para este agente
     IF NOT EXISTS (
       SELECT 1 FROM ai_action_logs
       WHERE tenant_id = agent_record.tenant_id
@@ -117,9 +117,9 @@ BEGIN
 END;
 $$;
 
--- Comentário para documentação
+-- Comentario para documentacao
 COMMENT ON FUNCTION public.trigger_playbook_evaluation_on_job_failure() IS 
-'Trigger que registra eventos de falha de job para avaliação de playbooks automatizada';
+'Trigger que registra eventos de falha de job para avaliacao de playbooks automatizada';
 
 COMMENT ON FUNCTION public.check_offline_agents_for_playbook() IS 
-'Função que verifica agentes offline e registra eventos para avaliação de playbooks';
+'Funcao que verifica agentes offline e registra eventos para avaliacao de playbooks';

@@ -1,11 +1,11 @@
--- P1: Criar trigger para auto-resolução de alertas na tabela agent_system_metrics
+-- P1: Criar trigger para auto-resolucao de alertas na tabela agent_system_metrics
 DROP TRIGGER IF EXISTS tr_auto_resolve_resource_alerts ON agent_system_metrics;
 CREATE TRIGGER tr_auto_resolve_resource_alerts
   AFTER INSERT ON agent_system_metrics
   FOR EACH ROW
   EXECUTE FUNCTION auto_resolve_resource_alerts();
 
--- P2: Criar view de saúde dos ciclos do sistema
+-- P2: Criar view de saude dos ciclos do sistema
 CREATE OR REPLACE VIEW v_system_cycle_health AS
 SELECT 
   'ai_actions_pending_verification' as cycle,

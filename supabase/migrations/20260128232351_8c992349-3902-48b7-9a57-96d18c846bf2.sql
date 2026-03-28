@@ -48,6 +48,6 @@ WHERE status = 'pending'
 GRANT SELECT ON public.v_system_cycle_health TO authenticated;
 GRANT SELECT ON public.v_system_cycle_health TO service_role;
 
--- Documentar segurança
+-- Documentar seguranca
 COMMENT ON VIEW public.v_system_cycle_health IS 
   'ADR-023: System health metrics with security_invoker=on + tenant isolation';

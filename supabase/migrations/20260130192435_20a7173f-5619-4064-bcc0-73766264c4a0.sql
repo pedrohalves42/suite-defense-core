@@ -11,7 +11,7 @@ BEGIN
       closure_reason = COALESCE(NEW.resolution_notes, 'DLQ item resolvido'),
       updated_at = NOW()
     WHERE source_type = 'dlq'
-      AND source_id = NEW.id  -- Comparação direta de uuid
+      AND source_id = NEW.id  -- Comparacao direta de uuid
       AND status NOT IN ('resolved', 'closed');
   END IF;
   RETURN NEW;

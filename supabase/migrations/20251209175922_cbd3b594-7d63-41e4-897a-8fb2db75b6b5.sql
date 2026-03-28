@@ -1,4 +1,4 @@
--- P1-SEC: Corrigir políticas RLS permissivas (INSERT com true para public)
+-- P1-SEC: Corrigir politicas RLS permissivas (INSERT com true para public)
 -- Alterar para permitir INSERT apenas via service_role
 
 -- 1. network_anomalies - corrigir INSERT policy
@@ -25,7 +25,7 @@ FOR INSERT
 TO service_role
 WITH CHECK (true);
 
--- 4. ai_insights - corrigir INSERT policy (também identificada com true)
+-- 4. ai_insights - corrigir INSERT policy (tambem identificada com true)
 DROP POLICY IF EXISTS "System can insert insights" ON public.ai_insights;
 CREATE POLICY "Service role can insert insights"
 ON public.ai_insights

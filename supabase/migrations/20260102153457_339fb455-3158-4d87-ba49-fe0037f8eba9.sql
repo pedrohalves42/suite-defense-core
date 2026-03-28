@@ -1,5 +1,5 @@
--- Função para sincronizar status de agentes pending que não enviam heartbeat
--- Marca como offline agentes pending que foram enrolled há mais de 10 minutos sem heartbeat
+-- Funcao para sincronizar status de agentes pending que nao enviam heartbeat
+-- Marca como offline agentes pending que foram enrolled ha mais de 10 minutos sem heartbeat
 
 CREATE OR REPLACE FUNCTION sync_pending_agents_status()
 RETURNS TABLE (
@@ -43,6 +43,6 @@ BEGIN
 END;
 $$;
 
--- Comentário explicativo
+-- Comentario explicativo
 COMMENT ON FUNCTION sync_pending_agents_status() IS 
-'Atualiza automaticamente o status de agentes pending para offline se não enviaram heartbeat em 10 minutos após enrollment';
+'Atualiza automaticamente o status de agentes pending para offline se nao enviaram heartbeat em 10 minutos apos enrollment';

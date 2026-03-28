@@ -1,5 +1,5 @@
 -- ============================================
--- P1-02: Views com Security Invoker (correção)
+-- P1-02: Views com Security Invoker (correcao)
 -- ============================================
 
 -- Recriar enrollment_keys_safe com security_invoker (key mascarada) - usando coluna correta 'description'
@@ -102,8 +102,8 @@ WHERE a.tenant_id IN (
   SELECT ur.tenant_id FROM user_roles ur WHERE ur.user_id = auth.uid()
 );
 
--- Comentários para documentação
+-- Comentarios para documentacao
 COMMENT ON VIEW public.enrollment_keys_safe IS 'View segura com keys mascaradas e security_invoker - isolamento por tenant via RLS';
-COMMENT ON VIEW public.v_agent_health_summary IS 'View resumo de saúde dos agentes com security_invoker';
-COMMENT ON VIEW public.v_problematic_agents IS 'View de agentes problemáticos com security_invoker';
+COMMENT ON VIEW public.v_agent_health_summary IS 'View resumo de saude dos agentes com security_invoker';
+COMMENT ON VIEW public.v_problematic_agents IS 'View de agentes problematicos com security_invoker';
 COMMENT ON VIEW public.v_agent_lifecycle_state IS 'View de estado do ciclo de vida dos agentes com security_invoker';

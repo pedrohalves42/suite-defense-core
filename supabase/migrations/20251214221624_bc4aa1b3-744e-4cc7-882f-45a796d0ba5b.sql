@@ -1,4 +1,4 @@
--- FASE 1: Configurar Licença Pro para Genialcred até 31/01/2026
+-- FASE 1: Configurar Licenca Pro para Genialcred ate 31/01/2026
 -- Primeiro, buscar o plan_id do plano Pro
 DO $$
 DECLARE
@@ -8,7 +8,7 @@ BEGIN
   -- Buscar ID do plano Pro
   SELECT id INTO v_pro_plan_id FROM subscription_plans WHERE name = 'pro' LIMIT 1;
   
-  -- Se não encontrar, usar um default
+  -- Se nao encontrar, usar um default
   IF v_pro_plan_id IS NULL THEN
     SELECT id INTO v_pro_plan_id FROM subscription_plans WHERE name ILIKE '%pro%' LIMIT 1;
   END IF;
@@ -23,7 +23,7 @@ BEGIN
     device_quantity = 200
   WHERE tenant_id = v_genialcred_tenant_id;
   
-  -- Se não existir, criar
+  -- Se nao existir, criar
   IF NOT FOUND THEN
     INSERT INTO tenant_subscriptions (tenant_id, plan_id, status, trial_end, current_period_end, device_quantity)
     VALUES (v_genialcred_tenant_id, v_pro_plan_id, 'active', '2026-01-31 23:59:59+00', '2026-01-31 23:59:59+00', 200);
@@ -51,10 +51,10 @@ DELETE FROM installation_analytics WHERE created_at < NOW() - INTERVAL '30 days'
 -- Limpar jobs antigos com timeout
 DELETE FROM jobs WHERE status = 'failed' AND error_message LIKE '%timeout%' AND created_at < NOW() - INTERVAL '7 days';
 
--- Adicionar coluna display_name aos agentes se não existir
+-- Adicionar coluna display_name aos agentes se nao existir
 ALTER TABLE agents ADD COLUMN IF NOT EXISTS display_name text;
 
--- Atualizar display_name com hostname ou agent_name mais amigável
+-- Atualizar display_name com hostname ou agent_name mais amigavel
 UPDATE agents 
 SET display_name = COALESCE(
   NULLIF(hostname, ''),

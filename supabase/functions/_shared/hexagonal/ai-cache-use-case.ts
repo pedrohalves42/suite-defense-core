@@ -2,13 +2,13 @@
  * Hexagonal Use Case: AI Semantic Cache
  * 
  * Pure domain logic for cache key generation and TTL decisions.
- * No infrastructure dependencies — only uses the AICachePort.
+ * No infrastructure dependencies ? only uses the AICachePort.
  */
 
 import type { AICachePort, CachedAIResponse } from './ai-cache-port.ts';
 import { logger } from '../logger.ts';
 
-// ─── Task Categories with TTL Configuration ────────────
+// ??? Task Categories with TTL Configuration ????????????
 export enum AITaskCategory {
   /** Simple status checks, classifications */
   SIMPLE = 'simple',
@@ -33,7 +33,7 @@ const CATEGORY_TTL_MINUTES: Record<AITaskCategory, number> = {
   [AITaskCategory.GENERAL]: 120,      // 2 hours
 };
 
-// ─── Cache Key Normalization (Pure) ────────────────────
+// ??? Cache Key Normalization (Pure) ????????????????????
 
 /**
  * Normalize prompt content for stable cache keys.
@@ -42,12 +42,12 @@ const CATEGORY_TTL_MINUTES: Record<AITaskCategory, number> = {
  */
 export function normalizeCacheContent(content: string): string {
   return content
-    // Round percentages to nearest 5 (e.g., 47.3% → 45%)
+    // Round percentages to nearest 5 (e.g., 47.3% ? 45%)
     .replace(/(\d+\.?\d*)\s*%/g, (_match, num) => {
       const rounded = Math.round(parseFloat(num) / 5) * 5;
       return `${rounded}%`;
     })
-    // Round standalone decimals with units (e.g., "48.0" → "50")
+    // Round standalone decimals with units (e.g., "48.0" ? "50")
     .replace(/\b(\d+)\.\d+\b/g, (_match, intPart) => {
       const n = parseInt(intPart, 10);
       return String(Math.round(n / 5) * 5);
@@ -65,7 +65,7 @@ export function normalizeCacheContent(content: string): string {
     .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '[UUID]');
 }
 
-// ─── Hash Generation (Pure) ────────────────────────────
+// ??? Hash Generation (Pure) ????????????????????????????
 
 /**
  * Generate a deterministic SHA-256 hash for cache key.
@@ -103,7 +103,7 @@ export function classifyTask(functionName: string): AITaskCategory {
   return AITaskCategory.GENERAL;
 }
 
-// ─── Use Case ──────────────────────────────────────────
+// ??? Use Case ??????????????????????????????????????????
 
 export interface CacheLookupResult {
   hit: boolean;

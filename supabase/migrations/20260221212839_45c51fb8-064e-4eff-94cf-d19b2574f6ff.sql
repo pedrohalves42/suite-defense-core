@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS public.soar_playbooks (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE public.soar_playbooks IS 'Playbooks de resposta automatizada SOAR para remediação de incidentes';
+COMMENT ON TABLE public.soar_playbooks IS 'Playbooks de resposta automatizada SOAR para remediacao de incidentes';
 
 ALTER TABLE public.soar_playbooks ENABLE ROW LEVEL SECURITY;
 
@@ -44,7 +44,7 @@ CREATE TRIGGER update_soar_playbooks_updated_at
 CREATE INDEX idx_soar_playbooks_tenant_active ON public.soar_playbooks(tenant_id, is_active);
 
 -- ====================================================================
--- Tabela ai_feedback: Loop de feedback para melhoria contínua da IA
+-- Tabela ai_feedback: Loop de feedback para melhoria continua da IA
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS public.ai_feedback (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS public.ai_feedback (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE public.ai_feedback IS 'Feedback dos operadores sobre insights e ações de IA para ajuste contínuo';
+COMMENT ON TABLE public.ai_feedback IS 'Feedback dos operadores sobre insights e acoes de IA para ajuste continuo';
 
 ALTER TABLE public.ai_feedback ENABLE ROW LEVEL SECURITY;
 

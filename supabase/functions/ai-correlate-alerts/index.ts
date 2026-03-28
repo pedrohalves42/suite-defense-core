@@ -80,7 +80,7 @@ Responda APENAS com JSON valido no formato:
   "recommendation": "string"
 }]`;
 
-  const userPrompt = `Alertas não resolvidos para ${tenantName} (últimas ${timeRangeHours}h):
+  const userPrompt = `Alertas nao resolvidos para ${tenantName} (ultimas ${timeRangeHours}h):
 
 Total: ${alerts.length} alertas
 

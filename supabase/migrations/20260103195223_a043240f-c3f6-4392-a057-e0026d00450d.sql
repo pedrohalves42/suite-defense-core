@@ -1,7 +1,7 @@
 -- =============================================================================
 -- Migration: Create Enforcement Compliance Metrics (FIXED)
 -- Purpose: Provide temporal-aware compliance metrics that separate pre/post-enforcement data
--- ADR: ADR-012 - Fechamento dos Ciclos de Governança Operacional
+-- ADR: ADR-012 - Fechamento dos Ciclos de Governanca Operacional
 -- =============================================================================
 
 -- 1. Create the enforcement compliance view
@@ -306,4 +306,4 @@ COMMENT ON VIEW public.v_enforcement_compliance IS
 'Provides temporal-aware compliance metrics that separate pre/post-enforcement data.
 Enforcement triggers were activated on 2026-01-03 19:31:58.
 Legacy data (before enforcement) is tracked separately for transparency.
-ADR: ADR-012 - Fechamento dos Ciclos de Governança Operacional';
+ADR: ADR-012 - Fechamento dos Ciclos de Governanca Operacional';

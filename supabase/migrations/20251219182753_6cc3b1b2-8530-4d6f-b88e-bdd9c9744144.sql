@@ -1,5 +1,5 @@
--- Atualizar função validate_agent_release_integrity com threshold diferenciado por plataforma
--- Windows (binário/PowerShell): 50kb
+-- Atualizar funcao validate_agent_release_integrity com threshold diferenciado por plataforma
+-- Windows (binario/PowerShell): 50kb
 -- Linux/macOS (shell script): 30kb
 
 CREATE OR REPLACE FUNCTION public.validate_agent_release_integrity()
@@ -32,7 +32,7 @@ JOIN agent_versions av ON av.version = ar.version AND av.platform = ar.platform
 WHERE av.is_latest = true;
 $function$;
 
--- Criar view para métricas de integridade agregadas
+-- Criar view para metricas de integridade agregadas
 CREATE OR REPLACE VIEW v_integrity_score AS
 SELECT
   -- Supply Chain Score
@@ -42,7 +42,7 @@ SELECT
     100
   ) AS supply_chain_score,
   
-  -- Job Integrity Score (jobs sem violações nos últimos 7 dias)
+  -- Job Integrity Score (jobs sem violacoes nos ultimos 7 dias)
   COALESCE(
     100 - (
       SELECT COUNT(*)::numeric FROM job_integrity_violations 
@@ -62,4 +62,4 @@ SELECT
   (SELECT COUNT(*) FROM validate_agent_release_integrity() WHERE is_valid = false) AS invalid_releases,
   (SELECT COUNT(*) FROM validate_agent_release_integrity()) AS total_releases;
 
-COMMENT ON VIEW v_integrity_score IS 'Métricas agregadas de integridade do sistema (supply chain + job integrity)';
+COMMENT ON VIEW v_integrity_score IS 'Metricas agregadas de integridade do sistema (supply chain + job integrity)';

@@ -1,10 +1,10 @@
--- ADR-029 FASE 1: Correções Críticas (P0)
+-- ADR-029 FASE 1: Correcoes Criticas (P0)
 
--- CRIT-06: Adicionar validação de tenant em revive_agent_on_reenroll
+-- CRIT-06: Adicionar validacao de tenant em revive_agent_on_reenroll
 CREATE OR REPLACE FUNCTION public.revive_agent_on_reenroll(
   p_agent_id uuid, 
   p_new_hmac_secret text,
-  p_expected_tenant_id uuid DEFAULT NULL  -- Novo parâmetro para validação cross-tenant
+  p_expected_tenant_id uuid DEFAULT NULL  -- Novo parametro para validacao cross-tenant
 )
 RETURNS json
 LANGUAGE plpgsql
@@ -22,7 +22,7 @@ BEGIN
     RETURN json_build_object('success', false, 'error', 'AGENT_NOT_FOUND');
   END IF;
   
-  -- CRIT-06: Validação de tenant para prevenir cross-tenant escalation
+  -- CRIT-06: Validacao de tenant para prevenir cross-tenant escalation
   -- Se p_expected_tenant_id foi fornecido, validar que o agente pertence ao tenant correto
   IF p_expected_tenant_id IS NOT NULL AND v_agent.tenant_id IS DISTINCT FROM p_expected_tenant_id THEN
     RETURN json_build_object(
@@ -96,6 +96,6 @@ BEGIN
   END LOOP;
 END $$;
 
--- ADR-029 FASE 3: Índice de Performance para jobs (existe)
+-- ADR-029 FASE 3: Indice de Performance para jobs (existe)
 CREATE INDEX IF NOT EXISTS idx_jobs_tenant_type_created 
 ON public.jobs (tenant_id, type, created_at DESC);

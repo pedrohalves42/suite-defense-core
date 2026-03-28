@@ -1,24 +1,24 @@
 -- ============================================================
 -- JOB EXECUTIONS: Append-Only Audit Trail (Fase 1 + 4)
--- Prova imutável de cada execução de job
+-- Prova imutavel de cada execucao de job
 -- ============================================================
 
--- 1. Criar tabela job_executions (append-only, imutável)
+-- 1. Criar tabela job_executions (append-only, imutavel)
 CREATE TABLE IF NOT EXISTS job_executions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE RESTRICT,
   agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE RESTRICT,
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
   
-  -- Contexto da execução
+  -- Contexto da execucao
   agent_version TEXT NOT NULL,
   agent_name TEXT NOT NULL,
   
-  -- Prova criptográfica
+  -- Prova criptografica
   payload_hash TEXT NOT NULL,  -- SHA256 do payload original
   nonce UUID NOT NULL DEFAULT gen_random_uuid(),
   
-  -- Timestamps imutáveis
+  -- Timestamps imutaveis
   claimed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   started_at TIMESTAMPTZ,
   finished_at TIMESTAMPTZ,
@@ -26,11 +26,11 @@ CREATE TABLE IF NOT EXISTS job_executions (
   -- Resultado
   status TEXT NOT NULL DEFAULT 'claimed' CHECK (status IN ('claimed', 'running', 'completed', 'failed')),
   exit_code INTEGER,
-  output_hash TEXT,  -- SHA256 do output (para verificação)
+  output_hash TEXT,  -- SHA256 do output (para verificacao)
   error_message TEXT,
   execution_time_seconds INTEGER,
   
-  -- Assinatura do resultado pelo agente (preparação Fase 3)
+  -- Assinatura do resultado pelo agente (preparacao Fase 3)
   result_signature TEXT,
   signature_algorithm TEXT DEFAULT 'ECDSA-P256-SHA256',
   signature_verified BOOLEAN DEFAULT FALSE,
@@ -38,11 +38,11 @@ CREATE TABLE IF NOT EXISTS job_executions (
   -- Metadata
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   
-  -- Constraint: nonce único por job previne replay
+  -- Constraint: nonce unico por job previne replay
   UNIQUE(job_id, nonce)
 );
 
--- 2. Índices para queries otimizadas
+-- 2. Indices para queries otimizadas
 CREATE INDEX IF NOT EXISTS idx_job_executions_job_id ON job_executions(job_id);
 CREATE INDEX IF NOT EXISTS idx_job_executions_agent_id ON job_executions(agent_id);
 CREATE INDEX IF NOT EXISTS idx_job_executions_tenant_id ON job_executions(tenant_id);
@@ -50,7 +50,7 @@ CREATE INDEX IF NOT EXISTS idx_job_executions_status ON job_executions(status);
 CREATE INDEX IF NOT EXISTS idx_job_executions_created_at ON job_executions(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_job_executions_payload_hash ON job_executions(payload_hash);
 
--- 3. RLS: Append-only (INSERT apenas, sem UPDATE/DELETE para usuários normais)
+-- 3. RLS: Append-only (INSERT apenas, sem UPDATE/DELETE para usuarios normais)
 ALTER TABLE job_executions ENABLE ROW LEVEL SECURITY;
 
 -- Policy para service role inserir executions
@@ -71,14 +71,14 @@ CREATE POLICY "Super admins can view all executions"
   ON job_executions FOR SELECT
   USING (has_role(auth.uid(), 'super_admin'));
 
--- 4. CRÍTICO: Permitir UPDATE apenas para finalização (status claimed -> completed/failed)
+-- 4. CRITICO: Permitir UPDATE apenas para finalizacao (status claimed -> completed/failed)
 -- Service role pode atualizar para finalizar executions
 CREATE POLICY "Service role can finalize executions"
   ON job_executions FOR UPDATE
   USING (true)
   WITH CHECK (true);
 
--- 5. Adicionar campos para assinatura do resultado na tabela agents (preparação Fase 3)
+-- 5. Adicionar campos para assinatura do resultado na tabela agents (preparacao Fase 3)
 ALTER TABLE agents
 ADD COLUMN IF NOT EXISTS result_public_key TEXT,
 ADD COLUMN IF NOT EXISTS result_key_fingerprint TEXT,
@@ -111,14 +111,14 @@ DECLARE
   v_nonce UUID;
   v_payload_hash TEXT;
 BEGIN
-  -- Buscar versão do agente
+  -- Buscar versao do agente
   SELECT agent_version INTO v_agent_version
   FROM agents
   WHERE id = p_agent_id;
   
   v_agent_version := COALESCE(v_agent_version, 'unknown');
   
-  -- Loop através dos jobs elegíveis
+  -- Loop atraves dos jobs elegiveis
   FOR v_job IN
     SELECT 
       j.id,
@@ -135,13 +135,13 @@ BEGIN
     LIMIT p_limit
     FOR UPDATE SKIP LOCKED
   LOOP
-    -- Gerar nonce único para esta execução
+    -- Gerar nonce unico para esta execucao
     v_nonce := gen_random_uuid();
     
     -- Calcular hash do payload
     v_payload_hash := encode(sha256(convert_to(COALESCE(v_job.payload::text, '{}'), 'UTF8')), 'hex');
     
-    -- Criar registro de execução (prova imutável)
+    -- Criar registro de execucao (prova imutavel)
     INSERT INTO job_executions (
       job_id,
       agent_id,
@@ -173,7 +173,7 @@ BEGIN
       current_execution_id = v_execution_id
     WHERE id = v_job.id;
     
-    -- Retornar job com dados da execução
+    -- Retornar job com dados da execucao
     job_id := v_job.id;
     job_type := v_job.type;
     payload := v_job.payload;
@@ -189,7 +189,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- 8. Função para finalizar execution (chamada pelo submit-job-result)
+-- 8. Funcao para finalizar execution (chamada pelo submit-job-result)
 CREATE OR REPLACE FUNCTION finalize_job_execution(
   p_job_id UUID,
   p_execution_id UUID,
@@ -208,7 +208,7 @@ DECLARE
   v_execution RECORD;
   v_result JSONB;
 BEGIN
-  -- Verificar que a execução existe e pertence ao agente
+  -- Verificar que a execucao existe e pertence ao agente
   SELECT * INTO v_execution
   FROM job_executions
   WHERE id = p_execution_id
@@ -218,7 +218,7 @@ BEGIN
   FOR UPDATE;
   
   IF NOT FOUND THEN
-    -- Tentar buscar por job_id se execution_id não fornecido
+    -- Tentar buscar por job_id se execution_id nao fornecido
     IF p_execution_id IS NULL THEN
       SELECT * INTO v_execution
       FROM job_executions
@@ -239,7 +239,7 @@ BEGIN
     END IF;
   END IF;
   
-  -- Atualizar execução com resultado
+  -- Atualizar execucao com resultado
   UPDATE job_executions
   SET 
     status = p_status,
@@ -261,7 +261,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- 9. View para métricas de saúde de jobs (Dashboard)
+-- 9. View para metricas de saude de jobs (Dashboard)
 CREATE OR REPLACE VIEW v_job_execution_health AS
 SELECT 
   j.tenant_id,
@@ -284,17 +284,17 @@ LEFT JOIN job_executions je ON j.current_execution_id = je.id
 WHERE j.created_at > NOW() - INTERVAL '24 hours'
 GROUP BY j.tenant_id;
 
--- 10. Trigger para prevenir modificação de executions finalizadas
+-- 10. Trigger para prevenir modificacao de executions finalizadas
 CREATE OR REPLACE FUNCTION prevent_execution_modification()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Permitir apenas transições claimed -> completed/failed
+  -- Permitir apenas transicoes claimed -> completed/failed
   IF OLD.status IN ('completed', 'failed') THEN
     RAISE EXCEPTION 'IMMUTABLE_VIOLATION: Finalized executions cannot be modified. Execution: %', OLD.id
       USING ERRCODE = '23514';
   END IF;
   
-  -- Não permitir alterar campos imutáveis
+  -- Nao permitir alterar campos imutaveis
   IF NEW.job_id != OLD.job_id 
      OR NEW.agent_id != OLD.agent_id 
      OR NEW.tenant_id != OLD.tenant_id
@@ -328,7 +328,7 @@ CREATE TRIGGER block_execution_deletion
   FOR EACH ROW
   EXECUTE FUNCTION prevent_execution_deletion();
 
--- 12. Função para detectar execuções duplicadas (anomalia)
+-- 12. Funcao para detectar execucoes duplicadas (anomalia)
 CREATE OR REPLACE FUNCTION detect_duplicate_executions(p_hours_back INTEGER DEFAULT 24)
 RETURNS TABLE (
   job_id UUID,

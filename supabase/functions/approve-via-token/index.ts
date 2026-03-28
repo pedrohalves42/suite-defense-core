@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
     logger.info(`[approve-via-token] Rate limited - IP: ${clientIp} - resetAt: ${rateLimitResult.resetAt} - requestId: ${requestId}`);
     return generateHtmlResponse({
       success: false,
-      message: `Muitas tentativas. Tente novamente após ${rateLimitResult.resetAt?.toLocaleString('pt-BR')}`,
+      message: `Muitas tentativas. Tente novamente apos ${rateLimitResult.resetAt?.toLocaleString('pt-BR')}`,
       error: 'RATE_LIMITED'
     });
   }
@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
       logger.info(`[approve-via-token] Missing token - requestId: ${requestId}`);
       return generateHtmlResponse({
         success: false,
-        message: 'Token de aprovação não fornecido',
+        message: 'Token de aprovacao nao fornecido',
         error: 'MISSING_TOKEN'
       });
     }
@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
       logger.info(`[approve-via-token] Token not found or invalid - requestId: ${requestId}`);
       return generateHtmlResponse({
         success: false,
-        message: 'Token de aprovação inválido ou não encontrado',
+        message: 'Token de aprovacao invalido ou nao encontrado',
         error: 'INVALID_TOKEN'
       });
     }
@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
       logger.info(`[approve-via-token] Request already processed - status: ${approvalRequest.status} - requestId: ${requestId}`);
       return generateHtmlResponse({
         success: false,
-        message: `Esta solicitação já foi processada (status: ${approvalRequest.status})`,
+        message: `Esta solicitacao ja foi processada (status: ${approvalRequest.status})`,
         error: 'ALREADY_PROCESSED'
       });
     }
@@ -147,7 +147,7 @@ Deno.serve(async (req) => {
       logger.info(`[approve-via-token] Token expired - requestId: ${requestId}`);
       return generateHtmlResponse({
         success: false,
-        message: 'O link de aprovação expirou',
+        message: 'O link de aprovacao expirou',
         error: 'TOKEN_EXPIRED'
       });
     }
@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
       logger.info(`[approve-via-token] Request expired - requestId: ${requestId}`);
       return generateHtmlResponse({
         success: false,
-        message: 'A solicitação de aprovação expirou',
+        message: 'A solicitacao de aprovacao expirou',
         error: 'REQUEST_EXPIRED'
       });
     }
@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
       logger.error(`[approve-via-token] Failed to update request - error: ${updateError.message} - requestId: ${requestId}`);
       return generateHtmlResponse({
         success: false,
-        message: 'Erro ao processar aprovação',
+        message: 'Erro ao processar aprovacao',
         error: 'UPDATE_FAILED'
       });
     }
@@ -254,7 +254,7 @@ Deno.serve(async (req) => {
 
     return generateHtmlResponse({
       success: true,
-      message: 'Aprovação realizada com sucesso!',
+      message: 'Aprovacao realizada com sucesso!',
       playbook_name: playbookName,
       execution_id: executionId,
     });
@@ -263,7 +263,7 @@ Deno.serve(async (req) => {
     logger.error(`[approve-via-token] Error: ${error} - requestId: ${requestId}`);
     return generateHtmlResponse({
       success: false,
-      message: 'Erro interno ao processar aprovação',
+      message: 'Erro interno ao processar aprovacao',
       error: error instanceof Error ? error.message : 'INTERNAL_ERROR'
     });
   }
@@ -277,8 +277,8 @@ function generateHtmlResponse(result: ApprovalResult): Response {
   const statusCode = isSuccess ? 200 : (result.error === 'INTERNAL_ERROR' ? 500 : 400);
   
   const bgColor = isSuccess ? '#22c55e' : '#ef4444';
-  const icon = isSuccess ? '✅' : '❌';
-  const title = isSuccess ? 'Aprovação Concluída' : 'Erro na Aprovação';
+  const icon = isSuccess ? '[OK] ' : '[ERROR] ';
+  const title = isSuccess ? 'Aprovacao Concluida' : 'Erro na Aprovacao';
   
   const html = `
 <!DOCTYPE html>
@@ -398,13 +398,13 @@ function generateHtmlResponse(result: ApprovalResult): Response {
         </div>
         ${result.execution_id ? `
           <div class="detail-row">
-            <span class="detail-label">Execução</span>
+            <span class="detail-label">Execucao</span>
             <span class="detail-value">${result.execution_id.substring(0, 8)}...</span>
           </div>
         ` : ''}
         <div class="detail-row">
           <span class="detail-label">Status</span>
-          <span class="detail-value">Em execução</span>
+          <span class="detail-value">Em execucao</span>
         </div>
       </div>
     ` : ''}
@@ -412,7 +412,7 @@ function generateHtmlResponse(result: ApprovalResult): Response {
     ${!isSuccess && result.error ? `
       <div class="details">
         <div class="detail-row">
-          <span class="detail-label">Código</span>
+          <span class="detail-label">Codigo</span>
           <span class="detail-value">${result.error}</span>
         </div>
       </div>
@@ -421,7 +421,7 @@ function generateHtmlResponse(result: ApprovalResult): Response {
     <a href="/" class="btn">Ir para o Dashboard</a>
     
     <p class="redirect-notice">
-      Você será redirecionado automaticamente em <span id="countdown">5</span> segundos...
+      Voce sera redirecionado automaticamente em <span id="countdown">5</span> segundos...
     </p>
     
     <p class="footer">CyberShield Security Platform</p>

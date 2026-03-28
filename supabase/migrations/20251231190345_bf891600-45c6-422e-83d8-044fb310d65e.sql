@@ -1,17 +1,17 @@
 -- =====================================================
 -- FIX: Decision Events Infrastructure
--- Corrige trigger duplicado, bug de coluna, e idempotência
+-- Corrige trigger duplicado, bug de coluna, e idempotencia
 -- =====================================================
 
 -- FASE 1: Remover trigger duplicado (INSERT)
 DROP TRIGGER IF EXISTS trg_create_decision_event_on_ai_action_insert ON ai_actions;
 
--- FASE 2: Criar índice de idempotência ANTES da função
+-- FASE 2: Criar indice de idempotencia ANTES da funcao
 CREATE UNIQUE INDEX IF NOT EXISTS ux_decision_events_action_id 
 ON decision_events ((evidence->>'action_id'))
 WHERE evidence->>'action_id' IS NOT NULL;
 
--- FASE 3: Corrigir função do trigger (bug da coluna + idempotência)
+-- FASE 3: Corrigir funcao do trigger (bug da coluna + idempotencia)
 CREATE OR REPLACE FUNCTION public.create_decision_event_from_ai_action()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -23,18 +23,18 @@ DECLARE
   v_agent_name TEXT;
   v_action_id TEXT;
 BEGIN
-  -- Guard: só processa status finais
+  -- Guard: so processa status finais
   IF NEW.status NOT IN ('executed', 'skipped') THEN
     RETURN NEW;
   END IF;
 
-  -- Verificar se já existe evento para esta action (idempotência)
+  -- Verificar se ja existe evento para esta action (idempotencia)
   v_action_id := NEW.id::text;
   IF EXISTS (
     SELECT 1 FROM decision_events 
     WHERE evidence->>'action_id' = v_action_id
   ) THEN
-    RETURN NEW; -- Já registrado, pular
+    RETURN NEW; -- Ja registrado, pular
   END IF;
 
   -- Buscar dados do agente
@@ -45,7 +45,7 @@ BEGIN
   WHERE ai.id = NEW.insight_id
   LIMIT 1;
 
-  -- Inserir decision_event (nome correto: actions_executed, não executed_actions)
+  -- Inserir decision_event (nome correto: actions_executed, nao executed_actions)
   INSERT INTO decision_events (
     tenant_id, 
     rule_code, 

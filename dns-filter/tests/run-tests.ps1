@@ -16,13 +16,13 @@ $script:FailCount = 0
 
 # Colors
 function Write-TestHeader($text) {
-    Write-Host "`n═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "`n???????????????????????????????????????????????????????????????" -ForegroundColor Cyan
     Write-Host "  $text" -ForegroundColor Cyan
-    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "???????????????????????????????????????????????????????????????" -ForegroundColor Cyan
 }
 
 function Write-TestResult($name, $passed, $details = "") {
-    $status = if ($passed) { "✓ PASS" } else { "✗ FAIL" }
+    $status = if ($passed) { "? PASS" } else { "? FAIL" }
     $color = if ($passed) { "Green" } else { "Red" }
     
     Write-Host "  $status - $name" -ForegroundColor $color
@@ -142,7 +142,7 @@ Write-TestResult "Test policy created" $true "5 blocking rules"
 Write-TestHeader "TEST 3: DNS Server Startup"
 
 if (-not $binaryExists) {
-    Write-Host "  ⚠ Skipping - binary not found" -ForegroundColor Yellow
+    Write-Host "  [WARN]  Skipping - binary not found" -ForegroundColor Yellow
 } else {
     # Start server in background
     $serverProcess = $null
@@ -276,8 +276,8 @@ if (-not $binaryExists) {
 
     if (-not $SkipServiceTests) {
         Write-TestHeader "TEST 8: Windows Service"
-        Write-Host "  ⚠ Service tests require Administrator privileges" -ForegroundColor Yellow
-        Write-Host "  ⚠ Skipped in automated mode - run manually with -install flag" -ForegroundColor Yellow
+        Write-Host "  [WARN]  Service tests require Administrator privileges" -ForegroundColor Yellow
+        Write-Host "  [WARN]  Skipped in automated mode - run manually with -install flag" -ForegroundColor Yellow
     }
 
     # Cleanup
@@ -321,10 +321,10 @@ Write-Host "  Report saved: $reportPath" -ForegroundColor Cyan
 
 # Exit code
 if ($script:FailCount -gt 0) {
-    Write-Host "`n  ⚠ PHASE 1 VALIDATION: ISSUES FOUND" -ForegroundColor Yellow
+    Write-Host "`n  [WARN]  PHASE 1 VALIDATION: ISSUES FOUND" -ForegroundColor Yellow
     exit 1
 } else {
-    Write-Host "`n  ✓ PHASE 1 VALIDATION: PASSED" -ForegroundColor Green
+    Write-Host "`n  ? PHASE 1 VALIDATION: PASSED" -ForegroundColor Green
     Write-Host "    Ready for Phase 2 (Agent Integration)" -ForegroundColor Green
     exit 0
 }

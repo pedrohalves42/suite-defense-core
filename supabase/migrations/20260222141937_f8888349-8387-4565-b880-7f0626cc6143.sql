@@ -3,7 +3,7 @@
 -- ZERO-GAP Phase 1+2: Critical FK constraints + security_barrier on views
 -- =============================================================================
 
--- ─── PHASE 1: Add FK tenant_id → tenants(id) on critical tables ───────────
+-- ??? PHASE 1: Add FK tenant_id ? tenants(id) on critical tables ???????????
 -- Only add where FK doesn't already exist
 -- Using DO block to skip if FK already exists
 
@@ -46,7 +46,7 @@ BEGIN
   END LOOP;
 END $$;
 
--- ─── PHASE 2: Add security_barrier to sensitive views ─────────────────────
+-- ??? PHASE 2: Add security_barrier to sensitive views ?????????????????????
 -- Recreate views with security_barrier=true for critical data views
 
 -- agents_safe
@@ -145,7 +145,7 @@ BEGIN
   END IF;
 END $$;
 
--- ─── Add status column to cron_health if missing ──────────────────────────
+-- ??? Add status column to cron_health if missing ??????????????????????????
 DO $$
 BEGIN
   IF NOT EXISTS (

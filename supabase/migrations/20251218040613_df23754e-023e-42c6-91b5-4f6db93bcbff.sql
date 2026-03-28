@@ -1,25 +1,25 @@
 -- =====================================================
 -- FASE 1: SOFTWARE VULNERABILITY BASELINE
--- Tabela para cruzamento software → CVE → risco real
+-- Tabela para cruzamento software ? CVE ? risco real
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS public.software_vulnerability_baseline (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   software_name TEXT NOT NULL,
-  software_name_patterns TEXT[] DEFAULT '{}', -- Padrões alternativos de nome
+  software_name_patterns TEXT[] DEFAULT '{}', -- Padroes alternativos de nome
   vendor TEXT,
   min_safe_version TEXT NOT NULL,
   severity TEXT NOT NULL CHECK (severity IN ('low', 'medium', 'high', 'critical')),
   cve_refs TEXT[] DEFAULT '{}',
   impact TEXT NOT NULL,
   remediation TEXT NOT NULL,
-  action TEXT NOT NULL, -- Ação comercial clara
+  action TEXT NOT NULL, -- Acao comercial clara
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Índices para performance
+-- Indices para performance
 CREATE INDEX IF NOT EXISTS idx_svb_software_name ON public.software_vulnerability_baseline(software_name);
 CREATE INDEX IF NOT EXISTS idx_svb_severity ON public.software_vulnerability_baseline(severity);
 CREATE INDEX IF NOT EXISTS idx_svb_active ON public.software_vulnerability_baseline(is_active) WHERE is_active = true;
@@ -27,7 +27,7 @@ CREATE INDEX IF NOT EXISTS idx_svb_active ON public.software_vulnerability_basel
 -- RLS
 ALTER TABLE public.software_vulnerability_baseline ENABLE ROW LEVEL SECURITY;
 
--- Políticas: qualquer usuário autenticado pode ler (dados públicos de segurança)
+-- Politicas: qualquer usuario autenticado pode ler (dados publicos de seguranca)
 CREATE POLICY "Authenticated users can read vulnerability baseline"
 ON public.software_vulnerability_baseline FOR SELECT
 TO authenticated
@@ -53,7 +53,7 @@ BEFORE UPDATE ON public.software_vulnerability_baseline
 FOR EACH ROW EXECUTE FUNCTION update_svb_updated_at();
 
 -- =====================================================
--- DADOS INICIAIS: 10 SOFTWARES CRÍTICOS
+-- DADOS INICIAIS: 10 SOFTWARES CRITICOS
 -- =====================================================
 
 INSERT INTO public.software_vulnerability_baseline 
@@ -66,9 +66,9 @@ VALUES
  '121.0', 
  'critical', 
  ARRAY['CVE-2024-0519', 'CVE-2024-0517', 'CVE-2024-0518'], 
- 'Execução remota de código via navegador - atacante pode assumir controle total do computador',
- 'Atualizar Google Chrome para versão 121 ou superior via chrome://settings/help',
- 'Atualizar Chrome agora (crítico)'),
+ 'Execucao remota de codigo via navegador - atacante pode assumir controle total do computador',
+ 'Atualizar Google Chrome para versao 121 ou superior via chrome://settings/help',
+ 'Atualizar Chrome agora (critico)'),
 
 -- 2. WinRAR
 ('WinRAR', 
@@ -77,8 +77,8 @@ VALUES
  '6.24', 
  'critical', 
  ARRAY['CVE-2023-40477', 'CVE-2023-38831'], 
- 'Execução de código malicioso ao abrir arquivos RAR/ZIP comprometidos',
- 'Atualizar WinRAR para versão 6.24+ em rarlab.com',
+ 'Execucao de codigo malicioso ao abrir arquivos RAR/ZIP comprometidos',
+ 'Atualizar WinRAR para versao 6.24+ em rarlab.com',
  'Atualizar WinRAR urgente'),
 
 -- 3. Java Runtime
@@ -88,8 +88,8 @@ VALUES
  '8u401', 
  'critical', 
  ARRAY['CVE-2024-20918', 'CVE-2024-20919', 'CVE-2024-20921'], 
- 'Múltiplas vulnerabilidades permitem execução remota e bypass de segurança',
- 'Atualizar Java via java.com ou remover se não utilizado',
+ 'Multiplas vulnerabilidades permitem execucao remota e bypass de seguranca',
+ 'Atualizar Java via java.com ou remover se nao utilizado',
  'Atualizar ou remover Java'),
 
 -- 4. Adobe Acrobat Reader
@@ -99,7 +99,7 @@ VALUES
  '24.001', 
  'high', 
  ARRAY['CVE-2024-20711', 'CVE-2024-20712', 'CVE-2024-20713'], 
- 'Execução de código malicioso ao abrir PDFs comprometidos',
+ 'Execucao de codigo malicioso ao abrir PDFs comprometidos',
  'Atualizar Adobe Reader via Help > Check for Updates',
  'Atualizar Adobe Reader'),
 
@@ -110,8 +110,8 @@ VALUES
  '24.01', 
  'high', 
  ARRAY['CVE-2024-11477', 'CVE-2023-31102'], 
- 'Buffer overflow permite execução de código ao extrair arquivos',
- 'Atualizar 7-Zip para versão 24.01+ em 7-zip.org',
+ 'Buffer overflow permite execucao de codigo ao extrair arquivos',
+ 'Atualizar 7-Zip para versao 24.01+ em 7-zip.org',
  'Atualizar 7-Zip'),
 
 -- 6. Mozilla Firefox
@@ -121,7 +121,7 @@ VALUES
  '122.0', 
  'high', 
  ARRAY['CVE-2024-0741', 'CVE-2024-0742', 'CVE-2024-0746'], 
- 'Vulnerabilidades críticas no navegador permitem ataques remotos',
+ 'Vulnerabilidades criticas no navegador permitem ataques remotos',
  'Atualizar Firefox via Menu > Help > About Firefox',
  'Atualizar Firefox'),
 
@@ -143,8 +143,8 @@ VALUES
  '3.0.20', 
  'medium', 
  ARRAY['CVE-2023-47360', 'CVE-2023-47359'], 
- 'Crash e possível execução de código via arquivos de mídia maliciosos',
- 'Atualizar VLC para versão 3.0.20+ em videolan.org',
+ 'Crash e possivel execucao de codigo via arquivos de midia maliciosos',
+ 'Atualizar VLC para versao 3.0.20+ em videolan.org',
  'Atualizar VLC'),
 
 -- 9. TeamViewer
@@ -154,8 +154,8 @@ VALUES
  '15.51', 
  'high', 
  ARRAY['CVE-2024-0819', 'CVE-2023-0837'], 
- 'Bypass de autenticação pode permitir acesso remoto não autorizado',
- 'Atualizar TeamViewer para versão 15.51+ ou desinstalar se não utilizado',
+ 'Bypass de autenticacao pode permitir acesso remoto nao autorizado',
+ 'Atualizar TeamViewer para versao 15.51+ ou desinstalar se nao utilizado',
  'Atualizar ou remover TeamViewer'),
 
 -- 10. Notepad++
@@ -166,7 +166,7 @@ VALUES
  'medium', 
  ARRAY['CVE-2023-40031', 'CVE-2023-40036'], 
  'Buffer overflow em plugins pode comprometer o sistema',
- 'Atualizar Notepad++ para versão 8.6.2+ em notepad-plus-plus.org',
+ 'Atualizar Notepad++ para versao 8.6.2+ em notepad-plus-plus.org',
  'Atualizar Notepad++');
 
--- Comentário: Essa tabela será expandida conforme novos CVEs são descobertos
+-- Comentario: Essa tabela sera expandida conforme novos CVEs sao descobertos

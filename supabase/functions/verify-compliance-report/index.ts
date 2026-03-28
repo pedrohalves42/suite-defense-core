@@ -1,7 +1,7 @@
 /**
  * Verify Compliance Report - Migrated to servePublic middleware
  * Public endpoint for cryptographic verification of compliance reports.
- * No authentication required — anyone with an audit_id can verify.
+ * No authentication required ? anyone with an audit_id can verify.
  */
 import { servePublic } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
@@ -91,7 +91,7 @@ servePublic(async (req, ctx) => {
   if (fetchError || !report) {
     logger.info(`[verify-compliance-report][${requestId}] Report NOT found for audit_id: "${auditId}"`);
     return new Response(
-      JSON.stringify({ success: false, error: 'Relatório não encontrado', audit_id: auditId, integrity: { valid: false } }),
+      JSON.stringify({ success: false, error: 'Relatorio nao encontrado', audit_id: auditId, integrity: { valid: false } }),
       { status: 404, headers: { 'Content-Type': 'application/json' } }
     );
   }

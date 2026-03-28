@@ -1,8 +1,8 @@
 
 -- ============================================================================
 -- VIEW EXPANDIDA: v_security_invariants
--- Verificações empíricas de TODOS os invariantes de segurança (INV-001 a INV-006)
--- Metodologia Nullmann: Prova de existência, não apenas configuração
+-- Verificacoes empiricas de TODOS os invariantes de seguranca (INV-001 a INV-006)
+-- Metodologia Nullmann: Prova de existencia, nao apenas configuracao
 -- ============================================================================
 
 DROP VIEW IF EXISTS v_security_invariants;
@@ -40,7 +40,7 @@ SELECT
   ) AS inv001_tables_with_policies,
   
   -- ========================================================================
-  -- INV-002: Autenticação HMAC Funcionando (PROVA EMPÍRICA)
+  -- INV-002: Autenticacao HMAC Funcionando (PROVA EMPIRICA)
   -- ========================================================================
   (
     SELECT COUNT(*) 
@@ -68,7 +68,7 @@ SELECT
   ) AS inv002_last_verification,
   
   -- ========================================================================
-  -- INV-003: Isolamento Multi-Tenant (PROVA EMPÍRICA)
+  -- INV-003: Isolamento Multi-Tenant (PROVA EMPIRICA)
   -- ========================================================================
   (
     SELECT COUNT(DISTINCT tenant_id) 
@@ -91,7 +91,7 @@ SELECT
   ) AS inv003_rls_tests_failed_7d,
   
   -- ========================================================================
-  -- INV-004: Secrets Protegidos (VERIFICAÇÃO ESTÁTICA)
+  -- INV-004: Secrets Protegidos (VERIFICACAO ESTATICA)
   -- ========================================================================
   (
     SELECT COUNT(*) = 0
@@ -113,7 +113,7 @@ SELECT
   ) AS inv004_safe_agent_views,
   
   -- ========================================================================
-  -- INV-005: Auditoria Habilitada (PROVA EMPÍRICA)
+  -- INV-005: Auditoria Habilitada (PROVA EMPIRICA)
   -- ========================================================================
   (
     SELECT COUNT(*) 
@@ -140,7 +140,7 @@ SELECT
   ) AS inv005_evidence_logs_24h,
   
   -- ========================================================================
-  -- INV-006: Privilégio Mínimo (VERIFICAÇÃO ESTÁTICA)
+  -- INV-006: Privilegio Minimo (VERIFICACAO ESTATICA)
   -- ========================================================================
   (
     SELECT COUNT(*) = 0
@@ -158,7 +158,7 @@ SELECT
   ) AS inv006_service_role_policies,
   
   -- ========================================================================
-  -- MÉTRICAS DE SAÚDE OPERACIONAL
+  -- METRICAS DE SAUDE OPERACIONAL
   -- ========================================================================
   (
     SELECT COUNT(*) 
@@ -188,16 +188,16 @@ SELECT
       AND completed_at > NOW() - INTERVAL '24 hours'
   ) AS health_jobs_completed_24h;
 
--- Comentário ADR
+-- Comentario ADR
 COMMENT ON VIEW v_security_invariants IS 
-'ADR-INV: View canônica para verificação empírica de invariantes de segurança (INV-001 a INV-006).
-Metodologia Nullmann: Prova de existência real, não apenas configuração teórica.
-- INV-001: RLS habilitado em tabelas públicas
+'ADR-INV: View canonica para verificacao empirica de invariantes de seguranca (INV-001 a INV-006).
+Metodologia Nullmann: Prova de existencia real, nao apenas configuracao teorica.
+- INV-001: RLS habilitado em tabelas publicas
 - INV-002: HMAC funcionando (assinaturas recentes)
 - INV-003: Isolamento multi-tenant (testes RLS passando)
-- INV-004: Secrets protegidos (não expostos em views)
+- INV-004: Secrets protegidos (nao expostos em views)
 - INV-005: Auditoria habilitada (logs recentes)
-- INV-006: Privilégio mínimo (sem escrita anon)
+- INV-006: Privilegio minimo (sem escrita anon)
 security_invoker=on para garantir RLS do caller.';
 
 -- Controle de acesso

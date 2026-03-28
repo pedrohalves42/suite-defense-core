@@ -1,5 +1,5 @@
 
--- Função para sincronizar status dos agentes baseado no heartbeat
+-- Funcao para sincronizar status dos agentes baseado no heartbeat
 CREATE OR REPLACE FUNCTION sync_agent_status_from_heartbeat()
 RETURNS void
 LANGUAGE plpgsql
@@ -10,7 +10,7 @@ DECLARE
   offline_threshold INTERVAL := INTERVAL '2 minutes';
   updated_count INTEGER := 0;
 BEGIN
-  -- Marcar como offline agentes sem heartbeat há mais de 2 minutos
+  -- Marcar como offline agentes sem heartbeat ha mais de 2 minutos
   UPDATE agents
   SET 
     status = 'offline',
@@ -48,5 +48,5 @@ BEGIN
 END;
 $$;
 
--- Comentário explicativo
-COMMENT ON FUNCTION sync_agent_status_from_heartbeat() IS 'Sincroniza o status dos agentes baseado no last_heartbeat. Agentes sem heartbeat há mais de 2 minutos são marcados como offline.';
+-- Comentario explicativo
+COMMENT ON FUNCTION sync_agent_status_from_heartbeat() IS 'Sincroniza o status dos agentes baseado no last_heartbeat. Agentes sem heartbeat ha mais de 2 minutos sao marcados como offline.';

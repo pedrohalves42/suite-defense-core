@@ -6,13 +6,13 @@
  * serve-agent-update and heartbeat Edge Functions.
  * 
  * This service is a thin adapter that doesn't touch authentication,
- * HMAC, rollout policies, or legacy compatibility — those remain in
+ * HMAC, rollout policies, or legacy compatibility ? those remain in
  * the calling Edge Functions.
  */
 
 import { logger } from '../logger.ts';
 
-// ─── Types ──────────────────────────────────────────────
+// ??? Types ??????????????????????????????????????????????
 export interface AgentUpdateContext {
   agentId: string;
   agentName: string;
@@ -37,12 +37,12 @@ export type UpdateDecision =
   | { action: 'upgrade'; release: ReleaseInfo; fromVersion: string; toVersion: string }
   | { action: 'hotfix'; release: ReleaseInfo; version: string; reason: string };
 
-// ─── Version Normalization ──────────────────────────────
+// ??? Version Normalization ??????????????????????????????
 export function normalizeVersion(v: string | null | undefined): string {
   return v?.replace(/^v/i, '').replace(/-.*$/, '') || '';
 }
 
-// ─── SHA256 Calculation ─────────────────────────────────
+// ??? SHA256 Calculation ?????????????????????????????????
 export function normalizeForWindows(content: string): string {
   return content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\r\n');
 }
@@ -55,12 +55,12 @@ export async function calculateSha256(content: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-// ─── Decision Service ───────────────────────────────────
+// ??? Decision Service ???????????????????????????????????
 export class UpdateDecisionService {
   /**
    * Determines if an agent needs an update based on version and checksum comparison.
    * 
-   * Pure domain logic — no DB calls, no auth, no side effects.
+   * Pure domain logic ? no DB calls, no auth, no side effects.
    */
   async evaluate(
     agent: AgentUpdateContext,
@@ -77,7 +77,7 @@ export class UpdateDecisionService {
 
     // Legacy agent bypass
     if (options?.forceLegacyDelivery) {
-      logger.info('[UpdateDecision] Legacy agent — forcing delivery', {
+      logger.info('[UpdateDecision] Legacy agent ? forcing delivery', {
         agentName: agent.agentName,
         currentVersion: agent.currentVersion,
         targetVersion: release.version,
@@ -90,7 +90,7 @@ export class UpdateDecisionService {
       };
     }
 
-    // Different version → upgrade
+    // Different version ? upgrade
     if (releaseNorm !== currentNorm) {
       return {
         action: 'upgrade',
@@ -100,13 +100,13 @@ export class UpdateDecisionService {
       };
     }
 
-    // Same version → check for hotfix via SHA256
+    // Same version ? check for hotfix via SHA256
     const releaseSha256 = await calculateSha256(release.scriptContent);
 
     if (agent.currentScriptSha256) {
-      // Agent sends SHA256 — compare directly
+      // Agent sends SHA256 ? compare directly
       if (agent.currentScriptSha256.toLowerCase() !== releaseSha256.toLowerCase()) {
-        logger.warn('[UpdateDecision] SHA256 mismatch — hotfix detected', {
+        logger.warn('[UpdateDecision] SHA256 mismatch ? hotfix detected', {
           agentName: agent.agentName,
           version: release.version,
           agentSha256: agent.currentScriptSha256.substring(0, 16) + '...',
@@ -120,16 +120,16 @@ export class UpdateDecisionService {
         };
       }
 
-      // Version + SHA match → up to date
+      // Version + SHA match ? up to date
       return { action: 'no_update', reason: 'version_and_sha256_match' };
     }
 
-    // No SHA256 header — check if release is recent
+    // No SHA256 header ? check if release is recent
     const threshold = options?.recentReleaseThresholdMs ?? 24 * 60 * 60 * 1000;
     if (release.createdAt) {
       const releaseAge = Date.now() - new Date(release.createdAt).getTime();
       if (releaseAge < threshold) {
-        logger.info('[UpdateDecision] Recent release — delivering without SHA256', {
+        logger.info('[UpdateDecision] Recent release ? delivering without SHA256', {
           agentName: agent.agentName,
           releaseAge: Math.round(releaseAge / 1000 / 60) + ' minutes',
         });

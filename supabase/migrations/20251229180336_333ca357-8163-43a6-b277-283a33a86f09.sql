@@ -1,7 +1,7 @@
--- Primeiro remove a função antiga (necessário para mudar assinatura)
+-- Primeiro remove a funcao antiga (necessario para mudar assinatura)
 DROP FUNCTION IF EXISTS public.get_agent_health_metrics(uuid);
 
--- Recria com campo adicional has_critical_alerts e lógica melhorada
+-- Recria com campo adicional has_critical_alerts e logica melhorada
 CREATE OR REPLACE FUNCTION public.get_agent_health_metrics(p_tenant_id uuid)
  RETURNS TABLE(
    id uuid, 
@@ -42,7 +42,7 @@ BEGIN
     CASE
       WHEN a.last_heartbeat IS NULL THEN 'never_connected'::TEXT
       WHEN a.last_heartbeat < NOW() - INTERVAL '10 minutes' THEN 'offline'::TEXT
-      -- Marcar como critical se há alertas não resolvidos OU heartbeat entre 5-10 min
+      -- Marcar como critical se ha alertas nao resolvidos OU heartbeat entre 5-10 min
       WHEN EXISTS (
         SELECT 1 FROM system_alerts sa 
         WHERE sa.agent_id = a.id 

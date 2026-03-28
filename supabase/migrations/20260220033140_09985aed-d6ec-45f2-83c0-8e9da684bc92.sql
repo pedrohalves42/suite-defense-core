@@ -1,6 +1,6 @@
 
 -- Fix run_maintenance_v2: use 'cancelled' instead of 'timeout' for expired jobs
--- The state machine only allows: pending→{queued,delivered,cancelled,failed}
+-- The state machine only allows: pending?{queued,delivered,cancelled,failed}
 -- 'timeout' is not a valid state. Expired jobs should be 'cancelled' (TTL exceeded).
 CREATE OR REPLACE FUNCTION public.run_maintenance_v2(
   p_expire_limit int DEFAULT 500,
@@ -18,7 +18,7 @@ DECLARE
   v_now timestamptz := now();
   v_thirty_days_ago timestamptz := now() - interval '30 days';
 BEGIN
-  -- 1) Expire jobs past TTL → mark as 'cancelled' (valid state transition)
+  -- 1) Expire jobs past TTL ? mark as 'cancelled' (valid state transition)
   WITH expired AS (
     UPDATE jobs
     SET status = 'cancelled'
@@ -33,7 +33,7 @@ BEGIN
   )
   SELECT count(*) INTO v_expired_count FROM expired;
 
-  -- 1b) Handle delivered jobs past TTL → mark as 'failed' (delivered→failed is valid)
+  -- 1b) Handle delivered jobs past TTL ? mark as 'failed' (delivered?failed is valid)
   WITH expired_delivered AS (
     UPDATE jobs
     SET status = 'failed'

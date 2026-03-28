@@ -1,9 +1,9 @@
 -- ============================================================
--- CORREÇÃO P0: Crons "Mortos" - Nullmann Audit Fix
+-- CORRECAO P0: Crons "Mortos" - Nullmann Audit Fix
 -- ============================================================
 
 -- 1. CORRIGIR check_incident_slo_task - Bug de sintaxe no format()
--- PostgreSQL format() não suporta %.1f, usar %s com concatenação
+-- PostgreSQL format() nao suporta %.1f, usar %s com concatenacao
 CREATE OR REPLACE FUNCTION public.check_incident_slo_task()
  RETURNS integer
  LANGUAGE plpgsql
@@ -52,7 +52,7 @@ BEGIN
 
         v_title := 'Burn Rate Alto: ' || COALESCE(v_slo.failure_class, 'Incidente');
 
-        -- CORREÇÃO: Usar concatenação em vez de format() com %.1f
+        -- CORRECAO: Usar concatenacao em vez de format() com %.1f
         v_description := 'Burn Rate 1h: ' || ROUND(v_slo.burn_rate_1h::numeric, 1)::text || 'x | 6h: ' || 
                          ROUND(v_slo.burn_rate_6h::numeric, 1)::text || 'x | Budget: ' || 
                          ROUND(v_slo.budget_consumed::numeric, 0)::text || '% consumido';
@@ -80,12 +80,12 @@ END;
 $function$;
 
 COMMENT ON FUNCTION check_incident_slo_task() IS 
-'[NULLMANN-FIX] Corrigido bug de sintaxe: PostgreSQL format() não suporta %.1f';
+'[NULLMANN-FIX] Corrigido bug de sintaxe: PostgreSQL format() nao suporta %.1f';
 
 -- 2. CORRIGIR cleanup_old_data_scheduled - Conflito com trigger de imutabilidade
 -- O trigger prevent_execution_modification bloqueia UPDATE em job_executions finalizadas
--- Solução: Usar UPDATE apenas em execuções que ainda não foram finalizadas,
--- e para as finalizadas, fazer DELETE direto (respeitando o período de 30 dias)
+-- Solucao: Usar UPDATE apenas em execucoes que ainda nao foram finalizadas,
+-- e para as finalizadas, fazer DELETE direto (respeitando o periodo de 30 dias)
 CREATE OR REPLACE FUNCTION public.cleanup_old_data_scheduled()
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -100,7 +100,7 @@ DECLARE
   v_executions_deleted INTEGER := 0;
   v_old_jobs_deleted INTEGER := 0;
 BEGIN
-  -- Limpeza de dados temporários (não-imutáveis)
+  -- Limpeza de dados temporarios (nao-imutaveis)
   DELETE FROM public.hmac_signatures WHERE used_at < now() - interval '6 hours';
   GET DIAGNOSTICS v_hmac_deleted = ROW_COUNT;
   
@@ -113,16 +113,16 @@ BEGIN
   DELETE FROM public.edge_function_metrics WHERE created_at < now() - interval '7 days';
   GET DIAGNOSTICS v_efm_deleted = ROW_COUNT;
   
-  -- CORREÇÃO: Em vez de UPDATE (bloqueado pelo trigger), fazer DELETE direto
-  -- O trigger prevent_execution_deletion permite DELETE após 30 dias da criação
-  -- Deletar job_executions de jobs antigos (>60 dias para margem de segurança)
+  -- CORRECAO: Em vez de UPDATE (bloqueado pelo trigger), fazer DELETE direto
+  -- O trigger prevent_execution_deletion permite DELETE apos 30 dias da criacao
+  -- Deletar job_executions de jobs antigos (>60 dias para margem de seguranca)
   WITH old_executions AS (
     SELECT je.id 
     FROM job_executions je
     INNER JOIN jobs j ON j.id = je.job_id
     WHERE j.status IN ('completed', 'failed')
       AND j.created_at < now() - interval '60 days'
-      AND je.finished_at IS NOT NULL  -- Apenas execuções finalizadas
+      AND je.finished_at IS NOT NULL  -- Apenas execucoes finalizadas
     LIMIT 500
   )
   DELETE FROM job_executions
@@ -131,7 +131,7 @@ BEGIN
   
   GET DIAGNOSTICS v_executions_deleted = ROW_COUNT;
   
-  -- Deletar jobs órfãos (sem execuções) após 60 dias
+  -- Deletar jobs orfaos (sem execucoes) apos 60 dias
   WITH deletable_jobs AS (
     SELECT j.id 
     FROM public.jobs j

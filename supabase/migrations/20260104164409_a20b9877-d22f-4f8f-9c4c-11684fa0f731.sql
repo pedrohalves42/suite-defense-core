@@ -1,4 +1,4 @@
--- Corrigir view SECURITY DEFINER - mudar para SECURITY INVOKER (padrão seguro)
+-- Corrigir view SECURITY DEFINER - mudar para SECURITY INVOKER (padrao seguro)
 DROP VIEW IF EXISTS public.v_agent_health_by_node;
 
 CREATE VIEW public.v_agent_health_by_node 

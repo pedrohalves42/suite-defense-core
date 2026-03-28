@@ -92,7 +92,7 @@ FOR SELECT USING (
   OR is_current_super_admin()
 );
 
--- 11. ai_insights - SELECT (já existe, drop e recreate)
+-- 11. ai_insights - SELECT (ja existe, drop e recreate)
 DROP POLICY IF EXISTS "Admins can view insights for their tenant" ON ai_insights;
 DROP POLICY IF EXISTS "ai_insights_select_active_tenant" ON ai_insights;
 CREATE POLICY "ai_insights_select_active_tenant" ON ai_insights
@@ -101,7 +101,7 @@ FOR SELECT USING (
   OR is_current_super_admin()
 );
 
--- 12. ai_insights - UPDATE (já existe, drop e recreate)
+-- 12. ai_insights - UPDATE (ja existe, drop e recreate)
 DROP POLICY IF EXISTS "Admins can update insights for their tenant" ON ai_insights;
 DROP POLICY IF EXISTS "ai_insights_update_active_tenant" ON ai_insights;
 CREATE POLICY "ai_insights_update_active_tenant" ON ai_insights

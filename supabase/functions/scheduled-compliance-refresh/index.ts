@@ -3,7 +3,7 @@
  * 
  * Cron job that recalculates compliance scores for ALL active tenants.
  * Runs every hour to prevent stale compliance data.
- * Called by pg_cron — no JWT required.
+ * Called by pg_cron ? no JWT required.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';

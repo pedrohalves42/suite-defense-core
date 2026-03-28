@@ -41,7 +41,7 @@ WITH CHECK (true);
 -- 3. LIMPAR agent_releases e registrar v3.10.27
 -- =====================================================
 
--- Desativar versões anteriores
+-- Desativar versoes anteriores
 UPDATE public.agent_releases 
 SET is_active = false 
 WHERE platform = 'windows';
@@ -55,7 +55,7 @@ DELETE FROM public.agent_releases
 WHERE version = 'v3.10.26-RATE-LIMIT-BACKOFF' 
   AND (script_content IS NULL OR script_content = '' OR LENGTH(script_content) < 1000);
 
--- Remover versões antigas (manter apenas últimas 3)
+-- Remover versoes antigas (manter apenas ultimas 3)
 DELETE FROM public.agent_releases 
 WHERE platform = 'windows' 
   AND version NOT IN (

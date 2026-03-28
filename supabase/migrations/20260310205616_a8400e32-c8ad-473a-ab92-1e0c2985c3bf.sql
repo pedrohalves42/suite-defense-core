@@ -35,7 +35,7 @@ CREATE TABLE public.backup_status (
   UNIQUE(agent_id, backup_type, backup_tool)
 );
 
--- Índices
+-- Indices
 CREATE INDEX idx_backup_status_tenant ON public.backup_status(tenant_id);
 CREATE INDEX idx_backup_status_agent ON public.backup_status(agent_id);
 CREATE INDEX idx_backup_status_status ON public.backup_status(status);

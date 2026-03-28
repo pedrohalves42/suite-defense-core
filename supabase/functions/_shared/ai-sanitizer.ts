@@ -1,15 +1,15 @@
 import { logger } from "./logger.ts";
 /**
- * AI Sanitizer - Proteção contra Prompt Injection e vazamento de dados
+ * AI Sanitizer - Protecao contra Prompt Injection e vazamento de dados
  * 
  * Implementa:
- * - Bloqueio de padrões de prompt injection
- * - Limitação de tamanho de input
- * - Remoção de caracteres de controle
- * - Anonimização de dados sensíveis
+ * - Bloqueio de padroes de prompt injection
+ * - Limitacao de tamanho de input
+ * - Remocao de caracteres de controle
+ * - Anonimizacao de dados sensiveis
  */
 
-// Padrões conhecidos de prompt injection a bloquear
+// Padroes conhecidos de prompt injection a bloquear
 const INJECTION_PATTERNS = [
   /\[IGNORE.*?INSTRUCTIONS?\]/gi,
   /\[SYSTEM\]/gi,
@@ -36,10 +36,10 @@ const INJECTION_PATTERNS = [
   /output\s+.*?system/gi,
 ];
 
-// Limite máximo de caracteres por input (10KB)
+// Limite maximo de caracteres por input (10KB)
 const MAX_INPUT_LENGTH = 10240;
 
-// Limite máximo de itens em arrays para prompts
+// Limite maximo de itens em arrays para prompts
 const MAX_ARRAY_ITEMS = 50;
 
 interface SanitizeOptions {
@@ -87,13 +87,13 @@ export function sanitizeForAI(
   // 1. Remover caracteres de controle (exceto newlines e tabs)
   text = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 
-  // 2. Detectar e bloquear padrões de injection
+  // 2. Detectar e bloquear padroes de injection
   for (const pattern of INJECTION_PATTERNS) {
     if (pattern.test(text)) {
       const patternName = pattern.source.substring(0, 30);
       result.blockedPatterns.push(patternName);
       
-      // Remover o padrão malicioso
+      // Remover o padrao malicioso
       text = text.replace(pattern, '[BLOCKED]');
     }
     // Reset regex lastIndex for global patterns
@@ -113,7 +113,7 @@ export function sanitizeForAI(
     result.truncated = true;
   }
 
-  // 4. Normalizar espaços em branco excessivos
+  // 4. Normalizar espacos em branco excessivos
   text = text.replace(/\s{3,}/g, '  ');
 
   result.sanitized = text;
@@ -190,41 +190,41 @@ export function anonymizeAgentName(agentName: string): string {
 }
 
 /**
- * Remove informações sensíveis de um contexto antes de enviar à IA
+ * Remove informacoes sensiveis de um contexto antes de enviar a IA
  */
 export function removeSensitiveData(text: string): string {
-  // Remover possíveis emails
+  // Remover possiveis emails
   text = text.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL]');
   
-  // Remover possíveis IPs
+  // Remover possiveis IPs
   text = text.replace(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g, '[IP]');
   
-  // Remover possíveis UUIDs
+  // Remover possiveis UUIDs
   text = text.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '[UUID]');
   
-  // Remover possíveis tokens/secrets (strings longas alfanuméricas)
+  // Remover possiveis tokens/secrets (strings longas alfanumericas)
   text = text.replace(/\b[a-zA-Z0-9]{32,}\b/g, '[TOKEN]');
   
   return text;
 }
 
 /**
- * Valida se uma resposta da IA é segura para exibição
+ * Valida se uma resposta da IA e segura para exibicao
  */
 export function validateAIResponse(response: string): { valid: boolean; issues: string[] } {
   const issues: string[] = [];
 
-  // Verificar se contém código executável
+  // Verificar se contem codigo executavel
   if (/<script/i.test(response)) {
     issues.push('Response contains script tags');
   }
 
-  // Verificar se contém possíveis dados vazados
+  // Verificar se contem possiveis dados vazados
   if (/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(response)) {
     issues.push('Response may contain email addresses');
   }
 
-  // Verificar tamanho excessivo (possível ataque de exfiltração)
+  // Verificar tamanho excessivo (possivel ataque de exfiltracao)
   if (response.length > 50000) {
     issues.push('Response exceeds maximum safe length');
   }

@@ -157,7 +157,7 @@ serveTenant(async (req, ctx) => {
   const { agent_id, mode } = body;
 
   try {
-    // ✅ BATCH MODE: Scan all agents for this tenant (serveTenant already validated access)
+    // [OK]  BATCH MODE: Scan all agents for this tenant (serveTenant already validated access)
     if (mode === 'batch_all_agents') {
       logger.info(`[${requestId}] [SCAN-VULNS] Starting BATCH scan for tenant ${tenantId}`);
       
@@ -323,7 +323,7 @@ serveTenant(async (req, ctx) => {
 
     // First, try to find matches in our CVE database cache
     for (const keyword of Array.from(softwareKeywords).slice(0, 30)) { // Increased to 30 keywords
-      // FASE 3: Melhorar query de CVE matching com ILIKE mais flexível
+      // FASE 3: Melhorar query de CVE matching com ILIKE mais flexivel
       const { data: cves, error: cveError } = await supabase
         .from('cve_database')
         .select('*')
@@ -432,8 +432,8 @@ function extractKeywords(name: string): string[] {
   const keywords: string[] = [];
   let lowerName = name.toLowerCase();
   
-  // FASE 3: Normalização melhorada para matching de CVE
-  // Remove version suffix (e.g., "Chrome 120.0.6099.129" → "chrome")
+  // FASE 3: Normalizacao melhorada para matching de CVE
+  // Remove version suffix (e.g., "Chrome 120.0.6099.129" ? "chrome")
   lowerName = lowerName.replace(/\s+\d+(\.\d+)*\s*$/, '');
   // Remove architecture suffix
   lowerName = lowerName.replace(/\s+(x64|x86|64-bit|32-bit|amd64|arm64)\s*$/i, '');

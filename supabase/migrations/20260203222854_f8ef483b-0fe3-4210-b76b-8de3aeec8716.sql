@@ -1,11 +1,11 @@
 
 -- ============================================================================
--- CORREÇÃO CRÍTICA: Políticas da Central de Ações
--- Resolve 1.191 ações pending (596 security_threat + 430 prediction + outros)
+-- CORRECAO CRITICA: Politicas da Central de Acoes
+-- Resolve 1.191 acoes pending (596 security_threat + 430 prediction + outros)
 -- ============================================================================
 
--- Criar políticas para insight_types que estão causando backlog
--- Usando os default mappings do resolve-action-policy como referência
+-- Criar politicas para insight_types que estao causando backlog
+-- Usando os default mappings do resolve-action-policy como referencia
 
 INSERT INTO tenant_action_policies (tenant_id, insight_type, execution_mode, created_by)
 SELECT 
@@ -20,7 +20,7 @@ CROSS JOIN (
     ('security_threat', 'auto'),
     ('prediction', 'auto'),
     
-    -- Tipos com volume médio (approval por segurança)
+    -- Tipos com volume medio (approval por seguranca)
     ('anomaly_detection', 'approval'),
     ('root_cause', 'approval'),
     ('integrity_violation', 'approval'),
@@ -43,5 +43,5 @@ WHERE NOT EXISTS (
     AND tap.insight_type = policy_config.insight_type
 );
 
--- Verificar total de políticas criadas
+-- Verificar total de politicas criadas
 -- SELECT COUNT(*) as policies_created FROM tenant_action_policies WHERE created_at > NOW() - INTERVAL '1 minute';

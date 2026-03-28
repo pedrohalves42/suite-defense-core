@@ -21,7 +21,7 @@ serveTenant(async (_req, ctx) => {
 
   logger.info(`[security-advisor][${requestId}] Analyzing security posture for tenant ${tenantId}`);
 
-  // ─── Gather current state ──────────────────────────
+  // ??? Gather current state ??????????????????????????
 
   // 1. Agents
   const { count: totalAgents } = await supabase
@@ -90,7 +90,7 @@ serveTenant(async (_req, ctx) => {
     .eq('tenant_id', tenantId)
     .lt('valid_until', new Date().toISOString());
 
-  // ─── Identify gaps ──────────────────────────────────
+  // ??? Identify gaps ??????????????????????????????????
 
   const gaps: SecurityGap[] = [];
 
@@ -109,7 +109,7 @@ serveTenant(async (_req, ctx) => {
     gaps.push({
       area: 'antivirus',
       severity: avEnabled === 0 ? 'critical' : 'warning',
-      metric: 'Cobertura de antivírus',
+      metric: 'Cobertura de antivirus',
       currentValue: `${avEnabled}/${avTotal}`,
       targetValue: `${avTotal}/${avTotal}`
     });
@@ -119,7 +119,7 @@ serveTenant(async (_req, ctx) => {
     gaps.push({
       area: 'vulnerabilities',
       severity: 'critical',
-      metric: 'Pontos fracos críticos',
+      metric: 'Pontos fracos criticos',
       currentValue: criticalVulns || 0,
       targetValue: 0
     });
@@ -139,9 +139,9 @@ serveTenant(async (_req, ctx) => {
     gaps.push({
       area: 'notifications',
       severity: 'warning',
-      metric: 'Canais de notificação',
+      metric: 'Canais de notificacao',
       currentValue: 0,
-      targetValue: '≥ 1'
+      targetValue: '? 1'
     });
   }
 
@@ -149,9 +149,9 @@ serveTenant(async (_req, ctx) => {
     gaps.push({
       area: 'policies',
       severity: 'warning',
-      metric: 'Políticas de segurança ativas',
+      metric: 'Politicas de seguranca ativas',
       currentValue: 0,
-      targetValue: '≥ 1'
+      targetValue: '? 1'
     });
   }
 
@@ -169,13 +169,13 @@ serveTenant(async (_req, ctx) => {
     gaps.push({
       area: 'insights',
       severity: 'info',
-      metric: 'Sugestões de IA pendentes',
+      metric: 'Sugestoes de IA pendentes',
       currentValue: pendingInsights || 0,
       targetValue: 0
     });
   }
 
-  // ─── Generate AI recommendations ────────────────────
+  // ??? Generate AI recommendations ????????????????????
 
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   let aiTips: Array<Record<string, unknown>> = [];
@@ -197,23 +197,23 @@ serveTenant(async (_req, ctx) => {
           messages: [
             {
               role: 'system',
-              content: `Você é um consultor de segurança cibernética para PMEs. Gere recomendações práticas e simples em português brasileiro.
+              content: `Voce e um consultor de seguranca cibernetica para PMEs. Gere recomendacoes praticas e simples em portugues brasileiro.
 Regras:
-- Sem jargões técnicos. Use linguagem acessível.
-- Cada dica deve ter: título curto, descrição de 1-2 frases, e um link de ação (caminho do módulo no sistema).
-- Máximo 5 dicas, priorizadas por severidade.
-- Responda APENAS com JSON válido, sem markdown.`
+- Sem jargoes tecnicos. Use linguagem acessivel.
+- Cada dica deve ter: titulo curto, descricao de 1-2 frases, e um link de acao (caminho do modulo no sistema).
+- Maximo 5 dicas, priorizadas por severidade.
+- Responda APENAS com JSON valido, sem markdown.`
             },
             {
               role: 'user',
-              content: `Analise estas lacunas de segurança e gere recomendações práticas:\n\n${gapsSummary}\n\nMódulos disponíveis no sistema:
+              content: `Analise estas lacunas de seguranca e gere recomendacoes praticas:\n\n${gapsSummary}\n\nModulos disponiveis no sistema:
 - /admin/agent-center (Central de Agentes)
-- /admin/security-monitoring (Alertas de Segurança)
+- /admin/security-monitoring (Alertas de Seguranca)
 - /admin/vulnerabilities (Pontos Fracos)
-- /admin/ai-insights (Sugestões da IA)
-- /admin/notification-settings (Configurar Notificações)
-- /admin/security-policies (Políticas de Segurança)
-- /admin/diagnostics (Diagnóstico de Problemas)
+- /admin/ai-insights (Sugestoes da IA)
+- /admin/notification-settings (Configurar Notificacoes)
+- /admin/security-policies (Politicas de Seguranca)
+- /admin/diagnostics (Diagnostico de Problemas)
 - /admin/compliance-hub (Conformidade)
 
 Retorne um array JSON com objetos: { "title": string, "description": string, "severity": "info"|"warning"|"critical", "actionPath": string, "actionLabel": string }`
@@ -269,18 +269,18 @@ Retorne um array JSON com objetos: { "title": string, "description": string, "se
     }
   }
 
-  // ─── Fallback static tips if AI fails ───────────────
+  // ??? Fallback static tips if AI fails ???????????????
 
   if (aiTips.length === 0 && gaps.length > 0) {
     const fallbackMap: Record<string, any> = {
-      agents: { title: 'Verifique seus computadores', description: 'Alguns computadores estão sem comunicação. Verifique se estão ligados e conectados.', actionPath: '/admin/agent-center', actionLabel: 'Ver computadores' },
-      antivirus: { title: 'Ative a proteção antivírus', description: 'Nem todos os computadores têm antivírus ativo. Isso é essencial para a segurança.', actionPath: '/admin/agent-center', actionLabel: 'Verificar proteção' },
-      vulnerabilities: { title: 'Corrija os pontos fracos críticos', description: 'Existem problemas de segurança que precisam de atenção imediata.', actionPath: '/admin/vulnerabilities', actionLabel: 'Ver pontos fracos' },
-      alerts: { title: 'Revise os alertas pendentes', description: 'Você tem alertas de segurança aguardando revisão. Não os ignore.', actionPath: '/admin/security-monitoring', actionLabel: 'Ver alertas' },
-      notifications: { title: 'Configure notificações', description: 'Sem notificações, você não será avisado sobre problemas. Configure pelo menos um canal.', actionPath: '/admin/notification-settings', actionLabel: 'Configurar' },
-      policies: { title: 'Crie uma política de segurança', description: 'Defina regras automáticas para proteger sua rede de ameaças.', actionPath: '/admin/security-policies', actionLabel: 'Criar política' },
-      certificates: { title: 'Renove certificados expirados', description: 'Certificados vencidos podem causar falhas de segurança e conexão.', actionPath: '/admin/agent-center', actionLabel: 'Ver detalhes' },
-      insights: { title: 'Confira as sugestões da IA', description: 'A inteligência artificial encontrou melhorias para sua segurança.', actionPath: '/admin/ai-insights', actionLabel: 'Ver sugestões' },
+      agents: { title: 'Verifique seus computadores', description: 'Alguns computadores estao sem comunicacao. Verifique se estao ligados e conectados.', actionPath: '/admin/agent-center', actionLabel: 'Ver computadores' },
+      antivirus: { title: 'Ative a protecao antivirus', description: 'Nem todos os computadores tem antivirus ativo. Isso e essencial para a seguranca.', actionPath: '/admin/agent-center', actionLabel: 'Verificar protecao' },
+      vulnerabilities: { title: 'Corrija os pontos fracos criticos', description: 'Existem problemas de seguranca que precisam de atencao imediata.', actionPath: '/admin/vulnerabilities', actionLabel: 'Ver pontos fracos' },
+      alerts: { title: 'Revise os alertas pendentes', description: 'Voce tem alertas de seguranca aguardando revisao. Nao os ignore.', actionPath: '/admin/security-monitoring', actionLabel: 'Ver alertas' },
+      notifications: { title: 'Configure notificacoes', description: 'Sem notificacoes, voce nao sera avisado sobre problemas. Configure pelo menos um canal.', actionPath: '/admin/notification-settings', actionLabel: 'Configurar' },
+      policies: { title: 'Crie uma politica de seguranca', description: 'Defina regras automaticas para proteger sua rede de ameacas.', actionPath: '/admin/security-policies', actionLabel: 'Criar politica' },
+      certificates: { title: 'Renove certificados expirados', description: 'Certificados vencidos podem causar falhas de seguranca e conexao.', actionPath: '/admin/agent-center', actionLabel: 'Ver detalhes' },
+      insights: { title: 'Confira as sugestoes da IA', description: 'A inteligencia artificial encontrou melhorias para sua seguranca.', actionPath: '/admin/ai-insights', actionLabel: 'Ver sugestoes' },
     };
 
     for (const gap of gaps.slice(0, 5)) {
@@ -291,7 +291,7 @@ Retorne um array JSON com objetos: { "title": string, "description": string, "se
     }
   }
 
-  // ─── Calculate maturity level ───────────────────────
+  // ??? Calculate maturity level ???????????????????????
 
   let maturityScore = 100;
   for (const gap of gaps) {
@@ -302,7 +302,7 @@ Retorne um array JSON com objetos: { "title": string, "description": string, "se
   maturityScore = Math.max(0, maturityScore);
 
   const maturityLevel = maturityScore >= 85 ? 'advanced' : maturityScore >= 60 ? 'intermediate' : 'basic';
-  const maturityLabel = maturityLevel === 'advanced' ? 'Avançado' : maturityLevel === 'intermediate' ? 'Intermediário' : 'Básico';
+  const maturityLabel = maturityLevel === 'advanced' ? 'Avancado' : maturityLevel === 'intermediate' ? 'Intermediario' : 'Basico';
 
   logger.info(`[security-advisor][${requestId}] Complete: ${aiTips.length} tips, maturity=${maturityLabel}`);
 

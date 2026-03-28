@@ -79,7 +79,7 @@ BEGIN
     INSERT INTO system_alerts (tenant_id, alert_type, severity, title, message, source)
     SELECT DISTINCT ur.tenant_id, 'stale_cron', 'critical',
       'Cron Silencioso Detectado',
-      format('Cron "%s" sem sucesso há 4h+', ch.cron_name),
+      format('Cron "%s" sem sucesso ha 4h+', ch.cron_name),
       'zero-gap-monitor'
     FROM cron_health ch
     CROSS JOIN (SELECT DISTINCT tenant_id FROM user_roles WHERE role = 'admin' LIMIT 1) ur

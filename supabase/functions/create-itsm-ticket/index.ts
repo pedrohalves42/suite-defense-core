@@ -12,7 +12,7 @@ interface CreateTicketRequest {
   agent_name?: string;
 }
 
-// ── Jira API ──
+// ?? Jira API ??
 async function createJiraTicket(
   integration: Record<string, unknown>,
   ticket: CreateTicketRequest
@@ -61,7 +61,7 @@ async function createJiraTicket(
   return { id: data.id, key: data.key, url: `${baseUrl}/browse/${data.key}` };
 }
 
-// ── ServiceNow API ──
+// ?? ServiceNow API ??
 async function createServiceNowTicket(
   integration: Record<string, unknown>,
   ticket: CreateTicketRequest

@@ -65,15 +65,15 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // ✅ P0 RED TEAM FIX: Validar origem da requisição
+    // [OK]  P0 RED TEAM FIX: Validar origem da requisicao
     const internalSecret = req.headers.get('X-Internal-Secret');
     const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
     const authHeader = req.headers.get('Authorization');
     
-    // Verificar se é chamada interna (cron) via secret
+    // Verificar se e chamada interna (cron) via secret
     const isInternalCall = internalSecret && expectedSecret && await timingSafeEqual(internalSecret, expectedSecret);
     
-    // Se não é interno, exigir autenticação JWT
+    // Se nao e interno, exigir autenticacao JWT
     if (!isInternalCall) {
       if (!authHeader) {
         logger.error('[SECURITY] evaluate-playbook-triggers called without auth or internal secret');
@@ -98,7 +98,7 @@ serve(async (req) => {
       });
     }
 
-    // ✅ P0 RED TEAM FIX: Se não é interno, validar que tenant_id pertence ao usuário
+    // [OK]  P0 RED TEAM FIX: Se nao e interno, validar que tenant_id pertence ao usuario
     if (!isInternalCall && authHeader) {
       const token = authHeader.replace('Bearer ', '');
       const { data: { user }, error: authError } = await supabase.auth.getUser(token);
@@ -113,7 +113,7 @@ serve(async (req) => {
         });
       }
       
-      // Verificar se o usuário tem acesso ao tenant
+      // Verificar se o usuario tem acesso ao tenant
       const { data: userRole } = await supabase
         .from('user_roles')
         .select('tenant_id, role')
@@ -145,7 +145,7 @@ serve(async (req) => {
 
     logger.info(`[evaluate-playbook-triggers] Evaluating ${trigger_type} for tenant ${tenant_id} (internal: ${isInternalCall})`);
 
-    // ✅ PHASE 3: Verificar se Shadow Mode (dry-run) está ativado para o tenant
+    // [OK]  PHASE 3: Verificar se Shadow Mode (dry-run) esta ativado para o tenant
     const { data: tenantSettings } = await supabase
       .from('tenant_settings')
       .select('enable_dry_run_mode')
@@ -189,7 +189,7 @@ serve(async (req) => {
     const playbook = playbooks[0];
     const cooldownMinutes = playbook.cooldown_minutes || 60;
 
-    // ✅ ANTI-LOOP: Usar função robusta do banco
+    // [OK]  ANTI-LOOP: Usar funcao robusta do banco
     const { data: hasRecentExec } = await supabase.rpc('has_recent_playbook_execution', {
       p_playbook_id: playbook.id,
       p_tenant_id: tenant_id,
@@ -208,7 +208,7 @@ serve(async (req) => {
       });
     }
 
-    // Avaliar condições do trigger
+    // Avaliar condicoes do trigger
     const conditions = playbook.trigger_conditions || {};
     const conditionsMet = evaluateConditions(trigger_type, conditions, context);
 
@@ -224,7 +224,7 @@ serve(async (req) => {
       });
     }
 
-    // ✅ FASE 2: Motor de Risco - Calcular risk score via RPC
+    // [OK]  FASE 2: Motor de Risco - Calcular risk score via RPC
     const { data: riskData, error: riskError } = await supabase.rpc('should_auto_execute_playbook', {
       p_playbook_id: playbook.id,
       p_event_type: trigger_type,
@@ -243,7 +243,7 @@ serve(async (req) => {
 
     logger.info(`[evaluate-playbook-triggers] Risk analysis: score=${riskAnalysis.risk_score}, auto_execute=${riskAnalysis.should_auto_execute}, reason=${riskAnalysis.decision_reason}`);
 
-    // Buscar informações do agente se fornecido
+    // Buscar informacoes do agente se fornecido
     let agentInfo = null;
     if (agent_id) {
       const { data: agent } = await supabase
@@ -254,7 +254,7 @@ serve(async (req) => {
       agentInfo = agent;
     }
 
-    // ✅ ENTERPRISE: Criar snapshot imutável do playbook
+    // [OK]  ENTERPRISE: Criar snapshot imutavel do playbook
     const playbookSnapshot = {
       id: playbook.id,
       name: playbook.name,
@@ -265,11 +265,11 @@ serve(async (req) => {
       version: playbook.version,
       require_approval: playbook.require_approval,
       cooldown_minutes: cooldownMinutes,
-      execution_mode: playbook.execution_mode || 'assistive', // ✅ AJUSTE 4: Incluir execution_mode no snapshot
+      execution_mode: playbook.execution_mode || 'assistive', // [OK]  AJUSTE 4: Incluir execution_mode no snapshot
       snapshot_created_at: new Date().toISOString(),
     };
 
-    // ✅ ENTERPRISE: Criar snapshot imutável das ações
+    // [OK]  ENTERPRISE: Criar snapshot imutavel das acoes
     const actionsSnapshot = (playbook.actions as PlaybookAction[] || [])
       .sort((a, b) => a.order_index - b.order_index)
       .map((action) => ({
@@ -282,7 +282,7 @@ serve(async (req) => {
         risk_level: action.risk_level,
       }));
 
-    // ✅ HUMAN-IN-THE-LOOP: Force human review for critical/high severity
+    // [OK]  HUMAN-IN-THE-LOOP: Force human review for critical/high severity
     const playbookSeverity = playbook.severity || 'medium';
     const { data: needsHumanReview } = await supabase.rpc('requires_human_review', {
       p_tenant_id: tenant_id,
@@ -290,12 +290,12 @@ serve(async (req) => {
       p_action_type: trigger_type,
     });
 
-    // ✅ PHASE 3: Em Shadow Mode, NUNCA auto-executar
+    // [OK]  PHASE 3: Em Shadow Mode, NUNCA auto-executar
     const wouldAutoExecute = riskAnalysis.should_auto_execute;
     // CRITICAL: If human review required, NEVER auto-execute regardless of risk engine
     const shouldAutoExecute = isDryRun ? false : (needsHumanReview ? false : wouldAutoExecute);
     
-    // Determinar decisão para logging
+    // Determinar decisao para logging
     let decision: 'auto_execute' | 'require_approval' | 'dry_run' = 'require_approval';
     if (isDryRun) {
       decision = 'dry_run';
@@ -305,7 +305,7 @@ serve(async (req) => {
     
     const triggeredBy = shouldAutoExecute ? 'risk_engine' : (isDryRun ? 'dry_run' : 'trigger');
 
-    // Criar execução pendente COM SNAPSHOTS e dados de risco
+    // Criar execucao pendente COM SNAPSHOTS e dados de risco
     const { data: execution, error: execError } = await supabase
       .from('playbook_executions')
       .insert({
@@ -318,17 +318,17 @@ serve(async (req) => {
           agent_info: agentInfo,
           evaluated_at: new Date().toISOString(),
           risk_analysis: riskAnalysis,
-          dry_run: isDryRun, // ✅ Incluir flag de dry_run no contexto
+          dry_run: isDryRun, // [OK]  Incluir flag de dry_run no contexto
         },
-        // ✅ IMUTÁVEL: Snapshots congelados no momento do trigger
+        // [OK]  IMUTAVEL: Snapshots congelados no momento do trigger
         playbook_snapshot: playbookSnapshot,
         actions_snapshot: actionsSnapshot,
         status: shouldAutoExecute ? 'in_progress' : 'pending',
-        // ✅ FASE 2 + 3: Novos campos de rastreio
+        // [OK]  FASE 2 + 3: Novos campos de rastreio
         auto_executed: shouldAutoExecute,
         risk_score: riskAnalysis.risk_score,
         triggered_by: triggeredBy,
-        dry_run: isDryRun, // ✅ PHASE 3: Marcar como dry_run
+        dry_run: isDryRun, // [OK]  PHASE 3: Marcar como dry_run
       })
       .select('id')
       .single();
@@ -340,7 +340,7 @@ serve(async (req) => {
 
     logger.info(`[evaluate-playbook-triggers] Created execution ${execution.id} with immutable snapshots (v${playbook.version}), auto_executed=${shouldAutoExecute}, risk_score=${riskAnalysis.risk_score}, dry_run=${isDryRun}`);
 
-    // ✅ PHASE 3: Log decisão no risk_decision_log
+    // [OK]  PHASE 3: Log decisao no risk_decision_log
     const { error: logError } = await supabase
       .from('risk_decision_log')
       .insert({
@@ -367,16 +367,16 @@ serve(async (req) => {
 
     if (logError) {
       logger.error('[evaluate-playbook-triggers] Error logging risk decision:', logError);
-      // Não falhar a operação por causa do log
+      // Nao falhar a operacao por causa do log
     }
 
-    // ✅ SEMI_AUTOMATIC MODE: Criar approval_request com 24h timeout e 1 approver
+    // [OK]  SEMI_AUTOMATIC MODE: Criar approval_request com 24h timeout e 1 approver
     const executionMode = playbook.execution_mode || 'assistive';
     
     if (executionMode === 'semi_automatic') {
       logger.info(`[evaluate-playbook-triggers] SEMI_AUTOMATIC: Creating approval request for ${playbook.name}`);
       
-      // ✅ P1 RED TEAM FIX: Rate limit global de approvals pendentes por tenant
+      // [OK]  P1 RED TEAM FIX: Rate limit global de approvals pendentes por tenant
       const MAX_PENDING_APPROVALS_PER_TENANT = 10;
       
       const { count: pendingCount, error: countError } = await supabase
@@ -420,12 +420,12 @@ serve(async (req) => {
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24); // 24h timeout
       
-      // ✅ ONE-CLICK APPROVAL: Gerar token seguro para aprovação via link direto
+      // [OK]  ONE-CLICK APPROVAL: Gerar token seguro para aprovacao via link direto
       const approvalToken = `${crypto.randomUUID()}-${Date.now().toString(36)}`;
       const tokenExpiresAt = new Date();
-      tokenExpiresAt.setHours(tokenExpiresAt.getHours() + 24); // Token também expira em 24h
+      tokenExpiresAt.setHours(tokenExpiresAt.getHours() + 24); // Token tambem expira em 24h
       
-      // ✅ P1 RED TEAM FIX: NÃO logar o token de aprovação (reduz entropia se logs vazarem)
+      // [OK]  P1 RED TEAM FIX: NAO logar o token de aprovacao (reduz entropia se logs vazarem)
       logger.info(`[evaluate-playbook-triggers] Generated secure approval token for execution ${execution.id}`);
       
       const { data: approvalRequest, error: approvalError } = await supabase
@@ -450,9 +450,9 @@ serve(async (req) => {
           },
           requested_by: null, // Sistema
           status: 'pending',
-          required_approvers: 1, // ✅ APENAS 1 CLIQUE para semi_automatic
+          required_approvers: 1, // [OK]  APENAS 1 CLIQUE para semi_automatic
           expires_at: expiresAt.toISOString(),
-          // ✅ ONE-CLICK APPROVAL: Token para aprovação via link
+          // [OK]  ONE-CLICK APPROVAL: Token para aprovacao via link
           approval_token: approvalToken,
           approval_token_expires_at: tokenExpiresAt.toISOString(),
         })
@@ -470,14 +470,14 @@ serve(async (req) => {
           agent_id: agent_id || null,
           alert_type: 'playbook_approval_required',
           severity: playbook.severity === 'critical' ? 'critical' : 'warning',
-          message: `Playbook "${playbook.name}" requer aprovação. Expira em 24h.`,
+          message: `Playbook "${playbook.name}" requer aprovacao. Expira em 24h.`,
           metadata: {
             playbook_id: playbook.id,
             playbook_name: playbook.name,
             execution_id: execution.id,
             approval_request_id: approvalRequest?.id,
             expires_at: expiresAt.toISOString(),
-            // ✅ ONE-CLICK: Incluir token no metadata (para debug, não expor)
+            // [OK]  ONE-CLICK: Incluir token no metadata (para debug, nao expor)
             has_approval_token: !!approvalRequest?.approval_token,
           },
         });
@@ -487,7 +487,7 @@ serve(async (req) => {
           const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
           const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
           
-          // ✅ ONE-CLICK APPROVAL: Construir URL de aprovação direta
+          // [OK]  ONE-CLICK APPROVAL: Construir URL de aprovacao direta
           const APP_URL = Deno.env.get('APP_URL') || 'https://cybershield.com.br';
           const approvalUrl = `${SUPABASE_URL}/functions/v1/approve-via-token?token=${approvalRequest?.approval_token}`;
           
@@ -501,8 +501,8 @@ serve(async (req) => {
               channel: 'all',
               alertType: 'playbook_approval_required',
               severity: playbook.severity === 'critical' ? 'critical' : 'warning',
-              title: `🚨 Aprovação necessária: ${playbook.name}`,
-              message: `O playbook "${playbook.name}" foi disparado automaticamente e requer aprovação humana para executar ações destrutivas. Esta solicitação expira em 24 horas.`,
+              title: `? Aprovacao necessaria: ${playbook.name}`,
+              message: `O playbook "${playbook.name}" foi disparado automaticamente e requer aprovacao humana para executar acoes destrutivas. Esta solicitacao expira em 24 horas.`,
               details: {
                 playbook_id: playbook.id,
                 playbook_name: playbook.name,
@@ -518,7 +518,7 @@ serve(async (req) => {
                   label: a.label,
                   risk: a.risk_level,
                 })),
-                // ✅ ONE-CLICK APPROVAL: Incluir URL de aprovação direta
+                // [OK]  ONE-CLICK APPROVAL: Incluir URL de aprovacao direta
                 approval_url: approvalUrl,
                 approval_token: approvalRequest?.approval_token,
               },
@@ -533,7 +533,7 @@ serve(async (req) => {
         }
       }
     }
-    // Se deve auto-executar (baseado no motor de risco E NÃO estiver em dry_run), executar automaticamente
+    // Se deve auto-executar (baseado no motor de risco E NAO estiver em dry_run), executar automaticamente
     else if (shouldAutoExecute) {
       logger.info(`[evaluate-playbook-triggers] Risk-based auto-execution: ${playbook.name} (score: ${riskAnalysis.risk_score}, threshold: ${riskAnalysis.threshold})`);
       
@@ -554,7 +554,7 @@ serve(async (req) => {
       logger.info(`[evaluate-playbook-triggers] DRY RUN: Would have auto-executed ${playbook.name} (score: ${riskAnalysis.risk_score}, threshold: ${riskAnalysis.threshold})`);
     }
 
-    // Log de segurança com informações de risco
+    // Log de seguranca com informacoes de risco
     await supabase.from('security_logs').insert({
       tenant_id,
       ip_address: 'system',
@@ -571,7 +571,7 @@ serve(async (req) => {
         agent_id,
         require_approval: playbook.require_approval,
         snapshots_created: true,
-        // ✅ FASE 2 + 3: Adicionar dados de risco ao log
+        // [OK]  FASE 2 + 3: Adicionar dados de risco ao log
         risk_analysis: {
           risk_score: riskAnalysis.risk_score,
           threshold: riskAnalysis.threshold,
@@ -580,8 +580,8 @@ serve(async (req) => {
         },
         auto_executed: shouldAutoExecute,
         triggered_by: triggeredBy,
-        dry_run: isDryRun, // ✅ PHASE 3
-        would_auto_execute: wouldAutoExecute, // ✅ PHASE 3: O que teria acontecido
+        dry_run: isDryRun, // [OK]  PHASE 3
+        would_auto_execute: wouldAutoExecute, // [OK]  PHASE 3: O que teria acontecido
       },
     });
 
@@ -598,11 +598,11 @@ serve(async (req) => {
       },
       agent_info: agentInfo,
       snapshots_created: true,
-      // ✅ FASE 2 + 3: Incluir dados de risco na resposta
+      // [OK]  FASE 2 + 3: Incluir dados de risco na resposta
       risk_analysis: riskAnalysis,
       auto_executed: shouldAutoExecute,
       triggered_by: triggeredBy,
-      // ✅ PHASE 3: Informações de Shadow Mode
+      // [OK]  PHASE 3: Informacoes de Shadow Mode
       dry_run: isDryRun,
       would_auto_execute: wouldAutoExecute,
       execution_time_ms: Date.now() - startTime,

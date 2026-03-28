@@ -168,12 +168,12 @@ SELECT public._add_tenant_fk_if_missing('weekly_security_reports', 'fk_weekly_se
 -- Cleanup helper
 DROP FUNCTION public._add_tenant_fk_if_missing(text, text);
 
--- V-310: DLQ stale items → exhausted (no updated_at column)
+-- V-310: DLQ stale items ? exhausted (no updated_at column)
 UPDATE public.failed_jobs_dlq
 SET status = 'exhausted', resolved_at = now()
 WHERE status = 'pending' AND created_at < now() - interval '48 hours';
 
--- V-311: Stale open tasks → cancelled
+-- V-311: Stale open tasks ? cancelled
 UPDATE public.tasks
 SET status = 'cancelled', updated_at = now()
 WHERE status = 'open' AND created_at < now() - interval '48 hours';

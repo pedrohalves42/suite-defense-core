@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // V-1146: Defense-in-depth auth guard — allow admin users from frontend
+  // V-1146: Defense-in-depth auth guard ? allow admin users from frontend
   const authError = assertInternalCaller(req, { allowAuthenticatedUsers: true });
   if (authError) return authError;
 
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
   try {
     logger.info('[process-agent-updates] Cron job started', { requestId });
 
-    // ─── Compose hexagonal dependencies ───────────────
+    // ??? Compose hexagonal dependencies ???????????????
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const useCase = new ProcessAgentUpdatesUseCase(
@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
       new PersistingEventDispatcherAdapter(supabase),
     );
 
-    // ─── Execute use case ─────────────────────────────
+    // ??? Execute use case ?????????????????????????????
     const result = await useCase.execute(requestId);
 
     if (result.platforms.length === 0) {

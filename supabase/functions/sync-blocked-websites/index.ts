@@ -92,7 +92,7 @@ serveTenant<SyncBlockedBody>(async (_req, ctx) => {
 
   return {
     success: true,
-    message: `Sincronização agendada para ${agents.length} computadores`,
+    message: `Sincronizacao agendada para ${agents.length} computadores`,
     jobs_created: createdJobs?.length || 0,
     blocked_domains_count: blockedDomains.length,
     agents: agents.map(a => a.agent_name),

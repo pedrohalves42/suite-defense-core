@@ -24,36 +24,36 @@ async function generateHMAC(data: string, secret: string): Promise<string> {
 
 // ===== SECURITY INVARIANTS DEFINITIONS =====
 const SECURITY_INVARIANTS = [
-  { id: "INV-001", name: "Proteção de Dados", technicalName: "RLS Ativo", description: "Todas as tabelas possuem proteção de acesso (Row Level Security)", laymanDescription: "Seus dados são protegidos e só você pode vê-los", check: "rls_enabled" },
-  { id: "INV-002", name: "Autenticação Segura", technicalName: "HMAC Auth", description: "Comunicação dos agentes usa assinatura criptográfica HMAC-SHA256", laymanDescription: "A comunicação entre seus computadores e o servidor é criptografada", check: "hmac_auth" },
-  { id: "INV-003", name: "Isolamento de Dados", technicalName: "Multi-Tenant", description: "Dados segregados por tenant_id - isolamento garantido", laymanDescription: "Seus dados estão completamente separados de outras empresas", check: "tenant_isolation" },
-  { id: "INV-004", name: "Senhas Protegidas", technicalName: "Credential Masking", description: "Credenciais não aparecem em logs ou relatórios", laymanDescription: "Suas senhas nunca são armazenadas em texto visível", check: "credential_masking" },
-  { id: "INV-005", name: "Modo Segurança", technicalName: "Fail-Closed", description: "Sistema bloqueia automaticamente em caso de falha repetida", laymanDescription: "O sistema se protege automaticamente quando detecta problemas", check: "fail_closed" },
-  { id: "INV-006", name: "Filtro de Sites", technicalName: "DNS Filter", description: "Bloqueio de sites maliciosos e perigosos está configurado", laymanDescription: "Sites perigosos são bloqueados automaticamente", check: "dns_filter" },
+  { id: "INV-001", name: "Protecao de Dados", technicalName: "RLS Ativo", description: "Todas as tabelas possuem protecao de acesso (Row Level Security)", laymanDescription: "Seus dados sao protegidos e so voce pode ve-los", check: "rls_enabled" },
+  { id: "INV-002", name: "Autenticacao Segura", technicalName: "HMAC Auth", description: "Comunicacao dos agentes usa assinatura criptografica HMAC-SHA256", laymanDescription: "A comunicacao entre seus computadores e o servidor e criptografada", check: "hmac_auth" },
+  { id: "INV-003", name: "Isolamento de Dados", technicalName: "Multi-Tenant", description: "Dados segregados por tenant_id - isolamento garantido", laymanDescription: "Seus dados estao completamente separados de outras empresas", check: "tenant_isolation" },
+  { id: "INV-004", name: "Senhas Protegidas", technicalName: "Credential Masking", description: "Credenciais nao aparecem em logs ou relatorios", laymanDescription: "Suas senhas nunca sao armazenadas em texto visivel", check: "credential_masking" },
+  { id: "INV-005", name: "Modo Seguranca", technicalName: "Fail-Closed", description: "Sistema bloqueia automaticamente em caso de falha repetida", laymanDescription: "O sistema se protege automaticamente quando detecta problemas", check: "fail_closed" },
+  { id: "INV-006", name: "Filtro de Sites", technicalName: "DNS Filter", description: "Bloqueio de sites maliciosos e perigosos esta configurado", laymanDescription: "Sites perigosos sao bloqueados automaticamente", check: "dns_filter" },
 ];
 
 // ===== TEMPLATE-SPECIFIC SECTIONS =====
 const TEMPLATE_SECTIONS: Record<string, Array<{id: string; title: string; description: string; laymanDescription: string}>> = {
   LGPD: [
-    { id: "SEC-LGPD-001", title: "Inventário de Dados", description: "Mapeamento de dados pessoais coletados e processados", laymanDescription: "Lista de quais informações pessoais sua empresa coleta" },
-    { id: "SEC-LGPD-002", title: "Logs de Acesso", description: "Registros de quem acessou dados pessoais", laymanDescription: "Histórico de quem viu ou alterou informações" },
-    { id: "SEC-LGPD-003", title: "Retenção de Dados", description: "Política de quanto tempo os dados são mantidos", laymanDescription: "Por quanto tempo seus dados ficam armazenados" },
-    { id: "SEC-LGPD-004", title: "Base Legal", description: "Verificação de consentimento e bases legais", laymanDescription: "Confirmação de que você tem permissão para usar os dados" },
-    { id: "SEC-LGPD-005", title: "Incidentes", description: "Registro de incidentes de segurança no período", laymanDescription: "Problemas de segurança que aconteceram" },
+    { id: "SEC-LGPD-001", title: "Inventario de Dados", description: "Mapeamento de dados pessoais coletados e processados", laymanDescription: "Lista de quais informacoes pessoais sua empresa coleta" },
+    { id: "SEC-LGPD-002", title: "Logs de Acesso", description: "Registros de quem acessou dados pessoais", laymanDescription: "Historico de quem viu ou alterou informacoes" },
+    { id: "SEC-LGPD-003", title: "Retencao de Dados", description: "Politica de quanto tempo os dados sao mantidos", laymanDescription: "Por quanto tempo seus dados ficam armazenados" },
+    { id: "SEC-LGPD-004", title: "Base Legal", description: "Verificacao de consentimento e bases legais", laymanDescription: "Confirmacao de que voce tem permissao para usar os dados" },
+    { id: "SEC-LGPD-005", title: "Incidentes", description: "Registro de incidentes de seguranca no periodo", laymanDescription: "Problemas de seguranca que aconteceram" },
   ],
   ISO_27001: [
-    { id: "SEC-ISO-001", title: "Políticas de Segurança", description: "Controles de segurança implementados", laymanDescription: "Regras de proteção que estão ativas" },
-    { id: "SEC-ISO-002", title: "Gestão de Ativos", description: "Inventário de equipamentos e sistemas", laymanDescription: "Lista de todos os computadores e programas" },
-    { id: "SEC-ISO-003", title: "Controle de Acesso", description: "Gestão de permissões e autenticação", laymanDescription: "Quem pode acessar o quê no sistema" },
-    { id: "SEC-ISO-004", title: "Logs de Alteração", description: "Trilha de auditoria de modificações", laymanDescription: "Histórico de todas as mudanças feitas" },
-    { id: "SEC-ISO-005", title: "Gestão de Incidentes", description: "Timeline de eventos de segurança", laymanDescription: "Cronograma de problemas e como foram resolvidos" },
+    { id: "SEC-ISO-001", title: "Politicas de Seguranca", description: "Controles de seguranca implementados", laymanDescription: "Regras de protecao que estao ativas" },
+    { id: "SEC-ISO-002", title: "Gestao de Ativos", description: "Inventario de equipamentos e sistemas", laymanDescription: "Lista de todos os computadores e programas" },
+    { id: "SEC-ISO-003", title: "Controle de Acesso", description: "Gestao de permissoes e autenticacao", laymanDescription: "Quem pode acessar o que no sistema" },
+    { id: "SEC-ISO-004", title: "Logs de Alteracao", description: "Trilha de auditoria de modificacoes", laymanDescription: "Historico de todas as mudancas feitas" },
+    { id: "SEC-ISO-005", title: "Gestao de Incidentes", description: "Timeline de eventos de seguranca", laymanDescription: "Cronograma de problemas e como foram resolvidos" },
   ],
   SOC2_LITE: [
-    { id: "SEC-SOC-001", title: "Segurança", description: "Proteção contra acessos não autorizados", laymanDescription: "Como o sistema impede invasões" },
+    { id: "SEC-SOC-001", title: "Seguranca", description: "Protecao contra acessos nao autorizados", laymanDescription: "Como o sistema impede invasoes" },
     { id: "SEC-SOC-002", title: "Disponibilidade", description: "Tempo de atividade e performance", laymanDescription: "Quanto tempo o sistema ficou funcionando" },
-    { id: "SEC-SOC-003", title: "Integridade", description: "Garantia de dados íntegros e corretos", laymanDescription: "Confirmação de que os dados não foram alterados" },
-    { id: "SEC-SOC-004", title: "Confidencialidade", description: "Proteção de informações sensíveis", laymanDescription: "Como suas informações secretas são protegidas" },
-    { id: "SEC-SOC-005", title: "Trilhas de Auditoria", description: "Logs completos para verificação", laymanDescription: "Registros de tudo que aconteceu no sistema" },
+    { id: "SEC-SOC-003", title: "Integridade", description: "Garantia de dados integros e corretos", laymanDescription: "Confirmacao de que os dados nao foram alterados" },
+    { id: "SEC-SOC-004", title: "Confidencialidade", description: "Protecao de informacoes sensiveis", laymanDescription: "Como suas informacoes secretas sao protegidas" },
+    { id: "SEC-SOC-005", title: "Trilhas de Auditoria", description: "Logs completos para verificacao", laymanDescription: "Registros de tudo que aconteceu no sistema" },
   ],
 };
 
@@ -154,8 +154,8 @@ serveTenant<ComplianceReportBody>(async (_req, ctx) => {
   securityScore -= failedJobs > 5 ? 10 : failedJobs > 2 ? 5 : 0;
   securityScore = Math.max(securityScore, 0);
 
-  const securityLevel = securityScore >= 90 ? "EXCELENTE" : securityScore >= 70 ? "BOM" : securityScore >= 50 ? "ADEQUADO" : securityScore >= 30 ? "ATENÇÃO" : "CRÍTICO";
-  const securityTrend = prevRiskScore ? (securityScore > (100 - prevRiskScore.score) ? "melhorando" : securityScore < (100 - prevRiskScore.score) ? "piorando" : "estável") : "primeiro_calculo";
+  const securityLevel = securityScore >= 90 ? "EXCELENTE" : securityScore >= 70 ? "BOM" : securityScore >= 50 ? "ADEQUADO" : securityScore >= 30 ? "ATENCAO" : "CRITICO";
+  const securityTrend = prevRiskScore ? (securityScore > (100 - prevRiskScore.score) ? "melhorando" : securityScore < (100 - prevRiskScore.score) ? "piorando" : "estavel") : "primeiro_calculo";
 
   const now = new Date();
   const auditId = `LAUDO-${crypto.randomUUID().slice(0, 8).toUpperCase()}-${now.getTime()}`;
@@ -176,32 +176,32 @@ serveTenant<ComplianceReportBody>(async (_req, ctx) => {
 
     switch (inv.check) {
       case "rls_enabled":
-        details = "Row Level Security está habilitado em todas as tabelas principais";
-        laymanDetails = "✓ Seus dados estão protegidos e separados dos dados de outras empresas";
+        details = "Row Level Security esta habilitado em todas as tabelas principais";
+        laymanDetails = "? Seus dados estao protegidos e separados dos dados de outras empresas";
         break;
       case "hmac_auth":
-        details = "Todos os agentes utilizam autenticação HMAC-SHA256";
-        laymanDetails = "✓ A comunicação entre computadores e servidor é segura";
+        details = "Todos os agentes utilizam autenticacao HMAC-SHA256";
+        laymanDetails = "? A comunicacao entre computadores e servidor e segura";
         break;
       case "tenant_isolation":
         details = "Isolamento de dados por tenant_id garantido";
-        laymanDetails = "✓ Nenhuma outra empresa pode ver suas informações";
+        laymanDetails = "? Nenhuma outra empresa pode ver suas informacoes";
         break;
       case "credential_masking":
-        details = "Credenciais são mascaradas em logs e relatórios";
-        laymanDetails = "✓ Suas senhas nunca aparecem em texto visível";
+        details = "Credenciais sao mascaradas em logs e relatorios";
+        laymanDetails = "? Suas senhas nunca aparecem em texto visivel";
         break;
       case "fail_closed": {
         const safeModeAgents = agentsData?.filter(a => a.status === "safe_mode").length ?? 0;
         status = safeModeAgents > 0 ? "WARN" : "PASS";
-        details = safeModeAgents > 0 ? `${safeModeAgents} agente(s) em modo segurança` : "Nenhum agente em modo segurança";
-        laymanDetails = safeModeAgents > 0 ? `⚠ ${safeModeAgents} computador(es) entraram em modo de proteção automática` : "✓ Todos os computadores funcionando normalmente";
+        details = safeModeAgents > 0 ? `${safeModeAgents} agente(s) em modo seguranca` : "Nenhum agente em modo seguranca";
+        laymanDetails = safeModeAgents > 0 ? `[WARN]  ${safeModeAgents} computador(es) entraram em modo de protecao automatica` : "? Todos os computadores funcionando normalmente";
         break;
       }
       case "dns_filter":
         status = blockedSitesCount > 0 ? "PASS" : "WARN";
         details = blockedSitesCount > 0 ? `${blockedSitesCount} regras de bloqueio ativas` : "Nenhuma regra de bloqueio configurada";
-        laymanDetails = blockedSitesCount > 0 ? `✓ ${blockedSitesCount} sites perigosos estão bloqueados` : "⚠ Nenhum site está bloqueado - considere configurar";
+        laymanDetails = blockedSitesCount > 0 ? `? ${blockedSitesCount} sites perigosos estao bloqueados` : "[WARN]  Nenhum site esta bloqueado - considere configurar";
         break;
     }
 
@@ -226,24 +226,24 @@ serveTenant<ComplianceReportBody>(async (_req, ctx) => {
 
     switch (sec.id) {
       case "SEC-LGPD-001": recordCount = agentCount ?? 0; details = `${agentCount ?? 0} endpoints monitorados`; laymanDetails = `Sua empresa tem ${agentCount ?? 0} computadores sendo monitorados`; break;
-      case "SEC-LGPD-002": recordCount = auditCount ?? 0; details = `${auditCount ?? 0} registros de acesso`; laymanDetails = `Foram registradas ${auditCount ?? 0} ações no sistema`; break;
-      case "SEC-LGPD-003": recordCount = 90; details = "Política de retenção: 90 dias para logs, 365 dias para relatórios"; laymanDetails = "Seus dados são mantidos por 90 dias e depois removidos"; break;
-      case "SEC-LGPD-004": recordCount = agentCount ?? 0; details = "Consentimento implícito via contrato de serviço"; laymanDetails = "O uso dos dados está autorizado pelo contrato de serviço"; break;
-      case "SEC-LGPD-005": recordCount = criticalEvents + highEvents; details = `${criticalEvents} críticos, ${highEvents} altos`; laymanDetails = recordCount === 0 ? "Nenhum incidente no período" : `${recordCount} incidentes registrados`; break;
-      case "SEC-ISO-001": recordCount = blockedSitesCount; details = `${blockedSitesCount} políticas de bloqueio ativas`; laymanDetails = `${blockedSitesCount} regras de proteção configuradas`; break;
+      case "SEC-LGPD-002": recordCount = auditCount ?? 0; details = `${auditCount ?? 0} registros de acesso`; laymanDetails = `Foram registradas ${auditCount ?? 0} acoes no sistema`; break;
+      case "SEC-LGPD-003": recordCount = 90; details = "Politica de retencao: 90 dias para logs, 365 dias para relatorios"; laymanDetails = "Seus dados sao mantidos por 90 dias e depois removidos"; break;
+      case "SEC-LGPD-004": recordCount = agentCount ?? 0; details = "Consentimento implicito via contrato de servico"; laymanDetails = "O uso dos dados esta autorizado pelo contrato de servico"; break;
+      case "SEC-LGPD-005": recordCount = criticalEvents + highEvents; details = `${criticalEvents} criticos, ${highEvents} altos`; laymanDetails = recordCount === 0 ? "Nenhum incidente no periodo" : `${recordCount} incidentes registrados`; break;
+      case "SEC-ISO-001": recordCount = blockedSitesCount; details = `${blockedSitesCount} politicas de bloqueio ativas`; laymanDetails = `${blockedSitesCount} regras de protecao configuradas`; break;
       case "SEC-ISO-002": recordCount = agentCount ?? 0; details = `${agentCount ?? 0} ativos inventariados`; laymanDetails = `${agentCount ?? 0} computadores cadastrados no sistema`; break;
       case "SEC-ISO-003": recordCount = failedLogins; details = `${failedLogins} tentativas de acesso negadas`; laymanDetails = failedLogins === 0 ? "Nenhuma tentativa de acesso suspeita" : `${failedLogins} tentativas bloqueadas`; break;
-      case "SEC-ISO-004": recordCount = auditCount ?? 0; details = `${auditCount ?? 0} alterações registradas`; laymanDetails = `${auditCount ?? 0} mudanças foram registradas no período`; break;
+      case "SEC-ISO-004": recordCount = auditCount ?? 0; details = `${auditCount ?? 0} alteracoes registradas`; laymanDetails = `${auditCount ?? 0} mudancas foram registradas no periodo`; break;
       case "SEC-ISO-005": recordCount = eventCount ?? 0; details = `${eventCount ?? 0} eventos processados`; laymanDetails = `${eventCount ?? 0} eventos foram analisados pelo sistema`; break;
-      case "SEC-SOC-001": recordCount = passedInvariants; details = `${passedInvariants}/${SECURITY_INVARIANTS.length} controles conformes`; laymanDetails = `${passedInvariants} de ${SECURITY_INVARIANTS.length} proteções estão funcionando`; break;
+      case "SEC-SOC-001": recordCount = passedInvariants; details = `${passedInvariants}/${SECURITY_INVARIANTS.length} controles conformes`; laymanDetails = `${passedInvariants} de ${SECURITY_INVARIANTS.length} protecoes estao funcionando`; break;
       case "SEC-SOC-002": {
         const availPct = agentCount && agentCount > 0 ? Math.round((onlineAgents.length / agentCount) * 100) : 100;
-        recordCount = onlineAgents.length; details = `${availPct}% disponibilidade (${onlineAgents.length}/${agentCount ?? 0} online)`; laymanDetails = `${onlineAgents.length} de ${agentCount ?? 0} computadores estão conectados agora`; break;
+        recordCount = onlineAgents.length; details = `${availPct}% disponibilidade (${onlineAgents.length}/${agentCount ?? 0} online)`; laymanDetails = `${onlineAgents.length} de ${agentCount ?? 0} computadores estao conectados agora`; break;
       }
-      case "SEC-SOC-003": recordCount = fixedVulns; details = `${fixedVulns} vulnerabilidades corrigidas`; laymanDetails = `${fixedVulns} problemas de segurança já foram resolvidos`; break;
-      case "SEC-SOC-004": recordCount = agentsWithActiveAV; details = `${agentsWithActiveAV}/${agentsWithAV} com proteção em tempo real`; laymanDetails = `${agentsWithActiveAV} computadores têm antivírus ativo`; break;
-      case "SEC-SOC-005": recordCount = auditCount ?? 0; details = `${auditCount ?? 0} registros de auditoria`; laymanDetails = `${auditCount ?? 0} ações foram registradas para verificação`; break;
-      default: recordCount = 0; details = "Dados não disponíveis"; laymanDetails = "Informação não disponível no momento";
+      case "SEC-SOC-003": recordCount = fixedVulns; details = `${fixedVulns} vulnerabilidades corrigidas`; laymanDetails = `${fixedVulns} problemas de seguranca ja foram resolvidos`; break;
+      case "SEC-SOC-004": recordCount = agentsWithActiveAV; details = `${agentsWithActiveAV}/${agentsWithAV} com protecao em tempo real`; laymanDetails = `${agentsWithActiveAV} computadores tem antivirus ativo`; break;
+      case "SEC-SOC-005": recordCount = auditCount ?? 0; details = `${auditCount ?? 0} registros de auditoria`; laymanDetails = `${auditCount ?? 0} acoes foram registradas para verificacao`; break;
+      default: recordCount = 0; details = "Dados nao disponiveis"; laymanDetails = "Informacao nao disponivel no momento";
     }
 
     return { id: sec.id, title: sec.title, description: sec.description, laymanDescription: sec.laymanDescription, record_count: recordCount, details, laymanDetails, evidence_refs: [] as string[] };
@@ -254,32 +254,32 @@ serveTenant<ComplianceReportBody>(async (_req, ctx) => {
     title: "Resumo Executivo",
     overallStatus: securityLevel,
     overallMessage: securityScore >= 90
-      ? `Parabéns! A empresa "${tenantName}" está muito bem protegida.`
+      ? `Parabens! A empresa "${tenantName}" esta muito bem protegida.`
       : securityScore >= 70
-      ? `A empresa "${tenantName}" está com boa segurança.`
+      ? `A empresa "${tenantName}" esta com boa seguranca.`
       : securityScore >= 50
-      ? `A empresa "${tenantName}" está adequada, mas alguns pontos merecem atenção.`
+      ? `A empresa "${tenantName}" esta adequada, mas alguns pontos merecem atencao.`
       : securityScore >= 30
-      ? `A empresa "${tenantName}" precisa de atenção. Existem ${criticalVulns + highVulns} vulnerabilidades.`
-      : `A empresa "${tenantName}" precisa de ação imediata. Corrija ${criticalVulns} vulnerabilidades críticas.`,
+      ? `A empresa "${tenantName}" precisa de atencao. Existem ${criticalVulns + highVulns} vulnerabilidades.`
+      : `A empresa "${tenantName}" precisa de acao imediata. Corrija ${criticalVulns} vulnerabilidades criticas.`,
     highlights: [
       { icon: "computer", label: "Computadores Protegidos", value: `${agentCount ?? 0}`, status: (agentCount ?? 0) > 0 ? "good" : "warning" },
-      { icon: "shield", label: "Antivírus Ativo", value: `${agentsWithActiveAV}/${agentsWithAV}`, status: agentsWithActiveAV >= agentsWithAV * 0.9 ? "good" : agentsWithActiveAV >= agentsWithAV * 0.7 ? "warning" : "critical" },
-      { icon: "alert", label: "Vulnerabilidades", value: criticalVulns > 0 ? `${criticalVulns} críticas` : highVulns > 0 ? `${highVulns} altas` : "Nenhuma", status: criticalVulns > 0 ? "critical" : highVulns > 0 ? "warning" : "good" },
+      { icon: "shield", label: "Antivirus Ativo", value: `${agentsWithActiveAV}/${agentsWithAV}`, status: agentsWithActiveAV >= agentsWithAV * 0.9 ? "good" : agentsWithActiveAV >= agentsWithAV * 0.7 ? "warning" : "critical" },
+      { icon: "alert", label: "Vulnerabilidades", value: criticalVulns > 0 ? `${criticalVulns} criticas` : highVulns > 0 ? `${highVulns} altas` : "Nenhuma", status: criticalVulns > 0 ? "critical" : highVulns > 0 ? "warning" : "good" },
       { icon: "block", label: "Sites Bloqueados", value: `${blockedSitesCount} regras`, status: blockedSitesCount > 0 ? "good" : "warning" },
-      { icon: "virus", label: "Ameaças Detectadas", value: threatsFound > 0 ? `${threatsFound}` : "Nenhuma", status: threatsFound === 0 ? "good" : "critical" },
+      { icon: "virus", label: "Ameacas Detectadas", value: threatsFound > 0 ? `${threatsFound}` : "Nenhuma", status: threatsFound === 0 ? "good" : "critical" },
       { icon: "offline", label: "Computadores Offline", value: offlineAgents.length > 0 ? `${offlineAgents.length}` : "Nenhum", status: offlineAgents.length === 0 ? "good" : offlineAgents.length <= 2 ? "warning" : "critical" },
     ],
     recommendations: [] as string[],
   };
 
-  if (criticalVulns > 0) executiveSummary.recommendations.push(`Corrija ${criticalVulns} vulnerabilidade(s) crítica(s) imediatamente`);
+  if (criticalVulns > 0) executiveSummary.recommendations.push(`Corrija ${criticalVulns} vulnerabilidade(s) critica(s) imediatamente`);
   if (highVulns > 0) executiveSummary.recommendations.push(`Resolva ${highVulns} vulnerabilidade(s) de alta gravidade esta semana`);
-  if (avOutdated > 0) executiveSummary.recommendations.push(`Atualize o antivírus em ${avOutdated} computador(es)`);
+  if (avOutdated > 0) executiveSummary.recommendations.push(`Atualize o antivirus em ${avOutdated} computador(es)`);
   if (offlineAgents.length > 0) executiveSummary.recommendations.push(`Verifique ${offlineAgents.length} computador(es) offline`);
   if (blockedSitesCount === 0) executiveSummary.recommendations.push("Configure regras de bloqueio de sites perigosos");
-  if (threatsFound > 0) executiveSummary.recommendations.push(`Analise ${threatsFound} ameaça(s) detectada(s)`);
-  if (executiveSummary.recommendations.length === 0) executiveSummary.recommendations.push("Continue monitorando - sua segurança está em dia!");
+  if (threatsFound > 0) executiveSummary.recommendations.push(`Analise ${threatsFound} ameaca(s) detectada(s)`);
+  if (executiveSummary.recommendations.length === 0) executiveSummary.recommendations.push("Continue monitorando - sua seguranca esta em dia!");
 
   // Hash payload
   const payloadForHash = JSON.stringify({
@@ -305,14 +305,14 @@ serveTenant<ComplianceReportBody>(async (_req, ctx) => {
   invariantsResults.forEach((inv, idx) => { inv.evidence_hash = sha256Hash.substring(idx * 8, idx * 8 + 16); });
   sections.forEach((sec, idx) => { (sec as Record<string, unknown>).evidence_refs = [sha256Hash.substring(idx * 4, idx * 4 + 8)]; });
 
-  const securityDescription = securityScore >= 90 ? "Ambiente seguro" : securityScore >= 70 ? "Situação controlada" : securityScore >= 50 ? "Revisão semanal sugerida" : securityScore >= 30 ? "Atenção recomendada em 24-48h" : "Requer ação imediata";
-  const securityLaymanDescription = securityScore >= 90 ? "Parabéns! Segurança excelente." : securityScore >= 70 ? "Bem protegida. Apenas pequenos ajustes." : securityScore >= 50 ? "Segurança ok, mas pode melhorar." : securityScore >= 30 ? "Existem problemas que precisam ser resolvidos." : "Atenção urgente! Problemas sérios.";
+  const securityDescription = securityScore >= 90 ? "Ambiente seguro" : securityScore >= 70 ? "Situacao controlada" : securityScore >= 50 ? "Revisao semanal sugerida" : securityScore >= 30 ? "Atencao recomendada em 24-48h" : "Requer acao imediata";
+  const securityLaymanDescription = securityScore >= 90 ? "Parabens! Seguranca excelente." : securityScore >= 70 ? "Bem protegida. Apenas pequenos ajustes." : securityScore >= 50 ? "Seguranca ok, mas pode melhorar." : securityScore >= 30 ? "Existem problemas que precisam ser resolvidos." : "Atencao urgente! Problemas serios.";
 
   // ===== FULL PAYLOAD =====
   const payload = {
     audit_id: auditId, tenant_id: tenantId, tenant_name: tenantName, template,
-    template_name: template === "LGPD" ? "LGPD - Lei Geral de Proteção de Dados" : template === "ISO_27001" ? "ISO 27001 - Segurança da Informação" : "SOC2-lite - Trust Services Criteria",
-    template_description: template === "LGPD" ? "Conformidade com a legislação brasileira de proteção de dados pessoais" : template === "ISO_27001" ? "Padrão internacional de gestão de segurança da informação" : "Critérios de confiança para serviços em nuvem simplificado",
+    template_name: template === "LGPD" ? "LGPD - Lei Geral de Protecao de Dados" : template === "ISO_27001" ? "ISO 27001 - Seguranca da Informacao" : "SOC2-lite - Trust Services Criteria",
+    template_description: template === "LGPD" ? "Conformidade com a legislacao brasileira de protecao de dados pessoais" : template === "ISO_27001" ? "Padrao internacional de gestao de seguranca da informacao" : "Criterios de confianca para servicos em nuvem simplificado",
     period_start: periodStart, period_end: periodEnd,
     generated_at: now.toISOString(), valid_until: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     executive_summary: executiveSummary, invariants: invariantsResults,
@@ -340,7 +340,7 @@ serveTenant<ComplianceReportBody>(async (_req, ctx) => {
     .from("generated_reports")
     .insert({
       tenant_id: tenantId, report_type: `compliance_${template.toLowerCase()}`,
-      title: `Relatório de Compliance ${template} - ${now.toLocaleDateString('pt-BR')}`,
+      title: `Relatorio de Compliance ${template} - ${now.toLocaleDateString('pt-BR')}`,
       risk_score: securityScore, risk_level: securityLevel, status: "generated",
       expires_at: payload.valid_until, audit_id: auditId,
       sha256: sha256Hash, hmac_signature: hmacSignature, report_data: payload,

@@ -1,12 +1,12 @@
 -- ============================================================
--- MIGRAÇÃO CONSOLIDADA: Fechamento de Todos os GAPs
+-- MIGRACAO CONSOLIDADA: Fechamento de Todos os GAPs
 -- Data: 2026-02-01
 -- Autor: Sistema
 -- ============================================================
 
 -- ============================================================
--- PARTE 1: Corrigir Trigger de Proteção de Execuções
--- Permite deleção de registros antigos (> 90 dias) para cleanup
+-- PARTE 1: Corrigir Trigger de Protecao de Execucoes
+-- Permite delecao de registros antigos (> 90 dias) para cleanup
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION prevent_execution_deletion()
@@ -16,19 +16,19 @@ SECURITY DEFINER
 SET search_path TO public
 AS $$
 BEGIN
-  -- Permitir deleção de registros antigos (> 90 dias) para cleanup
+  -- Permitir delecao de registros antigos (> 90 dias) para cleanup
   IF OLD.created_at < NOW() - INTERVAL '90 days' THEN
     RETURN OLD;
   END IF;
   
-  -- Bloquear deleção de registros recentes
+  -- Bloquear delecao de registros recentes
   RAISE EXCEPTION 'Cannot delete job execution records within 90 days retention period'
     USING ERRCODE = '23514';
 END;
 $$;
 
 -- ============================================================
--- PARTE 2: Habilitar RLS nas Partições HMAC
+-- PARTE 2: Habilitar RLS nas Particoes HMAC
 -- ============================================================
 
 DO $$
@@ -52,7 +52,7 @@ BEGIN
         partition_name
       );
     EXCEPTION WHEN undefined_table THEN
-      RAISE NOTICE 'Partição % não existe, pulando...', partition_name;
+      RAISE NOTICE 'Particao % nao existe, pulando...', partition_name;
     END;
   END LOOP;
 END $$;
@@ -117,7 +117,7 @@ BEGIN
 END;
 $$;
 
--- RPC: Limpar tasks órfãs
+-- RPC: Limpar tasks orfas
 CREATE OR REPLACE FUNCTION cleanup_stale_tasks(
   p_tenant_id UUID,
   p_days_old INTEGER DEFAULT 30,
@@ -173,7 +173,7 @@ END;
 $$;
 
 -- ============================================================
--- PARTE 4: Criar Partição HMAC para Julho 2026 (Prevenção)
+-- PARTE 4: Criar Particao HMAC para Julho 2026 (Prevencao)
 -- ============================================================
 
 DO $$

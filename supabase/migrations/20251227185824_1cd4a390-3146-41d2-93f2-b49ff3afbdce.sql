@@ -1,7 +1,7 @@
--- Dropar função existente com tipo diferente
+-- Dropar funcao existente com tipo diferente
 DROP FUNCTION IF EXISTS public.validate_agent_release_integrity();
 
--- Recriar função de validação de integridade do agente
+-- Recriar funcao de validacao de integridade do agente
 CREATE OR REPLACE FUNCTION public.validate_agent_release_integrity()
 RETURNS TABLE (
   release_id uuid,

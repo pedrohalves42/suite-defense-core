@@ -1,11 +1,11 @@
--- Corrigir trigger para usar decision_type válido
+-- Corrigir trigger para usar decision_type valido
 CREATE OR REPLACE FUNCTION public.create_dlq_decision_event()
 RETURNS TRIGGER AS $$
 DECLARE
   v_tenant_id uuid;
   v_decision_id uuid;
 BEGIN
-  -- Só criar evento quando status muda para 'resolved'
+  -- So criar evento quando status muda para 'resolved'
   IF NEW.status = 'resolved' AND (OLD IS NULL OR OLD.status != 'resolved') THEN
     v_tenant_id := NEW.tenant_id;
     
@@ -29,7 +29,7 @@ BEGIN
         'resolved_by', NEW.resolved_by
       ),
       COALESCE(NEW.resolution_source, CASE WHEN NEW.resolved_by IS NOT NULL THEN 'human' ELSE 'system' END),
-      'system'  -- Valor válido no constraint
+      'system'  -- Valor valido no constraint
     ) RETURNING id INTO v_decision_id;
   END IF;
   

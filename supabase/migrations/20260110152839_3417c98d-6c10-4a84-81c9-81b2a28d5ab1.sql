@@ -2,7 +2,7 @@
 -- ADR-037: Job Engine Correction - Phase 0 & Phase 1
 -- =====================================================
 
--- PRIMEIRO: Corrigir a função create_task_from_failed_job (source_id é uuid, não text)
+-- PRIMEIRO: Corrigir a funcao create_task_from_failed_job (source_id e uuid, nao text)
 CREATE OR REPLACE FUNCTION create_task_from_failed_job()
 RETURNS trigger AS $$
 DECLARE
@@ -10,7 +10,7 @@ DECLARE
   severity_level text;
   task_title text;
 BEGIN
-  -- Só atuar quando job transita PARA failed
+  -- So atuar quando job transita PARA failed
   IF OLD.status IS DISTINCT FROM 'failed' AND NEW.status = 'failed' THEN
     
     -- Mapear failure_class para severity
@@ -31,10 +31,10 @@ BEGIN
       ELSE 72
     END;
     
-    -- Título descritivo
+    -- Titulo descritivo
     task_title := '[Job Falho] ' || COALESCE(NEW.type, 'unknown') || ': ' || COALESCE(NEW.failure_class, 'UNKNOWN');
     
-    -- Criar task apenas para falhas não-esperadas
+    -- Criar task apenas para falhas nao-esperadas
     IF COALESCE(NEW.failure_class, '') NOT IN ('EXPECTED_DROP', 'TRANSIENT') THEN
       INSERT INTO public.tasks (
         tenant_id, 
@@ -53,7 +53,7 @@ BEGIN
       VALUES (
         NEW.tenant_id,
         'job',
-        NEW.id,  -- Já é UUID, não precisa de cast
+        NEW.id,  -- Ja e UUID, nao precisa de cast
         task_title,
         'Job falhou: ' || COALESCE(NEW.error_message, 'Sem mensagem de erro') || 
         E'\n\nAgente: ' || COALESCE(NEW.agent_name, 'N/A') ||
@@ -78,7 +78,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public';
 
--- SEGUNDO: Corrigir a função audit_dlq_operations para pular audit quando não há user
+-- SEGUNDO: Corrigir a funcao audit_dlq_operations para pular audit quando nao ha user
 CREATE OR REPLACE FUNCTION audit_dlq_operations()
 RETURNS trigger AS $$
 BEGIN
@@ -122,7 +122,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public';
 
--- TERCEIRO: Corrigir a função sanitize_dlq_payload usando extensions.digest
+-- TERCEIRO: Corrigir a funcao sanitize_dlq_payload usando extensions.digest
 CREATE OR REPLACE FUNCTION sanitize_dlq_payload()
 RETURNS trigger AS $$
 BEGIN
@@ -152,7 +152,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- QUARTO: Atualizar o trigger de transições para incluir 'pending'
+-- QUARTO: Atualizar o trigger de transicoes para incluir 'pending'
 CREATE OR REPLACE FUNCTION enforce_job_state_transitions()
 RETURNS trigger AS $$
 DECLARE
@@ -166,15 +166,15 @@ DECLARE
   }'::jsonb;
   v_allowed_states jsonb;
 BEGIN
-  -- Se status não mudou, permitir
+  -- Se status nao mudou, permitir
   IF OLD.status = NEW.status THEN
     RETURN NEW;
   END IF;
   
-  -- Buscar transições válidas para o estado atual
+  -- Buscar transicoes validas para o estado atual
   v_allowed_states := v_valid_transitions->OLD.status;
   
-  -- Verificar se o novo estado está na lista de permitidos
+  -- Verificar se o novo estado esta na lista de permitidos
   IF v_allowed_states IS NULL OR NOT v_allowed_states ? NEW.status THEN
     RAISE EXCEPTION 'ILLEGAL_STATE_TRANSITION: Cannot transition from % to %. Allowed transitions from %: %',
       OLD.status,
@@ -188,10 +188,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- FASE 0: CORREÇÃO DE DADOS
+-- FASE 0: CORRECAO DE DADOS
 -- =====================================================
 
--- 1. Cancelar jobs pending órfãos (>24h)
+-- 1. Cancelar jobs pending orfaos (>24h)
 UPDATE jobs
 SET status = 'cancelled',
     completed_at = now(),
@@ -214,7 +214,7 @@ SET status = 'failed',
 WHERE status = 'delivered'
   AND delivered_at < now() - interval '2 hours';
 
--- 4. Backfill DLQ com classificação causal
+-- 4. Backfill DLQ com classificacao causal
 INSERT INTO failed_jobs_dlq (
   original_job_id, tenant_id, agent_id, agent_name, 
   job_type, payload, error_message, failure_class, status
@@ -240,21 +240,21 @@ SET is_active = false
 WHERE expires_at < NOW()
   AND is_active = true;
 
--- FASE 1: PREVENÇÃO
+-- FASE 1: PREVENCAO
 -- =====================================================
 
--- 1. Função para garantir completed_at em estados terminais
+-- 1. Funcao para garantir completed_at em estados terminais
 CREATE OR REPLACE FUNCTION ensure_completed_at_on_terminal()
 RETURNS trigger AS $$
 BEGIN
-  -- INSERT: se já nasce terminal, garantir completed_at
+  -- INSERT: se ja nasce terminal, garantir completed_at
   IF TG_OP = 'INSERT' 
      AND NEW.status IN ('completed', 'failed', 'cancelled') 
      AND NEW.completed_at IS NULL THEN
     NEW.completed_at := now();
   END IF;
   
-  -- UPDATE: só se status MUDOU para terminal
+  -- UPDATE: so se status MUDOU para terminal
   IF TG_OP = 'UPDATE'
      AND NEW.status IS DISTINCT FROM OLD.status
      AND NEW.status IN ('completed', 'failed', 'cancelled')
@@ -275,7 +275,7 @@ BEFORE INSERT OR UPDATE ON jobs
 FOR EACH ROW
 EXECUTE FUNCTION ensure_completed_at_on_terminal();
 
--- 2. Função de cleanup automático de jobs stuck
+-- 2. Funcao de cleanup automatico de jobs stuck
 CREATE OR REPLACE FUNCTION cleanup_stuck_pending_jobs()
 RETURNS integer AS $$
 DECLARE
@@ -292,7 +292,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public';
 
--- 3. View de Health Anomalies para monitoramento contínuo
+-- 3. View de Health Anomalies para monitoramento continuo
 CREATE OR REPLACE VIEW v_job_health_anomalies AS
 SELECT 
   'pending_approved' as anomaly_type,

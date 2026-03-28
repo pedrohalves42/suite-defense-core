@@ -1,5 +1,5 @@
 -- ADR-030: Corrigir Type Mismatch em Triggers de Alertas/Tasks
--- Remove ::text casts para permitir comparação UUID direta
+-- Remove ::text casts para permitir comparacao UUID direta
 
 -- Corrigir auto_create_task_for_critical_alert
 CREATE OR REPLACE FUNCTION public.auto_create_task_for_critical_alert()
@@ -15,7 +15,7 @@ BEGIN
       'system_alert',
       NEW.id,  -- UUID direto, sem ::text
       'Alerta: ' || COALESCE(NEW.alert_type, 'Sistema'),
-      COALESCE(NEW.message, 'Alerta de sistema requer atenção'),
+      COALESCE(NEW.message, 'Alerta de sistema requer atencao'),
       NEW.severity,
       'open',
       NEW.severity = 'critical',

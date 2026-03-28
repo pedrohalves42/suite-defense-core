@@ -1,6 +1,6 @@
 
 -- =====================================================
--- V-206: BULK MIGRATION public → authenticated
+-- V-206: BULK MIGRATION public ? authenticated
 -- Preserves all USING/WITH CHECK clauses exactly as-is
 -- Only changes the granted role from public to authenticated
 -- =====================================================

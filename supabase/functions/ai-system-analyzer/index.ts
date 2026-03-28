@@ -187,13 +187,13 @@ Deno.serve(async (req) => {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - 7);
 
-        // 0. Buscar agentes com hostnames amigáveis para usar em vez de agent_name técnico
+        // 0. Buscar agentes com hostnames amigaveis para usar em vez de agent_name tecnico
         const { data: agentsList } = await supabase
           .from('agents')
           .select('id, agent_name, hostname, display_name')
           .eq('tenant_id', tenant.id);
         
-        // Criar mapa de agent_id -> nome amigável (prioridade: display_name > hostname > agent_name)
+        // Criar mapa de agent_id -> nome amigavel (prioridade: display_name > hostname > agent_name)
         const agentFriendlyNames = new Map<string, string>();
         for (const agent of (agentsList || [])) {
           const friendlyName = agent.display_name || agent.hostname || agent.agent_name;
@@ -226,7 +226,7 @@ Deno.serve(async (req) => {
           .order('collected_at', { ascending: false })
           .limit(500);
         
-        // Enriquecer métricas com nomes amigáveis
+        // Enriquecer metricas com nomes amigaveis
         const enrichedAgentMetrics = (agentMetrics || []).map(metric => ({
           ...metric,
           friendly_name: agentFriendlyNames.get(metric.agent_id) || metric.agent_name || metric.agent_id.slice(0, 8)
@@ -370,14 +370,14 @@ Deno.serve(async (req) => {
       logger.info('[ai-system-analyzer] No insights generated');
     }
 
-    // ── AUTO-RESOLVE: Close stale in_progress tasks (>48h without progress) ──
+    // ?? AUTO-RESOLVE: Close stale in_progress tasks (>48h without progress) ??
     try {
       const { data: resolvedTasks, error: resolveError } = await supabase
         .from('tasks')
         .update({
           status: 'resolved',
           closed_at: new Date().toISOString(),
-          closure_reason: 'Auto-resolved: condição normalizada ou tarefa sem progresso por 48h',
+          closure_reason: 'Auto-resolved: condicao normalizada ou tarefa sem progresso por 48h',
           updated_at: new Date().toISOString(),
         })
         .eq('status', 'in_progress')
@@ -462,8 +462,8 @@ async function analyzeWithAI(
       ? (data.failurePatterns.length / data.installationStats.length) * 100
       : 0;
 
-    // MELHORADO: Análise POR AGENTE em vez de médias globais
-    // Usar nomes amigáveis (display_name > hostname > agent_name) diretamente
+    // MELHORADO: Analise POR AGENTE em vez de medias globais
+    // Usar nomes amigaveis (display_name > hostname > agent_name) diretamente
     const agentMetricsMap = new Map<string, { 
       cpu: number[]; 
       memory: number[]; 
@@ -474,7 +474,7 @@ async function analyzeWithAI(
     for (const metric of data.agentMetrics) {
       const agentId = metric.agent_id;
       if (!agentMetricsMap.has(agentId)) {
-        // Usar o friendly_name já enriquecido anteriormente
+        // Usar o friendly_name ja enriquecido anteriormente
         const friendlyName = metric.friendly_name || metric.agent_name || agentId.slice(0, 8);
         agentMetricsMap.set(agentId, { 
           cpu: [], 
@@ -489,8 +489,8 @@ async function analyzeWithAI(
       if (metric.disk_usage_percent != null) agentData.disk.push(metric.disk_usage_percent);
     }
 
-    // Calcular médias e identificar outliers por agente
-    // CORREÇÃO: Usar nomes amigáveis diretamente em vez de anonimizar
+    // Calcular medias e identificar outliers por agente
+    // CORRECAO: Usar nomes amigaveis diretamente em vez de anonimizar
     const agentSummaries = Array.from(agentMetricsMap.entries()).map(([agentId, data]) => {
       const avgCpu = data.cpu.length > 0 ? data.cpu.reduce((a, b) => a + b, 0) / data.cpu.length : 0;
       const avgMemory = data.memory.length > 0 ? data.memory.reduce((a, b) => a + b, 0) / data.memory.length : 0;
@@ -501,7 +501,7 @@ async function analyzeWithAI(
       
       return {
         agent_id: agentId,
-        // Usar nome amigável diretamente (não anonimizado)
+        // Usar nome amigavel diretamente (nao anonimizado)
         agent_name: data.friendly_name,
         samples: data.cpu.length,
         avg_cpu: avgCpu,
@@ -517,14 +517,14 @@ async function analyzeWithAI(
       };
     });
 
-    // Identificar agentes problemáticos
+    // Identificar agentes problematicos
     const problematicAgents = agentSummaries.filter(a => a.high_cpu || a.high_memory || a.critical_disk);
 
-    // Correlacionar alertas com agentes específicos usando nomes amigáveis
+    // Correlacionar alertas com agentes especificos usando nomes amigaveis
     const alertsByAgent = new Map<string, number>();
     for (const alert of data.systemAlerts) {
       if (alert.agent_id) {
-        // Usar nome amigável do mapa de métricas ou fallback
+        // Usar nome amigavel do mapa de metricas ou fallback
         const agentData = agentMetricsMap.get(alert.agent_id);
         const friendlyName = agentData?.friendly_name || alert.agent_id.slice(0, 8);
         alertsByAgent.set(friendlyName, (alertsByAgent.get(friendlyName) || 0) + 1);
@@ -538,7 +538,7 @@ async function analyzeWithAI(
       return acc;
     }, {} as Record<string, number>);
 
-    // Médias globais para contexto geral
+    // Medias globais para contexto geral
     const avgCpuUsage = agentSummaries.length > 0
       ? agentSummaries.reduce((sum, a) => sum + a.avg_cpu, 0) / agentSummaries.length
       : 0;
@@ -546,7 +546,7 @@ async function analyzeWithAI(
       ? agentSummaries.reduce((sum, a) => sum + a.avg_memory, 0) / agentSummaries.length
       : 0;
 
-    // Usar nome do tenant diretamente (não anonimizado)
+    // Usar nome do tenant diretamente (nao anonimizado)
     const displayTenantName = tenantName || 'Empresa';
 
     const rawPrompt = `Voce e um especialista em analise de sistemas de monitoramento de computadores. Analise os dados abaixo e identifique problemas, anomalias, e oportunidades de otimizacao.
@@ -562,7 +562,7 @@ async function analyzeWithAI(
 
 **Analise POR AGENTE (PRIORIDADE):**
 ${agentSummaries.slice(0, 10).map(a => 
-  `- ${a.agent_name}: CPU max=${a.max_cpu.toFixed(1)}% avg=${a.avg_cpu.toFixed(1)}%, Mem max=${a.max_memory.toFixed(1)}% avg=${a.avg_memory.toFixed(1)}%, Disco max=${a.max_disk.toFixed(1)}% (${a.samples} amostras)${a.high_cpu ? ' ⚠️CPU' : ''}${a.high_memory ? ' ⚠️MEM' : ''}${a.critical_disk ? ' 🔴DISCO' : ''}`
+  `- ${a.agent_name}: CPU max=${a.max_cpu.toFixed(1)}% avg=${a.avg_cpu.toFixed(1)}%, Mem max=${a.max_memory.toFixed(1)}% avg=${a.avg_memory.toFixed(1)}%, Disco max=${a.max_disk.toFixed(1)}% (${a.samples} amostras)${a.high_cpu ? ' [WARN] ?CPU' : ''}${a.high_memory ? ' [WARN] ?MEM' : ''}${a.critical_disk ? ' ?DISCO' : ''}`
 ).join('\n')}
 
 **Agentes Problematicos Identificados:** ${problematicAgents.length}
@@ -606,7 +606,7 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
   }
 ]`;
 
-    // Sanitizar o prompt antes de enviar à IA
+    // Sanitizar o prompt antes de enviar a IA
     const promptSanitizeResult = sanitizeForAI(rawPrompt);
     if (promptSanitizeResult.blocked) {
       logger.warn('[ai-system-analyzer] Prompt injection blocked for tenant:', tenantId, promptSanitizeResult.blockedPatterns);
@@ -645,7 +645,7 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
     // Add failure rate evidence
     if (failureRate > 0) {
       evidenceArray.push(buildEvidence(
-        'Taxa de Falha de Instalação',
+        'Taxa de Falha de Instalacao',
         'installation_analytics',
         failureRate,
         undefined,
@@ -656,7 +656,7 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
     // Add CPU evidence
     if (avgCpuUsage > 0) {
       evidenceArray.push(buildEvidence(
-        'Uso Médio de CPU',
+        'Uso Medio de CPU',
         'agent_system_metrics_partitioned',
         avgCpuUsage,
         undefined,
@@ -667,7 +667,7 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
     // Add memory evidence
     if (avgMemoryUsage > 0) {
       evidenceArray.push(buildEvidence(
-        'Uso Médio de Memória',
+        'Uso Medio de Memoria',
         'agent_system_metrics_partitioned',
         avgMemoryUsage,
         undefined,
@@ -678,7 +678,7 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
     // Add problematic jobs evidence
     if (data.problematicJobs.length > 0) {
       evidenceArray.push(buildEvidence(
-        'Jobs Problemáticos',
+        'Jobs Problematicos',
         'v_problematic_jobs',
         data.problematicJobs.length,
         undefined,
@@ -690,7 +690,7 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
     const criticalAlerts = data.systemAlerts.filter(a => a.severity === 'critical').length;
     if (criticalAlerts > 0) {
       evidenceArray.push(buildEvidence(
-        'Alertas Críticos',
+        'Alertas Criticos',
         'system_alerts',
         criticalAlerts,
         undefined,
@@ -715,8 +715,8 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
     const confidence = calculateConfidence(evidenceArray, true);
     const reasoning_summary = generateReasoningSummary(
       evidenceArray,
-      `análise do tenant ${tenantName}`,
-      'Correlação automática de métricas, jobs e alertas realizada pela IA.'
+      `analise do tenant ${tenantName}`,
+      'Correlacao automatica de metricas, jobs e alertas realizada pela IA.'
     );
 
     // Mapear para formato do banco de dados com Evidence Pack

@@ -1,4 +1,4 @@
--- Fix: Remover SECURITY DEFINER da view (usar SECURITY INVOKER - padrão)
+-- Fix: Remover SECURITY DEFINER da view (usar SECURITY INVOKER - padrao)
 DROP VIEW IF EXISTS job_failure_health;
 
 CREATE VIEW job_failure_health AS

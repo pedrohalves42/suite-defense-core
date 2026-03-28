@@ -1,8 +1,8 @@
 # ============================================================
 # CyberShield - Fix Scheduled Task Script
 # ============================================================
-# Este script corrige tarefas agendadas com Duration problemática
-# que impede a reinstalação do agente.
+# Este script corrige tarefas agendadas com Duration problematica
+# que impede a reinstalacao do agente.
 # 
 # Erro corrigido: Duration:P999999990T23H59M59S
 # 
@@ -15,7 +15,7 @@ $ErrorActionPreference = "Continue"
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  CyberShield - Correção de Task" -ForegroundColor Cyan
+Write-Host "  CyberShield - Correcao de Task" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -53,7 +53,7 @@ foreach ($pattern in $taskPatterns) {
             }
         }
     } catch {
-        # Pattern não encontrou nenhuma task
+        # Pattern nao encontrou nenhuma task
     }
 }
 

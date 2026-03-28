@@ -53,10 +53,10 @@ function calculateRiskScore(stats: Record<string, number>, unprotectedPCs: Recor
 }
 
 function getRiskClassification(score: number): { level: string; color: string; description: string } {
-  if (score >= 80) return { level: 'BAIXO', color: 'green', description: 'Ambiente seguro com boas práticas implementadas' };
-  if (score >= 60) return { level: 'MÉDIO', color: 'yellow', description: 'Algumas vulnerabilidades requerem atenção' };
-  if (score >= 40) return { level: 'ALTO', color: 'orange', description: 'Múltiplas vulnerabilidades críticas identificadas' };
-  return { level: 'CRÍTICO', color: 'red', description: 'Ambiente em risco iminente - ação imediata necessária' };
+  if (score >= 80) return { level: 'BAIXO', color: 'green', description: 'Ambiente seguro com boas praticas implementadas' };
+  if (score >= 60) return { level: 'MEDIO', color: 'yellow', description: 'Algumas vulnerabilidades requerem atencao' };
+  if (score >= 40) return { level: 'ALTO', color: 'orange', description: 'Multiplas vulnerabilidades criticas identificadas' };
+  return { level: 'CRITICO', color: 'red', description: 'Ambiente em risco iminente - acao imediata necessaria' };
 }
 
 // ==================== TEMPLATE SECTION BUILDERS ====================
@@ -64,8 +64,8 @@ function getRiskClassification(score: number): { level: string; color: string; d
 type ComplianceTemplate = 'LGPD' | 'ISO_27001' | 'SOC2_LITE';
 
 const TEMPLATE_INFO: Record<ComplianceTemplate, { name: string; description: string }> = {
-  LGPD: { name: 'LGPD', description: 'Lei Geral de Proteção de Dados' },
-  ISO_27001: { name: 'ISO 27001', description: 'Gestão de Segurança da Informação' },
+  LGPD: { name: 'LGPD', description: 'Lei Geral de Protecao de Dados' },
+  ISO_27001: { name: 'ISO 27001', description: 'Gestao de Seguranca da Informacao' },
   SOC2_LITE: { name: 'SOC2-lite', description: 'Trust Services Criteria' },
 };
 
@@ -89,7 +89,7 @@ async function buildComplianceSections(
       );
       sections.push({
         id: 'data_access', title: 'Logs de Acesso',
-        description: 'Registros de acesso a dados sensíveis conforme Art. 37 LGPD',
+        description: 'Registros de acesso a dados sensiveis conforme Art. 37 LGPD',
         evidence_refs: await Promise.all(accessLogs.slice(0, 50).map(log => generateEvidenceHash(log))),
         data: accessLogs.slice(0, 50), record_count: accessLogs.length,
       });
@@ -98,8 +98,8 @@ async function buildComplianceSections(
         (log.action as string)?.includes('delete') || (log.action as string)?.includes('purge')
       );
       sections.push({
-        id: 'data_retention', title: 'Retenção de Dados',
-        description: 'Política de retenção e exclusão conforme Art. 16 LGPD',
+        id: 'data_retention', title: 'Retencao de Dados',
+        description: 'Politica de retencao e exclusao conforme Art. 16 LGPD',
         evidence_refs: await Promise.all(retentionLogs.slice(0, 30).map(log => generateEvidenceHash(log))),
         data: retentionLogs.slice(0, 30), record_count: retentionLogs.length,
       });
@@ -109,7 +109,7 @@ async function buildComplianceSections(
       );
       sections.push({
         id: 'consent_tracking', title: 'Rastreamento de Consentimento',
-        description: 'Evidência de consentimentos conforme Art. 7 LGPD',
+        description: 'Evidencia de consentimentos conforme Art. 7 LGPD',
         evidence_refs: await Promise.all(consentLogs.slice(0, 30).map(log => generateEvidenceHash(log))),
         data: consentLogs.slice(0, 30), record_count: consentLogs.length,
       });
@@ -117,7 +117,7 @@ async function buildComplianceSections(
       const incidents = data.securityEvents.filter(e => e.severity === 'critical' || e.severity === 'high');
       sections.push({
         id: 'incident_response', title: 'Resposta a Incidentes',
-        description: 'Eventos de segurança relacionados conforme Art. 48 LGPD',
+        description: 'Eventos de seguranca relacionados conforme Art. 48 LGPD',
         evidence_refs: await Promise.all(incidents.slice(0, 30).map(e => generateEvidenceHash(e))),
         data: incidents.slice(0, 30), record_count: incidents.length,
       });
@@ -125,8 +125,8 @@ async function buildComplianceSections(
     }
     case 'ISO_27001': {
       sections.push({
-        id: 'policy_enforcement', title: 'Aplicação de Políticas',
-        description: 'Status de políticas de segurança (A.5)',
+        id: 'policy_enforcement', title: 'Aplicacao de Politicas',
+        description: 'Status de politicas de seguranca (A.5)',
         evidence_refs: await Promise.all(data.activePolicies.map(p => generateEvidenceHash(p))),
         data: data.activePolicies, record_count: data.activePolicies.length,
       });
@@ -136,7 +136,7 @@ async function buildComplianceSections(
       );
       sections.push({
         id: 'incident_timeline', title: 'Timeline de Incidentes',
-        description: 'Histórico de eventos (A.16)',
+        description: 'Historico de eventos (A.16)',
         evidence_refs: await Promise.all(incidentTimeline.slice(0, 50).map(e => generateEvidenceHash(e))),
         data: incidentTimeline.slice(0, 50), record_count: incidentTimeline.length,
       });
@@ -145,8 +145,8 @@ async function buildComplianceSections(
         (log.action as string)?.includes('update') || (log.action as string)?.includes('create') || (log.action as string)?.includes('delete')
       );
       sections.push({
-        id: 'change_logs', title: 'Logs de Alterações',
-        description: 'Auditoria de mudanças (A.12.4)',
+        id: 'change_logs', title: 'Logs de Alteracoes',
+        description: 'Auditoria de mudancas (A.12.4)',
         evidence_refs: await Promise.all(changeLogs.slice(0, 50).map(log => generateEvidenceHash(log))),
         data: changeLogs.slice(0, 50), record_count: changeLogs.length,
       });
@@ -156,7 +156,7 @@ async function buildComplianceSections(
       );
       sections.push({
         id: 'access_control', title: 'Controle de Acesso',
-        description: 'Gestão de permissões (A.9)',
+        description: 'Gestao de permissoes (A.9)',
         evidence_refs: await Promise.all(
           [...accessControlLogs.slice(0, 25), ...data.failedLogins.slice(0, 25)].map(item => generateEvidenceHash(item))
         ),
@@ -170,7 +170,7 @@ async function buildComplianceSections(
         log.resource_type === 'user' || (log.action as string)?.includes('login') || (log.action as string)?.includes('auth')
       );
       sections.push({
-        id: 'user_access', title: 'Acesso de Usuários',
+        id: 'user_access', title: 'Acesso de Usuarios',
         description: 'Trilha de auditoria de acessos (CC6.1)',
         evidence_refs: await Promise.all(userAccessLogs.slice(0, 50).map(log => generateEvidenceHash(log))),
         data: userAccessLogs.slice(0, 50), record_count: userAccessLogs.length,
@@ -197,8 +197,8 @@ async function buildComplianceSections(
       });
 
       sections.push({
-        id: 'security_events', title: 'Eventos de Segurança',
-        description: 'Detecção e resposta (CC7.3)',
+        id: 'security_events', title: 'Eventos de Seguranca',
+        description: 'Deteccao e resposta (CC7.3)',
         evidence_refs: await Promise.all(
           [...data.securityEvents.slice(0, 25), ...data.blockedAttempts.slice(0, 25)].map(item => generateEvidenceHash(item))
         ),
@@ -220,9 +220,9 @@ async function evaluateSecurityInvariants(
 ): Promise<Array<Record<string, unknown>>> {
   const invariants = [
     { id: 'INV-001', name: 'RLS Ativo', description: 'Row Level Security habilitado em todas as tabelas' },
-    { id: 'INV-002', name: 'Autenticação HMAC', description: 'HMAC-SHA256 validado em todas requisições de agentes' },
+    { id: 'INV-002', name: 'Autenticacao HMAC', description: 'HMAC-SHA256 validado em todas requisicoes de agentes' },
     { id: 'INV-003', name: 'Isolamento Multi-Tenant', description: 'Dados isolados por tenant_id' },
-    { id: 'INV-004', name: 'Secrets Protegidos', description: 'Credenciais não expostas em logs ou respostas' },
+    { id: 'INV-004', name: 'Secrets Protegidos', description: 'Credenciais nao expostas em logs ou respostas' },
     { id: 'INV-005', name: 'Fail-Closed', description: 'Sistema falha de forma segura em caso de erro' },
     { id: 'INV-006', name: 'DNS Filter Ativo', description: 'Filtro DNS local operacional quando habilitado' },
   ];
@@ -235,14 +235,14 @@ async function evaluateSecurityInvariants(
     let details = '';
 
     switch (inv.id) {
-      case 'INV-001': details = 'RLS habilitado em todas as tabelas públicas'; break;
+      case 'INV-001': details = 'RLS habilitado em todas as tabelas publicas'; break;
       case 'INV-002': details = 'HMAC-SHA256 validado com replay protection'; break;
       case 'INV-003': details = 'Isolamento por tenant_id em todas as queries'; break;
       case 'INV-004': details = 'Secrets armazenados de forma segura no vault'; break;
-      case 'INV-005': details = 'Circuit breakers ativos em funções críticas'; break;
+      case 'INV-005': details = 'Circuit breakers ativos em funcoes criticas'; break;
       case 'INV-006':
         status = dnsFilterEnabled ? 'PASS' : 'UNKNOWN';
-        details = dnsFilterEnabled ? 'DNS Filter ativo e operacional' : 'DNS Filter não configurado para este tenant';
+        details = dnsFilterEnabled ? 'DNS Filter ativo e operacional' : 'DNS Filter nao configurado para este tenant';
         break;
     }
 
@@ -404,13 +404,13 @@ serveTenant<SecurityReportBody>(async (req, ctx) => {
   // ==================== FULL JSON FORMAT (DEFAULT) ====================
   const recommendations: Array<Record<string, unknown>> = [];
   if (stats.critical_vulnerabilities > 0) {
-    recommendations.push({ priority: 1, category: 'Vulnerabilidades', title: 'Corrigir vulnerabilidades críticas', description: `${stats.critical_vulnerabilities} vulnerabilidade(s) crítica(s) detectada(s).` });
+    recommendations.push({ priority: 1, category: 'Vulnerabilidades', title: 'Corrigir vulnerabilidades criticas', description: `${stats.critical_vulnerabilities} vulnerabilidade(s) critica(s) detectada(s).` });
   }
   if (unprotectedPCs.no_antivirus > 0) {
-    recommendations.push({ priority: 2, category: 'Antivírus', title: 'Instalar antivírus em computadores desprotegidos', description: `${unprotectedPCs.no_antivirus} computador(es) sem proteção.` });
+    recommendations.push({ priority: 2, category: 'Antivirus', title: 'Instalar antivirus em computadores desprotegidos', description: `${unprotectedPCs.no_antivirus} computador(es) sem protecao.` });
   }
   if (unprotectedPCs.outdated_av > 0) {
-    recommendations.push({ priority: 3, category: 'Antivírus', title: 'Atualizar definições de antivírus', description: `${unprotectedPCs.outdated_av} computador(es) com antivírus desatualizado.` });
+    recommendations.push({ priority: 3, category: 'Antivirus', title: 'Atualizar definicoes de antivirus', description: `${unprotectedPCs.outdated_av} computador(es) com antivirus desatualizado.` });
   }
   recommendations.sort((a, b) => (a.priority as number) - (b.priority as number));
 

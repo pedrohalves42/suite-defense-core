@@ -135,7 +135,7 @@ BEGIN
       NEW.tenant_id,
       'audit_integrity_breach',
       'critical',
-      'Violação de Integridade Detectada',
+      'Violacao de Integridade Detectada',
       format('Cadeia de auditoria quebrada. %s logs afetados.', COALESCE(NEW.breaks_detected, 0))
     );
     NEW.alert_sent := true;

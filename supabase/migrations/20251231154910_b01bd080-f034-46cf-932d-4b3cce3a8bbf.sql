@@ -3,9 +3,9 @@ ALTER TABLE tenant_action_policies
 ADD COLUMN IF NOT EXISTS last_applied_at TIMESTAMPTZ;
 
 COMMENT ON COLUMN tenant_action_policies.last_applied_at IS 
-  'Timestamp da última vez que esta política foi aplicada em uma decisão';
+  'Timestamp da ultima vez que esta politica foi aplicada em uma decisao';
 
--- CICLO 7: Persistência de relatórios para compliance/auditoria
+-- CICLO 7: Persistencia de relatorios para compliance/auditoria
 CREATE TABLE IF NOT EXISTS ai_decision_reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
@@ -38,7 +38,7 @@ FOR INSERT WITH CHECK (
 CREATE INDEX IF NOT EXISTS idx_ai_decision_reports_tenant
   ON ai_decision_reports (tenant_id, generated_at DESC);
 
--- CICLO 8: View agregada para métricas de qualidade
+-- CICLO 8: View agregada para metricas de qualidade
 CREATE OR REPLACE VIEW insight_feedback_quality AS
 SELECT
   ai.insight_type,

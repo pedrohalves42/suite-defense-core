@@ -4,10 +4,10 @@ import { corsHeaders } from '../_shared/cors.ts'
 import { logger } from '../_shared/logger.ts';
 
 /**
- * agent-snapshot - Edge Function Canônica
+ * agent-snapshot - Edge Function Canonica
  * 
- * Retorna snapshot único e consistente do agente.
- * Fonte única de verdade para todas as UIs (Monitoramento, Diagnóstico, Central de Ações).
+ * Retorna snapshot unico e consistente do agente.
+ * Fonte unica de verdade para todas as UIs (Monitoramento, Diagnostico, Central de Acoes).
  * 
  * Garantias:
  * - Tenant isolado via RLS
@@ -29,7 +29,7 @@ serve(async (req) => {
       return jsonError(405, 'Method not allowed', correlationId)
     }
 
-    // Cliente com contexto do usuário
+    // Cliente com contexto do usuario
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
       return jsonError(401, 'Missing authorization header', correlationId)
@@ -41,7 +41,7 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     )
 
-    // Autenticação
+    // Autenticacao
     const { data: authData, error: authError } = await supabase.auth.getUser()
     if (authError || !authData?.user) {
       logger.error('[agent-snapshot][AUTH_ERROR]', { authError, correlationId })
@@ -67,7 +67,7 @@ serve(async (req) => {
       return jsonError(400, 'Invalid agent_id format', correlationId)
     }
 
-    // Chamada RPC (fonte única de verdade)
+    // Chamada RPC (fonte unica de verdade)
     const { data: snapshot, error: rpcError } = await supabase
       .rpc('get_agent_snapshot', { p_agent_id: agent_id })
 

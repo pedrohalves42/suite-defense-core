@@ -34,9 +34,9 @@ function calculateRiskScore(stats: Record<string, unknown>): { score: number; le
   
   // Determine level
   let level = 'BAIXO'
-  if (score >= 70) level = 'CRÍTICO'
+  if (score >= 70) level = 'CRITICO'
   else if (score >= 50) level = 'ALTO'
-  else if (score >= 30) level = 'MÉDIO'
+  else if (score >= 30) level = 'MEDIO'
   
   return { score, level }
 }
@@ -65,19 +65,19 @@ function generateCommercialSummary(
   const issues: string[] = []
   
   if ((stats.critical_vulnerabilities || 0) > 0) {
-    issues.push(`${stats.critical_vulnerabilities} vulnerabilidade(s) crítica(s)`)
+    issues.push(`${stats.critical_vulnerabilities} vulnerabilidade(s) critica(s)`)
   }
   if ((stats.high_vulnerabilities || 0) > 0) {
     issues.push(`${stats.high_vulnerabilities} vulnerabilidade(s) de alto risco`)
   }
   if ((stats.threats_found || 0) > 0) {
-    issues.push(`${stats.threats_found} ameaça(s) detectada(s) pelo antivírus`)
+    issues.push(`${stats.threats_found} ameaca(s) detectada(s) pelo antivirus`)
   }
   if ((stats.malicious_scans || 0) > 0) {
     issues.push(`${stats.malicious_scans} acesso(s) suspeito(s) a sites maliciosos`)
   }
   if ((stats.blocked_sites || 0) > 0) {
-    issues.push(`${stats.blocked_sites} site(s) bloqueado(s) por política de segurança`)
+    issues.push(`${stats.blocked_sites} site(s) bloqueado(s) por politica de seguranca`)
   }
   if ((stats.outdated_software || 0) > 0) {
     issues.push(`${stats.outdated_software} software(s) desatualizado(s)`)
@@ -85,38 +85,38 @@ function generateCommercialSummary(
   
   // No issues - positive message
   if (issues.length === 0) {
-    return `✅ *Diagnóstico de Segurança Concluído*
+    return `[OK]  *Diagnostico de Seguranca Concluido*
 
 Computador: ${agentName}
 ${tenantName ? `Empresa: ${tenantName}\n` : ''}
-Status: ✅ Ambiente Seguro
+Status: [OK]  Ambiente Seguro
 
-Nenhum risco crítico identificado. Seu ambiente está protegido.
+Nenhum risco critico identificado. Seu ambiente esta protegido.
 
-_Relatório gerado automaticamente por CyberShield_`
+_Relatorio gerado automaticamente por CyberShield_`
   }
   
   // Has issues - urgency-based message
-  const urgency = riskLevel === 'CRÍTICO' ? 'imediata' : 
-                  riskLevel === 'ALTO' ? 'em até 48 horas' : 'em até 7 dias'
+  const urgency = riskLevel === 'CRITICO' ? 'imediata' : 
+                  riskLevel === 'ALTO' ? 'em ate 48 horas' : 'em ate 7 dias'
   
-  const emoji = riskLevel === 'CRÍTICO' ? '🔴' : 
-                riskLevel === 'ALTO' ? '🟠' : '🟡'
+  const emoji = riskLevel === 'CRITICO' ? '?' : 
+                riskLevel === 'ALTO' ? '?' : '?'
   
-  return `${emoji} *Diagnóstico de Segurança - Atenção Necessária*
+  return `${emoji} *Diagnostico de Seguranca - Atencao Necessaria*
 
 Computador: ${agentName}
 ${tenantName ? `Empresa: ${tenantName}\n` : ''}
-*Classificação: Risco ${riskLevel}*
+*Classificacao: Risco ${riskLevel}*
 
 Identificamos:
-${issues.map(i => `• ${i}`).join('\n')}
+${issues.map(i => `? ${i}`).join('\n')}
 
-⏰ *Ação recomendada:* Correção ${urgency}
+? *Acao recomendada:* Correcao ${urgency}
 
 Posso explicar em 10 minutos o que significa e como resolver?
 
-_Relatório gerado automaticamente por CyberShield_`
+_Relatorio gerado automaticamente por CyberShield_`
 }
 
 Deno.serve(async (req) => {
@@ -261,10 +261,10 @@ Deno.serve(async (req) => {
 
     // Generate title
     const reportTypeLabels: Record<string, string> = {
-      'full_security': 'Relatório de Segurança Completo',
-      'software_inventory': 'Inventário de Software',
-      'vulnerabilities': 'Análise de Vulnerabilidades',
-      'antivirus': 'Status do Antivírus',
+      'full_security': 'Relatorio de Seguranca Completo',
+      'software_inventory': 'Inventario de Software',
+      'vulnerabilities': 'Analise de Vulnerabilidades',
+      'antivirus': 'Status do Antivirus',
       'web_activity': 'Atividade Web'
     }
     const title = `${reportTypeLabels[reportType]} - ${agentLabel}`

@@ -111,7 +111,7 @@ serveTenant(async (_req, ctx) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: `Script ${platform} não encontrado ou muito pequeno.`,
+        error: `Script ${platform} nao encontrado ou muito pequeno.`,
         requestId
       }),
       { status: 404, headers: { 'Content-Type': 'application/json' } }

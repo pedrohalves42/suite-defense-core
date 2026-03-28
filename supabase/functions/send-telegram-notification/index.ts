@@ -27,17 +27,17 @@ interface TelegramPayload {
 }
 
 const SEVERITY_EMOJI: Record<string, string> = {
-  critical: '🔴',
-  high: '🟠',
-  medium: '🟡',
-  low: '🔵',
-  info: '✅',
+  critical: '?',
+  high: '?',
+  medium: '?',
+  low: '?',
+  info: '[OK] ',
 };
 
 const SEVERITY_LABEL: Record<string, string> = {
-  critical: 'CRÍTICO',
+  critical: 'CRITICO',
   high: 'ALTO',
-  medium: 'MÉDIO',
+  medium: 'MEDIO',
   low: 'BAIXO',
   info: 'INFO',
 };
@@ -93,24 +93,24 @@ Deno.serve(async (req: Request) => {
 
     // Format message with HTML (more reliable than Markdown)
     const severity = payload.alert.severity?.toLowerCase() || 'info';
-    const emoji = SEVERITY_EMOJI[severity] || '🔔';
+    const emoji = SEVERITY_EMOJI[severity] || '?';
     const label = SEVERITY_LABEL[severity] || 'ALERTA';
     const now = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
     const agentName = payload.alert.agent_name || 'System';
 
     const message = [
-      `${emoji} <b>CyberShield Alert</b>  ·  <code>${label}</code>`,
+      `${emoji} <b>CyberShield Alert</b>  ?  <code>${label}</code>`,
       ``,
-      `━━━━━━━━━━━━━━━━━━`,
+      `??????????????????`,
       ``,
       `<b>${escapeHtml(payload.alert.title)}</b>`,
       ``,
       `${escapeHtml(payload.alert.message)}`,
       ``,
-      `━━━━━━━━━━━━━━━━━━`,
+      `??????????????????`,
       ``,
-      `🤖 <b>Agent:</b> <code>${escapeHtml(agentName)}</code>`,
-      `🕐 <b>Data:</b> ${now}`,
+      `? <b>Agent:</b> <code>${escapeHtml(agentName)}</code>`,
+      `? <b>Data:</b> ${now}`,
     ].join('\n');
 
     // Send via Telegram Bot API

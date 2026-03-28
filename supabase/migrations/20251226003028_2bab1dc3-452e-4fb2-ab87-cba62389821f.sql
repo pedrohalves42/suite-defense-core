@@ -1,8 +1,8 @@
 -- ============================================================================
--- ARCH-NULL-ROOT: Prevenção de Violações de Invariantes
+-- ARCH-NULL-ROOT: Prevencao de Violacoes de Invariantes
 -- ============================================================================
 
--- FASE 2.1: Trigger para sincronizar executions quando job é finalizado
+-- FASE 2.1: Trigger para sincronizar executions quando job e finalizado
 CREATE OR REPLACE FUNCTION public.sync_execution_on_job_finalize()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -10,11 +10,11 @@ SECURITY DEFINER
 SET search_path TO 'public'
 AS $$
 BEGIN
-  -- Se job está sendo finalizado (transição para estado terminal)
+  -- Se job esta sendo finalizado (transicao para estado terminal)
   IF OLD.status NOT IN ('completed', 'failed', 'cancelled', 'done')
      AND NEW.status IN ('completed', 'failed', 'cancelled', 'done') THEN
     
-    -- Finalizar qualquer execution órfã em 'claimed'
+    -- Finalizar qualquer execution orfa em 'claimed'
     UPDATE job_executions
     SET 
       status = NEW.status,
@@ -34,7 +34,7 @@ BEGIN
 END;
 $$;
 
--- Criar trigger apenas se não existir
+-- Criar trigger apenas se nao existir
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -48,10 +48,10 @@ BEGIN
 END;
 $$;
 
--- FASE 2.2: Tornar payload_hash NOT NULL (dados já corrigidos)
+-- FASE 2.2: Tornar payload_hash NOT NULL (dados ja corrigidos)
 ALTER TABLE jobs ALTER COLUMN payload_hash SET NOT NULL;
 
--- FASE 3.1: Função sentinel para detectar violações futuras
+-- FASE 3.1: Funcao sentinel para detectar violacoes futuras
 CREATE OR REPLACE FUNCTION public.check_execution_orphans()
 RETURNS TABLE(
   orphan_count BIGINT, 
@@ -100,11 +100,11 @@ BEGIN
 END;
 $$;
 
--- FASE 3.2: Adicionar comentário de auditoria
+-- FASE 3.2: Adicionar comentario de auditoria
 COMMENT ON FUNCTION sync_execution_on_job_finalize() IS 
-  'ARCH-NULL-ROOT: Garante sincronização automática de job_executions quando job é finalizado. 
-   Previne executions órfãs e limpa current_execution_id residual.';
+  'ARCH-NULL-ROOT: Garante sincronizacao automatica de job_executions quando job e finalizado. 
+   Previne executions orfas e limpa current_execution_id residual.';
 
 COMMENT ON FUNCTION check_execution_orphans() IS
-  'ARCH-NULL-ROOT Sentinel: Detecta violações de invariantes (orphan executions, residual execution_id, null payload_hash).
-   Deve retornar 0,0,0,NULL em sistema saudável.';
+  'ARCH-NULL-ROOT Sentinel: Detecta violacoes de invariantes (orphan executions, residual execution_id, null payload_hash).
+   Deve retornar 0,0,0,NULL em sistema saudavel.';

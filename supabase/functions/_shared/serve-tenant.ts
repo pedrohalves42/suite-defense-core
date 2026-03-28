@@ -1,5 +1,5 @@
 /**
- * serveTenant() — Centralized Edge Function middleware for tenant validation.
+ * serveTenant() ? Centralized Edge Function middleware for tenant validation.
  * 
  * Replaces raw Deno.serve() to enforce tenant isolation on ALL user-facing functions.
  * 
@@ -9,7 +9,7 @@
  * - tenant_id extraction from body, header, or query
  * - Caller-tenant authorization via user_roles
  * - Internal call bypass (service_role / X-Internal-Secret)
- * - Agent auth bypass (X-Agent-Token — handled separately)
+ * - Agent auth bypass (X-Agent-Token ? handled separately)
  * - Request context (X-Request-ID, timing)
  * 
  * Usage:
@@ -37,10 +37,10 @@ import { requireEnv } from './env.ts';
 import { logger } from './logger.ts';
 import { timingSafeEqual } from './crypto-utils.ts';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ??? Types ???????????????????????????????????????????????????????????????????
 
 export interface TenantContext<T = unknown> {
-  /** Validated tenant ID — guaranteed to be authorized */
+  /** Validated tenant ID ? guaranteed to be authorized */
   tenantId: string;
   /** User ID from JWT (null for internal/service calls) */
   userId: string | null;
@@ -90,7 +90,7 @@ export interface ServeOptions {
 
   /**
    * Skip tenant validation entirely (for system-wide endpoints).
-   * Use with extreme caution — prefer servePublic() for webhooks.
+   * Use with extreme caution ? prefer servePublic() for webhooks.
    * Default: false
    */
   skipTenantValidation?: boolean;
@@ -104,7 +104,7 @@ export interface ServeOptions {
 
 type TenantHandler<T = unknown> = (req: Request, ctx: TenantContext<T>) => Promise<Response | Record<string, unknown> | unknown>;
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ??? Helpers ?????????????????????????????????????????????????????????????????
 
 function jsonResponse(data: unknown, status = 200, extraHeaders?: Record<string, string>) {
   return new Response(JSON.stringify(data), {
@@ -142,7 +142,7 @@ async function verifyUserTenantAccess(supabase: SupabaseClient, userId: string, 
   return !!data;
 }
 
-// ─── Main Middleware ─────────────────────────────────────────────────────────
+// ??? Main Middleware ?????????????????????????????????????????????????????????
 
 export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: ServeOptions) {
   const {
@@ -296,7 +296,7 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
       const responseTime = `${Date.now() - startTime}ms`;
       
       if (result instanceof Response) {
-        // Handler returned a raw Response — pass through
+        // Handler returned a raw Response ? pass through
         return result;
       }
 
@@ -313,7 +313,7 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
   });
 }
 
-// ─── servePublic: For webhooks and unauthenticated endpoints ─────────────────
+// ??? servePublic: For webhooks and unauthenticated endpoints ?????????????????
 
 export type PublicHandler = (req: Request, ctx: { supabase: SupabaseClient; requestId: string; body: unknown }) => Promise<Response | Record<string, unknown> | unknown>;
 
@@ -348,7 +348,7 @@ export function servePublic(handler: PublicHandler) {
   });
 }
 
-// ─── serveAgent: For agent-authenticated endpoints ──────────────────────────
+// ??? serveAgent: For agent-authenticated endpoints ??????????????????????????
 
 export interface AgentContext {
   agentId: string;

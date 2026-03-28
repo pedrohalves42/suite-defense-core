@@ -167,10 +167,10 @@ Responda APENAS com JSON valido no formato:
       const userPrompt = `Anomalias detectadas para ${tenant.name}:
 
 ${detectedAnomalies.map(a =>
-  `- ${a.agent}: ${a.metric} atual=${a.current}% (baseline: média=${a.mean}%, desvio=${a.std}%, threshold=${a.multiplier}σ) → desvio de ${a.deviation}%`
+  `- ${a.agent}: ${a.metric} atual=${a.current}% (baseline: media=${a.mean}%, desvio=${a.std}%, threshold=${a.multiplier}?) ? desvio de ${a.deviation}%`
 ).join('\n')}
 
-Contextualize cada anomalia: é um problema real ou atividade normal?`;
+Contextualize cada anomalia: e um problema real ou atividade normal?`;
 
       const { data: aiAnomalies } = await callAIJson<AnomalyResult[]>(
         systemPrompt, userPrompt,

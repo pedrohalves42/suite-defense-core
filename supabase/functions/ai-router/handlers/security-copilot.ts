@@ -6,7 +6,7 @@ import { TenantContext } from '../../_shared/serve-tenant.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
 
-const SYSTEM_PROMPT = `You are CyberShield Security Copilot — an expert cybersecurity analyst assistant.
+const SYSTEM_PROMPT = `You are CyberShield Security Copilot ? an expert cybersecurity analyst assistant.
 
 Your role:
 - Analyze security alerts, vulnerabilities, and agent health data
@@ -46,8 +46,8 @@ async function getTenantContext(supabase: ReturnType<typeof createClient>, tenan
 ### Agentes (${totalCount} total, ${onlineCount} online)
 ${(agents.data || []).slice(0, 10).map(a => `- ${a.hostname}: ${a.status} | OS: ${a.os_type} | v${a.agent_version} | Health: ${a.health_score ?? 'N/A'}`).join('\n')}
 
-### Alertas Abertos (${(alerts.data || []).length} total, ${criticalAlerts} críticos)
-${(alerts.data || []).slice(0, 10).map(a => `- [${a.severity?.toUpperCase()}] ${a.title} (${a.alert_type}) — ${a.status}`).join('\n') || 'Nenhum alerta aberto'}
+### Alertas Abertos (${(alerts.data || []).length} total, ${criticalAlerts} criticos)
+${(alerts.data || []).slice(0, 10).map(a => `- [${a.severity?.toUpperCase()}] ${a.title} (${a.alert_type}) ? ${a.status}`).join('\n') || 'Nenhum alerta aberto'}
 
 ### Vulnerabilidades (${(vulns.data || []).length})
 ${(vulns.data || []).slice(0, 10).map(v => `- [${v.severity?.toUpperCase()}] ${v.cve_id || 'N/A'}: ${v.title}`).join('\n') || 'Nenhuma'}
@@ -103,7 +103,7 @@ export async function handleSecurityCopilot(
       });
     }
     if (response.status === 402) {
-      return new Response(JSON.stringify({ error: 'Créditos de IA esgotados.' }), {
+      return new Response(JSON.stringify({ error: 'Creditos de IA esgotados.' }), {
         status: 402, headers: { 'Content-Type': 'application/json' },
       });
     }

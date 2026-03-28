@@ -8,7 +8,7 @@ import { handleValidationError, corsHeaders } from '../_shared/error-handler.ts'
 serveTenant(async (req, ctx) => {
   const { supabase, tenantId, userId, requestId, body: rawData } = ctx;
 
-  // Role checks — serveTenant validates JWT + tenant, but not roles
+  // Role checks ? serveTenant validates JWT + tenant, but not roles
   const { data: hasAdminRole } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
   const { data: hasOperatorRole } = await supabase.rpc('has_role', { _user_id: userId, _role: 'operator' });
   const { data: hasSuperAdminRole } = await supabase.rpc('is_super_admin', { _user_id: userId });
@@ -106,7 +106,7 @@ serveTenant(async (req, ctx) => {
   // Block paused agents
   if (agentData.scheduling_paused) {
     return new Response(
-      JSON.stringify({ error: { code: 'AGENT_PAUSED', message: `Agente '${agentName}' está com agendamento pausado: ${agentData.scheduling_paused_reason || 'versão incompatível, aguardando atualização manual'}` } }), 
+      JSON.stringify({ error: { code: 'AGENT_PAUSED', message: `Agente '${agentName}' esta com agendamento pausado: ${agentData.scheduling_paused_reason || 'versao incompativel, aguardando atualizacao manual'}` } }), 
       { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -130,7 +130,7 @@ serveTenant(async (req, ctx) => {
     });
 
     return new Response(
-      JSON.stringify({ error: { code: 'AGENT_OFFLINE', message: `Agente '${agentName}' está offline há mais de 2 horas (último heartbeat: ${lastHeartbeat}). Não é possível criar jobs para agentes inacessíveis.` } }), 
+      JSON.stringify({ error: { code: 'AGENT_OFFLINE', message: `Agente '${agentName}' esta offline ha mais de 2 horas (ultimo heartbeat: ${lastHeartbeat}). Nao e possivel criar jobs para agentes inacessiveis.` } }), 
       { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -192,7 +192,7 @@ serveTenant(async (req, ctx) => {
 
     if (!newJobId) {
       return new Response(
-        JSON.stringify({ error: { code: 'JOB_ALREADY_EXISTS', message: `Já existe um job ativo do tipo '${type}' para o agente '${agentName}'.` } }),
+        JSON.stringify({ error: { code: 'JOB_ALREADY_EXISTS', message: `Ja existe um job ativo do tipo '${type}' para o agente '${agentName}'.` } }),
         { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

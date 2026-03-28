@@ -1,19 +1,19 @@
 
--- ADR-029: Correção de Schema Inconsistente e Erros de Produção
+-- ADR-029: Correcao de Schema Inconsistente e Erros de Producao
 -- ================================================================
 
 -- FASE 1: Criar VIEW para anti-replay HMAC (aponta para tabela correta)
--- A tabela hmac_signatures tem schema de configuração (secrets)
+-- A tabela hmac_signatures tem schema de configuracao (secrets)
 -- A tabela hmac_signatures_partitioned tem schema de anti-replay (id, signature, used_at)
--- Solução: Criar view com nome que o código espera
+-- Solucao: Criar view com nome que o codigo espera
 
--- Renomear tabela atual para indicar seu propósito real
+-- Renomear tabela atual para indicar seu proposito real
 ALTER TABLE IF EXISTS hmac_signatures RENAME TO hmac_agent_secrets;
 
--- Renomear tabela partitioned para ser a principal (usada pelo código)
+-- Renomear tabela partitioned para ser a principal (usada pelo codigo)
 ALTER TABLE IF EXISTS hmac_signatures_partitioned RENAME TO hmac_signatures;
 
--- Criar índice para performance de replay detection
+-- Criar indice para performance de replay detection
 CREATE INDEX IF NOT EXISTS idx_hmac_signatures_signature ON hmac_signatures(signature);
 CREATE INDEX IF NOT EXISTS idx_hmac_signatures_used_at ON hmac_signatures(used_at);
 

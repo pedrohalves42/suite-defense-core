@@ -1,5 +1,5 @@
 /**
- * flush-event-buffer — Batch processor for the event ingestion buffer.
+ * flush-event-buffer ? Batch processor for the event ingestion buffer.
  * 
  * ARCHITECTURE: Reads unprocessed events from `endpoint_event_buffer`,
  * distributes them to the correct final tables in bulk, then marks
@@ -21,7 +21,7 @@ const BATCH_SIZE = 5000;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-// ── Threat Intel Cache (refreshed per invocation) ──
+// ?? Threat Intel Cache (refreshed per invocation) ??
 interface ThreatIndicator {
   indicator_value: string;
   indicator_type: string;
@@ -64,7 +64,7 @@ async function loadThreatIntel(supabase: Record<string, unknown>): Promise<{
   return { ips, hashes, domains };
 }
 
-// ── Behavioral Anomaly Detection ──
+// ?? Behavioral Anomaly Detection ??
 interface BaselineData {
   mean_value: number;
   std_deviation: number;
@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    // ── Step 1: Claim batch ──
+    // ?? Step 1: Claim batch ??
     const { data: claimedCount, error: claimError } = await supabase.rpc('claim_event_buffer_batch', {
       p_batch_id: batchId,
       p_limit: BATCH_SIZE,
@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── Step 2: Fetch claimed rows ──
+    // ?? Step 2: Fetch claimed rows ??
     const { data: rows, error: fetchError } = await supabase
       .from('endpoint_event_buffer')
       .select('id, tenant_id, agent_id, event_category, payload')
@@ -148,13 +148,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── Step 2.5: Load Threat Intel & Baselines in parallel ──
+    // ?? Step 2.5: Load Threat Intel & Baselines in parallel ??
     const [threatIntel, baselines] = await Promise.all([
       loadThreatIntel(supabase),
       loadBaselines(supabase),
     ]);
 
-    // ── Step 3: Group by category & enrich ──
+    // ?? Step 3: Group by category & enrich ??
     const processEvents: Array<Record<string, unknown>> = [];
     const fileEvents: Array<Record<string, unknown>> = [];
     const networkEvents: Array<Record<string, unknown>> = [];
@@ -257,7 +257,7 @@ Deno.serve(async (req) => {
           registryEvents.push({
             tenant_id: row.tenant_id,
             agent_id: row.agent_id,
-            // Normalize registry_snapshot → registry_value_set for storage
+            // Normalize registry_snapshot ? registry_value_set for storage
             event_type: (payload.event_type === 'registry_snapshot') ? 'registry_value_set' : payload.event_type,
             key_path: payload.key_path,
             value_name: payload.value_name,
@@ -278,7 +278,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── Step 3.5: Behavioral anomaly checks ──
+    // ?? Step 3.5: Behavioral anomaly checks ??
     for (const [agentId, count] of agentNetworkCounts) {
       const baseline = baselines.get(`${agentId}:network_connections`);
       if (baseline && isAnomaly(count, baseline)) {
@@ -290,8 +290,8 @@ Deno.serve(async (req) => {
             agent_id: agentId,
             alert_type: 'behavioral_anomaly',
             severity: 'high',
-            title: '[Auto] Anomalia comportamental: Conexões de rede',
-            message: `Agente com ${count} conexões de rede neste ciclo (baseline: ${baseline.mean_value.toFixed(0)} ± ${baseline.std_deviation.toFixed(0)})`,
+            title: '[Auto] Anomalia comportamental: Conexoes de rede',
+            message: `Agente com ${count} conexoes de rede neste ciclo (baseline: ${baseline.mean_value.toFixed(0)} ? ${baseline.std_deviation.toFixed(0)})`,
             details: {
               baseline_mean: baseline.mean_value,
               baseline_std: baseline.std_deviation,
@@ -315,7 +315,7 @@ Deno.serve(async (req) => {
             alert_type: 'behavioral_anomaly',
             severity: 'medium',
             title: '[Auto] Anomalia comportamental: Eventos de processo',
-            message: `Agente com ${count} eventos de processo neste ciclo (baseline: ${baseline.mean_value.toFixed(0)} ± ${baseline.std_deviation.toFixed(0)})`,
+            message: `Agente com ${count} eventos de processo neste ciclo (baseline: ${baseline.mean_value.toFixed(0)} ? ${baseline.std_deviation.toFixed(0)})`,
             details: {
               baseline_mean: baseline.mean_value,
               baseline_std: baseline.std_deviation,
@@ -327,7 +327,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── Step 4: Batch insert into final tables in parallel ──
+    // ?? Step 4: Batch insert into final tables in parallel ??
     const insertPromises: Promise<{ table: string; count: number; error?: string }>[] = [];
 
     if (processEvents.length > 0) {
@@ -399,7 +399,7 @@ Deno.serve(async (req) => {
           .in('id', successIds);
       }
     } else {
-      // ── Step 5: Mark ALL rows as processed ──
+      // ?? Step 5: Mark ALL rows as processed ??
       const CHUNK = 500;
       const markPromises: Promise<any>[] = [];
       for (let i = 0; i < processedIds.length; i += CHUNK) {

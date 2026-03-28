@@ -1,6 +1,6 @@
 -- =============================================================================
--- ATUALIZAR get_audit_raw_metrics COM NOVAS MÉTRICAS DO PLANO DE CHOQUE
--- Precisa dropar primeiro porque ordem dos parâmetros é diferente
+-- ATUALIZAR get_audit_raw_metrics COM NOVAS METRICAS DO PLANO DE CHOQUE
+-- Precisa dropar primeiro porque ordem dos parametros e diferente
 -- =============================================================================
 
 DROP FUNCTION IF EXISTS public.get_audit_raw_metrics(uuid, uuid);

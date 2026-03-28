@@ -1,4 +1,4 @@
--- Atualizar constraint para incluir novos tipos de decisão
+-- Atualizar constraint para incluir novos tipos de decisao
 ALTER TABLE decision_events DROP CONSTRAINT IF EXISTS decision_events_decision_type_check;
 
 ALTER TABLE decision_events ADD CONSTRAINT decision_events_decision_type_check 

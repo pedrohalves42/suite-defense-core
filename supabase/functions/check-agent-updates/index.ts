@@ -12,8 +12,8 @@ import { logger } from '../_shared/logger.ts';
  * Retorna versao latest baseada no platform do agente
  * 
  * Integrado com Hexagonal Architecture:
- * - Usa normalizeVersion para comparação consistente de versões
- * - Compara versão do agente com latest antes de retornar has_update
+ * - Usa normalizeVersion para comparacao consistente de versoes
+ * - Compara versao do agente com latest antes de retornar has_update
  */
 
 Deno.serve(async (req) => {
@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 6. Comparar versão via normalizeVersion (hexagonal)
+    // 6. Comparar versao via normalizeVersion (hexagonal)
     const currentNorm = normalizeVersion(agent.agent_version);
     const latestNorm = normalizeVersion(latestRelease.version);
     const hasUpdate = currentNorm !== latestNorm;

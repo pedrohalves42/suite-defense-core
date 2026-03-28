@@ -98,7 +98,7 @@ BEGIN
       policy_count,
       error_messages;
   ELSE
-    RAISE NOTICE E'\n=== SECURITY GATE PASSED ===\n✓ No dangerous public policies found\n✓ Secure views exist (agents_public, invites_safe)\n✓ ADR-023 compliance verified';
+    RAISE NOTICE E'\n=== SECURITY GATE PASSED ===\n? No dangerous public policies found\n? Secure views exist (agents_public, invites_safe)\n? ADR-023 compliance verified';
   END IF;
 END;
 $$;

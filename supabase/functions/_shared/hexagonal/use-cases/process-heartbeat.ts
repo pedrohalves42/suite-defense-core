@@ -44,7 +44,7 @@ interface SupabaseClient {
 
 /**
  * Processes a heartbeat from an agent.
- * Pure use case logic — authentication is handled by the Edge Function handler.
+ * Pure use case logic ? authentication is handled by the Edge Function handler.
  */
 export class ProcessHeartbeatUseCase {
   constructor(private readonly supabase: SupabaseClient) {}

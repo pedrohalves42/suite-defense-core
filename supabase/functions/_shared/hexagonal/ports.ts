@@ -9,7 +9,7 @@ import type {
   DomainEvent,
 } from './types.ts';
 
-// ─── Version Info (simplified domain read model) ────────
+// ??? Version Info (simplified domain read model) ????????
 export interface LatestVersionInfo {
   platform: Platform;
   version: string;
@@ -24,7 +24,7 @@ export interface OutdatedAgentInfo {
   platform: Platform;
 }
 
-// ─── Output Ports ───────────────────────────────────────
+// ??? Output Ports ???????????????????????????????????????
 
 /**
  * Port: Retrieves latest version information per platform.

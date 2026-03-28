@@ -1,8 +1,8 @@
 -- ============================================
--- Recriar views críticas com security_invoker=on
+-- Recriar views criticas com security_invoker=on
 -- ============================================
 
--- 1. agents_health_view - View de saúde dos agentes
+-- 1. agents_health_view - View de saude dos agentes
 DROP VIEW IF EXISTS public.agents_health_view;
 CREATE VIEW public.agents_health_view
 WITH (security_invoker = on)
@@ -76,7 +76,7 @@ WHERE ek.tenant_id IN (
   SELECT ur.tenant_id FROM user_roles ur WHERE ur.user_id = auth.uid()
 );
 
--- Comentários de documentação
-COMMENT ON VIEW public.agents_health_view IS 'View segura de saúde dos agentes - security_invoker=on garante isolamento por tenant';
+-- Comentarios de documentacao
+COMMENT ON VIEW public.agents_health_view IS 'View segura de saude dos agentes - security_invoker=on garante isolamento por tenant';
 COMMENT ON VIEW public.agents_safe IS 'View segura de agentes sem hmac_secret - security_invoker=on garante isolamento por tenant';
 COMMENT ON VIEW public.enrollment_keys_safe IS 'View segura com chaves mascaradas - security_invoker=on garante isolamento por tenant';

@@ -1,10 +1,10 @@
 
 -- ============================================================
 -- COST-OPT v7: Reduce edge function invocations by ~85%
--- Main target: flush-event-buffer (10s → 60s) = -7,776 inv/day
+-- Main target: flush-event-buffer (10s ? 60s) = -7,776 inv/day
 -- ============================================================
 
--- 1. FLUSH-EVENT-BUFFER: 10s → 60s (saves ~7,776 invocations/day)
+-- 1. FLUSH-EVENT-BUFFER: 10s ? 60s (saves ~7,776 invocations/day)
 SELECT cron.unschedule('flush-event-buffer-every-10s');
 
 SELECT cron.schedule(
@@ -22,7 +22,7 @@ SELECT cron.schedule(
   $$
 );
 
--- 2. HOURLY → EVERY 6H
+-- 2. HOURLY ? EVERY 6H
 
 SELECT cron.unschedule('scheduled-compliance-refresh-hourly');
 SELECT cron.schedule(
@@ -120,7 +120,7 @@ SELECT cron.schedule(
   $$
 );
 
--- 3. EVERY 2H → EVERY 6H or DAILY
+-- 3. EVERY 2H ? EVERY 6H or DAILY
 
 SELECT cron.unschedule('cleanup-stale-reports-hourly');
 SELECT cron.schedule(
@@ -218,7 +218,7 @@ SELECT cron.schedule(
   $$
 );
 
--- 4. process-scheduled-jobs: 15min → 2h
+-- 4. process-scheduled-jobs: 15min ? 2h
 SELECT cron.unschedule('process-scheduled-jobs');
 SELECT cron.schedule(
   'process-scheduled-jobs-2h',

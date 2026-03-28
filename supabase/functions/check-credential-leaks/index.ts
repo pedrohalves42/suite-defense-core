@@ -101,11 +101,11 @@ serveTenant(async (req, ctx) => {
     if (LOVABLE_API_KEY && agents?.length) {
       const prompt = `Analise os riscos de identidade e credenciais deste ambiente corporativo.
 Endpoints monitorados: ${agents.length}
-Domínios monitorados: ${monitors?.map(m => m.email_domain).join(', ') || 'Nenhum'}
+Dominios monitorados: ${monitors?.map(m => m.email_domain).join(', ') || 'Nenhum'}
 Senhas comprometidas encontradas: ${results.passwords_compromised}
 Vazamentos de dados encontrados: ${results.leaks_found}
 Alertas recentes: ${JSON.stringify(recentAlerts?.slice(0, 5) || [])}
-Forneça: Score de risco (0-100), Top 3 riscos, Recomendações prioritárias, Status MFA.`;
+Forneca: Score de risco (0-100), Top 3 riscos, Recomendacoes prioritarias, Status MFA.`;
 
       const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
@@ -113,7 +113,7 @@ Forneça: Score de risco (0-100), Top 3 riscos, Recomendações prioritárias, S
         body: JSON.stringify({
           model: 'google/gemini-2.5-flash-lite',
           messages: [
-            { role: 'system', content: 'Você é um analista de segurança especializado em Identity Security.' },
+            { role: 'system', content: 'Voce e um analista de seguranca especializado em Identity Security.' },
             { role: 'user', content: prompt },
           ],
         }),
@@ -122,14 +122,14 @@ Forneça: Score de risco (0-100), Top 3 riscos, Recomendações prioritárias, S
         const aiData = await aiResp.json();
         results.ai_analysis = aiData.choices?.[0]?.message?.content || '';
       } else if (aiResp.status === 429) {
-        results.ai_analysis = 'Análise IA temporariamente indisponível (rate limit).';
+        results.ai_analysis = 'Analise IA temporariamente indisponivel (rate limit).';
       } else if (aiResp.status === 402) {
-        results.ai_analysis = 'Créditos de IA insuficientes.';
+        results.ai_analysis = 'Creditos de IA insuficientes.';
       }
     }
   } catch (e) {
     logger.error('AI identity analysis failed:', e);
-    results.ai_analysis = 'Análise IA indisponível no momento.';
+    results.ai_analysis = 'Analise IA indisponivel no momento.';
   }
 
   return results;

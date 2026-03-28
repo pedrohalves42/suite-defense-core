@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
 
   try {
     const [rotationResult, keysResult] = await Promise.allSettled([
-      // ── 1. Credential Rotation Check ──
+      // ?? 1. Credential Rotation Check ??
       (async () => {
         // Find agent tokens older than rotation policy (default 90 days)
         const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
         }
       })(),
 
-      // ── 2. Expiring Enrollment Keys ──
+      // ?? 2. Expiring Enrollment Keys ??
       (async () => {
         const oneHourFromNow = new Date(Date.now() + 60 * 60 * 1000).toISOString();
         const now = new Date().toISOString();

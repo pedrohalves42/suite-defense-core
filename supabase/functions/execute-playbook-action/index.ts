@@ -41,7 +41,7 @@ serveTenant(async (req, ctx) => {
 
   logger.info(`[execute-playbook-action] Executing ${execution_id}, action_index: ${action_index}`);
 
-  // ✅ V-11007: Role check — user must be admin/super_admin/operator in this tenant
+  // [OK]  V-11007: Role check ? user must be admin/super_admin/operator in this tenant
   const { data: userRole } = await supabase
     .from('user_roles')
     .select('role, tenant_id')
@@ -74,7 +74,7 @@ serveTenant(async (req, ctx) => {
       });
     }
 
-    // Verificar se execução já foi finalizada
+    // Verificar se execucao ja foi finalizada
     if (['completed', 'failed', 'cancelled', 'ignored'].includes(execution.status)) {
       return new Response(JSON.stringify({ 
         error: 'Execution already finalized',
@@ -87,7 +87,7 @@ serveTenant(async (req, ctx) => {
 
     // V-11007: Tenant access already validated above (moved before execution fetch)
 
-    // ✅ ENTERPRISE: Usar ações do SNAPSHOT IMUTÁVEL (não do playbook atual)
+    // [OK]  ENTERPRISE: Usar acoes do SNAPSHOT IMUTAVEL (nao do playbook atual)
     const actionsSnapshot = execution.actions_snapshot as PlaybookAction[] || [];
     const playbookSnapshot = execution.playbook_snapshot as Record<string, unknown> || {};
 
@@ -98,7 +98,7 @@ serveTenant(async (req, ctx) => {
       });
     }
 
-    // ✅ AJUSTE 3: Enforcement de execution_mode - bloquear ações destrutivas em modo assistivo
+    // [OK]  AJUSTE 3: Enforcement de execution_mode - bloquear acoes destrutivas em modo assistivo
     const executionMode = (playbookSnapshot.execution_mode as string) || 'assistive';
     const DESTRUCTIVE_ACTIONS = [
       'isolate_agent', 'isolate', 
@@ -110,7 +110,7 @@ serveTenant(async (req, ctx) => {
       'revoke_token'
     ];
 
-    // ✅ SEMI_AUTOMATIC MODE: Verificar se há approval_request aprovado antes de executar
+    // [OK]  SEMI_AUTOMATIC MODE: Verificar se ha approval_request aprovado antes de executar
     if (executionMode === 'semi_automatic') {
       const { data: approvalRequest, error: approvalError } = await supabase
         .from('approval_requests')
@@ -217,7 +217,7 @@ serveTenant(async (req, ctx) => {
       })
       .eq('id', execution_id);
 
-    // Determinar quais ações executar (já ordenadas no snapshot)
+    // Determinar quais acoes executar (ja ordenadas no snapshot)
     const actionsToExecute = action_index !== undefined 
       ? [actionsSnapshot[action_index]] 
       : actionsSnapshot;
@@ -234,7 +234,7 @@ serveTenant(async (req, ctx) => {
 
     const evidenceIds: string[] = execution.evidence_ids || [];
 
-    // Executar cada ação do SNAPSHOT
+    // Executar cada acao do SNAPSHOT
     for (const action of actionsToExecute) {
       if (!action) continue;
 
@@ -258,7 +258,7 @@ serveTenant(async (req, ctx) => {
           executed_at: new Date().toISOString(),
         });
 
-        // Se gerou evidência, adicionar ao array
+        // Se gerou evidencia, adicionar ao array
         if (result?.evidence_id) {
           evidenceIds.push(result.evidence_id as string);
         }
@@ -284,7 +284,7 @@ serveTenant(async (req, ctx) => {
       ? (anyFailed ? 'failed' : 'completed')
       : 'in_progress';
 
-    // Atualizar execução
+    // Atualizar execucao
     await supabase
       .from('playbook_executions')
       .update({
@@ -295,7 +295,7 @@ serveTenant(async (req, ctx) => {
       })
       .eq('id', execution_id);
 
-    // ✅ ENTERPRISE: Criar audit log com referência ao snapshot
+    // [OK]  ENTERPRISE: Criar audit log com referencia ao snapshot
     await supabase.from('audit_logs').insert({
       user_id: userId,
       tenant_id: execution.tenant_id,
@@ -343,7 +343,7 @@ async function executeAction(
 
   switch (action.action_type) {
     case 'notify': {
-      // Inserir na fila de notificações
+      // Inserir na fila de notificacoes
       const { data: notification } = await supabase
         .from('notification_queue')
         .insert({
@@ -351,7 +351,7 @@ async function executeAction(
           channel: (payload.channels as string[])?.[0] || 'email',
           recipient_type: 'admin',
           subject: `[CyberShield] Playbook: ${action.label}`,
-          message: action.description || 'Ação de playbook executada',
+          message: action.description || 'Acao de playbook executada',
           priority: 'high',
           metadata: {
             playbook_execution_id: execution.id,
@@ -412,7 +412,7 @@ async function executeAction(
     }
 
     case 'generate_report': {
-      // Criar entrada de evidência
+      // Criar entrada de evidencia
       const { data: evidence } = await supabase
         .from('agent_evidence_logs')
         .insert({
@@ -490,7 +490,7 @@ async function executeAction(
         .eq('agent_id', agentId)
         .eq('is_active', true);
 
-      // Log de segurança
+      // Log de seguranca
       await supabase.from('security_logs').insert({
         tenant_id: tenantId,
         ip_address: 'system',
@@ -519,7 +519,7 @@ async function executeAction(
           agent_id: agentId,
           alert_type: 'playbook_escalation',
           severity: 'high',
-          message: `Escalação de playbook: ${action.label}`,
+          message: `Escalacao de playbook: ${action.label}`,
           details: {
             playbook_execution_id: execution.id,
             playbook_version: playbookSnapshot.version,
@@ -559,7 +559,7 @@ async function executeAction(
         throw new Error('Agent ID required for kill_process action');
       }
 
-      // Verificar status do agente (warn se offline, mas não bloquear)
+      // Verificar status do agente (warn se offline, mas nao bloquear)
       const { data: agent } = await supabase
         .from('agents')
         .select('agent_name, status, last_heartbeat')
@@ -584,7 +584,7 @@ async function executeAction(
                           (payload.process_name as string) || 
                           'unknown';
 
-      // Usar função centralizada de proteção
+      // Usar funcao centralizada de protecao
       if (isProcessProtected(processName)) {
         throw new Error(`Protected process cannot be killed: ${processName}`);
       }
@@ -658,7 +658,7 @@ async function executeAction(
                           (payload.service_name as string) || 
                           'unknown';
 
-      // Usar função centralizada de proteção
+      // Usar funcao centralizada de protecao
       if (isServiceProtected(serviceName)) {
         throw new Error(`Protected service cannot be stopped: ${serviceName}`);
       }
@@ -730,7 +730,7 @@ async function executeAction(
                           (payload.service_name as string) || 
                           'unknown';
 
-      // Usar função centralizada de proteção
+      // Usar funcao centralizada de protecao
       if (isServiceProtected(serviceName)) {
         throw new Error(`Protected service cannot be disabled: ${serviceName}`);
       }
@@ -802,8 +802,8 @@ async function executeAction(
                           (payload.service_name as string) || 
                           'CyberShieldAgent';
 
-      // Restart service NÃO valida proteção - usado para reiniciar o próprio agente
-      // Apenas log de warning para serviços críticos
+      // Restart service NAO valida protecao - usado para reiniciar o proprio agente
+      // Apenas log de warning para servicos criticos
       if (isServiceProtected(serviceName)) {
         logger.warn(`[execute-playbook-action] Warning: restarting protected service ${serviceName}`);
       }

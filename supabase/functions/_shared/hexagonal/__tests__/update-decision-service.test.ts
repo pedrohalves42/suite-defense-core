@@ -8,7 +8,7 @@ import {
   type ReleaseInfo,
 } from '../update-decision-service.ts';
 
-// ─── normalizeVersion ───────────────────────────────────
+// ??? normalizeVersion ???????????????????????????????????
 Deno.test('normalizeVersion strips v prefix', () => {
   assertEquals(normalizeVersion('v5.0.3'), '5.0.3');
 });
@@ -29,7 +29,7 @@ Deno.test('normalizeVersion strips v prefix and suffix together', () => {
   assertEquals(normalizeVersion('v5.0.3-beta.1'), '5.0.3');
 });
 
-// ─── normalizeForWindows ────────────────────────────────
+// ??? normalizeForWindows ????????????????????????????????
 Deno.test('normalizeForWindows converts LF to CRLF', () => {
   assertEquals(normalizeForWindows('a\nb\nc'), 'a\r\nb\r\nc');
 });
@@ -42,7 +42,7 @@ Deno.test('normalizeForWindows converts mixed line endings', () => {
   assertEquals(normalizeForWindows('a\r\nb\nc\rd'), 'a\r\nb\r\nc\r\nd');
 });
 
-// ─── calculateSha256 ────────────────────────────────────
+// ??? calculateSha256 ????????????????????????????????????
 Deno.test('calculateSha256 returns 64-char hex string', async () => {
   const hash = await calculateSha256('hello world');
   assertEquals(hash.length, 64);
@@ -61,7 +61,7 @@ Deno.test('calculateSha256 differs for different content', async () => {
   assertNotEquals(h1, h2);
 });
 
-// ─── UpdateDecisionService ──────────────────────────────
+// ??? UpdateDecisionService ??????????????????????????????
 const service = new UpdateDecisionService();
 
 function makeAgent(overrides: Partial<AgentUpdateContext> = {}): AgentUpdateContext {

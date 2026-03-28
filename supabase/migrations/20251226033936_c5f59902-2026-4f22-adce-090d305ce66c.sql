@@ -1,18 +1,18 @@
 -- =============================================
--- FASE 1 + FASE 2: Sistema de Ação Automática com Motor de Risco
+-- FASE 1 + FASE 2: Sistema de Acao Automatica com Motor de Risco
 -- =============================================
 
--- 🔴 CORREÇÃO CRÍTICA DE SEGURANÇA
--- Playbook "DNS bloqueou" tem ação destrutiva (isolate), deve requerer aprovação
+-- ? CORRECAO CRITICA DE SEGURANCA
+-- Playbook "DNS bloqueou" tem acao destrutiva (isolate), deve requerer aprovacao
 UPDATE playbooks 
 SET require_approval = true, updated_at = NOW()
 WHERE id = 'a2000000-0000-0000-0000-000000000002';
 
 -- =============================================
--- FASE 1.1: Auto-Execução Segura de Playbooks
+-- FASE 1.1: Auto-Execucao Segura de Playbooks
 -- =============================================
 
--- Garantir require_approval = true para TODOS playbooks com ações destrutivas
+-- Garantir require_approval = true para TODOS playbooks com acoes destrutivas
 UPDATE playbooks p
 SET require_approval = true, updated_at = NOW()
 WHERE p.id IN (
@@ -23,7 +23,7 @@ WHERE p.id IN (
 )
 AND require_approval = false;
 
--- Auto-execução APENAS para playbooks com TODAS as ações não-destrutivas
+-- Auto-execucao APENAS para playbooks com TODAS as acoes nao-destrutivas
 UPDATE playbooks p
 SET require_approval = false, updated_at = NOW()
 WHERE p.id IN (
@@ -36,7 +36,7 @@ WHERE p.id IN (
 AND p.is_enabled = true;
 
 -- =============================================
--- FASE 1.2: Colunas para Rastreio de Auto-Execução
+-- FASE 1.2: Colunas para Rastreio de Auto-Execucao
 -- =============================================
 
 ALTER TABLE playbook_executions 
@@ -44,12 +44,12 @@ ADD COLUMN IF NOT EXISTS auto_executed BOOLEAN DEFAULT false,
 ADD COLUMN IF NOT EXISTS risk_score NUMERIC(4,3),
 ADD COLUMN IF NOT EXISTS triggered_by TEXT DEFAULT 'user';
 
--- Índice para consultas de auditoria
+-- Indice para consultas de auditoria
 CREATE INDEX IF NOT EXISTS idx_playbook_executions_auto_executed 
 ON playbook_executions(auto_executed) WHERE auto_executed = true;
 
 -- =============================================
--- FASE 1.2: Função should_auto_quarantine
+-- FASE 1.2: Funcao should_auto_quarantine
 -- =============================================
 
 CREATE OR REPLACE FUNCTION should_auto_quarantine(
@@ -62,7 +62,7 @@ AS $$
 DECLARE
   v_enabled BOOLEAN;
 BEGIN
-  -- Buscar configuração do tenant
+  -- Buscar configuracao do tenant
   SELECT enable_auto_quarantine INTO v_enabled
   FROM tenant_settings
   WHERE tenant_id = p_tenant_id;
@@ -71,7 +71,7 @@ BEGIN
     RETURN false;
   END IF;
 
-  -- Critérios para auto-quarentena
+  -- Criterios para auto-quarentena
   IF (p_context->>'threat_level')::INT >= 8 THEN
     RETURN true;
   END IF;
@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS event_risk_scoring (
 -- RLS para event_risk_scoring
 ALTER TABLE event_risk_scoring ENABLE ROW LEVEL SECURITY;
 
--- Políticas RLS
+-- Politicas RLS
 CREATE POLICY "Admins can view event_risk_scoring" ON event_risk_scoring
   FOR SELECT USING (
     EXISTS (
@@ -123,17 +123,17 @@ CREATE POLICY "Service role full access to event_risk_scoring" ON event_risk_sco
 -- Dados iniciais de scoring
 INSERT INTO event_risk_scoring (event_type, severity_base, auto_action_threshold, description)
 VALUES
-  ('agent_offline', 0.4, 0.9, 'Agente offline por período prolongado'),
-  ('dns_blocked', 0.6, 0.85, 'Múltiplas tentativas de DNS bloqueado'),
-  ('job_failed', 0.5, 0.8, 'Job crítico falhou repetidamente'),
+  ('agent_offline', 0.4, 0.9, 'Agente offline por periodo prolongado'),
+  ('dns_blocked', 0.6, 0.85, 'Multiplas tentativas de DNS bloqueado'),
+  ('job_failed', 0.5, 0.8, 'Job critico falhou repetidamente'),
   ('integrity_low', 0.7, 0.75, 'Integridade do agente comprometida'),
-  ('malware_detected', 0.9, 0.7, 'Malware detectado por antivírus'),
+  ('malware_detected', 0.9, 0.7, 'Malware detectado por antivirus'),
   ('suspicious_process', 0.8, 0.75, 'Processo suspeito detectado'),
-  ('unauthorized_service', 0.7, 0.8, 'Serviço não autorizado')
+  ('unauthorized_service', 0.7, 0.8, 'Servico nao autorizado')
 ON CONFLICT (event_type) DO NOTHING;
 
 -- =============================================
--- FASE 2: Função calculate_event_risk
+-- FASE 2: Funcao calculate_event_risk
 -- =============================================
 
 CREATE OR REPLACE FUNCTION calculate_event_risk(
@@ -147,18 +147,18 @@ DECLARE
   v_base NUMERIC;
   v_score NUMERIC;
 BEGIN
-  -- Buscar configuração do evento
+  -- Buscar configuracao do evento
   SELECT severity_base INTO v_base
   FROM event_risk_scoring
   WHERE event_type = p_event_type AND is_active = true;
 
   IF v_base IS NULL THEN
-    RETURN 0.5; -- Default médio para eventos desconhecidos
+    RETURN 0.5; -- Default medio para eventos desconhecidos
   END IF;
 
   v_score := v_base;
 
-  -- Multiplicador: repetição
+  -- Multiplicador: repeticao
   IF (p_context->>'repeat_count') IS NOT NULL THEN
     v_score := v_score + LEAST((p_context->>'repeat_count')::NUMERIC * 0.03, 0.2);
   END IF;
@@ -170,12 +170,12 @@ BEGIN
     v_score := v_score + 0.15;
   END IF;
 
-  -- Multiplicador: horário fora do expediente
+  -- Multiplicador: horario fora do expediente
   IF p_context->>'outside_business_hours' = 'true' THEN
     v_score := v_score + 0.05;
   END IF;
 
-  -- Multiplicador: histórico de incidentes
+  -- Multiplicador: historico de incidentes
   IF (p_context->>'previous_incidents')::INT > 0 THEN
     v_score := v_score + LEAST((p_context->>'previous_incidents')::NUMERIC * 0.02, 0.1);
   END IF;
@@ -185,7 +185,7 @@ END;
 $$;
 
 -- =============================================
--- FASE 2: Função should_auto_execute_playbook
+-- FASE 2: Funcao should_auto_execute_playbook
 -- =============================================
 
 CREATE OR REPLACE FUNCTION should_auto_execute_playbook(
@@ -215,22 +215,22 @@ BEGIN
     v_threshold := 0.8; -- Default conservador
   END IF;
   
-  -- Verificar se playbook tem ações destrutivas
+  -- Verificar se playbook tem acoes destrutivas
   SELECT EXISTS(
     SELECT 1 FROM playbook_actions
     WHERE playbook_id = p_playbook_id
     AND action_type IN ('isolate', 'kill_process', 'stop_service', 'disable_service', 'revoke_token', 'quarantine', 'network_isolate')
   ) INTO v_has_destructive_actions;
   
-  -- Verificar configuração do playbook
+  -- Verificar configuracao do playbook
   SELECT require_approval, is_enabled 
   INTO v_require_approval, v_is_enabled
   FROM playbooks WHERE id = p_playbook_id;
   
-  -- Decisão final: auto-execute se:
-  -- 1. Playbook está ativo
-  -- 2. Não tem ações destrutivas
-  -- 3. Não requer aprovação
+  -- Decisao final: auto-execute se:
+  -- 1. Playbook esta ativo
+  -- 2. Nao tem acoes destrutivas
+  -- 3. Nao requer aprovacao
   -- 4. Risk score >= threshold
   RETURN jsonb_build_object(
     'risk_score', ROUND(v_risk_score, 3),

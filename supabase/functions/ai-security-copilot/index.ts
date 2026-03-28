@@ -2,7 +2,7 @@ import { serveTenant } from '../_shared/serve-tenant.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 
-const SYSTEM_PROMPT = `You are CyberShield Security Copilot — an expert cybersecurity analyst assistant embedded in the CyberShield platform.
+const SYSTEM_PROMPT = `You are CyberShield Security Copilot ? an expert cybersecurity analyst assistant embedded in the CyberShield platform.
 
 Your role:
 - Analyze security alerts, vulnerabilities, and agent health data
@@ -18,7 +18,7 @@ Guidelines:
 - Reference specific agents, vulnerabilities, or alerts when applicable
 - Use markdown formatting for clarity (headers, lists, bold)
 - If you don't have enough data to answer, say so clearly
-- Never fabricate data or metrics — only use what's provided`;
+- Never fabricate data or metrics ? only use what's provided`;
 
 async function getTenantContext(supabase: ReturnType<typeof createClient>, tenantId: string) {
   const [agents, alerts, vulns, insights] = await Promise.all([
@@ -42,11 +42,11 @@ async function getTenantContext(supabase: ReturnType<typeof createClient>, tenan
 ### Agentes (${totalCount} total, ${onlineCount} online)
 ${(agents.data || []).slice(0, 10).map(a => `- ${a.hostname}: ${a.status} | OS: ${a.os_type} | v${a.agent_version} | Health: ${a.health_score ?? 'N/A'}`).join('\n')}
 
-### Alertas Abertos (${(alerts.data || []).length} total, ${criticalAlerts} críticos)
-${(alerts.data || []).slice(0, 10).map(a => `- [${a.severity?.toUpperCase()}] ${a.title} (${a.alert_type}) — ${a.status}`).join('\n') || 'Nenhum alerta aberto'}
+### Alertas Abertos (${(alerts.data || []).length} total, ${criticalAlerts} criticos)
+${(alerts.data || []).slice(0, 10).map(a => `- [${a.severity?.toUpperCase()}] ${a.title} (${a.alert_type}) ? ${a.status}`).join('\n') || 'Nenhum alerta aberto'}
 
 ### Vulnerabilidades Abertas (${(vulns.data || []).length})
-${(vulns.data || []).slice(0, 10).map(v => `- [${v.severity?.toUpperCase()}] ${v.cve_id || 'N/A'}: ${v.title} — ${v.affected_software || 'N/A'}`).join('\n') || 'Nenhuma vulnerabilidade aberta'}
+${(vulns.data || []).slice(0, 10).map(v => `- [${v.severity?.toUpperCase()}] ${v.cve_id || 'N/A'}: ${v.title} ? ${v.affected_software || 'N/A'}`).join('\n') || 'Nenhuma vulnerabilidade aberta'}
 
 ### Insights de IA Recentes
 ${(insights.data || []).slice(0, 5).map(i => `- [${i.severity}] ${i.title}: ${i.description?.substring(0, 100)}`).join('\n') || 'Nenhum insight recente'}
@@ -95,7 +95,7 @@ serveTenant(async (req, ctx) => {
       });
     }
     if (response.status === 402) {
-      return new Response(JSON.stringify({ error: 'Créditos de IA esgotados.' }), {
+      return new Response(JSON.stringify({ error: 'Creditos de IA esgotados.' }), {
         status: 402, headers: { 'Content-Type': 'application/json' },
       });
     }

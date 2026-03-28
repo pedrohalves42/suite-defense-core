@@ -19,7 +19,7 @@ ALTER TABLE public.jobs DISABLE TRIGGER trg_prevent_job_payload_modification;
 ALTER TABLE public.failed_jobs_dlq DISABLE TRIGGER trg_audit_dlq_operations;
 ALTER TABLE public.agent_signing_keys DISABLE TRIGGER enforce_signing_key_immutability;
 
--- 2. Truncar partições existentes
+-- 2. Truncar particoes existentes
 TRUNCATE TABLE public.hmac_signatures_2026_02 CASCADE;
 TRUNCATE TABLE public.agent_system_metrics_2025_12 CASCADE;
 TRUNCATE TABLE public.agent_system_metrics_2026_01 CASCADE;

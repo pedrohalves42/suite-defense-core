@@ -1,9 +1,9 @@
 
 -- ============================================
--- MODELO DE SUSPENSÃO AUTOMÁTICA DE TENANTS
+-- MODELO DE SUSPENSAO AUTOMATICA DE TENANTS
 -- ============================================
 
--- 1. Adicionar campos de suspensão na tabela tenants
+-- 1. Adicionar campos de suspensao na tabela tenants
 ALTER TABLE public.tenants 
   ADD COLUMN IF NOT EXISTS suspension_status TEXT NOT NULL DEFAULT 'active' 
     CHECK (suspension_status IN ('active', 'warned', 'suspended', 'pending_deletion')),
@@ -17,7 +17,7 @@ ALTER TABLE public.tenants
 CREATE INDEX IF NOT EXISTS idx_tenants_suspension_status ON public.tenants (suspension_status);
 CREATE INDEX IF NOT EXISTS idx_tenants_last_activity ON public.tenants (last_activity_at) WHERE suspension_status = 'active';
 
--- 2. Tabela de log de eventos de suspensão (auditoria)
+-- 2. Tabela de log de eventos de suspensao (auditoria)
 CREATE TABLE IF NOT EXISTS public.tenant_suspension_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -44,7 +44,7 @@ CREATE POLICY "Super admins can view suspension events"
     )
   );
 
--- 3. Tabela de configuração de suspensão
+-- 3. Tabela de configuracao de suspensao
 CREATE TABLE IF NOT EXISTS public.tenant_suspension_config (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   warning_days INTEGER NOT NULL DEFAULT 45,
@@ -75,7 +75,7 @@ INSERT INTO public.tenant_suspension_config (warning_days, suspension_days, dele
 VALUES (45, 60, 90)
 ON CONFLICT DO NOTHING;
 
--- 4. Função para atualizar last_activity_at automaticamente
+-- 4. Funcao para atualizar last_activity_at automaticamente
 CREATE OR REPLACE FUNCTION public.update_tenant_activity()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -116,7 +116,7 @@ CREATE TRIGGER tr_update_tenant_activity_alerts
   AFTER INSERT ON public.system_alerts
   FOR EACH ROW EXECUTE FUNCTION public.update_tenant_activity();
 
--- 5. RPC para processar suspensão automática (chamada pelo cron)
+-- 5. RPC para processar suspensao automatica (chamada pelo cron)
 CREATE OR REPLACE FUNCTION public.process_tenant_suspensions()
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -158,7 +158,7 @@ BEGIN
 
     INSERT INTO public.tenant_suspension_events (tenant_id, event_type, previous_status, new_status, reason)
     VALUES (v_tenant.id, 'warning_sent', 'active', 'warned', 
-            'Inativo por ' || v_config.warning_days || '+ dias. Última atividade: ' || v_tenant.last_activity_at);
+            'Inativo por ' || v_config.warning_days || '+ dias. Ultima atividade: ' || v_tenant.last_activity_at);
 
     v_warned := v_warned + 1;
   END LOOP;
@@ -175,7 +175,7 @@ BEGIN
     UPDATE public.tenants
     SET suspension_status = 'suspended',
         suspended_at = now(),
-        suspension_reason = 'Inatividade automática (' || v_config.suspension_days || ' dias)'
+        suspension_reason = 'Inatividade automatica (' || v_config.suspension_days || ' dias)'
     WHERE id = v_tenant.id;
 
     INSERT INTO public.tenant_suspension_events (tenant_id, event_type, previous_status, new_status, reason)
@@ -201,7 +201,7 @@ BEGIN
 
     INSERT INTO public.tenant_suspension_events (tenant_id, event_type, previous_status, new_status, reason)
     VALUES (v_tenant.id, 'deletion_scheduled', 'suspended', 'pending_deletion',
-            'Deleção agendada para ' || (now() + INTERVAL '30 days')::TEXT);
+            'Delecao agendada para ' || (now() + INTERVAL '30 days')::TEXT);
 
     v_scheduled := v_scheduled + 1;
   END LOOP;
@@ -277,7 +277,7 @@ BEGIN
 
   -- Log cleanup completion
   INSERT INTO public.tenant_suspension_events (tenant_id, event_type, reason, metadata)
-  VALUES (p_tenant_id, 'cleanup_completed', 'Limpeza de dados concluída', v_deleted);
+  VALUES (p_tenant_id, 'cleanup_completed', 'Limpeza de dados concluida', v_deleted);
 
   RETURN jsonb_build_object(
     'status', 'completed',

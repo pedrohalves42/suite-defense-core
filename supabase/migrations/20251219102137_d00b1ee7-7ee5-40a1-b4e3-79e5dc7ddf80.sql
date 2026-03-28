@@ -2,11 +2,11 @@
 -- 1. TRIGGER: Auto-cancelar jobs de agentes offline (>24h)
 -- ============================================================
 
--- Função para cancelar jobs quando agente fica offline
+-- Funcao para cancelar jobs quando agente fica offline
 CREATE OR REPLACE FUNCTION public.cancel_jobs_on_agent_offline()
 RETURNS trigger AS $$
 BEGIN
-  -- Se heartbeat está NULL ou muito antigo, cancelar jobs pendentes
+  -- Se heartbeat esta NULL ou muito antigo, cancelar jobs pendentes
   IF NEW.last_heartbeat IS NULL OR NEW.last_heartbeat < NOW() - INTERVAL '24 hours' THEN
     UPDATE public.jobs
     SET 
@@ -20,7 +20,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- Criar trigger (drop se existir para idempotência)
+-- Criar trigger (drop se existir para idempotencia)
 DROP TRIGGER IF EXISTS trg_cancel_jobs_offline ON public.agents;
 
 CREATE TRIGGER trg_cancel_jobs_offline
@@ -29,7 +29,7 @@ FOR EACH ROW
 EXECUTE FUNCTION public.cancel_jobs_on_agent_offline();
 
 -- ============================================================
--- 2. FUNÇÃO: Reprocessar jobs com output que não geraram dados
+-- 2. FUNCAO: Reprocessar jobs com output que nao geraram dados
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION public.reprocess_job_outputs(p_hours_back integer DEFAULT 48)
@@ -80,7 +80,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- ============================================================
--- 3. FUNÇÃO: Cleanup dinâmico de HMAC signatures antigas
+-- 3. FUNCAO: Cleanup dinamico de HMAC signatures antigas
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION public.cleanup_old_hmac_signatures()
@@ -115,7 +115,7 @@ WHERE status IN ('queued', 'delivered')
   );
 
 -- ============================================================
--- 5. ÍNDICE: Otimizar queries de jobs por status e agent
+-- 5. INDICE: Otimizar queries de jobs por status e agent
 -- ============================================================
 
 CREATE INDEX IF NOT EXISTS idx_jobs_status_agent_id 

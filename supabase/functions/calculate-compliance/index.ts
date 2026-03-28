@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
 
     logger.info(`[${requestId}] [calc-compliance] Starting for tenant ${tenant_id}`);
 
-    // ─── Gather Metrics ──────────────────────────────────
+    // ??? Gather Metrics ??????????????????????????????????
 
     // 1. Vulnerability Management (weight: 25%)
     const { count: totalAgents } = await supabase
@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
     // Having events = good audit coverage
     const auditScore = (recentEvents || 0) > 0 ? Math.min(100, 70 + (recentEvents || 0)) : 50;
 
-    // ─── Calculate Overall ──────────────────────────────
+    // ??? Calculate Overall ??????????????????????????????
 
     const categories: CategoryScore[] = [
       { category: 'vulnerability_management', score: vulnScore, max_score: 100, weight: 0.25, details: `${criticalVulns || 0} critical, ${highVulns || 0} high vulns` },
@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
     );
     const grade = gradeFromScore(overallScore);
 
-    // ─── Drift Detection ────────────────────────────────
+    // ??? Drift Detection ????????????????????????????????
 
     const { data: previousSnapshot } = await supabase
       .from('compliance_snapshots')
@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ─── Persist Snapshot ───────────────────────────────
+    // ??? Persist Snapshot ???????????????????????????????
 
     const { error: snapshotError } = await supabase
       .from('compliance_snapshots')
@@ -204,7 +204,7 @@ Deno.serve(async (req) => {
       logger.warn(`[${requestId}] [calc-compliance] Snapshot insert error:`, snapshotError.message);
     }
 
-    // ─── Alert on Degradation ───────────────────────────
+    // ??? Alert on Degradation ???????????????????????????
 
     if (hasDrift && trend === 'degrading' && Math.abs(scoreDiff) >= 10) {
       await supabase.from('system_alerts').insert({
@@ -223,7 +223,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ─── Domain Event ───────────────────────────────────
+    // ??? Domain Event ???????????????????????????????????
 
     await supabase.from('domain_events').insert({
       aggregate_id: tenant_id,

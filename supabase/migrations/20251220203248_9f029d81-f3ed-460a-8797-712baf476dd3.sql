@@ -1,7 +1,7 @@
 -- Trigger de imutabilidade para signed_documents
--- Uma vez assinado, documento é IMUTÁVEL
+-- Uma vez assinado, documento e IMUTAVEL
 
--- Função que bloqueia modificação
+-- Funcao que bloqueia modificacao
 CREATE OR REPLACE FUNCTION public.prevent_signed_document_modification()
 RETURNS trigger
 LANGUAGE plpgsql

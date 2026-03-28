@@ -1,5 +1,5 @@
--- CICLO 6: Governança Granular por Tenant
--- Tabela para políticas de ação por insight type
+-- CICLO 6: Governanca Granular por Tenant
+-- Tabela para politicas de acao por insight type
 
 CREATE TABLE tenant_action_policies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -57,7 +57,7 @@ CREATE TRIGGER update_tenant_action_policies_updated_at
   EXECUTE FUNCTION update_svb_updated_at();
 
 -- CICLO 8: Feedback Humano
--- Tabela para feedback dos usuários sobre insights
+-- Tabela para feedback dos usuarios sobre insights
 
 CREATE TABLE ai_insight_feedback (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

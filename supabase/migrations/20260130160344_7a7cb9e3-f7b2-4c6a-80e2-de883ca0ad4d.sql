@@ -1,5 +1,5 @@
--- Fase A: Corrigir Transição de Estado de Jobs (P0 - CRÍTICO)
--- Adiciona a transição pending → delivered que era bloqueada
+-- Fase A: Corrigir Transicao de Estado de Jobs (P0 - CRITICO)
+-- Adiciona a transicao pending ? delivered que era bloqueada
 
 CREATE OR REPLACE FUNCTION public.enforce_job_state_transitions()
 RETURNS TRIGGER AS $$
@@ -87,5 +87,5 @@ BEGIN
 END;
 $$;
 
--- Concede acesso à RPC para usuários autenticados
+-- Concede acesso a RPC para usuarios autenticados
 GRANT EXECUTE ON FUNCTION public.create_jobs_for_all_agents(uuid, text, jsonb) TO authenticated;

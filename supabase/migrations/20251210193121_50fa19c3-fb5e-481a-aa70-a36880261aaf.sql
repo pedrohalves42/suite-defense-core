@@ -15,7 +15,7 @@ CREATE TABLE public.threat_intelligence_cache (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Índices para performance
+-- Indices para performance
 CREATE INDEX idx_tic_target ON threat_intelligence_cache(target, target_type);
 CREATE INDEX idx_tic_tenant ON threat_intelligence_cache(tenant_id);
 CREATE INDEX idx_tic_expires ON threat_intelligence_cache(expires_at);
@@ -34,7 +34,7 @@ TO service_role
 USING (true)
 WITH CHECK (true);
 
--- Fase 3: Tabela de métricas de IA
+-- Fase 3: Tabela de metricas de IA
 CREATE TABLE public.ai_inference_metrics (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   function_name TEXT NOT NULL,
@@ -52,7 +52,7 @@ CREATE TABLE public.ai_inference_metrics (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Índices para queries rápidas
+-- Indices para queries rapidas
 CREATE INDEX idx_ai_metrics_function ON ai_inference_metrics(function_name, created_at DESC);
 CREATE INDEX idx_ai_metrics_tenant ON ai_inference_metrics(tenant_id, created_at DESC);
 CREATE INDEX idx_ai_metrics_success ON ai_inference_metrics(success, created_at DESC);

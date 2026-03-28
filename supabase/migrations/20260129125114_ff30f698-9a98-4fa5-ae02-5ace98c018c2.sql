@@ -1,5 +1,5 @@
--- View para snapshot do agente (fonte única de verdade)
--- Fase 1.1 do plano unificado - Versão corrigida sem diagnostic_issues
+-- View para snapshot do agente (fonte unica de verdade)
+-- Fase 1.1 do plano unificado - Versao corrigida sem diagnostic_issues
 CREATE OR REPLACE VIEW agent_snapshots 
 WITH (security_invoker = on) AS
 SELECT
@@ -16,14 +16,14 @@ SELECT
   a.safe_mode_reason,
   COALESCE(a.is_isolated, false) AS is_isolated,
   COALESCE(a.is_throttled, false) AS is_throttled,
-  0::bigint AS active_issues, -- Placeholder, tabela não existe
+  0::bigint AS active_issues, -- Placeholder, tabela nao existe
   (SELECT COUNT(*) FROM ai_insights ai 
    WHERE ai.agent_id = a.id AND ai.status = 'open') AS unresolved_insights,
   now() AS snapshot_at
 FROM agents a
 WHERE a.tenant_id = get_active_tenant_id() OR is_current_super_admin();
 
--- RPC segura para obter snapshot de um agente específico
+-- RPC segura para obter snapshot de um agente especifico
 CREATE OR REPLACE FUNCTION get_agent_snapshot(p_agent_id uuid)
 RETURNS jsonb
 LANGUAGE sql

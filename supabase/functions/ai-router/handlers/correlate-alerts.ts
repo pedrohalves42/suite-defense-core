@@ -69,7 +69,7 @@ export async function handleCorrelateAlerts(
   const systemPrompt = `Voce e um especialista em Root Cause Analysis (RCA). Analise os alertas e identifique clusters correlacionados.
 Responda APENAS com JSON: [{"cluster_name":"string","related_alerts":["type"],"root_cause":"string","confidence":0-1,"severity":"info"|"warning"|"critical","affected_agents":["name"],"recommendation":"string"}]`;
 
-  const userPrompt = `Alertas para ${tenantName} (últimas ${timeRangeHours}h):
+  const userPrompt = `Alertas para ${tenantName} (ultimas ${timeRangeHours}h):
 Total: ${alerts.length}
 Por tipo:\n${Object.entries(alertsByType).map(([t, c]) => `- ${t}: ${c}`).join('\n')}
 Por agente:\n${Object.entries(alertsByAgent).map(([a, c]) => `- ${a}: ${c}`).join('\n')}

@@ -1,7 +1,7 @@
 
 -- =====================================================
--- SSA-SEC-003: HARDENING DE VIEWS PÚBLICAS E POLÍTICAS
--- Correção das 3 views públicas + política DELETE
+-- SSA-SEC-003: HARDENING DE VIEWS PUBLICAS E POLITICAS
+-- Correcao das 3 views publicas + politica DELETE
 -- =====================================================
 
 -- 1. Recriar agent_releases_public com security_invoker
@@ -20,7 +20,7 @@ SELECT
 FROM public.agent_releases
 WHERE is_active = true;
 
-COMMENT ON VIEW public.agent_releases_public IS 'SSA-SEC-003: View pública de releases com security_invoker. Apenas usuários autenticados. SOC2/ISO27001 compliant.';
+COMMENT ON VIEW public.agent_releases_public IS 'SSA-SEC-003: View publica de releases com security_invoker. Apenas usuarios autenticados. SOC2/ISO27001 compliant.';
 
 REVOKE ALL ON public.agent_releases_public FROM anon, public;
 GRANT SELECT ON public.agent_releases_public TO authenticated, service_role;
@@ -36,7 +36,7 @@ SELECT
   full_name
 FROM public.profiles;
 
-COMMENT ON VIEW public.profiles_public IS 'SSA-SEC-003: View pública de perfis com security_invoker. Apenas usuários autenticados no mesmo tenant. SOC2/ISO27001 compliant.';
+COMMENT ON VIEW public.profiles_public IS 'SSA-SEC-003: View publica de perfis com security_invoker. Apenas usuarios autenticados no mesmo tenant. SOC2/ISO27001 compliant.';
 
 REVOKE ALL ON public.profiles_public FROM anon, public;
 GRANT SELECT ON public.profiles_public TO authenticated, service_role;
@@ -68,17 +68,17 @@ WHERE (
   AND archived_at IS NULL
 );
 
-COMMENT ON VIEW public.agents_public IS 'SSA-SEC-003: View pública de agentes com security_invoker e isolamento de tenant. SOC2/ISO27001 compliant.';
+COMMENT ON VIEW public.agents_public IS 'SSA-SEC-003: View publica de agentes com security_invoker e isolamento de tenant. SOC2/ISO27001 compliant.';
 
 REVOKE ALL ON public.agents_public FROM anon, public;
 GRANT SELECT ON public.agents_public TO authenticated, service_role;
 
--- 4. Adicionar política DELETE em agent_signing_keys
--- Ninguém pode deletar chaves de assinatura (imutabilidade)
+-- 4. Adicionar politica DELETE em agent_signing_keys
+-- Ninguem pode deletar chaves de assinatura (imutabilidade)
 CREATE POLICY "agent_signing_keys_no_delete"
 ON public.agent_signing_keys
 FOR DELETE
 TO authenticated
 USING (false);
 
-COMMENT ON POLICY "agent_signing_keys_no_delete" ON public.agent_signing_keys IS 'SSA-SEC-003: Chaves de assinatura são imutáveis. Deletar é proibido para garantir auditabilidade.';
+COMMENT ON POLICY "agent_signing_keys_no_delete" ON public.agent_signing_keys IS 'SSA-SEC-003: Chaves de assinatura sao imutaveis. Deletar e proibido para garantir auditabilidade.';

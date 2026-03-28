@@ -19,7 +19,7 @@ import { logger } from '../_shared/logger.ts';
  * Score Governance (5 layers):
  * - Layer 1: Weighted Moving Average (50/30/20)
  * - Layer 2: Red Team as Risk Factor (not absolute judge)
- * - Layer 3: Variation Guardrail (±10 max)
+ * - Layer 3: Variation Guardrail (?10 max)
  * - Layer 4: Binary Criteria for threat_level (deterministic)
  * - Layer 5: Market Score (conservative smoothing)
  * 
@@ -35,10 +35,10 @@ const corsHeaders = {
 /**
  * Calculate deterministic base score from metrics (no LLM variance)
  * 
- * REGRA 1: Não penalizar se aiActions.total === 0 (IA ainda não usada)
- * REGRA 2: Só penalizar se HOUVE execução SEM aprovação
- * REGRA 3: Revisão humana só exigida em volume significativo
- * REGRA 4: Rollback = 0 NÃO é penalidade (nunca precisou reverter)
+ * REGRA 1: Nao penalizar se aiActions.total === 0 (IA ainda nao usada)
+ * REGRA 2: So penalizar se HOUVE execucao SEM aprovacao
+ * REGRA 3: Revisao humana so exigida em volume significativo
+ * REGRA 4: Rollback = 0 NAO e penalidade (nunca precisou reverter)
  */
 function calculateDeterministicScore(metrics: Record<string, unknown>): number {
   let score = 70;
@@ -138,11 +138,11 @@ function isRateLimited(error?: string): boolean {
   return error.includes('429') || error.toLowerCase().includes('rate limit');
 }
 
-// ─── Main handler via serveTenant ────────────────────────────────────────────
+// ??? Main handler via serveTenant ????????????????????????????????????????????
 serveTenant(async (req, ctx) => {
   const { supabase: serviceClient, tenantId, userId, isInternal, requestId } = ctx;
 
-  logger.info(`[ai-full-audit] Starting FULL audit v2.3 for tenant ${tenantId} (Red → Ana → Gap) [multi-provider] [requestId: ${requestId}]`);
+  logger.info(`[ai-full-audit] Starting FULL audit v2.3 for tenant ${tenantId} (Red ? Ana ? Gap) [multi-provider] [requestId: ${requestId}]`);
 
   // For user calls, create a user-context client for RPC that needs auth.uid()
   let userClient = serviceClient;
@@ -194,7 +194,7 @@ serveTenant(async (req, ctx) => {
   // Red Team runs WITHOUT Ana summary (anti-bias)
   const redPrompt = redTemplate.content
     .replace('{metrics}', JSON.stringify(metrics, null, 2))
-    .replace('{ana_summary}', 'Nenhuma análise Ana disponível - executando Red Team primeiro para evitar viés otimista.');
+    .replace('{ana_summary}', 'Nenhuma analise Ana disponivel - executando Red Team primeiro para evitar vies otimista.');
 
   // Red Team AI call via multi-provider
   const redMessages: AIMessage[] = [
@@ -224,7 +224,7 @@ serveTenant(async (req, ctx) => {
       await logGovernanceEvent(
         serviceClient, tenantId, null, 'ai_providers_unavailable',
         null, deterministicRedScore, 'deterministic_fallback',
-        'Todos os provedores de IA falharam. Usando análise determinística completa.',
+        'Todos os provedores de IA falharam. Usando analise deterministica completa.',
         { criteria_count: criteriaCount, threat_level: deterministicThreatLevel, deterministic_score: deterministicScore, error: redAiResult.error }
       );
       
@@ -241,8 +241,8 @@ serveTenant(async (req, ctx) => {
           fallback_reason: 'AI_PROVIDERS_UNAVAILABLE',
           binary_criteria: fallbackCriteria,
           governance_applied: ['deterministic_fallback'],
-          executive_summary: `Análise determinística: Score ${deterministicScore}/100 baseado em métricas. ${criteriaCount} critérios de risco identificados. Provedores de IA indisponíveis.`,
-          recommendation: criteriaCount >= 3 ? 'Ação imediata requerida' : criteriaCount >= 2 ? 'Atenção recomendada' : 'Sistema operando normalmente',
+          executive_summary: `Analise deterministica: Score ${deterministicScore}/100 baseado em metricas. ${criteriaCount} criterios de risco identificados. Provedores de IA indisponiveis.`,
+          recommendation: criteriaCount >= 3 ? 'Acao imediata requerida' : criteriaCount >= 2 ? 'Atencao recomendada' : 'Sistema operando normalmente',
           tokens_used: 0,
           warning: 'AI providers unavailable. Deterministic fallback audit based on metrics only.',
         }),
@@ -281,7 +281,7 @@ serveTenant(async (req, ctx) => {
     await logGovernanceEvent(
       serviceClient, tenantId, null, 'red_team_fallback',
       null, 50, 'parse_error',
-      'Red Team JSON parse falhou, usando fallback determinístico',
+      'Red Team JSON parse falhou, usando fallback deterministico',
       { error: (parseError as Error).message, content_length: redContent.length }
     );
   }
@@ -299,7 +299,7 @@ serveTenant(async (req, ctx) => {
     await logGovernanceEvent(
       serviceClient, tenantId, null, 'binary_criteria_fallback',
       null, Object.values(binaryCriteria).filter((v: unknown) => v === true).length,
-      'llm_fallback', 'LLM não retornou binary_criteria completo, usando cálculo determinístico',
+      'llm_fallback', 'LLM nao retornou binary_criteria completo, usando calculo deterministico',
       { original_criteria: redResult.binary_criteria, calculated: binaryCriteria }
     );
   }
@@ -370,14 +370,14 @@ serveTenant(async (req, ctx) => {
 
   // Build Ana prompt with RED TEAM CONTEXT
   const redTeamContext = `
-CONTEXTO RED TEAM (para calibrar sua análise):
-- Red Score: ${redResult.red_score}/100 (quanto maior, mais vulnerável)
+CONTEXTO RED TEAM (para calibrar sua analise):
+- Red Score: ${redResult.red_score}/100 (quanto maior, mais vulneravel)
 - Threat Level: ${redResult.threat_level}
 - Principais vetores de ataque identificados: ${redResult.attack_vectors?.slice(0, 3).map((v: Record<string, unknown>) => v.name).join(', ') || 'nenhum'}
-- Pior cenário: ${redResult.worst_case_scenario || 'não especificado'}
-- Challenge à análise otimista: ${redResult.challenge_to_ana || 'nenhum'}
+- Pior cenario: ${redResult.worst_case_scenario || 'nao especificado'}
+- Challenge a analise otimista: ${redResult.challenge_to_ana || 'nenhum'}
 
-INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciência das ameaças.
+INSTRUCAO: Considere esses riscos ao avaliar. Seu score deve refletir consciencia das ameacas.
 `;
 
   const anaPrompt = anaTemplate.content.replace('{metrics}', JSON.stringify(metrics, null, 2) + '\n\n' + redTeamContext);
@@ -407,7 +407,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
       await logGovernanceEvent(
         serviceClient, tenantId, null, 'ai_unavailable_ana_phase',
         null, deterministicScore, 'deterministic_fallback',
-        'Provedores de IA indisponíveis na fase Ana. Usando resultado determinístico com Red Team já executado.',
+        'Provedores de IA indisponiveis na fase Ana. Usando resultado deterministico com Red Team ja executado.',
         { criteria_count: criteriaCountTrue, red_score: redResult.red_score }
       );
       
@@ -425,8 +425,8 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
           binary_criteria: binaryCriteria,
           red_team_completed: true,
           governance_applied: ['deterministic_fallback', 'red_team_completed'],
-          executive_summary: `Análise parcial: Red Team executado (score ${redResult.red_score}). Ana não executada - provedores indisponíveis. Score determinístico: ${deterministicScore}/100.`,
-          recommendation: criteriaCountTrue >= 3 ? 'Ação imediata requerida' : criteriaCountTrue >= 2 ? 'Atenção recomendada' : 'Sistema operando normalmente',
+          executive_summary: `Analise parcial: Red Team executado (score ${redResult.red_score}). Ana nao executada - provedores indisponiveis. Score deterministico: ${deterministicScore}/100.`,
+          recommendation: criteriaCountTrue >= 3 ? 'Acao imediata requerida' : criteriaCountTrue >= 2 ? 'Atencao recomendada' : 'Sistema operando normalmente',
           tokens_used: redTokens,
           warning: 'AI unavailable during Ana phase. Red Team completed. Check provider configuration.',
         }),
@@ -478,7 +478,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
   await logGovernanceEvent(
     serviceClient, tenantId, null, 'deterministic_base_applied',
     null, deterministicBaseScore, 'fixed_rules',
-    'Base score calculada com regras determinísticas das métricas',
+    'Base score calculada com regras deterministicas das metricas',
     { metrics_used: ['agents', 'ai_actions', 'rollbacks', 'users', 'dlq', 'critical_alerts'] }
   );
   
@@ -488,7 +488,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
   await logGovernanceEvent(
     serviceClient, tenantId, null, 'risk_factor_applied',
     null, redRiskFactor * 100, 'red_team_adjustment',
-    `Red score ${redResult.red_score} → fator ${redRiskFactor.toFixed(3)}`,
+    `Red score ${redResult.red_score} ? fator ${redRiskFactor.toFixed(3)}`,
     { red_score: redResult.red_score, threat_level: redResult.threat_level }
   );
   
@@ -676,10 +676,10 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
 
   if (healthStatus === 'critical') {
     alertTriggered = true;
-    alertReason = `Gap crítico: ${gap} pontos. Risco elevado de compromisso.`;
+    alertReason = `Gap critico: ${gap} pontos. Risco elevado de compromisso.`;
   } else if (gapDelta !== null && gapDelta < -10) {
     alertTriggered = true;
-    alertReason = `Degradação significativa: gap caiu ${Math.abs(gapDelta)} pontos.`;
+    alertReason = `Degradacao significativa: gap caiu ${Math.abs(gapDelta)} pontos.`;
   }
 
   const { data: savedGap, error: gapSaveError } = await serviceClient
@@ -712,7 +712,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     JSON.stringify({
       success: true,
       version: '2.3',
-      execution_order: 'red_team → ana → gap',
+      execution_order: 'red_team ? ana ? gap',
       
       // Phase 1: Red Team
       red_team: {

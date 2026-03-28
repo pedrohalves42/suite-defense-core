@@ -3,7 +3,7 @@
 -- Controle granular de deploy de updates
 -- ========================================
 
--- Tabela de políticas de rollout por plataforma
+-- Tabela de politicas de rollout por plataforma
 CREATE TABLE public.agent_update_policies (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   platform text NOT NULL CHECK (platform IN ('windows', 'linux', 'macos')),
@@ -20,7 +20,7 @@ CREATE TABLE public.agent_update_policies (
 -- Enable RLS
 ALTER TABLE public.agent_update_policies ENABLE ROW LEVEL SECURITY;
 
--- Apenas super_admin pode gerenciar políticas de rollout
+-- Apenas super_admin pode gerenciar politicas de rollout
 CREATE POLICY "super_admin_manage_rollout_policies" ON public.agent_update_policies
   FOR ALL TO authenticated
   USING (public.has_role(auth.uid(), 'super_admin'))
@@ -32,10 +32,10 @@ CREATE TRIGGER update_agent_update_policies_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION public.update_tenant_settings_updated_at();
 
--- Índice para busca por plataforma
+-- Indice para busca por plataforma
 CREATE INDEX idx_agent_update_policies_platform ON public.agent_update_policies(platform);
 
--- Comentário explicativo
-COMMENT ON TABLE public.agent_update_policies IS 'Políticas de rollout gradual para updates de agentes. Permite controle de % de rollout e kill switch por plataforma.';
-COMMENT ON COLUMN public.agent_update_policies.rollout_percentage IS 'Percentual de agentes que receberão o update (0-100). Bucket determinístico via SHA256(agent_id).';
+-- Comentario explicativo
+COMMENT ON TABLE public.agent_update_policies IS 'Politicas de rollout gradual para updates de agentes. Permite controle de % de rollout e kill switch por plataforma.';
+COMMENT ON COLUMN public.agent_update_policies.rollout_percentage IS 'Percentual de agentes que receberao o update (0-100). Bucket deterministico via SHA256(agent_id).';
 COMMENT ON COLUMN public.agent_update_policies.enabled IS 'Kill switch: false = NENHUM agente recebe update, independente do percentual.';

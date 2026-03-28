@@ -1,5 +1,5 @@
 -- =============================================================================
--- ADR-034 FINALIZAÇÃO: Ativar modelo híbrido dirty flag
+-- ADR-034 FINALIZACAO: Ativar modelo hibrido dirty flag
 -- =============================================================================
 
 -- 1. Criar trigger leve para marcar fingerprints como dirty
@@ -22,7 +22,7 @@ AFTER INSERT ON failure_occurrences
 FOR EACH ROW
 EXECUTE FUNCTION mark_fingerprint_slo_dirty();
 
--- 2. Atualizar função de refresh para usar dirty flag (modo híbrido)
+-- 2. Atualizar funcao de refresh para usar dirty flag (modo hibrido)
 CREATE OR REPLACE FUNCTION refresh_all_incident_slos()
 RETURNS integer
 LANGUAGE plpgsql
@@ -33,7 +33,7 @@ DECLARE
   v_fp_id uuid;
   v_count integer := 0;
 BEGIN
-  -- Modo híbrido: só processa fingerprints marcados como dirty
+  -- Modo hibrido: so processa fingerprints marcados como dirty
   FOR v_fp_id IN 
     SELECT id FROM failure_fingerprints 
     WHERE slo_dirty = true
@@ -45,7 +45,7 @@ BEGIN
 END;
 $$;
 
--- 3. Marcar todos os fingerprints ativos como dirty para primeira execução
+-- 3. Marcar todos os fingerprints ativos como dirty para primeira execucao
 UPDATE failure_fingerprints 
 SET slo_dirty = true 
 WHERE is_active = true;

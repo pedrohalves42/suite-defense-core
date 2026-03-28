@@ -2,7 +2,7 @@
 -- P2: Edge Function Latency Metrics + System Operations
 -- ============================================
 
--- 1. Tabela para métricas de latência de Edge Functions
+-- 1. Tabela para metricas de latencia de Edge Functions
 CREATE TABLE IF NOT EXISTS public.edge_function_metrics (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   function_name TEXT NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS public.edge_function_metrics (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Índices para queries de performance
+-- Indices para queries de performance
 CREATE INDEX IF NOT EXISTS idx_efm_function_created 
   ON public.edge_function_metrics(function_name, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_efm_tenant_created 
@@ -25,7 +25,7 @@ CREATE INDEX IF NOT EXISTS idx_efm_tenant_created
 -- RLS
 ALTER TABLE public.edge_function_metrics ENABLE ROW LEVEL SECURITY;
 
--- Super admins podem ver todas as métricas
+-- Super admins podem ver todas as metricas
 CREATE POLICY "super_admins_view_all_efm" ON public.edge_function_metrics
   FOR SELECT USING (is_super_admin(auth.uid()));
 
@@ -33,7 +33,7 @@ CREATE POLICY "super_admins_view_all_efm" ON public.edge_function_metrics
 CREATE POLICY "service_role_insert_efm" ON public.edge_function_metrics
   FOR INSERT WITH CHECK (true);
 
--- 2. View para estatísticas agregadas de Edge Functions
+-- 2. View para estatisticas agregadas de Edge Functions
 CREATE OR REPLACE VIEW public.v_edge_function_stats WITH (security_invoker=on) AS
 SELECT 
   function_name,
@@ -53,7 +53,7 @@ WHERE created_at > now() - interval '24 hours'
 GROUP BY function_name
 ORDER BY total_calls DESC;
 
--- 3. View para jobs órfãos/travados
+-- 3. View para jobs orfaos/travados
 CREATE OR REPLACE VIEW public.v_stuck_jobs_report WITH (security_invoker=on) AS
 SELECT 
   j.id,
@@ -88,11 +88,11 @@ SELECT
   (SELECT COUNT(*) FROM agents WHERE tenant_id = t.id) as total_agents,
   (SELECT COUNT(*) FROM agents WHERE tenant_id = t.id AND last_heartbeat > now() - interval '5 minutes') as online_agents,
   (SELECT COUNT(*) FROM agents WHERE tenant_id = t.id AND (last_heartbeat IS NULL OR last_heartbeat < now() - interval '30 minutes')) as offline_agents,
-  -- Jobs últimas 24h
+  -- Jobs ultimas 24h
   (SELECT COUNT(*) FROM jobs WHERE tenant_id = t.id AND created_at > now() - interval '24 hours') as jobs_24h,
   (SELECT COUNT(*) FROM jobs WHERE tenant_id = t.id AND status = 'completed' AND created_at > now() - interval '24 hours') as jobs_completed_24h,
   (SELECT COUNT(*) FROM jobs WHERE tenant_id = t.id AND status = 'failed' AND created_at > now() - interval '24 hours') as jobs_failed_24h,
-  -- Jobs problemáticos
+  -- Jobs problematicos
   (SELECT COUNT(*) FROM jobs WHERE tenant_id = t.id AND status = 'delivered' AND delivered_at < now() - interval '30 minutes') as stuck_jobs,
   -- Alertas ativos
   (SELECT COUNT(*) FROM system_alerts WHERE tenant_id = t.id AND resolved = false) as active_alerts,
@@ -101,7 +101,7 @@ SELECT
 FROM tenants t
 WHERE t.id IN (SELECT tenant_id FROM public.user_roles WHERE user_id = auth.uid());
 
--- 5. Função para limpar dados antigos (chamada pelo pg_cron)
+-- 5. Funcao para limpar dados antigos (chamada pelo pg_cron)
 CREATE OR REPLACE FUNCTION public.cleanup_old_data_scheduled()
 RETURNS jsonb
 LANGUAGE plpgsql

@@ -1,6 +1,6 @@
 
 -- ============================================================================
--- FIX: Adicionar report de saúde para crons que executam funções SQL
+-- FIX: Adicionar report de saude para crons que executam funcoes SQL
 -- ADR-FINAL-001: Fechar ciclo de observabilidade de crons
 -- ============================================================================
 
@@ -20,7 +20,7 @@ DECLARE
   v_old_jobs_deleted INTEGER := 0;
   v_result jsonb;
 BEGIN
-  -- Limpeza de dados temporários (não-imutáveis)
+  -- Limpeza de dados temporarios (nao-imutaveis)
   DELETE FROM public.hmac_signatures WHERE used_at < now() - interval '6 hours';
   GET DIAGNOSTICS v_hmac_deleted = ROW_COUNT;
   
@@ -48,7 +48,7 @@ BEGIN
   WHERE job_executions.id = oe.id;
   GET DIAGNOSTICS v_executions_deleted = ROW_COUNT;
   
-  -- Deletar jobs órfãos (sem execuções) após 60 dias
+  -- Deletar jobs orfaos (sem execucoes) apos 60 dias
   WITH deletable_jobs AS (
     SELECT j.id 
     FROM public.jobs j
@@ -96,7 +96,7 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
--- Comentário para auditoria
+-- Comentario para auditoria
 COMMENT ON FUNCTION cleanup_old_data_scheduled IS 
-'ADR-FINAL-001: Função de limpeza com report automático para cron_health_checks.
+'ADR-FINAL-001: Funcao de limpeza com report automatico para cron_health_checks.
 Corrigido em 2026-02-07 para fechar ciclo de observabilidade.';

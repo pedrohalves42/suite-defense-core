@@ -2,7 +2,7 @@
 -- SAFE_MODE COMPLETO - FASE 1 + 2 COMBINADAS
 -- =====================================================
 
--- 1.1 Extensão da tabela agents com campos SAFE_MODE
+-- 1.1 Extensao da tabela agents com campos SAFE_MODE
 ALTER TABLE public.agents
 ADD COLUMN IF NOT EXISTS agent_mode TEXT DEFAULT 'NORMAL',
 ADD COLUMN IF NOT EXISTS safe_mode_reason TEXT,
@@ -127,7 +127,7 @@ ALTER TABLE public.system_liveness ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Anyone can view system liveness"
 ON public.system_liveness FOR SELECT USING (true);
 
--- 1.6 Criar tabela blast_radius_policies (necessária para validate_blast_radius)
+-- 1.6 Criar tabela blast_radius_policies (necessaria para validate_blast_radius)
 CREATE TABLE IF NOT EXISTS public.blast_radius_policies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -150,7 +150,7 @@ USING (tenant_id IN (
   WHERE ur.user_id = auth.uid() AND ur.role IN ('admin', 'super_admin')
 ));
 
--- 2.1 Trigger anti-modificação de forensic_snapshots
+-- 2.1 Trigger anti-modificacao de forensic_snapshots
 CREATE OR REPLACE FUNCTION public.enforce_forensic_snapshot_immutability()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -187,7 +187,7 @@ CREATE TRIGGER trg_enforce_safe_mode_jobs
 BEFORE INSERT ON public.jobs
 FOR EACH ROW EXECUTE FUNCTION public.prevent_jobs_on_safe_mode();
 
--- 2.3 Função para capturar snapshot forense
+-- 2.3 Funcao para capturar snapshot forense
 CREATE OR REPLACE FUNCTION public.capture_forensic_snapshot_full(
   p_agent_id UUID,
   p_trigger_reason TEXT,
@@ -239,7 +239,7 @@ BEGIN
 END;
 $$;
 
--- 2.4 Função para processar SAFE_MODE
+-- 2.4 Funcao para processar SAFE_MODE
 CREATE OR REPLACE FUNCTION public.process_safe_mode_entry(
   p_agent_id UUID,
   p_reason TEXT,
@@ -283,7 +283,7 @@ BEGIN
 END;
 $$;
 
--- 2.5 Função para autorizar recovery
+-- 2.5 Funcao para autorizar recovery
 CREATE OR REPLACE FUNCTION public.authorize_agent_recovery(
   p_agent_id UUID,
   p_approved_by UUID,
@@ -308,7 +308,7 @@ BEGIN
   
   v_payload := jsonb_build_object(
     'agent_id', p_agent_id,
-    'transition', 'SAFE_MODE → RECOVERY',
+    'transition', 'SAFE_MODE ? RECOVERY',
     'issued_at', NOW(),
     'expires_at', NOW() + (p_expires_in_minutes || ' minutes')::INTERVAL,
     'approved_by', p_approved_by

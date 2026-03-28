@@ -154,24 +154,24 @@ serve(async (req: Request): Promise<Response> => {
           if (resendKey) {
             try {
               const resend = new Resend(resendKey);
-              const riskEmoji = report?.risk_level === "CRÍTICO" ? "🔴" : 
-                               report?.risk_level === "ALTO" ? "🟠" : 
-                               report?.risk_level === "MÉDIO" ? "🟡" : "🟢";
+              const riskEmoji = report?.risk_level === "CRITICO" ? "?" : 
+                               report?.risk_level === "ALTO" ? "?" : 
+                               report?.risk_level === "MEDIO" ? "?" : "?";
 
               await resend.emails.send({
                 from: "CyberShield <alertas@cybershield.com.br>",
                 to: adminEmails,
-                subject: `${riskEmoji} Laudo de Segurança: ${report?.title || "Novo Laudo"}`,
+                subject: `${riskEmoji} Laudo de Seguranca: ${report?.title || "Novo Laudo"}`,
                 html: `
                   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: #1a1a2e;">🛡️ CyberShield - Laudo de Segurança</h2>
+                    <h2 style="color: #1a1a2e;">?? CyberShield - Laudo de Seguranca</h2>
                     <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
                       <h3>${report?.title || "Laudo Gerado"}</h3>
                       <p><strong>Agente:</strong> ${report?.agent_name || "Consolidado"}</p>
-                      <p><strong>Nível de Risco:</strong> ${riskEmoji} ${report?.risk_level || "N/A"} (Score: ${report?.risk_score || 0})</p>
+                      <p><strong>Nivel de Risco:</strong> ${riskEmoji} ${report?.risk_level || "N/A"} (Score: ${report?.risk_score || 0})</p>
                     </div>
                     <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107;">
-                      <h4>💬 Resumo Comercial:</h4>
+                      <h4>? Resumo Comercial:</h4>
                       <p>${report?.commercial_summary || notification.message_content || "Laudo gerado automaticamente."}</p>
                     </div>
                     <div style="margin-top: 20px; text-align: center;">
@@ -181,7 +181,7 @@ serve(async (req: Request): Promise<Response> => {
                       </a>
                     </div>
                     <p style="color: #666; font-size: 12px; margin-top: 30px;">
-                      Esta é uma notificação automática do sistema CyberShield.
+                      Esta e uma notificacao automatica do sistema CyberShield.
                     </p>
                   </div>
                 `,

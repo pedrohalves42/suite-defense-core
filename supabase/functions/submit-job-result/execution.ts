@@ -38,7 +38,7 @@ async function verifySignature(ctx: SubmitContext, outputHash: string | null): P
 
   if (!result_signature) {
     if (result_signature === null && execution_id && nonce) {
-      // No signature provided — skip
+      // No signature provided ? skip
     }
     return { verified: false, details: {} }
   }

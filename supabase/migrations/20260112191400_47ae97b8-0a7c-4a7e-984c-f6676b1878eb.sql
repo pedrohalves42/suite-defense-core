@@ -1,8 +1,8 @@
 -- FASE 9: Corrigir v_cron_silent_failures para usar job_key corretamente
 -- Problema: scheduled_jobs.name ("AI System Analyzer") != scheduled_job_runs.job_key ("ai-system-analyzer")
 
--- Primeiro: Atualizar job_key nos scheduled_jobs (a coluna já existe pela migração anterior que parcialmente executou)
--- Se a coluna não existir, adicioná-la
+-- Primeiro: Atualizar job_key nos scheduled_jobs (a coluna ja existe pela migracao anterior que parcialmente executou)
+-- Se a coluna nao existir, adiciona-la
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
@@ -26,7 +26,7 @@ UPDATE scheduled_jobs SET job_key = 'ai-full-audit' WHERE name = 'AI Full Audit 
 UPDATE scheduled_jobs SET job_key = 'ai-red-team-assessment' WHERE name = 'AI Red Team Assessment' AND (job_key IS NULL OR job_key = '');
 UPDATE scheduled_jobs SET job_key = 'generate-weekly-report' WHERE name = 'Weekly Security Report' AND (job_key IS NULL OR job_key = '');
 
--- Criar índice para performance
+-- Criar indice para performance
 CREATE INDEX IF NOT EXISTS idx_scheduled_jobs_job_key ON scheduled_jobs(job_key);
 
 -- DROP CASCADE para remover views dependentes
@@ -116,10 +116,10 @@ SELECT
 FROM v_cron_silent_failures
 WHERE health_status <> 'OK';
 
--- Conceder permissões
+-- Conceder permissoes
 GRANT SELECT ON v_cron_silent_failures TO authenticated, service_role;
 GRANT SELECT ON v_security_invariants TO authenticated, service_role;
 
--- Comentários
-COMMENT ON VIEW v_cron_silent_failures IS 'View para detectar jobs agendados que não estão executando com sucesso. Usa job_key para correlacionar com scheduled_job_runs.';
-COMMENT ON COLUMN scheduled_jobs.job_key IS 'Chave de identificação do job usada em scheduled_job_runs para correlação de execuções';
+-- Comentarios
+COMMENT ON VIEW v_cron_silent_failures IS 'View para detectar jobs agendados que nao estao executando com sucesso. Usa job_key para correlacionar com scheduled_job_runs.';
+COMMENT ON COLUMN scheduled_jobs.job_key IS 'Chave de identificacao do job usada em scheduled_job_runs para correlacao de execucoes';

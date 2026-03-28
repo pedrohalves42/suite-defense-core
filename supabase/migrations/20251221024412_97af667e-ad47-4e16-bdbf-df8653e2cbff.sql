@@ -1,26 +1,26 @@
 -- ============================================
 -- PLAYBOOKS ENTERPRISE UPGRADE
--- Versionamento + Snapshots Imutáveis + Anti-Loop
+-- Versionamento + Snapshots Imutaveis + Anti-Loop
 -- ============================================
 
--- 1️⃣ Adicionar versionamento ao playbooks
+-- 1?? Adicionar versionamento ao playbooks
 ALTER TABLE public.playbooks 
   ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1;
 
--- 2️⃣ Adicionar cooldown_minutes se não existir
+-- 2?? Adicionar cooldown_minutes se nao existir
 ALTER TABLE public.playbooks 
   ADD COLUMN IF NOT EXISTS cooldown_minutes INTEGER DEFAULT 60;
 
--- 3️⃣ Adicionar snapshots imutáveis ao playbook_executions
+-- 3?? Adicionar snapshots imutaveis ao playbook_executions
 ALTER TABLE public.playbook_executions 
   ADD COLUMN IF NOT EXISTS playbook_snapshot JSONB,
   ADD COLUMN IF NOT EXISTS actions_snapshot JSONB;
 
--- 4️⃣ Adicionar ignored_reason para execuções ignoradas
+-- 4?? Adicionar ignored_reason para execucoes ignoradas
 ALTER TABLE public.playbook_executions 
   ADD COLUMN IF NOT EXISTS ignored_reason TEXT;
 
--- 5️⃣ FUNÇÃO ANTI-LOOP ROBUSTA
+-- 5?? FUNCAO ANTI-LOOP ROBUSTA
 CREATE OR REPLACE FUNCTION public.has_recent_playbook_execution(
   p_playbook_id UUID,
   p_tenant_id UUID,
@@ -50,17 +50,17 @@ BEGIN
 END;
 $$;
 
--- 6️⃣ TRIGGER DE IMUTABILIDADE
+-- 6?? TRIGGER DE IMUTABILIDADE
 CREATE OR REPLACE FUNCTION public.prevent_playbook_execution_modification()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Impedir alteração após conclusão/cancelamento/falha
+  -- Impedir alteracao apos conclusao/cancelamento/falha
   IF OLD.status IN ('completed', 'cancelled', 'failed', 'ignored') THEN
     RAISE EXCEPTION 'IMMUTABLE_VIOLATION: Playbook execution is immutable after completion. Status: %', OLD.status
       USING ERRCODE = '23514';
   END IF;
   
-  -- Impedir alteração de snapshots após criação
+  -- Impedir alteracao de snapshots apos criacao
   IF OLD.playbook_snapshot IS NOT NULL AND NEW.playbook_snapshot IS DISTINCT FROM OLD.playbook_snapshot THEN
     RAISE EXCEPTION 'IMMUTABLE_VIOLATION: playbook_snapshot cannot be modified after creation'
       USING ERRCODE = '23514';
@@ -83,11 +83,11 @@ BEFORE UPDATE ON public.playbook_executions
 FOR EACH ROW
 EXECUTE FUNCTION public.prevent_playbook_execution_modification();
 
--- 7️⃣ TRIGGER PARA INCREMENTAR VERSÃO DO PLAYBOOK
+-- 7?? TRIGGER PARA INCREMENTAR VERSAO DO PLAYBOOK
 CREATE OR REPLACE FUNCTION public.increment_playbook_version()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Incrementar versão quando playbook é modificado (exceto updated_at)
+  -- Incrementar versao quando playbook e modificado (exceto updated_at)
   IF (NEW.name IS DISTINCT FROM OLD.name) OR
      (NEW.description IS DISTINCT FROM OLD.description) OR
      (NEW.trigger_type IS DISTINCT FROM OLD.trigger_type) OR
@@ -109,14 +109,14 @@ BEFORE UPDATE ON public.playbooks
 FOR EACH ROW
 EXECUTE FUNCTION public.increment_playbook_version();
 
--- 8️⃣ ÍNDICES PARA PERFORMANCE
+-- 8?? INDICES PARA PERFORMANCE
 CREATE INDEX IF NOT EXISTS idx_playbook_executions_cooldown 
   ON public.playbook_executions(playbook_id, tenant_id, agent_id, triggered_at, status);
 
 CREATE INDEX IF NOT EXISTS idx_playbooks_version 
   ON public.playbooks(id, version);
 
--- 9️⃣ COMENTÁRIOS DE DOCUMENTAÇÃO
+-- 9?? COMENTARIOS DE DOCUMENTACAO
 COMMENT ON COLUMN public.playbooks.version IS 'Auto-incrementing version for audit trail';
 COMMENT ON COLUMN public.playbooks.cooldown_minutes IS 'Minimum minutes between executions for same agent';
 COMMENT ON COLUMN public.playbook_executions.playbook_snapshot IS 'Immutable copy of playbook config at trigger time';

@@ -422,7 +422,7 @@ Deno.serve(async (req) => {
     
     const { validateAgentScriptContent, calculateScriptHash } = await import('../_shared/agent-script-validator.ts');
     
-    // Buscar script da tabela agent_releases (fonte única de verdade)
+    // Buscar script da tabela agent_releases (fonte unica de verdade)
     const { data: windowsReleaseData, error: windowsReleaseError } = await supabaseClient
       .from('agent_releases')
       .select('script_content, version, sha256')

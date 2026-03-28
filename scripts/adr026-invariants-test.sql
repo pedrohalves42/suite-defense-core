@@ -3,14 +3,14 @@
 -- Final Artifacts for GO DEFINITIVO Certification
 -- ============================================================
 -- 
--- Este script valida os invariantes críticos do ADR-026:
+-- Este script valida os invariantes criticos do ADR-026:
 -- 1. get_active_tenant_id() funciona corretamente
 -- 2. update_user_role_rpc respeita isolamento de tenant
 -- 3. agents_deny_direct_select bloqueia acesso direto
--- 4. agents_safe não expõe hmac_secret
--- 5. Views críticas usam security_invoker
+-- 4. agents_safe nao expoe hmac_secret
+-- 5. Views criticas usam security_invoker
 --
--- Execução: Via Supabase SQL Editor ou psql
+-- Execucao: Via Supabase SQL Editor ou psql
 -- Resultado esperado: 100% dos testes devem PASSAR
 -- ============================================================
 
@@ -38,7 +38,7 @@ BEGIN
     -- TEST 01: get_active_tenant_id() existe
     -- ===========================================
     
-    v_test_name := 'ADR026-01: get_active_tenant_id() Função Existe';
+    v_test_name := 'ADR026-01: get_active_tenant_id() Funcao Existe';
     v_total_tests := v_total_tests + 1;
     
     SELECT EXISTS (
@@ -54,16 +54,16 @@ BEGIN
     ELSE
         v_test_passed := false;
         v_failed_tests := v_failed_tests + 1;
-        RAISE NOTICE '[FAIL] %: Função não encontrada', v_test_name;
+        RAISE NOTICE '[FAIL] %: Funcao nao encontrada', v_test_name;
     END IF;
     
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
 
     -- ===========================================
-    -- TEST 02: get_active_tenant_id() é SECURITY DEFINER
+    -- TEST 02: get_active_tenant_id() e SECURITY DEFINER
     -- ===========================================
     
-    v_test_name := 'ADR026-02: get_active_tenant_id() é SECURITY DEFINER';
+    v_test_name := 'ADR026-02: get_active_tenant_id() e SECURITY DEFINER';
     v_total_tests := v_total_tests + 1;
     
     SELECT EXISTS (
@@ -81,7 +81,7 @@ BEGIN
     ELSE
         v_test_passed := false;
         v_failed_tests := v_failed_tests + 1;
-        RAISE NOTICE '[FAIL] %: Função não é SECURITY DEFINER', v_test_name;
+        RAISE NOTICE '[FAIL] %: Funcao nao e SECURITY DEFINER', v_test_name;
     END IF;
     
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
@@ -107,7 +107,7 @@ BEGIN
     ELSE
         v_test_passed := false;
         v_failed_tests := v_failed_tests + 1;
-        RAISE NOTICE '[FAIL] %: Policy não encontrada', v_test_name;
+        RAISE NOTICE '[FAIL] %: Policy nao encontrada', v_test_name;
     END IF;
     
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
@@ -131,16 +131,16 @@ BEGIN
     ELSE
         v_test_passed := false;
         v_failed_tests := v_failed_tests + 1;
-        RAISE NOTICE '[FAIL] %: View não encontrada', v_test_name;
+        RAISE NOTICE '[FAIL] %: View nao encontrada', v_test_name;
     END IF;
     
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
 
     -- ===========================================
-    -- TEST 05: agents_safe NÃO contém hmac_secret
+    -- TEST 05: agents_safe NAO contem hmac_secret
     -- ===========================================
     
-    v_test_name := 'ADR026-05: agents_safe Não Expõe hmac_secret';
+    v_test_name := 'ADR026-05: agents_safe Nao Expoe hmac_secret';
     v_total_tests := v_total_tests + 1;
     
     SELECT EXISTS (
@@ -163,10 +163,10 @@ BEGIN
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
 
     -- ===========================================
-    -- TEST 06: agents_safe NÃO contém payload_hash
+    -- TEST 06: agents_safe NAO contem payload_hash
     -- ===========================================
     
-    v_test_name := 'ADR026-06: agents_safe Não Expõe payload_hash';
+    v_test_name := 'ADR026-06: agents_safe Nao Expoe payload_hash';
     v_total_tests := v_total_tests + 1;
     
     SELECT EXISTS (
@@ -214,7 +214,7 @@ BEGIN
     ELSE
         v_test_passed := false;
         v_failed_tests := v_failed_tests + 1;
-        RAISE NOTICE '[FAIL] %: View não usa security_invoker', v_test_name;
+        RAISE NOTICE '[FAIL] %: View nao usa security_invoker', v_test_name;
     END IF;
     
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
@@ -223,7 +223,7 @@ BEGIN
     -- TEST 08: update_user_role_rpc existe
     -- ===========================================
     
-    v_test_name := 'ADR026-08: update_user_role_rpc Função Existe';
+    v_test_name := 'ADR026-08: update_user_role_rpc Funcao Existe';
     v_total_tests := v_total_tests + 1;
     
     SELECT EXISTS (
@@ -239,7 +239,7 @@ BEGIN
     ELSE
         v_test_passed := false;
         v_failed_tests := v_failed_tests + 1;
-        RAISE NOTICE '[FAIL] %: Função não encontrada', v_test_name;
+        RAISE NOTICE '[FAIL] %: Funcao nao encontrada', v_test_name;
     END IF;
     
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
@@ -248,7 +248,7 @@ BEGIN
     -- TEST 09: is_active_tenant() existe
     -- ===========================================
     
-    v_test_name := 'ADR026-09: is_active_tenant() Função Existe';
+    v_test_name := 'ADR026-09: is_active_tenant() Funcao Existe';
     v_total_tests := v_total_tests + 1;
     
     SELECT EXISTS (
@@ -264,7 +264,7 @@ BEGIN
     ELSE
         v_test_passed := false;
         v_failed_tests := v_failed_tests + 1;
-        RAISE NOTICE '[FAIL] %: Função não encontrada', v_test_name;
+        RAISE NOTICE '[FAIL] %: Funcao nao encontrada', v_test_name;
     END IF;
     
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
@@ -288,16 +288,16 @@ BEGIN
     ELSE
         v_test_passed := false;
         v_failed_tests := v_failed_tests + 1;
-        RAISE NOTICE '[FAIL] %: View não encontrada', v_test_name;
+        RAISE NOTICE '[FAIL] %: View nao encontrada', v_test_name;
     END IF;
     
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
 
     -- ===========================================
-    -- TEST 11: Nenhuma função sensível exposta a public
+    -- TEST 11: Nenhuma funcao sensivel exposta a public
     -- ===========================================
     
-    v_test_name := 'ADR026-11: Funções Sensíveis Não Expostas a Public';
+    v_test_name := 'ADR026-11: Funcoes Sensiveis Nao Expostas a Public';
     v_total_tests := v_total_tests + 1;
     
     SELECT COUNT(*) INTO v_query_result
@@ -318,7 +318,7 @@ BEGIN
     ELSE
         v_test_passed := false;
         v_failed_tests := v_failed_tests + 1;
-        RAISE NOTICE '[FAIL] %: % funções ainda expostas a public', v_test_name, v_query_result;
+        RAISE NOTICE '[FAIL] %: % funcoes ainda expostas a public', v_test_name, v_query_result;
     END IF;
     
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
@@ -342,7 +342,7 @@ BEGIN
     ELSE
         v_test_passed := false;
         v_failed_tests := v_failed_tests + 1;
-        RAISE NOTICE '[FAIL] %: View não encontrada', v_test_name;
+        RAISE NOTICE '[FAIL] %: View nao encontrada', v_test_name;
     END IF;
     
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
@@ -366,7 +366,7 @@ BEGIN
     ELSE
         v_test_passed := false;
         v_failed_tests := v_failed_tests + 1;
-        RAISE NOTICE '[FAIL] %: View não encontrada', v_test_name;
+        RAISE NOTICE '[FAIL] %: View nao encontrada', v_test_name;
     END IF;
     
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
@@ -390,16 +390,16 @@ BEGIN
     ELSE
         v_test_passed := false;
         v_failed_tests := v_failed_tests + 1;
-        RAISE NOTICE '[FAIL] %: View não encontrada', v_test_name;
+        RAISE NOTICE '[FAIL] %: View nao encontrada', v_test_name;
     END IF;
     
     v_test_results := v_test_results || jsonb_build_object('test', v_test_name, 'passed', v_test_passed);
 
     -- ===========================================
-    -- TEST 15: service_role mantém acesso a agents
+    -- TEST 15: service_role mantem acesso a agents
     -- ===========================================
     
-    v_test_name := 'ADR026-15: service_role Mantém Acesso a agents';
+    v_test_name := 'ADR026-15: service_role Mantem Acesso a agents';
     v_total_tests := v_total_tests + 1;
     
     SELECT EXISTS (
@@ -437,13 +437,13 @@ BEGIN
     
     IF v_failed_tests = 0 THEN
         RAISE NOTICE '============================================================';
-        RAISE NOTICE '🟢 ADR-026 INVARIANTS: ALL TESTS PASSED';
+        RAISE NOTICE '? ADR-026 INVARIANTS: ALL TESTS PASSED';
         RAISE NOTICE '   Status: ENTERPRISE / AUDITOR-GRADE';
         RAISE NOTICE '   Certified by: Dr. Isaac K. Vellum';
         RAISE NOTICE '============================================================';
     ELSE
         RAISE NOTICE '============================================================';
-        RAISE NOTICE '🔴 ADR-026 INVARIANTS: FAILURES DETECTED';
+        RAISE NOTICE '? ADR-026 INVARIANTS: FAILURES DETECTED';
         RAISE NOTICE '   % test(s) failed - Review required', v_failed_tests;
         RAISE NOTICE '============================================================';
     END IF;

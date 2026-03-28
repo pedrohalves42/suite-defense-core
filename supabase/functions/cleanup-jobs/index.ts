@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
           success: true,
           deleted_count: 0,
           skipped_count: skippedCount,
-          skipped_reason: 'Jobs com execuções recentes não podem ser removidos (política de auditoria)',
+          skipped_reason: 'Jobs com execucoes recentes nao podem ser removidos (politica de auditoria)',
           filters: { status, older_than_days, agent_name, only_undelivered, require_no_executions },
           requestId
         }),
@@ -252,7 +252,7 @@ Deno.serve(async (req) => {
         success: true,
         deleted_count: totalDeleted,
         skipped_count: skippedCount,
-        skipped_reason: skippedCount > 0 ? 'Jobs com execuções não podem ser removidos (política de auditoria)' : null,
+        skipped_reason: skippedCount > 0 ? 'Jobs com execucoes nao podem ser removidos (politica de auditoria)' : null,
         filters: { status, older_than_days, agent_name, only_undelivered, require_no_executions },
         requestId
       }),

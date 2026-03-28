@@ -12,7 +12,7 @@ DECLARE
   v_cancelled_count INTEGER;
   v_job_ids UUID[];
 BEGIN
-  -- Cancelar jobs "delivered" há mais de 2 horas
+  -- Cancelar jobs "delivered" ha mais de 2 horas
   WITH cancelled_jobs AS (
     UPDATE jobs
     SET 
@@ -67,9 +67,9 @@ BEGIN
 END;
 $$;
 
--- Comentário para documentação
+-- Comentario para documentacao
 COMMENT ON FUNCTION public.auto_cancel_zombie_jobs() IS 
-'SSA-003: Auto-cancela jobs em estado "delivered" há mais de 2 horas. 
+'SSA-003: Auto-cancela jobs em estado "delivered" ha mais de 2 horas. 
 Previne zombie jobs que bloqueiam o sistema.';
 
 
@@ -98,7 +98,7 @@ CREATE POLICY "Admins can view their tenant quotas"
     WHERE ur.user_id = auth.uid() AND ur.role IN ('admin', 'super_admin')
   ));
 
--- Função de validação de quota
+-- Funcao de validacao de quota
 CREATE OR REPLACE FUNCTION public.check_job_quota()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -109,13 +109,13 @@ DECLARE
   v_max_queued INTEGER;
   v_current_queued INTEGER;
 BEGIN
-  -- Buscar limite customizado ou usar padrão
+  -- Buscar limite customizado ou usar padrao
   SELECT COALESCE(tjq.max_queued_jobs, 100)
   INTO v_max_queued
   FROM tenant_job_quotas tjq
   WHERE tjq.tenant_id = NEW.tenant_id;
   
-  -- Se não há config customizada, usar padrão
+  -- Se nao ha config customizada, usar padrao
   IF v_max_queued IS NULL THEN
     v_max_queued := 100;
   END IF;
@@ -174,7 +174,7 @@ COMMENT ON FUNCTION public.check_job_quota() IS
 
 
 -- ============================================================
--- Índice para performance das queries de quota
+-- Indice para performance das queries de quota
 -- ============================================================
 CREATE INDEX IF NOT EXISTS idx_jobs_tenant_status_pending
   ON public.jobs (tenant_id, status)

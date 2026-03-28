@@ -12,7 +12,7 @@ serveAgent(async (_req, ctx) => {
     .maybeSingle();
 
   if (!config) {
-    // No config exists — return defaults (normal mode)
+    // No config exists ? return defaults (normal mode)
     return {
       light_mode_active: false,
       collection_interval_seconds: 180,

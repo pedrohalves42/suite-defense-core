@@ -1,6 +1,6 @@
 
 -- ============================================================
--- Sprint 30: Event Normalization — Unified View
+-- Sprint 30: Event Normalization ? Unified View
 -- ============================================================
 
 -- Normalized events view: unions all telemetry into a single queryable format

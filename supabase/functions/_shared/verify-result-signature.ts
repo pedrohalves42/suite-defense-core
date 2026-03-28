@@ -290,7 +290,7 @@ async function importEd25519PublicKey(keyData: string): Promise<CryptoKey> {
 
 /**
  * Imports an RSA public key from PEM, SPKI Base64, or CSP blob format
- * CSP blob: Microsoft CryptoAPI format from ExportCspBlob($false) — needs conversion to SPKI
+ * CSP blob: Microsoft CryptoAPI format from ExportCspBlob($false) ? needs conversion to SPKI
  */
 async function importRsaPublicKey(keyData: string, isCspBlob = false): Promise<CryptoKey> {
   let keyBytes: ArrayBuffer
@@ -342,7 +342,7 @@ function cspBlobToSpki(cspBlob: Uint8Array): ArrayBuffer {
   }
   if (pubExpBE.length === 0) pubExpBE.push(0)
   
-  // Modulus: modulusLen bytes at offset 20 (little-endian) → reverse to big-endian
+  // Modulus: modulusLen bytes at offset 20 (little-endian) ? reverse to big-endian
   const modulusLE = cspBlob.slice(20, 20 + modulusLen)
   const modulusBE = new Uint8Array(modulusLen)
   for (let i = 0; i < modulusLen; i++) {

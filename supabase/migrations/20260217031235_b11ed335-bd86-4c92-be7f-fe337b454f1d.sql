@@ -41,7 +41,7 @@ UPDATE public.system_alerts
 SET 
   resolved = true, 
   resolved_at = NOW(),
-  resolution_notes = 'Auto-resolvido: alerta histórico sem recorrência nos últimos 14 dias'
+  resolution_notes = 'Auto-resolvido: alerta historico sem recorrencia nos ultimos 14 dias'
 WHERE resolved = false 
   AND created_at < NOW() - INTERVAL '14 days';
 

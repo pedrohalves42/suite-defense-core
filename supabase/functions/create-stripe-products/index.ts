@@ -60,21 +60,21 @@ Deno.serve(async (req) => {
       {
         name: 'starter',
         stripeName: 'CyberShield - Starter',
-        description: 'Até 5 dispositivos - monitoramento básico para PMEs',
+        description: 'Ate 5 dispositivos - monitoramento basico para PMEs',
         price: 15000, // R$ 150,00
         metadata: { plan: 'starter', max_devices: '5' }
       },
       {
         name: 'pro',
         stripeName: 'CyberShield - Business',
-        description: 'Até 25 dispositivos - alertas avançados e relatórios',
+        description: 'Ate 25 dispositivos - alertas avancados e relatorios',
         price: 45000, // R$ 450,00
         metadata: { plan: 'pro', max_devices: '25' }
       },
       {
         name: 'scale',
         stripeName: 'CyberShield - Scale',
-        description: 'Até 100 dispositivos - onboarding e SLA',
+        description: 'Ate 100 dispositivos - onboarding e SLA',
         price: 120000, // R$ 1.200,00
         metadata: { plan: 'scale', max_devices: '100' }
       }
@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
     const annualCoupon = await stripe.coupons.create({
       percent_off: 16.67,
       duration: 'forever',
-      name: 'Desconto Anual - 2 meses grátis',
+      name: 'Desconto Anual - 2 meses gratis',
       metadata: { type: 'annual_discount' }
     });
 

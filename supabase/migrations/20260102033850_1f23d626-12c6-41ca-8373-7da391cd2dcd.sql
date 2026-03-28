@@ -3,7 +3,7 @@ ALTER TABLE decision_events
 ALTER COLUMN decision_source SET NOT NULL,
 ALTER COLUMN decision_type SET NOT NULL;
 
--- FASE 3.1: Criar view de saúde de governança
+-- FASE 3.1: Criar view de saude de governanca
 CREATE OR REPLACE VIEW governance_health_metrics AS
 SELECT
   COUNT(*) FILTER (WHERE decision_source IS NOT NULL) AS decision_events_total,
@@ -16,7 +16,7 @@ SELECT
   ) AS human_decision_rate
 FROM decision_events;
 
--- FASE 3.2: Criar função para métricas consolidadas de governança
+-- FASE 3.2: Criar funcao para metricas consolidadas de governanca
 CREATE OR REPLACE FUNCTION get_governance_snapshot()
 RETURNS jsonb
 LANGUAGE plpgsql

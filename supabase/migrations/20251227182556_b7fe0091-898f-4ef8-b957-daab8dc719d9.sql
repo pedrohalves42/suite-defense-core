@@ -1,6 +1,6 @@
 -- =============================================================
--- AJUSTES OBRIGATÓRIOS DE SEGURANÇA - CAMADA 1
--- Guard-rails anti-loop, lock lógico, auto-revert, índices
+-- AJUSTES OBRIGATORIOS DE SEGURANCA - CAMADA 1
+-- Guard-rails anti-loop, lock logico, auto-revert, indices
 -- =============================================================
 
 -- 1. Atualizar regra AGENT_IMPRODUTIVE_005 com guard-rails anti-loop
@@ -26,7 +26,7 @@ SET
   updated_at = NOW()
 WHERE code = 'AGENT_IMPRODUTIVE_005';
 
--- 2. Recriar RPC detect_improdutive_agents com lock lógico (evita re-throttle)
+-- 2. Recriar RPC detect_improdutive_agents com lock logico (evita re-throttle)
 CREATE OR REPLACE FUNCTION public.detect_improdutive_agents()
 RETURNS TABLE (
   agent_id uuid,
@@ -56,20 +56,20 @@ BEGIN
   FROM v_agent_execution_health v
   JOIN agents a ON a.id = v.agent_id
   WHERE v.health_status IN ('not_polling_jobs', 'not_executing_jobs', 'execution_stale')
-    -- Heartbeat OK (online nos últimos 30 min)
+    -- Heartbeat OK (online nos ultimos 30 min)
     AND v.minutes_since_heartbeat < 30
-    -- LOCK LÓGICO: Não já throttled atualmente
+    -- LOCK LOGICO: Nao ja throttled atualmente
     AND COALESCE(a.is_throttled, false) = false
-    -- Não throttled por esta regra nas últimas 2 horas (cooldown)
+    -- Nao throttled por esta regra nas ultimas 2 horas (cooldown)
     AND NOT EXISTS (
       SELECT 1 FROM decision_events de
       WHERE de.agent_id = v.agent_id
         AND de.rule_code = 'AGENT_IMPRODUTIVE_005'
         AND de.created_at > NOW() - INTERVAL '2 hours'
     )
-    -- Não está em SAFE_MODE
+    -- Nao esta em SAFE_MODE
     AND v.health_status != 'safe_mode'
-    -- Tem jobs parados há mais de 1h OU não executa há mais de 2h
+    -- Tem jobs parados ha mais de 1h OU nao executa ha mais de 2h
     AND (
       v.stale_queued_jobs >= 3
       OR v.minutes_since_execution > 120
@@ -81,7 +81,7 @@ $$;
 INSERT INTO public.decision_rules (code, description, scope, definition, is_enabled)
 VALUES (
   'AUTO_REVERT_THROTTLE_006',
-  'Remove throttle automaticamente após período de resfriamento',
+  'Remove throttle automaticamente apos periodo de resfriamento',
   'agent',
   '{
     "conditions": {
@@ -97,7 +97,7 @@ VALUES (
 )
 ON CONFLICT (code) DO NOTHING;
 
--- 4. Índices defensivos para performance
+-- 4. Indices defensivos para performance
 CREATE INDEX IF NOT EXISTS idx_decision_events_agent_rule_time
 ON decision_events (agent_id, rule_code, created_at DESC);
 

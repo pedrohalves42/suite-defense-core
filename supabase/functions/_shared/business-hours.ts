@@ -2,8 +2,8 @@ import { logger } from "./logger.ts";
 /**
  * Business Hours Utility
  * 
- * Verifica se o horário atual está dentro do expediente configurado.
- * Usado para evitar alertas fora do horário de trabalho.
+ * Verifica se o horario atual esta dentro do expediente configurado.
+ * Usado para evitar alertas fora do horario de trabalho.
  */
 
 export interface BusinessHoursConfig {
@@ -15,10 +15,10 @@ export interface BusinessHoursConfig {
 }
 
 /**
- * Verifica se o horário atual está dentro do expediente configurado
+ * Verifica se o horario atual esta dentro do expediente configurado
  */
 export function isWithinBusinessHours(config: BusinessHoursConfig | null | undefined): boolean {
-  // Se não há configuração ou está desabilitado, considera sempre dentro do expediente
+  // Se nao ha configuracao ou esta desabilitado, considera sempre dentro do expediente
   if (!config || !config.enabled) {
     return true;
   }
@@ -45,23 +45,23 @@ export function isWithinBusinessHours(config: BusinessHoursConfig | null | undef
       return true;
     }
 
-    // Mapear weekday string para número (0-6)
+    // Mapear weekday string para numero (0-6)
     const weekdayMap: Record<string, number> = {
       'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6,
-      // Versões lowercase para compatibilidade com dados existentes
+      // Versoes lowercase para compatibilidade com dados existentes
       'sun': 0, 'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6,
       // Nomes completos
       'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4, 'friday': 5, 'saturday': 6
     };
     const currentDay = weekdayMap[weekdayPart.value] ?? new Date().getDay();
     
-    // Verificar se é um dia de expediente
+    // Verificar se e um dia de expediente
     const workDays = config.days || [1, 2, 3, 4, 5]; // Default: segunda a sexta
     
-    // CORREÇÃO: Normalizar workDays para números (aceita strings ou números)
+    // CORRECAO: Normalizar workDays para numeros (aceita strings ou numeros)
     const normalizedWorkDays = (workDays as (number | string)[]).map((day) => {
       if (typeof day === 'number') return day;
-      // Converter string para número usando o mapa
+      // Converter string para numero usando o mapa
       const normalized = weekdayMap[day.toLowerCase()];
       return normalized !== undefined ? normalized : -1;
     }).filter((d): d is number => d >= 0 && d <= 6);
@@ -70,7 +70,7 @@ export function isWithinBusinessHours(config: BusinessHoursConfig | null | undef
       return false;
     }
 
-    // Verificar horário
+    // Verificar horario
     const currentTimeMinutes = parseInt(hourPart.value) * 60 + parseInt(minutePart.value);
     
     const [startHour, startMinute] = (config.start || '08:00').split(':').map(Number);
@@ -82,13 +82,13 @@ export function isWithinBusinessHours(config: BusinessHoursConfig | null | undef
     return currentTimeMinutes >= startMinutes && currentTimeMinutes <= endMinutes;
   } catch (error) {
     logger.warn('[BusinessHours] Error checking business hours:', error);
-    // Em caso de erro, considera dentro do expediente para não bloquear alertas
+    // Em caso de erro, considera dentro do expediente para nao bloquear alertas
     return true;
   }
 }
 
 /**
- * Busca configuração de horário de expediente do tenant
+ * Busca configuracao de horario de expediente do tenant
  */
 export async function getTenantBusinessHours(
   supabase: any,
@@ -116,7 +116,7 @@ export async function getTenantBusinessHours(
 }
 
 /**
- * Verifica se deve processar alertas para um tenant baseado no horário de expediente
+ * Verifica se deve processar alertas para um tenant baseado no horario de expediente
  */
 export async function shouldProcessAlertsForTenant(
   supabase: any,

@@ -4,7 +4,7 @@ import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 
 /**
- * release-sync — Consolidated release sync function
+ * release-sync ? Consolidated release sync function
  * 
  * Replaces 5 individual sync functions:
  *   sync-release-content, sync-release-from-codebase, sync-release-from-repo,
@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
             .download(release.storage_path);
 
           if (dlErr || !fileData) {
-            result.errors.push(`Release ${release.version}: storage download failed — ${dlErr?.message}`);
+            result.errors.push(`Release ${release.version}: storage download failed ? ${dlErr?.message}`);
             continue;
           }
 
@@ -131,12 +131,12 @@ Deno.serve(async (req) => {
             .eq('id', release.id);
 
           if (updateErr) {
-            result.errors.push(`Release ${release.version}: update failed — ${updateErr.message}`);
+            result.errors.push(`Release ${release.version}: update failed ? ${updateErr.message}`);
           } else {
             result.releases_updated++;
           }
         } else if (release.script_content) {
-          // Content exists — if sync_from_repo, push to storage
+          // Content exists ? if sync_from_repo, push to storage
           if (action === 'sync_from_repo' || action === 'sync_all') {
             const storagePath = `scripts/${release.platform}/${release.version}/install.ps1`;
 
@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
               });
 
             if (uploadErr) {
-              result.errors.push(`Release ${release.version}: storage upload failed — ${uploadErr.message}`);
+              result.errors.push(`Release ${release.version}: storage upload failed ? ${uploadErr.message}`);
             } else {
               // Update storage path reference
               await supabase

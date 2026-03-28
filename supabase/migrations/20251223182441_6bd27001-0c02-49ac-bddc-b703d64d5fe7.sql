@@ -1,4 +1,4 @@
--- Cleanup stuck jobs (queued/delivered há mais de 2 horas)
+-- Cleanup stuck jobs (queued/delivered ha mais de 2 horas)
 -- One-time cleanup
 UPDATE public.jobs
 SET 

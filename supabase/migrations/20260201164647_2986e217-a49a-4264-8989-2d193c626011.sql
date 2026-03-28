@@ -1,5 +1,5 @@
 -- ============================================================
--- CORREÇÃO: RPCs de Limpeza com colunas corretas
+-- CORRECAO: RPCs de Limpeza com colunas corretas
 -- ============================================================
 
 -- RPC: Processar DLQ em lote (corrigido)
@@ -59,7 +59,7 @@ BEGIN
 END;
 $$;
 
--- RPC: Limpar tasks órfãs (corrigido)
+-- RPC: Limpar tasks orfas (corrigido)
 CREATE OR REPLACE FUNCTION cleanup_stale_tasks(
   p_tenant_id UUID,
   p_days_old INTEGER DEFAULT 30,
@@ -74,7 +74,7 @@ DECLARE
   v_cancelled INTEGER := 0;
   v_archived INTEGER := 0;
 BEGIN
-  -- Cancelar tasks abertas sem fingerprint (órfãs)
+  -- Cancelar tasks abertas sem fingerprint (orfas)
   WITH orphan_tasks AS (
     SELECT id FROM tasks
     WHERE tenant_id = p_tenant_id

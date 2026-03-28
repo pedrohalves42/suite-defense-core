@@ -20,7 +20,7 @@ DECLARE
   v_tokens_invalidated INT;
   v_jobs_deleted INT;
 BEGIN
-  -- 🔒 SECURITY: Get caller's tenant context
+  -- ? SECURITY: Get caller's tenant context
   v_caller_tenant_id := get_active_tenant_id();
   
   -- Allow super_admin to bypass tenant check
@@ -54,7 +54,7 @@ BEGIN
     );
   END IF;
   
-  -- 🔒 CRITICAL: Validate caller owns this agent (unless super_admin)
+  -- ? CRITICAL: Validate caller owns this agent (unless super_admin)
   IF NOT is_current_super_admin() AND v_caller_tenant_id != v_tenant_id THEN
     -- LOG ATTACK: Cross-tenant access attempt
     INSERT INTO security_logs (
@@ -176,7 +176,7 @@ BEGIN
     RETURN;
   END IF;
 
-  -- 🔒 SECURITY: Validate caller context (skip for service_role/agent calls)
+  -- ? SECURITY: Validate caller context (skip for service_role/agent calls)
   -- Note: Agent calls come through Edge Functions with service_role
   -- User-initiated calls must validate tenant ownership
   v_caller_tenant_id := get_active_tenant_id();

@@ -1,20 +1,20 @@
 
 -- =====================================================
--- FASE 4: DLQ Review Obrigatório (High - 10 pts)
+-- FASE 4: DLQ Review Obrigatorio (High - 10 pts)
 -- Usando tabela correta: failed_jobs_dlq
 -- =====================================================
 
--- 4.1 Adicionar colunas de revisão obrigatória à DLQ (algumas já existem)
+-- 4.1 Adicionar colunas de revisao obrigatoria a DLQ (algumas ja existem)
 ALTER TABLE public.failed_jobs_dlq 
   ADD COLUMN IF NOT EXISTS review_required boolean DEFAULT false,
   ADD COLUMN IF NOT EXISTS flagged_suspicious boolean DEFAULT false,
   ADD COLUMN IF NOT EXISTS auto_flagged_reason text;
 
--- 4.2 Trigger de Fallback para Revisão Obrigatória
+-- 4.2 Trigger de Fallback para Revisao Obrigatoria
 CREATE OR REPLACE FUNCTION public.enforce_dlq_review_on_age()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Se item na DLQ há mais de 24h sem revisão adequada, bloquear resolução
+  -- Se item na DLQ ha mais de 24h sem revisao adequada, bloquear resolucao
   IF OLD.created_at < now() - interval '24 hours' 
      AND OLD.resolved_by IS NULL 
      AND NEW.status = 'resolved' 
@@ -23,7 +23,7 @@ BEGIN
       USING ERRCODE = '23514';
   END IF;
   
-  -- Marcar automaticamente como suspeito se padrões detectados
+  -- Marcar automaticamente como suspeito se padroes detectados
   IF NEW.failure_class IN ('security', 'critical', 'auth_failure') 
      AND NOT COALESCE(NEW.flagged_suspicious, false) THEN
     NEW.flagged_suspicious := true;
@@ -40,7 +40,7 @@ CREATE TRIGGER trg_enforce_dlq_review
   BEFORE UPDATE ON public.failed_jobs_dlq
   FOR EACH ROW EXECUTE FUNCTION public.enforce_dlq_review_on_age();
 
--- 4.3 Função de Revisão em Massa com Validação
+-- 4.3 Funcao de Revisao em Massa com Validacao
 CREATE OR REPLACE FUNCTION public.force_review_unreviewed_dlq(
   p_reviewer_id uuid,
   p_max_items int DEFAULT 100
@@ -130,7 +130,7 @@ SELECT
 FROM public.failed_jobs_dlq;
 
 -- =====================================================
--- FASE 5: Atualização de get_audit_raw_metrics (Corrigida)
+-- FASE 5: Atualizacao de get_audit_raw_metrics (Corrigida)
 -- =====================================================
 
 CREATE OR REPLACE FUNCTION public.get_audit_raw_metrics(p_tenant_id uuid)
@@ -149,12 +149,12 @@ BEGIN
   END IF;
 
   SELECT jsonb_build_object(
-    -- Métricas básicas de auditoria
+    -- Metricas basicas de auditoria
     'total_audit_logs', (SELECT COUNT(*) FROM public.audit_logs WHERE tenant_id = p_tenant_id),
     'audit_logs_30d', (SELECT COUNT(*) FROM public.audit_logs WHERE tenant_id = p_tenant_id AND created_at > now() - interval '30 days'),
     'audit_logs_with_hash', (SELECT COUNT(*) FROM public.audit_logs WHERE tenant_id = p_tenant_id AND integrity_hash IS NOT NULL),
     
-    -- Métricas de auditoria de IA
+    -- Metricas de auditoria de IA
     'ai_decisions_logged', (
       SELECT COUNT(*) FROM public.audit_logs 
       WHERE tenant_id = p_tenant_id 
@@ -178,18 +178,18 @@ BEGIN
       END
     ),
     
-    -- Métricas de testes RLS
+    -- Metricas de testes RLS
     'rls_test_runs_30d', (SELECT COUNT(DISTINCT test_run_id) FROM public.rls_test_results WHERE tested_at > now() - interval '30 days'),
     'rls_failures_detected', (SELECT COUNT(*) FROM public.rls_test_results WHERE NOT passed AND tested_at > now() - interval '30 days'),
     'rls_last_test', (SELECT MAX(tested_at) FROM public.rls_test_results),
     
-    -- Métricas de integridade
+    -- Metricas de integridade
     'audit_integrity_checks_30d', (SELECT COUNT(*) FROM public.audit_integrity_checks WHERE tenant_id = p_tenant_id AND checked_at > now() - interval '30 days'),
     'audit_integrity_breaches', (SELECT COUNT(*) FROM public.audit_integrity_checks WHERE tenant_id = p_tenant_id AND NOT chain_valid AND checked_at > now() - interval '30 days'),
     'audit_integrity_last_check', (SELECT MAX(checked_at) FROM public.audit_integrity_checks WHERE tenant_id = p_tenant_id),
     'audit_chain_valid', (SELECT bool_and(chain_valid) FROM public.audit_integrity_checks WHERE tenant_id = p_tenant_id AND checked_at > now() - interval '7 days'),
     
-    -- Métricas de DLQ (usando failed_jobs_dlq)
+    -- Metricas de DLQ (usando failed_jobs_dlq)
     'dlq_total_items', (SELECT COUNT(*) FROM public.failed_jobs_dlq WHERE tenant_id = p_tenant_id),
     'dlq_unresolved', (SELECT COUNT(*) FROM public.failed_jobs_dlq WHERE tenant_id = p_tenant_id AND status != 'resolved'),
     'dlq_reviewed_count', (SELECT COUNT(*) FROM public.failed_jobs_dlq WHERE tenant_id = p_tenant_id AND resolved_by IS NOT NULL),
@@ -209,12 +209,12 @@ BEGIN
     ),
     'dlq_suspicious_count', (SELECT COUNT(*) FROM public.failed_jobs_dlq WHERE tenant_id = p_tenant_id AND flagged_suspicious),
     
-    -- Métricas de validação de ações
+    -- Metricas de validacao de acoes
     'ai_validations_30d', (SELECT COUNT(*) FROM public.ai_action_validations WHERE tenant_id = p_tenant_id AND validated_at > now() - interval '30 days'),
     'ai_validations_passed', (SELECT COUNT(*) FROM public.ai_action_validations WHERE tenant_id = p_tenant_id AND validation_passed AND validated_at > now() - interval '30 days'),
     'ai_validations_failed', (SELECT COUNT(*) FROM public.ai_action_validations WHERE tenant_id = p_tenant_id AND NOT validation_passed AND validated_at > now() - interval '30 days'),
     
-    -- Métricas de DLQ categorizadas
+    -- Metricas de DLQ categorizadas
     'dlq_categorized_total', (SELECT COUNT(*) FROM public.dlq_categorized WHERE tenant_id = p_tenant_id),
     'dlq_categorized_security', (SELECT COUNT(*) FROM public.dlq_categorized WHERE tenant_id = p_tenant_id AND risk_category = 'security'),
     
@@ -227,7 +227,7 @@ END;
 $$;
 
 -- =====================================================
--- ÍNDICES ADICIONAIS PARA PERFORMANCE
+-- INDICES ADICIONAIS PARA PERFORMANCE
 -- =====================================================
 
 CREATE INDEX IF NOT EXISTS idx_dlq_suspicious ON public.failed_jobs_dlq(flagged_suspicious) WHERE flagged_suspicious = true;

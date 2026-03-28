@@ -1,19 +1,19 @@
--- P0-002: Adicionar UNIQUE constraint nas partições de hmac_signatures
+-- P0-002: Adicionar UNIQUE constraint nas particoes de hmac_signatures
 -- Para tabelas particionadas, o constraint deve incluir a coluna de particionamento (used_at)
--- Criar índice único global na tabela particionada base
+-- Criar indice unico global na tabela particionada base
 CREATE UNIQUE INDEX IF NOT EXISTS hmac_signatures_signature_used_at_unique 
 ON hmac_signatures_partitioned (signature, used_at);
 
--- Adicionar constraint nas partições existentes
+-- Adicionar constraint nas particoes existentes
 CREATE UNIQUE INDEX IF NOT EXISTS hmac_signatures_2025_12_signature_unique 
 ON hmac_signatures_2025_12 (signature);
 
 CREATE UNIQUE INDEX IF NOT EXISTS hmac_signatures_2026_01_signature_unique 
 ON hmac_signatures_2026_01 (signature);
 
--- P0-003: Criar RPC claim_jobs_for_agent com locking atômico
--- Esta função usa SELECT FOR UPDATE SKIP LOCKED para garantir que apenas um agente
--- pode reclamar cada job, prevenindo execuções paralelas
+-- P0-003: Criar RPC claim_jobs_for_agent com locking atomico
+-- Esta funcao usa SELECT FOR UPDATE SKIP LOCKED para garantir que apenas um agente
+-- pode reclamar cada job, prevenindo execucoes paralelas
 CREATE OR REPLACE FUNCTION claim_jobs_for_agent(
   p_agent_id UUID,
   p_agent_name TEXT,
@@ -39,7 +39,7 @@ DECLARE
   v_now TIMESTAMPTZ := NOW();
 BEGIN
   -- Selecionar e travar jobs atomicamente usando FOR UPDATE SKIP LOCKED
-  -- Isso garante que se outro agente/processo já travou o job, ele é pulado
+  -- Isso garante que se outro agente/processo ja travou o job, ele e pulado
   SELECT array_agg(j.id) INTO v_job_ids
   FROM (
     SELECT jobs.id 
@@ -82,5 +82,5 @@ BEGIN
 END;
 $$;
 
--- Comentário explicando a função
+-- Comentario explicando a funcao
 COMMENT ON FUNCTION claim_jobs_for_agent IS 'Atomic job claiming with SELECT FOR UPDATE SKIP LOCKED to prevent parallel execution';

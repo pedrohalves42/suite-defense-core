@@ -1,5 +1,5 @@
 // FASE CORRECAO: Edge function scheduled para cleanup de jobs de agentes offline
-// Executa a cada hora para garantir que jobs não fiquem órfãos
+// Executa a cada hora para garantir que jobs nao fiquem orfaos
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts'
@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Chamar função SQL que faz o cleanup
+    // Chamar funcao SQL que faz o cleanup
     const { data, error } = await supabase.rpc('cleanup_offline_agents_jobs')
 
     if (error) {

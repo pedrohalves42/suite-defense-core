@@ -195,7 +195,7 @@ Deno.serve(async (req) => {
               <strong>${a.agent_name}</strong><br/>
               Estado: ${a.agent_state || 'unknown'}<br/>
               Status: ${a.lifecycle_status || 'unknown'}<br/>
-              Último heartbeat: ${a.last_heartbeat ? new Date(a.last_heartbeat).toLocaleString('pt-BR') : 'nunca'}
+              Ultimo heartbeat: ${a.last_heartbeat ? new Date(a.last_heartbeat).toLocaleString('pt-BR') : 'nunca'}
             </li>
           `).join('')}
         </ul>

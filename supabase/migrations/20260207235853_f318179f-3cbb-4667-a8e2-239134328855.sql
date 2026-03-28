@@ -4,7 +4,7 @@
 -- Adiciona provider column e views para dashboard
 -- =====================================================
 
--- 1. Adicionar coluna provider se não existir
+-- 1. Adicionar coluna provider se nao existir
 ALTER TABLE ai_inference_metrics 
 ADD COLUMN IF NOT EXISTS provider text;
 
@@ -12,14 +12,14 @@ ADD COLUMN IF NOT EXISTS provider text;
 ALTER TABLE ai_inference_metrics 
 ADD COLUMN IF NOT EXISTS cost_usd numeric(10,8) DEFAULT 0;
 
--- 3. Índices para performance do dashboard
+-- 3. Indices para performance do dashboard
 CREATE INDEX IF NOT EXISTS idx_ai_metrics_provider 
 ON ai_inference_metrics(provider);
 
 CREATE INDEX IF NOT EXISTS idx_ai_metrics_created_provider 
 ON ai_inference_metrics(created_at DESC, provider);
 
--- 4. View de performance por provider (últimas 24h)
+-- 4. View de performance por provider (ultimas 24h)
 CREATE OR REPLACE VIEW v_ai_provider_performance WITH (security_invoker = on) AS
 SELECT 
   COALESCE(provider, 'unknown') as provider,
@@ -35,7 +35,7 @@ WHERE created_at > NOW() - INTERVAL '24 hours'
 GROUP BY COALESCE(provider, 'unknown')
 ORDER BY requests_24h DESC;
 
--- 5. View de tendências horárias
+-- 5. View de tendencias horarias
 CREATE OR REPLACE VIEW v_ai_hourly_trends WITH (security_invoker = on) AS
 SELECT 
   DATE_TRUNC('hour', created_at) as hour,
@@ -49,7 +49,7 @@ WHERE created_at > NOW() - INTERVAL '7 days'
 GROUP BY DATE_TRUNC('hour', created_at)
 ORDER BY hour DESC;
 
--- 6. View de performance por função
+-- 6. View de performance por funcao
 CREATE OR REPLACE VIEW v_ai_function_performance WITH (security_invoker = on) AS
 SELECT 
   function_name,
@@ -64,7 +64,7 @@ WHERE created_at > NOW() - INTERVAL '24 hours'
 GROUP BY function_name
 ORDER BY requests_24h DESC;
 
--- 7. Função RPC para obter score de providers (para seleção inteligente)
+-- 7. Funcao RPC para obter score de providers (para selecao inteligente)
 CREATE OR REPLACE FUNCTION get_ai_provider_scores()
 RETURNS TABLE(
   provider text,
@@ -102,7 +102,7 @@ AS $$
   ORDER BY score ASC;
 $$;
 
--- 8. Comentários para documentação
+-- 8. Comentarios para documentacao
 COMMENT ON VIEW v_ai_provider_performance IS 
 'Dashboard view: AI provider performance metrics (last 24h)';
 

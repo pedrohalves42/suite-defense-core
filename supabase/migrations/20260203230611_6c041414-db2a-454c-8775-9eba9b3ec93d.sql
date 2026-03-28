@@ -1,7 +1,7 @@
 
 -- ============================================================================
--- CORREÇÃO FINAL: v_security_invariants - INV-004 excluir views admin documentadas
--- A view hmac_agent_secrets é intencionalmente administrativa (super_admin only)
+-- CORRECAO FINAL: v_security_invariants - INV-004 excluir views admin documentadas
+-- A view hmac_agent_secrets e intencionalmente administrativa (super_admin only)
 -- ============================================================================
 
 DROP VIEW IF EXISTS v_security_invariants;
@@ -46,20 +46,20 @@ SELECT
   (SELECT COUNT(DISTINCT action) FROM audit_logs WHERE created_at > NOW() - INTERVAL '24 hours') AS inv005_unique_actions_24h,
   (SELECT COUNT(*) FROM agent_evidence_logs WHERE created_at > NOW() - INTERVAL '24 hours') AS inv005_evidence_logs_24h,
   
-  -- INV-006: Privilégio Mínimo
+  -- INV-006: Privilegio Minimo
   (SELECT COUNT(*) = 0 FROM information_schema.role_table_grants WHERE grantee = 'anon' AND privilege_type IN ('INSERT', 'UPDATE', 'DELETE') AND table_schema = 'public') AS inv006_no_anon_write,
   (SELECT COUNT(*) FROM pg_policies WHERE schemaname = 'public' AND roles::text LIKE '%service_role%') AS inv006_service_role_policies,
   
-  -- Métricas de Saúde
+  -- Metricas de Saude
   (SELECT COUNT(*) FROM agents WHERE archived_at IS NULL AND last_heartbeat > NOW() - INTERVAL '30 minutes') AS health_active_agents,
   (SELECT COUNT(*) FROM ai_actions WHERE status = 'pending' AND created_at > NOW() - INTERVAL '7 days') AS health_pending_actions,
   (SELECT COUNT(*) FROM ai_actions WHERE status = 'executed' AND executed_at > NOW() - INTERVAL '24 hours') AS health_executed_actions_24h,
   (SELECT COUNT(*) FROM jobs WHERE status = 'done' AND completed_at > NOW() - INTERVAL '24 hours') AS health_jobs_completed_24h;
 
 COMMENT ON VIEW v_security_invariants IS 
-'ADR-INV: View canônica para verificação empírica de invariantes de segurança (INV-001 a INV-006).
-Metodologia Nullmann: Prova de existência real, não configuração teórica.
-Views admin documentadas (hmac_agent_secrets) são excluídas do INV-004 pois usam is_current_super_admin().
+'ADR-INV: View canonica para verificacao empirica de invariantes de seguranca (INV-001 a INV-006).
+Metodologia Nullmann: Prova de existencia real, nao configuracao teorica.
+Views admin documentadas (hmac_agent_secrets) sao excluidas do INV-004 pois usam is_current_super_admin().
 security_invoker=on para garantir RLS do caller.';
 
 REVOKE ALL ON v_security_invariants FROM PUBLIC;

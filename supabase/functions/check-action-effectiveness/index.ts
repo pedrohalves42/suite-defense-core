@@ -48,7 +48,7 @@ async function checkDnsActivity(
     return {
       status: 'resolved',
       evidence: { domain, attempts_after_action: 0 },
-      reason: `Nenhuma tentativa de acesso ao domínio ${domain} após o bloqueio`
+      reason: `Nenhuma tentativa de acesso ao dominio ${domain} apos o bloqueio`
     };
   } else if (blockedAttempts === attempts) {
     return {
@@ -60,7 +60,7 @@ async function checkDnsActivity(
     return {
       status: 'partial',
       evidence: { domain, attempts_after_action: attempts, blocked: blockedAttempts },
-      reason: `${attempts - blockedAttempts} tentativa(s) não bloqueada(s)`
+      reason: `${attempts - blockedAttempts} tentativa(s) nao bloqueada(s)`
     };
   }
 }
@@ -90,13 +90,13 @@ async function checkAntivirusStatus(
       return {
         status: 'resolved',
         evidence: { product: status.product_name, current_status: status.status },
-        reason: `Antivírus ${status.product_name} está ativo`
+        reason: `Antivirus ${status.product_name} esta ativo`
       };
     } else {
       return {
         status: 'failed',
         evidence: { product: status.product_name, current_status: status.status },
-        reason: `Antivírus ainda está ${status.status}`
+        reason: `Antivirus ainda esta ${status.status}`
       };
     }
   } else {
@@ -107,13 +107,13 @@ async function checkAntivirusStatus(
       return {
         status: 'resolved',
         evidence: { product: status.product_name, last_update: status.last_update_at },
-        reason: `Antivírus atualizado em ${status.last_update_at}`
+        reason: `Antivirus atualizado em ${status.last_update_at}`
       };
     } else {
       return {
         status: 'failed',
         evidence: { product: status.product_name, last_update: status.last_update_at },
-        reason: 'Antivírus ainda não foi atualizado'
+        reason: 'Antivirus ainda nao foi atualizado'
       };
     }
   }
@@ -180,7 +180,7 @@ async function checkAgentOnline(
     return {
       status: 'failed',
       evidence: { status: agent.status, state: agent.agent_state, last_heartbeat: agent.last_heartbeat },
-      reason: `Agente ainda está ${agent.agent_state}`
+      reason: `Agente ainda esta ${agent.agent_state}`
     };
   }
 }
@@ -214,7 +214,7 @@ async function checkVulnerabilityFixed(
     return {
       status: 'resolved',
       evidence: { cve_id: cveId },
-      reason: `Vulnerabilidade ${cveId} não está mais presente`
+      reason: `Vulnerabilidade ${cveId} nao esta mais presente`
     };
   } else {
     return {
@@ -326,7 +326,7 @@ serve(async (req) => {
           result = { 
             status: 'unknown', 
             evidence: { note: 'No specific verification strategy for this insight type' },
-            reason: `Verificação automática não disponível para ${insight_type}`
+            reason: `Verificacao automatica nao disponivel para ${insight_type}`
           };
       }
 

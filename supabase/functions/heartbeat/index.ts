@@ -247,18 +247,18 @@ Deno.serve(async (req) => {
     // ============================================================
     // PERF-FIX: Parallelize independent DB operations
     // System metrics insert, process insert, and token update
-    // are independent of each other — run them concurrently
+    // are independent of each other ? run them concurrently
     // ============================================================
     const systemMetrics = (osInfo as Record<string, unknown>).system_metrics
     
-    // TUNING: tenant_id already available from initial join — zero extra queries
+    // TUNING: tenant_id already available from initial join ? zero extra queries
     const cachedTenantId = agent.tenant_id || null
     const getTenantId = async (): Promise<string | null> => cachedTenantId
 
     // Build all parallel promises
     const parallelOps: Promise<void>[] = []
 
-    // 1. Token last_used_at update (fire-and-forget) — uses agent_id since tokenHash is internal to authenticateAgent
+    // 1. Token last_used_at update (fire-and-forget) ? uses agent_id since tokenHash is internal to authenticateAgent
     parallelOps.push(
       supabase
         .from('agent_tokens')
@@ -360,7 +360,7 @@ Deno.serve(async (req) => {
             error: procError.message,
           })
         } else {
-          // Cleanup old snapshots (keep last 48h) — non-blocking
+          // Cleanup old snapshots (keep last 48h) ? non-blocking
           supabase
             .from('agent_processes')
             .delete()
@@ -379,7 +379,7 @@ Deno.serve(async (req) => {
     // Se agent tem force_update_version pendente, incluir dados completos no response
     // Isso bypassa completamente o job system e funciona com agentes antigos
     // ============================================================
-    // TUNING: forceCheck data already available from initial join — zero extra queries
+    // TUNING: forceCheck data already available from initial join ? zero extra queries
     const forceCheck = {
       force_update_version: agent.force_update_version,
       force_update_reason: agent.force_update_reason,
@@ -430,7 +430,7 @@ Deno.serve(async (req) => {
               force_update_override_safe_mode_expires_at: null,
             })
             .eq('id', agent.id)
-          // effectiveForceVersion stays null → no force update delivered
+          // effectiveForceVersion stays null ? no force update delivered
         } else {
           effectiveForceVersion = recoveredVersion
           effectiveForceReason = effectiveForceReason || 'Recovered from pending force_update_at without version'
@@ -480,8 +480,8 @@ Deno.serve(async (req) => {
         .eq('id', agent.id)
       // Fall through to normal heartbeat response (no force update)
     } else if (effectiveForceVersion) {
-      // Guard contra limpeza prematura da mesma versão: a string de versão sozinha
-      // não prova que o novo payload/script realmente entrou em execução.
+      // Guard contra limpeza prematura da mesma versao: a string de versao sozinha
+      // nao prova que o novo payload/script realmente entrou em execucao.
       const currentVersion = agentVersion || updateData.agent_version
       const forceTriggeredAt = (forceCheck as Record<string, unknown>)?.force_update_at
       const currentNorm = normalizeVersion(currentVersion)
@@ -512,7 +512,7 @@ Deno.serve(async (req) => {
           })
           .eq('id', agent.id)
 
-        // Response normal - mesmo target já foi aplicado com sucesso
+        // Response normal - mesmo target ja foi aplicado com sucesso
       } else {
         if (sameVersionReported) {
           logger.warn('Agent reports target version but force_update remains pending; preserving delivery until real apply is confirmed', {
@@ -523,7 +523,7 @@ Deno.serve(async (req) => {
             lastForcedUpdateApplied,
           })
         }
-        // PARTE 1: Verificar delivered_count - se > 50, limpar flag (agente não suporta)
+        // PARTE 1: Verificar delivered_count - se > 50, limpar flag (agente nao suporta)
         const deliveredCount = (forceCheck as Record<string, unknown>).force_update_delivered_count || 0
         
         if (deliveredCount >= 50) {
@@ -609,7 +609,7 @@ Deno.serve(async (req) => {
               }
 
               // SAFETY: Version header validation - ensure script content matches target version
-              const headerMatch = finalScript.match(/CyberShield\s+Agent\s*[-–]\s*\w+\s+v?([\d]+\.[\d]+)/i);
+              const headerMatch = finalScript.match(/CyberShield\s+Agent\s*[-?]\s*\w+\s+v?([\d]+\.[\d]+)/i);
               const scriptMajor = headerMatch?.[1] || '';
               const targetMajor = normalizeVersion(effectiveForceVersion)?.split('.').slice(0, 2).join('.') || '';
               
@@ -631,7 +631,7 @@ Deno.serve(async (req) => {
               const scriptBytes = encoder.encode(normalizedScript)
               const base64Script = encodeBase64(scriptBytes)
               
-              // Calcular SHA256 do conteúdo normalizado (mesmo algoritmo do serve-agent-update)
+              // Calcular SHA256 do conteudo normalizado (mesmo algoritmo do serve-agent-update)
               const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes)
               const hashArray = Array.from(new Uint8Array(hashBuffer))
               const calculatedSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
@@ -680,7 +680,7 @@ Deno.serve(async (req) => {
                     new_version: release.version,
                     old_version: currentVersion || 'unknown',
                   },
-                  // COST-OPT v6: Unified intervals — BUG 5 fix: eliminates ping-pong
+                  // COST-OPT v6: Unified intervals ? BUG 5 fix: eliminates ping-pong
                   heartbeat_interval_seconds: 600,
                   poll_interval_seconds: 600,
                   // v5.0.16-hardening: EventLog toggle (default true)
@@ -766,7 +766,7 @@ Deno.serve(async (req) => {
         script_sha256: currentScriptSha256,
         script_hash_signature: null,
         script_hash_signed_at: currentScriptHashSignedAt,
-        // COST-OPT v6: Unified intervals (heartbeat=600s, poll=600s) — BUG 5 fix: eliminates ping-pong
+        // COST-OPT v6: Unified intervals (heartbeat=600s, poll=600s) ? BUG 5 fix: eliminates ping-pong
         heartbeat_interval_seconds: 600,
         poll_interval_seconds: 600,
         // Agent config flags

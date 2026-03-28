@@ -1,6 +1,6 @@
 UPDATE agents 
 SET force_update_version = 'v5.0.14',
-    force_update_reason = 'Rollout gradual v5.0.14 - aprovado após canário pcteste1',
+    force_update_reason = 'Rollout gradual v5.0.14 - aprovado apos canario pcteste1',
     force_update_at = NOW(),
     force_update_delivered_count = 0,
     force_update_delivery_count = 0,

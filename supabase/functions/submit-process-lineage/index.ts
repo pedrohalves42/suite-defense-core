@@ -162,7 +162,7 @@ serveAgent(async (_req, ctx) => {
       alert_type: 'suspicious_process',
       severity: suspiciousCount >= 3 ? 'critical' : 'high',
       title: `${suspiciousCount} processo(s) suspeito(s) detectado(s)`,
-      description: `Agente ${agentName} reportou ${suspiciousCount} processos com padrões suspeitos: ${suspiciousProcs.map(p => p.process_name).join(', ')}`,
+      description: `Agente ${agentName} reportou ${suspiciousCount} processos com padroes suspeitos: ${suspiciousProcs.map(p => p.process_name).join(', ')}`,
       metadata: {
         suspicious_processes: suspiciousProcs.slice(0, 10).map(p => ({
           name: p.process_name,

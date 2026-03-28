@@ -1,6 +1,6 @@
 /**
  * Agent Version Management Service
- * AGT-028: Enforcement de versão da frota e compliance
+ * AGT-028: Enforcement de versao da frota e compliance
  * Migrated to serveTenant middleware
  */
 
@@ -40,7 +40,7 @@ serveTenant(async (_req, ctx) => {
   methods: ['POST'],
 });
 
-// ── Helpers ──────────────────────────────────────────
+// ?? Helpers ??????????????????????????????????????????
 
 function parseVersion(v: string): number[] {
   return (v ?? '0.0.0').replace(/^v/i, '').split('.').map(Number);

@@ -15,7 +15,7 @@ DECLARE
   v_trigger_type text;
   v_execution_id uuid;
 BEGIN
-  -- Expanded alert → trigger type mapping
+  -- Expanded alert ? trigger type mapping
   v_trigger_type := CASE NEW.alert_type
     WHEN 'vulnerability_critical' THEN 'vulnerability_critical'
     WHEN 'antivirus_outdated' THEN 'antivirus_outdated'

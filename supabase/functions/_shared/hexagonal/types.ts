@@ -1,12 +1,12 @@
 /**
  * Deno-compatible domain types for the Hexagonal Architecture.
  *
- * AUTO-GENERATED — DO NOT EDIT MANUALLY.
+ * AUTO-GENERATED ? DO NOT EDIT MANUALLY.
  * Source of truth: src/domain/shared-kernel/shared-enums.ts
  * Regenerate with: npx tsx scripts/sync-shared-types.ts
  */
 
-// ─── Platform Enums ─────────────────────────────────────
+// ??? Platform Enums ?????????????????????????????????????
 export enum Platform {
   WINDOWS = 'windows',
   LINUX = 'linux',

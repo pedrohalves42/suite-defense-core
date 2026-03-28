@@ -1,12 +1,12 @@
--- Fase 1: Adicionar decision_event_id à tabela ai_actions para rastreabilidade completa
+-- Fase 1: Adicionar decision_event_id a tabela ai_actions para rastreabilidade completa
 ALTER TABLE public.ai_actions 
 ADD COLUMN IF NOT EXISTS decision_event_id UUID REFERENCES public.decision_events(id);
 
--- Criar índice para consultas de audit trail
+-- Criar indice para consultas de audit trail
 CREATE INDEX IF NOT EXISTS idx_ai_actions_decision_event ON public.ai_actions(decision_event_id);
 
--- Fase 2: Criar view que corrige a classificação de status dos jobs
--- Reclassifica timeouts de computador desligado como 'cancelled_timeout' ao invés de 'failed'
+-- Fase 2: Criar view que corrige a classificacao de status dos jobs
+-- Reclassifica timeouts de computador desligado como 'cancelled_timeout' ao inves de 'failed'
 CREATE OR REPLACE VIEW public.v_jobs_status_corrected AS
 SELECT 
   j.*,
@@ -19,7 +19,7 @@ SELECT
       j.error_message ILIKE '%expired before%' OR
       j.error_message ILIKE '%Stuck job%'
     ) THEN 'cancelled_timeout'
-    -- Jobs que foram entregues mas nunca responderam (agente offline após entrega)
+    -- Jobs que foram entregues mas nunca responderam (agente offline apos entrega)
     WHEN j.status = 'failed' AND j.error_message ILIKE '%delivered but%' THEN 'cancelled_no_response'
     -- Manter o status original para outros casos
     ELSE j.status
@@ -37,10 +37,10 @@ SELECT
   END AS is_real_failure
 FROM public.jobs j;
 
--- Conceder permissões na view
+-- Conceder permissoes na view
 GRANT SELECT ON public.v_jobs_status_corrected TO authenticated;
 
--- Fase 3: Criar RPC para métricas de autonomia
+-- Fase 3: Criar RPC para metricas de autonomia
 CREATE OR REPLACE FUNCTION public.get_autonomy_metrics(
   p_tenant_id UUID,
   p_days INTEGER DEFAULT 7
@@ -184,7 +184,7 @@ BEGIN
 END;
 $$;
 
--- Fase 5: Criar RPC para timeline de decisões
+-- Fase 5: Criar RPC para timeline de decisoes
 CREATE OR REPLACE FUNCTION public.get_decision_timeline(
   p_tenant_id UUID,
   p_limit INTEGER DEFAULT 50,

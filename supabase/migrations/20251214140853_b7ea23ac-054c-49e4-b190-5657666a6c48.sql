@@ -1,4 +1,4 @@
--- Tabela de fila de notificações
+-- Tabela de fila de notificacoes
 CREATE TABLE public.notification_queue (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,

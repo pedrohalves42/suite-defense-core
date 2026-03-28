@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 
 /**
- * SOAR Lite Engine — Automated Security Response
+ * SOAR Lite Engine ? Automated Security Response
  * 
  * Evaluates security events against SOAR rules and triggers
  * automated remediation actions with blast radius protection.
@@ -10,7 +10,7 @@ import { logger } from '../_shared/logger.ts';
  * Called by: correlate-edr-events, submit-endpoint-events, or scheduled
  * 
  * Flow:
- *   Event → Match Rules → Check Blast Radius → Create Remediation Job
+ *   Event ? Match Rules ? Check Blast Radius ? Create Remediation Job
  */
 
 const corsHeaders = {
@@ -44,7 +44,7 @@ interface SOARRule {
 const BUILTIN_RULES: SOARRule[] = [
   {
     id: 'soar-builtin-001',
-    name: 'Ransomware → Isolate Host',
+    name: 'Ransomware ? Isolate Host',
     trigger_type: 'ransomware_detected',
     trigger_conditions: {},
     action_type: 'isolate_host',
@@ -56,7 +56,7 @@ const BUILTIN_RULES: SOARRule[] = [
   },
   {
     id: 'soar-builtin-002',
-    name: 'Token Exfiltration → Revoke Token',
+    name: 'Token Exfiltration ? Revoke Token',
     trigger_type: 'token_exfiltration',
     trigger_conditions: {},
     action_type: 'revoke_agent_token',
@@ -68,7 +68,7 @@ const BUILTIN_RULES: SOARRule[] = [
   },
   {
     id: 'soar-builtin-003',
-    name: 'AV Disabled → Re-enable AV',
+    name: 'AV Disabled ? Re-enable AV',
     trigger_type: 'antivirus_disabled',
     trigger_conditions: {},
     action_type: 'check_antivirus',
@@ -80,7 +80,7 @@ const BUILTIN_RULES: SOARRule[] = [
   },
   {
     id: 'soar-builtin-004',
-    name: 'Firewall Disabled → Re-enable Firewall',
+    name: 'Firewall Disabled ? Re-enable Firewall',
     trigger_type: 'firewall_disabled',
     trigger_conditions: {},
     action_type: 'enable_firewall',
@@ -92,7 +92,7 @@ const BUILTIN_RULES: SOARRule[] = [
   },
   {
     id: 'soar-builtin-005',
-    name: 'Suspicious Process → Kill Process',
+    name: 'Suspicious Process ? Kill Process',
     trigger_type: 'suspicious_process',
     trigger_conditions: {},
     action_type: 'kill_process',
@@ -104,7 +104,7 @@ const BUILTIN_RULES: SOARRule[] = [
   },
   {
     id: 'soar-builtin-006',
-    name: 'C2 Communication → Block IP + Isolate',
+    name: 'C2 Communication ? Block IP + Isolate',
     trigger_type: 'c2_communication',
     trigger_conditions: {},
     action_type: 'isolate_host',

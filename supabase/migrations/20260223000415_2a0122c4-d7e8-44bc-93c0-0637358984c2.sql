@@ -2,7 +2,7 @@
 -- =============================================================================
 -- VELLUM V-001 FIX: Mass revoke internal/cron/trigger SECURITY DEFINER 
 -- functions from authenticated role
--- These are NOT user-facing RPCs — they should only be callable by postgres/triggers
+-- These are NOT user-facing RPCs ? they should only be callable by postgres/triggers
 -- =============================================================================
 DO $$
 DECLARE

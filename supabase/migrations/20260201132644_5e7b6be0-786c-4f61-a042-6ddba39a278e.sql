@@ -1,13 +1,13 @@
 -- ============================================================================
--- Criar partições HMAC Fevereiro-Junho 2026 (INV-002 Nullmann)
+-- Criar particoes HMAC Fevereiro-Junho 2026 (INV-002 Nullmann)
 -- ============================================================================
 
--- Criar partição Fevereiro 2026 (URGENTE)
+-- Criar particao Fevereiro 2026 (URGENTE)
 CREATE TABLE IF NOT EXISTS public.hmac_signatures_2026_02 
   PARTITION OF public.hmac_signatures
   FOR VALUES FROM ('2026-02-01') TO ('2026-03-01');
 
--- Criar partições futuras para prevenir recorrência
+-- Criar particoes futuras para prevenir recorrencia
 CREATE TABLE IF NOT EXISTS public.hmac_signatures_2026_03 
   PARTITION OF public.hmac_signatures
   FOR VALUES FROM ('2026-03-01') TO ('2026-04-01');
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS public.hmac_signatures_2026_06
   PARTITION OF public.hmac_signatures
   FOR VALUES FROM ('2026-06-01') TO ('2026-07-01');
 
--- Criar índices nas novas partições
+-- Criar indices nas novas particoes
 CREATE INDEX IF NOT EXISTS idx_hmac_signatures_2026_02_signature 
   ON public.hmac_signatures_2026_02(signature);
 CREATE INDEX IF NOT EXISTS idx_hmac_signatures_2026_02_used_at 

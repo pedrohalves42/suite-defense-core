@@ -9,13 +9,13 @@ ALTER TABLE system_alerts ADD CONSTRAINT system_alerts_alert_type_check
     'non_execution_detected', 'stuck_installations', 'agent_integrity_failure'
   ));
 
--- FASE 2: RLS para agent_releases - permitir leitura para usuários autenticados
+-- FASE 2: RLS para agent_releases - permitir leitura para usuarios autenticados
 CREATE POLICY "agent_releases_select_authenticated" 
 ON agent_releases FOR SELECT 
 TO authenticated 
 USING (is_active = true);
 
--- FASE 3: Corrigir função collect_task_evidence (a.status -> a.resolved)
+-- FASE 3: Corrigir funcao collect_task_evidence (a.status -> a.resolved)
 CREATE OR REPLACE FUNCTION public.collect_task_evidence(p_agent_id uuid, p_task_type text)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -58,7 +58,7 @@ BEGIN
     AND i.created_at > NOW() - INTERVAL '24 hours'
   LIMIT 10;
 
-  -- Coletar métricas recentes do agente
+  -- Coletar metricas recentes do agente
   SELECT jsonb_build_object(
     'cpu_usage_percent', m.cpu_usage_percent,
     'memory_usage_percent', m.memory_usage_percent,
@@ -71,7 +71,7 @@ BEGIN
   ORDER BY m.collected_at DESC
   LIMIT 1;
 
-  -- Montar evidência completa
+  -- Montar evidencia completa
   v_evidence := jsonb_build_object(
     'task_type', p_task_type,
     'agent_id', p_agent_id,
@@ -85,7 +85,7 @@ BEGIN
 END;
 $$;
 
--- FASE 4: Corrigir função check_offline_agents_for_playbook
+-- FASE 4: Corrigir funcao check_offline_agents_for_playbook
 CREATE OR REPLACE FUNCTION public.check_offline_agents_for_playbook(p_tenant_id uuid)
 RETURNS TABLE(agent_id uuid, agent_name text, last_heartbeat timestamptz, minutes_offline integer)
 LANGUAGE plpgsql

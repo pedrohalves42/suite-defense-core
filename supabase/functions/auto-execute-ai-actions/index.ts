@@ -1,14 +1,14 @@
 /**
  * Auto Execute AI Actions - Edge Function
  * 
- * Executa automaticamente ações de IA de baixo risco que não requerem aprovação manual.
- * ENTERPRISE: Usa resolve-action-policy como PONTO ÚNICO DE DECISÃO.
+ * Executa automaticamente acoes de IA de baixo risco que nao requerem aprovacao manual.
+ * ENTERPRISE: Usa resolve-action-policy como PONTO UNICO DE DECISAO.
  * 
  * Fluxo:
- * 1. Busca insights recentes que geraram ações pendentes
- * 2. Consulta resolve-action-policy para cada ação
- * 3. Executa ações de baixo risco automaticamente
- * 4. Registra execuções no audit log
+ * 1. Busca insights recentes que geraram acoes pendentes
+ * 2. Consulta resolve-action-policy para cada acao
+ * 3. Executa acoes de baixo risco automaticamente
+ * 4. Registra execucoes no audit log
  * 5. Fecha ciclo atualizando status do insight
  */
 
@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Helper: Invocar resolve-action-policy (PONTO ÚNICO DE DECISÃO)
+    // Helper: Invocar resolve-action-policy (PONTO UNICO DE DECISAO)
     async function resolvePolicy(tenantId: string, insightType: string): Promise<PolicyResponse> {
       try {
         const response = await fetch(
@@ -94,13 +94,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Buscar ações pendentes que não requerem aprovação
-    // P0 FIX: Buscar ações de cada tenant separadamente para garantir balanceamento justo
-    // Usa query que distribui ações entre tenants (round-robin)
+    // Buscar acoes pendentes que nao requerem aprovacao
+    // P0 FIX: Buscar acoes de cada tenant separadamente para garantir balanceamento justo
+    // Usa query que distribui acoes entre tenants (round-robin)
     const { data: pendingActionsRaw, error: actionsError } = await supabase
       .rpc('get_balanced_pending_actions', { p_limit: 50 })
     
-    // Fallback para query direta se RPC não existir
+    // Fallback para query direta se RPC nao existir
     let pendingActions = pendingActionsRaw
     if (actionsError || !pendingActionsRaw) {
       logger.info(`[${requestId}] Using fallback query (RPC not available)`)
@@ -147,7 +147,7 @@ Deno.serve(async (req) => {
 
     logger.info(`[${requestId}] Found ${pendingActions.length} pending actions`)
 
-    // Buscar configurações de ações (whitelist)
+    // Buscar configuracoes de acoes (whitelist)
     const { data: actionConfigs } = await supabase
       .from('ai_action_configs')
       .select('action_type, is_enabled, requires_approval, risk_level, max_executions_per_day')
@@ -168,14 +168,14 @@ Deno.serve(async (req) => {
       const config = configMap.get(action.action_type)
       const insight = action.ai_insights as Record<string, unknown>
       
-      // Skip se não está na whitelist ou está desabilitado
+      // Skip se nao esta na whitelist ou esta desabilitado
       if (!config || !config.is_enabled) {
         logger.info(`[${requestId}] Skipping ${action.id}: action type ${action.action_type} not enabled`)
         result.actions_skipped++
         continue
       }
 
-      // Skip se requer aprovação manual (from ai_action_configs)
+      // Skip se requer aprovacao manual (from ai_action_configs)
       if (config.requires_approval) {
         logger.info(`[${requestId}] Skipping ${action.id}: requires manual approval (config)`)
         result.actions_skipped++
@@ -195,22 +195,22 @@ Deno.serve(async (req) => {
         continue
       }
       
-      // Skip se requer aprovação (não é auto)
+      // Skip se requer aprovacao (nao e auto)
       if (policy.execution_mode === 'approval') {
         logger.info(`[${requestId}] Skipping ${action.id}: requires approval (source=${policy.source})`)
         result.actions_skipped++
         continue
       }
       
-      // Só continua se execution_mode === 'auto'
-      // Skip se é alto risco (proteção adicional)
+      // So continua se execution_mode === 'auto'
+      // Skip se e alto risco (protecao adicional)
       if (config.risk_level === 'high') {
         logger.info(`[${requestId}] Skipping ${action.id}: high risk action`)
         result.actions_skipped++
         continue
       }
 
-      // ✅ HUMAN-IN-THE-LOOP: Check if critical actions require human review
+      // [OK]  HUMAN-IN-THE-LOOP: Check if critical actions require human review
       const insightSeverity = insight?.severity || config.risk_level || 'medium'
       const { data: needsHumanReview } = await supabase.rpc('requires_human_review', {
         p_tenant_id: action.tenant_id,
@@ -267,14 +267,14 @@ Deno.serve(async (req) => {
           .eq('id', action.insight_id)
       }
 
-      // Executar ação automaticamente
+      // Executar acao automaticamente
       try {
         let executionResult: any = {}
         
         switch (action.action_type) {
           case 'create_system_alert': {
             const payload = action.action_payload as Record<string, unknown>
-            // Mapear para tipos de alerta válidos
+            // Mapear para tipos de alerta validos
             const validAlertTypes = [
               'agent_offline', 'high_cpu', 'high_memory', 'high_disk', 
               'job_failed', 'security_threat', 'memory_warning',
@@ -327,7 +327,7 @@ Deno.serve(async (req) => {
           case 'suggest_agent_restart':
           case 'suggest_config_change':
           case 'suggest_job_cleanup': {
-            // Sugestões são apenas registradas, não executam ação real
+            // Sugestoes sao apenas registradas, nao executam acao real
             executionResult = {
               suggestion_recorded: true,
               action_type: action.action_type,
@@ -342,7 +342,7 @@ Deno.serve(async (req) => {
             continue
         }
 
-        // Atualizar status da ação COM policy_source para auditoria
+        // Atualizar status da acao COM policy_source para auditoria
         await supabase
           .from('ai_actions')
           .update({
@@ -356,7 +356,7 @@ Deno.serve(async (req) => {
           })
           .eq('id', action.id)
 
-        // Registrar execução
+        // Registrar execucao
         await supabase
           .from('ai_action_executions')
           .insert({
@@ -392,7 +392,7 @@ Deno.serve(async (req) => {
         logger.error(`[${requestId}] Failed to execute action ${action.id}:`, execError)
         result.errors.push(`${action.id}: ${execError.message}`)
         
-        // Marcar ação como falhou
+        // Marcar acao como falhou
         await supabase
           .from('ai_actions')
           .update({

@@ -1,5 +1,5 @@
--- View para detectar agentes com problemas de execução
--- Identifica agentes que estão "online" mas não estão pegando/executando jobs
+-- View para detectar agentes com problemas de execucao
+-- Identifica agentes que estao "online" mas nao estao pegando/executando jobs
 
 CREATE OR REPLACE VIEW public.v_agent_execution_health AS
 SELECT 
@@ -11,21 +11,21 @@ SELECT
   a.agent_mode,
   a.agent_version,
   
-  -- Métricas de heartbeat
+  -- Metricas de heartbeat
   ROUND(EXTRACT(EPOCH FROM (NOW() - a.last_heartbeat))/60) as minutes_since_heartbeat,
   
-  -- Última execução
+  -- Ultima execucao
   je.last_execution_at,
   ROUND(EXTRACT(EPOCH FROM (NOW() - je.last_execution_at))/60) as minutes_since_execution,
   
-  -- Jobs acumulados problemáticos
+  -- Jobs acumulados problematicos
   COALESCE(stale_q.stale_queued_jobs, 0) as stale_queued_jobs,
   COALESCE(stale_d.stale_delivered_jobs, 0) as stale_delivered_jobs,
   
   -- Total de jobs pendentes
   COALESCE(pending.pending_jobs, 0) as pending_jobs,
   
-  -- Diagnóstico de saúde
+  -- Diagnostico de saude
   CASE 
     WHEN a.last_heartbeat IS NULL THEN 'never_connected'
     WHEN a.last_heartbeat < NOW() - INTERVAL '30 minutes' THEN 'offline'
@@ -49,16 +49,16 @@ SELECT
     ELSE 'low'
   END as severity,
   
-  -- Descrição do problema
+  -- Descricao do problema
   CASE 
     WHEN a.last_heartbeat IS NULL THEN 'Agente nunca conectou ao sistema'
-    WHEN a.last_heartbeat < NOW() - INTERVAL '30 minutes' THEN 'Agente offline há mais de 30 minutos'
-    WHEN a.agent_mode = 'SAFE_MODE' THEN 'Agente em modo seguro - execução limitada'
-    WHEN COALESCE(stale_q.stale_queued_jobs, 0) > 3 THEN 'Agente online mas não está buscando jobs há mais de 1 hora'
-    WHEN COALESCE(stale_d.stale_delivered_jobs, 0) > 2 THEN 'Agente recebeu jobs mas não está executando há mais de 30 minutos'
+    WHEN a.last_heartbeat < NOW() - INTERVAL '30 minutes' THEN 'Agente offline ha mais de 30 minutos'
+    WHEN a.agent_mode = 'SAFE_MODE' THEN 'Agente em modo seguro - execucao limitada'
+    WHEN COALESCE(stale_q.stale_queued_jobs, 0) > 3 THEN 'Agente online mas nao esta buscando jobs ha mais de 1 hora'
+    WHEN COALESCE(stale_d.stale_delivered_jobs, 0) > 2 THEN 'Agente recebeu jobs mas nao esta executando ha mais de 30 minutos'
     WHEN je.last_execution_at IS NOT NULL 
          AND je.last_execution_at < NOW() - INTERVAL '4 hours'
-         AND COALESCE(pending.pending_jobs, 0) > 0 THEN 'Última execução há mais de 4 horas com jobs pendentes'
+         AND COALESCE(pending.pending_jobs, 0) > 0 THEN 'Ultima execucao ha mais de 4 horas com jobs pendentes'
     ELSE 'Agente funcionando normalmente'
   END as health_description,
   
@@ -66,14 +66,14 @@ SELECT
 
 FROM public.agents a
 
--- Última execução de job
+-- Ultima execucao de job
 LEFT JOIN LATERAL (
   SELECT MAX(je.finished_at) as last_execution_at
   FROM public.job_executions je
   WHERE je.agent_id = a.id
 ) je ON true
 
--- Jobs queued há mais de 1 hora
+-- Jobs queued ha mais de 1 hora
 LEFT JOIN LATERAL (
   SELECT COUNT(*) as stale_queued_jobs
   FROM public.jobs j
@@ -82,7 +82,7 @@ LEFT JOIN LATERAL (
     AND j.created_at < NOW() - INTERVAL '1 hour'
 ) stale_q ON true
 
--- Jobs delivered há mais de 30 minutos
+-- Jobs delivered ha mais de 30 minutos
 LEFT JOIN LATERAL (
   SELECT COUNT(*) as stale_delivered_jobs
   FROM public.jobs j
@@ -101,13 +101,13 @@ LEFT JOIN LATERAL (
 
 WHERE a.status = 'active';
 
--- Índices para performance da view
+-- Indices para performance da view
 CREATE INDEX IF NOT EXISTS idx_jobs_agent_status_created 
 ON public.jobs(agent_id, status, created_at);
 
 CREATE INDEX IF NOT EXISTS idx_job_executions_agent_finished 
 ON public.job_executions(agent_id, finished_at DESC);
 
--- Comentário na view
+-- Comentario na view
 COMMENT ON VIEW public.v_agent_execution_health IS 
-'View que identifica agentes com problemas de execução: online mas não pegando jobs, não executando, etc.';
+'View que identifica agentes com problemas de execucao: online mas nao pegando jobs, nao executando, etc.';

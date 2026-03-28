@@ -277,8 +277,8 @@ Deno.serve(async (request) => {
               tenant_id: tenantSub.tenant_id,
               alert_type: "trial_ending",
               severity: "medium",
-              title: "Seu período de trial está acabando",
-              message: "Seu trial gratuito expira em 3 dias. Atualize seu método de pagamento para continuar usando o CyberShield.",
+              title: "Seu periodo de trial esta acabando",
+              message: "Seu trial gratuito expira em 3 dias. Atualize seu metodo de pagamento para continuar usando o CyberShield.",
               details: {
                 subscription_id: subscription.id,
                 trial_end: subscription.trial_end 
@@ -439,7 +439,7 @@ Deno.serve(async (request) => {
               alert_type: "payment_failed",
               severity: "high",
               title: "Falha no Pagamento",
-              message: `O pagamento da fatura ${invoice.number} falhou. Por favor, atualize seu método de pagamento.`,
+              message: `O pagamento da fatura ${invoice.number} falhou. Por favor, atualize seu metodo de pagamento.`,
               details: {
                 invoice_id: invoice.id,
                 amount_due: invoice.amount_due,

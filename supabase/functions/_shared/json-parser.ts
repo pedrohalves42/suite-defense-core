@@ -147,7 +147,7 @@ export function createFallbackAudit(reason: string): FallbackAuditResult {
     overall_score: 50,
     status: 'partial',
     error: reason,
-    executive_summary: 'Análise parcial - erro no processamento da resposta AI. O sistema continua operacional mas a auditoria requer nova tentativa.',
+    executive_summary: 'Analise parcial - erro no processamento da resposta AI. O sistema continua operacional mas a auditoria requer nova tentativa.',
     recommendation: 'READY_MVP',
     dimensions: {},
     meta: {

@@ -1,4 +1,4 @@
--- Evoluir view v_confidence_gap_trend com trend 90d e direção
+-- Evoluir view v_confidence_gap_trend com trend 90d e direcao
 -- Usando CTEs separadas para evitar nested window functions
 DROP VIEW IF EXISTS v_confidence_gap_trend;
 
