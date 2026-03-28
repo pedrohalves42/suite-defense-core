@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
+import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface IncidentSLOState {
   id: string;
