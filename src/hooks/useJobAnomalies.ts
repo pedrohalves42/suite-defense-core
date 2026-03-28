@@ -86,6 +86,7 @@ export function getAnomalySeverityConfig(severity: 'critical' | 'high' | 'medium
  */
 export const useJobAnomalies = () => {
   const { activeTenant, loading } = useActiveTenant();  // ADR-029 CRIT-04: Add loading
+  const adaptiveInterval = useAdaptivePolling(300_000);
 
   const query = useQuery({
     queryKey: ['job-anomalies', activeTenant?.id],
