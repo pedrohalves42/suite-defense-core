@@ -110,7 +110,7 @@ const OnboardingWizard = () => {
         const { data } = await supabase
           .from('agents' )
           .select('id')
-          .eq('tenant_id', tenant)
+          .eq('tenant_id', tenant?.id ?? '')
           .gte('last_seen', fiveMinAgo)
           .limit(1);
 

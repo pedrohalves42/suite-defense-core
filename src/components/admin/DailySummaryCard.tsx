@@ -69,7 +69,7 @@ export function DailySummaryCard() {
       ]);
 
       const jobs: Array<{ status: string }> = jobsRes.data || [];
-      const actions: Array<{ action_type: string; status: string }> = actionsRes.data || [];
+      const actions: Array<{ action_type: string; status: string }> = (actionsRes.data as any) || [];
 
       const jobsSuccess = jobs.filter(j => j.status === 'completed').length;
       const jobsFailed = jobs.filter(j => j.status === 'failed').length;

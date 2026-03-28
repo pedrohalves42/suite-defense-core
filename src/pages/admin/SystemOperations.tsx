@@ -83,7 +83,7 @@ export default function SystemOperations() {
         .select('*')
         .single();
       if (error) throw error;
-      return data as OperationsSummary;
+      return data as unknown as OperationsSummary;
     },
     enabled: !!tenant?.id,
     refetchInterval: 300000,
