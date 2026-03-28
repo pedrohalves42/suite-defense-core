@@ -17,7 +17,7 @@ const StatusPage = () => {
     queryKey: ['status-page-agents', tenant],
     queryFn: async () => {
       if (!tenant) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as never)
         .from('agents')
         .select('id, hostname, status, last_seen, agent_version')
         .eq('tenant_id', tenant?.id ?? '')
@@ -31,8 +31,8 @@ const StatusPage = () => {
     staleTime: 120_000,
   });
 
-  const onlineCount = agents?.filter((a: any) => a.status === 'online').length || 0;
-  const offlineCount = agents?.filter((a: any) => a.status === 'offline').length || 0;
+  const onlineCount = agents?.filter((a: Record<string, unknown>) => a.status === 'online').length || 0;
+  const offlineCount = agents?.filter((a: Record<string, unknown>) => a.status === 'offline').length || 0;
   const totalCount = agents?.length || 0;
   const uptimePercent = totalCount > 0 ? Math.round((onlineCount / totalCount) * 100) : 0;
 

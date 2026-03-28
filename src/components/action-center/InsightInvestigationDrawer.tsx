@@ -61,7 +61,7 @@ export function InsightInvestigationDrawer({
   const suggestedActions = getSuggestedActions(item.trigger_type);
   
   // Extract metrics from evidence
-  const evidence = item.context?.evidence as any | undefined;
+  const evidence = item.context?.evidence as Record<string, unknown> | undefined;
   const evidencePack = evidence?.evidence_pack as Array<Record<string, unknown>> | undefined;
   
   let metrics: { cpu?: number; memory?: number; disk?: number } = {};

@@ -76,7 +76,7 @@ async function fetchForensicData(agentId: string): Promise<ForensicData> {
 
   if (!agentRow) throw new Error('Agente não encontrado');
 
-  const agent = agentRow as any as AgentInfo;
+  const agent = agentRow as unknown as AgentInfo;
 
   // Fetch latest process snapshot
   const { data: processRows } = await supabase
@@ -87,7 +87,7 @@ async function fetchForensicData(agentId: string): Promise<ForensicData> {
     .limit(5);
 
   const latestSnapshot = processRows?.[0];
-  const processes: ProcessEntry[] = ((latestSnapshot?.processes as any[]) || []).map((p: any) => ({
+  const processes: ProcessEntry[] = ((latestSnapshot?.processes as unknown[]) || []).map((p: any) => ({
     pid: p.pid, name: p.name, cpu_percent: p.cpu_percent,
     memory_mb: p.memory_mb, user: p.user, command_line: p.command_line,
   }));
@@ -109,7 +109,7 @@ async function fetchForensicData(agentId: string): Promise<ForensicData> {
     .order('received_at', { ascending: false })
     .limit(500);
 
-  const networkEvents: NetworkEvent[] = ((netRaw || []) as any[]).map(( r: any) => ({
+  const networkEvents: NetworkEvent[] = ((netRaw || []) as unknown[]).map(( r: any) => ({
     remote_address: r.payload?.remote_address || '',
     remote_port: Number(r.payload?.remote_port) || 0,
     process_name: r.payload?.process_name || '',
@@ -144,7 +144,7 @@ async function fetchForensicData(agentId: string): Promise<ForensicData> {
     .order('received_at', { ascending: false })
     .limit(50);
 
-  const fileEvents: FileEvent[] = ((fileRaw || []) as any[]).map(( r: any) => ({
+  const fileEvents: FileEvent[] = ((fileRaw || []) as unknown[]).map(( r: any) => ({
     file_path: r.payload?.file_path || '',
     event_type: r.payload?.event_type || '',
     process_name: r.payload?.process_name || undefined,
@@ -159,7 +159,7 @@ async function fetchForensicData(agentId: string): Promise<ForensicData> {
     .order('created_at', { ascending: false })
     .limit(20);
 
-  const alerts = ((alertsRaw || []) as any[]).map((a: any) => ({
+  const alerts = ((alertsRaw || []) as unknown[]).map((a: Record<string, unknown>) => ({
     type: a.alert_type, severity: a.severity,
     title: a.title, message: a.message, created_at: a.created_at,
   }));
@@ -173,7 +173,7 @@ async function fetchForensicData(agentId: string): Promise<ForensicData> {
     .limit(50);
 
   const domainsMap = new Map<string, boolean>();
-  for (const d of (domainsRaw || []) as any[]) {
+  for (const d of (domainsRaw || []) as unknown[]) {
     if (d.domain && !domainsMap.has(d.domain)) {
       domainsMap.set(d.domain, d.is_blocked === true);
     }

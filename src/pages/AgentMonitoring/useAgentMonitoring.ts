@@ -39,7 +39,7 @@ export function useAgentMonitoring() {
         p_include_archived: false,
       });
       if (error) throw error;
-      return ((data || []) as any[])
+      return ((data || []) as unknown[])
         .map((agent: any) => ({
           id: agent.id,
           agent_name: agent.agent_name,

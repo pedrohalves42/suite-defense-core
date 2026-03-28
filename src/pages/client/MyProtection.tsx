@@ -58,7 +58,7 @@ export const MyProtection = () => {
           .neq('status', 'active')
       ]);
 
-      const agents = (agentsRes.data as any as Array<{ id: string; agent_name: string; last_heartbeat: string | null; status: string }>) || [];
+      const agents = (agentsRes.data as unknown as Array<{ id: string; agent_name: string; last_heartbeat: string | null; status: string }>) || [];
       const onlineAgents = agents.filter(a => isAgentOnline(a.last_heartbeat));
       const offlineAgents = agents.filter(a => !isAgentOnline(a.last_heartbeat));
 

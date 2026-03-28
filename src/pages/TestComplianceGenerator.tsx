@@ -56,11 +56,11 @@ export default function TestComplianceGenerator() {
           p_tenant_id: tenant.id,
           p_include_archived: false,
         });
-        const data = ((rawData as any as any[]) || [])
+        const data = ((rawData as unknown as unknown[]) || [])
           .sort((a: any, b: any) => (a.agent_name || '').localeCompare(b.agent_name || ''));
         
         if (error) throw error;
-        setAgents((data || []) as any as AgentInfo[]);
+        setAgents((data || []) as unknown as AgentInfo[]);
 
         const onlineCount = (data || []).filter(a => a.status === "active").length;
         

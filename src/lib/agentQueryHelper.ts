@@ -49,7 +49,7 @@ export async function fetchAgentsByTenant(
     throw error;
   }
 
-  return (data as any as AgentRecord[]) || [];
+  return (data as unknown as AgentRecord[]) || [];
 }
 
 /**
@@ -71,7 +71,7 @@ export async function fetchAgentById(
     throw error;
   }
 
-  const agents = (data as any as AgentRecord[]) || [];
+  const agents = (data as unknown as AgentRecord[]) || [];
   return agents.find(a => a.id === agentId) || null;
 }
 

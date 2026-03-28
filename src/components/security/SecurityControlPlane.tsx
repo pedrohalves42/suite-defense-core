@@ -90,7 +90,7 @@ export function SecurityControlPlane() {
         supabase.from('jobs').select('*', { count: 'exact', head: true })
           .eq('tenant_id', tenant.id).eq('status', 'failed').gte('created_at', last1h),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (supabase.from('rls_test_results' as any).select('*', { count: 'exact', head: true }) )
+        (supabase.from('rls_test_results' as never).select('*', { count: 'exact', head: true }) )
           .eq('tenant_id', tenant.id).eq('passed', false).gte('tested_at', last24h),
         supabase.from('system_global_state').select('mode')
           .order('triggered_at', { ascending: false }).limit(1).maybeSingle()

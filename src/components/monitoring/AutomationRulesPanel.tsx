@@ -101,8 +101,8 @@ export function AutomationRulesPanel() {
           .limit(50),
       ]);
 
-      if (rulesRes.data) setRules(rulesRes.data as any as AutomationRule[]);
-      if (execRes.data) setExecutions(execRes.data as any as AutomationExecution[]);
+      if (rulesRes.data) setRules(rulesRes.data as unknown as AutomationRule[]);
+      if (execRes.data) setExecutions(execRes.data as unknown as AutomationExecution[]);
     } catch (error) {
       logger.error('Error fetching automation data', error);
     } finally {

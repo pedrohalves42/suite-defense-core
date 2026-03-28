@@ -32,7 +32,7 @@ const PWAInstallPrompt = () => {
   // Check if already installed
   const checkIfInstalled = useCallback(() => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const isInWebAppiOS = (navigator as any as any).standalone === true;
+    const isInWebAppiOS = (navigator as unknown as any).standalone === true;
     return isStandalone || isInWebAppiOS;
   }, []);
 

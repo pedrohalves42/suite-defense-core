@@ -86,7 +86,7 @@ export const ClientComputers = () => {
       });
 
       if (error) throw error;
-      const agentsData = ((rawData as any as any[]) || [])
+      const agentsData = ((rawData as unknown as unknown[]) || [])
         .sort((a: any, b: any) => {
           const aHb = a.last_heartbeat || '';
           const bHb = b.last_heartbeat || '';
@@ -96,7 +96,7 @@ export const ClientComputers = () => {
       if (error) throw error;
 
       // Fetch latest metrics for each agent
-      const agentIds = agentsData?.map((a: any) => a.id as string) || [];
+      const agentIds = agentsData?.map((a: Record<string, unknown>) => a.id as string) || [];
       
       if (agentIds.length === 0) return [];
 
