@@ -109,7 +109,7 @@ export function usePendingPlaybookExecutions() {
         .limit(20);
 
       if (error) throw error;
-      return (data || []) as any as PlaybookExecution[];
+      return (data || []) as unknown as PlaybookExecution[];
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,
@@ -169,7 +169,7 @@ export function usePlaybookExecutionHistory(limit = 50) {
         .limit(limit);
 
       if (error) throw error;
-      return (data || []) as any as PlaybookExecution[];
+      return (data || []) as unknown as PlaybookExecution[];
     },
     enabled: !!tenant?.id
   });

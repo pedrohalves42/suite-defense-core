@@ -233,7 +233,7 @@ export function useAvailableAgents(groupId: string | null) {
       if (agentsError) throw agentsError;
 
       // Map to expected format
-      const mappedAgents = ((allAgents || []) as any as Array<Record<string, unknown>>).map((agent) => ({
+      const mappedAgents = ((allAgents || []) as unknown as Array<Record<string, unknown>>).map((agent) => ({
         id: String(agent.id),
         agent_name: String(agent.agent_name),
         display_name: String(agent.display_name || agent.agent_name),

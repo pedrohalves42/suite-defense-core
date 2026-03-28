@@ -78,7 +78,7 @@ export function useIncidentEvents(incidentId: string) {
         .eq('tenant_id', activeTenant!.id)
         .order('event_time', { ascending: true });
       if (error) throw error;
-      return (data || []) as any as IncidentEvent[];
+      return (data || []) as unknown as IncidentEvent[];
     },
     enabled: !loading && !!activeTenant?.id && !!incidentId,
   });

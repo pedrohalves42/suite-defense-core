@@ -48,7 +48,7 @@ export function useBackupStatus() {
 
       if (error) throw error;
 
-      const records = (data || []) as any as BackupStatusRecord[];
+      const records = (data || []) as unknown as BackupStatusRecord[];
 
       const ok = records.filter(r => r.status === 'ok').length;
       const warning = records.filter(r => r.status === 'warning').length;

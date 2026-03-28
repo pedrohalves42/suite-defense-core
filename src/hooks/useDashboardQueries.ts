@@ -52,7 +52,7 @@ async function fetchTokens(tenantId: string): Promise<DashboardAgentToken[]> {
     .select("id, tenant_id, agent_id, is_active, created_at, expires_at, last_used_at")
     .eq("tenant_id", tenantId).order("created_at", { ascending: false });
   if (error) throw error;
-  return (data || []) as any as DashboardAgentToken[];
+  return (data || []) as unknown as DashboardAgentToken[];
 }
 
 // PERF-FIX: Slim select for rate_limits — avoid fetching metadata blobs
@@ -70,7 +70,7 @@ async function fetchVirusScans(tenantId: string): Promise<DashboardVirusScan[]> 
     .select("id, agent_name, tenant_id, file_path, file_hash, is_malicious, detection_name, engine, scanned_at, quarantined")
     .eq("tenant_id", tenantId).order("scanned_at", { ascending: false }).limit(100);
   if (error) throw error;
-  return data as any as DashboardVirusScan[] || [];
+  return data as unknown as DashboardVirusScan[] || [];
 }
 
 async function fetchAuditLogs(tenantId: string): Promise<DashboardAuditLog[]> {

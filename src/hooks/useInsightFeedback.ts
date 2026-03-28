@@ -143,7 +143,7 @@ export function useFeedbackQualityMetrics() {
         return [] as import('@/types/views').InsightFeedbackQualityRow[];
       }
 
-      return (data || []) as any as import('@/types/views').InsightFeedbackQualityRow[];
+      return (data || []) as unknown as import('@/types/views').InsightFeedbackQualityRow[];
     },
     enabled: !loading && !!activeTenant?.id,
     staleTime: 120000, // 2 minutes

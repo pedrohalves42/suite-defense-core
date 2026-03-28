@@ -15,7 +15,7 @@ export function useThreatIntelStats() {
         p_tenant_id: tenant!.id
       });
       if (error) throw error;
-      return data as any as ThreatIntelStats;
+      return data as unknown as ThreatIntelStats;
     },
     enabled: !!tenant?.id,
     refetchInterval: adaptiveInterval,

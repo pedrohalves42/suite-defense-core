@@ -72,7 +72,7 @@ export function useAgentCausality(agentId: string | null, tenantId?: string | nu
         return null;
       }
 
-      const agent = (agentsList as any as Array<Record<string, unknown>>)?.find(
+      const agent = (agentsList as unknown as Array<Record<string, unknown>>)?.find(
         (a) => a.id === agentId
       ) || null;
 

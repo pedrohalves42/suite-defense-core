@@ -37,12 +37,12 @@ export function useSmartNotifications() {
       
       // Parse the jsonb array response
       if (Array.isArray(data)) {
-        return data as any as SmartNotification[];
+        return data as unknown as SmartNotification[];
       }
       
       // If it's a single object or jsonb, wrap in array
       if (data && typeof data === 'object') {
-        return [data] as any as SmartNotification[];
+        return [data] as unknown as SmartNotification[];
       }
       
       return [];

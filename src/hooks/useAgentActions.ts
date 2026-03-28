@@ -17,7 +17,7 @@ export function useAgentActions() {
         p_agent_id: agentId,
       });
       if (error) throw error;
-      return data as any as { success: boolean; previous_interval?: number };
+      return data as unknown as { success: boolean; previous_interval?: number };
     },
     onSuccess: (result) => {
       toast({
@@ -74,7 +74,7 @@ export function useAgentActions() {
           blocked_at: null,
           blocked_by: null,
           blocked_reason: null,
-        }) as any)
+        }) as never)
         .eq('id', versionId)
         .eq('tenant_id', tenantId);
       if (error) throw error;
@@ -103,7 +103,7 @@ export function useAgentActions() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase
         .from('decision_rules')
-        .update({ is_enabled: isEnabled, updated_at: new Date().toISOString() }) as any)
+        .update({ is_enabled: isEnabled, updated_at: new Date().toISOString() }) as never)
         .eq('id', ruleId)
         .eq('tenant_id', tenantId);
       if (error) throw error;
@@ -157,7 +157,7 @@ export function useAgentActions() {
         p_include_archived: false,
       });
       if (rpcError) throw rpcError;
-      const agent = (agentsList as any as Array<Record<string, unknown>>)?.find(
+      const agent = (agentsList as unknown as Array<Record<string, unknown>>)?.find(
         (a) => a.id === agentId
       );
       if (!agent) throw new Error('Agente não encontrado');
