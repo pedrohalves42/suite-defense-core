@@ -150,6 +150,7 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
     allowFallback = true,
     methods = ['POST'],
     skipTenantValidation = false,
+    rateLimit: rateLimitConfig,
   } = options || {};
 
   Deno.serve(async (req: Request) => {
@@ -257,7 +258,28 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
         }
       }
 
-      // 7. Build context and call handler
+      // 7. Rate limiting (optional)
+      if (rateLimitConfig && tenantId) {
+        const { checkRateLimit } = await import('./rate-limit.ts');
+        const identifier = userId ? `user:${userId}` : `tenant:${tenantId}`;
+        const rlResult = await checkRateLimit(supabase, identifier, rateLimitConfig.endpoint, {
+          maxRequests: rateLimitConfig.maxRequests ?? 60,
+          windowMinutes: rateLimitConfig.windowMinutes ?? 1,
+          blockMinutes: rateLimitConfig.blockMinutes ?? 5,
+        });
+        if (!rlResult.allowed) {
+          const retryAfter = rlResult.resetAt
+            ? Math.max(1, Math.ceil((rlResult.resetAt.getTime() - Date.now()) / 1000))
+            : 60;
+          return jsonResponse(
+            { error: { message: 'Rate limit exceeded', code: 'RATE_LIMITED' } },
+            429,
+            { 'X-Request-ID': requestId, 'Retry-After': String(retryAfter) },
+          );
+        }
+      }
+
+      // 8. Build context and call handler
       const ctx: TenantContext<T> = {
         tenantId: tenantId!,
         userId,
