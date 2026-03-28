@@ -9804,6 +9804,2106 @@ export type Database = {
           user_agent?: string | null
           user_id?: string | null
         }
+        Relationships: []
+      }
+      audit_logs_2024_01: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2024_02: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2024_03: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2024_04: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2024_05: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2024_06: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2024_07: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2024_08: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2024_09: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2024_10: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2024_11: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2024_12: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2025_01: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2025_02: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2025_03: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2025_04: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2025_05: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2025_06: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2025_07: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2025_08: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2025_09: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2025_10: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2025_11: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2025_12: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2026_01: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2026_02: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2026_03: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2026_04: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2026_05: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2026_06: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2026_07: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2026_08: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2026_09: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_default: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_old: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
         Relationships: [
           {
             foreignKeyName: "audit_logs_actor_id_fkey"
@@ -17939,6 +20039,3051 @@ export type Database = {
           status?: string
           tenant_id?: string
         }
+        Relationships: []
+      }
+      job_executions_2024_01: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2024_02: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2024_03: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2024_04: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2024_05: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2024_06: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2024_07: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2024_08: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2024_09: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2024_10: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2024_11: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2024_12: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2025_01: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2025_02: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2025_03: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2025_04: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2025_05: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2025_06: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2025_07: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2025_08: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2025_09: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2025_10: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2025_11: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2025_12: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2026_01: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2026_02: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2026_03: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2026_04: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2026_05: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2026_06: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2026_07: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2026_08: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_2026_09: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_default: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      job_executions_old: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at: string | null
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          legacy: boolean | null
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          previous_execution_hash: string | null
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          archived_at?: string | null
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          legacy?: boolean | null
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          previous_execution_hash?: string | null
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
         Relationships: [
           {
             foreignKeyName: "fk_job_executions_tenant"
@@ -18469,7 +23614,7 @@ export type Database = {
             foreignKeyName: "jobs_current_execution_id_fkey"
             columns: ["current_execution_id"]
             isOneToOne: false
-            referencedRelation: "job_executions"
+            referencedRelation: "job_executions_old"
             referencedColumns: ["id"]
           },
           {
@@ -37584,6 +42729,14 @@ export type Database = {
         Returns: number
       }
       create_metrics_partition_if_needed: { Args: never; Returns: undefined }
+      create_monthly_partitions: {
+        Args: {
+          p_months_ahead?: number
+          p_partition_column: string
+          p_table_name: string
+        }
+        Returns: number
+      }
       create_retroactive_execution: {
         Args: { p_job_id: string }
         Returns: string
@@ -38278,6 +43431,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      maintain_partitions: { Args: never; Returns: undefined }
       mark_cron_failure: {
         Args: { p_cron_name: string; p_error: string }
         Returns: undefined
