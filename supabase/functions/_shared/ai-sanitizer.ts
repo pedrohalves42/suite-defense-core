@@ -130,7 +130,7 @@ export function sanitizeObjectForAI<T extends Record<string, any>>(
   const { maxArrayItems = MAX_ARRAY_ITEMS } = options;
   const warnings: string[] = [];
 
-  function sanitizeValue(value: any, path: string = ''): any {
+  function sanitizeValue(value: unknown, path: string = ''): unknown {
     if (value === null || value === undefined) {
       return value;
     }
@@ -148,7 +148,7 @@ export function sanitizeObjectForAI<T extends Record<string, any>>(
         warnings.push(`Array at ${path} truncated from ${value.length} to ${maxArrayItems} items`);
         value = value.slice(0, maxArrayItems);
       }
-      return value.map((item: any, idx: number) => sanitizeValue(item, `${path}[${idx}]`));
+      return value.map((item: unknown, idx: number) => sanitizeValue(item, `${path}[${idx}]`));
     }
 
     if (typeof value === 'object') {

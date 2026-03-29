@@ -248,7 +248,7 @@ export async function processAnomalies(
   supabase: SupabaseClient,
   validation: BehaviorValidation,
   context: AIContext,
-  additionalContext: Record<string, any> = {}
+  additionalContext: Record<string, unknown> = {}
 ): Promise<void> {
   for (const anomaly of validation.anomalies) {
     // Rate limiting: verificar ocorrencias recentes
