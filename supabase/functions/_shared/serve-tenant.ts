@@ -209,13 +209,13 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
         
         if (authError || !authUser) {
         logger.warn(`[serveTenant][${requestId}] Invalid JWT`);
-          return errorResponse('Invalid or expired token', 401, requestId);
+          return errorResponse('Invalid or expired token', 401, requestId, origin);
         }
         userId = authUser.id;
       }
       // 4d. No auth at all
       else {
-        return errorResponse('Authorization required', 401, requestId);
+        return errorResponse('Authorization required', 401, requestId, origin);
       }
 
       // 5. Resolve tenant_id
@@ -234,7 +234,7 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
         if (isInternal) {
           // Internal calls: trust the provided tenant_id
           if (!tenantId) {
-            return errorResponse('tenant_id required for internal calls', 400, requestId);
+            return errorResponse('tenant_id required for internal calls', 400, requestId, origin);
           }
         } else if (userId) {
           // User calls: validate access
@@ -242,15 +242,15 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
             const hasAccess = await verifyUserTenantAccess(supabase, userId, tenantId);
             if (!hasAccess) {
               logger.warn(`[SECURITY][${requestId}] User ${userId} denied access to tenant ${tenantId}`);
-              return errorResponse('Access denied: unauthorized tenant', 403, requestId);
+              return errorResponse('Access denied: unauthorized tenant', 403, requestId, origin);
             }
           } else if (allowFallback) {
             tenantId = await resolveDefaultTenant(supabase, userId);
             if (!tenantId) {
-              return errorResponse('No tenant associated with user', 403, requestId);
+              return errorResponse('No tenant associated with user', 403, requestId, origin);
             }
           } else {
-            return errorResponse('tenant_id required', 400, requestId);
+            return errorResponse('tenant_id required', 400, requestId, origin);
           }
         }
       } else {
@@ -278,6 +278,7 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
             { error: { message: 'Rate limit exceeded', code: 'RATE_LIMITED' } },
             429,
             { 'X-Request-ID': requestId, 'Retry-After': String(retryAfter) },
+            origin,
           );
         }
       }
@@ -306,12 +307,12 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
       return jsonResponse(result, 200, {
         'X-Request-ID': requestId,
         'X-Response-Time': responseTime,
-      });
+      }, origin);
 
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Internal server error';
       logger.error(`[serveTenant][${requestId}] Error`, { message: msg });
-      return errorResponse(msg, 500, requestId);
+      return errorResponse(msg, 500, requestId, origin);
     }
   });
 }
