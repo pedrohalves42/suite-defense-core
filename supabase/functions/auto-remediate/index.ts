@@ -274,14 +274,17 @@ Deno.serve(async (req: Request) => {
     // SPRINT 13: Dispatch browser notification via dispatch-notification
     // ???????????????????????????????????????????????????????
     try {
-      await supabase.functions.invoke('dispatch-notification', {
+      await supabase.functions.invoke('notification-router', {
         body: {
-          tenant_id: tenantId,
-          type: 'remediation_executed',
-          title: `[JOB]  Remediacao: ${action_type}`,
-          message: `Acao "${action_type}" executada no agente "${agent.agent_name}"`,
-          severity: 'high',
-          metadata: { action_id: action?.id, job_id: job?.id },
+          action: 'dispatch',
+          payload: {
+            tenant_id: tenantId,
+            type: 'remediation_executed',
+            title: `[JOB]  Remediacao: ${action_type}`,
+            message: `Acao "${action_type}" executada no agente "${agent.agent_name}"`,
+            severity: 'high',
+            metadata: { action_id: action?.id, job_id: job?.id },
+          },
         },
         headers: { 'X-Internal-Secret': internalSecret || '' },
       });

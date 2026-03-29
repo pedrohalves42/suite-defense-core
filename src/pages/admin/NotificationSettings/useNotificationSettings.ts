@@ -200,14 +200,17 @@ export function useNotificationSettings() {
   const handleTestNotification = useCallback(async (channel: NotificationChannel) => {
     try {
       toast.info('Enviando notificação de teste...');
-      const { error } = await supabase.functions.invoke('dispatch-notification', {
+      const { error } = await supabase.functions.invoke('notification-router', {
         body: {
-          tenant_id: tenantId,
-          alert_type: 'test',
-          severity: 'info',
-          title: 'Teste de Notificação',
-          message: 'Esta é uma notificação de teste do CyberShield.',
-          agent_name: 'Sistema'
+          action: 'dispatch',
+          payload: {
+            tenant_id: tenantId,
+            alert_type: 'test',
+            severity: 'info',
+            title: 'Teste de Notificação',
+            message: 'Esta é uma notificação de teste do CyberShield.',
+            agent_name: 'Sistema'
+          }
         }
       });
       if (error) throw error;
