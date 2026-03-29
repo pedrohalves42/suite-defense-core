@@ -1,5 +1,12 @@
+/**
+ * Check Tenant Quotas - Hardened with assertInternalCaller
+ * Auth: Internal only (cron/service_role)
+ * 
+ * FIX: Replaced insecure === comparison with timing-safe assertInternalCaller
+ */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 
 interface QuotaAlert {
@@ -17,21 +24,9 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
-  // Accept either internal secret OR valid JWT (for cron jobs)
-  const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
-  const providedSecret = req.headers.get('X-Internal-Secret');
-  const authHeader = req.headers.get('Authorization');
-
-  const hasValidSecret = providedSecret === INTERNAL_SECRET;
-  const hasJWT = authHeader && authHeader.startsWith('Bearer ');
-  
-  if (!hasValidSecret && !hasJWT) {
-    logger.error('[Quota Check] Unauthorized access attempt');
-    return new Response(
-      JSON.stringify({ error: 'Unauthorized' }),
-      { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-    );
-  }
+  // V-MIG: Replace insecure === with timing-safe assertInternalCaller
+  const authError = await assertInternalCaller(req);
+  if (authError) return authError;
 
   const requestId = crypto.randomUUID();
   logger.info(`[${requestId}] Starting quota monitoring`);
@@ -67,7 +62,6 @@ Deno.serve(async (req) => {
       const usagePercentage = (feature.quota_used / feature.quota_limit) * 100;
       const threshold = feature.quota_warning_threshold || 80;
 
-      // Check if usage exceeds threshold
       if (usagePercentage >= threshold) {
         const tenant = Array.isArray(feature.tenants) ? feature.tenants[0] : feature.tenants;
         
@@ -99,7 +93,6 @@ Deno.serve(async (req) => {
             : 'Atencao: Voce esta proximo do limite de quota.',
         };
 
-        // Call notification-dispatcher (consolidated from send-system-alert)
         const { data: alertData, error: alertError } = await supabase.functions.invoke('notification-dispatcher', {
           headers: {
             'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '',
@@ -116,20 +109,10 @@ Deno.serve(async (req) => {
 
         if (alertError) {
           logger.error(`[${requestId}] Error sending alert for tenant ${alert.tenant_id}:`, alertError);
-          alertResults.push({
-            tenant_id: alert.tenant_id,
-            feature_key: alert.feature_key,
-            success: false,
-            error: alertError.message
-          });
+          alertResults.push({ tenant_id: alert.tenant_id, feature_key: alert.feature_key, success: false, error: alertError.message });
         } else {
           logger.info(`[${requestId}] Alert sent successfully for ${alert.tenant_name}`);
-          alertResults.push({
-            tenant_id: alert.tenant_id,
-            feature_key: alert.feature_key,
-            success: true,
-            data: alertData
-          });
+          alertResults.push({ tenant_id: alert.tenant_id, feature_key: alert.feature_key, success: true, data: alertData });
         }
       } catch (error) {
         logger.error(`[${requestId}] Error processing alert:`, error);
@@ -155,27 +138,19 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify(result),
-      { 
-        status: 200, 
-        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
-      }
+      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     logger.error(`[${requestId}] Fatal error:`, error);
     
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: errorMessage,
+        error: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString()
       }),
-      { 
-        status: 500, 
-        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
-      }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });

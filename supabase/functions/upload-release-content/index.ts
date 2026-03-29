@@ -1,20 +1,22 @@
-import { requireEnv } from '../_shared/env.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
-import { timingSafeEqual } from '../_shared/crypto-utils.ts';
-import { logger } from '../_shared/logger.ts';
-
 /**
- * upload-release-content
+ * upload-release-content - Hardened with assertInternalCaller
  * 
  * Safe, direct upload of script content to agent_releases.
  * Now includes ECDSA P-256 signing for supply chain integrity.
  * 
- * Auth: X-Internal-Secret (backend-to-backend) OR service-role Authorization
+ * Auth: assertInternalCaller (X-Internal-Secret or service_role)
  * Body: { platform: string, version: string, content: string, release_notes?: string }
+ * 
+ * FIX: Replaced manual secret check with standardized assertInternalCaller
  */
 
-// ECDSA P-256 signing utilities (inline to avoid import issues in edge functions)
+import { requireEnv } from '../_shared/env.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { buildCorsHeaders } from '../_shared/cors.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { logger } from '../_shared/logger.ts';
+
+// ECDSA P-256 signing utilities
 function base64ToArrayBuffer(base64: string): ArrayBuffer {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
@@ -55,19 +57,11 @@ Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') return new Response(null, { headers: buildCorsHeaders(origin) });
 
-  try {
-    // Auth: require internal secret or service role
-    const internalSecret = req.headers.get('X-Internal-Secret');
-    const authHeader = req.headers.get('Authorization');
-    const expectedSecret = Deno.env.get('INTERNAL_SECRET');
-    
-    const isInternalAuth = expectedSecret && internalSecret && await timingSafeEqual(internalSecret, expectedSecret);
-    const isServiceRole = authHeader && Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') && await timingSafeEqual(authHeader, `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`);
-    
-    if (!isInternalAuth && !isServiceRole) {
-      logger.warn('[upload-release-content] No internal auth, proceeding with caution');
-    }
+  // V-MIG: Replace manual secret check with standardized assertInternalCaller
+  const authError = await assertInternalCaller(req);
+  if (authError) return authError;
 
+  try {
     const { platform, version, content, release_notes } = await req.json();
 
     if (!platform || !version || !content) {
@@ -98,7 +92,6 @@ Deno.serve(async (req) => {
     }
 
     // SAFETY: Nested block comment detection (prevents header corruption)
-    // PowerShell <# ... #> header must not contain another <# inside
     const headerEndIdx = trimmed.indexOf('#>');
     if (headerEndIdx > 0) {
       const headerBlock = trimmed.substring(0, headerEndIdx);
@@ -115,7 +108,7 @@ Deno.serve(async (req) => {
     }
 
     // SAFETY: Version mismatch guard
-    const headerMatch = trimmed.match(/CyberShield\s+Agent\s*[-?]\s*\w+\s+v?([\d]+\.[\d]+\.[\d]+)/i);
+    const headerMatch = trimmed.match(/CyberShield\s+Agent\s*[-–]\s*\w+\s+v?([\d]+\.[\d]+\.[\d]+)/i);
     if (headerMatch) {
       const scriptVersion = headerMatch[1];
       const targetVersion = version.replace(/^v/, '');
@@ -162,7 +155,6 @@ Deno.serve(async (req) => {
         logger.info(`[upload-release-content] ECDSA signature generated for ${platform}/${version}`);
       } catch (signErr) {
         logger.error('[upload-release-content] ECDSA signing failed:', (signErr as Error).message);
-        // Don't block upload if signing fails - log and continue
       }
     } else {
       logger.warn('[upload-release-content] ECDSA_PRIVATE_KEY not configured, skipping signing');

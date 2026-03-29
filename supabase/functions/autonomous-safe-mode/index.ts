@@ -1,7 +1,7 @@
 import { requireEnv } from '../_shared/env.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
-import { timingSafeEqual } from '../_shared/crypto-utils.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 
 interface RuleResult {
@@ -32,42 +32,17 @@ interface ActionExecuted {
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
+  // V-MIG: Replace manual secret check with standardized assertInternalCaller
+  const authError = await assertInternalCaller(req);
+  if (authError) return authError;
+
   const startedAt = Date.now();
 
   try {
-    // Parse body to check source
-    let body: { source?: string } = {};
-    try {
-      body = await req.json();
-    } catch {
-      // Empty body is fine for cron calls
-    }
-
-    // Validate origin - accept if:
-    // 1. source === 'cron' (scheduled pg_cron call)
-    // 2. Has valid internal secret header
-    // 3. Has valid JWT auth header
-    const internalSecret = req.headers.get('x-internal-secret');
-    const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
-    const isInternalCall = internalSecret && expectedSecret && 
-      await timingSafeEqual(internalSecret, expectedSecret);
-    const authHeader = req.headers.get('Authorization');
-    
-    if (!isInternalCall && !authHeader) {
-      logger.warn('[autonomous-safe-mode] Unauthorized: No valid origin');
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      );
-    }
-
-    logger.debug(`[autonomous-safe-mode] Authorized call from: ${isInternalCall ? 'internal' : 'jwt'}`);
-
     const supabaseUrl = requireEnv('SUPABASE_URL');
     const supabaseServiceKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
     

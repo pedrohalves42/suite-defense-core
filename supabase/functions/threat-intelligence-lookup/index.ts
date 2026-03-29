@@ -1,11 +1,10 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
+/**
+ * Threat Intelligence Lookup - Migrated to serveTenant
+ * Auth: JWT + tenant validation via serveTenant middleware
+ */
+import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
-import { getTenantIdForUser } from '../_shared/tenant.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
-
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 interface ThreatIntelResult {
   target: string;
@@ -21,6 +20,7 @@ interface ThreatIntelResult {
   whois_data?: Record<string, unknown>;
   ssl_data?: Record<string, unknown>;
   cached: boolean;
+  cached_at?: string;
 }
 
 // VirusTotal URL/Domain scan
@@ -37,11 +37,9 @@ async function checkVirusTotal(target: string, type: 'url' | 'domain' | 'ip'): P
   
   try {
     let endpoint: string;
-    let id: string;
     
     if (type === 'url') {
-      // URL needs to be base64 encoded
-      id = btoa(target).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const id = btoa(target).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
       endpoint = `https://www.virustotal.com/api/v3/urls/${id}`;
     } else if (type === 'domain') {
       endpoint = `https://www.virustotal.com/api/v3/domains/${target}`;
@@ -54,7 +52,6 @@ async function checkVirusTotal(target: string, type: 'url' | 'domain' | 'ip'): P
     });
     
     if (response.status === 404) {
-      // Not found in VT database - submit for analysis if URL
       if (type === 'url') {
         const submitResponse = await fetchWithTimeout('https://www.virustotal.com/api/v3/urls', {
           method: 'POST',
@@ -247,248 +244,173 @@ async function checkPhishTank(url: string): Promise<{
   }
 }
 
-// Determine target type
 function determineTargetType(target: string): 'url' | 'ip' | 'domain' {
-  // Check if it's an IP address
   const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
-  if (ipRegex.test(target)) {
-    return 'ip';
-  }
-  
-  // Check if it's a URL
-  if (target.startsWith('http://') || target.startsWith('https://')) {
-    return 'url';
-  }
-  
+  if (ipRegex.test(target)) return 'ip';
+  if (target.startsWith('http://') || target.startsWith('https://')) return 'url';
   return 'domain';
 }
 
-// Extract domain from URL
-function extractDomain(target: string): string {
-  try {
-    if (target.startsWith('http://') || target.startsWith('https://')) {
-      return new URL(target).hostname;
-    }
-    return target;
-  } catch {
-    return target;
-  }
+// ─── serveTenant migration ───────────────────────────────────────────────────
+
+interface ThreatIntelBody {
+  target?: string;
+  skip_cache?: boolean;
 }
 
-Deno.serve(async (req) => {
-  const origin = req.headers.get("origin");
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: buildCorsHeaders(origin) });
+serveTenant<ThreatIntelBody>(async (_req, ctx) => {
+  const { supabase, tenantId, requestId, body } = ctx;
+  
+  const target = body?.target;
+  const skip_cache = body?.skip_cache ?? false;
+  
+  if (!target || typeof target !== 'string') {
+    return new Response(
+      JSON.stringify({ error: 'target is required' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
   }
   
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
+  const targetType = determineTargetType(target);
+  const normalizedTarget = target.trim().toLowerCase();
+  
+  logger.info(`[${requestId}] Threat intelligence lookup: ${targetType} - ${normalizedTarget}`);
+  
+  // Check cache first
+  if (!skip_cache) {
+    const { data: cached } = await supabase
+      .from('threat_intelligence_cache')
+      .select('*')
+      .eq('target', normalizedTarget)
+      .eq('target_type', targetType)
+      .eq('tenant_id', tenantId)
+      .gt('expires_at', new Date().toISOString())
+      .single();
+    
+    if (cached) {
+      logger.info(`[${requestId}] Cache hit for ${normalizedTarget}`);
+      return {
+        target: cached.target,
+        target_type: cached.target_type,
+        reputation: cached.reputation,
+        risk_score: cached.risk_score,
+        sources: cached.sources,
+        whois_data: cached.whois_data,
+        ssl_data: cached.ssl_data,
+        cached: true,
+        cached_at: cached.cached_at,
+      };
+    }
+  }
+  
+  // Run all checks in parallel
+  const sources: ThreatIntelResult['sources'] = [];
+  const rawResponses: Record<string, unknown> = {};
+  
+  const checks = await Promise.allSettled([
+    targetType === 'ip' 
+      ? checkAbuseIPDB(normalizedTarget)
+      : checkVirusTotal(normalizedTarget, targetType),
+    targetType === 'url' ? checkURLhaus(normalizedTarget) : null,
+    targetType === 'url' ? checkPhishTank(normalizedTarget) : null,
+    targetType === 'domain' 
+      ? checkVirusTotal(normalizedTarget, 'domain')
+      : null,
+  ]);
+  
+  if (checks[0].status === 'fulfilled' && checks[0].value) {
+    const result = checks[0].value;
+    sources.push({
+      name: targetType === 'ip' ? 'AbuseIPDB' : 'VirusTotal',
+      verdict: result.verdict,
+      confidence: result.score,
+      details: result.details,
     });
+    rawResponses[targetType === 'ip' ? 'abuseipdb' : 'virustotal'] = result;
   }
   
-  try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    
-    // Auth
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
-      });
+  if (checks[1].status === 'fulfilled' && checks[1].value) {
+    const result = checks[1].value;
+    sources.push({
+      name: 'URLhaus',
+      verdict: result.verdict,
+      confidence: result.score,
+      details: result.details,
+    });
+    rawResponses.urlhaus = result;
+  }
+  
+  if (checks[2].status === 'fulfilled' && checks[2].value) {
+    const result = checks[2].value;
+    sources.push({
+      name: 'PhishTank',
+      verdict: result.verdict,
+      confidence: result.score,
+      details: result.details,
+    });
+    rawResponses.phishtank = result;
+  }
+  
+  if (checks[3].status === 'fulfilled' && checks[3].value) {
+    const result = checks[3].value;
+    sources.push({
+      name: 'VirusTotal (Domain)',
+      verdict: result.verdict,
+      confidence: result.score,
+      details: result.details,
+    });
+    rawResponses.virustotal_domain = result;
+  }
+  
+  // Calculate aggregate score and reputation
+  let maxScore = 0;
+  let reputation: ThreatIntelResult['reputation'] = 'unknown';
+  
+  for (const source of sources) {
+    if (source.confidence > maxScore) {
+      maxScore = source.confidence;
     }
     
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
-        status: 401,
-        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
-      });
+    if (source.verdict === 'malicious') {
+      reputation = 'malicious';
+    } else if (source.verdict === 'suspicious' && reputation !== 'malicious') {
+      reputation = 'suspicious';
+    } else if (source.verdict === 'clean' && reputation === 'unknown') {
+      reputation = 'clean';
     }
-    
-    const tenantId = await getTenantIdForUser(supabase, user.id);
-    if (!tenantId) {
-      return new Response(JSON.stringify({ error: 'Tenant not found' }), {
-        status: 403,
-        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
-      });
-    }
-    
-    const { target, skip_cache = false } = await req.json();
-    
-    if (!target || typeof target !== 'string') {
-      return new Response(JSON.stringify({ error: 'target is required' }), {
-        status: 400,
-        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
-      });
-    }
-    
-    const targetType = determineTargetType(target);
-    const normalizedTarget = target.trim().toLowerCase();
-    
-    logger.info(`Threat intelligence lookup: ${targetType} - ${normalizedTarget}`);
-    
-    // Check cache first
-    if (!skip_cache) {
-      const { data: cached } = await supabase
-        .from('threat_intelligence_cache')
-        .select('*')
-        .eq('target', normalizedTarget)
-        .eq('target_type', targetType)
-        .eq('tenant_id', tenantId)
-        .gt('expires_at', new Date().toISOString())
-        .single();
-      
-      if (cached) {
-        logger.info(`Cache hit for ${normalizedTarget}`);
-        return new Response(JSON.stringify({
-          target: cached.target,
-          target_type: cached.target_type,
-          reputation: cached.reputation,
-          risk_score: cached.risk_score,
-          sources: cached.sources,
-          whois_data: cached.whois_data,
-          ssl_data: cached.ssl_data,
-          cached: true,
-          cached_at: cached.cached_at,
-        }), {
-          status: 200,
-          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
-        });
-      }
-    }
-    
-    // Run all checks in parallel
-    const sources: ThreatIntelResult['sources'] = [];
-    const rawResponses: Record<string, unknown> = {};
-    
-    const checks = await Promise.allSettled([
-      targetType === 'ip' 
-        ? checkAbuseIPDB(normalizedTarget)
-        : checkVirusTotal(normalizedTarget, targetType),
-      targetType === 'url' ? checkURLhaus(normalizedTarget) : null,
-      targetType === 'url' ? checkPhishTank(normalizedTarget) : null,
-      targetType === 'domain' 
-        ? checkVirusTotal(normalizedTarget, 'domain')
-        : null,
-    ]);
-    
-    // Process VirusTotal/AbuseIPDB result
-    if (checks[0].status === 'fulfilled' && checks[0].value) {
-      const result = checks[0].value;
-      sources.push({
-        name: targetType === 'ip' ? 'AbuseIPDB' : 'VirusTotal',
-        verdict: result.verdict,
-        confidence: result.score,
-        details: result.details,
-      });
-      rawResponses[targetType === 'ip' ? 'abuseipdb' : 'virustotal'] = result;
-    }
-    
-    // Process URLhaus result
-    if (checks[1].status === 'fulfilled' && checks[1].value) {
-      const result = checks[1].value;
-      sources.push({
-        name: 'URLhaus',
-        verdict: result.verdict,
-        confidence: result.score,
-        details: result.details,
-      });
-      rawResponses.urlhaus = result;
-    }
-    
-    // Process PhishTank result
-    if (checks[2].status === 'fulfilled' && checks[2].value) {
-      const result = checks[2].value;
-      sources.push({
-        name: 'PhishTank',
-        verdict: result.verdict,
-        confidence: result.score,
-        details: result.details,
-      });
-      rawResponses.phishtank = result;
-    }
-    
-    // Process domain VT result (for URLs)
-    if (checks[3].status === 'fulfilled' && checks[3].value) {
-      const result = checks[3].value;
-      sources.push({
-        name: 'VirusTotal (Domain)',
-        verdict: result.verdict,
-        confidence: result.score,
-        details: result.details,
-      });
-      rawResponses.virustotal_domain = result;
-    }
-    
-    // Calculate aggregate score and reputation
-    let maxScore = 0;
-    let reputation: ThreatIntelResult['reputation'] = 'unknown';
-    
-    for (const source of sources) {
-      if (source.confidence > maxScore) {
-        maxScore = source.confidence;
-      }
-      
-      if (source.verdict === 'malicious') {
-        reputation = 'malicious';
-      } else if (source.verdict === 'suspicious' && reputation !== 'malicious') {
-        reputation = 'suspicious';
-      } else if (source.verdict === 'clean' && reputation === 'unknown') {
-        reputation = 'clean';
-      }
-    }
-    
-    // If no sources returned data
-    if (sources.length === 0) {
-      reputation = 'unknown';
-    }
-    
-    const result: ThreatIntelResult = {
+  }
+  
+  if (sources.length === 0) {
+    reputation = 'unknown';
+  }
+  
+  // Cache the result
+  await supabase
+    .from('threat_intelligence_cache')
+    .upsert({
       target: normalizedTarget,
       target_type: targetType,
       reputation,
       risk_score: maxScore,
       sources,
-      cached: false,
-    };
-    
-    // Cache the result
-    await supabase
-      .from('threat_intelligence_cache')
-      .upsert({
-        target: normalizedTarget,
-        target_type: targetType,
-        reputation,
-        risk_score: maxScore,
-        sources,
-        raw_responses: rawResponses,
-        tenant_id: tenantId,
-        cached_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      }, {
-        onConflict: 'target,target_type,tenant_id',
-      });
-    
-    logger.success(`Threat intel lookup complete: ${normalizedTarget} = ${reputation} (score: ${maxScore})`);
-    
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
+      raw_responses: rawResponses,
+      tenant_id: tenantId,
+      cached_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    }, {
+      onConflict: 'target,target_type,tenant_id',
     });
-    
-  } catch (error) {
-    logger.error('Threat intelligence lookup failed:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      {
-        status: 500,
-        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
-      }
-    );
-  }
+  
+  logger.info(`[${requestId}] Threat intel complete: ${normalizedTarget} = ${reputation} (score: ${maxScore})`);
+  
+  return {
+    target: normalizedTarget,
+    target_type: targetType,
+    reputation,
+    risk_score: maxScore,
+    sources,
+    cached: false,
+  } satisfies ThreatIntelResult;
+}, {
+  rateLimit: { endpoint: 'threat-intelligence-lookup', maxRequests: 30, windowMinutes: 1 },
 });

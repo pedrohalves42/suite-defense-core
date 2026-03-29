@@ -1,11 +1,15 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
-
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: buildCorsHeaders(origin) });
+
+  // V-MIG: Add missing authentication guard - was completely unauthenticated!
+  const authError = await assertInternalCaller(req);
+  if (authError) return authError;
 
   try {
     const supabase = createClient(
