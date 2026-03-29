@@ -23,8 +23,8 @@ async function flushLogs() {
   const entries = LOG_BUFFER.splice(0, MAX_BUFFER_SIZE);
 
   try {
-    await supabase.from('domain_events').insert(
-      entries.map((entry) => ({
+    await supabase.functions.invoke('log-domain-event', {
+      body: entries.map((entry) => ({
         aggregate_id: 'frontend',
         aggregate_type: 'frontend_log',
         event_type: `FrontendLog_${entry.level}`,
@@ -35,8 +35,8 @@ async function flushLogs() {
           user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
         },
         occurred_on: entry.timestamp,
-      }))
-    );
+      })),
+    });
   } catch {
     // Best-effort — don't crash the app if logging fails
   }
