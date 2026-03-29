@@ -1,7 +1,7 @@
 <#
     CyberShield Agent - Windows v5.0.15 FULL ENTERPRISE
 
-    v5.0.15: INTEGRITY + CRYPTO + BASELINE STABILIZATION
+    v5.0.15: EDR + INTEGRITY + CRYPTO + BASELINE STABILIZATION + THREAT NETWORK + AGGREGATION
     - FIX: $PID read-only variable renamed to $procId (EDR process collection)
     - NEW: USB device whitelist - persistent devices (internal HDDs) no longer trigger repeated alerts
       * Tracks known devices in C:\CyberShield\data\usb_whitelist.json
@@ -9,8 +9,12 @@
       * Manual whitelist support for admin-approved devices
     - FIX: DNS sync now handles 403 (feature disabled) and 404 gracefully without ERROR logging
     - FIX: RSA-2048 signature fallback confirmed operational
-
-    v5.0.15: EDR TELEMETRY ACTIVATION + THREAT NETWORK + PROCESS LINEAGE + EDGE EVENT AGGREGATION
+    - FIX: BOM-safe file hashing for TOCTOU integrity (prevents false violations)
+    - FIX: TOCTOU guard skips during update-in-progress
+    - FIX: Crypto boot fallback RSA in outer catch of Initialize-AgentKeys
+    - FIX: Baseline ConvertTo-BaselineJson bypasses PS 5.1 duplicate key crash
+    - FIX: Import-BaselineSafe with regex recovery fallback
+    - FIX: Mutex-protected baseline writes prevent concurrent corruption
     - NEW: Edge Event Aggregation Engine - Local event deduplication before submission
       * Configurable time windows (default 3s) for grouping similar events
       * File/Process/Network event type-specific thresholds
