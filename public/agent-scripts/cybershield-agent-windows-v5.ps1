@@ -1,7 +1,7 @@
 <#
-    CyberShield Agent - Windows v5.0.16 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.15 FULL ENTERPRISE
 
-    v5.0.16: INTEGRITY + CRYPTO + BASELINE STABILIZATION
+    v5.0.15: INTEGRITY + CRYPTO + BASELINE STABILIZATION
     - FIX: $PID read-only variable renamed to $procId (EDR process collection)
     - NEW: USB device whitelist - persistent devices (internal HDDs) no longer trigger repeated alerts
       * Tracks known devices in C:\CyberShield\data\usb_whitelist.json
@@ -199,7 +199,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.16"
+    [string]$AgentVersion = "v5.0.15"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -208,7 +208,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 # ============================================
-#  v5.0.16-hardening: SECURE TOKEN STORAGE
+#  v5.0.15-hardening: SECURE TOKEN STORAGE
 #  Reads tokens from protected files if not provided via CLI.
 #  If CLI tokens are provided, migrates them to files for future runs.
 # ============================================
@@ -548,7 +548,7 @@ $Global:AutoRepairStats = @{
 # v5.0.13-fix: SecurityDegraded flag (BUG 7 - declare early for robustness)
 $Global:SecurityDegraded = $false
 
-# v5.0.16-fix: BOM-safe file hashing for TOCTOU integrity
+# v5.0.15-fix: BOM-safe file hashing for TOCTOU integrity
 # Get-FileHash uses the file as-is (with BOM if present), which causes hash mismatches
 # when the same content is saved with/without BOM by different tools.
 # This function strips UTF-8 BOM before hashing for consistent results.
@@ -572,7 +572,7 @@ function Get-BOMSafeFileHash {
     }
 }
 
-# v5.0.16-fix: Record script hash at boot for TOCTOU self-heal (BOM-safe)
+# v5.0.15-fix: Record script hash at boot for TOCTOU self-heal (BOM-safe)
 try {
     $Global:BootScriptHash = Get-BOMSafeFileHash -FilePath $PSCommandPath
 } catch {
@@ -601,13 +601,13 @@ $Global:RollbackPaths = @{
     RollbackState = Join-Path $dataDir "rollback_state.json"
 }
 
-# v5.0.16-hardening: Update-in-progress flag for TOCTOU guard
+# v5.0.15-hardening: Update-in-progress flag for TOCTOU guard
 $Global:UpdateInProgress = $false
 
-# v5.0.16-hardening: EventLog toggle (server-configurable via heartbeat)
+# v5.0.15-hardening: EventLog toggle (server-configurable via heartbeat)
 $Global:EnableEventLog = $true
 
-# v5.0.16-hardening: BurntToast availability cache (checked once)
+# v5.0.15-hardening: BurntToast availability cache (checked once)
 $Global:BurntToastAvailable = $null
 
 # v5.0.1: FSM Enterprise States
@@ -802,7 +802,7 @@ try {
 }
 
 # ============================================
-#  v5.0.16-hardening: SAFE EVENTLOG WRAPPER
+#  v5.0.15-hardening: SAFE EVENTLOG WRAPPER
 #  Skips Write-EventLog when disabled by server policy
 # ============================================
 function Write-SafeEventLog {
@@ -893,7 +893,7 @@ function Test-RuntimeIntegrity {
                 }
                 return $true
             } else {
-                # v5.0.16-hardening: Skip TOCTOU violation if self-update is in progress
+                # v5.0.15-hardening: Skip TOCTOU violation if self-update is in progress
                 if ($Global:UpdateInProgress) {
                     Write-Log "[INTEGRITY] Script changed during update-in-progress - expected, skipping TOCTOU violation" "DEBUG"
                     return $true
@@ -1394,7 +1394,7 @@ function Add-AggregatedEvent {
         burst_alerted = $false
     }
 
-    # v5.0.16-hardening: Per-entry size cap (10KB max metadata)
+    # v5.0.15-hardening: Per-entry size cap (10KB max metadata)
     if ($Metadata) {
         try {
             $metaJson = $Metadata | ConvertTo-Json -Compress -Depth 3 -ErrorAction SilentlyContinue
@@ -1405,7 +1405,7 @@ function Add-AggregatedEvent {
         } catch { }
     }
 
-    # v5.0.16-hardening: Preemptive flush at 80% capacity
+    # v5.0.15-hardening: Preemptive flush at 80% capacity
     if ($Global:EventAggregationBuffer.Count -ge [int]($Global:AggregationMaxBufferSize * 0.8)) {
         Write-Log "[AGGREGATION] Buffer at 80% ($($Global:EventAggregationBuffer.Count)/$($Global:AggregationMaxBufferSize)) - preemptive flush" "WARN"
         Invoke-FlushAggregationBuffer
@@ -1460,7 +1460,7 @@ function Invoke-FlushAggregationBuffer {
         $flushed = 0
         $keys = @($Global:EventAggregationBuffer.Keys)
 
-        # v5.0.16-hardening: Truncate oldest entries if buffer exceeds max
+        # v5.0.15-hardening: Truncate oldest entries if buffer exceeds max
         if ($keys.Count -gt $Global:AggregationMaxBufferSize) {
             $overflow = $keys.Count - $Global:AggregationMaxBufferSize
             $Global:AggregationStats.buffer_overflow += $overflow
@@ -1737,7 +1737,7 @@ function Initialize-AgentKeys {
         return $true
         
     } catch {
-        # v5.0.16-fix: Outer catch must attempt RSA fallback before giving up
+        # v5.0.15-fix: Outer catch must attempt RSA fallback before giving up
         # Previously returned $false without trying RSA, leaving agent in DEGRADED
         Write-Log "[KEYS] Key initialization error: $($_.Exception.Message) - attempting RSA fallback" "WARN"
         try {
@@ -4250,7 +4250,7 @@ function ConvertTo-SafePSO {
 function ConvertTo-BaselineJson {
     <#
     .SYNOPSIS
-        v5.0.16-fix: Manual JSON serialization for baseline data.
+        v5.0.15-fix: Manual JSON serialization for baseline data.
         Bypasses ConvertTo-Json which can crash on PS 5.1 with duplicate NoteProperties.
         Produces clean JSON array with guaranteed unique keys per object.
     #>
@@ -4283,7 +4283,7 @@ function ConvertTo-BaselineJson {
 function Import-BaselineSafe {
     <#
     .SYNOPSIS
-        v5.0.16-fix: Resilient baseline JSON import.
+        v5.0.15-fix: Resilient baseline JSON import.
         Wraps ConvertFrom-Json with dedup and regex fallback for corrupted files.
         Prevents PS 5.1 crash on duplicate keys inside JSON objects.
     #>
@@ -4329,7 +4329,7 @@ function Import-BaselineSafe {
 function Save-BaselineSafe {
     <#
     .SYNOPSIS
-        v5.0.16-fix: Atomic baseline save with mutex protection.
+        v5.0.15-fix: Atomic baseline save with mutex protection.
         Uses ConvertTo-BaselineJson (manual serialization) and writes via .NET for atomicity.
     #>
     param([array]$Baseline)
@@ -4362,7 +4362,7 @@ function Initialize-ProcessBaseline {
             try {
                 $rawJson = Get-Content $Global:ProcessBaselinePath -Raw -ErrorAction Stop
                 if ($rawJson -and $rawJson.Trim().Length -gt 2) {
-                    # v5.0.16-fix: Use Import-BaselineSafe instead of raw ConvertFrom-Json
+                    # v5.0.15-fix: Use Import-BaselineSafe instead of raw ConvertFrom-Json
                     $loadedBaseline = Import-BaselineSafe -RawJson $rawJson
                     if ($loadedBaseline.Count -eq 0) { $loadedBaseline = $null }
                 }
@@ -5262,7 +5262,7 @@ function Apply-ForcedUpdate {
             Write-Log "[FORCE UPDATE] REJECTED - Payload too large: $($bytes.Length) bytes (max 5MB)" "ERROR"
             return @{ success = $false; error = "Update payload exceeds 5MB limit ($($bytes.Length) bytes)" }
         }
-        # v5.0.16-hardening: TOCTOU guard - signal that update is in progress
+        # v5.0.15-hardening: TOCTOU guard - signal that update is in progress
         $Global:UpdateInProgress = $true
         
         [System.IO.File]::WriteAllBytes($tempScript, $bytes)
@@ -5373,7 +5373,7 @@ function Apply-ForcedUpdate {
         # process for a few seconds/minutes before the restarted scheduled task takes over.
         try {
             Save-SignedHashCache -Hash $actualHash -Signature $updateSignature -Timestamp (Get-Date -Format "o")
-            # v5.0.16-fix: Also update BootScriptHash so Test-RuntimeIntegrity won't
+            # v5.0.15-fix: Also update BootScriptHash so Test-RuntimeIntegrity won't
             # see the new file as a TOCTOU violation during the grace period before restart
             $Global:BootScriptHash = $actualHash
             Write-Log "[FORCE UPDATE] Expected hash cache + BootScriptHash atualizado para o novo payload" "SUCCESS"
@@ -5416,7 +5416,7 @@ function Apply-ForcedUpdate {
         # DYNAMIC TASK DETECTION: Find the correct Scheduled Task name
         Write-Log "[FORCE UPDATE] Detectando Scheduled Task..." "INFO"
         
-        # v5.0.16-hardening: Safe argument builder with validation
+        # v5.0.15-hardening: Safe argument builder with validation
         function New-SafeTaskArguments {
             param(
                 [string]$TargetScript,
@@ -5443,7 +5443,7 @@ function Apply-ForcedUpdate {
             $safeSUrl = $SUrl -replace '"', '\"'
             $safeAName = $AName -replace '"', '\"'
             
-            # v5.0.16: If secrets files exist, do NOT pass tokens on CLI
+            # v5.0.15: If secrets files exist, do NOT pass tokens on CLI
             $secretsPath = Join-Path "C:\CyberShield" "secrets"
             $hasSecretFiles = (Test-Path (Join-Path $secretsPath "agent.token")) -and (Test-Path (Join-Path $secretsPath "hmac.secret"))
             
@@ -5638,7 +5638,7 @@ function Send-Heartbeat {
                     }
 
                     # ============================================
-                    # v5.0.16-hardening: EVENTLOG TOGGLE FROM SERVER
+                    # v5.0.15-hardening: EVENTLOG TOGGLE FROM SERVER
                     # ============================================
                     $eventLogProp = $response.PSObject.Properties['enable_eventlog']
                     if ($null -ne $eventLogProp) {
@@ -5745,7 +5745,7 @@ function Show-SecurityToast {
     )
     
     try {
-        # v5.0.16-hardening: Check BurntToast availability once and cache result
+        # v5.0.15-hardening: Check BurntToast availability once and cache result
         if ($null -eq $Global:BurntToastAvailable) {
             $Global:BurntToastAvailable = $false
             try {
