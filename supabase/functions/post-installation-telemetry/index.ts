@@ -19,7 +19,6 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-
   const requestId = crypto.randomUUID();
   logger.info(`[${requestId}] POST installation telemetry request started`);
 

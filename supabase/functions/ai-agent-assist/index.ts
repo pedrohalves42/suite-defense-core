@@ -12,7 +12,6 @@ import { createErrorResponse, handleException, createValidationError, ErrorCode 
 import { callAIJson } from '../_shared/ai-provider-helper.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 // ??? Types ??????????????????????????????????????????????
 
@@ -102,10 +101,6 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-
-  // Auth guard: require authenticated user or internal caller
-  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
-  if (authError) return authError;
   const requestId = crypto.randomUUID();
 
   try {

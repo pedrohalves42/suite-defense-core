@@ -126,7 +126,6 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-
   const requestId = crypto.randomUUID();
 
   try {

@@ -2,7 +2,6 @@ import { requireEnv } from '../_shared/env.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 import { timingSafeEqual } from '../_shared/crypto-utils.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,10 +35,6 @@ interface ActionExecuted {
 }
 
 Deno.serve(async (req) => {
-  // Auth guard: reject unauthenticated calls
-  const authError = await assertInternalCaller(req);
-  if (authError) return authError;
-
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });

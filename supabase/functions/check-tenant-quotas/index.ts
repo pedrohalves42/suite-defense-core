@@ -1,7 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 interface QuotaAlert {
   tenant_id: string;
@@ -13,10 +12,6 @@ interface QuotaAlert {
 }
 
 Deno.serve(async (req) => {
-  // Auth guard: reject unauthenticated calls
-  const authError = await assertInternalCaller(req);
-  if (authError) return authError;
-
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }

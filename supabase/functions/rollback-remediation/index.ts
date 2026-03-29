@@ -2,7 +2,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { handleException } from '../_shared/error-handler.ts';
 import { createAuditLog } from '../_shared/audit.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -13,10 +12,6 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
  * Body: { action_id: string }
  */
 Deno.serve(async (req: Request) => {
-  // Auth guard: reject unauthenticated calls
-  const authError = await assertInternalCaller(req);
-  if (authError) return authError;
-
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }

@@ -95,7 +95,6 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-
   // Health check endpoint
   if (req.method === 'GET' && new URL(req.url).pathname === '/serve-installer') {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');

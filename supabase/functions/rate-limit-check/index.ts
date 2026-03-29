@@ -24,7 +24,6 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-
   try {
     const { identifier, endpoint, tenant_id } = await req.json();
 

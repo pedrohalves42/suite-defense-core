@@ -2,7 +2,6 @@ import { serve } from "https://deno.land/std@0.203.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { corsHeaders } from '../_shared/cors.ts'
 import { logger } from '../_shared/logger.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 /**
  * agent-snapshot - Edge Function Canonica
@@ -17,10 +16,6 @@ import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
  */
 
 serve(async (req) => {
-  // Auth guard: require authenticated user or internal caller
-  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
-  if (authError) return authError;
-
   const correlationId = crypto.randomUUID()
 
   // CORS preflight

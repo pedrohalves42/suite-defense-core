@@ -7,7 +7,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { callAISimple } from '../_shared/ai-provider-helper.ts';
 import { timingSafeEqual } from '../_shared/crypto-utils.ts';
 import { logger } from '../_shared/logger.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const SUPABASE_URL = requireEnv('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
@@ -118,10 +117,6 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
-
-  // Auth guard: require authenticated user or internal caller
-  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
-  if (authError) return authError;
   const startedAt = Date.now();
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 

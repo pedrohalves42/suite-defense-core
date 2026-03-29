@@ -4,7 +4,6 @@ import { AIPromptRegistry, logPromptUsage } from "../_shared/ai-prompt-registry.
 import { safeParseJSON, createFallbackAudit } from "../_shared/json-parser.ts";
 import { callAI, type AIMessage } from "../_shared/ai-provider-helper.ts";
 import { logger } from '../_shared/logger.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,10 +12,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Auth guard: reject unauthenticated calls
-  const authError = await assertInternalCaller(req);
-  if (authError) return authError;
-
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }

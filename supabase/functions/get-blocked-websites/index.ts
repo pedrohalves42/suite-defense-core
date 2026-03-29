@@ -3,7 +3,6 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { logger } from '../_shared/logger.ts';
 import { hashToken } from '../_shared/token-hash.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -13,10 +12,6 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-
-  // Auth guard: require authenticated user or internal caller
-  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
-  if (authError) return authError;
   if (req.method !== 'GET') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,

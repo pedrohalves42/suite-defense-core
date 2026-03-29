@@ -3,7 +3,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { runQualityCheck, createQualityAlert, logQualityCheck } from '../_shared/ai-quality-monitor.ts';
 import { AIPromptRegistry } from '../_shared/ai-prompt-registry.ts';
 import { logger } from '../_shared/logger.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,10 +17,6 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-
-  // Auth guard: require authenticated user or internal caller
-  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
-  if (authError) return authError;
   try {
     // Verify admin access
     const authHeader = req.headers.get('Authorization');

@@ -1,6 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 /**
  * SOAR Lite Engine ? Automated Security Response
@@ -137,10 +136,6 @@ function mapEventToTrigger(eventType: string, details: Record<string, unknown>):
 }
 
 Deno.serve(async (req: Request) => {
-  // Auth guard: reject unauthenticated calls
-  const authError = await assertInternalCaller(req);
-  if (authError) return authError;
-
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }

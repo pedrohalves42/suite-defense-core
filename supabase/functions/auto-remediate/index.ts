@@ -3,7 +3,6 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { handleException } from '../_shared/error-handler.ts';
 import { createAuditLog } from '../_shared/audit.ts';
 import { logger } from '../_shared/logger.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -27,10 +26,6 @@ interface RemediationRequest {
 }
 
 Deno.serve(async (req: Request) => {
-  // Auth guard: reject unauthenticated calls
-  const authError = await assertInternalCaller(req);
-  if (authError) return authError;
-
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }

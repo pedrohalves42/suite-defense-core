@@ -11,7 +11,6 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-
   const requestId = crypto.randomUUID();
   logger.info(`[${requestId}] Setup agent script in storage`);
 

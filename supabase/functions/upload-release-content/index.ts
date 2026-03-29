@@ -3,7 +3,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { timingSafeEqual } from '../_shared/crypto-utils.ts';
 import { logger } from '../_shared/logger.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 /**
  * upload-release-content
@@ -62,10 +61,6 @@ Deno.serve(async (req) => {
     const expectedSecret = Deno.env.get('INTERNAL_SECRET');
     
     const isInternalAuth = expectedSecret && internalSecret && await timingSafeEqual(internalSecret, expectedSecret);
-
-  // Auth guard: require authenticated user or internal caller
-  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
-  if (authError) return authError;
     const isServiceRole = authHeader && Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') && await timingSafeEqual(authHeader, `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`);
     
     if (!isInternalAuth && !isServiceRole) {
