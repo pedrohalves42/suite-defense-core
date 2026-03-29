@@ -52,9 +52,9 @@ export async function handleCleanupTelemetry(supabase: SupabaseClient, requestId
   };
 }
 
-// ──────────────────────────────────────────────
+// ----------------------------------------------
 // Handler: stale-reports
-// ──────────────────────────────────────────────
+// ----------------------------------------------
 export async function handleCleanupStaleReports(supabase: SupabaseClient, requestId: string) {
   const STALE_HOURS = 24;
   const results = { processed: 0, cleaned: 0, retried: 0, failed: 0, errors: [] as string[] };
@@ -109,9 +109,9 @@ export async function handleCleanupStaleReports(supabase: SupabaseClient, reques
   return { success: true, ...results };
 }
 
-// ──────────────────────────────────────────────
+// ----------------------------------------------
 // Handler: stale-updates
-// ──────────────────────────────────────────────
+// ----------------------------------------------
 export async function handleCleanupStaleUpdates(supabase: SupabaseClient, requestId: string) {
   const MAX_DELIVERY_COUNT = 10;
   const MAX_STALE_HOURS = 168;
@@ -177,9 +177,9 @@ export async function handleCleanupStaleUpdates(supabase: SupabaseClient, reques
   return { success: true, cleaned, total_stale: staleAgents.length, agents: staleAgents.map(a => ({ name: a.agent_name, stuck_version: a.force_update_version, delivery_count: a.force_update_delivery_count, trigger_reason: a.force_update_reason })) };
 }
 
-// ──────────────────────────────────────────────
+// ----------------------------------------------
 // Handler: stale-playbooks
-// ──────────────────────────────────────────────
+// ----------------------------------------------
 export async function handleCleanupStalePlaybooks(supabase: SupabaseClient, requestId: string) {
   const TIMEOUT_MINUTES = 30;
   const results = { processed: 0, cleaned: 0, alertsCreated: 0, errors: [] as string[] };
@@ -220,9 +220,9 @@ export async function handleCleanupStalePlaybooks(supabase: SupabaseClient, requ
   return { success: true, ...results };
 }
 
-// ──────────────────────────────────────────────
+// ----------------------------------------------
 // Handler: offline-agents-jobs
-// ──────────────────────────────────────────────
+// ----------------------------------------------
 export async function handleCleanupOfflineAgentsJobs(supabase: SupabaseClient, requestId: string) {
   const { data, error } = await supabase.rpc('cleanup_offline_agents_jobs');
   if (error) {
@@ -233,9 +233,9 @@ export async function handleCleanupOfflineAgentsJobs(supabase: SupabaseClient, r
   return { success: true, cleaned_count: result.cleaned_count, agent_ids: result.agent_ids || [], job_ids: result.job_ids || [] };
 }
 
-// ──────────────────────────────────────────────
+// ----------------------------------------------
 // Handler: stuck-builds
-// ──────────────────────────────────────────────
+// ----------------------------------------------
 export async function handleCleanupStuckBuilds(supabase: SupabaseClient, requestId: string) {
   const { data, error } = await supabase.rpc('cleanup_stuck_builds');
   if (error) throw new Error(`Cleanup function failed: ${error.message}`);
@@ -243,9 +243,9 @@ export async function handleCleanupStuckBuilds(supabase: SupabaseClient, request
   return { success: true, cleaned_count: result.cleaned_count || 0, build_ids: result.build_ids || [] };
 }
 
-// ──────────────────────────────────────────────
+// ----------------------------------------------
 // Handler: stuck-jobs
-// ──────────────────────────────────────────────
+// ----------------------------------------------
 export async function handleCleanupStuckJobs(supabase: SupabaseClient, requestId: string) {
   const MAX_DELIVERY_ATTEMPTS = 5;
   const STUCK_TIMEOUT_MINUTES = 10;
@@ -328,9 +328,9 @@ export async function handleCleanupStuckJobs(supabase: SupabaseClient, requestId
   };
 }
 
-// ──────────────────────────────────────────────
+// ----------------------------------------------
 // Handler: auto-cleanup-jobs
-// ──────────────────────────────────────────────
+// ----------------------------------------------
 export async function handleAutoCleanupJobs(supabase: SupabaseClient, requestId: string, body: Record<string, unknown>) {
   // KILL SWITCH CHECK
   const { data: systemMode } = await supabase.rpc('get_system_mode_safe');
@@ -382,9 +382,9 @@ export async function handleAutoCleanupJobs(supabase: SupabaseClient, requestId:
   return { success: true, queued_cancelled: queuedCancelled, delivered_failed: deliveredFailed, total_cleaned: queuedCancelled + deliveredFailed, retried: retriedCount, tenants_affected: tenantsAffected };
 }
 
-// ──────────────────────────────────────────────
+// ----------------------------------------------
 // Handler: security-cleanup
-// ──────────────────────────────────────────────
+// ----------------------------------------------
 export async function handleSecurityCleanup(supabase: SupabaseClient, requestId: string) {
   const now = new Date();
   const stats = { hmac_signatures_deleted: 0, rate_limits_deleted: 0, failed_logins_deleted: 0, ip_blocklist_deleted: 0, old_metrics_deleted: 0, security_logs_archived: 0 };
@@ -424,9 +424,9 @@ export async function handleSecurityCleanup(supabase: SupabaseClient, requestId:
   return { success: true, stats, total_deleted: totalDeleted };
 }
 
-// ──────────────────────────────────────────────
+// ----------------------------------------------
 // Handler: cleanup-jobs (admin, JWT auth)
-// ──────────────────────────────────────────────
+// ----------------------------------------------
 export async function handleCleanupJobs(supabase: SupabaseClient, requestId: string, body: Record<string, unknown>, tenantId: string) {
   const status = (body.status as string[]) || ['failed', 'delivered'];
   const older_than_days = (body.older_than_days as number) || 7;
