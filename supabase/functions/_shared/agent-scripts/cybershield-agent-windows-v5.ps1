@@ -377,9 +377,9 @@ try {
                     } else {
                         # Step 2: Only NOW compare hash (signature verified first)
                         try {
-                            $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+                            $currentHash = Get-BOMSafeFileHash -FilePath $PSCommandPath
                         } catch {
-                            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-FileHash failed (file locked/ACL): $($_.Exception.Message)" -ErrorAction SilentlyContinue
+                            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-BOMSafeFileHash failed (file locked/ACL): $($_.Exception.Message)" -ErrorAction SilentlyContinue
                             [Environment]::Exit(9005)
                         }
                         if ($currentHash -ne $cacheJson.hash.ToLower()) {
@@ -397,9 +397,9 @@ try {
                 } else {
                     # No signature in cache - legacy format, compare hash with warning
                     try {
-                        $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+                        $currentHash = Get-BOMSafeFileHash -FilePath $PSCommandPath
                     } catch {
-                        Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-FileHash failed: $($_.Exception.Message)" -ErrorAction SilentlyContinue
+                        Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-BOMSafeFileHash failed: $($_.Exception.Message)" -ErrorAction SilentlyContinue
                         [Environment]::Exit(9005)
                     }
                     if ($currentHash -ne $cacheJson.hash.ToLower()) {
@@ -428,9 +428,9 @@ try {
         $expectedHash = (Get-Content $hashCachePath -Raw -ErrorAction SilentlyContinue).Trim()
         if ($expectedHash -and $expectedHash.Length -eq 64) {
             try {
-                $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+                $currentHash = Get-BOMSafeFileHash -FilePath $PSCommandPath
             } catch {
-                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-FileHash failed: $($_.Exception.Message)" -ErrorAction SilentlyContinue
+                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-BOMSafeFileHash failed: $($_.Exception.Message)" -ErrorAction SilentlyContinue
                 [Environment]::Exit(9005)
             }
             if ($currentHash -ne $expectedHash.ToLower()) {
@@ -862,7 +862,7 @@ function Test-RuntimeIntegrity {
         }
         if (-not $expectedHash -or $expectedHash.Length -ne 64) { return $true }
         
-        $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256).Hash.ToLower()
+        $currentHash = Get-BOMSafeFileHash -FilePath $PSCommandPath
         if ($currentHash -ne $expectedHash.ToLower()) {
             # v5.0.15-hotfix-toctou: SELF-HEAL instead of terminating.
             # The server may have sent a hash computed with different normalization.
