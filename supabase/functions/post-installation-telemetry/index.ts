@@ -6,8 +6,9 @@ import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 
-// HARDENED: Restrict CORS ? this endpoint is called by PowerShell agents, not browsers
+// HARDENED: Restrict CORS - this endpoint is called by PowerShell agents, not browsers
 const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || "https://cybershield-audit.lovable.app";
+const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-agent-token, x-hmac-signature, x-timestamp, x-nonce",
 };
