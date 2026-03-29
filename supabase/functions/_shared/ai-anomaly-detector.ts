@@ -221,7 +221,7 @@ export async function logAnomaly(
   tenantId: string,
   functionName: string,
   anomaly: AnomalyFlag,
-  context: Record<string, any> = {}
+  context: Record<string, unknown> = {}
 ): Promise<void> {
   try {
     await supabase.from('ai_anomalies').insert({
