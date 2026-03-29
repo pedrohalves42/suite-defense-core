@@ -62,7 +62,7 @@ export function SLIDashboard({ tenantId }: SLIDashboardProps) {
       setSlo(sloRes);
       setMetrics(dashRes.recentMetrics || []);
     } catch (e) {
-      console.error('Failed to load SLI/SLO:', e);
+      logger.error('Failed to load SLI/SLO data', e);
     } finally {
       setLoading(false);
     }

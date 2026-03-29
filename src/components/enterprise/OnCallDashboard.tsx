@@ -46,7 +46,7 @@ export function OnCallDashboard() {
       setSource(oncallRes.source || 'local');
       setAlerts(alertsRes.alerts || []);
     } catch (e) {
-      console.error('Failed to load on-call data:', e);
+      logger.error('Failed to load on-call data', e);
     } finally {
       setLoading(false);
     }
