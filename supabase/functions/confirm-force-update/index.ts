@@ -5,6 +5,7 @@ import { logger } from '../_shared/logger.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { hashToken } from '../_shared/token-hash.ts';
 import { normalizeVersion } from '../_shared/hexagonal/update-decision-service.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const SUPABASE_URL = requireEnv('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
@@ -29,6 +30,10 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+
+  // Auth guard: require authenticated user or internal caller
+  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
+  if (authError) return authError;
   const requestId = crypto.randomUUID();
 
   try {

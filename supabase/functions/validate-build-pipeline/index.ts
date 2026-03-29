@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 interface PipelineCheck {
   name: string;
@@ -15,6 +16,10 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+
+  // Auth guard: require authenticated user or internal caller
+  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
+  if (authError) return authError;
   try {
     // Authenticate admin user
     const authHeader = req.headers.get('Authorization');

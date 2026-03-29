@@ -5,6 +5,7 @@
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const SCIM_SCHEMAS = {
   USER: 'urn:ietf:params:scim:schemas:core:2.0:User',
@@ -510,6 +511,10 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { headers: scimHeaders, status: 204 });
   }
 
+
+  // Auth guard: require authenticated user or internal caller
+  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
+  if (authError) return authError;
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {

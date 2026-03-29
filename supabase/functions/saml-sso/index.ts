@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
 import { logger } from '../_shared/logger.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 /**
  * SAML 2.0 SSO Edge Function
@@ -13,6 +14,10 @@ const ACS_URL = Deno.env.get('SAML_ACS_URL') || 'https://cybershield-audit.lovab
 const DASHBOARD_URL = Deno.env.get('DASHBOARD_URL') || 'https://cybershield-audit.lovable.app'
 
 Deno.serve(async (req) => {
+  // Auth guard: require authenticated user or internal caller
+  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
+  if (authError) return authError;
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders, status: 204 })
   }

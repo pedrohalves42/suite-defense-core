@@ -10,6 +10,7 @@ import { applyWindowsScriptHotfix } from '../_shared/windows-script-hotfix.ts';
 import { INSTALLER_VERSION } from '../_shared/installer-version.ts';
 import { hashToken } from '../_shared/token-hash.ts';
 import { updateDecisionService, normalizeVersion, normalizeForWindows, calculateSha256 } from '../_shared/hexagonal/update-decision-service.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const SUPABASE_URL = requireEnv('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
@@ -19,6 +20,10 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+
+  // Auth guard: require agent token, authenticated user, or internal caller
+  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
+  if (authError) return authError;
   const requestId = crypto.randomUUID();
 
   try {

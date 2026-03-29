@@ -6,6 +6,7 @@ import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { hashToken } from '../_shared/token-hash.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 // Validation schema
 const InstallationEventSchema = z.object({
@@ -40,6 +41,10 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+
+  // Auth guard: require agent token, authenticated user, or internal caller
+  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
+  if (authError) return authError;
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
