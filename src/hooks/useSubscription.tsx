@@ -1,29 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
-
-interface SubscriptionFeature {
-  enabled: boolean;
-  quota_limit: number | null;
-  quota_used: number;
-}
-
-interface SubscriptionData {
-  subscribed: boolean;
-  plan_name: string;
-  device_quantity: number;
-  max_devices: number;
-  installed_agents: number;
-  available_slots: number;
-  status: string;
-  trial_end: string | null;
-  current_period_end: string | null;
-  features: Record<string, SubscriptionFeature>;
-}
-
+// COST-OPT-V9: Only hook that retains polling (10 min interval)
 export const useSubscription = () => {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { user } = useAuth();
 
   const { data: subscription, isLoading, refetch } = useQuery<SubscriptionData>({

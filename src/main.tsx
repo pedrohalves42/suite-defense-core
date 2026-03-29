@@ -25,9 +25,9 @@ if (typeof window !== "undefined" && /preview--/.test(window.location.hostname))
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes - data stays fresh
-      gcTime: 10 * 60 * 1000, // 10 minutes - cache persists in memory
-      refetchOnWindowFocus: false, // Disable aggressive refetching
+      staleTime: 10 * 60 * 1000, // COST-OPT-V9: 10 minutes - reduce refetches
+      gcTime: 15 * 60 * 1000, // 15 minutes - cache persists in memory
+      refetchOnWindowFocus: true, // Only refetch when user returns to tab
       refetchOnReconnect: true, // Refetch on network reconnect
       retry: 1, // Only retry once on failure
     },

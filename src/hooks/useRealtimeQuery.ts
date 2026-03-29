@@ -86,15 +86,13 @@ export function useRealtimeQuery<T>({
     };
   }, [realtimeTable, realtimeFilter, enabled, queryClient, ...queryKey]);
 
-  // Use adaptive polling: only poll when visible and no realtime
-  const effectiveInterval = isVisible ? fallbackInterval : false;
-
+  // COST-OPT-V9: No polling at all. Realtime handles updates, manual refetch for the rest.
   return useQuery({
     queryKey,
     queryFn,
     enabled,
     staleTime,
-    refetchInterval: realtimeTable ? false : effectiveInterval,
+    refetchInterval: false,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   });
