@@ -4247,6 +4247,108 @@ function ConvertTo-SafePSO {
     }
 }
 
+function ConvertTo-BaselineJson {
+    <#
+    .SYNOPSIS
+        v5.0.16-fix: Manual JSON serialization for baseline data.
+        Bypasses ConvertTo-Json which can crash on PS 5.1 with duplicate NoteProperties.
+        Produces clean JSON array with guaranteed unique keys per object.
+    #>
+    param([array]$Baseline)
+    $sb = [System.Text.StringBuilder]::new(4096)
+    [void]$sb.Append('[')
+    $first = $true
+    foreach ($e in $Baseline) {
+        if (-not $first) { [void]$sb.Append(',') }
+        $first = $false
+        $n = (Get-SafeBaselineProp $e 'name')
+        $c = (Get-SafeBaselineProp $e 'company')
+        $d = (Get-SafeBaselineProp $e 'description')
+        $f = (Get-SafeBaselineProp $e 'first_seen')
+        # Escape backslashes and quotes for JSON safety
+        $ne = if ($n) { $n -replace '\\', '\\\\' -replace '"', '\"' -replace "`t", '\t' -replace "`n", '\n' -replace "`r", '' } else { '' }
+        $ce = if ($c) { $c -replace '\\', '\\\\' -replace '"', '\"' -replace "`t", '\t' -replace "`n", '\n' -replace "`r", '' } else { $null }
+        $de = if ($d) { $d -replace '\\', '\\\\' -replace '"', '\"' -replace "`t", '\t' -replace "`n", '\n' -replace "`r", '' } else { $null }
+        $fe = if ($f) { $f -replace '\\', '\\\\' -replace '"', '\"' } else { (Get-Date).ToString('o') }
+        [void]$sb.Append("{`"name`":`"$ne`",`"company`":")
+        if ($null -ne $ce) { [void]$sb.Append("`"$ce`"") } else { [void]$sb.Append("null") }
+        [void]$sb.Append(",`"description`":")
+        if ($null -ne $de) { [void]$sb.Append("`"$de`"") } else { [void]$sb.Append("null") }
+        [void]$sb.Append(",`"first_seen`":`"$fe`"}")
+    }
+    [void]$sb.Append(']')
+    return $sb.ToString()
+}
+
+function Import-BaselineSafe {
+    <#
+    .SYNOPSIS
+        v5.0.16-fix: Resilient baseline JSON import.
+        Wraps ConvertFrom-Json with dedup and regex fallback for corrupted files.
+        Prevents PS 5.1 crash on duplicate keys inside JSON objects.
+    #>
+    param([string]$RawJson)
+    $entries = @()
+    $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    try {
+        $parsed = $RawJson | ConvertFrom-Json -ErrorAction Stop
+        foreach ($item in $parsed) {
+            $name = Get-SafeBaselineProp $item 'name'
+            if ($name -and -not $seen.Contains($name)) {
+                [void]$seen.Add($name)
+                $entries += [ordered]@{
+                    name        = $name
+                    company     = Get-SafeBaselineProp $item 'company'
+                    description = Get-SafeBaselineProp $item 'description'
+                    first_seen  = Get-SafeBaselineProp $item 'first_seen'
+                }
+            }
+        }
+    } catch {
+        Write-Log "[BASELINE] ConvertFrom-Json failed, using regex recovery: $($_.Exception.Message)" "WARN"
+        $nameMatches = [regex]::Matches($RawJson, '"name"\s*:\s*"([^"]*)"')
+        foreach ($m in $nameMatches) {
+            $name = $m.Groups[1].Value
+            if ($name -and -not $seen.Contains($name)) {
+                [void]$seen.Add($name)
+                $entries += [ordered]@{
+                    name        = $name
+                    company     = $null
+                    description = "recovered"
+                    first_seen  = (Get-Date).ToString("o")
+                }
+            }
+        }
+        if ($entries.Count -gt 0) {
+            Write-Log "[BASELINE] Regex recovery found $($entries.Count) processes" "WARN"
+        }
+    }
+    return $entries
+}
+
+function Save-BaselineSafe {
+    <#
+    .SYNOPSIS
+        v5.0.16-fix: Atomic baseline save with mutex protection.
+        Uses ConvertTo-BaselineJson (manual serialization) and writes via .NET for atomicity.
+    #>
+    param([array]$Baseline)
+    $mtx = $null
+    try {
+        $mtx = [System.Threading.Mutex]::new($false, "CyberShield_Baseline_Write")
+        [void]$mtx.WaitOne(5000)
+        $jsonContent = ConvertTo-BaselineJson -Baseline $Baseline
+        [System.IO.File]::WriteAllText($Global:ProcessBaselinePath, $jsonContent, [System.Text.UTF8Encoding]::new($false))
+    } catch {
+        Write-Log "[BASELINE] Save-BaselineSafe failed: $($_.Exception.Message)" "WARN"
+    } finally {
+        if ($mtx) {
+            try { $mtx.ReleaseMutex() } catch { }
+            try { $mtx.Dispose() } catch { }
+        }
+    }
+}
+
 function Initialize-ProcessBaseline {
     <#
     .SYNOPSIS
