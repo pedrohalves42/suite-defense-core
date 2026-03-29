@@ -1,5 +1,5 @@
 /**
- * submit-router — Consolidated agent telemetry submission endpoint
+ * submit-router -- Consolidated agent telemetry submission endpoint
  * 
  * Consolidates non-HMAC submit-* functions that use serveAgent middleware.
  * HMAC functions (submit-antivirus-status, submit-software-inventory, submit-system-metrics,

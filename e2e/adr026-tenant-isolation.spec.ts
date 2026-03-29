@@ -14,7 +14,7 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 // Skip if not configured
-test.beforeEach(({ }, testInfo) => {
+test.beforeEach((_fixtures, testInfo) => {
   if (!SUPABASE_URL) {
     console.log('⚠️ SUPABASE_URL not configured, skipping ADR-026 tests');
     testInfo.skip();

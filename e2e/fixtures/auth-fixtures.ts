@@ -47,6 +47,7 @@ export const test = base.extend<{ authenticatedPage: Page }>({
     if (!success) {
       throw new Error('Authentication failed – check TEST_ADMIN_EMAIL / TEST_ADMIN_PASSWORD');
     }
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(page);
   },
 });

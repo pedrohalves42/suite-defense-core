@@ -1,5 +1,5 @@
 /**
- * report-router — Consolidated report generation dispatcher
+ * report-router -- Consolidated report generation dispatcher
  * 
  * Replaces individual generate-* functions with a single entry point.
  * 
@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    logger.info(`[${requestId}] report-router: proxy → ${functionName} (action=${action})`);
+    logger.info(`[${requestId}] report-router: proxy -> ${functionName} (action=${action})`);
 
     const targetUrl = `${SUPABASE_URL}/functions/v1/${functionName}`;
     const headers: Record<string, string> = {

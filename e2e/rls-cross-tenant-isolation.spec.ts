@@ -11,7 +11,7 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 // Skip all tests if no Supabase configuration
-test.beforeEach(({ }, testInfo) => {
+test.beforeEach((_fixtures, testInfo) => {
   if (!SUPABASE_URL) {
     console.log('Skipping RLS isolation tests: SUPABASE_URL not configured');
     testInfo.skip();
