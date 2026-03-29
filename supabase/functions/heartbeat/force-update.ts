@@ -122,7 +122,7 @@ export async function processForceUpdate(
 
 // ─── Private helpers ────────────────────────────────────────
 
-async function selfHealForceVersion(
+export async function selfHealForceVersion(
   supabase: SupabaseClient,
   agent: AgentContext,
   platform: string,
