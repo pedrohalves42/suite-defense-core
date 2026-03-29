@@ -158,15 +158,16 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
   Deno.serve(async (req: Request) => {
     const requestId = req.headers.get('X-Request-ID') || crypto.randomUUID();
     const startTime = Date.now();
+    const origin = req.headers.get('origin');
 
     // 1. CORS
     if (req.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
+      return new Response(null, { headers: buildCorsHeaders(origin) });
     }
 
     // 2. Method check
     if (methods.length > 0 && !methods.includes(req.method)) {
-      return errorResponse(`Method ${req.method} not allowed`, 405, requestId);
+      return errorResponse(`Method ${req.method} not allowed`, 405, requestId, origin);
     }
 
     try {
