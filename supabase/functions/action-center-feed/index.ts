@@ -1,8 +1,8 @@
 // Deno.serve() - no import needed
 import { logger } from '../_shared/logger.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { 
 import { buildCorsHeaders } from '../_shared/cors.ts';
+import { 
   healthProbeMiddleware, 
   addHealthHeaders,
   EDGE_VERSION 

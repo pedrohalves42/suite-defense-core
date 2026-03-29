@@ -1,7 +1,7 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
-import {
 import { buildCorsHeaders } from '../_shared/cors.ts';
+import {
   isProcessProtected,
   isServiceProtected
 } from '../_shared/protected-targets.ts';
