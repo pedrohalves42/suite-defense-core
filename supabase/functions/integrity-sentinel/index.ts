@@ -5,7 +5,7 @@ import { timingSafeEqual } from '../_shared/crypto-utils.ts'
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 
-}
+
 
 /**
  * INTEGRITY SENTINEL - CAMADA 3 do Zero Trust
