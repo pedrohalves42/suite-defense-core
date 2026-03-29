@@ -3,7 +3,7 @@
  * INSIGHT_IGNORED_009, PROGRESSIVE_DEGRADATION_012
  */
 import { logger } from '../../_shared/logger.ts';
-import type { RuleResult, RuleRecord } from '../types.ts';
+import type { RuleResult, RuleRecord, SupabaseClient } from '../types.ts';
 
 export async function processSilentFailureDetection(supabase: SupabaseClient, rule: RuleRecord): Promise<RuleResult> {
   logger.debug('[SILENT_FAILURE_007] Detecting silent job failures');

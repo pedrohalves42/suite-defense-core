@@ -3,7 +3,7 @@
  * AGENT_IMPRODUTIVE_005, AUTO_REVERT_THROTTLE_006
  */
 import { logger } from '../../_shared/logger.ts';
-import type { RuleResult, ActionExecuted, RuleRecord } from '../types.ts';
+import type { RuleResult, ActionExecuted, RuleRecord, SupabaseClient } from '../types.ts';
 
 export async function processSafeModeRule(supabase: SupabaseClient, rule: RuleRecord): Promise<RuleResult> {
   const conditions = rule.definition?.conditions || {
