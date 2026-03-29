@@ -106,18 +106,20 @@ type TenantHandler<T = unknown> = (req: Request, ctx: TenantContext<T>) => Promi
 
 // ??? Helpers ?????????????????????????????????????????????????????????????????
 
-function jsonResponse(data: unknown, status = 200, extraHeaders?: Record<string, string>) {
+function jsonResponse(data: unknown, status = 200, extraHeaders?: Record<string, string>, origin?: string | null) {
+  const cors = origin ? buildCorsHeaders(origin) : corsHeaders;
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json', ...extraHeaders },
+    headers: { ...cors, ...securityHeaders, 'Content-Type': 'application/json', ...extraHeaders },
   });
 }
 
-function errorResponse(message: string, status: number, requestId: string) {
+function errorResponse(message: string, status: number, requestId: string, origin?: string | null) {
   return jsonResponse(
     { error: { message, code: status === 401 ? 'UNAUTHORIZED' : status === 403 ? 'FORBIDDEN' : 'ERROR' } },
     status,
-    { 'X-Request-ID': requestId }
+    { 'X-Request-ID': requestId },
+    origin
   );
 }
 
