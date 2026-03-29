@@ -4487,7 +4487,7 @@ function Get-ProcessAnomalies {
                         $n = Get-SafeBaselineProp $e 'name'
                         if ($n) { [void]$Global:ProcessBaselineSet.Add($n) }
                     }
-                    $cleanBaseline | ConvertTo-SafePSO | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+                    Save-BaselineSafe -Baseline $cleanBaseline
                 }
             }
         } catch {
@@ -4532,7 +4532,7 @@ function Get-ProcessAnomalies {
                     }
                 }
                 # v5.0.14-fix3: Use ConvertTo-SafePSO to prevent PS 5.1 duplicate key errors
-                $normalizedForSave | ConvertTo-SafePSO | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+                Save-BaselineSafe -Baseline $normalizedForSave
             } catch {
                 Write-Log "[BASELINE] Failed to save baseline: $($_.Exception.Message)" "WARN"
             }
