@@ -225,7 +225,7 @@ Deno.serve(async (req) => {
       
       const { data: antivirus } = await avQuery
       statistics.antivirus_engines = antivirus?.length || 0
-      statistics.threats_found = antivirus?.reduce((sum: number, av: any) => sum + (av.threats_found || 0), 0) || 0
+      statistics.threats_found = antivirus?.reduce((sum: number, av: { threats_found?: number }) => sum + (av.threats_found || 0), 0) || 0
       reportData.antivirus_status = antivirus || []
     }
 

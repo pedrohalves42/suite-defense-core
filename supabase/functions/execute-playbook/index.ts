@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 /**
  * Execute Playbook - Migrated to assertInternalCaller
  */
@@ -121,7 +122,7 @@ Deno.serve(async (req: Request) => {
 });
 
 // deno-lint-ignore no-explicit-any
-async function createAlert(supabase: any, playbook: any, triggerData: any) {
+async function createAlert(supabase: SupabaseClient, playbook: Record<string, unknown>, triggerData: Record<string, unknown>) {
   const { error } = await supabase.from('system_alerts').insert({
     tenant_id: triggerData.tenant_id,
     agent_id: triggerData.agent_id || null,
@@ -136,7 +137,7 @@ async function createAlert(supabase: any, playbook: any, triggerData: any) {
 }
 
 // deno-lint-ignore no-explicit-any
-async function collectEvidence(supabase: any, triggerData: any) {
+async function collectEvidence(supabase: SupabaseClient, triggerData: any) {
   if (!triggerData.agent_id) return { skipped: true, reason: 'no_agent_id' };
 
   const { data: agent } = await supabase

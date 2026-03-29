@@ -178,7 +178,7 @@ async function createIncident(
   supabase: SupabaseClient,
   tenantId: string,
   agentId: string,
-  rule: any,
+  rule: Record<string, unknown>,
   matchedDets: Array<Record<string, unknown>>,
   tactics: string[]
 ) {

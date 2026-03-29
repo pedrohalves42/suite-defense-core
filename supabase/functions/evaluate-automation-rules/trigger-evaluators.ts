@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 /**
  * Trigger evaluators for automation rules
  */
@@ -5,11 +6,11 @@ import { matchesScope, evaluateOperator } from './helpers.ts';
 
 export interface TriggerCandidate {
   agentId: string;
-  triggerData: any;
+  triggerData: Record<string, unknown>;
 }
 
 export async function evaluateMetricThreshold(
-  supabase: any, rule: any, tenantId: string, agents: Array<Record<string, unknown>>, latestMetrics: Map<string, any>
+  supabase: SupabaseClient, rule: Record<string, unknown>, tenantId: string, agents: Array<Record<string, unknown>>, latestMetrics: Map<string, Record<string, unknown>>
 ): Promise<TriggerCandidate[]> {
   const conditions = rule.trigger_conditions as Record<string, unknown>;
   const candidates: TriggerCandidate[] = [];
@@ -35,7 +36,7 @@ export async function evaluateMetricThreshold(
 }
 
 export async function evaluateProcessAnomaly(
-  supabase: any, rule: any, tenantId: string, agents: Array<Record<string, unknown>>
+  supabase: SupabaseClient, rule: Record<string, unknown>, tenantId: string, agents: Array<Record<string, unknown>>
 ): Promise<TriggerCandidate[]> {
   const conditions = rule.trigger_conditions as Record<string, unknown>;
   const candidates: TriggerCandidate[] = [];
@@ -74,7 +75,7 @@ export async function evaluateProcessAnomaly(
 }
 
 export async function evaluateAgentStatus(
-  supabase: any, rule: any, tenantId: string, agents: Array<Record<string, unknown>>
+  supabase: SupabaseClient, rule: Record<string, unknown>, tenantId: string, agents: Array<Record<string, unknown>>
 ): Promise<TriggerCandidate[]> {
   const conditions = rule.trigger_conditions as Record<string, unknown>;
   const candidates: TriggerCandidate[] = [];
@@ -102,7 +103,7 @@ export async function evaluateAgentStatus(
 }
 
 export async function evaluateSecurityCheck(
-  supabase: any, rule: any, tenantId: string, agents: Array<Record<string, unknown>>
+  supabase: SupabaseClient, rule: Record<string, unknown>, tenantId: string, agents: Array<Record<string, unknown>>
 ): Promise<TriggerCandidate[]> {
   const conditions = rule.trigger_conditions as Record<string, unknown>;
   const candidates: TriggerCandidate[] = [];

@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 /**
  * Per-tenant evaluation with enterprise protection pipeline v2
  * Extracted from monolithic index.ts
@@ -26,13 +27,13 @@ import {
 } from './trigger-evaluators.ts';
 
 async function executeAction(
-  supabase: any,
+  supabase: SupabaseClient,
   rule: any,
   agentId: string,
   tenantId: string,
-  triggerData: any,
+  triggerData: Record<string, unknown>,
   agents: Array<Record<string, unknown>>
-): Promise<{ status: string; result: any }> {
+): Promise<{ status: string; result: Record<string, unknown> }> {
   const actionConfig = rule.action_config as Record<string, unknown>;
 
   try {
@@ -129,7 +130,7 @@ async function executeAction(
 }
 
 export async function evaluateForTenant(
-  supabase: any,
+  supabase: SupabaseClient,
   tenantId: string
 ): Promise<{ evaluated: number; triggered: number; blocked: number; decisions: number; risk_score?: number }> {
   const { data: rules } = await supabase

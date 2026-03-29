@@ -438,7 +438,7 @@ serve(async (req) => {
           const payload = BlockIpPayloadSchema.parse(action.action_payload);
           
           // Create a job to block the IP
-          const jobPayload: any = {
+          const jobPayload: Record<string, unknown> = {
             ip_address: payload.ip_address,
             duration_hours: payload.duration_hours,
             scope: payload.scope,
