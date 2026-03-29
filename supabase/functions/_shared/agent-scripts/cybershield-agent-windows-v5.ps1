@@ -1,7 +1,7 @@
 <#
-    CyberShield Agent - Windows v5.0.15 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.16 FULL ENTERPRISE
 
-    v5.0.15: STABILIZATION + USB WHITELIST + DNS SYNC RESILIENCE
+    v5.0.16: INTEGRITY + CRYPTO + BASELINE STABILIZATION
     - FIX: $PID read-only variable renamed to $procId (EDR process collection)
     - NEW: USB device whitelist - persistent devices (internal HDDs) no longer trigger repeated alerts
       * Tracks known devices in C:\CyberShield\data\usb_whitelist.json
