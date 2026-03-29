@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { buildCorsHeaders } from '../_shared/cors.ts';
+import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -30,7 +31,7 @@ Deno.serve(async (req) => {
     const { error } = await supabase.from("domain_events").insert(events);
 
     if (error) {
-      console.error("[log-domain-event] Insert error:", error.message);
+      logger.error("[log-domain-event] Insert error:", { error: error.message });
       return new Response(JSON.stringify({ error: error.message }), {
         status: 500,
         headers: { ...headers, "Content-Type": "application/json" },
@@ -43,7 +44,7 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("[log-domain-event] Error:", message);
+    logger.error("[log-domain-event] Error:", { error: message });
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...headers, "Content-Type": "application/json" },
