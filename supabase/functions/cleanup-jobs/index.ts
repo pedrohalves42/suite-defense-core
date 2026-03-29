@@ -1,26 +1,20 @@
 /**
  * cleanup-jobs -> PROXY to cleanup-router (admin action)
+ * Migrated to serveTenant middleware (requires JWT auth)
  */
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
+import { serveTenant } from '../_shared/serve-tenant.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
-Deno.serve(async (req) => {
-  const origin = req.headers.get("origin");
-  if (req.method === 'OPTIONS') return new Response(null, { headers: buildCorsHeaders(origin) });
-
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
-  }
-
-  let body: Record<string, unknown> = {};
-  try { body = await req.json(); } catch { /* empty body */ }
+serveTenant(async (req, ctx) => {
+  const { body } = ctx;
+  const authHeader = req.headers.get('Authorization') || '';
 
   const url = `${Deno.env.get('SUPABASE_URL')}/functions/v1/cleanup-router`;
   const resp = await fetchWithTimeout(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
-    body: JSON.stringify({ action: 'jobs', ...body }),
+    body: JSON.stringify({ action: 'jobs', ...(body as Record<string, unknown> || {}) }),
   });
-  return new Response(await resp.text(), { status: resp.status, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
-});
+  const data = await resp.json();
+  return data;
+}, { skipTenantValidation: true, methods: ['POST'] });

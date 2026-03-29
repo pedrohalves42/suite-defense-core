@@ -1126,3 +1126,71 @@ Semana 8 (S8): [FASE 4] Remediação de findings + relatório final
 - [ ] `as any`: <50 casts em produção
 - [ ] God functions: nenhum arquivo >500 linhas em edge functions
 - [ ] Polling: ≤30 refetchInterval, zero polling em abas ocultas
+
+---
+
+## PLANO DE EXECUÇÃO FINAL DA AUDITORIA (Atualizado 2026-03-29)
+
+### Estado Atual
+
+| Métrica | Valor |
+|---------|-------|
+| Edge Functions com `Deno.serve()` | 134 |
+| Migráveis para middleware | 92 |
+| HMAC (manter raw body) | 34 |
+| Legacy | 3 |
+| Funções >400 linhas | 34 |
+| Testes heartbeat | 35 passando |
+| Heartbeat modularizado | ✅ |
+| `serveInternal()` criado | ✅ |
+| CI quality gate | ✅ |
+
+### Fase E1 — Remover Monólito Heartbeat
+- [x] Deletar `agent-heartbeat/` (monólito legado 579 linhas)
+- [x] Atualizar documentação
+- Gate: Build limpo, testes passando
+
+### Fase E2 — Migrar Primeiro Lote (20 funções ≤150 linhas)
+1. cleanup-offline-agents-jobs (22)
+2. cleanup-stale-playbooks (22)
+3. cleanup-stale-reports (22)
+4. cleanup-stale-updates (22)
+5. cleanup-stuck-jobs (22)
+6. security-cleanup-cron (22)
+7. auto-cleanup-jobs (25)
+8. cleanup-jobs (27)
+9. cleanup-stuck-builds (38)
+10. log-domain-event (54)
+11. get-telegram-chat-id (57)
+12. reset-daily-quotas (57)
+13. scheduled-compliance-refresh (93)
+14. process-tenant-suspensions (94)
+15. check-installation-health (108)
+16. detect-blocked-attempts (115)
+17. block-website (119)
+18. sync-stripe-subscriptions (122)
+19. record-failed-login (129)
+20. process-agent-updates (131)
+
+### Fase E3 — Modularizar Top 10 God Functions (>400 linhas)
+1. autonomous-safe-mode (1452)
+2. action-center-feed (1316)
+3. evaluate-automation-rules (1059)
+4. serve-installer (882)
+5. execute-playbook-action (851)
+6. ai-system-analyzer (835)
+7. ai-full-audit (779)
+8. sign-release (752)
+9. scan-vulnerabilities (721)
+10. evaluate-playbook-triggers (709)
+
+### Fase E4 — Eliminar `any` em produção
+- ~60 ocorrências identificadas em ~17 funções
+- Gate: `--check-any` = 0 violações
+
+### Fase E5 — Migrar Lotes 2-5 (restante das 92)
+- Gate: `Deno.serve()` ≤40
+
+### Fase E6 — Agente Windows modularização
+### Fase E7 — Banco/escala (particionamento)
+### Fase E8 — Maturidade operacional (SLOs, pen-test, runbooks)
