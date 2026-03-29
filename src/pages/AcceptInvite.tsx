@@ -250,6 +250,7 @@ export default function AcceptInvite() {
                   validatePassword(e.target.value);
                 }}
                 required
+                autoComplete="new-password"
                 minLength={8}
                 className="h-10 bg-background/50 border-border/50 focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
               />
