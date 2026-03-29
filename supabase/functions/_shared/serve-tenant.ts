@@ -449,3 +449,55 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
     }
   });
 }
+
+// ═══ serveInternal: For cron/orchestration endpoints (service_role or X-Internal-Secret) ═══
+
+export interface InternalContext {
+  supabase: SupabaseClient;
+  requestId: string;
+  body: unknown;
+}
+
+export type InternalHandler = (req: Request, ctx: InternalContext) => Promise<Response | Record<string, unknown> | unknown>;
+
+/**
+ * Middleware for internal/cron endpoints.
+ * Validates caller via service_role JWT or X-Internal-Secret header.
+ * No tenant validation — these are system-wide operations.
+ */
+export function serveInternal(handler: InternalHandler) {
+  Deno.serve(async (req: Request) => {
+    const requestId = req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const origin = req.headers.get('origin');
+    const log = loggerWithContext({ requestId });
+
+    if (req.method === 'OPTIONS') {
+      return new Response(null, { headers: buildCorsHeaders(origin) });
+    }
+
+    try {
+      const supabase = createClient(
+        requireEnv('SUPABASE_URL'),
+        requireEnv('SUPABASE_SERVICE_ROLE_KEY')
+      );
+
+      // Validate caller is internal (service_role or X-Internal-Secret)
+      const { assertInternalCaller } = await import('./assert-internal-caller.ts');
+      const authError = await assertInternalCaller(req);
+      if (authError) return authError;
+
+      let body: unknown = {};
+      if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+        try { body = await req.json(); } catch { body = {}; }
+      }
+
+      const result = await handler(req, { supabase, requestId, body });
+      if (result instanceof Response) return result;
+      return jsonResponse(result, 200, { 'X-Request-ID': requestId }, origin);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Internal server error';
+      log.error(`[serveInternal] Error`, { message: msg });
+      return errorResponse(msg, 500, requestId, origin);
+    }
+  });
+}
