@@ -1,5 +1,5 @@
 /**
- * cleanup-jobs → PROXY to cleanup-router (admin action)
+ * cleanup-jobs -> PROXY to cleanup-router (admin action)
  */
 import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';

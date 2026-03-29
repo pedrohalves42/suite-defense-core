@@ -8,9 +8,9 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 
-// ──────────────────────────────────────────────
+// ------------------------------------------------
 // Handler: telemetry
-// ──────────────────────────────────────────────
+// ------------------------------------------------
 export async function handleCleanupTelemetry(supabase: SupabaseClient, requestId: string) {
   const { data: cleanupResult, error: cleanupError } = await supabase.rpc('cleanup_expired_telemetry');
   if (cleanupError) {
