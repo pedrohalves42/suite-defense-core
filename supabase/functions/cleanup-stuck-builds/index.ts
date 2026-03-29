@@ -1,5 +1,5 @@
 /**
- * cleanup-stuck-builds → PROXY to cleanup-router
+ * cleanup-stuck-builds -> PROXY to cleanup-router
  */
 import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';

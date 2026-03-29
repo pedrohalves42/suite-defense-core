@@ -1,5 +1,5 @@
 /**
- * notification-router — Consolidated notification dispatcher
+ * notification-router -- Consolidated notification dispatcher
  * 
  * Replaces individual notification functions with a single entry point.
  * Uses DIRECT handlers for: email, telegram, whatsapp, webhook, welcome, security
@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
     // === DIRECT HANDLER (no HTTP hop) ===
     const directHandler = DIRECT_HANDLERS[action];
     if (directHandler) {
-      logger.info(`[${requestId}] notification-router: direct → ${action}`);
+      logger.info(`[${requestId}] notification-router: direct -> ${action}`);
       const supabase = createClient(
         Deno.env.get('SUPABASE_URL')!,
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
     // === PROXY DISPATCH (for complex functions with own middleware) ===
     const functionName = PROXY_TARGETS[action];
     if (functionName) {
-      logger.info(`[${requestId}] notification-router: proxy → ${functionName} (action=${action})`);
+      logger.info(`[${requestId}] notification-router: proxy -> ${functionName} (action=${action})`);
 
       const targetUrl = `${SUPABASE_URL}/functions/v1/${functionName}`;
       const headers: Record<string, string> = {

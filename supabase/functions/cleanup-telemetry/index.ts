@@ -1,5 +1,5 @@
 /**
- * cleanup-telemetry → PROXY to cleanup-router
+ * cleanup-telemetry -> PROXY to cleanup-router
  * Kept for backward compatibility with pg_cron entries.
  */
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';

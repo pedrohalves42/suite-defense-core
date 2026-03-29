@@ -1,5 +1,5 @@
 /**
- * collect-router — Consolidated agent data collection endpoint
+ * collect-router -- Consolidated agent data collection endpoint
  * 
  * Replaces individual collect-* functions with a single entry point.
  * All actions use serveAgent middleware (agent token auth).
