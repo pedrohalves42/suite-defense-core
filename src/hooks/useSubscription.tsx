@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { usePageVisibility } from './usePageVisibility';
 
 interface SubscriptionFeature {
   enabled: boolean;
@@ -22,9 +22,10 @@ interface SubscriptionData {
   features: Record<string, SubscriptionFeature>;
 }
 
+// COST-OPT-V9: Only hook that retains polling (10 min, paused when hidden)
 export const useSubscription = () => {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { user } = useAuth();
+  const isVisible = usePageVisibility();
 
   const { data: subscription, isLoading, refetch } = useQuery<SubscriptionData>({
     queryKey: ['subscription', user?.id],
@@ -41,8 +42,8 @@ export const useSubscription = () => {
       return data as SubscriptionData;
     },
     enabled: !!user,
-    staleTime: 2 * 60 * 1000, // 2 minutes - subscription data doesn't change frequently
-    refetchInterval: adaptiveInterval,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: isVisible ? 600_000 : false, // 10 min when visible, off when hidden
   });
 
   return {
