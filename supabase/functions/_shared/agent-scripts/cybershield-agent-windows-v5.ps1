@@ -4362,10 +4362,12 @@ function Initialize-ProcessBaseline {
             try {
                 $rawJson = Get-Content $Global:ProcessBaselinePath -Raw -ErrorAction Stop
                 if ($rawJson -and $rawJson.Trim().Length -gt 2) {
-                    $loadedBaseline = $rawJson | ConvertFrom-Json -ErrorAction Stop
+                    # v5.0.16-fix: Use Import-BaselineSafe instead of raw ConvertFrom-Json
+                    $loadedBaseline = Import-BaselineSafe -RawJson $rawJson
+                    if ($loadedBaseline.Count -eq 0) { $loadedBaseline = $null }
                 }
             } catch {
-                Write-Log "[BASELINE] HOTFIX-BASELINE-LOAD-SAFE: ConvertFrom-Json failed ($($_.Exception.Message)). Rebuilding baseline..." "WARN"
+                Write-Log "[BASELINE] HOTFIX-BASELINE-LOAD-SAFE: Load failed ($($_.Exception.Message)). Rebuilding baseline..." "WARN"
                 # Rename corrupted file and rebuild
                 $corruptPath = "$($Global:ProcessBaselinePath).corrupt.$((Get-Date).ToString('yyyyMMddHHmmss'))"
                 Move-Item -Path $Global:ProcessBaselinePath -Destination $corruptPath -Force -ErrorAction SilentlyContinue
@@ -4391,7 +4393,7 @@ function Initialize-ProcessBaseline {
                 $dupsRemoved = ([array]$loadedBaseline).Count - $normalizedBaseline.Count
                 if ($dupsRemoved -gt 0) {
                     Write-Log "[BASELINE] Load dedup: removed $dupsRemoved duplicate entries" "WARN"
-                    $normalizedBaseline | ConvertTo-SafePSO | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+                    Save-BaselineSafe -Baseline $normalizedBaseline
                 }
                 Write-Log "[BASELINE] Loaded and normalized baseline with $($normalizedBaseline.Count) processes" "INFO"
             } else {
@@ -4418,7 +4420,7 @@ function Initialize-ProcessBaseline {
 
             $Global:ProcessBaseline = $baseline
             # v5.0.14-fix3: Use ConvertTo-SafePSO to prevent PS 5.1 duplicate key errors
-            $baseline | ConvertTo-SafePSO | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+            Save-BaselineSafe -Baseline $baseline
 
             Write-Log "[BASELINE] Created baseline with $($baseline.Count) processes" "SUCCESS"
         }
