@@ -261,10 +261,15 @@ export async function verifyHmacSignature(
             .join('')
 
           // SECURITY FIX: timing-safe comparison to prevent timing attacks
-          const encoder2 = new TextEncoder();
-          const sigBuf = encoder2.encode(signature);
-          const expectedBuf = encoder2.encode(expectedSignature);
-          const isMatch = sigBuf.length === expectedBuf.length && crypto.subtle.timingSafeEqual(sigBuf, expectedBuf);
+          // Use constant-time XOR comparison (both are hex strings of same hash algo, so fixed length)
+          const sigBytes = new TextEncoder().encode(signature);
+          const expectedBytes = new TextEncoder().encode(expectedSignature);
+          let diff = sigBytes.length ^ expectedBytes.length;
+          const len = Math.min(sigBytes.length, expectedBytes.length);
+          for (let i = 0; i < len; i++) {
+            diff |= sigBytes[i] ^ expectedBytes[i];
+          }
+          const isMatch = diff === 0;
           if (isMatch) {
             const { error: insertError } = await supabase.from('hmac_signatures').insert({
               signature,
