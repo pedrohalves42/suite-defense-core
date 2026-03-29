@@ -31,6 +31,6 @@ servePublic(async (req, ctx) => {
   const { data: contact, error: insertError } = await supabase.from('contact_submissions').insert({ name, email, company: company || null, phone: phone || null, endpoints: endpoints || null, message: message || null, ip_address: clientIp, user_agent: userAgent, source: 'website' }).select('id').single();
   if (insertError) { logger.error(`[submit-contact][${requestId}] Insert error:`, insertError); throw new Error('Erro ao salvar contato'); }
   logger.info(`[submit-contact][${requestId}] Contact saved`, { contactId: contact?.id, email });
-  try { await supabase.functions.invoke('send-notification', { body: { type: 'new_contact', data: { name, email, company, endpoints } }, headers: { 'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '' } }); } catch (_) { /* non-critical */ }
+  try { await supabase.functions.invoke('notification-router', { body: { action: 'dispatch', payload: { type: 'new_contact', data: { name, email, company, endpoints } } }, headers: { 'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '' } }); } catch (_) { /* non-critical */ }
   return { success: true, message: 'Contato recebido com sucesso!', id: contact?.id };
 });

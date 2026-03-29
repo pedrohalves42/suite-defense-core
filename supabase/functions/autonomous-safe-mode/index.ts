@@ -366,14 +366,17 @@ async function processSafeModeRule(supabase: any, rule: any): Promise<RuleResult
 
     // Send notification
     try {
-      await supabase.functions.invoke('dispatch-notification', {
+      await supabase.functions.invoke('notification-router', {
         body: {
-          tenant_id: agent.tenant_id,
-          notification_type: 'safe_mode_auto',
-          title: `SAFE_MODE Automatico: ${agent.agent_name}`,
-          message: `O agente ${agent.agent_name} entrou automaticamente em SAFE_MODE apos ${agent.failure_count} falhas.`,
-          severity: 'critical',
-          data: { agent_id: agent.agent_id, agent_name: agent.agent_name, rule_code: rule.code }
+          action: 'dispatch',
+          payload: {
+            tenant_id: agent.tenant_id,
+            notification_type: 'safe_mode_auto',
+            title: `SAFE_MODE Automatico: ${agent.agent_name}`,
+            message: `O agente ${agent.agent_name} entrou automaticamente em SAFE_MODE apos ${agent.failure_count} falhas.`,
+            severity: 'critical',
+            data: { agent_id: agent.agent_id, agent_name: agent.agent_name, rule_code: rule.code }
+          }
         }
       });
       actionsExecuted.push({ type: 'SEND_NOTIFICATION', success: true });
