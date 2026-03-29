@@ -3,6 +3,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
+/** Extended timeout for this function's external calls */
+const FETCH_TIMEOUT_MS = 60000;
+
 const SYSTEM_PROMPT = `You are CyberShield Security Copilot ? an expert cybersecurity analyst assistant embedded in the CyberShield platform.
 
 Your role:
@@ -73,7 +76,7 @@ serveTenant(async (req, ctx) => {
 
   const tenantContext = await getTenantContext(supabase, tenantId);
 
-  const response = await fetchWithTimeout('https://ai.gateway.lovable.dev/v1/chat/completions', {
+  const response = await fetchWithTimeout('https://ai.gateway.lovable.dev/v1/chat/completions', { timeoutMs: FETCH_TIMEOUT_MS,
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${LOVABLE_API_KEY}`,

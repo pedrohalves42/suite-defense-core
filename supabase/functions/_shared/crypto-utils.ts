@@ -135,12 +135,35 @@ export async function timingSafeEqual(a: string, b: string): Promise<boolean> {
   const encoder = new TextEncoder();
   const aBuf = encoder.encode(a);
   const bBuf = encoder.encode(b);
-  if (aBuf.byteLength !== bBuf.byteLength) {
-    // Compare against self to burn the same CPU time, then return false
-    await crypto.subtle.timingSafeEqual(aBuf, aBuf);
-    return false;
+
+  // Use HMAC-based comparison for constant-time equality.
+  // Signing both values with the same random key and comparing digests
+  // ensures the comparison time doesn't leak information about content.
+  const key = await crypto.subtle.generateKey(
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+
+  const [macA, macB] = await Promise.all([
+    crypto.subtle.sign('HMAC', key, aBuf),
+    crypto.subtle.sign('HMAC', key, bBuf),
+  ]);
+
+  // Compare the HMAC digests byte-by-byte (fixed 32-byte length, constant time)
+  const viewA = new Uint8Array(macA);
+  const viewB = new Uint8Array(macB);
+  if (viewA.length !== viewB.length) return false;
+
+  let diff = 0;
+  for (let i = 0; i < viewA.length; i++) {
+    diff |= viewA[i] ^ viewB[i];
   }
-  return crypto.subtle.timingSafeEqual(aBuf, bBuf);
+
+  // Also reject if original lengths differ (check after constant-time work)
+  diff |= aBuf.byteLength ^ bBuf.byteLength;
+
+  return diff === 0;
 }
 
 // Utility functions for Base64 conversion

@@ -2,6 +2,9 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+
+/** Extended timeout for this function's external calls */
+const FETCH_TIMEOUT_MS = 45000;
 import { buildCorsHeaders } from '../_shared/cors.ts';
 
 interface WeeklyMetrics {
@@ -214,7 +217,7 @@ serve(async (req) => {
         const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
         const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
         
-        await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/notification-dispatcher`, {
+        await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/notification-dispatcher`, { timeoutMs: FETCH_TIMEOUT_MS,
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

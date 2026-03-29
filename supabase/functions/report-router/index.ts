@@ -15,6 +15,9 @@ import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
+/** Extended timeout for this function's external calls */
+const FETCH_TIMEOUT_MS = 45000;
+
 const RouterSchema = z.object({
   action: z.string().min(1).max(64),
   payload: z.record(z.unknown()).optional().default({}),
@@ -97,7 +100,7 @@ Deno.serve(async (req) => {
     const nonce = req.headers.get('X-Nonce');
     if (nonce) headers['X-Nonce'] = nonce;
 
-    const response = await fetchWithTimeout(targetUrl, {
+    const response = await fetchWithTimeout(targetUrl, { timeoutMs: FETCH_TIMEOUT_MS,
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
