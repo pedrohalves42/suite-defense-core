@@ -4,7 +4,6 @@ import { verifyHmacSignature } from "../_shared/hmac.ts";
 import { hashToken } from "../_shared/token-hash.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { logger } from '../_shared/logger.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 // HARDENED: Restrict CORS ? this endpoint is called by PowerShell agents, not browsers
 const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || "https://cybershield-audit.lovable.app";
@@ -21,9 +20,6 @@ serve(async (req) => {
   }
 
 
-  // Auth guard: require agent token, authenticated user, or internal caller
-  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
-  if (authError) return authError;
   const requestId = crypto.randomUUID();
   logger.info(`[${requestId}] POST installation telemetry request started`);
 

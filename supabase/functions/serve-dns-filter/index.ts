@@ -2,7 +2,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { hashToken } from '../_shared/token-hash.ts';
 import { logger } from '../_shared/logger.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,9 +15,6 @@ Deno.serve(async (req) => {
   }
 
 
-  // Auth guard: require agent token, authenticated user, or internal caller
-  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
-  if (authError) return authError;
   if (req.method !== 'GET' && req.method !== 'POST') {
     return new Response(
       JSON.stringify({ error: 'Method not allowed. Use GET or POST.' }),

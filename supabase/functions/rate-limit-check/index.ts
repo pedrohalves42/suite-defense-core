@@ -1,6 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logger } from '../_shared/logger.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,9 +25,6 @@ Deno.serve(async (req: Request) => {
   }
 
 
-  // Auth guard: require agent token, authenticated user, or internal caller
-  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
-  if (authError) return authError;
   try {
     const { identifier, endpoint, tenant_id } = await req.json();
 

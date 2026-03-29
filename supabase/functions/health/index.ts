@@ -8,7 +8,6 @@ import {
   addHealthHeaders
 } from '../_shared/health-probe.ts'
 import { requireSuperAdmin } from '../_shared/require-super-admin.ts'
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 Deno.serve(async (req) => {
   const corsHeaders = {
@@ -35,9 +34,6 @@ Deno.serve(async (req) => {
         return authResult.response!;
       }
 
-  // Auth guard: require agent token, authenticated user, or internal caller
-  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
-  if (authError) return authError;
       // Accept POST body with script content
       if (req.method !== 'POST') {
         return new Response(JSON.stringify({

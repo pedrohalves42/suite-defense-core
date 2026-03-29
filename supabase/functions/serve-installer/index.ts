@@ -27,7 +27,6 @@ import {
 } from '../_shared/installer-template-envvars.ts';
 // Linux/macOS scripts are now fetched from agent_releases database instead of placeholder files
 import { INSTALLER_VERSION, LAST_UPDATED, getVersionInfo } from '../_shared/installer-version.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const SUPABASE_URL = requireEnv('SUPABASE_URL');
 
@@ -97,9 +96,6 @@ Deno.serve(async (req) => {
   }
 
 
-  // Auth guard: require agent token, authenticated user, or internal caller
-  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
-  if (authError) return authError;
   // Health check endpoint
   if (req.method === 'GET' && new URL(req.url).pathname === '/serve-installer') {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
