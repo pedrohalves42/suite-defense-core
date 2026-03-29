@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 /**
  * Feed builder — generates the action center feed (GET handler)
  */
@@ -13,7 +14,7 @@ import {
 } from './copy-map.ts';
 
 export async function buildFeed(
-  serviceClient: any,
+  serviceClient: SupabaseClient,
   tenantId: string,
 ): Promise<ActionCenterFeed> {
   // Agent health metrics
