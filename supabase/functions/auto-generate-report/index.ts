@@ -58,7 +58,7 @@ function getNextAction(priority: 'high' | 'medium' | 'low'): string {
 
 // V4: Generate commercial summary text ready for WhatsApp/Email
 function generateCommercialSummary(
-  stats: any, 
+  stats: Record<string, unknown>, 
   riskLevel: string, 
   agentName: string,
   tenantName?: string
@@ -165,8 +165,8 @@ Deno.serve(async (req) => {
     const agentFilter = agent_id ? { agent_id } : {}
 
     // Fetch data based on report type
-    let statistics: any = {}
-    let reportData: any = {}
+    let statistics: Record<string, unknown> = {}
+    let reportData: Record<string, unknown> = {}
 
     // Get agents count
     const { count: agentCount } = await supabase
@@ -225,7 +225,7 @@ Deno.serve(async (req) => {
       
       const { data: antivirus } = await avQuery
       statistics.antivirus_engines = antivirus?.length || 0
-      statistics.threats_found = antivirus?.reduce((sum: number, av: any) => sum + (av.threats_found || 0), 0) || 0
+      statistics.threats_found = antivirus?.reduce((sum: number, av: { threats_found?: number }) => sum + (av.threats_found || 0), 0) || 0
       reportData.antivirus_status = antivirus || []
     }
 

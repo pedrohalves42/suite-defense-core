@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
@@ -205,7 +206,7 @@ serve(async (req: Request): Promise<Response> => {
 });
 
 async function generateTenantReport(
-  supabase: any, 
+  supabase: SupabaseClient, 
   tenantId: string, 
   triggerType: string
 ): Promise<void> {
@@ -247,7 +248,7 @@ async function generateTenantReport(
   // Calculate statistics
   const criticalVulns = vulnStats?.filter((v: Record<string, unknown>) => v.severity === "critical").length || 0;
   const highVulns = vulnStats?.filter((v: Record<string, unknown>) => v.severity === "high").length || 0;
-  const totalThreats = avStats?.reduce((sum: number, a: any) => sum + (a.threats_found || 0), 0) || 0;
+  const totalThreats = avStats?.reduce((sum: number, a: { threats_found?: number }) => sum + (a.threats_found || 0), 0) || 0;
   const blockedSites = webStats?.filter((w: Record<string, unknown>) => w.is_blocked).length || 0;
 
   const statistics = {

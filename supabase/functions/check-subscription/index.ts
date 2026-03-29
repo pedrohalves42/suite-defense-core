@@ -2,7 +2,7 @@ import Stripe from "https://esm.sh/stripe@18.5.0";
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 
-const logStep = (step: string, details?: any) => {
+const logStep = (step: string, details?: Record<string, unknown>) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
   logger.info(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
 };
@@ -68,7 +68,8 @@ serveTenant(async (req, ctx) => {
         .select("feature_key, enabled, quota_limit, quota_used")
         .eq("tenant_id", tenantId);
 
-      const featuresMap = features?.reduce((acc: any, f: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase returns untyped rows
+      const featuresMap = features?.reduce((acc: Record<string, unknown>, f: Record<string, any>) => {
         acc[f.feature_key] = { enabled: f.enabled, quota_limit: f.quota_limit, quota_used: f.quota_used };
         return acc;
       }, {});
@@ -141,7 +142,7 @@ serveTenant(async (req, ctx) => {
     .select("feature_key, enabled, quota_limit, quota_used")
     .eq("tenant_id", tenantId);
 
-  const featuresMap = features?.reduce((acc: any, f: any) => {
+  const featuresMap = features?.reduce((acc: Record<string, unknown>, f: Record<string, unknown>) => {
     acc[f.feature_key] = { enabled: f.enabled, quota_limit: f.quota_limit, quota_used: f.quota_used };
     return acc;
   }, {});

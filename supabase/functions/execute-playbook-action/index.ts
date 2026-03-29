@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
@@ -327,7 +328,7 @@ serveTenant(async (req, ctx) => {
 });
 
 async function executeAction(
-  supabase: any,
+  supabase: SupabaseClient,
   action: PlaybookAction,
   execution: Record<string, unknown>,
   userId: string,

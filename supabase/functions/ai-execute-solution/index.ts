@@ -33,7 +33,7 @@ serveTenant(async (_req, ctx) => {
     );
   }
 
-  let result: any = {};
+  let result: Record<string, unknown> = {};
   const success = true;
   const error_message = null;
 

@@ -271,7 +271,7 @@ Deno.serve(async (req) => {
 
       // Executar acao automaticamente
       try {
-        let executionResult: any = {}
+        let executionResult: Record<string, unknown> = {}
         
         switch (action.action_type) {
           case 'create_system_alert': {

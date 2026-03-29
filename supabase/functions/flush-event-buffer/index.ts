@@ -333,7 +333,7 @@ Deno.serve(async (req) => {
 
     if (processEvents.length > 0) {
       insertPromises.push(
-        supabase.from('endpoint_process_events').insert(processEvents).then(({ error }: any) => ({
+        supabase.from('endpoint_process_events').insert(processEvents).then(({ error }: { error: { message: string } | null }) => ({
           table: 'process', count: error ? 0 : processEvents.length, error: error?.message,
         }))
       );
@@ -341,7 +341,7 @@ Deno.serve(async (req) => {
 
     if (fileEvents.length > 0) {
       insertPromises.push(
-        supabase.from('endpoint_file_events').insert(fileEvents).then(({ error }: any) => ({
+        supabase.from('endpoint_file_events').insert(fileEvents).then(({ error }: { error: { message: string } | null }) => ({
           table: 'file', count: error ? 0 : fileEvents.length, error: error?.message,
         }))
       );
@@ -349,7 +349,7 @@ Deno.serve(async (req) => {
 
     if (networkEvents.length > 0) {
       insertPromises.push(
-        supabase.from('endpoint_network_events').insert(networkEvents).then(({ error }: any) => ({
+        supabase.from('endpoint_network_events').insert(networkEvents).then(({ error }: { error: { message: string } | null }) => ({
           table: 'network', count: error ? 0 : networkEvents.length, error: error?.message,
         }))
       );
@@ -357,7 +357,7 @@ Deno.serve(async (req) => {
 
     if (registryEvents.length > 0) {
       insertPromises.push(
-        supabase.from('endpoint_registry_events').insert(registryEvents).then(({ error }: any) => ({
+        supabase.from('endpoint_registry_events').insert(registryEvents).then(({ error }: { error: { message: string } | null }) => ({
           table: 'registry', count: error ? 0 : registryEvents.length, error: error?.message,
         }))
       );
@@ -366,7 +366,7 @@ Deno.serve(async (req) => {
     // Insert threat matches and anomaly alerts in parallel
     if (threatMatches.length > 0) {
       insertPromises.push(
-        supabase.from('threat_matches').insert(threatMatches).then(({ error }: any) => ({
+        supabase.from('threat_matches').insert(threatMatches).then(({ error }: { error: { message: string } | null }) => ({
           table: 'threat_matches', count: error ? 0 : threatMatches.length, error: error?.message,
         }))
       );
@@ -374,7 +374,7 @@ Deno.serve(async (req) => {
 
     if (anomalyAlerts.length > 0) {
       insertPromises.push(
-        supabase.from('system_alerts').insert(anomalyAlerts).then(({ error }: any) => ({
+        supabase.from('system_alerts').insert(anomalyAlerts).then(({ error }: { error: { message: string } | null }) => ({
           table: 'anomaly_alerts', count: error ? 0 : anomalyAlerts.length, error: error?.message,
         }))
       );

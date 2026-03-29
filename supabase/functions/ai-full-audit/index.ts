@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { AIPromptRegistry, logPromptUsage } from "../_shared/ai-prompt-registry.ts";
 import { safeParseJSON, createFallbackAudit, createFallbackRedTeam } from "../_shared/json-parser.ts";
@@ -93,7 +94,7 @@ function getDeterministicThreatLevel(criteriaCountTrue: number): string {
 }
 
 async function logGovernanceEvent(
-  supabase: any,
+  supabase: SupabaseClient,
   tenantId: string,
   auditId: string | null,
   eventType: string,
@@ -101,7 +102,7 @@ async function logGovernanceEvent(
   newValue: number,
   ruleApplied: string,
   justification: string,
-  metadata: any = {}
+  metadata: Record<string, unknown> = {}
 ): Promise<void> {
   try {
     await supabase.from('score_governance_log').insert({
@@ -262,7 +263,7 @@ serveTenant(async (req, ctx) => {
   const redTokens = redAiResult.tokensUsed?.total || 0;
 
   // Parse Red Team response with robust stream-safe parser
-  let redResult: any;
+  let redResult: Record<string, unknown> | null = null;
   let redTeamFallbackUsed = false;
   try {
     redResult = safeParseJSON(redContent, 'red-team');
@@ -446,7 +447,7 @@ INSTRUCAO: Considere esses riscos ao avaliar. Seu score deve refletir conscienci
   const anaTokens = anaAiResult.tokensUsed?.total || 0;
 
   // Parse Ana response with robust stream-safe parser
-  let anaResult: any;
+  let anaResult: Record<string, unknown> | null = null;
   let anaFallbackUsed = false;
   try {
     anaResult = safeParseJSON(anaContent, 'ana');

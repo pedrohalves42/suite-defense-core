@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
         for (const snapshot of processData) {
           const processes = snapshot.processes as Array<Record<string, unknown>>;
           if (Array.isArray(processes)) {
-            const totalCpu = processes.reduce((sum: number, p: any) => sum + (Number(p.cpu_percent || p.cpu || 0)), 0);
+            const totalCpu = processes.reduce((sum: number, p: { cpu_percent?: number; cpu?: number }) => sum + (Number(p.cpu_percent || p.cpu || 0)), 0);
             cpuValues.push(Math.min(totalCpu, 100));
             processCountValues.push(processes.length);
           }

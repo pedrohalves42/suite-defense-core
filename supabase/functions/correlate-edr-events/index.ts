@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 /**
  * correlate-edr-events ? Multi-signal correlation engine.
  * 
@@ -24,7 +25,7 @@ Deno.serve(async (req: Request) => {
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, serviceRoleKey);
 
-  let body: any = {};
+  let body: Record<string, unknown> = {};
   try { body = await req.json(); } catch { body = {}; }
 
   const lookbackMinutes = body.lookback_minutes || 60;
@@ -174,10 +175,10 @@ Deno.serve(async (req: Request) => {
 });
 
 async function createIncident(
-  supabase: any,
+  supabase: SupabaseClient,
   tenantId: string,
   agentId: string,
-  rule: any,
+  rule: Record<string, unknown>,
   matchedDets: Array<Record<string, unknown>>,
   tactics: string[]
 ) {

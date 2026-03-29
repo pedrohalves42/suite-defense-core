@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from "./logger.ts";
 /**
  * Business Hours Utility
@@ -91,7 +92,7 @@ export function isWithinBusinessHours(config: BusinessHoursConfig | null | undef
  * Busca configuracao de horario de expediente do tenant
  */
 export async function getTenantBusinessHours(
-  supabase: any,
+  supabase: SupabaseClient,
   tenantId: string
 ): Promise<BusinessHoursConfig | null> {
   try {
@@ -119,7 +120,7 @@ export async function getTenantBusinessHours(
  * Verifica se deve processar alertas para um tenant baseado no horario de expediente
  */
 export async function shouldProcessAlertsForTenant(
-  supabase: any,
+  supabase: SupabaseClient,
   tenantId: string
 ): Promise<{ shouldProcess: boolean; reason: string }> {
   const businessHours = await getTenantBusinessHours(supabase, tenantId);

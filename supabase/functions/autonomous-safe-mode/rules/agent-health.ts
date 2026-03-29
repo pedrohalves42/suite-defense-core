@@ -3,9 +3,9 @@
  * AGENT_IMPRODUTIVE_005, AUTO_REVERT_THROTTLE_006
  */
 import { logger } from '../../_shared/logger.ts';
-import type { RuleResult, ActionExecuted, RuleRecord } from '../types.ts';
+import type { RuleResult, ActionExecuted, RuleRecord, SupabaseClient } from '../types.ts';
 
-export async function processSafeModeRule(supabase: any, rule: RuleRecord): Promise<RuleResult> {
+export async function processSafeModeRule(supabase: SupabaseClient, rule: RuleRecord): Promise<RuleResult> {
   const conditions = rule.definition?.conditions || {
     time_window_minutes: 10,
     min_failures: 3,
@@ -127,7 +127,7 @@ export async function processSafeModeRule(supabase: any, rule: RuleRecord): Prom
   return { rule_code: rule.code, processed_count: agents.length, agents };
 }
 
-export async function processThrottleRule(supabase: any, rule: RuleRecord): Promise<RuleResult> {
+export async function processThrottleRule(supabase: SupabaseClient, rule: RuleRecord): Promise<RuleResult> {
   const conditions = rule.definition?.conditions || {
     requests_per_minute: 60,
     error_rate_percent: 50,
@@ -200,7 +200,7 @@ export async function processThrottleRule(supabase: any, rule: RuleRecord): Prom
   return { rule_code: rule.code, processed_count: agents.length, agents };
 }
 
-export async function processImprodutiveRule(supabase: any, rule: RuleRecord): Promise<RuleResult> {
+export async function processImprodutiveRule(supabase: SupabaseClient, rule: RuleRecord): Promise<RuleResult> {
   const params = rule.definition?.parameters || {
     poll_interval_seconds: 300,
     auto_revert_after_hours: 2
@@ -297,7 +297,7 @@ export async function processImprodutiveRule(supabase: any, rule: RuleRecord): P
   return { rule_code: rule.code, processed_count: agents.length, agents };
 }
 
-export async function processAutoRevertThrottle(supabase: any, rule: RuleRecord): Promise<RuleResult> {
+export async function processAutoRevertThrottle(supabase: SupabaseClient, rule: RuleRecord): Promise<RuleResult> {
   logger.debug('[AUTO_REVERT_THROTTLE_006] Checking revert candidates');
 
   const { data: candidates, error } = await supabase

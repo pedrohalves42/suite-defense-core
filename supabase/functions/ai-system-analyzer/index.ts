@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { sanitizeForAI, anonymizeAgentName } from '../_shared/ai-sanitizer.ts';
@@ -24,14 +25,14 @@ interface AIInsight {
   severity: 'info' | 'warning' | 'critical';
   title: string;
   description: string;
-  evidence: any;
+  evidence: Record<string, unknown>;
   recommendation: string;
   confidence_score: number;
 }
 
 // Helper: Verificar se tenant tem feature AI habilitada e quota disponivel
 async function checkTenantAIEligibility(
-  supabase: any,
+  supabase: SupabaseClient,
   tenantId: string
 ): Promise<{ eligible: boolean; reason?: string }> {
   // 1. Verificar subscription ativa ou trial valido
@@ -85,7 +86,7 @@ async function checkTenantAIEligibility(
 
 // Helper: Incrementar uso de quota (safe from SQL injection)
 async function incrementAIQuotaUsage(
-  supabase: any,
+  supabase: SupabaseClient,
   tenantId: string,
   insightsCount: number
 ): Promise<void> {
@@ -760,7 +761,7 @@ async function generateSuggestedActions(insights: Array<Record<string, unknown>>
 
     // Determinar tipo de acao baseado no tipo de insight
     let actionType = null;
-    let actionPayload: any = {};
+    let actionPayload: Record<string, unknown> = {};
 
     switch (insight.insight_type) {
       case 'agent_health':

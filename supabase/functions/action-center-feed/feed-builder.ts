@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 /**
  * Feed builder — generates the action center feed (GET handler)
  */
@@ -13,7 +14,7 @@ import {
 } from './copy-map.ts';
 
 export async function buildFeed(
-  serviceClient: any,
+  serviceClient: SupabaseClient,
   tenantId: string,
 ): Promise<ActionCenterFeed> {
   // Agent health metrics
@@ -66,25 +67,30 @@ export async function buildFeed(
 
   if (execError) logger.error('[action-center-feed] Playbook query error:', execError);
 
-  const playbookItems: ActionItem[] = (executions || []).map((exec: Record<string, unknown>) => ({
-    item_id: exec.id as string,
-    source_type: 'playbook' as const,
-    agent_id: exec.agent_id as string,
-    agent_name: (exec as any).agent?.agent_name || null,
-    hostname: (exec as any).agent?.hostname || null,
-    title: (exec as any).playbook?.name || 'Acao pendente',
-    description: (exec as any).playbook?.description || null,
-    severity: (exec as any).playbook?.severity || 'medium',
-    risk_score: exec.risk_score as number,
-    context: (exec.trigger_context || {}) as Record<string, unknown>,
-    created_at: exec.triggered_at as string,
-    trigger_type: (exec as any).playbook?.trigger_type || 'unknown',
-    playbook_id: (exec as any).playbook?.id || null,
-    priority_score: ((exec.risk_score as number) || 0) * 2 +
-      ((exec as any).playbook?.severity === 'critical' ? 100 :
-       (exec as any).playbook?.severity === 'high' ? 50 :
-       (exec as any).playbook?.severity === 'medium' ? 20 : 5),
-  }));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase join returns untyped nested objects
+  const playbookItems: ActionItem[] = (executions || []).map((exec: Record<string, any>) => {
+    const agent = exec.agent as { agent_name?: string; hostname?: string } | null;
+    const playbook = exec.playbook as { id?: string; name?: string; description?: string; severity?: string; trigger_type?: string } | null;
+    return {
+      item_id: exec.id as string,
+      source_type: 'playbook' as const,
+      agent_id: exec.agent_id as string,
+      agent_name: agent?.agent_name || null,
+      hostname: agent?.hostname || null,
+      title: playbook?.name || 'Acao pendente',
+      description: playbook?.description || null,
+      severity: playbook?.severity || 'medium',
+      risk_score: exec.risk_score as number,
+      context: (exec.trigger_context || {}) as Record<string, unknown>,
+      created_at: exec.triggered_at as string,
+      trigger_type: playbook?.trigger_type || 'unknown',
+      playbook_id: playbook?.id || null,
+      priority_score: ((exec.risk_score as number) || 0) * 2 +
+        (playbook?.severity === 'critical' ? 100 :
+         playbook?.severity === 'high' ? 50 :
+         playbook?.severity === 'medium' ? 20 : 5),
+    };
+  });
 
   // AI Insights
   const { data: insights, error: insightsError } = await serviceClient

@@ -4,7 +4,7 @@
  */
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
-import type { RuleResult, EngineResult, RuleRecord } from './types.ts';
+import type { RuleResult, EngineResult, RuleRecord, SupabaseClient } from './types.ts';
 import {
   processSafeModeRule,
   processThrottleRule,
@@ -25,7 +25,7 @@ import {
 } from './rules/quality.ts';
 
 /** Rule code → handler map */
-const RULE_HANDLERS: Record<string, (sb: any, rule: RuleRecord) => Promise<RuleResult>> = {
+const RULE_HANDLERS: Record<string, (sb: SupabaseClient, rule: RuleRecord) => Promise<RuleResult>> = {
   'SAFE_MODE_RULE_001': processSafeModeRule,
   'AGENT_THROTTLE_002': processThrottleRule,
   'AGENT_ISOLATE_003': processIsolateRule,

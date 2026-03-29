@@ -118,7 +118,7 @@ export function createValidationError(
   requestId?: string
 ): Response {
   let errorMessage: string;
-  let errorDetails: any;
+  let errorDetails: unknown;
 
   if (typeof message === 'string') {
     errorMessage = message;

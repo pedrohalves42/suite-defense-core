@@ -155,7 +155,7 @@ serve(async (req) => {
     const tokensUsed = aiResult.tokensUsed?.total || 0;
 
     // Parse AI response with robust stream-safe extraction
-    let analysisResult: any;
+    let analysisResult: Record<string, unknown> | null = null;
     let fallbackUsed = false;
     try {
       analysisResult = safeParseJSON(aiContent, 'ai-system-audit');

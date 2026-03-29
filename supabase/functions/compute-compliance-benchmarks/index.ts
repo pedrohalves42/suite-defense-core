@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
@@ -160,7 +161,7 @@ Deno.serve(async (req) => {
 });
 
 async function calculateTenantComplianceScore(
-  supabase: any,
+  supabase: SupabaseClient,
   tenantId: string
 ): Promise<{ overall: number; categories: Record<string, number> } | null> {
   try {

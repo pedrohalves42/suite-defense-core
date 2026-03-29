@@ -30,7 +30,7 @@ interface HealthCheckResponse {
   recommendations: string[];
 }
 
-const logStep = (step: string, details?: any) => {
+const logStep = (step: string, details?: Record<string, unknown>) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
   logger.info(`[STRIPE-HEALTH-CHECK] ${step}${detailsStr}`);
 };

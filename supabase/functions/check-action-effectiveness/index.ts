@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
@@ -12,7 +13,7 @@ type EffectivenessResult = {
 
 // Verification strategies by insight type
 async function checkDnsActivity(
-  supabase: any,
+  supabase: SupabaseClient,
   agentId: string,
   actionCreatedAt: string,
   originalEvidence: Record<string, unknown>
@@ -62,7 +63,7 @@ async function checkDnsActivity(
 }
 
 async function checkAntivirusStatus(
-  supabase: any,
+  supabase: SupabaseClient,
   agentId: string,
   actionCreatedAt: string,
   checkType: 'enabled' | 'updated'
@@ -116,7 +117,7 @@ async function checkAntivirusStatus(
 }
 
 async function checkSafeModeResolved(
-  supabase: any,
+  supabase: SupabaseClient,
   agentId: string
 ): Promise<EffectivenessResult> {
   const { data, error } = await supabase
@@ -149,7 +150,7 @@ async function checkSafeModeResolved(
 }
 
 async function checkAgentOnline(
-  supabase: any,
+  supabase: SupabaseClient,
   agentId: string
 ): Promise<EffectivenessResult> {
   const { data, error } = await supabase
@@ -182,7 +183,7 @@ async function checkAgentOnline(
 }
 
 async function checkVulnerabilityFixed(
-  supabase: any,
+  supabase: SupabaseClient,
   agentId: string,
   originalEvidence: Record<string, unknown>
 ): Promise<EffectivenessResult> {

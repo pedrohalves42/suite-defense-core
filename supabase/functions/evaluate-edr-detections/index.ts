@@ -42,7 +42,7 @@ function getCachedRegex(pattern: string): RegExp {
   return re;
 }
 
-function matchesCondition(event: any, condition: { field: string; operator: string; value: string }): boolean {
+function matchesCondition(event: Record<string, unknown>, condition: { field: string; operator: string; value: string }): boolean {
   const fieldValue = String(event[condition.field] || '').toLowerCase();
   const matchValue = condition.value.toLowerCase();
 
@@ -58,7 +58,7 @@ function matchesCondition(event: any, condition: { field: string; operator: stri
   }
 }
 
-function evaluateRule(event: any, rule: DetectionRule): boolean {
+function evaluateRule(event: Record<string, unknown>, rule: DetectionRule): boolean {
   const logic = rule.rule_logic;
   if (!logic?.field) return false;
 
@@ -86,7 +86,7 @@ Deno.serve(async (req: Request) => {
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, serviceRoleKey);
 
-  let body: any = {};
+  let body: Record<string, unknown> = {};
   try { body = await req.json(); } catch { body = {}; }
 
   const lookbackMinutes = body.lookback_minutes || 15;

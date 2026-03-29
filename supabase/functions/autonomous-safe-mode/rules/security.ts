@@ -3,9 +3,9 @@
  * BLOCKED_ACCESS_PATTERN_010, AGENT_DIVERGENT_011
  */
 import { logger } from '../../_shared/logger.ts';
-import type { RuleResult, ActionExecuted, RuleRecord } from '../types.ts';
+import type { RuleResult, ActionExecuted, RuleRecord, SupabaseClient } from '../types.ts';
 
-export async function processIsolateRule(supabase: any, rule: RuleRecord): Promise<RuleResult> {
+export async function processIsolateRule(supabase: SupabaseClient, rule: RuleRecord): Promise<RuleResult> {
   const conditions = rule.definition?.conditions || {
     suspicious_events_count: 5,
     time_window_minutes: 10
@@ -92,7 +92,7 @@ export async function processIsolateRule(supabase: any, rule: RuleRecord): Promi
   return { rule_code: rule.code, processed_count: agents.length, agents };
 }
 
-export async function processVersionBlockRule(supabase: any, rule: RuleRecord): Promise<RuleResult> {
+export async function processVersionBlockRule(supabase: SupabaseClient, rule: RuleRecord): Promise<RuleResult> {
   const conditions = rule.definition?.conditions || {
     failure_rate_percent: 30,
     affected_agents_count: 3,
@@ -144,7 +144,7 @@ export async function processVersionBlockRule(supabase: any, rule: RuleRecord): 
   return { rule_code: rule.code, processed_count: agents.length, agents };
 }
 
-export async function processBlockedAccessPatternRule(supabase: any, rule: RuleRecord): Promise<RuleResult> {
+export async function processBlockedAccessPatternRule(supabase: SupabaseClient, rule: RuleRecord): Promise<RuleResult> {
   const conditions = rule.definition?.conditions || {
     min_blocked_attempts: 10,
     time_window_minutes: 30
@@ -252,7 +252,7 @@ export async function processBlockedAccessPatternRule(supabase: any, rule: RuleR
   return { rule_code: rule.code, processed_count: agents.length, agents };
 }
 
-export async function processAgentDivergentRule(supabase: any, rule: RuleRecord): Promise<RuleResult> {
+export async function processAgentDivergentRule(supabase: SupabaseClient, rule: RuleRecord): Promise<RuleResult> {
   const conditions = rule.definition?.conditions || {
     deviation_threshold_stddev: 2,
     comparison_window_hours: 24

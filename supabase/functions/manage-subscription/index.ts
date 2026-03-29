@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
@@ -11,7 +12,7 @@ interface PlanConfig {
 }
 
 // V4: Fetch plan config from database
-async function getPlanConfig(supabase: any, planName: string): Promise<PlanConfig | null> {
+async function getPlanConfig(supabase: SupabaseClient, planName: string): Promise<PlanConfig | null> {
   const { data: mappings, error } = await supabase
     .from("stripe_plan_mapping")
     .select("plan_type, stripe_price_id, base_devices")
@@ -46,7 +47,7 @@ async function getAllAddonPriceIds(supabase: Record<string, unknown>): Promise<s
 serveTenant(async (req, ctx) => {
   const { supabase, tenantId, userId, requestId, body } = ctx;
 
-  const logStep = (step: string, details?: any) => {
+  const logStep = (step: string, details?: Record<string, unknown>) => {
     const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
     logger.info(`[MANAGE-SUBSCRIPTION][${requestId}] ${step}${detailsStr}`);
   };
@@ -104,7 +105,7 @@ serveTenant(async (req, ctx) => {
   const allAddonPriceIds = await getAllAddonPriceIds(supabase);
   logStep("Loaded addon price IDs from DB", { count: allAddonPriceIds.length });
 
-  let result: any = {};
+  let result: Record<string, unknown> = {};
 
   switch (operation) {
     case "upgrade": {

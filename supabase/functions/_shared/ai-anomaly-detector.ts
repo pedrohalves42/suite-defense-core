@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from "./logger.ts";
 /**
  * AI Anomaly Detector
@@ -178,7 +179,7 @@ const SKIP_THRESHOLD = 10;
  * Verifica anomalias recentes do mesmo tipo (rate limiting)
  */
 async function checkRecentAnomalies(
-  supabase: any,
+  supabase: SupabaseClient,
   tenantId: string,
   functionName: string,
   anomalyType: string,
@@ -216,11 +217,11 @@ async function checkRecentAnomalies(
  * Registra anomalia no banco de dados
  */
 export async function logAnomaly(
-  supabase: any,
+  supabase: SupabaseClient,
   tenantId: string,
   functionName: string,
   anomaly: AnomalyFlag,
-  context: Record<string, any> = {}
+  context: Record<string, unknown> = {}
 ): Promise<void> {
   try {
     await supabase.from('ai_anomalies').insert({
@@ -244,10 +245,10 @@ export async function logAnomaly(
  * Processa todas as anomalias detectadas com rate limiting
  */
 export async function processAnomalies(
-  supabase: any,
+  supabase: SupabaseClient,
   validation: BehaviorValidation,
   context: AIContext,
-  additionalContext: Record<string, any> = {}
+  additionalContext: Record<string, unknown> = {}
 ): Promise<void> {
   for (const anomaly of validation.anomalies) {
     // Rate limiting: verificar ocorrencias recentes
