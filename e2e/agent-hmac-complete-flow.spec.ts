@@ -25,7 +25,7 @@ test.describe.serial('Agent HMAC Complete Flow', () => {
   let agentName: string;
 
   // Skip if no Supabase URL configured - using beforeEach for proper Playwright skip behavior
-  test.beforeEach(({ }, testInfo) => {
+  test.beforeEach((_fixtures, testInfo) => {
     if (!SUPABASE_URL) {
       testInfo.skip();
     }
