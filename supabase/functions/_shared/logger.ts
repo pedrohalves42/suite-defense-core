@@ -83,7 +83,10 @@ function enrichEntry(entry: LogEntry, ctx?: Partial<LogContext>): LogEntry {
 /**
  * P3+PHASE-1: Creates a logger instance with context fields (requestId, tenantId, agentId) and timing.
  */
-export const loggerWithContext = (ctx: LogContext) => {
+export const loggerWithContext = (ctxOrRequestId: LogContext | string) => {
+  const ctx: LogContext = typeof ctxOrRequestId === 'string'
+    ? { requestId: ctxOrRequestId }
+    : ctxOrRequestId;
   const startTime = Date.now();
 
   return {
