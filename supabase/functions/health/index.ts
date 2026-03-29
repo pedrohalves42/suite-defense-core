@@ -12,7 +12,8 @@ import { buildCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
-  }
+
+
 
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: addHealthHeaders(buildCorsHeaders(origin)) })
