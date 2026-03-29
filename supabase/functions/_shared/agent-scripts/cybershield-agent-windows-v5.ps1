@@ -1737,8 +1737,15 @@ function Initialize-AgentKeys {
         return $true
         
     } catch {
-        Write-Log "[KEYS] Failed to initialize keys: $($_.Exception.Message)" "ERROR"
-        return $false
+        # v5.0.16-fix: Outer catch must attempt RSA fallback before giving up
+        # Previously returned $false without trying RSA, leaving agent in DEGRADED
+        Write-Log "[KEYS] Key initialization error: $($_.Exception.Message) - attempting RSA fallback" "WARN"
+        try {
+            return Initialize-RSACspKeys
+        } catch {
+            Write-Log "[KEYS] RSA fallback also failed: $($_.Exception.Message)" "ERROR"
+            return $false
+        }
     }
 }
 
