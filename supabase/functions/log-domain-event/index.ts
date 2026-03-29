@@ -1,53 +1,29 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
-import { buildCorsHeaders } from '../_shared/cors.ts';
+/**
+ * log-domain-event - Trusted relayer for domain events
+ * Migrated to servePublic middleware (no auth required for event logging)
+ */
+import { servePublic } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 
-Deno.serve(async (req) => {
-  const origin = req.headers.get("origin");
-  const headers = buildCorsHeaders(origin);
+servePublic(async (_req, ctx) => {
+  const { supabase, requestId, body } = ctx;
 
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers });
+  // Support both single event and array of events
+  const events = Array.isArray(body) ? body : [body];
+
+  if (events.length === 0) {
+    return { success: true, inserted: 0 };
   }
 
-  try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  const { error } = await supabase.from('domain_events').insert(events);
+
+  if (error) {
+    logger.error(`[log-domain-event][${requestId}] Insert error:`, { error: error.message });
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
-
-    const body = await req.json();
-
-    // Support both single event and array of events
-    const events = Array.isArray(body) ? body : [body];
-
-    if (events.length === 0) {
-      return new Response(JSON.stringify({ success: true, inserted: 0 }), {
-        status: 200,
-        headers: { ...headers, "Content-Type": "application/json" },
-      });
-    }
-
-    const { error } = await supabase.from("domain_events").insert(events);
-
-    if (error) {
-      logger.error("[log-domain-event] Insert error:", { error: error.message });
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 500,
-        headers: { ...headers, "Content-Type": "application/json" },
-      });
-    }
-
-    return new Response(JSON.stringify({ success: true, inserted: events.length }), {
-      status: 200,
-      headers: { ...headers, "Content-Type": "application/json" },
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    logger.error("[log-domain-event] Error:", { error: message });
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { ...headers, "Content-Type": "application/json" },
-    });
   }
-});
+
+  return { success: true, inserted: events.length };
+}, { methods: ['POST'] });

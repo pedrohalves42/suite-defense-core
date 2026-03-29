@@ -1,93 +1,59 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+/**
+ * process-tenant-suspensions - Processes suspensions and cleanup
+ * Migrated to serveInternal middleware
+ */
+import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
-import { buildCorsHeaders } from '../_shared/cors.ts';
 
+serveInternal(async (_req, ctx) => {
+  const { supabase, requestId } = ctx;
 
-Deno.serve(async (req) => {
-  const origin = req.headers.get("origin");
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: buildCorsHeaders(origin) });
+  // Phase 1: Process suspensions via RPC
+  const { data: suspensionResult, error: suspensionError } = await supabase.rpc(
+    'process_tenant_suspensions'
+  );
+
+  if (suspensionError) {
+    logger.error(`[${requestId}] Suspension processing error:`, suspensionError);
+    return new Response(
+      JSON.stringify({ error: suspensionError.message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
-  // V-1122: Defense-in-depth auth guard for cron function
-  const authError = assertInternalCaller(req);
-  if (authError) return authError;
+  // Phase 2: Cleanup data for suspended tenants
+  const { data: suspendedTenants, error: tenantsError } = await supabase
+    .from('tenants')
+    .select('id, name, suspended_at')
+    .in('suspension_status', ['suspended', 'pending_deletion'])
+    .limit(10);
 
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  if (tenantsError) {
+    logger.error(`[${requestId}] Error fetching suspended tenants:`, tenantsError);
+  }
 
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
-
-    // Phase 1: Process suspensions via RPC
-    const { data: suspensionResult, error: suspensionError } = await supabase.rpc(
-      "process_tenant_suspensions"
-    );
-
-    if (suspensionError) {
-      logger.error("Suspension processing error:", suspensionError);
-      return new Response(
-        JSON.stringify({ error: suspensionError.message }),
-        { status: 500, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
+  const cleanupResults: { tenant_id: string; status: string; result?: unknown; error?: string }[] = [];
+  if (suspendedTenants && suspendedTenants.length > 0) {
+    for (const tenant of suspendedTenants) {
+      const { data: cleanupResult, error: cleanupError } = await supabase.rpc(
+        'cleanup_suspended_tenant_data',
+        { p_tenant_id: tenant.id }
       );
-    }
 
-    // Phase 2: Cleanup data for suspended tenants
-    const { data: suspendedTenants, error: tenantsError } = await supabase
-      .from("tenants")
-      .select("id, name, suspended_at")
-      .in("suspension_status", ["suspended", "pending_deletion"])
-      .limit(10);
-
-    if (tenantsError) {
-      logger.error("Error fetching suspended tenants:", tenantsError);
-    }
-
-    const cleanupResults = [];
-    if (suspendedTenants && suspendedTenants.length > 0) {
-      for (const tenant of suspendedTenants) {
-        const { data: cleanupResult, error: cleanupError } = await supabase.rpc(
-          "cleanup_suspended_tenant_data",
-          { p_tenant_id: tenant.id }
-        );
-
-        if (cleanupError) {
-          logger.error(`Cleanup error for tenant ${tenant.id}:`, cleanupError);
-          cleanupResults.push({
-            tenant_id: tenant.id,
-            status: "error",
-            error: cleanupError.message,
-          });
-        } else {
-          cleanupResults.push({
-            tenant_id: tenant.id,
-            status: "completed",
-            result: cleanupResult,
-          });
-        }
+      if (cleanupError) {
+        logger.error(`[${requestId}] Cleanup error for tenant ${tenant.id}:`, cleanupError);
+        cleanupResults.push({ tenant_id: tenant.id, status: 'error', error: cleanupError.message });
+      } else {
+        cleanupResults.push({ tenant_id: tenant.id, status: 'completed', result: cleanupResult });
       }
     }
-
-    const result = {
-      suspension: suspensionResult,
-      cleanup: {
-        tenants_processed: cleanupResults.length,
-        results: cleanupResults,
-      },
-      processed_at: new Date().toISOString(),
-    };
-
-    logger.info("Tenant suspension processing completed:", JSON.stringify(result));
-
-    return new Response(JSON.stringify(result), {
-      headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" },
-    });
-  } catch (error) {
-    logger.error("Unexpected error:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
-    );
   }
+
+  logger.info(`[${requestId}] Tenant suspension processing completed`);
+
+  return {
+    suspension: suspensionResult,
+    cleanup: { tenants_processed: cleanupResults.length, results: cleanupResults },
+    processed_at: new Date().toISOString(),
+  };
 });

@@ -1,114 +1,57 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+/**
+ * detect-blocked-attempts - Correlates blocked access attempts
+ * Migrated to serveInternal middleware
+ */
+import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 
-Deno.serve(async (req) => {
-  const origin = req.headers.get("origin");
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: buildCorsHeaders(origin) })
+serveInternal(async (_req, ctx) => {
+  const { supabase, requestId } = ctx;
+  const startedAt = Date.now();
+
+  // Timeout via race
+  const timeoutMs = 20000;
+  const rpcPromise = supabase.rpc('detect_blocked_access_attempts');
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('RPC timeout after 20s')), timeoutMs)
+  );
+
+  const { data, error } = await Promise.race([rpcPromise, timeoutPromise]) as { data: unknown; error: Record<string, unknown> | null };
+
+  if (error) {
+    const isTimeout = error.code === '57014' || (error.message as string)?.includes('timeout');
+    logger.error(`[${requestId}] Detection ${isTimeout ? 'timed out' : 'failed'}:`, error);
+
+    try {
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'detect-blocked-attempts', p_success: false,
+        p_duration_ms: Date.now() - startedAt,
+        p_error: isTimeout ? 'RPC timeout' : (error.message as string),
+        p_result: null, p_processed_count: 0, p_job_source: 'cron',
+      });
+    } catch (_e) { /* best effort */ }
+
+    return new Response(
+      JSON.stringify({
+        status: isTimeout ? 'timeout' : 'error',
+        error: isTimeout ? 'Query timed out' : (error.message as string),
+        requestId,
+      }),
+      { status: isTimeout ? 504 : 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
-  // V-1138: Defense-in-depth auth guard for cron function
-  const authError = assertInternalCaller(req)
-  if (authError) return authError
-
-  const requestId = crypto.randomUUID().slice(0, 8)
-  const startedAt = Date.now()
-  logger.info(`[${requestId}] detect-blocked-attempts: Starting correlation...`)
-
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  )
+  const insertedCount = (data as Record<string, unknown>[])?.[0]?.inserted_count ?? 0;
+  logger.info(`[${requestId}] Detected ${insertedCount} new blocked attempts in ${Date.now() - startedAt}ms`);
 
   try {
-    // Timeout is handled by the race below; removed redundant set_config RPC call
-    const timeoutMs = 20000; // 20s total timeout
-    const rpcPromise = supabase.rpc('detect_blocked_access_attempts');
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('RPC timeout after 20s')), timeoutMs)
-    );
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'detect-blocked-attempts', p_success: true,
+      p_duration_ms: Date.now() - startedAt,
+      p_result: { inserted_count: insertedCount },
+      p_processed_count: insertedCount as number, p_job_source: 'cron',
+    });
+  } catch (_e) { /* best effort */ }
 
-    const { data, error } = await Promise.race([rpcPromise, timeoutPromise]) as { data: unknown; error: unknown };
-
-    if (error) {
-      const isTimeout = error.code === '57014' || error.message?.includes('timeout');
-      logger.error(`[${requestId}] Detection ${isTimeout ? 'timed out' : 'failed'}:`, error);
-
-      // Log observability even on failure
-      try {
-        await supabase.rpc('log_scheduled_job_run', {
-          p_job_key: 'detect-blocked-attempts',
-          p_success: false,
-          p_duration_ms: Date.now() - startedAt,
-          p_error: isTimeout ? 'RPC timeout - consider adding indexes on agent_web_activity(domain, visited_at)' : error.message,
-          p_result: null,
-          p_processed_count: 0,
-          p_job_source: 'cron'
-        });
-      } catch (e) { logger.warn('[detect-blocked-attempts] Failed to log job run:', e); }
-
-      return new Response(
-        JSON.stringify({ 
-          status: isTimeout ? 'timeout' : 'error',
-          error: isTimeout ? 'Query timed out. The blocked_access_attempts correlation query needs optimization.' : error.message,
-          suggestion: isTimeout ? 'Add indexes: CREATE INDEX idx_awa_domain_visited ON agent_web_activity(domain, visited_at); CREATE INDEX idx_baa_agent_domain ON blocked_access_attempts(agent_id, domain, attempted_at);' : undefined,
-          requestId 
-        }),
-        { status: isTimeout ? 504 : 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const insertedCount = data?.[0]?.inserted_count ?? 0
-    logger.info(`[${requestId}] Detected ${insertedCount} new blocked attempts in ${Date.now() - startedAt}ms`)
-
-    try {
-      await supabase.rpc('log_scheduled_job_run', {
-        p_job_key: 'detect-blocked-attempts',
-        p_success: true,
-        p_duration_ms: Date.now() - startedAt,
-        p_result: { inserted_count: insertedCount },
-        p_processed_count: insertedCount,
-        p_job_source: 'cron'
-      });
-    } catch (e) { logger.warn('[detect-blocked-attempts] Failed to log job run:', e); }
-
-    return new Response(
-      JSON.stringify({ 
-        status: 'ok',
-        inserted_count: insertedCount,
-        duration_ms: Date.now() - startedAt,
-        requestId
-      }),
-      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-    )
-
-  } catch (err) {
-    const errMsg = String(err);
-    const isTimeout = errMsg.includes('timeout') || errMsg.includes('20s');
-    logger.error(`[${requestId}] ${isTimeout ? 'Timeout' : 'Exception'}:`, err)
-    
-    // Log error observability
-    try {
-      await supabase.rpc('log_scheduled_job_run', {
-        p_job_key: 'detect-blocked-attempts',
-        p_success: false,
-        p_duration_ms: Date.now() - startedAt,
-        p_error: errMsg,
-        p_result: null,
-        p_processed_count: 0,
-        p_job_source: 'cron'
-      })
-    } catch (e) { logger.warn('[detect-blocked-attempts] Failed to log error run:', e); }
-    
-    return new Response(
-      JSON.stringify({ 
-        status: isTimeout ? 'timeout' : 'error',
-        error: errMsg,
-        requestId 
-      }),
-      { status: isTimeout ? 504 : 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-    )
-  }
-})
+  return { status: 'ok', inserted_count: insertedCount, duration_ms: Date.now() - startedAt, requestId };
+});

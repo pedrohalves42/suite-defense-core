@@ -1,29 +1,18 @@
 /**
  * cleanup-stuck-builds -> PROXY to cleanup-router
+ * Migrated to serveInternal middleware (accepts both internal + JWT)
  */
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { serveInternal } from '../_shared/serve-tenant.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
-Deno.serve(async (req) => {
-  const origin = req.headers.get("origin");
-  if (req.method === 'OPTIONS') return new Response(null, { headers: buildCorsHeaders(origin) });
-
-  // Accept both internal and JWT auth (frontend calls this too)
+serveInternal(async (req, ctx) => {
   const authHeader = req.headers.get('Authorization');
-  const isJwtCall = authHeader?.startsWith('Bearer ');
-  
-  if (!isJwtCall) {
-    const authError = assertInternalCaller(req);
-    if (authError) return authError;
-  }
-
   const url = `${Deno.env.get('SUPABASE_URL')}/functions/v1/cleanup-router`;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  
-  // Forward JWT if present, otherwise use service_role
-  if (isJwtCall) {
-    headers['Authorization'] = authHeader!;
+
+  // Forward JWT if present, otherwise service_role is already used by serveInternal
+  if (authHeader?.startsWith('Bearer ')) {
+    headers['Authorization'] = authHeader;
   } else {
     headers['Authorization'] = `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`;
   }
@@ -33,5 +22,5 @@ Deno.serve(async (req) => {
     headers,
     body: JSON.stringify({ action: 'stuck-builds' }),
   });
-  return new Response(await resp.text(), { status: resp.status, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
+  return await resp.json();
 });
