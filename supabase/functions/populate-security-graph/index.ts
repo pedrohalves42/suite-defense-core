@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     const edges: Array<Record<string, unknown>> = [];
     const nodeMap = new Map<string, string>(); // value -> id
 
-    function addNode(type: string, value: string, label: string, risk: number, meta: any = {}) {
+    function addNode(type: string, value: string, label: string, risk: number, meta: Record<string, unknown> = {}) {
       const key = `${type}:${value}`;
       if (nodeMap.has(key)) return nodeMap.get(key)!;
       const id = crypto.randomUUID();

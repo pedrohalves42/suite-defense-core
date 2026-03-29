@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       const dedupKey = `cybershield-${tenantId || 'global'}-${Date.now()}`
 
       // If PagerDuty is configured, send alert
-      let pagerResult: any = { dedup_key: dedupKey }
+      let pagerResult: Record<string, unknown> = { dedup_key: dedupKey }
       if (PAGERDUTY_ROUTING_KEY) {
         const pdResponse = await fetchWithTimeout('https://events.pagerduty.com/v2/enqueue', {
           method: 'POST',

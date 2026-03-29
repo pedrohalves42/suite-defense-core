@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
@@ -22,7 +23,7 @@ interface CVEMatch {
 
 // Helper function to scan a single agent (used by batch mode)
 async function scanAgentVulnerabilities(
-  supabase: any,
+  supabase: SupabaseClient,
   agent_id: string,
   tenant_id: string,
   requestId: string
@@ -562,7 +563,7 @@ function truncate(text: string, maxLength: number): string {
   return text.length > maxLength ? text.slice(0, maxLength) + '...' : text;
 }
 
-function generateRemediation(softwareName: string, cve: any): string {
+function generateRemediation(softwareName: string, cve: Record<string, unknown>): string {
   const baseName = softwareName.split(/[\s\-_]/)[0];
   const latestVersion = cve.affected_versions?.[0]?.versionEndExcluding;
   

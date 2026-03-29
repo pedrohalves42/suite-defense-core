@@ -28,7 +28,7 @@ import {
 
 async function executeAction(
   supabase: SupabaseClient,
-  rule: any,
+  rule: Record<string, unknown>,
   agentId: string,
   tenantId: string,
   triggerData: Record<string, unknown>,

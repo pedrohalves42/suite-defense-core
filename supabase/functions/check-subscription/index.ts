@@ -142,7 +142,7 @@ serveTenant(async (req, ctx) => {
     .select("feature_key, enabled, quota_limit, quota_used")
     .eq("tenant_id", tenantId);
 
-  const featuresMap = features?.reduce((acc: any, f: any) => {
+  const featuresMap = features?.reduce((acc: Record<string, unknown>, f: Record<string, unknown>) => {
     acc[f.feature_key] = { enabled: f.enabled, quota_limit: f.quota_limit, quota_used: f.quota_used };
     return acc;
   }, {});

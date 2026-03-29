@@ -137,7 +137,7 @@ async function createAlert(supabase: SupabaseClient, playbook: Record<string, un
 }
 
 // deno-lint-ignore no-explicit-any
-async function collectEvidence(supabase: SupabaseClient, triggerData: any) {
+async function collectEvidence(supabase: SupabaseClient, triggerData: Record<string, unknown>) {
   if (!triggerData.agent_id) return { skipped: true, reason: 'no_agent_id' };
 
   const { data: agent } = await supabase

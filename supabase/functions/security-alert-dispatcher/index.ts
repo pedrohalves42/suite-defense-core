@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 /**
  * Security Alert Dispatcher
  * 
@@ -233,7 +234,7 @@ Deno.serve(async (req: Request) => {
 });
 
 async function createSystemAlert(
-  supabase: any,
+  supabase: SupabaseClient,
   alertType: string,
   severity: 'info' | 'warning' | 'critical',
   message: string

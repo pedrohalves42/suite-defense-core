@@ -31,7 +31,7 @@ serve(async (req) => {
     );
 
     // Parse body FIRST (before validating auth)
-    let body: any;
+    let body: Record<string, unknown>;
     try {
       body = await req.json();
       logger.info(`[${requestId}] Body parsed successfully`);
