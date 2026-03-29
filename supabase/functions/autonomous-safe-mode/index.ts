@@ -25,7 +25,7 @@ import {
 } from './rules/quality.ts';
 
 /** Rule code → handler map */
-const RULE_HANDLERS: Record<string, (sb: any, rule: RuleRecord) => Promise<RuleResult>> = {
+const RULE_HANDLERS: Record<string, (sb: SupabaseClient, rule: RuleRecord) => Promise<RuleResult>> = {
   'SAFE_MODE_RULE_001': processSafeModeRule,
   'AGENT_THROTTLE_002': processThrottleRule,
   'AGENT_ISOLATE_003': processIsolateRule,
