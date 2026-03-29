@@ -11,13 +11,23 @@ const ALLOWED_ORIGINS = [
 ];
 
 /**
+ * Check if an origin is allowed.
+ * Accepts exact matches from the allowlist plus any *.lovable.app subdomain.
+ */
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  if (/^https:\/\/[a-z0-9._-]+\.lovable\.app$/.test(origin)) return true;
+  if (origin.startsWith('http://localhost:')) return true;
+  return false;
+}
+
+/**
  * Build CORS + security headers for a given request origin.
  * Falls back to the primary production domain if the origin is not allowlisted.
  */
 export function buildCorsHeaders(origin: string | null): Record<string, string> {
-  const allowedOrigin = (origin && ALLOWED_ORIGINS.includes(origin))
-    ? origin
-    : ALLOWED_ORIGINS[0];
+  const allowedOrigin = isAllowedOrigin(origin) ? origin! : ALLOWED_ORIGINS[0];
 
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
@@ -33,7 +43,5 @@ export function buildCorsHeaders(origin: string | null): Record<string, string> 
 
 /**
  * Static corsHeaders kept for backward compatibility.
- * Functions that don't yet pass `req.headers.get('origin')` will use
- * the primary production domain as the allowed origin.
  */
 export const corsHeaders = buildCorsHeaders(ALLOWED_ORIGINS[0]);
