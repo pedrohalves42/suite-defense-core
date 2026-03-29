@@ -14,7 +14,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { handleException } from '../_shared/error-handler.ts'
-import { checkRateLimit } from '../_shared/rate-limit.ts'
+import { checkHeartbeatRateLimit } from './ratelimit/wrapper.ts'
 import { logger } from '../_shared/logger.ts'
 import { requireEnv } from '../_shared/env.ts'
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
