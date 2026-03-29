@@ -63,13 +63,16 @@ Deno.serve(async (req) => {
 
     // Send 7-day reminders
     for (const sub of expiringSoon || []) {
-      await supabase.functions.invoke("send-trial-reminder", {
+      await supabase.functions.invoke("notification-router", {
         body: {
-          tenant_id: sub.tenant_id,
-          tenant_name: (sub as Record<string, unknown>).tenants.name,
-          owner_user_id: (sub as Record<string, unknown>).tenants.owner_user_id,
-          trial_end: sub.trial_end,
-          days_remaining: 7,
+          action: "trial-reminder",
+          payload: {
+            tenant_id: sub.tenant_id,
+            tenant_name: (sub as Record<string, unknown>).tenants.name,
+            owner_user_id: (sub as Record<string, unknown>).tenants.owner_user_id,
+            trial_end: sub.trial_end,
+            days_remaining: 7,
+          },
         },
       });
 
@@ -83,13 +86,16 @@ Deno.serve(async (req) => {
 
     // Send 1-day reminders
     for (const sub of expiringTomorrow || []) {
-      await supabase.functions.invoke("send-trial-reminder", {
+      await supabase.functions.invoke("notification-router", {
         body: {
-          tenant_id: sub.tenant_id,
-          tenant_name: (sub as Record<string, unknown>).tenants.name,
-          owner_user_id: (sub as Record<string, unknown>).tenants.owner_user_id,
-          trial_end: sub.trial_end,
-          days_remaining: 1,
+          action: "trial-reminder",
+          payload: {
+            tenant_id: sub.tenant_id,
+            tenant_name: (sub as Record<string, unknown>).tenants.name,
+            owner_user_id: (sub as Record<string, unknown>).tenants.owner_user_id,
+            trial_end: sub.trial_end,
+            days_remaining: 1,
+          },
         },
       });
 
