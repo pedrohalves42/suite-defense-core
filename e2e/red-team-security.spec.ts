@@ -16,7 +16,7 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 // Skip all tests if env vars are missing - using beforeEach for proper Playwright skip behavior
-test.beforeEach(({ }, testInfo) => {
+test.beforeEach((_fixtures, testInfo) => {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     console.warn('⚠️ Skipping Red Team tests: Missing SUPABASE_URL or SUPABASE_ANON_KEY');
     testInfo.skip();

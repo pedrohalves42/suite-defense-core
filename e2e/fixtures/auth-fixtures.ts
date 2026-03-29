@@ -42,6 +42,7 @@ async function performLogin(page: Page): Promise<boolean> {
  * Extended test fixture that provides an authenticated page
  */
 export const test = base.extend<{ authenticatedPage: Page }>({
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   authenticatedPage: async ({ page }, use) => {
     const success = await performLogin(page);
     if (!success) {
