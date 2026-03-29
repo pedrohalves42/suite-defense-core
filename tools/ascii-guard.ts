@@ -92,9 +92,25 @@ const replacementsByCode: Record<number, string> = {
   0x1F50D: "[SCAN] "    // magnifying glass
 };
 
+// Files that intentionally use Unicode (emojis in user-facing messages)
+const EMOJI_WHITELIST_PATTERNS = [
+  "notification-router/handler-telegram",
+  "notification-router/handler-whatsapp",
+  "notification-router/handler-email",
+  "notification-router/handler-security",
+  "notification-router/handler-welcome",
+  "submit-router/handlers/ransomware-indicator",
+];
+
 function isTargetFile(filePath: string): boolean {
   const ext = path.extname(filePath).toLowerCase();
-  
+  const normalized = filePath.replace(/\\/g, "/");
+
+  // Skip files that intentionally use emoji in user-facing messages
+  if (EMOJI_WHITELIST_PATTERNS.some((p) => normalized.includes(p))) {
+    return false;
+  }
+
   // Backend files: always validate
   if (TARGET_EXTS.includes(ext)) {
     return true;
@@ -102,7 +118,6 @@ function isTargetFile(filePath: string): boolean {
   
   // TypeScript files: only validate if in supabase/functions (Edge Functions)
   if (ext === ".ts" || ext === ".tsx") {
-    const normalized = filePath.replace(/\\/g, "/");
     return normalized.includes("supabase/functions/");
   }
   
