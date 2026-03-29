@@ -4,7 +4,7 @@
  */
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
-import type { RuleResult, EngineResult, RuleRecord } from './types.ts';
+import type { RuleResult, EngineResult, RuleRecord, SupabaseClient } from './types.ts';
 import {
   processSafeModeRule,
   processThrottleRule,
