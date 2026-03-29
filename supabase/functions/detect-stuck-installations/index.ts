@@ -2,15 +2,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { Resend } from "https://esm.sh/resend@4.0.0";
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
-const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   // V-1139: Defense-in-depth auth guard for cron function
@@ -72,7 +73,7 @@ Deno.serve(async (req) => {
           request_id: requestId
         }),
         {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" },
           status: 200
         }
       );
@@ -264,7 +265,7 @@ Deno.serve(async (req) => {
         request_id: requestId
       }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" },
         status: 200
       }
     );
@@ -300,7 +301,7 @@ Deno.serve(async (req) => {
         request_id: requestId
       }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" },
         status: 500
       }
     );

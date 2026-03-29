@@ -5,6 +5,7 @@ import { callAI, type AIMessage } from "../_shared/ai-provider-helper.ts";
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { requireEnv } from '../_shared/env.ts';
 import { logger } from '../_shared/logger.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 /**
  * AI Full Audit Orchestrator v2.3
@@ -25,12 +26,6 @@ import { logger } from '../_shared/logger.ts';
  * 
  * v2.3: Migrated to serveTenant middleware
  */
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-tenant-id',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-};
 
 /**
  * Calculate deterministic base score from metrics (no LLM variance)
@@ -171,7 +166,7 @@ serveTenant(async (req, ctx) => {
           message: metricsError.message ?? 'unknown error'
         }
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 
@@ -184,7 +179,7 @@ serveTenant(async (req, ctx) => {
   if (!redPersona || !redTemplate) {
     return new Response(
       JSON.stringify({ error: 'Red Team prompt configuration error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 
@@ -246,20 +241,20 @@ serveTenant(async (req, ctx) => {
           tokens_used: 0,
           warning: 'AI providers unavailable. Deterministic fallback audit based on metrics only.',
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
     
     if (isRateLimited(redAiResult.error)) {
       return new Response(
         JSON.stringify({ error: 'Rate limit exceeded. Please try again later.', stage: 'red_team', retry_after: 60 }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
     
     return new Response(
       JSON.stringify({ error: 'Red Team analysis failed', stage: 'red_team', details: redAiResult.error }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 
@@ -361,7 +356,7 @@ serveTenant(async (req, ctx) => {
   if (!anaPersona || !anaTemplate) {
     return new Response(
       JSON.stringify({ error: 'Ana prompt configuration error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 
@@ -430,20 +425,20 @@ INSTRUCAO: Considere esses riscos ao avaliar. Seu score deve refletir conscienci
           tokens_used: redTokens,
           warning: 'AI unavailable during Ana phase. Red Team completed. Check provider configuration.',
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
     
     if (isRateLimited(anaAiResult.error)) {
       return new Response(
         JSON.stringify({ error: 'Rate limit exceeded. Please try again later.', stage: 'ana', retry_after: 60 }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
     
     return new Response(
       JSON.stringify({ error: 'Ana analysis failed', stage: 'ana', details: anaAiResult.error }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 
@@ -778,6 +773,6 @@ INSTRUCAO: Considere esses riscos ao avaliar. Seu score deve refletir conscienci
         ana_template: anaTemplate.version,
       },
     }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
   );
 }, { methods: ['POST'], tenantSource: 'auto' });

@@ -3,7 +3,7 @@
  * Previously had NO caller authentication.
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 
 interface ExecuteSolutionRequest {
@@ -29,7 +29,7 @@ serveTenant(async (_req, ctx) => {
   if (actionError || !action) {
     return new Response(
       JSON.stringify({ error: 'Action not found or unauthorized' }),
-      { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 

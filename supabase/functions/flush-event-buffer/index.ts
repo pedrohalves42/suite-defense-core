@@ -14,7 +14,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 
 const BATCH_SIZE = 5000;
@@ -104,8 +104,9 @@ function isAnomaly(value: number, baseline: BaselineData): boolean {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: buildCorsHeaders(origin) });
   }
 
   const authError = assertInternalCaller(req);
@@ -125,13 +126,13 @@ Deno.serve(async (req) => {
     if (claimError) {
       logger.error('[flush-event-buffer] claim error:', claimError.message);
       return new Response(JSON.stringify({ error: claimError.message }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
     if (!claimedCount || claimedCount === 0) {
       return new Response(JSON.stringify({ flushed: 0, message: 'Buffer empty' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -144,7 +145,7 @@ Deno.serve(async (req) => {
 
     if (fetchError || !rows?.length) {
       return new Response(JSON.stringify({ flushed: 0, message: 'Buffer empty' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -432,12 +433,12 @@ Deno.serve(async (req) => {
     logger.info(`[flush-event-buffer] Flushed ${stats.flushed} events in ${elapsed}ms (proc=${stats.process} file=${stats.file} net=${stats.network} reg=${stats.registry} threats=${stats.threat_matches} anomalies=${stats.anomaly_alerts})`);
 
     return new Response(JSON.stringify(stats), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   } catch (err) {
     logger.error('[flush-event-buffer] Unexpected error:', err);
     return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   }
 });

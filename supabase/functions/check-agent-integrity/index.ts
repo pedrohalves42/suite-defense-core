@@ -4,7 +4,7 @@
  */
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { shouldProcessAlertsForTenant } from '../_shared/business-hours.ts';
 import { logger } from '../_shared/logger.ts';
 
@@ -23,8 +23,9 @@ interface IntegrityCheckResult {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const authError = assertInternalCaller(req);
@@ -211,7 +212,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: true, requestId, timestamp: new Date().toISOString(), summary, issues: issues.slice(0, 50), duration_ms: durationMs }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     const durationMs = Date.now() - startedAt;
@@ -228,7 +229,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error', requestId }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });

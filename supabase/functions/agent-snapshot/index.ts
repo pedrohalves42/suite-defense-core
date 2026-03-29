@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.203.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { corsHeaders } from '../_shared/cors.ts'
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts'
 import { logger } from '../_shared/logger.ts';
 
 /**
@@ -20,7 +20,7 @@ serve(async (req) => {
 
   // CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: buildCorsHeaders(origin) })
   }
 
   try {
@@ -93,7 +93,7 @@ serve(async (req) => {
       }),
       { 
         status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
       }
     )
 
@@ -106,6 +106,6 @@ serve(async (req) => {
 function jsonError(status: number, message: string, correlationId: string) {
   return new Response(
     JSON.stringify({ error: message, correlation_id: correlationId }),
-    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    { status, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
   )
 }

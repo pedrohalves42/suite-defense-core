@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 
@@ -39,8 +39,9 @@ interface SyncResult {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const authError = assertInternalCaller(req);
@@ -183,7 +184,7 @@ Deno.serve(async (req) => {
     logger.error(`[release-sync][${requestId}] Fatal:`, error);
     return new Response(
       JSON.stringify({ error: 'Internal error', message: String(error), requestId }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
     );
   }
 });
@@ -192,6 +193,6 @@ function respond(result: SyncResult, requestId: string, startedAt: number): Resp
   result.duration_ms = Date.now() - startedAt;
   return new Response(
     JSON.stringify({ ...result, requestId }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
   );
 }

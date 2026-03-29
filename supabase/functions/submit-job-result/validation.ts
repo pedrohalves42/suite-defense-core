@@ -5,6 +5,7 @@
 import { logger } from '../_shared/logger.ts'
 import { corsHeaders } from '../_shared/error-handler.ts'
 import type { ParsedPayload } from './types.ts'
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 /**
  * Extracts and validates the payload from a raw request body.
@@ -35,7 +36,7 @@ export function validateAndParsePayload(payload: Record<string, unknown>):
       success: false,
       response: new Response(
         JSON.stringify({ error: 'Invalid payload: job_id required (string)' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
   }
@@ -46,7 +47,7 @@ export function validateAndParsePayload(payload: Record<string, unknown>):
       success: false,
       response: new Response(
         JSON.stringify({ error: 'status must be "completed" or "failed"' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
   }
@@ -58,7 +59,7 @@ export function validateAndParsePayload(payload: Record<string, unknown>):
         success: false,
         response: new Response(
           JSON.stringify({ error: 'execution_time_seconds must be a positive number' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         )
       }
     }

@@ -28,8 +28,10 @@ import { checkVersionGate, checkJobOwnership, checkExecutionIdRequired, checkPay
 import { processSideEffects } from './side-effects/index.ts'
 import { finalizeExecution } from './execution.ts'
 import { validateGovernance, validateUpdateAgentVersion, triggerAutoReport, analyzeBlockedAccess, processDnsBlockEvents } from './post-completion.ts'
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') return handleCorsPreflightRequest()
   const methodError = validateHttpMethod(req, ['POST'])
   if (methodError) return methodError
@@ -46,7 +48,7 @@ Deno.serve(async (req) => {
     
     if (!agentToken) {
       await logSecurityEvent({ supabase, ipAddress, endpoint: '/submit-job-result', attackType: 'unauthorized', severity: 'medium', blocked: true, details: { reason: 'Missing X-Agent-Token' } })
-      return new Response(JSON.stringify({ error: 'X-Agent-Token header required' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'X-Agent-Token header required' }), { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } })
     }
 
     const tokenHash = await hashToken(agentToken)
@@ -59,7 +61,7 @@ Deno.serve(async (req) => {
 
     if (tokenError || !token?.agents) {
       await logSecurityEvent({ supabase, ipAddress, endpoint: '/submit-job-result', attackType: 'unauthorized', severity: 'high', blocked: true, details: { token_prefix: agentToken.substring(0, 8) } })
-      return new Response(JSON.stringify({ error: 'Invalid or inactive token' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'Invalid or inactive token' }), { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } })
     }
 
     const agentRaw = Array.isArray(token.agents) ? token.agents[0] : token.agents
@@ -77,7 +79,7 @@ Deno.serve(async (req) => {
     // ?? 3. HMAC verification ??
     if (!agent.hmac_secret) {
       logger.error('[submit-job-result] CRITICAL: Agent without HMAC secret:', agent.agent_name)
-      return new Response(JSON.stringify({ error: 'HMAC secret not configured for agent' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'HMAC secret not configured for agent' }), { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } })
     }
 
     const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret, {
@@ -86,13 +88,13 @@ Deno.serve(async (req) => {
     if (!hmacResult.valid) {
       logger.error('[submit-job-result] HMAC validation failed', { agent: agent.agent_name, error_code: hmacResult.errorCode })
       await logSecurityEvent({ supabase, tenantId: agent.tenant_id, ipAddress, endpoint: '/submit-job-result', attackType: 'unauthorized', severity: 'high', blocked: true, details: { agent_name: agent.agent_name, error_code: hmacResult.errorCode } })
-      return new Response(JSON.stringify({ error: 'unauthorized', code: hmacResult.errorCode, message: hmacResult.errorMessage, transient: hmacResult.transient }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'unauthorized', code: hmacResult.errorCode, message: hmacResult.errorMessage, transient: hmacResult.transient }), { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } })
     }
 
     // ?? 4. Rate limiting ??
     const rateLimitResult = await checkRateLimit(supabase, agent.agent_name, 'submit-job-result', { maxRequests: 100, windowMinutes: 1, blockMinutes: 5 })
     if (!rateLimitResult.allowed) {
-      return new Response(JSON.stringify({ error: 'Rate limit exceeded', resetAt: rateLimitResult.resetAt }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded', resetAt: rateLimitResult.resetAt }), { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } })
     }
 
     // ?? 5. Parse & validate payload ??
@@ -110,10 +112,10 @@ Deno.serve(async (req) => {
 
     if (fetchError) {
       logger.error('[submit-job-result] Database error fetching job', { job_id: payload.job_id, error: fetchError.message })
-      return new Response(JSON.stringify({ error: 'Erro ao buscar job', details: fetchError.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'Erro ao buscar job', details: fetchError.message }), { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } })
     }
     if (!job) {
-      return new Response(JSON.stringify({ error: 'Job nao encontrado' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'Job nao encontrado' }), { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } })
     }
 
     // ?? 7. Build context ??
@@ -174,7 +176,7 @@ Deno.serve(async (req) => {
       logger.error('[submit-job-result] Database update failed', { job_id: payload.job_id, error: updateError.message, isIntegrityViolation, sideEffectsInserted: ctx.sideEffects.inserted })
       return new Response(
         JSON.stringify({ error: isIntegrityViolation ? 'Job integrity violation: missing side effects' : 'Erro ao atualizar job', details: updateError.message, code: isIntegrityViolation ? 'INTEGRITY_VIOLATION' : updateError.code }),
-        { status: isIntegrityViolation ? 422 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: isIntegrityViolation ? 422 : 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -190,7 +192,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: true, job_id: payload.job_id, execution_id: payload.execution_id || null, execution_finalized: execResult.executionFinalized, message: `Job marcado como ${payload.status}` }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {

@@ -7,13 +7,14 @@
  * Auth: Internal only (cron/service_role) via assertInternalCaller
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   // V-2001: Use standardized assertInternalCaller
@@ -37,7 +38,7 @@ Deno.serve(async (req: Request) => {
 
   if (!rules?.length) {
     return new Response(JSON.stringify({ message: 'No active correlation rules' }), {
-      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   }
 
@@ -61,7 +62,7 @@ Deno.serve(async (req: Request) => {
 
   if (!allTenantIds.length) {
     return new Response(JSON.stringify({ message: 'No tenants with active rules/detections' }), {
-      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   }
 
@@ -168,7 +169,7 @@ Deno.serve(async (req: Request) => {
   logger.info(`[correlate-edr-events] Created ${incidentsCreated} incidents`);
 
   return new Response(JSON.stringify({ success: true, incidents_created: incidentsCreated }), {
-    status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
   });
 });
 

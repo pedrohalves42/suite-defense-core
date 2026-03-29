@@ -2,6 +2,7 @@ import { serveTenant } from '../_shared/serve-tenant.ts';
 import { corsHeaders } from '../_shared/error-handler.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 const GenerateKeySchema = z.object({
   expiresInHours: z.number().positive().int(),
@@ -10,6 +11,7 @@ const GenerateKeySchema = z.object({
 });
 
 serveTenant(async (req, ctx) => {
+  const origin = req.headers.get("origin");
   const { supabase, tenantId, userId, requestId, body } = ctx;
 
   // Role check
@@ -102,6 +104,6 @@ serveTenant(async (req, ctx) => {
       maxUses: keyData.max_uses,
       description: keyData.description,
     }),
-    { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
   );
 });

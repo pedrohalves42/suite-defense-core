@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { corsHeaders } from "../_shared/cors.ts"
+import { corsHeaders, buildCorsHeaders } from "../_shared/cors.ts"
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts'
 import { recordMetric } from '../_shared/apm.ts'
 import { logger } from '../_shared/logger.ts';
@@ -42,8 +42,9 @@ interface ConsolidatedResult {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const authError = assertInternalCaller(req);
@@ -420,7 +421,7 @@ Deno.serve(async (req) => {
     } catch { /* non-critical */ }
 
     return new Response(JSON.stringify({ success: true, ...result }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   } catch (error) {
     const err = error as Error;
@@ -433,7 +434,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ success: false, error: err.message, ...result }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   }
 });

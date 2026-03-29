@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
-import { corsHeaders } from '../_shared/cors.ts'
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts'
 import { logger } from '../_shared/logger.ts';
 
 /**
@@ -16,8 +16,9 @@ const SLI_TARGETS = {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders, status: 204 })
+    return new Response(null, { headers: buildCorsHeaders(origin), status: 204 })
   }
 
   const supabase = createClient(
@@ -35,7 +36,7 @@ Deno.serve(async (req) => {
       const { tenantId, endpoint, statusCode, latencyMs } = body
       if (!endpoint || statusCode === undefined) {
         return new Response(JSON.stringify({ error: 'endpoint and statusCode required' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         })
       }
 
@@ -92,7 +93,7 @@ Deno.serve(async (req) => {
       }
 
       return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       })
     }
 
@@ -131,7 +132,7 @@ Deno.serve(async (req) => {
         throughput: { current: Math.round(throughput), target: SLI_TARGETS.throughput.target, status: status(throughput, 10000, 8000) },
         errorRate: { current: +errorRate.toFixed(2), target: SLI_TARGETS.errorRate.target, status: status(errorRate, 0.1, 0.5, false) },
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       })
     }
 
@@ -181,7 +182,7 @@ Deno.serve(async (req) => {
         burnRate: +burnRate.toFixed(2),
         estimatedTimeToExhaustion: hoursToExhaustion,
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       })
     }
 
@@ -200,17 +201,17 @@ Deno.serve(async (req) => {
         recentMetrics: recentMetrics || [],
         timestamp: new Date().toISOString(),
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       })
     }
 
     return new Response(JSON.stringify({ error: 'Unknown action' }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
     })
   } catch (error) {
     logger.error('[sli-collector] Error:', error)
     return new Response(JSON.stringify({ error: (error as Error).message }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
     })
   }
 })

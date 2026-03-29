@@ -15,7 +15,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 import {
@@ -50,8 +50,9 @@ const ADMIN_ACTIONS = new Set([
 ]);
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const requestId = crypto.randomUUID();
@@ -64,7 +65,7 @@ Deno.serve(async (req) => {
     if (!action) {
       return new Response(
         JSON.stringify({ error: 'Missing required field: action', requestId }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -113,7 +114,7 @@ Deno.serve(async (req) => {
         default:
           return new Response(
             JSON.stringify({ error: `Unknown action: ${action}`, requestId }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
       }
     } else if (ADMIN_ACTIONS.has(action)) {
@@ -122,7 +123,7 @@ Deno.serve(async (req) => {
       if (!authHeader) {
         return new Response(
           JSON.stringify({ error: 'Unauthorized: Missing token', requestId }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -133,7 +134,7 @@ Deno.serve(async (req) => {
       if (authErr || !user) {
         return new Response(
           JSON.stringify({ error: 'Unauthorized', requestId }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -149,7 +150,7 @@ Deno.serve(async (req) => {
       if (!userRole || !['admin', 'super_admin'].includes(userRole.role)) {
         return new Response(
           JSON.stringify({ error: 'Forbidden: Admin access required', requestId }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -160,13 +161,13 @@ Deno.serve(async (req) => {
         default:
           return new Response(
             JSON.stringify({ error: `Unknown admin action: ${action}`, requestId }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
       }
     } else {
       return new Response(
         JSON.stringify({ error: `Unknown action: ${action}`, requestId }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -188,7 +189,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ ...result as Record<string, unknown>, requestId, action, duration_ms: durationMs }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -196,7 +197,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: false, error: errorMessage, requestId }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });

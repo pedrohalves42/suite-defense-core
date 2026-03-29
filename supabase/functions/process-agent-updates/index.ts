@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import {
   SupabaseVersionQueryAdapter,
@@ -14,8 +14,9 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   // V-1146: Defense-in-depth auth guard ? allow admin users from frontend
@@ -31,7 +32,7 @@ Deno.serve(async (req) => {
     if (userError || !user) {
       return new Response(
         JSON.stringify({ error: 'Invalid authentication token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
       );
     }
     // Verify admin role
@@ -43,7 +44,7 @@ Deno.serve(async (req) => {
     if (!roles || roles.length === 0) {
       return new Response(
         JSON.stringify({ error: 'Insufficient permissions' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
       );
     }
     logger.info('[process-agent-updates] Triggered by admin user', { userId: user.id });
@@ -70,7 +71,7 @@ Deno.serve(async (req) => {
     if (result.platforms.length === 0) {
       return new Response(
         JSON.stringify({ message: 'No latest versions registered' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
       );
     }
 
@@ -96,7 +97,7 @@ Deno.serve(async (req) => {
           jobs_created: p.jobsCreated,
         })),
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
     );
 
   } catch (error) {
@@ -123,7 +124,7 @@ Deno.serve(async (req) => {
         message: err.message,
         requestId,
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
     );
   }
 });

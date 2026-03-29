@@ -8,15 +8,14 @@ import {
   addHealthHeaders
 } from '../_shared/health-probe.ts'
 import { requireSuperAdmin } from '../_shared/require-super-admin.ts'
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'content-type, authorization, x-client-info, apikey'
+  const origin = req.headers.get("origin");
   }
 
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: addHealthHeaders(corsHeaders) })
+    return new Response(null, { headers: addHealthHeaders(buildCorsHeaders(origin)) })
   }
 
   try {
@@ -38,7 +37,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({
           error: 'POST the script content as request body',
           usage: 'curl -X POST --data-binary @script.ps1 "URL/health?sync_script=true&version=v5.0.4&platform=windows"'
-        }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } })
       }
 
       const script = await req.text()
@@ -49,12 +48,12 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({
           error: 'Script content too short',
           length: script?.length || 0
-        }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } })
       }
 
       if (script.trimStart().startsWith('<!DOCTYPE') || script.trimStart().startsWith('<html')) {
         return new Response(JSON.stringify({ error: 'Content is HTML, not a script' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         })
       }
 
@@ -75,14 +74,14 @@ Deno.serve(async (req) => {
 
       if (error) {
         return new Response(JSON.stringify({ error: error.message }), {
-          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         })
       }
 
       return new Response(JSON.stringify({
         success: true, version, platform,
         script_size: bytes.length, sha256: hash, updated: data
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }), { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } })
     }
 
     // Regular health check
@@ -101,7 +100,7 @@ Deno.serve(async (req) => {
           error: dbError.message, timestamp: new Date().toISOString(),
           edge_version: EDGE_VERSION
         }),
-        { status: 503, headers: addHealthHeaders({ ...corsHeaders, 'Content-Type': 'application/json' }) }
+        { status: 503, headers: addHealthHeaders({ ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }) }
       )
     }
 
@@ -113,13 +112,13 @@ Deno.serve(async (req) => {
         system_mode: systemMode, schema_valid: schemaValidation.valid,
         missing_tables: schemaValidation.missingTables, uptime: 'ok'
       }),
-      { status: 200, headers: addHealthHeaders({ ...corsHeaders, 'Content-Type': 'application/json' }) }
+      { status: 200, headers: addHealthHeaders({ ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }) }
     )
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return new Response(
       JSON.stringify({ status: 'error', message: errorMessage, timestamp: new Date().toISOString() }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     )
   }
 })

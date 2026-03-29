@@ -1,7 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -15,13 +16,14 @@ interface StuckBuild {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   const requestId = crypto.randomUUID();
   const startedAt = Date.now();
   
   logger.info('[build-watchdog] Starting watchdog check');
 
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   try {
@@ -48,7 +50,7 @@ Deno.serve(async (req) => {
             requestId,
             timestamp: new Date().toISOString()
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -67,7 +69,7 @@ Deno.serve(async (req) => {
         } else {
           // Verificar status no GitHub
           try {
-            const ghResponse = await fetch(
+            const ghResponse = await fetchWithTimeout(
               `https://api.github.com/repos/${GITHUB_REPO}/actions/runs/${build.github_run_id}`,
               {
                 headers: {
@@ -137,13 +139,13 @@ Deno.serve(async (req) => {
           requestId,
           timestamp: new Date().toISOString()
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }, { timeoutMs: 25000 });
 
   } catch (error) {
     if (error instanceof Error && error.message === 'Request timeout') {
-      return createTimeoutResponse(corsHeaders);
+      return createTimeoutResponse(buildCorsHeaders(origin));
     }
     
     logger.error('[build-watchdog] Error', error);
@@ -168,7 +170,7 @@ Deno.serve(async (req) => {
         message: error instanceof Error ? error.message : 'Unknown error',
         requestId
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });

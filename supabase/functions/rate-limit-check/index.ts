@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logger } from '../_shared/logger.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
-const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
@@ -20,8 +20,9 @@ const ENDPOINT_LIMITS: Record<string, RateLimitConfig> = {
 };
 
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   try {
@@ -30,7 +31,7 @@ Deno.serve(async (req: Request) => {
     if (!identifier || !endpoint || !tenant_id) {
       return new Response(
         JSON.stringify({ error: "Missing required fields: identifier, endpoint, tenant_id" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
       );
     }
 
@@ -71,7 +72,7 @@ Deno.serve(async (req: Request) => {
           {
             status: 429,
             headers: {
-              ...corsHeaders,
+              ...buildCorsHeaders(origin),
               "Content-Type": "application/json",
               "Retry-After": String(Math.ceil((blockedUntil.getTime() - Date.now()) / 1000)),
             },
@@ -122,7 +123,7 @@ Deno.serve(async (req: Request) => {
         {
           status: 429,
           headers: {
-            ...corsHeaders,
+            ...buildCorsHeaders(origin),
             "Content-Type": "application/json",
             "Retry-After": String(config.windowSeconds),
           },
@@ -137,14 +138,14 @@ Deno.serve(async (req: Request) => {
         limit: config.maxRequests,
         window_seconds: config.windowSeconds,
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
     );
   } catch (error) {
     logger.error("Rate limit check error:", error);
     // Fail open ? don't block requests if rate limiter errors
     return new Response(
       JSON.stringify({ allowed: true, error: "Rate limiter unavailable" }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
     );
   }
 });

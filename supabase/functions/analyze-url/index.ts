@@ -1,6 +1,7 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 const VIRUSTOTAL_API_KEY = Deno.env.get('VIRUSTOTAL_API_KEY');
 const ABUSEIPDB_API_KEY = Deno.env.get('ABUSEIPDB_API_KEY');
@@ -166,13 +167,13 @@ serveTenant(async (req, ctx) => {
 
 async function analyzeWithVirusTotal(url: string, apiKey: string): Promise<VirusTotalResult> {
   const urlId = btoa(url).replace(/=/g, '');
-  const getResponse = await fetch(`https://www.virustotal.com/api/v3/urls/${urlId}`, {
+  const getResponse = await fetchWithTimeout(`https://www.virustotal.com/api/v3/urls/${urlId}`, {
     method: 'GET',
     headers: { 'x-apikey': apiKey },
   });
 
   if (getResponse.status === 404) {
-    const scanResponse = await fetch('https://www.virustotal.com/api/v3/urls', {
+    const scanResponse = await fetchWithTimeout('https://www.virustotal.com/api/v3/urls', {
       method: 'POST',
       headers: { 'x-apikey': apiKey, 'Content-Type': 'application/x-www-form-urlencoded' },
       body: `url=${encodeURIComponent(url)}`,
@@ -205,7 +206,7 @@ async function analyzeWithVirusTotal(url: string, apiKey: string): Promise<Virus
 }
 
 async function analyzeWithAbuseIPDB(ip: string, apiKey: string): Promise<AbuseIPDBResult> {
-  const response = await fetch(`https://api.abuseipdb.com/api/v2/check?ipAddress=${encodeURIComponent(ip)}&maxAgeInDays=90`, {
+  const response = await fetchWithTimeout(`https://api.abuseipdb.com/api/v2/check?ipAddress=${encodeURIComponent(ip)}&maxAgeInDays=90`, {
     method: 'GET',
     headers: { 'Key': apiKey, 'Accept': 'application/json' },
   });

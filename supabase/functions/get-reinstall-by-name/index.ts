@@ -18,13 +18,14 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { hashToken } from '../_shared/token-hash.ts';
 import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const requestId = crypto.randomUUID();
@@ -44,7 +45,7 @@ Deno.serve(async (req) => {
     if (!agentName) {
       return new Response(
         '# ERROR: Missing agent name in URL\n# Usage: irm ".../get-reinstall-by-name/YOUR_AGENT_NAME?key=YOUR_KEY" | iex\n# Or:    irm ".../get-reinstall-by-name?name=YOUR_AGENT_NAME&key=YOUR_KEY" | iex\nWrite-Host "ERROR: Specify agent name in URL" -ForegroundColor Red\n',
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain; charset=utf-8' } }
       );
     }
 
@@ -87,7 +88,7 @@ Deno.serve(async (req) => {
         logger.error(`[${requestId}] Invalid enrollment key`);
         return new Response(
           '# ERROR: Invalid or expired enrollment key\n# Tip: use an ACTIVE Enrollment Key from Chaves de Instalacao (not JWT)\nWrite-Host "ERROR: Invalid key" -ForegroundColor Red\n',
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }
+          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain; charset=utf-8' } }
         );
       }
 
@@ -95,7 +96,7 @@ Deno.serve(async (req) => {
       if (ek.expires_at && new Date(ek.expires_at) < new Date()) {
         return new Response(
           '# ERROR: Enrollment key has expired\nWrite-Host "ERROR: Key expired" -ForegroundColor Red\n',
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }
+          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain; charset=utf-8' } }
         );
       }
 
@@ -103,7 +104,7 @@ Deno.serve(async (req) => {
       if (ek.max_uses && ek.current_uses >= ek.max_uses) {
         return new Response(
           '# ERROR: Enrollment key usage limit reached\nWrite-Host "ERROR: Key usage limit reached" -ForegroundColor Red\n',
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }
+          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain; charset=utf-8' } }
         );
       }
 
@@ -125,7 +126,7 @@ Deno.serve(async (req) => {
       if (authError || !user) {
         return new Response(
           '# ERROR: Invalid JWT token\nWrite-Host "ERROR: Auth failed" -ForegroundColor Red\n',
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }
+          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain; charset=utf-8' } }
         );
       }
       // Get tenant
@@ -138,14 +139,14 @@ Deno.serve(async (req) => {
     } else {
       return new Response(
         '# ERROR: Authentication required\n# Provide one of:\n#  - Query: ?key=YOUR_ENROLLMENT_KEY\n#  - Header: X-Enrollment-Key: YOUR_ENROLLMENT_KEY\n#  - POST JSON: {"enrollment_key":"YOUR_ENROLLMENT_KEY"}\nWrite-Host "ERROR: No auth provided" -ForegroundColor Red\n',
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain; charset=utf-8' } }
       );
     }
 
     if (!tenantId) {
       return new Response(
         '# ERROR: Could not determine tenant\nWrite-Host "ERROR: No tenant" -ForegroundColor Red\n',
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }
+        { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain; charset=utf-8' } }
       );
     }
 
@@ -163,7 +164,7 @@ Deno.serve(async (req) => {
       logger.warn(`[${requestId}] Agent not found: ${agentName}`);
       return new Response(
         `# ERROR: Agent "${agentName}" not found in your tenant\nWrite-Host "ERROR: Agent not found: ${agentName}" -ForegroundColor Red\n`,
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }
+        { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain; charset=utf-8' } }
       );
     }
 
@@ -194,7 +195,7 @@ Deno.serve(async (req) => {
       logger.error(`[${requestId}] Token creation failed:`, tokenError);
       return new Response(
         '# ERROR: Failed to generate credentials\nWrite-Host "ERROR: Token creation failed" -ForegroundColor Red\n',
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }
+        { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain; charset=utf-8' } }
       );
     }
 
@@ -225,7 +226,7 @@ Deno.serve(async (req) => {
     if (!release?.script_content) {
       return new Response(
         '# ERROR: No active agent script found in database\nWrite-Host "ERROR: No script available" -ForegroundColor Red\n',
-        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }
+        { status: 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain; charset=utf-8' } }
       );
     }
 
@@ -445,7 +446,7 @@ Start-Sleep -Seconds 15
     return new Response(script, {
       status: 200,
       headers: {
-        ...corsHeaders,
+        ...buildCorsHeaders(origin),
         'Content-Type': 'text/plain; charset=utf-8',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
       },
@@ -455,7 +456,7 @@ Start-Sleep -Seconds 15
     logger.error(`[${requestId}] Error:`, error);
     return new Response(
       `# ERROR: ${error instanceof Error ? error.message : 'Internal error'}\nWrite-Host "ERROR: Internal server error" -ForegroundColor Red\n`,
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain; charset=utf-8' } }
     );
   }
 });

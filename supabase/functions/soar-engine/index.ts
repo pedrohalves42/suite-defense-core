@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 /**
  * SOAR Lite Engine ? Automated Security Response
@@ -12,11 +13,6 @@ import { logger } from '../_shared/logger.ts';
  * Flow:
  *   Event ? Match Rules ? Check Blast Radius ? Create Remediation Job
  */
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 interface SOAREvent {
   tenant_id: string;
@@ -136,8 +132,9 @@ function mapEventToTrigger(eventType: string, details: Record<string, unknown>):
 }
 
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const requestId = crypto.randomUUID().slice(0, 8);
@@ -153,7 +150,7 @@ Deno.serve(async (req: Request) => {
 
     if (!events.length) {
       return new Response(JSON.stringify({ success: true, actions: 0 }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -289,13 +286,13 @@ Deno.serve(async (req: Request) => {
         results,
         request_id: requestId,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
     );
   } catch (error) {
     logger.error(`[${requestId}] [SOAR] Fatal error:`, error);
     return new Response(
       JSON.stringify({ success: false, error: String(error), request_id: requestId }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
     );
   }
 });

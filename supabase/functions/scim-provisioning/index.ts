@@ -3,7 +3,7 @@
  * Suporte a Okta, Azure AD, Google Workspace
  */
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 
 const SCIM_SCHEMAS = {
@@ -14,7 +14,7 @@ const SCIM_SCHEMAS = {
   SERVICE_PROVIDER_CONFIG: 'urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig',
 } as const;
 
-const scimHeaders = { ...corsHeaders, 'Content-Type': 'application/scim+json' };
+const scimHeaders = { ...buildCorsHeaders(origin), 'Content-Type': 'application/scim+json' };
 
 function scimError(status: number, detail: string): Response {
   return new Response(JSON.stringify({ schemas: [SCIM_SCHEMAS.ERROR], detail, status }), {
@@ -506,6 +506,7 @@ async function deleteGroup(supabase: SupabaseClient, tenantId: string, groupId: 
 // ?? Main Handler ????????????????????????????????????????????????????????
 
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: scimHeaders, status: 204 });
   }

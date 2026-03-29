@@ -1,7 +1,7 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { aiSimpleComplete, getProviderStatus } from '../_shared/ai-multi-provider.ts';
 import { logger } from '../_shared/logger.ts';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 
 interface TranslateCveBody {
   tenant_id?: string;
@@ -16,7 +16,7 @@ serveTenant<TranslateCveBody>(async (_req, ctx) => {
   if (!description) {
     return new Response(
       JSON.stringify({ error: 'Description required' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 

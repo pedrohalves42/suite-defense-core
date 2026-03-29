@@ -2,11 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { callAIJson } from '../_shared/ai-provider-helper.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 interface AnomalyResult {
   agent_id: string;
@@ -21,8 +17,9 @@ interface AnomalyResult {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   try {
@@ -41,7 +38,7 @@ Deno.serve(async (req) => {
     const { data: systemMode } = await supabase.rpc('get_system_mode_safe');
     if (systemMode === 'halt_jobs') {
       return new Response(JSON.stringify({ success: false, error: 'SYSTEM_HALTED' }), {
-        status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -55,7 +52,7 @@ Deno.serve(async (req) => {
 
     if (!tenants || tenants.length === 0) {
       return new Response(JSON.stringify({ success: true, anomalies: [] }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -205,13 +202,13 @@ Contextualize cada anomalia: e um problema real ou atividade normal?`;
       anomalies: allAnomalies,
       timestamp: new Date().toISOString(),
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
     logger.error('[ai-behavioral-anomaly-detector] Error:', error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   }
 });

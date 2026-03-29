@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
-import { corsHeaders } from '../_shared/cors.ts'
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts'
 import { logger } from '../_shared/logger.ts';
 
 /**
@@ -13,8 +13,9 @@ const ACS_URL = Deno.env.get('SAML_ACS_URL') || 'https://cybershield-audit.lovab
 const DASHBOARD_URL = Deno.env.get('DASHBOARD_URL') || 'https://cybershield-audit.lovable.app'
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders, status: 204 })
+    return new Response(null, { headers: buildCorsHeaders(origin), status: 204 })
   }
 
   const supabase = createClient(
@@ -40,7 +41,7 @@ Deno.serve(async (req) => {
   </SPSSODescriptor>
 </EntityDescriptor>`
       return new Response(metadata, {
-        headers: { ...corsHeaders, 'Content-Type': 'application/xml' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/xml' }
       })
     }
 
@@ -49,7 +50,7 @@ Deno.serve(async (req) => {
       const { tenantId } = body
       if (!tenantId) {
         return new Response(JSON.stringify({ error: 'tenantId required' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         })
       }
 
@@ -62,7 +63,7 @@ Deno.serve(async (req) => {
 
       if (cfgErr || !config) {
         return new Response(JSON.stringify({ error: 'SAML not configured for this tenant' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         })
       }
 
@@ -90,7 +91,7 @@ Deno.serve(async (req) => {
 
       logger.info(`[saml-sso] Login initiated for tenant ${tenantId}, provider: ${config.provider}`)
       return new Response(JSON.stringify({ redirect_url: redirectUrl }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       })
     }
 
@@ -99,7 +100,7 @@ Deno.serve(async (req) => {
       const { samlResponse, relayState } = body
       if (!samlResponse) {
         return new Response(JSON.stringify({ error: 'SAMLResponse required' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         })
       }
 
@@ -120,7 +121,7 @@ Deno.serve(async (req) => {
 
       if (!email) {
         return new Response(JSON.stringify({ error: 'Email not found in SAML response' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         })
       }
 
@@ -170,7 +171,7 @@ Deno.serve(async (req) => {
 
       if (linkErr || !linkData) {
         return new Response(JSON.stringify({ error: 'Failed to create session' }), {
-          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         })
       }
 
@@ -193,7 +194,7 @@ Deno.serve(async (req) => {
         email,
         redirect_url: DASHBOARD_URL,
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       })
     }
 
@@ -202,21 +203,21 @@ Deno.serve(async (req) => {
       const authHeader = req.headers.get('Authorization')
       if (!authHeader) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         })
       }
       const token = authHeader.replace('Bearer ', '')
       const { data: claims, error: claimsErr } = await supabase.auth.getClaims(token)
       if (claimsErr || !claims?.claims?.sub) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         })
       }
 
       const { tenantId, provider, entityId, ssoUrl, certificate, attributeMapping } = body
       if (!tenantId || !provider || !ssoUrl) {
         return new Response(JSON.stringify({ error: 'tenantId, provider, ssoUrl required' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         })
       }
 
@@ -242,7 +243,7 @@ Deno.serve(async (req) => {
       }).catch(() => {})
 
       return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       })
     }
 
@@ -251,7 +252,7 @@ Deno.serve(async (req) => {
       const { tenantId } = body
       if (!tenantId) {
         return new Response(JSON.stringify({ error: 'tenantId required' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         })
       }
 
@@ -262,17 +263,17 @@ Deno.serve(async (req) => {
         .maybeSingle()
 
       return new Response(JSON.stringify(config || { enabled: false }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       })
     }
 
     return new Response(JSON.stringify({ error: 'Unknown action' }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
     })
   } catch (error) {
     logger.error('[saml-sso] Error:', error)
     return new Response(JSON.stringify({ error: (error as Error).message }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
     })
   }
 })

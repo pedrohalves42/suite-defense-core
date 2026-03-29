@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -96,14 +97,15 @@ interface CVERecord {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   if (req.method !== 'POST') {
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 405, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 
@@ -144,7 +146,7 @@ Deno.serve(async (req) => {
             cves: cachedCVEs,
             total: cachedCVEs.length
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
     }
@@ -173,7 +175,7 @@ Deno.serve(async (req) => {
     logger.info(`[${requestId}] [FETCH-NVD] Fetching from NVD: ${nvdUrl}`);
 
     // Fetch from NVD API
-    const nvdResponse = await fetch(nvdUrl, {
+    const nvdResponse = await fetchWithTimeout(nvdUrl, {
       headers: {
         'Accept': 'application/json',
         'User-Agent': 'CyberShield-Security-Scanner/1.0'
@@ -191,7 +193,7 @@ Deno.serve(async (req) => {
             error: 'NVD API rate limit exceeded. Please wait and try again.',
             retry_after_seconds: 30
           }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
       
@@ -349,7 +351,7 @@ Deno.serve(async (req) => {
           hasMore: nvdData.startIndex + nvdData.resultsPerPage < nvdData.totalResults
         }
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
 
   } catch (error: unknown) {
@@ -358,7 +360,7 @@ Deno.serve(async (req) => {
     
     return new Response(
       JSON.stringify({ error: message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });

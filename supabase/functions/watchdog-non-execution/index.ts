@@ -18,11 +18,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.47.10';
 import { logger } from '../_shared/logger.ts';
 import { shouldProcessAlertsForTenant } from '../_shared/business-hours.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 interface AgentExecutionHealth {
   agent_id: string;
@@ -43,11 +39,12 @@ interface AgentExecutionHealth {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   const requestId = crypto.randomUUID();
 
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   // V-1148: Defense-in-depth auth guard for cron function
@@ -86,7 +83,7 @@ Deno.serve(async (req) => {
           timestamp: new Date().toISOString(),
         }),
         {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
           status: 200,
         }
       );
@@ -236,7 +233,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify(result),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         status: 200,
       }
     );
@@ -269,7 +266,7 @@ Deno.serve(async (req) => {
         timestamp: new Date().toISOString(),
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         status: 500,
       }
     );

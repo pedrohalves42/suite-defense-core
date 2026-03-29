@@ -3,7 +3,7 @@
  * Previously used validateCallerTenant() directly ? now handled by middleware.
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 
 serveTenant(async (_req, ctx) => {
   const { tenantId, supabase, body } = ctx;
@@ -12,7 +12,7 @@ serveTenant(async (_req, ctx) => {
   if (!simulation_type) {
     return new Response(
       JSON.stringify({ error: 'simulation_type required' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 
@@ -27,7 +27,7 @@ serveTenant(async (_req, ctx) => {
   if (!agents?.length) {
     return new Response(
       JSON.stringify({ error: 'No online agents to test' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 

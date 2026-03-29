@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { handleException } from '../_shared/error-handler.ts';
 import { createAuditLog } from '../_shared/audit.ts';
 import { logger } from '../_shared/logger.ts';
@@ -26,8 +26,9 @@ interface RemediationRequest {
 }
 
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const requestId = crypto.randomUUID();
@@ -51,7 +52,7 @@ Deno.serve(async (req: Request) => {
       const { data: { user }, error } = await userClient.auth.getUser();
       if (error || !user) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         });
       }
       userId = user.id;
@@ -60,7 +61,7 @@ Deno.serve(async (req: Request) => {
       tenantId = role?.tenant_id;
     } else {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -69,7 +70,7 @@ Deno.serve(async (req: Request) => {
 
     if (!agent_id || !action_type || !trigger_source) {
       return new Response(JSON.stringify({ error: 'agent_id, action_type, and trigger_source are required' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -87,7 +88,7 @@ Deno.serve(async (req: Request) => {
 
     if (agentErr || !agent) {
       return new Response(JSON.stringify({ error: 'Agent not found or access denied' }), {
-        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -95,7 +96,7 @@ Deno.serve(async (req: Request) => {
     if (tenantId && tenantId !== agent.tenant_id) {
       logger.warn(`[SECURITY] Tenant mismatch: user tenant ${tenantId} vs agent tenant ${agent.tenant_id}`);
       return new Response(JSON.stringify({ error: 'Access denied: agent belongs to different tenant' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
     tenantId = tenantId || agent.tenant_id;
@@ -132,7 +133,7 @@ Deno.serve(async (req: Request) => {
           error: 'BLAST_RADIUS_EXCEEDED',
           affected_percent: blastCheck.affected_percent,
           message: `Remediacao bloqueada: ${blastCheck.affected_percent?.toFixed(1)}% da frota ja esta sendo remediada. Limite: 10%.`,
-        }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }), { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
       }
     } catch (blastErr) {
       // Fail-open: if blast radius check fails, proceed with remediation
@@ -155,7 +156,7 @@ Deno.serve(async (req: Request) => {
           success: false,
           error: 'CIRCUIT_BREAKER_OPEN',
           message: 'Circuit breaker aberto: muitas remediacoes nos ultimos 10 minutos. Aguarde o cooldown.',
-        }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }), { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
       }
     } catch {
       // Fail-open
@@ -197,7 +198,7 @@ Deno.serve(async (req: Request) => {
         action_id: action?.id,
         status: 'pending_approval',
         message: 'Action requires approval before execution',
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }), { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
     }
 
     // Execute remediation via job
@@ -299,7 +300,7 @@ Deno.serve(async (req: Request) => {
       status: 'executing',
       action_type,
       rollback_supported: !!ROLLBACK_MAP[action_type],
-    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }), { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
   } catch (error) {
     return handleException(error, requestId, 'auto-remediate');
   }

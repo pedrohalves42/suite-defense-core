@@ -3,7 +3,7 @@
  * Previously had NO authentication at all.
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { sanitizeForAI } from '../_shared/ai-sanitizer.ts';
 import { callAIJson } from '../_shared/ai-provider-helper.ts';
 import { AIEvidence, buildEvidence, calculateConfidence, generateReasoningSummary, extractDataSources } from '../_shared/ai-evidence-types.ts';
@@ -53,7 +53,7 @@ serveTenant(async (_req, ctx) => {
   if (!agent || !context) {
     return new Response(
       JSON.stringify({ error: 'Agent and context are required' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 

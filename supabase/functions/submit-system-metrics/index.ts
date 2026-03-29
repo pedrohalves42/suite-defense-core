@@ -1,11 +1,12 @@
 import { requireEnv } from '../_shared/env.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logger } from '../_shared/logger.ts';
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts';
 import { hashToken } from '../_shared/token-hash.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 const SUPABASE_URL = requireEnv('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
@@ -44,6 +45,7 @@ interface SystemMetrics {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   // QUAL-01: Proper HTTP method validation
   if (req.method === 'OPTIONS') {
     return handleCorsPreflightRequest();
@@ -60,7 +62,7 @@ Deno.serve(async (req) => {
     if (!agentToken) {
       return new Response(JSON.stringify({ error: 'Missing agent token' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -89,7 +91,7 @@ Deno.serve(async (req) => {
       logger.warn('Invalid agent token');
       return new Response(JSON.stringify({ error: 'Invalid agent token' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -108,7 +110,7 @@ Deno.serve(async (req) => {
           }), 
           {
             status: 401,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
           }
         );
       }
@@ -130,7 +132,7 @@ Deno.serve(async (req) => {
         }), 
         {
           status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         }
       );
     }
@@ -207,7 +209,7 @@ Deno.serve(async (req) => {
       logger.error('Failed to insert metrics', insertError);
       return new Response(JSON.stringify({ error: 'Failed to store metrics' }), {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
     
@@ -404,7 +406,7 @@ Deno.serve(async (req) => {
 
       if (activeRules && activeRules.length > 0) {
         const evalUrl = `${SUPABASE_URL}/functions/v1/evaluate-automation-rules`;
-        const evalResponse = await fetch(evalUrl, {
+        const evalResponse = await fetchWithTimeout(evalUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -516,7 +518,7 @@ Deno.serve(async (req) => {
       }), 
       {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       }
     );
 
@@ -526,7 +528,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ error: 'Internal server error' }), 
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       }
     );
   }

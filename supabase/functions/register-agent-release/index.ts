@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { signPayload } from '../_shared/crypto-utils.ts';
 
@@ -36,8 +36,9 @@ function extractEmbeddedVersion(scriptContent: string): string | null {
  */
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const requestId = crypto.randomUUID();
@@ -52,7 +53,7 @@ Deno.serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: 'Missing authorization' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -63,7 +64,7 @@ Deno.serve(async (req) => {
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -77,7 +78,7 @@ Deno.serve(async (req) => {
     if (!isSuperAdmin) {
       return new Response(
         JSON.stringify({ error: 'Requires super_admin role' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -98,7 +99,7 @@ Deno.serve(async (req) => {
     if (!platform || !version || !script_content) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields: platform, version, script_content' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -122,7 +123,7 @@ Deno.serve(async (req) => {
           size: script_content.length,
           minRequired: MIN_SCRIPT_SIZE
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -150,7 +151,7 @@ Deno.serve(async (req) => {
           error: 'Platform mismatch: Windows scripts must start with <# or param()',
           detected: isUnixScript ? 'Unix/macOS bash script' : 'Unknown script type'
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -166,7 +167,7 @@ Deno.serve(async (req) => {
           error: 'Platform mismatch: Linux/macOS scripts must start with #!/',
           detected: isWindowsScript ? 'Windows PowerShell script' : 'Unknown script type'
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -189,7 +190,7 @@ Deno.serve(async (req) => {
           error: 'Embedded version not found in script content',
           message: 'The uploaded script must declare its own version in the header or AGENT_VERSION variable.'
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -207,7 +208,7 @@ Deno.serve(async (req) => {
           declared_version: version,
           embedded_version: embeddedVersion,
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -354,7 +355,7 @@ Deno.serve(async (req) => {
         signature_present: !!finalSignature,
         signed_by: finalSignedBy || null
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
@@ -371,7 +372,7 @@ Deno.serve(async (req) => {
         message: err.message,
         requestId
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });

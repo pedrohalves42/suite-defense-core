@@ -4,11 +4,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { timingSafeEqual } from '../_shared/crypto-utils.ts';
 import { logger } from '../_shared/logger.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 interface TriggerEvent {
   tenant_id: string;
@@ -54,7 +51,7 @@ interface TenantSettings {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const startTime = Date.now();
@@ -81,7 +78,7 @@ serve(async (req) => {
           error: 'Unauthorized: Authentication required' 
         }), { 
           status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
         });
       }
     }
@@ -94,7 +91,7 @@ serve(async (req) => {
         error: 'tenant_id and trigger_type are required' 
       }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -109,7 +106,7 @@ serve(async (req) => {
           error: 'Invalid token' 
         }), { 
           status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
         });
       }
       
@@ -127,7 +124,7 @@ serve(async (req) => {
           error: 'Access denied: You do not have access to this tenant' 
         }), { 
           status: 403, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
         });
       }
       
@@ -138,7 +135,7 @@ serve(async (req) => {
           error: 'Forbidden: Only admins can trigger playbooks' 
         }), { 
           status: 403, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
         });
       }
     }
@@ -181,7 +178,7 @@ serve(async (req) => {
         triggered: false,
         reason: 'No active playbooks for this trigger type',
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -204,7 +201,7 @@ serve(async (req) => {
         reason: 'Cooldown active - recent execution exists',
         cooldown_minutes: cooldownMinutes,
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -220,7 +217,7 @@ serve(async (req) => {
         conditions,
         context,
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -413,7 +410,7 @@ serve(async (req) => {
           max_allowed: MAX_PENDING_APPROVALS_PER_TENANT,
         }), {
           status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         });
       }
       
@@ -491,7 +488,7 @@ serve(async (req) => {
           const APP_URL = Deno.env.get('APP_URL') || 'https://cybershield.com.br';
           const approvalUrl = `${SUPABASE_URL}/functions/v1/approve-via-token?token=${approvalRequest?.approval_token}`;
           
-          await fetch(`${SUPABASE_URL}/functions/v1/notification-dispatcher`, {
+          await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/notification-dispatcher`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -539,7 +536,7 @@ serve(async (req) => {
       
       try {
         const executeUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/execute-playbook-action`;
-        await fetch(executeUrl, {
+        await fetchWithTimeout(executeUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -607,7 +604,7 @@ serve(async (req) => {
       would_auto_execute: wouldAutoExecute,
       execution_time_ms: Date.now() - startTime,
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
@@ -616,7 +613,7 @@ serve(async (req) => {
       error: error instanceof Error ? error.message : 'Internal server error',
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   }
 });

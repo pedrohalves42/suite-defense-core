@@ -4,6 +4,7 @@
  */
 import { logger } from '../_shared/logger.ts';
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 const SEVERITY_EMOJI: Record<string, string> = {
   critical: '🔴', high: '🟠', medium: '🟡', low: '🟢', info: 'ℹ️',
@@ -49,7 +50,7 @@ export async function handleWhatsApp(
   formData.append('To', toNumber);
   formData.append('Body', message);
 
-  const response = await fetch(twilioUrl, {
+  const response = await fetchWithTimeout(twilioUrl, {
     method: 'POST',
     headers: { 'Authorization': `Basic ${credentials}`, 'Content-Type': 'application/x-www-form-urlencoded' },
     body: formData.toString(),

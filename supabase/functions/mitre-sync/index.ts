@@ -10,16 +10,18 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 const MITRE_ENTERPRISE_URL =
   'https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json';
 
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders, status: 204 });
+    return new Response(null, { headers: buildCorsHeaders(origin), status: 204 });
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -28,7 +30,7 @@ Deno.serve(async (req: Request) => {
   if (!supabaseUrl || !serviceRoleKey) {
     return new Response(
       JSON.stringify({ error: 'Server configuration error: Missing credentials.' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 
@@ -95,7 +97,7 @@ Deno.serve(async (req: Request) => {
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
   });
 }
 
@@ -103,7 +105,7 @@ async function syncMitreRules(supabase: ReturnType<typeof createClient>) {
   const t0 = Date.now();
   logger.info('[mitre-sync] Fetching MITRE Enterprise ATT&CK?');
 
-  const resp = await fetch(MITRE_ENTERPRISE_URL);
+  const resp = await fetchWithTimeout(MITRE_ENTERPRISE_URL);
   if (!resp.ok) throw new Error(`MITRE fetch failed: ${resp.status}`);
   const stix = await resp.json();
 

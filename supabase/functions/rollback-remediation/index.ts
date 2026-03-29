@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { handleException } from '../_shared/error-handler.ts';
 import { createAuditLog } from '../_shared/audit.ts';
 
@@ -12,8 +12,9 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
  * Body: { action_id: string }
  */
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const requestId = crypto.randomUUID();
@@ -25,7 +26,7 @@ Deno.serve(async (req: Request) => {
     const jwtHeader = req.headers.get('Authorization');
     if (!jwtHeader) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -35,7 +36,7 @@ Deno.serve(async (req: Request) => {
     const { data: { user }, error: authErr } = await userClient.auth.getUser();
     if (authErr || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -47,14 +48,14 @@ Deno.serve(async (req: Request) => {
     const adminRoles = (userRoles || []).filter(r => ['admin', 'super_admin'].includes(r.role));
     if (adminRoles.length === 0) {
       return new Response(JSON.stringify({ error: 'Admin role required for rollback' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
     const { action_id } = await req.json();
     if (!action_id) {
       return new Response(JSON.stringify({ error: 'action_id required' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -71,13 +72,13 @@ Deno.serve(async (req: Request) => {
 
     if (fetchErr || !action) {
       return new Response(JSON.stringify({ error: 'Remediation action not found' }), {
-        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
     if (action.status !== 'success' && action.status !== 'executing') {
       return new Response(JSON.stringify({ error: `Cannot rollback action in status: ${action.status}` }), {
-        status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 409, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -85,7 +86,7 @@ Deno.serve(async (req: Request) => {
     const rollbackPayload = buildRollbackPayload(action.action_type, action.trigger_details as Record<string, unknown>);
     if (!rollbackPayload) {
       return new Response(JSON.stringify({ error: `Rollback not supported for action type: ${action.action_type}` }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -163,7 +164,7 @@ Deno.serve(async (req: Request) => {
       rollback_job_id: job?.id,
       original_action_id: action_id,
       message: `Rollback initiated for "${action.action_type}" on agent "${action.agent_name}"`,
-    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }), { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
   } catch (error) {
     return handleException(error, requestId, 'rollback-remediation');
   }

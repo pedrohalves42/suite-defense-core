@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { signPayload } from '../_shared/crypto-utils.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
@@ -79,9 +79,10 @@ async function requireSuperAdmin(supabase: ReturnType<typeof createClient>, req:
  * validates the embedded version, re-signs them, and updates agent_releases/agent_versions.
  */
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  const origin = req.headers.get("origin");
+  if (req.method === 'OPTIONS') return new Response(null, { headers: buildCorsHeaders(origin) });
   if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405, headers: corsHeaders });
+    return new Response('Method not allowed', { status: 405, headers: buildCorsHeaders(origin) });
   }
 
   try {
@@ -240,7 +241,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ success: true, version: VERSION, results }, null, 2), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -252,7 +253,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ error: message }), {
       status,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   }
 });

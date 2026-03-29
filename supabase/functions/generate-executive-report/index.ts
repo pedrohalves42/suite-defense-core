@@ -2,7 +2,7 @@ import { requireEnv } from '../_shared/env.ts';
 // Edge Function: Generate Executive Report (Daily Risk Delta Narrative)
 // Fase 2: Narrativa Executiva Continua
 
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { callAISimple } from '../_shared/ai-provider-helper.ts';
 import { timingSafeEqual } from '../_shared/crypto-utils.ts';
@@ -113,8 +113,9 @@ function estimateCostAvoided(data: RiskDelta): number {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: buildCorsHeaders(origin) });
   }
 
   const startedAt = Date.now();
@@ -142,7 +143,7 @@ Deno.serve(async (req) => {
       logger.info('[generate-executive-report] Unauthorized: No valid origin');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -309,7 +310,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify(result),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     logger.error('Error:', error);
@@ -329,7 +330,7 @@ Deno.serve(async (req) => {
     
     return new Response(
       JSON.stringify({ success: false, error: String(error) }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });

@@ -2,11 +2,8 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 // ?? Feed Fetchers ??
 
@@ -26,7 +23,7 @@ async function fetchMalwareBazaarRecent(): Promise<RawIndicator[]> {
   try {
     const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded' };
     if (abuseKey) headers['Auth-Key'] = abuseKey;
-    const resp = await fetch('https://mb-api.abuse.ch/api/v1/', {
+    const resp = await fetchWithTimeout('https://mb-api.abuse.ch/api/v1/', {
       method: 'POST',
       headers,
       body: 'query=get_recent&limit=50',
@@ -81,7 +78,7 @@ async function fetchMalwareBazaarCSV(): Promise<RawIndicator[]> {
   const indicators: RawIndicator[] = [];
   try {
     // Fallback: use the daily CSV hash list
-    const resp = await fetch('https://bazaar.abuse.ch/export/csv/recent/', {
+    const resp = await fetchWithTimeout('https://bazaar.abuse.ch/export/csv/recent/', {
       method: 'GET',
     });
     if (!resp.ok) {
@@ -126,7 +123,7 @@ async function fetchURLhaus(): Promise<RawIndicator[]> {
   try {
     const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded' };
     if (abuseKey) headers['Auth-Key'] = abuseKey;
-    const resp = await fetch('https://urlhaus-api.abuse.ch/v1/urls/recent/', {
+    const resp = await fetchWithTimeout('https://urlhaus-api.abuse.ch/v1/urls/recent/', {
       method: 'POST',
       headers,
       body: 'limit=100',
@@ -178,7 +175,7 @@ async function fetchURLhaus(): Promise<RawIndicator[]> {
 async function fetchURLhausCSV(): Promise<RawIndicator[]> {
   const indicators: RawIndicator[] = [];
   try {
-    const resp = await fetch('https://urlhaus.abuse.ch/downloads/csv_recent/');
+    const resp = await fetchWithTimeout('https://urlhaus.abuse.ch/downloads/csv_recent/');
     if (!resp.ok) {
       logger.warn(`URLhaus CSV HTTP ${resp.status}`);
       return indicators;
@@ -216,7 +213,7 @@ async function fetchURLhausCSV(): Promise<RawIndicator[]> {
 async function fetchFeodoTracker(): Promise<RawIndicator[]> {
   const indicators: RawIndicator[] = [];
   try {
-    const resp = await fetch('https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.json');
+    const resp = await fetchWithTimeout('https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.json');
     
     if (!resp.ok) {
       logger.warn(`Feodo Tracker HTTP ${resp.status}`);
@@ -263,7 +260,7 @@ async function fetchFeodoTracker(): Promise<RawIndicator[]> {
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: buildCorsHeaders(origin) });
   }
 
   try {
@@ -427,13 +424,13 @@ serve(async (req: Request) => {
     }
 
     return new Response(JSON.stringify({ success: true, results }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   } catch (err) {
     logger.error('Sync threat feeds error:', err);
     return new Response(
       JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
     );
   }
 });

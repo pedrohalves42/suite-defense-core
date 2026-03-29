@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -129,8 +129,9 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const requestId = crypto.randomUUID();
@@ -147,7 +148,7 @@ Deno.serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: 'Missing authorization' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -158,7 +159,7 @@ Deno.serve(async (req) => {
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -172,7 +173,7 @@ Deno.serve(async (req) => {
     if (!isSuperAdmin) {
       return new Response(
         JSON.stringify({ error: 'Requires super_admin role' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -200,7 +201,7 @@ Deno.serve(async (req) => {
             created_at: new Date().toISOString(),
             created_by: user.email
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -211,7 +212,7 @@ Deno.serve(async (req) => {
         if (!sha256 || !private_key) {
           return new Response(
             JSON.stringify({ error: 'Missing required fields: sha256, private_key' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -233,7 +234,7 @@ Deno.serve(async (req) => {
             signed_at: new Date().toISOString(),
             signed_by: user.email
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -244,7 +245,7 @@ Deno.serve(async (req) => {
         if (!sha256 || !signature_base64 || !public_key) {
           return new Response(
             JSON.stringify({ error: 'Missing required fields: sha256, signature_base64, public_key' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -262,7 +263,7 @@ Deno.serve(async (req) => {
             algorithm: 'ECDSA-P256-SHA256',
             verified_at: new Date().toISOString()
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -283,7 +284,7 @@ Deno.serve(async (req) => {
               message: 'Configure ECDSA_PRIVATE_KEY secret or provide private_key in body',
               hint: 'Generate keypair with action=generate-keypair, then add the private_key as a secret'
             }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -322,7 +323,7 @@ Deno.serve(async (req) => {
               message: 'No releases to sign', 
               signed_count: 0 
             }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -388,7 +389,7 @@ Deno.serve(async (req) => {
             signed_by: user.email,
             results
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -401,7 +402,7 @@ Deno.serve(async (req) => {
         if (!document_name) {
           return new Response(
             JSON.stringify({ error: 'Missing required field: document_name' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -410,7 +411,7 @@ Deno.serve(async (req) => {
         if (!providedHash && !document_content) {
           return new Response(
             JSON.stringify({ error: 'Missing required field: document_hash OR document_content' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -422,7 +423,7 @@ Deno.serve(async (req) => {
               error: 'Missing ECDSA private key',
               message: 'Configure ECDSA_PRIVATE_KEY secret'
             }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -434,7 +435,7 @@ Deno.serve(async (req) => {
           if (!/^[a-f0-9]{64}$/i.test(providedHash)) {
             return new Response(
               JSON.stringify({ error: 'Invalid document_hash: must be 64 hex characters (SHA-256)' }),
-              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
             );
           }
           document_hash = providedHash.toLowerCase();
@@ -503,7 +504,7 @@ Deno.serve(async (req) => {
             audit_level: audit_level || 'STANDARD',
             persisted: true
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -522,7 +523,7 @@ Deno.serve(async (req) => {
         if (!platform || !version || !script_content || !private_key) {
           return new Response(
             JSON.stringify({ error: 'Missing required fields: platform, version, script_content, private_key' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -610,7 +611,7 @@ Deno.serve(async (req) => {
             signed_by: user.email,
             size_bytes: script_content.length
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -620,7 +621,7 @@ Deno.serve(async (req) => {
         if (!ed25519PrivateKey) {
           return new Response(
             JSON.stringify({ error: 'Missing ED25519_PRIVATE_KEY secret' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -647,7 +648,7 @@ Deno.serve(async (req) => {
           if (releasesToSign.length === 0) {
             return new Response(
               JSON.stringify({ success: true, message: 'No active releases found', signed_count: 0 }),
-              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
             );
           }
 
@@ -685,7 +686,7 @@ Deno.serve(async (req) => {
               signed_by: user.email,
               results: ed25519Results
             }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -724,7 +725,7 @@ Deno.serve(async (req) => {
             signed_by: user.email,
             results: ed25519Results
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -734,7 +735,7 @@ Deno.serve(async (req) => {
             error: 'Invalid action',
             valid_actions: ['generate-keypair', 'sign', 'verify', 'sign-existing', 'sign-existing-ed25519', 'sign-and-register', 'sign-document']
           }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
     }
 
@@ -744,7 +745,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ error: 'Internal server error', message: err.message, requestId }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });

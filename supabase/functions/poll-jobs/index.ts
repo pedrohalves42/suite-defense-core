@@ -9,7 +9,9 @@ import { logger } from '../_shared/logger.ts'
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
 import { hashToken } from '../_shared/token-hash.ts'
 import { signJob } from '../_shared/crypto-utils.ts'
+import { buildCorsHeaders } from '../_shared/cors.ts';
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   // QUAL-01: Proper HTTP method validation
   if (req.method === 'OPTIONS') {
     return handleCorsPreflightRequest()
@@ -28,7 +30,7 @@ Deno.serve(async (req) => {
     if (!agentToken) {
       return new Response(
         JSON.stringify({ error: 'Token do agente necessario' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 401 }
       )
     }
 
@@ -37,7 +39,7 @@ Deno.serve(async (req) => {
     if (!tokenValidation.success) {
       return new Response(
         JSON.stringify({ error: 'Formato de token invalido' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 400 }
       )
     }
 
@@ -57,7 +59,7 @@ Deno.serve(async (req) => {
     if (!token?.agents) {
       return new Response(
         JSON.stringify({ error: 'Token invalido' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 401 }
       )
     }
 
@@ -124,7 +126,7 @@ Deno.serve(async (req) => {
           })
           return new Response(
             JSON.stringify({ error: 'HMAC verification failed', code: 'HMAC_INVALID' }),
-            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           )
         }
         logger.warn('HMAC verification failed - accepting legacy agent poll-jobs', {
@@ -146,7 +148,7 @@ Deno.serve(async (req) => {
         })
         return new Response(
           JSON.stringify({ error: 'HMAC headers required', code: 'HMAC_MISSING' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         )
       }
       logger.warn('Poll-jobs accepted without HMAC (legacy agent)', {
@@ -169,7 +171,7 @@ Deno.serve(async (req) => {
           error: 'Rate limit excedido',
           resetAt: rateLimitResult.resetAt 
         }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -224,7 +226,7 @@ Deno.serve(async (req) => {
       
       return new Response(
         JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }), // COST-OPT-V6
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
@@ -253,7 +255,7 @@ Deno.serve(async (req) => {
       })
       return new Response(
         JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }), // COST-OPT-V6
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 200 }
       )
     }
     
@@ -291,7 +293,7 @@ Deno.serve(async (req) => {
       })
       return new Response(
         JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }), // COST-OPT-V6
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
@@ -341,7 +343,7 @@ Deno.serve(async (req) => {
       logger.debug('No valid jobs to return', { agentName: agent.agent_name })
       return new Response(
         JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }), // COST-OPT-V6
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
@@ -462,7 +464,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify(recoveryJobs),
         {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
           status: 200
         }
       )
@@ -476,7 +478,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify(responsePayload),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         status: 200
       }
     )

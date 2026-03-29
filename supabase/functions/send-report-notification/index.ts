@@ -2,8 +2,8 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { logger } from '../_shared/logger.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
-const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
@@ -16,13 +16,13 @@ interface NotificationPayload {
 
 serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" },
     });
   }
 
@@ -68,7 +68,7 @@ serve(async (req: Request): Promise<Response> => {
         processed: 0 
       }), {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" },
       });
     }
 
@@ -254,7 +254,7 @@ serve(async (req: Request): Promise<Response> => {
       failed: failedCount
     }), {
       status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" },
     });
 
   } catch (error: Record<string, unknown>) {
@@ -264,7 +264,7 @@ serve(async (req: Request): Promise<Response> => {
       error: error.message 
     }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" },
     });
   }
 });

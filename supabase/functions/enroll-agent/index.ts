@@ -8,8 +8,10 @@ import { checkQuotaAvailable } from '../_shared/quota.ts';
 import { logger } from '../_shared/logger.ts';
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts';
 import { hashToken, getTokenPrefix } from '../_shared/token-hash.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   const requestId = crypto.randomUUID();
   const startTime = Date.now();
   
@@ -42,7 +44,7 @@ Deno.serve(async (req) => {
           error: 'Muitas tentativas de enrollment. Tente novamente mais tarde.',
           resetAt: rateLimitResult.resetAt 
         }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -70,7 +72,7 @@ Deno.serve(async (req) => {
           code: 'MISSING_ENROLLMENT_KEY',
           requestId 
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -125,7 +127,7 @@ Deno.serve(async (req) => {
           code: 'INVALID_ENROLLMENT_KEY',
           requestId
         }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -150,7 +152,7 @@ Deno.serve(async (req) => {
           expiredAt: keyData.expires_at,
           requestId
         }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -176,7 +178,7 @@ Deno.serve(async (req) => {
           maxUses: keyData.max_uses,
           requestId
         }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -215,7 +217,7 @@ Deno.serve(async (req) => {
             quotaUsed: quotaCheck.current,
             quotaLimit: quotaCheck.limit
           }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
     }
@@ -266,7 +268,7 @@ Deno.serve(async (req) => {
             success: false, 
             error: 'Unauthorized: Agent belongs to different tenant' 
           }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -284,7 +286,7 @@ Deno.serve(async (req) => {
           logger.error(`[${requestId}] Failed to fetch agent for fallback validation`);
           return new Response(
             JSON.stringify({ error: 'Agent not found during fallback', code: 'AGENT_NOT_FOUND' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
         
@@ -316,7 +318,7 @@ Deno.serve(async (req) => {
               success: false, 
               error: 'Unauthorized: Agent belongs to different tenant' 
             }),
-            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
         
@@ -441,7 +443,7 @@ Deno.serve(async (req) => {
         expiresAt: expiresAt.toISOString(),
         requestId
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     const duration = Date.now() - startTime;

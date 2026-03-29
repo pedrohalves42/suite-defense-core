@@ -1,6 +1,6 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 
 interface EvidenceRequest {
   tenant_id?: string;
@@ -40,7 +40,7 @@ serveTenant<EvidenceRequest>(async (_req, ctx) => {
   if (!periodStart || !periodEnd) {
     return new Response(
       JSON.stringify({ success: false, error: 'periodStart and periodEnd are required' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 
@@ -197,7 +197,7 @@ serveTenant<EvidenceRequest>(async (_req, ctx) => {
     logger.error(`[export-evidence-bundle][${requestId}] Failed to save bundle:`, insertError);
     return new Response(
       JSON.stringify({ success: false, error: 'Failed to save bundle record' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 

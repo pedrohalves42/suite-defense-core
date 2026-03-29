@@ -1,5 +1,6 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 interface CreateTicketRequest {
   integration_id: string;
@@ -42,7 +43,7 @@ async function createJiraTicket(
   };
 
   const auth = btoa(`${creds.email}:${creds.api_token}`);
-  const response = await fetch(`${baseUrl}/rest/api/3/issue`, {
+  const response = await fetchWithTimeout(`${baseUrl}/rest/api/3/issue`, {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${auth}`,
@@ -81,7 +82,7 @@ async function createServiceNowTicket(
   };
 
   const auth = btoa(`${creds.username}:${creds.password}`);
-  const response = await fetch(`${baseUrl}/api/now/table/incident`, {
+  const response = await fetchWithTimeout(`${baseUrl}/api/now/table/incident`, {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${auth}`,

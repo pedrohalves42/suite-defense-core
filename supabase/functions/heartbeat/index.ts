@@ -9,6 +9,7 @@ import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-
 import { normalizeVersion, normalizeForWindows } from '../_shared/hexagonal/update-decision-service.ts'
 import { applyWindowsScriptHotfix } from '../_shared/windows-script-hotfix.ts'
 import { authenticateAgent } from '../_shared/agent-auth.ts'
+import { buildCorsHeaders } from '../_shared/cors.ts';
 // NOTE: Codebase script imports removed - .ps1 files are NOT bundled in Deno Deploy
 // All script content is served exclusively from the agent_releases DB table
 // Domain event dispatch removed from hot path to reduce latency
@@ -23,6 +24,7 @@ const HEARTBEAT_EXTRA_FIELDS = [
 ]
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   // QUAL-01: Proper HTTP method validation
   if (req.method === 'OPTIONS') {
     return handleCorsPreflightRequest()
@@ -78,7 +80,7 @@ Deno.serve(async (req) => {
       logger.error('CRITICAL SECURITY: Agent without HMAC secret', { agentName: agent.agent_name })
       return new Response(
         JSON.stringify({ error: 'HMAC secret not configured for agent' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
     
@@ -108,7 +110,7 @@ Deno.serve(async (req) => {
           })
           return new Response(
             JSON.stringify({ error: 'HMAC verification failed', code: 'HMAC_INVALID' }),
-            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           )
         }
         // Legacy agent: accept with warning (backward compat)
@@ -132,7 +134,7 @@ Deno.serve(async (req) => {
         })
         return new Response(
           JSON.stringify({ error: 'HMAC headers required', code: 'HMAC_MISSING' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         )
       }
       // Legacy agent without HMAC headers - read body manually
@@ -170,7 +172,7 @@ Deno.serve(async (req) => {
           error: 'Rate limit excedido',
           resetAt: rateLimitResult.resetAt 
         }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
     
@@ -691,7 +693,7 @@ Deno.serve(async (req) => {
                   jobs: [],
                 }),
                 {
-                  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                  headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
                   status: 200
                 }
               )
@@ -779,7 +781,7 @@ Deno.serve(async (req) => {
         jobs: [],
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         status: 200
       }
     )

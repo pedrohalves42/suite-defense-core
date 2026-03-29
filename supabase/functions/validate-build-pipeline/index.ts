@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 interface PipelineCheck {
   name: string;
@@ -10,9 +11,10 @@ interface PipelineCheck {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   // Handle CORS
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   try {
@@ -21,7 +23,7 @@ Deno.serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -35,7 +37,7 @@ Deno.serve(async (req) => {
     if (userError || !user) {
       return new Response(
         JSON.stringify({ error: 'Invalid token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -49,7 +51,7 @@ Deno.serve(async (req) => {
     if (!roles || roles.role !== 'admin') {
       return new Response(
         JSON.stringify({ error: 'Admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -122,7 +124,7 @@ Deno.serve(async (req) => {
     // Check 5: GitHub Workflow Exists
     if (BUILD_GH_TOKEN && BUILD_GH_REPOSITORY) {
       try {
-        const workflowsResponse = await fetch(
+        const workflowsResponse = await fetchWithTimeout(
           `https://api.github.com/repos/${BUILD_GH_REPOSITORY}/actions/workflows`,
           {
             headers: {
@@ -193,7 +195,7 @@ Deno.serve(async (req) => {
     // Check 6: GitHub API Connectivity
     if (BUILD_GH_TOKEN && BUILD_GH_REPOSITORY) {
       try {
-        const repoResponse = await fetch(
+        const repoResponse = await fetchWithTimeout(
           `https://api.github.com/repos/${BUILD_GH_REPOSITORY}`,
           {
             headers: {
@@ -314,7 +316,7 @@ Deno.serve(async (req) => {
       {
         status: 200,
         headers: {
-          ...corsHeaders,
+          ...buildCorsHeaders(origin),
           'Content-Type': 'application/json'
         }
       }
@@ -335,7 +337,7 @@ Deno.serve(async (req) => {
       {
         status: 500,
         headers: {
-          ...corsHeaders,
+          ...buildCorsHeaders(origin),
           'Content-Type': 'application/json'
         }
       }

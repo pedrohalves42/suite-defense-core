@@ -7,7 +7,7 @@
  * Architecture: Hexagonal ? uses callAIJson for multi-provider routing.
  */
 
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { createErrorResponse, handleException, createValidationError, ErrorCode } from '../_shared/error-handler.ts';
 import { callAIJson } from '../_shared/ai-provider-helper.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
@@ -97,8 +97,9 @@ Respond in JSON format:
 // ??? Handler ????????????????????????????????????????????
 
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const requestId = crypto.randomUUID();
@@ -183,7 +184,7 @@ Analyze and provide diagnosis with remediation actions.`;
         }),
         {
           status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         },
       );
     }
@@ -230,7 +231,7 @@ Analyze and provide diagnosis with remediation actions.`;
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       },
     );
   } catch (error) {

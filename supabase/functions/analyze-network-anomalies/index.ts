@@ -7,11 +7,7 @@ import { persistAIMetrics } from "../_shared/ai-metrics-persistence.ts";
 import { AIEvidence, buildEvidence, calculateConfidence, generateReasoningSummary, extractDataSources } from "../_shared/ai-evidence-types.ts";
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 interface AnalysisRequest {
   agentName?: string;
@@ -19,8 +15,9 @@ interface AnalysisRequest {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   // V-1133: Defense-in-depth auth guard for cron function
@@ -53,7 +50,7 @@ Deno.serve(async (req) => {
           JSON.stringify({ error: 'Nao autenticado' }),
           {
             status: 401,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
           }
         );
       }
@@ -87,7 +84,7 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'Erro ao buscar dados dos agentes' }),
         {
           status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         }
       );
     }
@@ -110,7 +107,7 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'Erro ao buscar dados dos jobs' }),
         {
           status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         }
       );
     }
@@ -200,7 +197,7 @@ Seja especifico e tecnico, focando em seguranca cibernetica.`;
         }),
         {
           status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         }
       );
     }
@@ -281,7 +278,7 @@ Seja especifico e tecnico, focando em seguranca cibernetica.`;
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       }
     );
   } catch (error) {
@@ -290,7 +287,7 @@ Seja especifico e tecnico, focando em seguranca cibernetica.`;
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro desconhecido' }),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       }
     );
   }

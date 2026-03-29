@@ -14,11 +14,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { recordMetric } from '../_shared/apm.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-internal-secret',
-};
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 /**
  * Matches the ACTUAL columns of v_cron_silent_failures view.
@@ -54,8 +50,9 @@ function deriveHealthStatus(job: SilentJob): 'OK' | 'NEVER_RAN' | 'STALE' {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   // V-1123: Defense-in-depth auth guard for cron function
@@ -116,7 +113,7 @@ Deno.serve(async (req) => {
           jobs_checked: allJobs.length,
           silent_jobs: 0
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -140,7 +137,7 @@ Deno.serve(async (req) => {
           existing_task_id: existingTask[0].id,
           silent_jobs: unhealthyJobs.length
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -239,7 +236,7 @@ Deno.serve(async (req) => {
         silent_jobs: unhealthyJobs.length,
         duration_ms: duration
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
@@ -274,7 +271,7 @@ Deno.serve(async (req) => {
         error: error instanceof Error ? error.message : 'Unknown error',
         request_id: requestId
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });

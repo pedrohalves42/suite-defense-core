@@ -4,6 +4,7 @@
  */
 import { logger } from '../_shared/logger.ts';
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 export async function handleWebhook(
   payload: Record<string, unknown>,
@@ -73,7 +74,7 @@ export async function handleWebhook(
     }
 
     try {
-      const response = await fetch(webhook.url, {
+      const response = await fetchWithTimeout(webhook.url, {
         method: 'POST', headers, body: JSON.stringify(webhookPayload),
         signal: AbortSignal.timeout(10000),
       });

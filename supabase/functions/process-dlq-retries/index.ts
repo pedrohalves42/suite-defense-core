@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { createRequestContext, mergeHeaders } from '../_shared/request-context.ts';
 import { getDLQEntriesForRetry, calculateNextRetry } from '../_shared/dlq.ts';
 import { logger, loggerWithContext } from '../_shared/logger.ts';
@@ -51,12 +51,13 @@ function isUnrecoverable(entry: DLQEntryRow): string | null {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   const startedAt = Date.now();
   const ctx = createRequestContext(req, 'process-dlq-retries');
   const log = loggerWithContext(ctx.requestId);
   
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: mergeHeaders(corsHeaders, ctx) });
+    return new Response(null, { headers: mergeHeaders(buildCorsHeaders(origin), ctx) });
   }
 
   // V-1125: Defense-in-depth auth guard for cron function
@@ -97,7 +98,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, requestId: ctx.requestId, results }),
-        { status: 200, headers: mergeHeaders(corsHeaders, ctx) }
+        { status: 200, headers: mergeHeaders(buildCorsHeaders(origin), ctx) }
       );
     }
 
@@ -251,7 +252,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: true, requestId: ctx.requestId, results }),
-      { status: 200, headers: mergeHeaders(corsHeaders, ctx) }
+      { status: 200, headers: mergeHeaders(buildCorsHeaders(origin), ctx) }
     );
   } catch (err) {
     log.error('Unexpected error', err);
@@ -268,7 +269,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ error: 'Internal server error', requestId: ctx.requestId }),
-      { status: 500, headers: mergeHeaders(corsHeaders, ctx) }
+      { status: 500, headers: mergeHeaders(buildCorsHeaders(origin), ctx) }
     );
   }
 });

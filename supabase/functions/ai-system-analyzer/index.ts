@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { sanitizeForAI, anonymizeAgentName } from '../_shared/ai-sanitizer.ts';
 import { callAIJson, getAIProviderHealth, type AIMessage } from '../_shared/ai-provider-helper.ts';
 import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from '../_shared/ai-metrics.ts';
@@ -123,8 +123,9 @@ async function incrementAIQuotaUsage(
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -141,7 +142,7 @@ Deno.serve(async (req) => {
           error: 'SYSTEM_HALTED', 
           message: 'Kill switch is active. Set system_state.mode to normal to resume.' 
         }),
-        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -160,7 +161,7 @@ Deno.serve(async (req) => {
     if (!tenants || tenants.length === 0) {
       logger.info('[ai-system-analyzer] No tenants found, skipping analysis');
       return new Response(JSON.stringify({ message: 'No tenants to analyze' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         status: 200,
       });
     }
@@ -414,7 +415,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify(result), 
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         status: 200,
       }
     );
@@ -441,7 +442,7 @@ Deno.serve(async (req) => {
         error: error instanceof Error ? error.message : 'Unknown error' 
       }), 
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         status: 500,
       }
     );

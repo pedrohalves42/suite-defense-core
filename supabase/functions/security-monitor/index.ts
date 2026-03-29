@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 
@@ -24,7 +24,8 @@ interface SecurityResult {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  const origin = req.headers.get("origin");
+  if (req.method === 'OPTIONS') return new Response(null, { headers: buildCorsHeaders(origin) });
 
   const authError = assertInternalCaller(req);
   if (authError) return authError;
@@ -140,13 +141,13 @@ Deno.serve(async (req) => {
     logger.info(`[security-monitor] Completed in ${result.duration_ms}ms`, JSON.stringify(result));
 
     return new Response(JSON.stringify({ success: true, ...result }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   } catch (e) {
     const msg = (e as Error).message;
     logger.error('[security-monitor] Fatal:', msg);
     return new Response(JSON.stringify({ error: msg }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   }
 });

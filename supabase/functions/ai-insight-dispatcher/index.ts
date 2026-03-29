@@ -3,11 +3,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { timingSafeEqual } from '../_shared/crypto-utils.ts';
 import { logger } from '../_shared/logger.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 interface AIInsight {
   id: string;
@@ -84,7 +80,7 @@ function isLowRiskAction(actionType: string): boolean {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   try {
@@ -99,7 +95,7 @@ serve(async (req) => {
     
     if (!isInternal) {
       return new Response(JSON.stringify({ error: 'Unauthorized: internal access only' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -112,7 +108,7 @@ serve(async (req) => {
     if (!insight) {
       return new Response(
         JSON.stringify({ error: 'Missing insight data' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -135,7 +131,7 @@ serve(async (req) => {
             insight_type: insightData.insight_type ? 'present' : 'missing',
           }
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
     
@@ -154,7 +150,7 @@ serve(async (req) => {
         logger.info('[ai-insight-dispatcher] Mode=none, skipping action');
         return new Response(
           JSON.stringify({ success: true, action: 'none' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
 
       case 'suggest':
@@ -162,7 +158,7 @@ serve(async (req) => {
         logger.info('[ai-insight-dispatcher] Mode=suggest, insight visible in Action Center');
         return new Response(
           JSON.stringify({ success: true, action: 'suggested' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
 
       case 'auto':
@@ -226,7 +222,7 @@ serve(async (req) => {
 
             return new Response(
               JSON.stringify({ success: true, action: 'auto_executed', result: execResult }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
             );
           } catch (execErr) {
             logger.error('[ai-insight-dispatcher] Execution exception:', execErr);
@@ -241,7 +237,7 @@ serve(async (req) => {
             action: 'suggested',
             reason: !isLowRisk ? 'high_risk_action' : !isWhitelisted ? 'not_whitelisted' : 'rate_limited',
           }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
 
       case 'auto_with_approval':
@@ -294,28 +290,28 @@ serve(async (req) => {
             action: 'pending_approval',
             playbook_found: !!playbook,
           }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
 
       default:
         logger.info('[ai-insight-dispatcher] Unknown mode:', insightData.auto_action_mode);
         return new Response(
           JSON.stringify({ success: true, action: 'none' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
     }
 
     // Fallback response (should not reach here)
     return new Response(
       JSON.stringify({ success: true, action: 'processed' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     logger.error('[ai-insight-dispatcher] Error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });
