@@ -33,12 +33,11 @@ interface ActiveTenantContextType {
 
 const ActiveTenantContext = createContext<ActiveTenantContextType | undefined>(undefined);
 
-const ACTIVE_TENANT_KEY = 'cybershield_active_tenant_id';
-
 /**
  * Syncs the active tenant to the backend, updating the user's JWT app_metadata.
  * This ensures RLS policies can optionally use active_tenant_id for stricter isolation.
  * P2 MED-01: Added 10s timeout to prevent indefinite hanging
+ * V-AUDIT: active_tenant_id is NO LONGER persisted in localStorage (XSS risk).
  */
 async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
   const SYNC_TIMEOUT_MS = 10000; // P2 MED-01: 10 second timeout
@@ -142,29 +141,9 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
       if (found) return found;
     }
     
-    // V-1014 FIX: Check localStorage hint ONLY after server validation
-    if (typeof window !== 'undefined') {
-      const savedId = localStorage.getItem(ACTIVE_TENANT_KEY);
-      if (savedId) {
-        const found = tenants.find(t => t.id === savedId);
-        if (found) return found;
-      }
-    }
-    
     // Default to first tenant
     return tenants[0];
   }, [tenants, activeTenantId]);
-
-  // V-12004 FIX: Sync localStorage hint to state OUTSIDE render via useEffect
-  // This prevents the React anti-pattern of setState during render
-  useEffect(() => {
-    if (activeTenant && !activeTenantId && typeof window !== 'undefined') {
-      const savedId = localStorage.getItem(ACTIVE_TENANT_KEY);
-      if (savedId && savedId === activeTenant.id) {
-        setActiveTenantId(savedId);
-      }
-    }
-  }, [activeTenant, activeTenantId]);
 
   // CORREÇÃO: Calcular role baseada no tenant ATIVO
   const activeRole = useMemo((): AppRole | null => {
@@ -174,12 +153,8 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
     return (tenantRole?.role as AppRole) || null;
   }, [activeTenant, userTenantRoles]);
 
-  // Update localStorage when active tenant changes
-  useEffect(() => {
-    if (activeTenant) {
-      localStorage.setItem(ACTIVE_TENANT_KEY, activeTenant.id);
-    }
-  }, [activeTenant?.id]);
+  // V-AUDIT: No longer persist to localStorage (XSS risk).
+  // Tenant preference survives via JWT app_metadata.active_tenant_id.
 
   // PATCH #2 OPTIMIZED: Sync initial tenant to backend
   // Only sync on FIRST load or when tenant actually changes
@@ -259,7 +234,6 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
 
       // 3. Update local state AFTER JWT is confirmed updated
       setActiveTenantId(tenant.id);
-      localStorage.setItem(ACTIVE_TENANT_KEY, tenant.id);
 
       // 4. Clear all cached queries so they refetch with new tenant context
       queryClient.clear();

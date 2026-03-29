@@ -47,10 +47,14 @@ export async function assertInternalCaller(req: Request, options?: { allowAuthen
     return null;
   }
 
-  // 4. Direct scheduled invocation without headers
+  // 4. Requests without any authentication headers are REJECTED.
+  // Scheduled cron invocations are authenticated via anon key (handled in step 3).
   if (!authHeader && !internalSecret) {
-    logger.info('[assert-internal-caller] Authorized via scheduled invocation without headers');
-    return null;
+    logger.warn('[SECURITY] Rejected: no authentication headers present');
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized: authentication required' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   // 5. Authenticated user JWT (when explicitly allowed by the caller)

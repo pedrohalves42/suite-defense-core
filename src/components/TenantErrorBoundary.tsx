@@ -56,8 +56,7 @@ export class TenantErrorBoundary extends Component<Props, State> {
   };
 
   handleClearCacheAndReload = () => {
-    // Clear tenant-related localStorage
-    localStorage.removeItem('cybershield_active_tenant_id');
+    // Clear tenant-related cache (no longer using localStorage for tenant_id)
     localStorage.removeItem('tenant_errors');
     localStorage.removeItem('context_decisions');
     

@@ -112,9 +112,9 @@ if ($validationPassed) {
         Remove-Item "C:\CyberShield\*" -Recurse -Force -ErrorAction SilentlyContinue
         Unregister-ScheduledTask -TaskName "CyberShield Agent" -Confirm:$false -ErrorAction SilentlyContinue
         
-        # Executar instalador validado
+        # Executar instalador validado (sem Invoke-Expression - segurança)
         Write-Host "Executando instalador validado..." -ForegroundColor Yellow
-        Invoke-Expression $script
+        & $scriptPath
         
         Write-Host "`n[OK] Instalacao concluida!" -ForegroundColor Green
         Write-Host "`nVerifique os logs:" -ForegroundColor Yellow
