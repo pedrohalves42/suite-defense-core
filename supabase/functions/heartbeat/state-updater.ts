@@ -50,12 +50,13 @@ export async function executeParallelOps(
 
   // 1. Token last_used_at update (fire-and-forget)
   parallelOps.push(
-    supabase
-      .from('agent_tokens')
-      .update({ last_used_at: new Date().toISOString() })
-      .eq('agent_id', agent.id)
-      .eq('is_active', true)
-      .then(() => {}),
+    Promise.resolve(
+      supabase
+        .from('agent_tokens')
+        .update({ last_used_at: new Date().toISOString() })
+        .eq('agent_id', agent.id)
+        .eq('is_active', true)
+    ).then(() => {}),
   )
 
   // 2. System metrics insert
