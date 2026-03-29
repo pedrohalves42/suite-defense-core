@@ -31,7 +31,7 @@ verify_jwt = false
 # === Trial Period Functions ===
 [functions.check-trial-expiration]
 verify_jwt = false
-schedule = "0 */12 * * *"
+schedule = "0 6 * * *"
 
 [functions.send-trial-reminder]
 verify_jwt = false
@@ -324,15 +324,13 @@ verify_jwt = true
 [functions.health]
 verify_jwt = false
 
-# Consolidated health monitor (daily at 6 AM) COST-OPT-V7
+# Consolidated health monitor - DISABLED schedule COST-OPT-V8 (covered by system-maintenance)
 [functions.health-monitor]
 verify_jwt = false
-schedule = "0 6 * * *"
 
-# Consolidated security monitor (daily at 7 AM) COST-OPT-V7
+# Consolidated security monitor - DISABLED schedule COST-OPT-V8 (covered by system-maintenance)
 [functions.security-monitor]
 verify_jwt = false
-schedule = "0 7 * * *"
 
 # Health check - DISABLED schedule COST-OPT-V7 (covered by health-monitor)
 [functions.check-installation-health]
@@ -456,14 +454,13 @@ verify_jwt = false
 [functions.send-report-notification]
 verify_jwt = false
 
+# scheduled-report-generator - DISABLED schedule COST-OPT-V8 (invoke manually)
 [functions.scheduled-report-generator]
 verify_jwt = false
-schedule = "0 3 * * *"
 
-# === Blocked Access Detection (daily at 4 AM) COST-OPT-V6 ===
+# Blocked Access Detection - DISABLED schedule COST-OPT-V8 (invoke manually)
 [functions.detect-blocked-attempts]
 verify_jwt = false
-schedule = "0 4 * * *"
 
 # === V4.0 Software Risk Engine ===
 # (Moved to line 107-108 with verify_jwt = false for cron access)
@@ -576,9 +573,9 @@ verify_jwt = true
 verify_jwt = false
 
 # === Invoke Scheduled Jobs (every 12 hours) COST-OPT-V7 ===
+# invoke-scheduled-jobs - DISABLED schedule COST-OPT-V8 (covered by system-maintenance)
 [functions.invoke-scheduled-jobs]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
 # === P0: Cleanup Stale Playbooks - DISABLED COST-OPT-V6 (covered by system-maintenance) ===
 [functions.cleanup-stale-playbooks]
@@ -625,9 +622,9 @@ verify_jwt = false
 verify_jwt = true
 
 # === Log Integrity Verification (weekly Sunday at 2:00 UTC) COST-OPT-V5 ===
+# verify-log-integrity - DISABLED schedule COST-OPT-V8 (invoke manually)
 [functions.verify-log-integrity]
 verify_jwt = false
-schedule = "0 2 * * 0"
 
 # === Confidence Gap Trend Analysis ===
 [functions.analyze-confidence-gap-trend]
@@ -744,9 +741,9 @@ verify_jwt = false
 # REMOVED: sync-scripts-direct (consolidated into release-sync)
 
 # === Threat Intelligence: Sync feeds daily at 4 AM UTC ===
+# sync-threat-feeds - DISABLED schedule COST-OPT-V8 (invoke manually)
 [functions.sync-threat-feeds]
 verify_jwt = false
-schedule = "0 4 * * *"
 
 # === EDR Correlation - DISABLED schedule COST-OPT-V7 (invoke manually) ===
 [functions.correlate-edr-events]
