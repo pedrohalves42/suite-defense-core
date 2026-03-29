@@ -14,7 +14,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { handleException } from '../_shared/error-handler.ts'
-import { checkHeartbeatRateLimit } from './ratelimit/wrapper.ts'
+import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { logger } from '../_shared/logger.ts'
 import { requireEnv } from '../_shared/env.ts'
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
@@ -94,7 +94,9 @@ Deno.serve(async (req) => {
     const platform = updateData.os_type || 'windows'
 
     // ── 4. Rate limiting ────────────────────────────────────
-    const rateLimitResult = await checkHeartbeatRateLimit(supabase, agent.agent_name)
+    const rateLimitResult = await checkRateLimit(supabase, agent.agent_name, 'heartbeat', {
+      maxRequests: 6, windowMinutes: 5, blockMinutes: 2,
+    })
     if (!rateLimitResult.allowed) {
       return new Response(
         JSON.stringify({ error: 'Rate limit excedido', resetAt: rateLimitResult.resetAt }),
