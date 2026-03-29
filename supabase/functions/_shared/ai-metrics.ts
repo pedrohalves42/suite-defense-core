@@ -83,7 +83,7 @@ export async function measureAICall<T>(
 /**
  * Extract token usage from AI response (if available)
  */
-export function extractTokenUsage(response: any): { prompt?: number; completion?: number; total?: number } {
+export function extractTokenUsage(response: Record<string, unknown>): { prompt?: number; completion?: number; total?: number } {
   try {
     if (response?.usage) {
       return {

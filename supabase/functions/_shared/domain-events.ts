@@ -49,7 +49,7 @@ export class EdgeDomainEventDispatcher {
     const { data, error } = await query;
     if (error) throw error;
 
-    return (data || []).map((row: any) => ({
+    return (data || []).map((row: Record<string, unknown>) => ({
       aggregateId: row.aggregate_id,
       aggregateType: row.aggregate_type,
       eventType: row.event_type,

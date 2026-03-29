@@ -253,8 +253,8 @@ export async function getDriftScore(
         .is('resolved_at', null);
       if (error) throw error;
 
-      const score = events?.reduce((sum: number, e: any) => sum + (e.drift_score || 0), 0) || 0;
-      const hasCritical = events?.some((e: any) => e.severity === 'critical');
+      const score = events?.reduce((sum: number, e: { drift_score?: number }) => sum + (e.drift_score || 0), 0) || 0;
+      const hasCritical = events?.some((e: { severity?: string }) => e.severity === 'critical');
       const severity = hasCritical ? 'critical' : score > 15 ? 'high' : score > 5 ? 'medium' : 'low';
 
       return { score, severity, events: events?.length || 0 };
