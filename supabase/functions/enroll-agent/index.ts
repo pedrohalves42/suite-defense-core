@@ -94,13 +94,15 @@ Deno.serve(async (req) => {
     const hmacDeclared = supportsHmac === true;
     if (!hmacDeclared) {
       // Check feature flag — allows gradual rollout / kill-switch
-      const { data: flag } = await supabase
+      // feature_flags is per-tenant; check if ANY tenant has it enabled (global policy)
+      const { data: flags } = await supabase
         .from('feature_flags')
-        .select('is_enabled')
-        .eq('flag_name', 'enforce_hmac_enrollment')
-        .maybeSingle();
+        .select('enabled')
+        .eq('key', 'enforce_hmac_enrollment')
+        .eq('enabled', true)
+        .limit(1);
 
-      const enforceHmac = flag?.is_enabled ?? false;
+      const enforceHmac = (flags && flags.length > 0);
       if (enforceHmac) {
         logger.warn(`[${requestId}] Enrollment rejected: agent does not support HMAC`, {
           agentName,
