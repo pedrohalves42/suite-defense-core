@@ -1,7 +1,7 @@
 <#
-    CyberShield Agent - Windows v5.0.15 FULL ENTERPRISE
+    CyberShield Agent - Windows v5.0.16 FULL ENTERPRISE
 
-    v5.0.15: STABILIZATION + USB WHITELIST + DNS SYNC RESILIENCE
+    v5.0.16: INTEGRITY + CRYPTO + BASELINE STABILIZATION
     - FIX: $PID read-only variable renamed to $procId (EDR process collection)
     - NEW: USB device whitelist - persistent devices (internal HDDs) no longer trigger repeated alerts
       * Tracks known devices in C:\CyberShield\data\usb_whitelist.json
@@ -199,7 +199,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v5.0.15"
+    [string]$AgentVersion = "v5.0.16"
 )
 
 # CRITICAL: Force TLS 1.2 for compatibility
@@ -377,9 +377,9 @@ try {
                     } else {
                         # Step 2: Only NOW compare hash (signature verified first)
                         try {
-                            $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+                            $currentHash = Get-BOMSafeFileHash -FilePath $PSCommandPath
                         } catch {
-                            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-FileHash failed (file locked/ACL): $($_.Exception.Message)" -ErrorAction SilentlyContinue
+                            Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-BOMSafeFileHash failed (file locked/ACL): $($_.Exception.Message)" -ErrorAction SilentlyContinue
                             [Environment]::Exit(9005)
                         }
                         if ($currentHash -ne $cacheJson.hash.ToLower()) {
@@ -397,9 +397,9 @@ try {
                 } else {
                     # No signature in cache - legacy format, compare hash with warning
                     try {
-                        $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+                        $currentHash = Get-BOMSafeFileHash -FilePath $PSCommandPath
                     } catch {
-                        Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-FileHash failed: $($_.Exception.Message)" -ErrorAction SilentlyContinue
+                        Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-BOMSafeFileHash failed: $($_.Exception.Message)" -ErrorAction SilentlyContinue
                         [Environment]::Exit(9005)
                     }
                     if ($currentHash -ne $cacheJson.hash.ToLower()) {
@@ -428,9 +428,9 @@ try {
         $expectedHash = (Get-Content $hashCachePath -Raw -ErrorAction SilentlyContinue).Trim()
         if ($expectedHash -and $expectedHash.Length -eq 64) {
             try {
-                $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+                $currentHash = Get-BOMSafeFileHash -FilePath $PSCommandPath
             } catch {
-                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-FileHash failed: $($_.Exception.Message)" -ErrorAction SilentlyContinue
+                Write-EventLog -LogName Application -Source "CyberShield" -EventId 9005 -EntryType Error -Message "INTEGRITY: Get-BOMSafeFileHash failed: $($_.Exception.Message)" -ErrorAction SilentlyContinue
                 [Environment]::Exit(9005)
             }
             if ($currentHash -ne $expectedHash.ToLower()) {
@@ -548,9 +548,33 @@ $Global:AutoRepairStats = @{
 # v5.0.13-fix: SecurityDegraded flag (BUG 7 - declare early for robustness)
 $Global:SecurityDegraded = $false
 
-# v5.0.15-hotfix-toctou: Record script hash at boot for TOCTOU self-heal
+# v5.0.16-fix: BOM-safe file hashing for TOCTOU integrity
+# Get-FileHash uses the file as-is (with BOM if present), which causes hash mismatches
+# when the same content is saved with/without BOM by different tools.
+# This function strips UTF-8 BOM before hashing for consistent results.
+function Get-BOMSafeFileHash {
+    param(
+        [Parameter(Mandatory)]
+        [string]$FilePath
+    )
+    try {
+        $rawBytes = [System.IO.File]::ReadAllBytes($FilePath)
+        # Strip UTF-8 BOM (EF BB BF) if present
+        if ($rawBytes.Length -ge 3 -and $rawBytes[0] -eq 0xEF -and $rawBytes[1] -eq 0xBB -and $rawBytes[2] -eq 0xBF) {
+            $rawBytes = $rawBytes[3..($rawBytes.Length - 1)]
+        }
+        $sha = [System.Security.Cryptography.SHA256]::Create()
+        $hashBytes = $sha.ComputeHash($rawBytes)
+        $sha.Dispose()
+        return [BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
+    } catch {
+        throw "Get-BOMSafeFileHash failed for ${FilePath}: $($_.Exception.Message)"
+    }
+}
+
+# v5.0.16-fix: Record script hash at boot for TOCTOU self-heal (BOM-safe)
 try {
-    $Global:BootScriptHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+    $Global:BootScriptHash = Get-BOMSafeFileHash -FilePath $PSCommandPath
 } catch {
     $Global:BootScriptHash = $null
 }
@@ -838,7 +862,7 @@ function Test-RuntimeIntegrity {
         }
         if (-not $expectedHash -or $expectedHash.Length -ne 64) { return $true }
         
-        $currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256).Hash.ToLower()
+        $currentHash = Get-BOMSafeFileHash -FilePath $PSCommandPath
         if ($currentHash -ne $expectedHash.ToLower()) {
             # v5.0.15-hotfix-toctou: SELF-HEAL instead of terminating.
             # The server may have sent a hash computed with different normalization.
@@ -1713,8 +1737,15 @@ function Initialize-AgentKeys {
         return $true
         
     } catch {
-        Write-Log "[KEYS] Failed to initialize keys: $($_.Exception.Message)" "ERROR"
-        return $false
+        # v5.0.16-fix: Outer catch must attempt RSA fallback before giving up
+        # Previously returned $false without trying RSA, leaving agent in DEGRADED
+        Write-Log "[KEYS] Key initialization error: $($_.Exception.Message) - attempting RSA fallback" "WARN"
+        try {
+            return Initialize-RSACspKeys
+        } catch {
+            Write-Log "[KEYS] RSA fallback also failed: $($_.Exception.Message)" "ERROR"
+            return $false
+        }
     }
 }
 
@@ -4216,6 +4247,108 @@ function ConvertTo-SafePSO {
     }
 }
 
+function ConvertTo-BaselineJson {
+    <#
+    .SYNOPSIS
+        v5.0.16-fix: Manual JSON serialization for baseline data.
+        Bypasses ConvertTo-Json which can crash on PS 5.1 with duplicate NoteProperties.
+        Produces clean JSON array with guaranteed unique keys per object.
+    #>
+    param([array]$Baseline)
+    $sb = [System.Text.StringBuilder]::new(4096)
+    [void]$sb.Append('[')
+    $first = $true
+    foreach ($e in $Baseline) {
+        if (-not $first) { [void]$sb.Append(',') }
+        $first = $false
+        $n = (Get-SafeBaselineProp $e 'name')
+        $c = (Get-SafeBaselineProp $e 'company')
+        $d = (Get-SafeBaselineProp $e 'description')
+        $f = (Get-SafeBaselineProp $e 'first_seen')
+        # Escape backslashes and quotes for JSON safety
+        $ne = if ($n) { $n -replace '\\', '\\\\' -replace '"', '\"' -replace "`t", '\t' -replace "`n", '\n' -replace "`r", '' } else { '' }
+        $ce = if ($c) { $c -replace '\\', '\\\\' -replace '"', '\"' -replace "`t", '\t' -replace "`n", '\n' -replace "`r", '' } else { $null }
+        $de = if ($d) { $d -replace '\\', '\\\\' -replace '"', '\"' -replace "`t", '\t' -replace "`n", '\n' -replace "`r", '' } else { $null }
+        $fe = if ($f) { $f -replace '\\', '\\\\' -replace '"', '\"' } else { (Get-Date).ToString('o') }
+        [void]$sb.Append("{`"name`":`"$ne`",`"company`":")
+        if ($null -ne $ce) { [void]$sb.Append("`"$ce`"") } else { [void]$sb.Append("null") }
+        [void]$sb.Append(",`"description`":")
+        if ($null -ne $de) { [void]$sb.Append("`"$de`"") } else { [void]$sb.Append("null") }
+        [void]$sb.Append(",`"first_seen`":`"$fe`"}")
+    }
+    [void]$sb.Append(']')
+    return $sb.ToString()
+}
+
+function Import-BaselineSafe {
+    <#
+    .SYNOPSIS
+        v5.0.16-fix: Resilient baseline JSON import.
+        Wraps ConvertFrom-Json with dedup and regex fallback for corrupted files.
+        Prevents PS 5.1 crash on duplicate keys inside JSON objects.
+    #>
+    param([string]$RawJson)
+    $entries = @()
+    $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    try {
+        $parsed = $RawJson | ConvertFrom-Json -ErrorAction Stop
+        foreach ($item in $parsed) {
+            $name = Get-SafeBaselineProp $item 'name'
+            if ($name -and -not $seen.Contains($name)) {
+                [void]$seen.Add($name)
+                $entries += [ordered]@{
+                    name        = $name
+                    company     = Get-SafeBaselineProp $item 'company'
+                    description = Get-SafeBaselineProp $item 'description'
+                    first_seen  = Get-SafeBaselineProp $item 'first_seen'
+                }
+            }
+        }
+    } catch {
+        Write-Log "[BASELINE] ConvertFrom-Json failed, using regex recovery: $($_.Exception.Message)" "WARN"
+        $nameMatches = [regex]::Matches($RawJson, '"name"\s*:\s*"([^"]*)"')
+        foreach ($m in $nameMatches) {
+            $name = $m.Groups[1].Value
+            if ($name -and -not $seen.Contains($name)) {
+                [void]$seen.Add($name)
+                $entries += [ordered]@{
+                    name        = $name
+                    company     = $null
+                    description = "recovered"
+                    first_seen  = (Get-Date).ToString("o")
+                }
+            }
+        }
+        if ($entries.Count -gt 0) {
+            Write-Log "[BASELINE] Regex recovery found $($entries.Count) processes" "WARN"
+        }
+    }
+    return $entries
+}
+
+function Save-BaselineSafe {
+    <#
+    .SYNOPSIS
+        v5.0.16-fix: Atomic baseline save with mutex protection.
+        Uses ConvertTo-BaselineJson (manual serialization) and writes via .NET for atomicity.
+    #>
+    param([array]$Baseline)
+    $mtx = $null
+    try {
+        $mtx = [System.Threading.Mutex]::new($false, "CyberShield_Baseline_Write")
+        [void]$mtx.WaitOne(5000)
+        $jsonContent = ConvertTo-BaselineJson -Baseline $Baseline
+        [System.IO.File]::WriteAllText($Global:ProcessBaselinePath, $jsonContent, [System.Text.UTF8Encoding]::new($false))
+    } catch {
+        Write-Log "[BASELINE] Save-BaselineSafe failed: $($_.Exception.Message)" "WARN"
+    } finally {
+        if ($mtx) {
+            try { $mtx.ReleaseMutex() } catch { }
+            try { $mtx.Dispose() } catch { }
+        }
+    }
+}
+
 function Initialize-ProcessBaseline {
     <#
     .SYNOPSIS
@@ -4229,10 +4362,12 @@ function Initialize-ProcessBaseline {
             try {
                 $rawJson = Get-Content $Global:ProcessBaselinePath -Raw -ErrorAction Stop
                 if ($rawJson -and $rawJson.Trim().Length -gt 2) {
-                    $loadedBaseline = $rawJson | ConvertFrom-Json -ErrorAction Stop
+                    # v5.0.16-fix: Use Import-BaselineSafe instead of raw ConvertFrom-Json
+                    $loadedBaseline = Import-BaselineSafe -RawJson $rawJson
+                    if ($loadedBaseline.Count -eq 0) { $loadedBaseline = $null }
                 }
             } catch {
-                Write-Log "[BASELINE] HOTFIX-BASELINE-LOAD-SAFE: ConvertFrom-Json failed ($($_.Exception.Message)). Rebuilding baseline..." "WARN"
+                Write-Log "[BASELINE] HOTFIX-BASELINE-LOAD-SAFE: Load failed ($($_.Exception.Message)). Rebuilding baseline..." "WARN"
                 # Rename corrupted file and rebuild
                 $corruptPath = "$($Global:ProcessBaselinePath).corrupt.$((Get-Date).ToString('yyyyMMddHHmmss'))"
                 Move-Item -Path $Global:ProcessBaselinePath -Destination $corruptPath -Force -ErrorAction SilentlyContinue
@@ -4258,7 +4393,7 @@ function Initialize-ProcessBaseline {
                 $dupsRemoved = ([array]$loadedBaseline).Count - $normalizedBaseline.Count
                 if ($dupsRemoved -gt 0) {
                     Write-Log "[BASELINE] Load dedup: removed $dupsRemoved duplicate entries" "WARN"
-                    $normalizedBaseline | ConvertTo-SafePSO | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+                    Save-BaselineSafe -Baseline $normalizedBaseline
                 }
                 Write-Log "[BASELINE] Loaded and normalized baseline with $($normalizedBaseline.Count) processes" "INFO"
             } else {
@@ -4285,7 +4420,7 @@ function Initialize-ProcessBaseline {
 
             $Global:ProcessBaseline = $baseline
             # v5.0.14-fix3: Use ConvertTo-SafePSO to prevent PS 5.1 duplicate key errors
-            $baseline | ConvertTo-SafePSO | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+            Save-BaselineSafe -Baseline $baseline
 
             Write-Log "[BASELINE] Created baseline with $($baseline.Count) processes" "SUCCESS"
         }
@@ -4352,7 +4487,7 @@ function Get-ProcessAnomalies {
                         $n = Get-SafeBaselineProp $e 'name'
                         if ($n) { [void]$Global:ProcessBaselineSet.Add($n) }
                     }
-                    $cleanBaseline | ConvertTo-SafePSO | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+                    Save-BaselineSafe -Baseline $cleanBaseline
                 }
             }
         } catch {
@@ -4397,7 +4532,7 @@ function Get-ProcessAnomalies {
                     }
                 }
                 # v5.0.14-fix3: Use ConvertTo-SafePSO to prevent PS 5.1 duplicate key errors
-                $normalizedForSave | ConvertTo-SafePSO | ConvertTo-Json -Depth 5 | Out-File $Global:ProcessBaselinePath -Encoding UTF8
+                Save-BaselineSafe -Baseline $normalizedForSave
             } catch {
                 Write-Log "[BASELINE] Failed to save baseline: $($_.Exception.Message)" "WARN"
             }
@@ -5238,7 +5373,10 @@ function Apply-ForcedUpdate {
         # process for a few seconds/minutes before the restarted scheduled task takes over.
         try {
             Save-SignedHashCache -Hash $actualHash -Signature $updateSignature -Timestamp (Get-Date -Format "o")
-            Write-Log "[FORCE UPDATE] Expected hash cache atualizado para o novo payload" "SUCCESS"
+            # v5.0.16-fix: Also update BootScriptHash so Test-RuntimeIntegrity won't
+            # see the new file as a TOCTOU violation during the grace period before restart
+            $Global:BootScriptHash = $actualHash
+            Write-Log "[FORCE UPDATE] Expected hash cache + BootScriptHash atualizado para o novo payload" "SUCCESS"
         } catch {
             Write-Log "[FORCE UPDATE] Falha ao atualizar expected hash cache: $($_.Exception.Message)" "WARN"
         }
