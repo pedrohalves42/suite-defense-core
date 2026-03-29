@@ -3,6 +3,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+
+/** Extended timeout for this function's external calls */
+const FETCH_TIMEOUT_MS = 30000;
 import { buildCorsHeaders } from '../_shared/cors.ts';
 
 // ?? Feed Fetchers ??
@@ -23,7 +26,7 @@ async function fetchMalwareBazaarRecent(): Promise<RawIndicator[]> {
   try {
     const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded' };
     if (abuseKey) headers['Auth-Key'] = abuseKey;
-    const resp = await fetchWithTimeout('https://mb-api.abuse.ch/api/v1/', {
+    const resp = await fetchWithTimeout('https://mb-api.abuse.ch/api/v1/', { timeoutMs: FETCH_TIMEOUT_MS,
       method: 'POST',
       headers,
       body: 'query=get_recent&limit=50',
@@ -78,7 +81,7 @@ async function fetchMalwareBazaarCSV(): Promise<RawIndicator[]> {
   const indicators: RawIndicator[] = [];
   try {
     // Fallback: use the daily CSV hash list
-    const resp = await fetchWithTimeout('https://bazaar.abuse.ch/export/csv/recent/', {
+    const resp = await fetchWithTimeout('https://bazaar.abuse.ch/export/csv/recent/', { timeoutMs: FETCH_TIMEOUT_MS,
       method: 'GET',
     });
     if (!resp.ok) {
@@ -123,7 +126,7 @@ async function fetchURLhaus(): Promise<RawIndicator[]> {
   try {
     const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded' };
     if (abuseKey) headers['Auth-Key'] = abuseKey;
-    const resp = await fetchWithTimeout('https://urlhaus-api.abuse.ch/v1/urls/recent/', {
+    const resp = await fetchWithTimeout('https://urlhaus-api.abuse.ch/v1/urls/recent/', { timeoutMs: FETCH_TIMEOUT_MS,
       method: 'POST',
       headers,
       body: 'limit=100',

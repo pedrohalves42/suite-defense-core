@@ -23,6 +23,9 @@ import { handleSecurityCopilot } from './handlers/security-copilot.ts';
 import { handleGetInsights } from './handlers/get-insights.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
+/** Extended timeout for this function's external calls */
+const FETCH_TIMEOUT_MS = 60000;
+
 const RouterSchema = z.object({
   action: z.string().min(1).max(64),
   payload: z.record(z.unknown()).optional().default({}),
@@ -111,7 +114,7 @@ serveTenant(async (req, ctx) => {
     const apiKey = req.headers.get('apikey');
     if (apiKey) headers['apikey'] = apiKey;
 
-    const response = await fetchWithTimeout(targetUrl, {
+    const response = await fetchWithTimeout(targetUrl, { timeoutMs: FETCH_TIMEOUT_MS,
       method: 'POST',
       headers,
       body: JSON.stringify(payload),

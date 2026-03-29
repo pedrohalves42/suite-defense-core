@@ -3,6 +3,9 @@ import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
+/** Extended timeout for this function's external calls */
+const FETCH_TIMEOUT_MS = 30000;
+
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -175,7 +178,7 @@ Deno.serve(async (req) => {
     logger.info(`[${requestId}] [FETCH-NVD] Fetching from NVD: ${nvdUrl}`);
 
     // Fetch from NVD API
-    const nvdResponse = await fetchWithTimeout(nvdUrl, {
+    const nvdResponse = await fetchWithTimeout(nvdUrl, { timeoutMs: FETCH_TIMEOUT_MS,
       headers: {
         'Accept': 'application/json',
         'User-Agent': 'CyberShield-Security-Scanner/1.0'

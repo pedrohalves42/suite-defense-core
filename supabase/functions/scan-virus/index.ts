@@ -7,6 +7,9 @@ import { checkQuotaAvailable } from '../_shared/quota.ts';
 import { hashToken } from '../_shared/token-hash.ts';
 import { logger } from '../_shared/logger.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+
+/** Extended timeout for this function's external calls */
+const FETCH_TIMEOUT_MS = 30000;
 import { buildCorsHeaders } from '../_shared/cors.ts';
 
 interface ScanRequest {
@@ -31,8 +34,7 @@ async function scanWithHybridAnalysis(fileHash: string, apiKey: string): Promise
     
     // Query for existing scan report
     const reportResponse = await fetchWithTimeout(
-      `https://www.hybrid-analysis.com/api/v2/report/${fileHash}/summary`,
-      {
+      `https://www.hybrid-analysis.com/api/v2/report/${fileHash}/summary`, { timeoutMs: FETCH_TIMEOUT_MS,
         headers: {
           'api-key': apiKey,
           'User-Agent': 'CyberShield',
