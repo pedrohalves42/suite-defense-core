@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,7 +46,7 @@ export function OnCallDashboard() {
       setSource(oncallRes.source || 'local');
       setAlerts(alertsRes.alerts || []);
     } catch (e) {
-      console.error('Failed to load on-call data:', e);
+      logger.error('Failed to load on-call data', e);
     } finally {
       setLoading(false);
     }

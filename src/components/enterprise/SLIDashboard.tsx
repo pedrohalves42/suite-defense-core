@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -61,7 +62,7 @@ export function SLIDashboard({ tenantId }: SLIDashboardProps) {
       setSlo(sloRes);
       setMetrics(dashRes.recentMetrics || []);
     } catch (e) {
-      console.error('Failed to load SLI/SLO:', e);
+      logger.error('Failed to load SLI/SLO data', e);
     } finally {
       setLoading(false);
     }
