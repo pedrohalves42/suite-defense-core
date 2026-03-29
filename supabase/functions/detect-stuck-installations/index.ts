@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     }
 
     // Group stuck agents by tenant
-    const stuckByTenant = stuckAgents.reduce((acc: any, agent: any) => {
+    const stuckByTenant = stuckAgents.reduce((acc: Record<string, unknown[]>, agent: Record<string, unknown>) => {
       if (!acc[agent.tenant_id]) {
         acc[agent.tenant_id] = [];
       }
