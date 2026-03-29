@@ -34,7 +34,7 @@ import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-
 import { corsHeaders, buildCorsHeaders } from './cors.ts';
 import { securityHeaders } from './security-headers.ts';
 import { requireEnv } from './env.ts';
-import { logger } from './logger.ts';
+import { logger, loggerWithContext } from './logger.ts';
 import { timingSafeEqual } from './crypto-utils.ts';
 
 // ??? Types ???????????????????????????????????????????????????????????????????
@@ -311,7 +311,8 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
 
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Internal server error';
-      logger.error(`[serveTenant][${requestId}] Error`, { message: msg });
+      const log = loggerWithContext({ requestId, tenantId: tenantId ?? undefined });
+      log.error(`[serveTenant] Error`, { message: msg });
       return errorResponse(msg, 500, requestId, origin);
     }
   });
@@ -347,7 +348,8 @@ export function servePublic(handler: PublicHandler) {
       return jsonResponse(result, 200, { 'X-Request-ID': requestId }, origin);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Internal server error';
-      logger.error(`[servePublic][${requestId}] Error`, { message: msg });
+      const log = loggerWithContext({ requestId });
+      log.error(`[servePublic] Error`, { message: msg });
       return errorResponse(msg, 500, requestId, origin);
     }
   });
@@ -441,7 +443,8 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
       return jsonResponse(result, 200, { 'X-Request-ID': requestId }, origin);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Internal server error';
-      logger.error(`[serveAgent][${requestId}] Error`, { message: msg });
+      const log = loggerWithContext({ requestId });
+      log.error(`[serveAgent] Error`, { message: msg });
       return errorResponse(msg, 500, requestId, origin);
     }
   });

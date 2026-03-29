@@ -47,6 +47,10 @@ export const AgentNameSchema = z.string()
 export const EnrollAgentSchema = z.object({
   enrollmentKey: z.string().length(19, 'Chave de enrollment deve ter formato XXXX-XXXX-XXXX-XXXX'),
   agentName: AgentNameSchema,
+  /** Agent version reported during enrollment (e.g. "5.0.15"). Used for HMAC sunset policy. */
+  agentVersion: z.string().max(20).optional(),
+  /** Explicit flag: agent declares HMAC support. Legacy agents omit this. */
+  supportsHmac: z.boolean().optional(),
 });
 
 export const CreateJobSchema = z.object({

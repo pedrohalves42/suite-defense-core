@@ -86,7 +86,50 @@ Deno.serve(async (req) => {
       return handleValidationError(validation.error, undefined, requestId);
     }
 
-    const { enrollmentKey, agentName } = validation.data;
+    const { enrollmentKey, agentName, agentVersion, supportsHmac } = validation.data;
+
+    // ── PR-5: HMAC Sunset Policy ──────────────────────────────────────────────
+    // New enrollments from agents that don't declare HMAC support are blocked.
+    // Controlled via feature flag 'enforce_hmac_enrollment' for safe rollout.
+    const hmacDeclared = supportsHmac === true;
+    if (!hmacDeclared) {
+      // Check feature flag — allows gradual rollout / kill-switch
+      // feature_flags is per-tenant; check if ANY tenant has it enabled (global policy)
+      const { data: flags } = await supabase
+        .from('feature_flags')
+        .select('enabled')
+        .eq('key', 'enforce_hmac_enrollment')
+        .eq('enabled', true)
+        .limit(1);
+
+      const enforceHmac = (flags && flags.length > 0);
+      if (enforceHmac) {
+        logger.warn(`[${requestId}] Enrollment rejected: agent does not support HMAC`, {
+          agentName,
+          agentVersion: agentVersion ?? 'unknown',
+        });
+
+        await createAuditLog({
+          supabase,
+          tenantId: 'unknown',
+          action: 'agent_enrollment_rejected_no_hmac',
+          resourceType: 'agent',
+          resourceId: agentName,
+          details: { reason: 'hmac_not_supported', agentVersion: agentVersion ?? 'unknown' },
+          request: req,
+          success: false,
+        });
+
+        return new Response(
+          JSON.stringify({
+            error: 'Agent version does not support HMAC authentication. Please upgrade to v5.0.12+.',
+            code: 'HMAC_REQUIRED',
+            requestId,
+          }),
+          { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     // P1 SEC-001 FIX: Validate enrollment key by hash (not plaintext)
     // Hash the incoming key and compare with stored hash
