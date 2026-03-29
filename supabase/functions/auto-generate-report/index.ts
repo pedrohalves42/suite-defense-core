@@ -165,8 +165,8 @@ Deno.serve(async (req) => {
     const agentFilter = agent_id ? { agent_id } : {}
 
     // Fetch data based on report type
-    let statistics: any = {}
-    let reportData: any = {}
+    let statistics: Record<string, unknown> = {}
+    let reportData: Record<string, unknown> = {}
 
     // Get agents count
     const { count: agentCount } = await supabase

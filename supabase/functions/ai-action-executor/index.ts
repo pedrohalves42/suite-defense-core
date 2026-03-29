@@ -124,7 +124,7 @@ serve(async (req) => {
     }
 
     // 7. Executar acao baseada no tipo
-    let executionResult: any = {};
+    let executionResult: Record<string, unknown> = {};
     let executionStatus = 'executed';
     let errorMessage = null;
 

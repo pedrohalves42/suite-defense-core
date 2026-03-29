@@ -761,7 +761,7 @@ async function generateSuggestedActions(insights: Array<Record<string, unknown>>
 
     // Determinar tipo de acao baseado no tipo de insight
     let actionType = null;
-    let actionPayload: any = {};
+    let actionPayload: Record<string, unknown> = {};
 
     switch (insight.insight_type) {
       case 'agent_health':

@@ -263,7 +263,7 @@ serveTenant(async (req, ctx) => {
   const redTokens = redAiResult.tokensUsed?.total || 0;
 
   // Parse Red Team response with robust stream-safe parser
-  let redResult: any;
+  let redResult: Record<string, unknown> | null = null;
   let redTeamFallbackUsed = false;
   try {
     redResult = safeParseJSON(redContent, 'red-team');
@@ -447,7 +447,7 @@ INSTRUCAO: Considere esses riscos ao avaliar. Seu score deve refletir conscienci
   const anaTokens = anaAiResult.tokensUsed?.total || 0;
 
   // Parse Ana response with robust stream-safe parser
-  let anaResult: any;
+  let anaResult: Record<string, unknown> | null = null;
   let anaFallbackUsed = false;
   try {
     anaResult = safeParseJSON(anaContent, 'ana');
