@@ -20,10 +20,6 @@ import { shouldProcessAlertsForTenant } from '../_shared/business-hours.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 interface AgentExecutionHealth {
   agent_id: string;
   agent_name: string;

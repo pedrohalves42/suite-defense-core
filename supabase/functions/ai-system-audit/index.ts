@@ -6,11 +6,6 @@ import { callAI, type AIMessage } from "../_shared/ai-provider-helper.ts";
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-tenant-id',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-};
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: buildCorsHeaders(origin) });

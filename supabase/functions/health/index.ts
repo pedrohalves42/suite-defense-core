@@ -12,8 +12,6 @@ import { buildCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'content-type, authorization, x-client-info, apikey'
   }
 
   if (req.method === 'OPTIONS') {

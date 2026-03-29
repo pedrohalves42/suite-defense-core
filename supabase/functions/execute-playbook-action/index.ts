@@ -6,10 +6,6 @@ import { buildCorsHeaders } from '../_shared/cors.ts';
   isServiceProtected
 } from '../_shared/protected-targets.ts';
 
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 interface PlaybookAction {
   id: string;
   order_index: number;

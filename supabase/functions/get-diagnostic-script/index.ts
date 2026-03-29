@@ -4,10 +4,6 @@ import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 const DIAGNOSTIC_SCRIPT = `#Requires -RunAsAdministrator
 # CyberShield Agent Diagnostic Script
 # Version: 1.0.0

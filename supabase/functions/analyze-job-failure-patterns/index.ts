@@ -4,10 +4,6 @@ import { validateCallerTenant } from '../_shared/validate-caller-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 interface FailurePattern {
   agent_id: string;
   agent_name: string;

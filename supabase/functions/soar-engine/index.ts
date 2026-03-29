@@ -14,10 +14,6 @@ import { buildCorsHeaders } from '../_shared/cors.ts';
  *   Event ? Match Rules ? Check Blast Radius ? Create Remediation Job
  */
 
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 interface SOAREvent {
   tenant_id: string;
   agent_id: string;

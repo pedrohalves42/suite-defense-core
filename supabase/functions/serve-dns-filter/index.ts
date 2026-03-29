@@ -4,10 +4,6 @@ import { hashToken } from '../_shared/token-hash.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-agent-token, x-hmac-signature, x-timestamp, x-nonce',
-};
-
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   // Handle CORS preflight

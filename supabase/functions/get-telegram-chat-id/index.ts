@@ -2,10 +2,6 @@ import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 // deno-lint-ignore-file
 
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {

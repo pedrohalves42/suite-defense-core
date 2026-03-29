@@ -8,10 +8,6 @@ import { buildCorsHeaders } from '../_shared/cors.ts';
   EDGE_VERSION 
 } from '../_shared/health-probe.ts';
 
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-tenant-id, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
-
 // Events older than 15 minutes are considered historical (not urgent)
 const HISTORICAL_THRESHOLD_MS = 15 * 60 * 1000; // 15 minutes
 

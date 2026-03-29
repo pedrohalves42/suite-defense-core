@@ -27,11 +27,6 @@ import { buildCorsHeaders } from '../_shared/cors.ts';
  * v2.3: Migrated to serveTenant middleware
  */
 
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-tenant-id',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-};
-
 /**
  * Calculate deterministic base score from metrics (no LLM variance)
  * 
