@@ -153,6 +153,7 @@ const UpdatePassword = () => {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
+                autoComplete="new-password"
                 minLength={8}
                 maxLength={72}
                 disabled={loading}
