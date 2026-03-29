@@ -58,7 +58,7 @@ async function fetchTokens(tenantId: string): Promise<DashboardAgentToken[]> {
 // PERF-FIX: Slim select for rate_limits — avoid fetching metadata blobs
 async function fetchRateLimits(tenantId: string): Promise<DashboardRateLimit[]> {
   const { data, error } = await (supabase.from("rate_limits" as never) )
-    .select("id, tenant_id, identifier, action, request_count, last_request_at, blocked_until")
+    .select("id, tenant_id, identifier, endpoint, request_count, last_request_at, blocked_until")
     .eq("tenant_id", tenantId).order("last_request_at", { ascending: false }).limit(100);
   if (error) throw error;
   return data || [];
@@ -67,7 +67,7 @@ async function fetchRateLimits(tenantId: string): Promise<DashboardRateLimit[]> 
 // PERF-FIX: Slim select for virus_scans — avoid fetching large scan_output blob
 async function fetchVirusScans(tenantId: string): Promise<DashboardVirusScan[]> {
   const { data, error } = await supabase.from("virus_scans")
-    .select("id, agent_name, tenant_id, file_path, file_hash, is_malicious, detection_name, engine, scanned_at, quarantined")
+    .select("id, agent_name, tenant_id, file_path, file_hash, is_malicious, positives, total_scans, scanned_at")
     .eq("tenant_id", tenantId).order("scanned_at", { ascending: false }).limit(100);
   if (error) throw error;
   return data as unknown as DashboardVirusScan[] || [];
