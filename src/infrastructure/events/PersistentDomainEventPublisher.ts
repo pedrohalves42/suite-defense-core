@@ -44,9 +44,9 @@ export class PersistentDomainEventPublisher implements DomainEventDispatcher {
         tenant_id: this.extractTenantId(event),
       }));
 
-      const { error } = await supabase
-        .from('domain_events')
-        .insert(rows);
+      const { error } = await supabase.functions.invoke('log-domain-event', {
+        body: rows,
+      });
 
       if (error) {
         logger.error('[PersistentDomainEventPublisher] Failed to persist events', { error: error.message });
