@@ -6,6 +6,7 @@ import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from '../_
 import { persistAIMetrics } from '../_shared/ai-metrics-persistence.ts';
 import { AIEvidence, buildEvidence, calculateConfidence, generateReasoningSummary, extractDataSources } from '../_shared/ai-evidence-types.ts';
 import { logger } from '../_shared/logger.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -123,6 +124,10 @@ async function incrementAIQuotaUsage(
 }
 
 Deno.serve(async (req) => {
+  // Auth guard: reject unauthenticated calls
+  const authError = await assertInternalCaller(req);
+  if (authError) return authError;
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
