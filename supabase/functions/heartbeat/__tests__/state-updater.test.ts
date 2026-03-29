@@ -12,7 +12,7 @@ interface MockCall {
 
 function mockSupabase() {
   const calls: MockCall[] = [];
-  const chain = {
+  const chain: Record<string, unknown> = {
     eq: () => chain,
     lt: () => chain,
     then: (cb: (v: { data: null; error: null }) => void) => {
