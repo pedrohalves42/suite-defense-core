@@ -20,8 +20,8 @@ export interface MaintenanceResult {
 }
 
 interface SupabaseClient {
-  from(table: string): any;
-  rpc(fn: string, params: Record<string, unknown>): any;
+  from(table: string): ReturnType<SupabaseClient['from']>;
+  rpc(fn: string, params: Record<string, unknown>): Promise<{ data: Record<string, unknown> | null; error: { message: string } | null }>;
 }
 
 export class RunMaintenanceUseCase {
@@ -64,7 +64,7 @@ export class RunMaintenanceUseCase {
         retriggered_agents: result.retriggeredAgents,
         duration_ms: result.durationMs,
       },
-    }).then(({ error: healthErr }: { error: any }) => {
+    }).then(({ error: healthErr }: { error: { message: string } | null }) => {
       if (healthErr) {
         logger.warn('[RunMaintenance] Failed to update cron health', { error: healthErr.message });
       }

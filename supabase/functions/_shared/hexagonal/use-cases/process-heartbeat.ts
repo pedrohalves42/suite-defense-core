@@ -38,8 +38,8 @@ export interface HeartbeatResult {
 }
 
 interface SupabaseClient {
-  from(table: string): any;
-  rpc(fn: string, params: Record<string, unknown>): any;
+  from(table: string): ReturnType<SupabaseClient['from']>;
+  rpc(fn: string, params: Record<string, unknown>): Promise<{ data: Record<string, unknown> | null; error: { message: string } | null }>;
 }
 
 /**

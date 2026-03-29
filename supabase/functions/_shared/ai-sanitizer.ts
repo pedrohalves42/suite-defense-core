@@ -152,7 +152,7 @@ export function sanitizeObjectForAI<T extends Record<string, any>>(
     }
 
     if (typeof value === 'object') {
-      const sanitized: Record<string, any> = {};
+      const sanitized: Record<string, unknown> = {};
       for (const [key, val] of Object.entries(value)) {
         sanitized[key] = sanitizeValue(val, `${path}.${key}`);
       }
