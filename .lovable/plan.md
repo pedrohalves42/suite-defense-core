@@ -731,26 +731,398 @@ try {
 
 ---
 
-## Ordem de Implementação
+## ✅ Etapas 1-4 Concluídas (Agent v5.0.15 consolidado)
 
-| Etapa | Mudanças | Linhas Afetadas | Estimativa |
-|-------|----------|----------------|------------|
-| 1 | P1.1 — Hash BOM-safe (5 pontos) | 553, 385, 405, 436, 841 | 15 min |
-| 2 | P1.2 — Grace period pós-update | 876 + auto-update block | 10 min |
-| 3 | P1.3 — Atomic update verification | auto-update flow | 10 min |
-| 4 | P1.4 — Log estruturado TOCTOU | 878 | 5 min |
-| 5 | P2.1 — Fallback RSA no catch externo | ~1693 | 5 min |
-| 6 | P2.2 — Eliminar emergency duplicada | boot sequence | 10 min |
-| 7 | P3.1 — ConvertTo-BaselineJson | nova função + 3 call sites | 15 min |
-| 8 | P3.2 — Import-BaselineSafe | nova função + 1 call site | 10 min |
-| 9 | P3.3 — Mutex de escrita | save baseline | 5 min |
-| 10 | Sync public/ + bump version | sync script | 5 min |
+Todas as correções P1 (TOCTOU), P2 (crypto boot) e P3 (baseline) foram aplicadas
+diretamente na v5.0.15. Scripts source e public sincronizados.
 
-**Total: ~90 min**
+---
 
-## Critérios de Sucesso
-- [ ] Zero `TOCTOU VIOLATION` em 48h após deploy
-- [ ] Boot direto para ENFORCING sem DEGRADED transitório
-- [ ] Zero `Corrupted baseline detected` após primeira inicialização
-- [ ] Hash do script sincronizado entre source e public
-- [ ] Agente v5.0.16 operacional em pcteste1
+# ETAPA 5 — Plano de Mitigação de Débitos Técnicos e Conformidade SOC 2
+
+**Data do plano:** 2026-03-29
+**Baseline verificada em código (não estimada):**
+
+| Métrica | Valor Real Verificado |
+|---------|----------------------|
+| `as any` casts em `src/` | **89** (em ~25 arquivos, maioria em testes) |
+| God functions >1000 linhas | **3** (autonomous-safe-mode: 1451, action-center-feed: 1315, evaluate-automation-rules: 1058) |
+| `refetchInterval` em `src/` | **148** ocorrências |
+| Arquivos de teste (src + edge) | **74** (55 src + 19 edge) |
+| Tabela de nonces/replay | **Não existe** |
+| Tabelas de aprovação (dual-admin) | **5 tabelas existem** (automation_approvals, approvals, approval_chains, approval_requests, v_pending_critical_approvals) |
+| backup_verifications | **Existe** |
+| agent_signing_keys | **Existe** |
+
+---
+
+## FASE 1 — IMPACTO DIRETO SOC 2 (Semanas 1-2)
+
+### 1.1 Nonce/Replay Tracking (Item #5) — P1 CRÍTICO
+**Severidade:** Alta (sem isso, HMAC é vulnerável a replay attacks)
+**Esforço:** 2 dias
+**Impacto SOC 2:** CC6.1 (Logical Access), CC6.6 (External Threats)
+
+**Ações:**
+1. **Criar tabela `hmac_consumed_nonces`:**
+   ```sql
+   CREATE TABLE public.hmac_consumed_nonces (
+     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+     nonce text NOT NULL,
+     agent_id uuid NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+     tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+     consumed_at timestamptz NOT NULL DEFAULT now(),
+     expires_at timestamptz NOT NULL DEFAULT (now() + interval '10 minutes'),
+     UNIQUE(nonce, tenant_id)
+   );
+   CREATE INDEX idx_nonces_expires ON hmac_consumed_nonces(expires_at);
+   CREATE INDEX idx_nonces_lookup ON hmac_consumed_nonces(nonce, tenant_id);
+   ALTER TABLE hmac_consumed_nonces ENABLE ROW LEVEL SECURITY;
+   ```
+
+2. **Criar cron job de limpeza (a cada 15 min):**
+   ```sql
+   SELECT cron.schedule('cleanup-expired-nonces', '*/15 * * * *', $$
+     DELETE FROM public.hmac_consumed_nonces WHERE expires_at < now();
+   $$);
+   ```
+
+3. **Modificar `_shared/hmac.ts`:**
+   - Antes de validar HMAC, verificar se nonce já foi consumido
+   - Após validação bem-sucedida, inserir nonce na tabela
+   - Rejeitar com 409 Conflict se nonce já existir
+
+4. **Atualizar agente v5.0.15:**
+   - Gerar UUID como nonce em cada request
+   - Incluir nonce no cálculo HMAC: `HMAC(timestamp + nonce + body)`
+
+**Critério de sucesso:** Zero replay attacks possíveis; nonce rejeitado na segunda tentativa.
+
+---
+
+### 1.2 Evidência Formal de Restore Tests — CC7.5 (Item #8) — P1
+**Severidade:** Alta (bloqueador de certificação)
+**Esforço:** 1 dia
+**Impacto SOC 2:** CC7.5 (Recovery Testing)
+
+**Ações:**
+1. **Criar cron job semanal** que executa `scripts/backup-restore-test.sh` automaticamente
+2. **Verificar e popular `backup_verifications`:**
+   ```sql
+   -- Cron semanal (domingos 03:00 UTC)
+   SELECT cron.schedule('weekly-backup-restore-test', '0 3 * * 0', $$
+     SELECT net.http_post(
+       url:='https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/run-backup-restore-test',
+       headers:='{"Authorization": "Bearer <anon_key>"}'::jsonb
+     );
+   $$);
+   ```
+3. **Criar edge function `run-backup-restore-test`** que:
+   - Executa restore em schema temporário
+   - Valida integridade da cadeia de auditoria
+   - Insere resultado em `backup_verifications`
+   - Envia alerta se falhar
+4. **Dashboard de evidência:** Adicionar card em ComplianceDashboard mostrando últimas 10 verificações
+
+**Critério de sucesso:** Registro semanal em `backup_verifications` com resultado pass/fail + timestamp.
+
+---
+
+### 1.3 Comprovar Rotação de Chaves 90 dias (Item #9) — P1
+**Severidade:** Alta (bloqueador de certificação)
+**Esforço:** 1 dia
+**Impacto SOC 2:** CC6.1, CC6.7 (Key Management)
+
+**Ações:**
+1. **Criar cron job de rotação automática (mensal, verificação de 90 dias):**
+   ```sql
+   SELECT cron.schedule('check-key-rotation', '0 2 1 * *', $$
+     SELECT net.http_post(
+       url:='https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/rotate-signing-keys',
+       headers:='{"Authorization": "Bearer <anon_key>"}'::jsonb
+     );
+   $$);
+   ```
+2. **Criar tabela `key_rotation_audit_log`:**
+   ```sql
+   CREATE TABLE public.key_rotation_audit_log (
+     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+     tenant_id uuid REFERENCES tenants(id),
+     key_type text NOT NULL, -- 'ed25519_signing', 'hmac_agent', 'ecdsa_agent'
+     old_key_id uuid,
+     new_key_id uuid,
+     rotated_at timestamptz NOT NULL DEFAULT now(),
+     rotated_by text NOT NULL DEFAULT 'system_cron',
+     reason text DEFAULT 'scheduled_90_day_rotation'
+   );
+   ```
+3. **Verificar `agent_signing_keys`:** Adicionar alerta se alguma chave tem >80 dias sem rotação
+4. **Dashboard:** Card de "Key Rotation Status" mostrando dias desde última rotação por tipo
+
+**Critério de sucesso:** Evidência de rotação automática a cada ≤90 dias com audit trail completo.
+
+---
+
+### 1.4 Workflow Dual-Admin (Item #6) — P2
+**Severidade:** Média-Alta (parcialmente implementado)
+**Esforço:** 3 dias
+**Impacto SOC 2:** CC6.1 (Segregation of Duties), CC8.1 (Change Management)
+
+**Estado atual:** 5 tabelas existem (approvals, approval_chains, approval_requests, automation_approvals, v_pending_critical_approvals). Falta UI completa e enforcement.
+
+**Ações:**
+1. **Mapear ações que requerem dual-approval:**
+   - Deletar agente
+   - Alterar política de segurança
+   - Revogar chave de enrollment
+   - Alterar configuração de tenant
+   - Aprovar automação SOAR crítica
+2. **Criar componente `ApprovalWorkflow`:**
+   - Formulário de solicitação com justificativa
+   - Lista de aprovações pendentes (filtrada por role)
+   - Notificação em tempo real via Supabase Realtime
+3. **Enforcement em Edge Functions:**
+   - Interceptar ações críticas
+   - Verificar se existe aprovação válida em `approval_requests`
+   - Rejeitar com 403 se não aprovado por segundo admin
+4. **Audit trail:** Toda aprovação/rejeição registrada com evidência (5 Ws)
+
+**Critério de sucesso:** Ações críticas bloqueadas sem segunda aprovação; trail completo em approval_requests.
+
+---
+
+## FASE 2 — QUALIDADE DE CÓDIGO (Semanas 3-4)
+
+### 2.1 Reduzir `as any` de 89 para <50 (Item #1) — P2
+**Severidade:** Média
+**Esforço:** 1-2 dias (já reduzido de 421 para 89)
+**Impacto SOC 2:** CC8.1 (Quality Assurance)
+
+**Estado atual:** 89 casts, maioria em arquivos de teste (useAuth.test.tsx: 11, useSuperAdmin.test.tsx: 7, useTenant.test.tsx: 5).
+
+**Ações:**
+1. **Testes (≈45 casts):** Criar tipos mock adequados:
+   ```typescript
+   // Em vez de: const mockSupabase = { auth: { getUser: vi.fn() } } as any
+   // Usar:
+   type MockSupabaseClient = Pick<SupabaseClient, 'auth'> & { auth: { getUser: Mock } };
+   ```
+2. **Hooks de produção (≈20 casts):** Tipar corretamente retornos de Supabase queries
+3. **Páginas admin (≈24 casts):** Substituir por type assertions específicas (`as AgentRow`)
+
+**Prioridade interna:**
+| Grupo | Arquivos | Casts | Ação |
+|-------|----------|-------|------|
+| Testes | 8 arquivos | ~45 | Criar tipos mock |
+| Hooks prod | 3 arquivos | ~12 | Tipar queries |
+| Páginas | 8 arquivos | ~24 | Type assertions específicas |
+| Infra | 6 arquivos | ~8 | Caso a caso |
+
+**Critério de sucesso:** `grep -rn "as any" src/ | wc -l` retorna <50.
+
+---
+
+### 2.2 Decompor 3 God Functions (Item #2) — P2
+**Severidade:** Média
+**Esforço:** 2 dias
+**Impacto SOC 2:** CC8.1 (Maintainability)
+
+**Plano de decomposição:**
+
+#### `autonomous-safe-mode/index.ts` (1451 linhas)
+Dividir em:
+- `_shared/safe-mode/health-checks.ts` — Verificações de saúde (agent connectivity, DB health)
+- `_shared/safe-mode/recovery-actions.ts` — Ações de recuperação (restart, rollback)
+- `_shared/safe-mode/escalation.ts` — Lógica de escalação (alertas, notificações)
+- `autonomous-safe-mode/index.ts` — Orquestrador (≤300 linhas)
+
+#### `action-center-feed/index.ts` (1315 linhas)
+Dividir em:
+- `_shared/action-center/feed-builder.ts` — Construção do feed de ações
+- `_shared/action-center/filters.ts` — Filtros e paginação
+- `_shared/action-center/enrichment.ts` — Enriquecimento de dados (agent info, tenant info)
+- `action-center-feed/index.ts` — Handler HTTP (≤250 linhas)
+
+#### `evaluate-automation-rules/index.ts` (1058 linhas)
+Dividir em:
+- `_shared/automation/rule-engine.ts` — Motor de avaliação de regras
+- `_shared/automation/condition-evaluator.ts` — Avaliação de condições
+- `_shared/automation/action-executor.ts` — Execução de ações
+- `evaluate-automation-rules/index.ts` — Entry point (≤200 linhas)
+
+**Critério de sucesso:** Nenhum arquivo >500 linhas; todos os testes existentes passando.
+
+---
+
+### 2.3 Auditoria de refetchInterval (Item #3) — P2
+**Severidade:** Média
+**Esforço:** 1 dia
+**Impacto SOC 2:** Indireto (performance/disponibilidade)
+
+**Estado atual:** 148 ocorrências de `refetchInterval` em `src/`.
+
+**Ações:**
+1. **Categorizar os 148 usos:**
+   - **Substituir por Realtime** (tabelas com publicação ativa): agents, jobs, alerts, heartbeats
+   - **Converter para useAdaptivePolling** (pausa em background): dashboards, monitoring
+   - **Manter refetchInterval** (dados externos sem Realtime): config, policies
+   - **Remover** (dados estáticos que não mudam): enums, feature flags
+
+2. **Aplicar `usePageVisibility`:**
+   ```typescript
+   const isVisible = usePageVisibility();
+   useQuery({
+     refetchInterval: isVisible ? 30000 : false, // Pausa quando aba oculta
+   });
+   ```
+
+3. **Padronizar intervalos:**
+   | Tipo de dado | Intervalo | Com Realtime? |
+   |-------------|-----------|---------------|
+   | Agentes ativos | Realtime | Sim → remover polling |
+   | Dashboard metrics | 60s (visible) / false (hidden) | Não |
+   | Alertas | Realtime | Sim → remover polling |
+   | Config/policies | 300s | Não |
+
+**Critério de sucesso:** ≤30 `refetchInterval` restantes; zero polling em abas ocultas.
+
+---
+
+## FASE 3 — COBERTURA DE TESTES (Semanas 3-6)
+
+### 3.1 Aumentar Cobertura de <20% para >60% (Item #4) — P1
+**Severidade:** Alta (bloqueador SOC 2)
+**Esforço:** 2-3 semanas
+**Impacto SOC 2:** CC8.1 (Testing), CC7.1 (Monitoring)
+
+**Estado atual:** 74 arquivos de teste (55 src + 19 edge functions).
+
+**Estratégia por camada:**
+
+#### Semana 1 — Edge Functions críticas (Tier 1-2)
+| Função | Tipo | Prioridade |
+|--------|------|-----------|
+| heartbeat | Integration | P0 |
+| poll-jobs | Integration | P0 |
+| serve-agent-update | Integration | P0 |
+| submit-agent-evidence | Integration | P0 |
+| evaluate-automation-rules | Unit | P1 |
+| action-center-feed | Unit | P1 |
+| autonomous-safe-mode | Unit | P1 |
+
+**Meta:** 30 novos testes de edge functions → cobertura edge: ~60%
+
+#### Semana 2 — Hooks e services críticos
+| Módulo | Tipo | Prioridade |
+|--------|------|-----------|
+| useAuth / useSession | Unit | P0 |
+| useTenant / useTenantFeatures | Unit | P0 |
+| useAgentActions | Unit | P1 |
+| HMAC validation | Unit | P0 |
+| Rate limiter | Unit | P0 |
+| domain/services/* | Unit | P1 |
+
+**Meta:** 25 novos testes de hooks/services → cobertura src: ~40%
+
+#### Semana 3 — Componentes e páginas
+| Módulo | Tipo | Prioridade |
+|--------|------|-----------|
+| AgentManagement | Integration | P1 |
+| SecurityMonitoring | Integration | P1 |
+| ComplianceDashboard | Integration | P1 |
+| ApprovalWorkflow | Integration | P1 |
+| Auth flow (login/signup) | E2E | P0 |
+
+**Meta:** 20 novos testes → cobertura total: >60%
+
+**Critério de sucesso:** `vitest --coverage` reporta ≥60% branches + statements.
+
+---
+
+## FASE 4 — VALIDAÇÃO EXTERNA (Semanas 5-8)
+
+### 4.1 Pen Test Externo (Item #7) — P1
+**Severidade:** Alta (bloqueador de certificação)
+**Esforço:** 1-2 semanas (externo) + 1 semana remediação
+**Impacto SOC 2:** CC3.1, CC6.1, CC7.1
+
+**Ações:**
+1. **Preparação (Semana 5):**
+   - Documentar superfície de ataque (259 edge functions, 12 agent scripts, DNS filter)
+   - Preparar ambiente de staging isolado
+   - Definir escopo: OWASP Top 10, autenticação, HMAC/ECDSA, multi-tenant isolation
+2. **Execução (Semanas 6-7):**
+   - Contratar firma de pen test certificada (CREST/OSCP)
+   - Escopo mínimo: API testing, authentication bypass, privilege escalation, tenant isolation
+3. **Remediação (Semana 8):**
+   - Classificar findings por severidade (Critical/High/Medium/Low)
+   - Corrigir todos os Critical e High antes da certificação
+   - Documentar Medium/Low com plano de mitigação
+
+**Critério de sucesso:** Relatório de pen test com zero findings Critical/High não remediados.
+
+---
+
+### 4.2 Testes de Carga (Item #10) — P3
+**Severidade:** Média-Baixa
+**Esforço:** 3-5 dias
+**Impacto SOC 2:** CC7.1 (Availability)
+
+**Ações:**
+1. **Definir cenários:**
+   - 1000 agentes simultâneos com heartbeat a cada 60s
+   - 100 heartbeats/segundo sustained
+   - Burst: 500 alertas em 10 segundos
+   - 50 usuários admin simultâneos no dashboard
+2. **Ferramentas:** k6 ou Artillery
+3. **Targets:**
+   - heartbeat: p99 < 500ms
+   - poll-jobs: p99 < 300ms
+   - dashboard queries: p99 < 2s
+4. **Executar e documentar resultados** em `docs/load-test-results/`
+
+**Critério de sucesso:** Todos os endpoints dentro dos targets de latência sob carga.
+
+---
+
+## CRONOGRAMA CONSOLIDADO
+
+```
+Semana 1 (S1): [FASE 1] Nonce/replay + Restore evidence + Key rotation audit
+Semana 2 (S2): [FASE 1] Dual-admin workflow (UI + enforcement)
+Semana 3 (S3): [FASE 2] as any + god functions + refetchInterval audit
+               [FASE 3] Testes edge functions (Tier 1-2)
+Semana 4 (S4): [FASE 3] Testes hooks/services + componentes
+Semana 5 (S5): [FASE 3] Completar cobertura 60%
+               [FASE 4] Preparar pen test
+Semana 6 (S6): [FASE 4] Pen test externo (execução)
+Semana 7 (S7): [FASE 4] Pen test (continuação) + load test
+Semana 8 (S8): [FASE 4] Remediação de findings + relatório final
+```
+
+## MATRIZ DE PRIORIDADE (MoSCoW)
+
+| Item | Must | Should | Could | Won't |
+|------|------|--------|-------|-------|
+| #5 Nonce/replay | ✅ | | | |
+| #8 Restore evidence | ✅ | | | |
+| #9 Key rotation proof | ✅ | | | |
+| #4 Cobertura >60% | ✅ | | | |
+| #7 Pen test | ✅ | | | |
+| #6 Dual-admin | | ✅ | | |
+| #1 as any <50 | | ✅ | | |
+| #2 God functions | | ✅ | | |
+| #3 refetchInterval | | | ✅ | |
+| #10 Load test | | | ✅ | |
+
+## CRITÉRIOS DE CERTIFICAÇÃO SOC 2 (Gate Final)
+
+- [ ] Nonce/replay: tabela `hmac_consumed_nonces` operacional, replay rejeitado
+- [ ] Restore: ≥4 registros em `backup_verifications` (1/semana × 4 semanas)
+- [ ] Key rotation: ≥1 rotação documentada em `key_rotation_audit_log`
+- [ ] Dual-admin: ações críticas bloqueadas sem segunda aprovação
+- [ ] Cobertura: ≥60% (statements + branches) via vitest --coverage
+- [ ] Pen test: relatório formal com zero Critical/High não remediados
+- [ ] `as any`: <50 casts em produção
+- [ ] God functions: nenhum arquivo >500 linhas em edge functions
+- [ ] Polling: ≤30 refetchInterval, zero polling em abas ocultas
