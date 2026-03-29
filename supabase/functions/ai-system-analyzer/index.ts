@@ -25,7 +25,7 @@ interface AIInsight {
   severity: 'info' | 'warning' | 'critical';
   title: string;
   description: string;
-  evidence: any;
+  evidence: Record<string, unknown>;
   recommendation: string;
   confidence_score: number;
 }

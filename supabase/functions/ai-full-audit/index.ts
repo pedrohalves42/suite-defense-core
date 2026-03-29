@@ -102,7 +102,7 @@ async function logGovernanceEvent(
   newValue: number,
   ruleApplied: string,
   justification: string,
-  metadata: any = {}
+  metadata: Record<string, unknown> = {}
 ): Promise<void> {
   try {
     await supabase.from('score_governance_log').insert({

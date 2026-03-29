@@ -58,7 +58,7 @@ function getNextAction(priority: 'high' | 'medium' | 'low'): string {
 
 // V4: Generate commercial summary text ready for WhatsApp/Email
 function generateCommercialSummary(
-  stats: any, 
+  stats: Record<string, unknown>, 
   riskLevel: string, 
   agentName: string,
   tenantName?: string
