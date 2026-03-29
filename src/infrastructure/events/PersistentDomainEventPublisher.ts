@@ -11,16 +11,16 @@ import { logger } from '@/lib/logger';
 export class PersistentDomainEventPublisher implements DomainEventDispatcher {
   async dispatch(event: DomainEvent): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('domain_events')
-        .insert({
+      const { error } = await supabase.functions.invoke('log-domain-event', {
+        body: {
           aggregate_id: event.aggregateId,
           aggregate_type: this.inferAggregateType(event.eventType),
           event_type: event.eventType,
           payload: this.buildPayload(event) as unknown as Json,
           occurred_on: event.occurredOn.toISOString(),
           tenant_id: this.extractTenantId(event),
-        });
+        },
+      });
 
       if (error) {
         logger.error('[PersistentDomainEventPublisher] Failed to persist event', { error: error.message });
@@ -44,9 +44,9 @@ export class PersistentDomainEventPublisher implements DomainEventDispatcher {
         tenant_id: this.extractTenantId(event),
       }));
 
-      const { error } = await supabase
-        .from('domain_events')
-        .insert(rows);
+      const { error } = await supabase.functions.invoke('log-domain-event', {
+        body: rows,
+      });
 
       if (error) {
         logger.error('[PersistentDomainEventPublisher] Failed to persist events', { error: error.message });
