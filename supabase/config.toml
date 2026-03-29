@@ -157,10 +157,9 @@ verify_jwt = true
 [functions.cleanup-expired-enrollment-keys]
 verify_jwt = true
 
-# Auto-renew enrollment keys (every 12 hours) COST-OPT-V5
+# Auto-renew enrollment keys - DISABLED schedule COST-OPT-V7 (covered by system-maintenance)
 [functions.auto-renew-enrollment-keys]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
 [functions.cleanup-orphaned-data]
 verify_jwt = true
@@ -214,24 +213,21 @@ verify_jwt = false
 [functions.check-stuck-jobs]
 verify_jwt = false
 
-# P1-01: Cleanup stuck jobs (every 12 hours) COST-OPT-V6
+# P1-01: Cleanup stuck jobs - DISABLED schedule COST-OPT-V7 (covered by system-maintenance)
 [functions.cleanup-stuck-jobs]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
-# P1-02: Cleanup jobs for offline agents (every 12 hours) COST-OPT-V5
+# P1-02: Cleanup jobs for offline agents - DISABLED schedule COST-OPT-V7 (covered by system-maintenance)
 [functions.cleanup-offline-agents-jobs]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
 # Network Anomalies Analysis - DISABLED COST-OPT-V6 (insufficient volume for 1 agent)
 [functions.analyze-network-anomalies]
 verify_jwt = false
 
-# Production health (every 12 hours) COST-OPT-V5
+# Production health - DISABLED schedule COST-OPT-V7 (covered by health-monitor)
 [functions.check-production-health]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
 # === Alert Functions ===
 [functions.send-alert-email]
@@ -328,20 +324,19 @@ verify_jwt = true
 [functions.health]
 verify_jwt = false
 
-# Consolidated health monitor (every 12 hours) COST-OPT-V10
+# Consolidated health monitor (daily at 6 AM) COST-OPT-V7
 [functions.health-monitor]
 verify_jwt = false
-schedule = "0 */12 * * *"
+schedule = "0 6 * * *"
 
-# Consolidated security monitor (every 12 hours) COST-OPT-V10
+# Consolidated security monitor (daily at 7 AM) COST-OPT-V7
 [functions.security-monitor]
 verify_jwt = false
-schedule = "0 */12 * * *"
+schedule = "0 7 * * *"
 
-# Health check (every 12 hours) COST-OPT-V5
+# Health check - DISABLED schedule COST-OPT-V7 (covered by health-monitor)
 [functions.check-installation-health]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
 # === FASE 3+4: Agent Release Management ===
 [functions.register-agent-release]
@@ -350,9 +345,9 @@ verify_jwt = true
 [functions.get-agent-script-content]
 verify_jwt = true
 
+# process-agent-updates - DISABLED schedule COST-OPT-V7 (invoke manually)
 [functions.process-agent-updates]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
 # === Security Features v3.10.0 ===
 [functions.submit-software-inventory]
@@ -445,10 +440,9 @@ verify_jwt = true
 [functions.translate-cve]
 verify_jwt = true
 
-# === HMAC Cleanup (every 12 hours) COST-OPT-V5 ===
+# === HMAC Cleanup - DISABLED schedule COST-OPT-V7 (covered by system-maintenance) ===
 [functions.hmac-cleanup-scheduled]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
 # === AI Quality - DISABLED schedule COST-OPT-V5 (invoke manually) ===
 [functions.ai-quality-check]
@@ -581,19 +575,18 @@ verify_jwt = true
 [functions.action-center-feed]
 verify_jwt = false
 
-# === Invoke Scheduled Jobs (every 2 hours) COST-OPT-V6 ===
+# === Invoke Scheduled Jobs (every 12 hours) COST-OPT-V7 ===
 [functions.invoke-scheduled-jobs]
 verify_jwt = false
-schedule = "0 */2 * * *"
+schedule = "0 */12 * * *"
 
 # === P0: Cleanup Stale Playbooks - DISABLED COST-OPT-V6 (covered by system-maintenance) ===
 [functions.cleanup-stale-playbooks]
 verify_jwt = false
 
-# === P0: Process Failed Jobs (every 12 hours) COST-OPT-V6 ===
+# === P0: Process Failed Jobs - DISABLED schedule COST-OPT-V7 (covered by system-maintenance) ===
 [functions.process-failed-jobs]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
 # === P1: Cleanup Stale Reports - DISABLED COST-OPT-V6 (covered by system-maintenance) ===
 [functions.cleanup-stale-reports]
@@ -623,10 +616,9 @@ verify_jwt = true
 
 # REMOVED: check-credential-rotation (consolidated into security-monitor)
 
-# === Agent Integrity Check (every 12 hours) COST-OPT-V5 ===
+# === Agent Integrity Check - DISABLED schedule COST-OPT-V7 (covered by security-monitor) ===
 [functions.check-agent-integrity]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
 # === Job Failure Pattern Analysis ===
 [functions.analyze-job-failure-patterns]
@@ -649,25 +641,21 @@ verify_jwt = false
 [functions.set-active-tenant]
 verify_jwt = false
 
-# === ADR-032: SLO Burn Rate Evaluation (every 12 hours) COST-OPT-V5 ===
+# === ADR-032: SLO Burn Rate - DISABLED schedule COST-OPT-V7 (invoke manually) ===
 [functions.evaluate-job-slo]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
-# === Task SLA Breach Check (every 12 hours) COST-OPT-V5 ===
+# === Task SLA Breach Check - DISABLED schedule COST-OPT-V7 (invoke manually) ===
 [functions.check-task-sla-breach]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
-# === Detect Stuck Installations (every 12 hours) COST-OPT-V5 ===
+# === Detect Stuck Installations - DISABLED schedule COST-OPT-V7 (covered by health-monitor) ===
 [functions.detect-stuck-installations]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
-# === ADR-FINAL: Cron Sentinel (every 12 hours) COST-OPT-V5 ===
+# === ADR-FINAL: Cron Sentinel - DISABLED schedule COST-OPT-V7 (invoke manually) ===
 [functions.cron-sentinel]
 verify_jwt = false
-schedule = "0 */12 * * *"
 
 # === Security Operations Framework ===
 # V-002 Fix: Allow cron calls without JWT (function validates internally via x-cron-source header)
@@ -701,10 +689,9 @@ verify_jwt = false
 [functions.calculate-compliance]
 verify_jwt = false
 
-# === Scheduled Compliance Refresh (hourly) ===
+# === Scheduled Compliance Refresh - DISABLED schedule COST-OPT-V7 (invoke manually) ===
 [functions.scheduled-compliance-refresh]
 verify_jwt = false
-schedule = "0 * * * *"
 
 # === Security Advisor (AI-powered tips) ===
 [functions.security-advisor]
@@ -761,10 +748,9 @@ verify_jwt = false
 verify_jwt = false
 schedule = "0 4 * * *"
 
-# === EDR Correlation: Run every 30 minutes ===
+# === EDR Correlation - DISABLED schedule COST-OPT-V7 (invoke manually) ===
 [functions.correlate-edr-events]
 verify_jwt = false
-schedule = "*/30 * * * *"
 
 # === Threat Intelligence Lookup (on-demand) ===
 [functions.threat-intelligence-lookup]
