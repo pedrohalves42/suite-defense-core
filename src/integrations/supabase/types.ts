@@ -26557,6 +26557,13 @@ export type Database = {
             foreignKeyName: "quarantined_files_virus_scan_id_fkey"
             columns: ["virus_scan_id"]
             isOneToOne: false
+            referencedRelation: "v_virus_scans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quarantined_files_virus_scan_id_fkey"
+            columns: ["virus_scan_id"]
+            isOneToOne: false
             referencedRelation: "virus_scans"
             referencedColumns: ["id"]
           },
@@ -26752,6 +26759,7 @@ export type Database = {
           identifier: string
           last_request_at: string
           request_count: number
+          tenant_id: string | null
           window_start: string
         }
         Insert: {
@@ -26761,6 +26769,7 @@ export type Database = {
           identifier: string
           last_request_at?: string
           request_count?: number
+          tenant_id?: string | null
           window_start?: string
         }
         Update: {
@@ -26770,6 +26779,7 @@ export type Database = {
           identifier?: string
           last_request_at?: string
           request_count?: number
+          tenant_id?: string | null
           window_start?: string
         }
         Relationships: []
@@ -42098,6 +42108,105 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "subscription_plans"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_virus_scans: {
+        Row: {
+          agent_name: string | null
+          file_hash: string | null
+          file_path: string | null
+          id: string | null
+          is_malicious: boolean | null
+          positives: number | null
+          scan_result: Json | null
+          scanned_at: string | null
+          tenant_id: string | null
+          total_scans: number | null
+          virustotal_permalink: string | null
+        }
+        Insert: {
+          agent_name?: string | null
+          file_hash?: string | null
+          file_path?: string | null
+          id?: string | null
+          is_malicious?: boolean | null
+          positives?: number | null
+          scan_result?: Json | null
+          scanned_at?: string | null
+          tenant_id?: string | null
+          total_scans?: number | null
+          virustotal_permalink?: string | null
+        }
+        Update: {
+          agent_name?: string | null
+          file_hash?: string | null
+          file_path?: string | null
+          id?: string | null
+          is_malicious?: boolean | null
+          positives?: number | null
+          scan_result?: Json | null
+          scanned_at?: string | null
+          tenant_id?: string | null
+          total_scans?: number | null
+          virustotal_permalink?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_virus_scans_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_virus_scans_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "fk_virus_scans_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "fk_virus_scans_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "virus_scans_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "virus_scans_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "virus_scans_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "virus_scans_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
           },
         ]
       }
