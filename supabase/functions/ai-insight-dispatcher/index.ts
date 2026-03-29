@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { requireEnv } from '../_shared/env.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
@@ -34,7 +35,7 @@ const LOW_RISK_ACTIONS = [
 const MAX_AUTO_EXECUTIONS_PER_DAY = 100;
 
 async function checkAutoExecutionRateLimit(
-  supabase: any,
+  supabase: SupabaseClient,
   tenantId: string
 ): Promise<boolean> {
   const today = new Date();
@@ -56,7 +57,7 @@ async function checkAutoExecutionRateLimit(
 }
 
 async function isActionWhitelisted(
-  supabase: any,
+  supabase: SupabaseClient,
   actionType: string
 ): Promise<boolean> {
   const { data, error } = await supabase

@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts'
 import { logger } from '../_shared/logger.ts';
@@ -105,7 +106,7 @@ Deno.serve(async (req) => {
   }
 })
 
-async function scanTenant(supabase: any, tenantId: string) {
+async function scanTenant(supabase: SupabaseClient, tenantId: string) {
   const current = await collectMetrics(supabase, tenantId)
   const baseline = await getBaseline(supabase, tenantId)
   const drift = calculateDrift(baseline, current)
@@ -141,7 +142,7 @@ async function scanTenant(supabase: any, tenantId: string) {
   logger.info(`[drift-detect] Tenant ${tenantId}: score=${drift.score}, severity=${drift.severity}`)
 }
 
-async function collectMetrics(supabase: any, tenantId: string): Promise<ComplianceMetrics> {
+async function collectMetrics(supabase: SupabaseClient, tenantId: string): Promise<ComplianceMetrics> {
   // Check user_roles for admins with MFA
   const { data: admins } = await supabase
     .from('user_roles')
@@ -172,7 +173,7 @@ async function collectMetrics(supabase: any, tenantId: string): Promise<Complian
   }
 }
 
-async function getBaseline(supabase: any, tenantId: string): Promise<ComplianceMetrics> {
+async function getBaseline(supabase: SupabaseClient, tenantId: string): Promise<ComplianceMetrics> {
   const { data: baseline } = await supabase
     .from('compliance_baselines')
     .select('*')

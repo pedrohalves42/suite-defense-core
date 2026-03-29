@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { AIPromptRegistry, logPromptUsage } from "../_shared/ai-prompt-registry.ts";
 import { safeParseJSON, createFallbackAudit, createFallbackRedTeam } from "../_shared/json-parser.ts";
@@ -93,7 +94,7 @@ function getDeterministicThreatLevel(criteriaCountTrue: number): string {
 }
 
 async function logGovernanceEvent(
-  supabase: any,
+  supabase: SupabaseClient,
   tenantId: string,
   auditId: string | null,
   eventType: string,

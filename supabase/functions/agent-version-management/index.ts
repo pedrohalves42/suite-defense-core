@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 /**
  * Agent Version Management Service
  * AGT-028: Enforcement de versao da frota e compliance
@@ -63,7 +64,7 @@ async function latestActiveVersion(supabase: Record<string, unknown>): Promise<s
   return data?.version ?? 'v5.0.15';
 }
 
-async function getFleetCompliance(supabase: any, tenantId?: string) {
+async function getFleetCompliance(supabase: SupabaseClient, tenantId?: string) {
   let q = supabase
     .from('agents_safe')
     .select('id, tenant_id, agent_version, last_seen_at, status')
@@ -101,7 +102,7 @@ async function getFleetCompliance(supabase: any, tenantId?: string) {
   };
 }
 
-async function enforceUpdate(supabase: any, tenantId?: string, dryRun = true) {
+async function enforceUpdate(supabase: SupabaseClient, tenantId?: string, dryRun = true) {
   const compliance = await getFleetCompliance(supabase, tenantId);
   const latest = compliance.latest_version;
   let scheduled = 0;
@@ -140,7 +141,7 @@ async function enforceUpdate(supabase: any, tenantId?: string, dryRun = true) {
   return { dry_run: dryRun, scheduled, failed, details: details.slice(0, 50) };
 }
 
-async function setMinVersion(supabase: any, tenantId: string, minVersion: string, reason?: string) {
+async function setMinVersion(supabase: SupabaseClient, tenantId: string, minVersion: string, reason?: string) {
   const { error } = await supabase
     .from('tenant_version_policies')
     .upsert(

@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 /**
  * correlate-edr-events ? Multi-signal correlation engine.
  * 
@@ -174,7 +175,7 @@ Deno.serve(async (req: Request) => {
 });
 
 async function createIncident(
-  supabase: any,
+  supabase: SupabaseClient,
   tenantId: string,
   agentId: string,
   rule: any,

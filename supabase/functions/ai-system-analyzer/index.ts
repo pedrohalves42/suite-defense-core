@@ -1,3 +1,4 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { sanitizeForAI, anonymizeAgentName } from '../_shared/ai-sanitizer.ts';
@@ -31,7 +32,7 @@ interface AIInsight {
 
 // Helper: Verificar se tenant tem feature AI habilitada e quota disponivel
 async function checkTenantAIEligibility(
-  supabase: any,
+  supabase: SupabaseClient,
   tenantId: string
 ): Promise<{ eligible: boolean; reason?: string }> {
   // 1. Verificar subscription ativa ou trial valido
@@ -85,7 +86,7 @@ async function checkTenantAIEligibility(
 
 // Helper: Incrementar uso de quota (safe from SQL injection)
 async function incrementAIQuotaUsage(
-  supabase: any,
+  supabase: SupabaseClient,
   tenantId: string,
   insightsCount: number
 ): Promise<void> {
