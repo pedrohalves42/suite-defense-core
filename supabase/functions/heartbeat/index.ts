@@ -94,9 +94,7 @@ Deno.serve(async (req) => {
     const platform = updateData.os_type || 'windows'
 
     // ── 4. Rate limiting ────────────────────────────────────
-    const rateLimitResult = await checkRateLimit(supabase, agent.agent_name, 'heartbeat', {
-      maxRequests: 6, windowMinutes: 5, blockMinutes: 2,
-    })
+    const rateLimitResult = await checkHeartbeatRateLimit(supabase, agent.agent_name)
     if (!rateLimitResult.allowed) {
       return new Response(
         JSON.stringify({ error: 'Rate limit excedido', resetAt: rateLimitResult.resetAt }),
