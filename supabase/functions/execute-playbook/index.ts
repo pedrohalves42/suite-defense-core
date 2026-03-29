@@ -3,7 +3,7 @@
  */
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { handleException } from '../_shared/error-handler.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
@@ -19,8 +19,9 @@ const PlaybookSchema = z.object({
 });
 
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const authError = assertInternalCaller(req);
@@ -38,7 +39,7 @@ Deno.serve(async (req: Request) => {
     if (!parsed.success) {
       return new Response(
         JSON.stringify({ error: 'Invalid input', details: parsed.error.flatten().fieldErrors }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -55,7 +56,7 @@ Deno.serve(async (req: Request) => {
     if (pbError || !playbook) {
       return new Response(
         JSON.stringify({ error: 'Playbook not found or inactive' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -112,7 +113,7 @@ Deno.serve(async (req: Request) => {
         successful_steps: results.filter(r => r.success).length,
         results,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     return handleException(error, requestId, 'execute-playbook');

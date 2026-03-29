@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { hashToken } from '../_shared/token-hash.ts';
 import { corsSecurityHeaders, secureJsonResponse, secureErrorResponse, secureCorsPreflightResponse } from '../_shared/security-headers.ts';
 import { logger } from '../_shared/logger.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 interface ProcessEntry {
   pid: number;
@@ -169,7 +170,7 @@ serve(async (req) => {
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
         const evalUrl = `${supabaseUrl}/functions/v1/evaluate-automation-rules`;
-        const evalResponse = await fetch(evalUrl, {
+        const evalResponse = await fetchWithTimeout(evalUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

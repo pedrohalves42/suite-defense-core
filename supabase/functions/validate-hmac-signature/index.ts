@@ -1,7 +1,7 @@
 import { requireEnv } from '../_shared/env.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from "../_shared/cors.ts";
+import { corsHeaders, buildCorsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit } from "../_shared/rate-limit.ts";
 import { logger } from '../_shared/logger.ts';
 
@@ -33,7 +33,7 @@ function hexToBytes(hex: string): Uint8Array {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
   
   const requestId = crypto.randomUUID();
@@ -66,7 +66,7 @@ serve(async (req) => {
       }), { 
         status: 429, 
         headers: { 
-          ...corsHeaders, 
+          ...buildCorsHeaders(origin), 
           'Content-Type': 'application/json',
           'Retry-After': Math.ceil((rateLimitResult.resetAt!.getTime() - Date.now()) / 1000).toString()
         } 
@@ -87,7 +87,7 @@ serve(async (req) => {
         request_id: requestId
       }), { 
         status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
       });
     }
     
@@ -110,7 +110,7 @@ serve(async (req) => {
         request_id: requestId
       }), { 
         status: 422, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
       });
     }
     
@@ -146,7 +146,7 @@ serve(async (req) => {
       request_id: requestId
     }), { 
       status: 200, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
     });
     
   } catch (error: Record<string, unknown>) {
@@ -160,7 +160,7 @@ serve(async (req) => {
       request_id: requestId
     }), { 
       status: 500, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
     });
   }
 });

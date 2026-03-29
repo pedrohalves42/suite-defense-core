@@ -1,11 +1,11 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import {
+import { buildCorsHeaders } from '../_shared/cors.ts';
   isProcessProtected,
   isServiceProtected
 } from '../_shared/protected-targets.ts';
 
-const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
@@ -27,6 +27,7 @@ interface ExecuteRequest {
 }
 
 serveTenant(async (req, ctx) => {
+  const origin = req.headers.get("origin");
   const { supabase, tenantId, userId, requestId, body } = ctx;
   const startTime = Date.now();
 
@@ -35,7 +36,7 @@ serveTenant(async (req, ctx) => {
   if (!execution_id) {
     return new Response(JSON.stringify({ error: 'execution_id is required' }), {
       status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   }
 
@@ -54,7 +55,7 @@ serveTenant(async (req, ctx) => {
   if (!userRole) {
     return new Response(JSON.stringify({ error: 'Forbidden' }), {
       status: 403,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   }
 
@@ -70,7 +71,7 @@ serveTenant(async (req, ctx) => {
       logger.error('[execute-playbook-action] Execution not found:', execError);
       return new Response(JSON.stringify({ error: 'Execution not found' }), {
         status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -81,7 +82,7 @@ serveTenant(async (req, ctx) => {
         status: execution.status 
       }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -94,7 +95,7 @@ serveTenant(async (req, ctx) => {
     if (actionsSnapshot.length === 0) {
       return new Response(JSON.stringify({ error: 'No actions found in snapshot' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -155,7 +156,7 @@ serveTenant(async (req, ctx) => {
           expires_at: pendingRequest?.expires_at || null,
         }), {
           status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         });
       }
 
@@ -200,7 +201,7 @@ serveTenant(async (req, ctx) => {
           allowed_modes: ['semi_automatic', 'automatic'],
         }), {
           status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         });
       }
     }
@@ -325,7 +326,7 @@ serveTenant(async (req, ctx) => {
       evidence_ids: evidenceIds,
       used_immutable_snapshot: true,
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
 });
 

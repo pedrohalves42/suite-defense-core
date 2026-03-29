@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders, handleException } from '../_shared/error-handler.ts'
 import { logger } from '../_shared/logger.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 interface ReportGenerationPayload {
   tenant_id: string
@@ -120,8 +121,9 @@ _Relatorio gerado automaticamente por CyberShield_`
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: buildCorsHeaders(origin) })
   }
 
   const supabase = createClient(
@@ -139,7 +141,7 @@ Deno.serve(async (req) => {
     if (!tenant_id) {
       return new Response(
         JSON.stringify({ error: 'tenant_id is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -320,7 +322,7 @@ Deno.serve(async (req) => {
         next_action: nextAction,
         has_commercial_summary: !!commercialSummary
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {

@@ -1,6 +1,6 @@
 import { requireEnv } from '../_shared/env.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { hashToken } from '../_shared/token-hash.ts';
 import { normalizeVersion } from '../_shared/hexagonal/update-decision-service.ts';
@@ -17,9 +17,10 @@ import { logger } from '../_shared/logger.ts';
  */
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const requestId = crypto.randomUUID();
@@ -35,7 +36,7 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'Server configuration error', requestId }),
         {
           status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         }
       );
     }
@@ -50,7 +51,7 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'Missing agent token', requestId }),
         {
           status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         }
       );
     }
@@ -79,7 +80,7 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'Invalid agent token', requestId }),
         {
           status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         }
       );
     }
@@ -124,7 +125,7 @@ Deno.serve(async (req) => {
         }),
         {
           status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         }
       );
     }
@@ -156,7 +157,7 @@ Deno.serve(async (req) => {
         }),
         {
           status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         }
       );
     }
@@ -182,7 +183,7 @@ Deno.serve(async (req) => {
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       }
     );
 
@@ -196,7 +197,7 @@ Deno.serve(async (req) => {
       }),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       }
     );
   }

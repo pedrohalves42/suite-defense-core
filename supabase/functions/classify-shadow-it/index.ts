@@ -1,5 +1,6 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 const SHADOW_IT_RULES: Record<string, { category: string; risk: string; score: number }> = {
   'dropbox': { category: 'cloud_storage', risk: 'review', score: 60 }, 'google drive': { category: 'cloud_storage', risk: 'review', score: 40 }, 'onedrive': { category: 'cloud_storage', risk: 'approved', score: 20 }, 'mega': { category: 'cloud_storage', risk: 'blocked', score: 80 }, 'wetransfer': { category: 'cloud_storage', risk: 'review', score: 65 }, 'icloud': { category: 'cloud_storage', risk: 'review', score: 45 },
@@ -26,7 +27,7 @@ async function classifyWithAI(list: string[]) {
   for (const p of AI_PROVIDERS) {
     const key = Deno.env.get(p.keyEnv); if (!key) continue;
     try {
-      const r = await fetch(p.url, { method: 'POST', headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: p.model, messages: [{ role: 'system', content: 'Cybersecurity Shadow IT expert.' }, { role: 'user', content: prompt }], temperature: 0.1, max_tokens: 2048, response_format: { type: 'json_object' } }) });
+      const r = await fetchWithTimeout(p.url, { method: 'POST', headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: p.model, messages: [{ role: 'system', content: 'Cybersecurity Shadow IT expert.' }, { role: 'user', content: prompt }], temperature: 0.1, max_tokens: 2048, response_format: { type: 'json_object' } }) });
       if (!r.ok) continue;
       const d = await r.json(); const c = d.choices?.[0]?.message?.content; if (c) return JSON.parse(c);
     } catch { continue; }

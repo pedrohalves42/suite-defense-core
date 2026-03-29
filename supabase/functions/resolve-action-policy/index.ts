@@ -11,7 +11,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
-import { corsHeaders } from '../_shared/cors.ts'
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts'
 import { validateCallerTenant } from '../_shared/validate-caller-tenant.ts'
 import { logger } from '../_shared/logger.ts';
 
@@ -80,8 +80,9 @@ const DEFAULT_MAPPINGS: Record<string, 'auto' | 'approval'> = {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: buildCorsHeaders(origin) })
   }
 
   const requestId = crypto.randomUUID()
@@ -101,7 +102,7 @@ Deno.serve(async (req) => {
           error: 'Missing required fields', 
           required: ['tenant_id', 'insight_type'] 
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -110,7 +111,7 @@ Deno.serve(async (req) => {
     if (!validation.authorized) {
       return new Response(
         JSON.stringify({ error: validation.error }),
-        { status: validation.statusCode || 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: validation.statusCode || 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -150,7 +151,7 @@ Deno.serve(async (req) => {
       
       return new Response(
         JSON.stringify(response),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -172,7 +173,7 @@ Deno.serve(async (req) => {
       
       return new Response(
         JSON.stringify(response),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -194,7 +195,7 @@ Deno.serve(async (req) => {
       }
       return new Response(
         JSON.stringify(response),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -222,7 +223,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify(response),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
@@ -232,7 +233,7 @@ Deno.serve(async (req) => {
         error: 'policy_resolution_failed',
         message: error instanceof Error ? error.message : 'Unknown error'
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     )
   }
 })

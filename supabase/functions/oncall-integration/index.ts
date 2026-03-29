@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
-import { corsHeaders } from '../_shared/cors.ts'
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts'
 import { logger } from '../_shared/logger.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 /**
  * On-Call Rotation / PagerDuty Integration
@@ -8,8 +9,9 @@ import { logger } from '../_shared/logger.ts';
  */
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders, status: 204 })
+    return new Response(null, { headers: buildCorsHeaders(origin), status: 204 })
   }
 
   const supabase = createClient(
@@ -31,7 +33,7 @@ Deno.serve(async (req) => {
       const { summary, severity, source, details, tenantId } = body
       if (!summary) {
         return new Response(JSON.stringify({ error: 'summary required' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         })
       }
 
@@ -41,7 +43,7 @@ Deno.serve(async (req) => {
       // If PagerDuty is configured, send alert
       let pagerResult: any = { dedup_key: dedupKey }
       if (PAGERDUTY_ROUTING_KEY) {
-        const pdResponse = await fetch('https://events.pagerduty.com/v2/enqueue', {
+        const pdResponse = await fetchWithTimeout('https://events.pagerduty.com/v2/enqueue', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -76,7 +78,7 @@ Deno.serve(async (req) => {
 
       logger.info(`[oncall] Alert created: ${summary} (${severity})`)
       return new Response(JSON.stringify({ success: true, incident_id: dedupKey }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       })
     }
 
@@ -87,7 +89,7 @@ Deno.serve(async (req) => {
       if (PAGERDUTY_API_KEY && PAGERDUTY_SCHEDULE_ID) {
         try {
           const now = new Date().toISOString()
-          const pdRes = await fetch(
+          const pdRes = await fetchWithTimeout(
             `https://api.pagerduty.com/oncalls?schedule_ids[]=${PAGERDUTY_SCHEDULE_ID}&since=${now}&until=${now}`,
             {
               headers: {
@@ -127,7 +129,7 @@ Deno.serve(async (req) => {
         timestamp: new Date().toISOString(),
         source: PAGERDUTY_API_KEY ? 'pagerduty' : 'local',
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       })
     }
 
@@ -136,7 +138,7 @@ Deno.serve(async (req) => {
       const { incidentId } = body
       if (!incidentId) {
         return new Response(JSON.stringify({ error: 'incidentId required' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         })
       }
 
@@ -147,7 +149,7 @@ Deno.serve(async (req) => {
 
       logger.info(`[oncall] Incident ${incidentId} escalated`)
       return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       })
     }
 
@@ -156,7 +158,7 @@ Deno.serve(async (req) => {
       const { name, timezone, rotation } = body
       if (!name || !rotation) {
         return new Response(JSON.stringify({ error: 'name and rotation required' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         })
       }
 
@@ -168,7 +170,7 @@ Deno.serve(async (req) => {
       })
 
       return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       })
     }
 
@@ -182,17 +184,17 @@ Deno.serve(async (req) => {
         .limit(50)
 
       return new Response(JSON.stringify({ alerts: alerts || [] }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       })
     }
 
     return new Response(JSON.stringify({ error: 'Unknown action' }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
     })
   } catch (error) {
     logger.error('[oncall-integration] Error:', error)
     return new Response(JSON.stringify({ error: (error as Error).message }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
     })
   }
 })

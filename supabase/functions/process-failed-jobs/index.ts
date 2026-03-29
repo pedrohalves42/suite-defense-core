@@ -1,8 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
-const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
@@ -22,10 +22,11 @@ const DLQ_CLASSES = [
 ];
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   const startedAt = Date.now();
 
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   // V-1142: Defense-in-depth auth guard for cron function
@@ -33,7 +34,7 @@ Deno.serve(async (req) => {
   if (authError) return authError;
   
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const supabase = createClient(
@@ -82,7 +83,7 @@ Deno.serve(async (req) => {
       
       return new Response(
         JSON.stringify({ success: true, ...results }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -217,7 +218,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: true, ...results }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     logger.error('[process-failed-jobs] Error:', error);
@@ -237,7 +238,7 @@ Deno.serve(async (req) => {
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });

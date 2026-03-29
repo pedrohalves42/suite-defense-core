@@ -1,14 +1,15 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const requestId = crypto.randomUUID();
@@ -38,7 +39,7 @@ Deno.serve(async (req) => {
         }),
         {
           status: 503,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         }
       );
     }
@@ -55,7 +56,7 @@ Deno.serve(async (req) => {
         }),
         {
           status: 503,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         }
       );
     }
@@ -83,7 +84,7 @@ Deno.serve(async (req) => {
         }),
         { 
           status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         }
       );
     }
@@ -114,7 +115,7 @@ Deno.serve(async (req) => {
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       }
     );
 
@@ -129,7 +130,7 @@ Deno.serve(async (req) => {
       }),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       }
     );
   }

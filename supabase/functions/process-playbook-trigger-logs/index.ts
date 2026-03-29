@@ -2,8 +2,9 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
-const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
@@ -18,7 +19,7 @@ const corsHeaders = {
  */
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   // V-1130: Defense-in-depth auth guard for cron function
@@ -58,7 +59,7 @@ serve(async (req) => {
         message: 'No pending logs',
         duration_ms: Date.now() - startTime,
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -118,7 +119,7 @@ serve(async (req) => {
         };
 
         // Chamar evaluate-playbook-triggers internamente
-        const response = await fetch(`${SUPABASE_URL}/functions/v1/evaluate-playbook-triggers`, {
+        const response = await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/evaluate-playbook-triggers`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -190,7 +191,7 @@ serve(async (req) => {
       total: pendingLogs.length,
       duration_ms: duration,
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
@@ -203,7 +204,7 @@ serve(async (req) => {
       duration_ms: Date.now() - startTime,
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   }
 });

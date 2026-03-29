@@ -5,6 +5,7 @@
 import { Resend } from 'https://esm.sh/resend@4.0.0';
 import { logger } from '../_shared/logger.ts';
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 interface SecurityPayload {
   channel?: 'email' | 'webhook' | 'all';
@@ -166,7 +167,7 @@ async function sendSecurityWebhook(
     const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(`${timestamp}.${body}`));
     const sigHex = Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
 
-    const response = await fetch(webhookUrl, {
+    const response = await fetchWithTimeout(webhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

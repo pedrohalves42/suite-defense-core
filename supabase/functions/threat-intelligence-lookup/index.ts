@@ -1,7 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { getTenantIdForUser } from '../_shared/tenant.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -48,14 +49,14 @@ async function checkVirusTotal(target: string, type: 'url' | 'domain' | 'ip'): P
       endpoint = `https://www.virustotal.com/api/v3/ip_addresses/${target}`;
     }
     
-    const response = await fetch(endpoint, {
+    const response = await fetchWithTimeout(endpoint, {
       headers: { 'x-apikey': apiKey },
     });
     
     if (response.status === 404) {
       // Not found in VT database - submit for analysis if URL
       if (type === 'url') {
-        const submitResponse = await fetch('https://www.virustotal.com/api/v3/urls', {
+        const submitResponse = await fetchWithTimeout('https://www.virustotal.com/api/v3/urls', {
           method: 'POST',
           headers: {
             'x-apikey': apiKey,
@@ -123,7 +124,7 @@ async function checkAbuseIPDB(ip: string): Promise<{
   }
   
   try {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `https://api.abuseipdb.com/api/v2/check?ipAddress=${encodeURIComponent(ip)}&maxAgeInDays=90`,
       {
         headers: {
@@ -175,7 +176,7 @@ async function checkURLhaus(target: string): Promise<{
   details: Record<string, unknown>;
 } | null> {
   try {
-    const response = await fetch('https://urlhaus-api.abuse.ch/v1/url/', {
+    const response = await fetchWithTimeout('https://urlhaus-api.abuse.ch/v1/url/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: `url=${encodeURIComponent(target)}`,
@@ -214,7 +215,7 @@ async function checkPhishTank(url: string): Promise<{
   details: Record<string, unknown>;
 } | null> {
   try {
-    const response = await fetch('https://checkurl.phishtank.com/checkurl/', {
+    const response = await fetchWithTimeout('https://checkurl.phishtank.com/checkurl/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: `url=${encodeURIComponent(url)}&format=json`,
@@ -275,14 +276,15 @@ function extractDomain(target: string): string {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
   
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   }
   
@@ -294,7 +296,7 @@ Deno.serve(async (req) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
     
@@ -304,7 +306,7 @@ Deno.serve(async (req) => {
     if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Invalid token' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
     
@@ -312,7 +314,7 @@ Deno.serve(async (req) => {
     if (!tenantId) {
       return new Response(JSON.stringify({ error: 'Tenant not found' }), {
         status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
     
@@ -321,7 +323,7 @@ Deno.serve(async (req) => {
     if (!target || typeof target !== 'string') {
       return new Response(JSON.stringify({ error: 'target is required' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
     
@@ -355,7 +357,7 @@ Deno.serve(async (req) => {
           cached_at: cached.cached_at,
         }), {
           status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         });
       }
     }
@@ -476,7 +478,7 @@ Deno.serve(async (req) => {
     
     return new Response(JSON.stringify(result), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
     
   } catch (error) {
@@ -485,7 +487,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ error: 'Internal server error' }),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       }
     );
   }

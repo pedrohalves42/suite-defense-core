@@ -5,13 +5,15 @@ import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { hashToken } from '../_shared/token-hash.ts'
 import { logger } from '../_shared/logger.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   // [WARN] [WARN] ? DEPRECATED: Sunset date 2026-06-01. Use /submit-job-result (v3) instead.
   logger.warn('[ack-job] [WARN] [WARN] ? DEPRECATED: Sunset 2026-06-01. Use /submit-job-result instead.');
   
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: buildCorsHeaders(origin) })
   }
 
   try {
@@ -24,7 +26,7 @@ Deno.serve(async (req) => {
     if (!agentToken) {
       return new Response(
         JSON.stringify({ error: 'Token do agente necessario' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 401 }
       )
     }
 
@@ -33,7 +35,7 @@ Deno.serve(async (req) => {
     if (!tokenValidation.success) {
       return new Response(
         JSON.stringify({ error: 'Formato de token invalido' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 400 }
       )
     }
 
@@ -51,7 +53,7 @@ Deno.serve(async (req) => {
     if (!token?.agents) {
       return new Response(
         JSON.stringify({ error: 'Token invalido' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 401 }
       )
     }
 
@@ -62,7 +64,7 @@ Deno.serve(async (req) => {
       logger.error('[ack-job] CRITICAL SECURITY: Agent without HMAC secret:', agent.agent_name)
       return new Response(
         JSON.stringify({ error: 'HMAC secret not configured for agent' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
     
@@ -82,7 +84,7 @@ Deno.serve(async (req) => {
           message: hmacResult.errorMessage,
           transient: hmacResult.transient
         }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -99,7 +101,7 @@ Deno.serve(async (req) => {
           error: 'Rate limit excedido',
           resetAt: rateLimitResult.resetAt 
         }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
     
@@ -133,7 +135,7 @@ Deno.serve(async (req) => {
     if (!jobId) {
       return new Response(
         JSON.stringify({ error: 'job_id ausente (esperado na URL ou body)' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 400 }
       )
     }
 
@@ -142,7 +144,7 @@ Deno.serve(async (req) => {
     if (!jobIdValidation.success) {
       return new Response(
         JSON.stringify({ error: 'Formato de job ID invalido' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 400 }
       )
     }
 
@@ -163,7 +165,7 @@ Deno.serve(async (req) => {
       logger.error('[ACK] Job nao encontrado:', validatedJobId, fetchError)
       return new Response(
         JSON.stringify({ error: 'Job nao encontrado' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 404 }
       )
     }
 
@@ -187,7 +189,7 @@ Deno.serve(async (req) => {
       logger.error('[ACK] Job pertence a outro agente:', existingJob.agent_name, '!=', agent.agent_name)
       return new Response(
         JSON.stringify({ error: 'Job pertence a outro agente' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 403 }
       )
     }
 
@@ -202,7 +204,7 @@ Deno.serve(async (req) => {
         }),
         { 
           headers: { 
-            ...corsHeaders, 
+            ...buildCorsHeaders(origin), 
             'Content-Type': 'application/json',
             'X-Deprecation-Warning': 'ack-job is deprecated. Migrate to submit-job-result',
             'X-Sunset-Date': '2025-12-31'
@@ -230,7 +232,7 @@ Deno.serve(async (req) => {
       logger.error('[ACK] Erro ao atualizar job:', updateError)
       return new Response(
         JSON.stringify({ error: 'Erro ao atualizar job' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 500 }
       )
     }
 
@@ -244,7 +246,7 @@ Deno.serve(async (req) => {
       }),
       {
         headers: { 
-          ...corsHeaders, 
+          ...buildCorsHeaders(origin), 
           'Content-Type': 'application/json',
           'X-Deprecation-Warning': 'ack-job is deprecated. Migrate to submit-job-result',
           'X-Sunset-Date': '2026-06-01'

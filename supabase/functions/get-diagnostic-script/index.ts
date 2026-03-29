@@ -2,8 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logger } from '../_shared/logger.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
-const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
@@ -306,14 +306,14 @@ Write-Host "============================================================" -Foreg
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   // Only allow GET requests
   if (req.method !== 'GET') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   }
 
@@ -344,7 +344,7 @@ serve(async (req) => {
       }), {
         status: 429,
         headers: { 
-          ...corsHeaders, 
+          ...buildCorsHeaders(origin), 
           'Content-Type': 'application/json',
           'Retry-After': retryAfter.toString()
         },
@@ -359,7 +359,7 @@ serve(async (req) => {
 
   return new Response(DIAGNOSTIC_SCRIPT, {
     headers: {
-      ...corsHeaders,
+      ...buildCorsHeaders(origin),
       'Content-Type': 'text/plain; charset=utf-8',
       'Content-Disposition': 'inline; filename="diagnose-agent.ps1"',
     },

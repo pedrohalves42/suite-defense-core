@@ -4,7 +4,7 @@
  */
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 
 interface StuckJob {
@@ -25,8 +25,9 @@ function getZombieThresholdMinutes(jobType: string): number {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const authError = assertInternalCaller(req);
@@ -53,7 +54,7 @@ Deno.serve(async (req) => {
     if (!deliveredJobs || deliveredJobs.length === 0) {
       return new Response(
         JSON.stringify({ success: true, stuck_jobs: 0, alerts_created: 0, auto_failed: 0, timestamp: new Date().toISOString() }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -87,7 +88,7 @@ Deno.serve(async (req) => {
     if (stuckJobs.length === 0) {
       return new Response(
         JSON.stringify({ success: true, stuck_jobs: 0, alerts_created: 0, auto_failed: autoFailedCount, timestamp: new Date().toISOString() }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -131,7 +132,7 @@ Deno.serve(async (req) => {
     });
 
     return new Response(JSON.stringify(result), {
-      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   } catch (error) {
     logger.error(`[${requestId}] Fatal error:`, error);
@@ -148,7 +149,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error', timestamp: new Date().toISOString() }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });

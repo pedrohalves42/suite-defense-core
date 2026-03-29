@@ -1,6 +1,6 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 
 // Real SHA256 using Web Crypto API
 async function generateSHA256(data: string): Promise<string> {
@@ -84,7 +84,7 @@ serveTenant<ComplianceReportBody>(async (_req, ctx) => {
 
   if (!["LGPD", "ISO_27001", "SOC2_LITE"].includes(template)) {
     return new Response(JSON.stringify({ error: "Invalid template" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      { status: 400, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } });
   }
 
   // ===== DATA COLLECTION =====
@@ -165,7 +165,7 @@ serveTenant<ComplianceReportBody>(async (_req, ctx) => {
   if (!hmacSecret) {
     logger.error(`[generate-compliance-report][${requestId}] COMPLIANCE_HMAC_SECRET not configured!`);
     return new Response(JSON.stringify({ error: "Server configuration error: HMAC secret not configured" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      { status: 500, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } });
   }
 
   // ===== BUILD INVARIANTS =====
@@ -351,7 +351,7 @@ serveTenant<ComplianceReportBody>(async (_req, ctx) => {
   if (saveError) {
     logger.error(`[generate-compliance-report][${requestId}] Failed to save report:`, saveError);
     return new Response(JSON.stringify({ error: "Failed to persist report" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      { status: 500, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } });
   }
 
   logger.info(`[generate-compliance-report][${requestId}] Report ${auditId} persisted with ID: ${savedReport.id}`);

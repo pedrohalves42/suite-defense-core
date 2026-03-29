@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { AutoGenerateEnrollmentSchema } from '../_shared/validation.ts';
 import { handleException, handleValidationError } from '../_shared/error-handler.ts';
 import { logSecurityEvent, extractIpAddress, checkIpBlocklist } from '../_shared/security-log.ts';
@@ -9,6 +9,7 @@ import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
 import { withAPM } from '../_shared/apm.ts';
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   const requestId = crypto.randomUUID();
   const startTime = Date.now();
   
@@ -21,7 +22,7 @@ Deno.serve(async (req) => {
     } catch (error) {
       if (error instanceof Error && error.message.includes('timeout')) {
         logger.error('Request timeout in auto-generate-enrollment', { requestId });
-        return createTimeoutResponse(corsHeaders);
+        return createTimeoutResponse(buildCorsHeaders(origin));
       }
       throw error;
     }
@@ -37,7 +38,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
   
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   // Health check endpoint - ANY GET request is treated as health check
@@ -61,7 +62,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
         }),
         {
           status: healthy ? 200 : 503,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         }
       );
     } catch (error) {
@@ -72,7 +73,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
         }),
         {
           status: 503,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         }
       );
     }
@@ -88,7 +89,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
       }),
       {
         status: 405,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Allow': 'GET, POST, OPTIONS' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json', 'Allow': 'GET, POST, OPTIONS' },
       }
     );
   }
@@ -115,7 +116,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
         timestamp: new Date().toISOString()
       }), {
         status: 503,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
     
@@ -153,7 +154,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
           timestamp: new Date().toISOString()
         }), {
           status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         });
       }
     } catch (blocklistError: Record<string, unknown>) {
@@ -197,7 +198,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
             requestId,
             timestamp: new Date().toISOString()
           }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
     } catch (rateLimitError: Record<string, unknown>) {
@@ -218,7 +219,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
         timestamp: new Date().toISOString()
       }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -236,7 +237,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
         timestamp: new Date().toISOString()
       }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -261,7 +262,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
         timestamp: new Date().toISOString()
       }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -343,7 +344,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
         timestamp: new Date().toISOString()
       }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -542,7 +543,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
           }),
           {
             status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
           }
         );
       }
@@ -636,7 +637,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       }
     );
   } catch (error: Record<string, unknown>) {
@@ -651,7 +652,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
       timestamp: new Date().toISOString()
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   }
 }

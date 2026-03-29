@@ -4,6 +4,7 @@
  */
 import { logger } from '../_shared/logger.ts';
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 const SEVERITY_EMOJI: Record<string, string> = {
   critical: '🔴', high: '🟠', medium: '🟡', low: '🟢', info: '🔵',
@@ -57,7 +58,7 @@ export async function handleTelegram(
   ].join('\n');
 
   const chatId = recipient || config?.chat_id;
-  const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+  const response = await fetchWithTimeout(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true }),

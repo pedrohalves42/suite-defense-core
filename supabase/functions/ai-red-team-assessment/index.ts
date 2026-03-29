@@ -3,15 +3,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { AIPromptRegistry, logPromptUsage } from "../_shared/ai-prompt-registry.ts";
 import { callAI, type AIMessage } from "../_shared/ai-provider-helper.ts";
 import { logger } from '../_shared/logger.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
-const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   try {
@@ -64,7 +64,7 @@ serve(async (req) => {
       if (userError || !user) {
         return new Response(
           JSON.stringify({ error: 'Invalid token' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -81,7 +81,7 @@ serve(async (req) => {
       if (!adminRole) {
         return new Response(
           JSON.stringify({ error: 'Admin access required' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -95,14 +95,14 @@ serve(async (req) => {
     } else {
       return new Response(
         JSON.stringify({ error: 'Authorization required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
     
     if (!tenantId) {
       return new Response(
         JSON.stringify({ error: 'Tenant ID not found' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
     
@@ -116,7 +116,7 @@ serve(async (req) => {
       logger.error('Failed to load Red Team prompts from registry');
       return new Response(
         JSON.stringify({ error: 'Prompt configuration error' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -140,7 +140,7 @@ serve(async (req) => {
             message: metricsError.message ?? 'unknown error'
           }
         }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -186,7 +186,7 @@ serve(async (req) => {
       if (aiResult.error?.includes('429') || aiResult.error?.toLowerCase().includes('rate limit')) {
         return new Response(
           JSON.stringify({ error: 'Rate limit exceeded. Please try again later.', retry_after: 60 }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -275,13 +275,13 @@ serve(async (req) => {
             tokens_used: 0,
             warning: 'AI providers unavailable. This is a deterministic fallback assessment.',
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
       
       return new Response(
         JSON.stringify({ error: 'AI analysis failed', details: aiResult.error }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -302,7 +302,7 @@ serve(async (req) => {
       logger.error('Failed to parse AI response:', aiContent);
       return new Response(
         JSON.stringify({ error: 'Failed to parse AI analysis', raw: aiContent }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -362,14 +362,14 @@ serve(async (req) => {
         metrics_snapshot: metrics,
         tokens_used: tokensUsed,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     logger.error('[ai-red-team-assessment] Error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });

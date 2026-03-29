@@ -1,7 +1,7 @@
 import { requireEnv } from '../_shared/env.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { encodeBase64 } from 'https://deno.land/std@0.208.0/encoding/base64.ts';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { applyWindowsScriptHotfix } from '../_shared/windows-script-hotfix.ts';
@@ -15,8 +15,9 @@ const SUPABASE_URL = requireEnv('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const requestId = crypto.randomUUID();
@@ -30,7 +31,7 @@ Deno.serve(async (req) => {
       logger.warn('[serve-agent-update] Missing X-Agent-Token', { requestId });
       return new Response(
         JSON.stringify({ error: 'Missing agent token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -53,7 +54,7 @@ Deno.serve(async (req) => {
       });
       return new Response(
         JSON.stringify({ error: 'Invalid token or agent not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -155,7 +156,7 @@ Deno.serve(async (req) => {
             error: 'Forced version not found',
             force_update_version: agent.force_update_version
           }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -194,7 +195,7 @@ Deno.serve(async (req) => {
         });
         return new Response(
           JSON.stringify({ error: 'Script content corrupted (HTML)', version: agent.force_update_version }),
-          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -255,7 +256,7 @@ Deno.serve(async (req) => {
           confirm_required_headers: ['X-Agent-Token', 'X-HMAC-Signature', 'X-Timestamp', 'X-Nonce'],
           confirm_instructions: 'After applying the update and recreating the scheduled task, POST to confirm_url with confirm_body_schema and HMAC headers to clear the force_update flag. Without this call, the update will be re-delivered on next heartbeat.'
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -315,7 +316,7 @@ Deno.serve(async (req) => {
             rollout_bucket: bucket,
             rollout_percentage: rolloutPolicy.rollout_percentage
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
       
@@ -349,7 +350,7 @@ Deno.serve(async (req) => {
           error: 'No update available',
           current_version: agent.agent_version 
         }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -400,7 +401,7 @@ Deno.serve(async (req) => {
             message: 'Already up to date',
             current_version: agent.agent_version 
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -468,7 +469,7 @@ Deno.serve(async (req) => {
           error: 'No valid script available',
           message: 'Script content not found in database or storage'
         }),
-        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -546,7 +547,7 @@ Deno.serve(async (req) => {
         confirm_required_headers: ['X-Agent-Token', 'X-HMAC-Signature', 'X-Timestamp', 'X-Nonce'],
         confirm_instructions: 'After applying the update, POST to confirm_url with confirm_body_schema and HMAC headers to register the new version.'
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
@@ -563,7 +564,7 @@ Deno.serve(async (req) => {
         message: err.message,
         requestId 
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });

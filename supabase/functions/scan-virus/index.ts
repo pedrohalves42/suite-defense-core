@@ -6,6 +6,8 @@ import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { checkQuotaAvailable } from '../_shared/quota.ts';
 import { hashToken } from '../_shared/token-hash.ts';
 import { logger } from '../_shared/logger.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 interface ScanRequest {
   filePath: string;
@@ -28,7 +30,7 @@ async function scanWithHybridAnalysis(fileHash: string, apiKey: string): Promise
     logger.info(`[Hybrid Analysis] Scanning hash: ${fileHash}`);
     
     // Query for existing scan report
-    const reportResponse = await fetch(
+    const reportResponse = await fetchWithTimeout(
       `https://www.hybrid-analysis.com/api/v2/report/${fileHash}/summary`,
       {
         headers: {
@@ -78,7 +80,7 @@ async function scanWithVirusTotal(fileHash: string, apiKey: string): Promise<Sca
   try {
     logger.info(`[VirusTotal] Scanning hash: ${fileHash}`);
     
-    const vtResponse = await fetch(
+    const vtResponse = await fetchWithTimeout(
       `https://www.virustotal.com/vtapi/v2/file/report?apikey=${apiKey}&resource=${fileHash}`
     );
 
@@ -122,8 +124,9 @@ async function scanWithVirusTotal(fileHash: string, apiKey: string): Promise<Sca
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const requestId = crypto.randomUUID();
@@ -137,7 +140,7 @@ Deno.serve(async (req) => {
     if (!hybridAnalysisApiKey && !virusTotalApiKey) {
       return new Response(
         JSON.stringify({ error: 'Nenhum servico de scan configurado' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -148,7 +151,7 @@ Deno.serve(async (req) => {
     if (!agentToken) {
       return new Response(
         JSON.stringify({ error: 'Token do agente necessario' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -156,7 +159,7 @@ Deno.serve(async (req) => {
     if (!tokenValidation.success) {
       return new Response(
         JSON.stringify({ error: 'Formato de token invalido' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -174,7 +177,7 @@ Deno.serve(async (req) => {
     if (!token?.agents) {
       return new Response(
         JSON.stringify({ error: 'Token invalido' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -185,7 +188,7 @@ Deno.serve(async (req) => {
       logger.error(`[${requestId}] Agent ${agent.agent_name} has no tenant_id`);
       return new Response(
         JSON.stringify({ error: 'Configuracao invalida do agente' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -200,7 +203,7 @@ Deno.serve(async (req) => {
             message: hmacResult.errorMessage,
             transient: hmacResult.transient
           }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
     }
@@ -218,7 +221,7 @@ Deno.serve(async (req) => {
           error: 'Rate limit excedido',
           resetAt: rateLimitResult.resetAt 
         }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -234,7 +237,7 @@ Deno.serve(async (req) => {
     if (!filePath || !fileHash) {
       return new Response(
         JSON.stringify({ error: 'filePath e fileHash sao obrigatorios' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -251,7 +254,7 @@ Deno.serve(async (req) => {
           quotaUsed: quotaCheck.current,
           quotaLimit: quotaCheck.limit
         }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -267,7 +270,7 @@ Deno.serve(async (req) => {
           quotaUsed: dailyQuotaCheck.current,
           quotaLimit: dailyQuotaCheck.limit
         }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -291,7 +294,7 @@ Deno.serve(async (req) => {
           permalink: existingScan.virustotal_permalink,
           scannedAt: existingScan.scanned_at,
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -316,7 +319,7 @@ Deno.serve(async (req) => {
           error: 'Arquivo nao encontrado em nenhum servico de scan',
           message: 'Envie o arquivo para analise ou tente novamente mais tarde' 
         }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -387,7 +390,7 @@ Deno.serve(async (req) => {
         scans: scanResult.scans,
         scannerUsed: scanResult.scannerUsed,
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     return handleException(error, requestId, 'scan-virus');

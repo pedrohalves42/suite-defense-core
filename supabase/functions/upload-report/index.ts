@@ -6,11 +6,13 @@ import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { logSecurityEvent, extractIpAddress } from '../_shared/security-log.ts'
 import { hashToken } from '../_shared/token-hash.ts'
 import { logger } from '../_shared/logger.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   const requestId = crypto.randomUUID()
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: buildCorsHeaders(origin) })
   }
 
   try {
@@ -23,7 +25,7 @@ Deno.serve(async (req) => {
     if (!agentToken) {
       return new Response(
         JSON.stringify({ error: 'Token do agente necessario' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 401 }
       )
     }
 
@@ -32,7 +34,7 @@ Deno.serve(async (req) => {
     if (!tokenValidation.success) {
       return new Response(
         JSON.stringify({ error: 'Formato de token invalido' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 400 }
       )
     }
 
@@ -50,7 +52,7 @@ Deno.serve(async (req) => {
     if (!token?.agents) {
       return new Response(
         JSON.stringify({ error: 'Token invalido' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 401 }
       )
     }
 
@@ -61,7 +63,7 @@ Deno.serve(async (req) => {
       logger.error(`[${requestId}] Agent ${agent.agent_name} has no tenant_id`)
       return new Response(
         JSON.stringify({ error: 'Configuracao invalida do agente' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 500 }
       )
     }
     
@@ -76,7 +78,7 @@ Deno.serve(async (req) => {
             message: hmacResult.errorMessage,
             transient: hmacResult.transient
           }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         )
       }
     }
@@ -94,7 +96,7 @@ Deno.serve(async (req) => {
           error: 'Rate limit excedido',
           resetAt: rateLimitResult.resetAt 
         }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
     
@@ -118,7 +120,7 @@ Deno.serve(async (req) => {
       if (!job_id || !result) {
         return new Response(
           JSON.stringify({ error: 'Campos obrigatorios faltando (job_id, result)' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 400 }
         )
       }
 
@@ -142,7 +144,7 @@ Deno.serve(async (req) => {
       if (!kind || !file) {
         return new Response(
           JSON.stringify({ error: 'Campos obrigatorios faltando (kind, file)' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 400 }
         )
       }
 
@@ -180,7 +182,7 @@ Deno.serve(async (req) => {
       if (!validateFileSize(file.size)) {
         return new Response(
           JSON.stringify({ error: 'Arquivo muito grande (maximo 10MB)' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 413 }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 413 }
         )
       }
 
@@ -217,7 +219,7 @@ Deno.serve(async (req) => {
         file: report.file_path
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         status: 201
       }
     )

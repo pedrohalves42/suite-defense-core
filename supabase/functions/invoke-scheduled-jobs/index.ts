@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 
@@ -7,8 +7,9 @@ import { logger } from '../_shared/logger.ts';
  * Invoca todos os scheduled_jobs que estao habilitados e no horario de execucao.
  */
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   // V-1110: Defense-in-depth auth guard for cron function
@@ -34,7 +35,7 @@ Deno.serve(async (req) => {
           error: 'SYSTEM_HALTED', 
           message: 'Kill switch is active. Set system_state.mode to normal to resume.' 
         }),
-        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -229,7 +230,7 @@ Deno.serve(async (req) => {
       JSON.stringify(summary),
       { 
         status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
       }
     );
 
@@ -263,7 +264,7 @@ Deno.serve(async (req) => {
       }),
       { 
         status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
       }
     );
   }

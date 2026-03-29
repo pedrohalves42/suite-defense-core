@@ -12,6 +12,7 @@ import { logger } from '../_shared/logger.ts'
 import { logSecurityEvent } from '../_shared/security-log.ts'
 import { corsHeaders } from '../_shared/error-handler.ts'
 import type { SubmitContext } from './types.ts'
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 const MIN_SUPPORTED_VERSION = 'v4.0.9'
 const TRANSITION_DATE = new Date('2026-01-19T00:00:00Z')
@@ -60,7 +61,7 @@ export async function checkVersionGate(ctx: SubmitContext): Promise<Response | n
         current: ctx.agentVersion,
         message: 'Agent version too old. Please update to continue submitting job results.'
       }),
-      { status: 426, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 426, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     )
   }
   return null
@@ -97,7 +98,7 @@ export async function checkJobOwnership(ctx: SubmitContext): Promise<Response | 
     })
     return new Response(
       JSON.stringify({ error: 'Este job nao pertence ao agente autenticado' }),
-      { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     )
   }
 
@@ -130,7 +131,7 @@ export async function checkJobOwnership(ctx: SubmitContext): Promise<Response | 
         error: 'Cross-tenant access denied',
         details: 'Job pertence a outra organizacao'
       }),
-      { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     )
   }
 
@@ -173,7 +174,7 @@ export async function checkExecutionIdRequired(ctx: SubmitContext): Promise<Resp
         error: 'EXECUTION_ID_REQUIRED',
         message: 'Jobs created after 2026-01-19 require execution_id for audit compliance'
       }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     )
   }
   return null
@@ -230,7 +231,7 @@ export async function checkPayloadTampering(ctx: SubmitContext): Promise<Respons
         error: 'PAYLOAD_TAMPERED',
         message: 'Job payload integrity check failed'
       }),
-      { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 409, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     )
   }
   
@@ -277,7 +278,7 @@ export async function checkDuplicateSubmission(ctx: SubmitContext): Promise<Resp
         message: 'Job ja estava concluido',
         job_id: payload.job_id
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     )
   }
   

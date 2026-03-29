@@ -21,6 +21,7 @@ import { handleCorrelateAlerts } from './handlers/correlate-alerts.ts';
 import { handleExecuteSolution } from './handlers/execute-solution.ts';
 import { handleSecurityCopilot } from './handlers/security-copilot.ts';
 import { handleGetInsights } from './handlers/get-insights.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 const RouterSchema = z.object({
   action: z.string().min(1).max(64),
@@ -110,7 +111,7 @@ serveTenant(async (req, ctx) => {
     const apiKey = req.headers.get('apikey');
     if (apiKey) headers['apikey'] = apiKey;
 
-    const response = await fetch(targetUrl, {
+    const response = await fetchWithTimeout(targetUrl, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),

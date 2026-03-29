@@ -1,6 +1,6 @@
 import { requireEnv } from '../_shared/env.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { timingSafeEqual } from '../_shared/crypto-utils.ts';
 import { logger } from '../_shared/logger.ts';
 
@@ -52,7 +52,8 @@ async function ecdsaSign(content: string, privateKeyBase64: string): Promise<str
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  const origin = req.headers.get("origin");
+  if (req.method === 'OPTIONS') return new Response(null, { headers: buildCorsHeaders(origin) });
 
   try {
     // Auth: require internal secret or service role
@@ -71,7 +72,7 @@ Deno.serve(async (req) => {
 
     if (!platform || !version || !content) {
       return new Response(JSON.stringify({ error: 'Missing platform, version, or content' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       });
     }
 
@@ -82,7 +83,7 @@ Deno.serve(async (req) => {
         error: 'Content is HTML, not a script. This indicates the URL returned the SPA instead of the raw file.',
         hint: 'Use raw file content, not a URL that serves HTML.'
       }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       });
     }
 
@@ -92,7 +93,7 @@ Deno.serve(async (req) => {
         error: 'Content too small to be a valid agent script',
         size: content.length 
       }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       });
     }
 
@@ -108,7 +109,7 @@ Deno.serve(async (req) => {
           hint: 'Code was injected into the changelog comment block. Clean the header before uploading.',
           nested_count: openTags
         }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         });
       }
     }
@@ -126,7 +127,7 @@ Deno.serve(async (req) => {
           target_version: version,
           hint: 'The script content does not match the target version. Exact version match required.'
         }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         });
       }
       logger.info(`[upload-release-content] Version check passed: script=v${scriptVersion}, target=${version}`);
@@ -192,11 +193,11 @@ Deno.serve(async (req) => {
       signed: !!signature,
       signed_at: signedAt,
       header: normalized.substring(0, 80),
-    }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }), { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
   } catch (e) {
     logger.error('[upload-release-content] Error:', (e as Error).message);
     return new Response(JSON.stringify({ error: (e as Error).message }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
     });
   }
 });

@@ -13,7 +13,7 @@ import { requireEnv } from '../_shared/env.ts';
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
 import { 
@@ -82,6 +82,7 @@ function validateNoPlaceholders(
 
 // Deno server to handle POST requests
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   const requestId = crypto.randomUUID();
   const startTime = Date.now();
   
@@ -92,7 +93,7 @@ Deno.serve(async (req) => {
   });
 
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   // Health check endpoint
@@ -115,7 +116,7 @@ Deno.serve(async (req) => {
       }),
       {
         status: healthy ? 200 : 503,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       }
     );
   }
@@ -139,7 +140,7 @@ Deno.serve(async (req) => {
       }),
       {
         status: 503,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       }
     );
   }
@@ -185,7 +186,7 @@ Deno.serve(async (req) => {
           {
             status: 429,
             headers: { 
-              ...corsHeaders, 
+              ...buildCorsHeaders(origin), 
               'Content-Type': 'application/json',
               'Retry-After': rateLimitResult.resetAt ? 
                 Math.ceil((rateLimitResult.resetAt.getTime() - Date.now()) / 1000).toString() : '1800'
@@ -204,7 +205,7 @@ Deno.serve(async (req) => {
           }),
           {
             status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
           }
         );
       }
@@ -215,7 +216,7 @@ Deno.serve(async (req) => {
       logger.debug(`[${requestId}] Missing enrollment key`);
       return new Response('Enrollment key is required', { 
         status: 400,
-        headers: corsHeaders
+        headers: buildCorsHeaders(origin)
       });
     }
 
@@ -241,7 +242,7 @@ Deno.serve(async (req) => {
       logger.debug(`[${requestId}] Invalid enrollment key: ${enrollmentError?.message}`);
       return new Response('Invalid or expired enrollment key', { 
         status: 404,
-        headers: corsHeaders
+        headers: buildCorsHeaders(origin)
       });
     }
 
@@ -249,7 +250,7 @@ Deno.serve(async (req) => {
       logger.debug(`[${requestId}] Enrollment key already used`);
       return new Response('This enrollment key has been used', { 
         status: 410,
-        headers: corsHeaders
+        headers: buildCorsHeaders(origin)
       });
     }
 
@@ -257,7 +258,7 @@ Deno.serve(async (req) => {
       logger.debug(`[${requestId}] Enrollment key expired`);
       return new Response('This enrollment key has expired', { 
         status: 410,
-        headers: corsHeaders
+        headers: buildCorsHeaders(origin)
       });
     }
 
@@ -333,7 +334,7 @@ Deno.serve(async (req) => {
           logger.error(`[${requestId}] Failed to auto-provision agent`, newAgentError);
           return new Response('Failed to create agent record', { 
             status: 500,
-            headers: corsHeaders
+            headers: buildCorsHeaders(origin)
           });
         }
         
@@ -368,7 +369,7 @@ Deno.serve(async (req) => {
         logger.debug(`[${requestId}] Agent not found: ${agentError?.message}`);
         return new Response('Agent not found', { 
           status: 404,
-          headers: corsHeaders
+          headers: buildCorsHeaders(origin)
         });
       }
       agentData = existingAgent;
@@ -407,7 +408,7 @@ Deno.serve(async (req) => {
       logger.error(`[${requestId}] Failed to create fresh agent token`, tokenInsertError);
       return new Response('Failed to generate agent credentials', { 
         status: 500,
-        headers: corsHeaders
+        headers: buildCorsHeaders(origin)
       });
     }
 
@@ -442,7 +443,7 @@ Deno.serve(async (req) => {
           details: 'Please register an active agent release for Windows in Admin > Agent Releases',
           requestId
         }),
-        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
     
@@ -455,7 +456,7 @@ Deno.serve(async (req) => {
         'Failed to generate secure installer - script validation failed',
         {
           status: 503,
-          headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain' }
         }
       );
     }
@@ -467,7 +468,7 @@ Deno.serve(async (req) => {
       logger.error(`[${requestId}] Agent script validation failed: invalid content length (${agentScriptContent?.length || 0} bytes)`);
       return new Response('Agent script validation failed: content too short or missing', { 
         status: 503,
-        headers: corsHeaders
+        headers: buildCorsHeaders(origin)
       });
     }
     
@@ -491,7 +492,7 @@ Deno.serve(async (req) => {
       logger.error(`[${requestId}] Invalid agent token format: ${agentToken?.substring(0, 8)}...`);
       return new Response('Invalid agent token format', { 
         status: 500,
-        headers: corsHeaders
+        headers: buildCorsHeaders(origin)
       });
     }
     
@@ -500,7 +501,7 @@ Deno.serve(async (req) => {
       logger.error(`[${requestId}] Invalid HMAC secret format: length=${hmacSecret?.length}, valid_hex=${/^[0-9a-f]+$/i.test(hmacSecret || '')}`);
       return new Response('Invalid HMAC secret format', { 
         status: 500,
-        headers: corsHeaders
+        headers: buildCorsHeaders(origin)
       });
     }
     
@@ -547,7 +548,7 @@ Deno.serve(async (req) => {
             details: 'Please register an active agent release for this platform in Admin > Agent Releases',
             requestId
           }),
-          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -579,7 +580,7 @@ Deno.serve(async (req) => {
           details: `Platform "${platform}" is not supported. Use windows, linux, or macos.`,
           requestId
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -614,7 +615,7 @@ Deno.serve(async (req) => {
         `Installer generation failed: ${remainingPlaceholders.length} incomplete placeholders: ${remainingPlaceholders.slice(0, 5).join(', ')}`, 
         { 
           status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain' }
         }
       );
     }
@@ -641,7 +642,7 @@ Deno.serve(async (req) => {
         }),
         {
           status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         }
       );
     }
@@ -663,7 +664,7 @@ Deno.serve(async (req) => {
         }),
         {
           status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         }
       );
     }
@@ -688,7 +689,7 @@ Deno.serve(async (req) => {
         }),
         {
           status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
         }
       );
     }
@@ -714,7 +715,7 @@ Deno.serve(async (req) => {
           }),
           {
             status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
           }
         );
       }
@@ -739,7 +740,7 @@ Deno.serve(async (req) => {
           }),
           {
             status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
           }
         );
       }
@@ -845,7 +846,7 @@ Deno.serve(async (req) => {
       // v4.1.6: Added Cache-Control: no-store to prevent proxy/browser caching
       return new Response(templateContent, {
         headers: {
-          ...corsHeaders,
+          ...buildCorsHeaders(origin),
           'Content-Type': 'text/plain; charset=utf-8',
           'Content-Disposition': `attachment; filename="${fileName}"`,
           'X-Script-SHA256': installerSha256,
@@ -863,7 +864,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     if (error instanceof Error && error.message === 'Request timeout') {
-      return createTimeoutResponse(corsHeaders);
+      return createTimeoutResponse(buildCorsHeaders(origin));
     }
     const duration = Date.now() - startTime;
     logger.error(`[${requestId}] Failed after ${duration}ms:`, error);
@@ -874,7 +875,7 @@ Deno.serve(async (req) => {
       }),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       }
     );
   }

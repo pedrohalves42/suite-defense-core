@@ -2,8 +2,8 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
-const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
@@ -26,7 +26,7 @@ const PLAN_FREQUENCIES: PlanFrequency = {
 
 serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   // V-1121: Defense-in-depth auth guard for cron function
@@ -36,7 +36,7 @@ serve(async (req: Request): Promise<Response> => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" },
     });
   }
 
@@ -76,7 +76,7 @@ serve(async (req: Request): Promise<Response> => {
         generated: 0
       }), {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" },
       });
     }
 
@@ -177,7 +177,7 @@ serve(async (req: Request): Promise<Response> => {
 
     return new Response(JSON.stringify(result), {
       status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" },
     });
 
   } catch (error: Record<string, unknown>) {
@@ -201,7 +201,7 @@ serve(async (req: Request): Promise<Response> => {
       error: error.message
     }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" },
     });
   }
 });

@@ -5,10 +5,12 @@ import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { hashToken } from '../_shared/token-hash.ts'
 import { logger } from '../_shared/logger.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: buildCorsHeaders(origin) })
   }
 
   try {
@@ -21,7 +23,7 @@ Deno.serve(async (req) => {
     if (!agentToken) {
       return new Response(
         JSON.stringify({ error: 'Token do agente necessario' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 401 }
       )
     }
 
@@ -30,7 +32,7 @@ Deno.serve(async (req) => {
     if (!tokenValidation.success) {
       return new Response(
         JSON.stringify({ error: 'Formato de token invalido' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 400 }
       )
     }
 
@@ -48,7 +50,7 @@ Deno.serve(async (req) => {
     if (!token?.agents) {
       return new Response(
         JSON.stringify({ error: 'Token invalido' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 401 }
       )
     }
 
@@ -65,7 +67,7 @@ Deno.serve(async (req) => {
             message: hmacResult.errorMessage,
             transient: hmacResult.transient
           }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         )
       }
     }
@@ -83,7 +85,7 @@ Deno.serve(async (req) => {
           error: 'Rate limit excedido',
           resetAt: rateLimitResult.resetAt 
         }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
     
@@ -113,7 +115,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify(reportsResponse),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         status: 200
       }
     )

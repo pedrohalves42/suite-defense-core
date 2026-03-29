@@ -1,5 +1,5 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 
 interface SoftwareItem {
@@ -153,6 +153,7 @@ function getSeverityFromScoreHelper(score: number | null): string {
 }
 
 serveTenant(async (req, ctx) => {
+  const origin = req.headers.get("origin");
   const { supabase, tenantId, requestId, body } = ctx;
   const { agent_id, mode } = body;
 
@@ -182,7 +183,7 @@ serveTenant(async (req, ctx) => {
             agents_scanned: 0,
             total_vulnerabilities: 0
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
       
@@ -254,7 +255,7 @@ serveTenant(async (req, ctx) => {
           total_vulnerabilities: totalVulns,
           results
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -262,7 +263,7 @@ serveTenant(async (req, ctx) => {
     if (!agent_id) {
       return new Response(
         JSON.stringify({ error: 'agent_id required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -291,7 +292,7 @@ serveTenant(async (req, ctx) => {
           vulnerabilities_found: 0,
           scan_method: 'dynamic_nvd'
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -410,7 +411,7 @@ serveTenant(async (req, ctx) => {
           ? 'dynamic_nvd' 
           : 'fallback_signatures'
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
 
   } catch (error: unknown) {
@@ -422,7 +423,7 @@ serveTenant(async (req, ctx) => {
     logger.error(`[${requestId}] [SCAN-VULNS] Error:`, message);
     return new Response(
       JSON.stringify({ error: message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });

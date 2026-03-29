@@ -10,7 +10,7 @@
  */
 
 import { requireEnv, optionalEnv } from '../_shared/env.ts';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { createErrorResponse, ErrorCode } from '../_shared/error-handler.ts';
 import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
@@ -30,6 +30,7 @@ const BUILD_GH_REPOSITORY = Deno.env.get('BUILD_GH_REPOSITORY');
 // GET returns health status; POST triggers build.
 
 serveTenant(async (req, ctx) => {
+  const origin = req.headers.get("origin");
   const { supabase, userId, requestId, body } = ctx;
 
   // ?? GET: Health check ??
@@ -53,7 +54,7 @@ serveTenant(async (req, ctx) => {
           github_repo: !!BUILD_GH_REPOSITORY,
         },
       }),
-      { status: healthy ? 200 : 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: healthy ? 200 : 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 
@@ -326,12 +327,12 @@ try {
           estimated_completion: new Date(Date.now() + 180000).toISOString(),
           github_actions_url: githubActionsUrl,
         }),
-        { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 202, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }, { timeoutMs: 25000 });
   } catch (error) {
     if (error instanceof Error && error.message === 'Request timeout') {
-      return createTimeoutResponse(corsHeaders);
+      return createTimeoutResponse(buildCorsHeaders(origin));
     }
     logger.error(`[${requestId}] Build request failed`, { error });
     return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Build process failed', 500, requestId);

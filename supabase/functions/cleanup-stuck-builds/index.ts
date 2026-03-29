@@ -1,11 +1,13 @@
 /**
  * cleanup-stuck-builds → PROXY to cleanup-router
  */
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  const origin = req.headers.get("origin");
+  if (req.method === 'OPTIONS') return new Response(null, { headers: buildCorsHeaders(origin) });
 
   // Accept both internal and JWT auth (frontend calls this too)
   const authHeader = req.headers.get('Authorization');
@@ -26,10 +28,10 @@ Deno.serve(async (req) => {
     headers['Authorization'] = `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`;
   }
 
-  const resp = await fetch(url, {
+  const resp = await fetchWithTimeout(url, {
     method: 'POST',
     headers,
     body: JSON.stringify({ action: 'stuck-builds' }),
   });
-  return new Response(await resp.text(), { status: resp.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  return new Response(await resp.text(), { status: resp.status, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
 });

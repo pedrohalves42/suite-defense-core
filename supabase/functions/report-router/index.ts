@@ -9,10 +9,11 @@
  * Auth: Internal (cron) or JWT with admin/super_admin role
  */
 
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 const RouterSchema = z.object({
   action: z.string().min(1).max(64),
@@ -33,14 +34,15 @@ const PROXY_TARGETS: Record<string, string> = {
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   if (req.method !== 'POST') {
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      { status: 405, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
     );
   }
 
@@ -56,7 +58,7 @@ Deno.serve(async (req) => {
     if (!parsed.success) {
       return new Response(
         JSON.stringify({ error: 'Invalid request', details: parsed.error.flatten().fieldErrors }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
       );
     }
 
@@ -66,7 +68,7 @@ Deno.serve(async (req) => {
     if (!functionName) {
       return new Response(
         JSON.stringify({ error: `Unknown action: ${action}`, available: Object.keys(PROXY_TARGETS) }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
       );
     }
 
@@ -95,7 +97,7 @@ Deno.serve(async (req) => {
     const nonce = req.headers.get('X-Nonce');
     if (nonce) headers['X-Nonce'] = nonce;
 
-    const response = await fetch(targetUrl, {
+    const response = await fetchWithTimeout(targetUrl, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
@@ -104,14 +106,14 @@ Deno.serve(async (req) => {
     const responseBody = await response.text();
     return new Response(responseBody, {
       status: response.status,
-      headers: { ...corsHeaders, 'Content-Type': response.headers.get('Content-Type') || 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': response.headers.get('Content-Type') || 'application/json' },
     });
 
   } catch (error) {
     logger.error(`[${requestId}] report-router error:`, error);
     return new Response(
       JSON.stringify({ error: 'Internal error', message: error instanceof Error ? error.message : 'Unknown', requestId }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
     );
   }
 });

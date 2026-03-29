@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { getTenantIdForUser } from '../_shared/tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
@@ -33,11 +33,12 @@ interface TelemetryResponse {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   const requestId = crypto.randomUUID();
   
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   try {
@@ -76,7 +77,7 @@ Deno.serve(async (req) => {
         { 
           status: 429, 
           headers: { 
-            ...corsHeaders, 
+            ...buildCorsHeaders(origin), 
             'Content-Type': 'application/json',
             'Retry-After': '60'
           } 
@@ -101,7 +102,7 @@ Deno.serve(async (req) => {
         } as TelemetryResponse),
         { 
           status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
         }
       );
     }
@@ -124,7 +125,7 @@ Deno.serve(async (req) => {
         } as TelemetryResponse),
         { 
           status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
         }
       );
     }
@@ -163,7 +164,7 @@ Deno.serve(async (req) => {
                 reason: 'invalid_agent_token',
                 requestId,
               } as TelemetryResponse),
-              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
             );
           }
 
@@ -184,7 +185,7 @@ Deno.serve(async (req) => {
                 reason: 'enrollment_key_not_found',
                 requestId,
               } as TelemetryResponse),
-              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
             );
           }
 
@@ -217,7 +218,7 @@ Deno.serve(async (req) => {
               tracked: true,
               requestId
             } as TelemetryResponse),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -245,7 +246,7 @@ Deno.serve(async (req) => {
                 message: hmacResult.errorMessage 
               }
             } as TelemetryResponse),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -277,7 +278,7 @@ Deno.serve(async (req) => {
               requestId,
               details: { code: insertError.code, message: insertError.message }
             } as TelemetryResponse),
-            { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 202, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -292,7 +293,7 @@ Deno.serve(async (req) => {
             tracked: true,
             requestId
           } as TelemetryResponse),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       } catch (err) {
         logger.error('[track-installation-event] Agent-token mode error', { requestId, error: err });
@@ -303,7 +304,7 @@ Deno.serve(async (req) => {
             reason: 'internal_error',
             requestId,
           } as TelemetryResponse),
-          { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 202, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
     }
@@ -354,7 +355,7 @@ Deno.serve(async (req) => {
                 tracked: true,
                 requestId
               } as TelemetryResponse),
-              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
             );
           }
         }
@@ -368,7 +369,7 @@ Deno.serve(async (req) => {
             reason: 'no_authentication_and_agent_not_found',
             requestId
           } as TelemetryResponse),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       } catch (inferError) {
         logger.error('[track-installation-event] Inference failed', { error: inferError, requestId });
@@ -379,7 +380,7 @@ Deno.serve(async (req) => {
             reason: 'inference_error',
             requestId
           } as TelemetryResponse),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
     }
@@ -400,7 +401,7 @@ Deno.serve(async (req) => {
         } as TelemetryResponse),
         { 
           status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
         }
       );
     }
@@ -418,7 +419,7 @@ Deno.serve(async (req) => {
         } as TelemetryResponse),
         { 
           status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
         }
       );
     }
@@ -481,7 +482,7 @@ Deno.serve(async (req) => {
         } as TelemetryResponse),
         { 
           status: 202, // Accepted but not processed
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
         }
       );
     }
@@ -500,7 +501,7 @@ Deno.serve(async (req) => {
       } as TelemetryResponse),
       { 
         status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
       }
     );
 
@@ -519,7 +520,7 @@ Deno.serve(async (req) => {
       } as TelemetryResponse),
       { 
         status: 202,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
       }
     );
   }

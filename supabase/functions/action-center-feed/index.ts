@@ -2,12 +2,12 @@
 import { logger } from '../_shared/logger.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { 
+import { buildCorsHeaders } from '../_shared/cors.ts';
   healthProbeMiddleware, 
   addHealthHeaders,
   EDGE_VERSION 
 } from '../_shared/health-probe.ts';
 
-const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-tenant-id, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
@@ -316,9 +316,10 @@ function calculatePriorityScore(severity: string): number {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: addHealthHeaders(corsHeaders) });
+    return new Response(null, { headers: addHealthHeaders(buildCorsHeaders(origin)) });
   }
 
   try {
@@ -327,7 +328,7 @@ Deno.serve(async (req) => {
     if (!supabaseUrl || !supabaseServiceKey) {
       return new Response(
         JSON.stringify({ error: 'Server configuration error' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -335,7 +336,7 @@ Deno.serve(async (req) => {
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
     // Health probe - emergency mode & schema validation
-    const healthCheck = await healthProbeMiddleware(serviceClient, corsHeaders);
+    const healthCheck = await healthProbeMiddleware(serviceClient, buildCorsHeaders(origin));
     if (healthCheck) return healthCheck;
 
     // Get auth token from request
@@ -343,7 +344,7 @@ Deno.serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: addHealthHeaders({ ...corsHeaders, 'Content-Type': 'application/json' }) }
+        { status: 401, headers: addHealthHeaders({ ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }) }
       );
     }
 
@@ -356,7 +357,7 @@ Deno.serve(async (req) => {
       logger.error('[action-center-feed] User auth error:', userError);
       return new Response(
         JSON.stringify({ error: 'Invalid token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -420,7 +421,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify(emptyFeed),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -738,7 +739,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify(feed),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -750,7 +751,7 @@ Deno.serve(async (req) => {
       if (!item_id || !action) {
         return new Response(
           JSON.stringify({ error: 'Missing item_id or action' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -766,13 +767,13 @@ Deno.serve(async (req) => {
           logger.error('[action-center-feed] Execute playbook error:', error);
           return new Response(
             JSON.stringify({ error: error.message }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
         return new Response(
           JSON.stringify({ success: true, data }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -793,13 +794,13 @@ Deno.serve(async (req) => {
           logger.error('[action-center-feed] Ignore error:', error);
           return new Response(
             JSON.stringify({ error: error.message }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
         return new Response(
           JSON.stringify({ success: true }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -818,13 +819,13 @@ Deno.serve(async (req) => {
           logger.error('[action-center-feed] Acknowledge alert error:', error);
           return new Response(
             JSON.stringify({ error: error.message }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
         return new Response(
           JSON.stringify({ success: true }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -839,7 +840,7 @@ Deno.serve(async (req) => {
         
         return new Response(
           JSON.stringify({ success: true, message: 'Offline status acknowledged' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -862,13 +863,13 @@ Deno.serve(async (req) => {
           logger.error('[action-center-feed] Acknowledge insight error:', error);
           return new Response(
             JSON.stringify({ error: error.message }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
         return new Response(
           JSON.stringify({ success: true }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -894,7 +895,7 @@ Deno.serve(async (req) => {
           logger.error('[action-center-feed] Ignore insight error:', error);
           return new Response(
             JSON.stringify({ error: error.message }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -902,7 +903,7 @@ Deno.serve(async (req) => {
 
         return new Response(
           JSON.stringify({ success: true, status: 'ignored' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -914,7 +915,7 @@ Deno.serve(async (req) => {
         if (!reason) {
           return new Response(
             JSON.stringify({ error: 'Rejection reason is required' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -932,7 +933,7 @@ Deno.serve(async (req) => {
           logger.error('[action-center-feed] Get insight for reject error:', insightError);
           return new Response(
             JSON.stringify({ error: 'Insight not found' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -955,7 +956,7 @@ Deno.serve(async (req) => {
           logger.error('[action-center-feed] Reject insight error:', updateError);
           return new Response(
             JSON.stringify({ error: updateError.message }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -991,7 +992,7 @@ Deno.serve(async (req) => {
 
         return new Response(
           JSON.stringify({ success: true, status: 'rejected' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -1040,13 +1041,13 @@ Deno.serve(async (req) => {
               message: 'Recovery job created for offline agent',
               job_id: job?.id || null,
             }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
         
         return new Response(
           JSON.stringify({ success: true, message: 'Agent not found for recovery' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -1057,7 +1058,7 @@ Deno.serve(async (req) => {
         
         return new Response(
           JSON.stringify({ success: true, message: 'Offline status ignored' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -1075,7 +1076,7 @@ Deno.serve(async (req) => {
           logger.error('[action-center-feed] Fetch alert error:', alertFetchErr);
           return new Response(
             JSON.stringify({ error: 'Alert not found' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -1132,7 +1133,7 @@ Deno.serve(async (req) => {
           logger.error('[action-center-feed] Execute alert error:', error);
           return new Response(
             JSON.stringify({ error: error.message }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -1142,7 +1143,7 @@ Deno.serve(async (req) => {
             remediation_dispatched: !!remediation && !!alert.agent_id,
             remediation: remediationResult,
           }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -1162,13 +1163,13 @@ Deno.serve(async (req) => {
           logger.error('[action-center-feed] Ignore alert error:', error);
           return new Response(
             JSON.stringify({ error: error.message }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
         return new Response(
           JSON.stringify({ success: true }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -1186,7 +1187,7 @@ Deno.serve(async (req) => {
           logger.error('[action-center-feed] Get insight error:', insightError);
           return new Response(
             JSON.stringify({ error: 'Insight not found' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -1217,7 +1218,7 @@ Deno.serve(async (req) => {
               message: 'Insight acknowledged - no automated actions available',
               status: 'reviewed_no_action',
             }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -1242,7 +1243,7 @@ Deno.serve(async (req) => {
           logger.error('[action-center-feed] Create action error:', createError);
           return new Response(
             JSON.stringify({ error: createError.message }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -1262,7 +1263,7 @@ Deno.serve(async (req) => {
                 warning: 'Action created but execution may have failed',
                 error: execError.message,
               }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
             );
           }
 
@@ -1282,7 +1283,7 @@ Deno.serve(async (req) => {
 
           return new Response(
             JSON.stringify({ success: true, action_id: createdAction.id, result: execResult, status: 'resolved' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         } catch (execErr) {
           logger.error('[action-center-feed] Execute action exception:', execErr);
@@ -1292,27 +1293,27 @@ Deno.serve(async (req) => {
               action_id: createdAction.id,
               warning: 'Action created but execution threw exception',
             }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
       }
 
       return new Response(
         JSON.stringify({ error: 'Unknown action' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 405, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     logger.error('[action-center-feed] Error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });

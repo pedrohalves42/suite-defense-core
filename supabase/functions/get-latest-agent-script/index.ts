@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { applyWindowsScriptHotfix } from '../_shared/windows-script-hotfix.ts';
 import { logger } from '../_shared/logger.ts';
 
@@ -45,16 +45,17 @@ function extractScriptVersion(content: string): string | null {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   const requestId = crypto.randomUUID();
   
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   if (req.method !== 'GET') {
     return new Response(
       JSON.stringify({ error: 'Method not allowed', requestId }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 405, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 
@@ -73,7 +74,7 @@ Deno.serve(async (req) => {
           message: 'Platform must be one of: windows, linux, macos',
           requestId
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -100,7 +101,7 @@ Deno.serve(async (req) => {
           message: `No active ${platform} agent release available`,
           requestId
         }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -157,7 +158,7 @@ Deno.serve(async (req) => {
           message: 'Script content is missing or corrupted',
           requestId
         }),
-        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -196,7 +197,7 @@ Deno.serve(async (req) => {
       return new Response(normalizedScript, {
         status: 200,
         headers: {
-          ...corsHeaders,
+          ...buildCorsHeaders(origin),
           'Content-Type': 'text/plain; charset=utf-8',
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'X-Agent-Version': release.version,
@@ -235,7 +236,7 @@ Deno.serve(async (req) => {
       {
         status: 200,
         headers: {
-          ...corsHeaders,
+          ...buildCorsHeaders(origin),
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'X-Request-ID': requestId
@@ -253,7 +254,7 @@ Deno.serve(async (req) => {
         message: err.message,
         requestId
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });

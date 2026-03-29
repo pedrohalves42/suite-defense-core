@@ -1,6 +1,7 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 import { BuildTelemetry } from '../_shared/build-telemetry.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 export interface GitHubConfig {
   token: string;
@@ -31,7 +32,7 @@ export async function validateGitHubAccess(
   requestId: string
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    const testResponse = await fetch(
+    const testResponse = await fetchWithTimeout(
       `https://api.github.com/repos/${config.repository}/actions/workflows`,
       { headers: { Authorization: `Bearer ${config.token}` } }
     );
@@ -66,7 +67,7 @@ export async function dispatchBuild(
       const dispatchUrl = `https://api.github.com/repos/${config.repository}/dispatches`;
       logger.info(`[${requestId}] repository_dispatch attempt ${attempt}/${maxRetries}`);
 
-      const resp = await fetch(dispatchUrl, {
+      const resp = await fetchWithTimeout(dispatchUrl, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${config.token}`,
@@ -106,7 +107,7 @@ export async function dispatchBuild(
   telemetry?.startStep('workflow_dispatch_fallback');
   try {
     const workflowUrl = `https://api.github.com/repos/${config.repository}/actions/workflows/build-agent-exe.yml/dispatches`;
-    const resp = await fetch(workflowUrl, {
+    const resp = await fetchWithTimeout(workflowUrl, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${config.token}`,

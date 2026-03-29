@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsSecurityHeaders, secureJsonResponse, secureErrorResponse, secureCorsPreflightResponse } from '../_shared/security-headers.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 /**
  * Evaluate Automation Rules ? Enterprise-Grade Engine v2
@@ -383,7 +384,7 @@ async function executeAction(
         try {
           const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
           const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET') || '';
-          await fetch(`${supabaseUrl}/functions/v1/evaluate-playbook-triggers`, {
+          await fetchWithTimeout(`${supabaseUrl}/functions/v1/evaluate-playbook-triggers`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

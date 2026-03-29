@@ -1,8 +1,8 @@
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { logger } from '../_shared/logger.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
-const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
@@ -118,8 +118,9 @@ function formatDate(dateStr: string, lang: string): string {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   try {
@@ -232,13 +233,13 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: true, email_id: emailData?.id }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      { headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
     logger.error("[SEND-TRIAL-REMINDER] Error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      { headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" }, status: 500 }
     );
   }
 });

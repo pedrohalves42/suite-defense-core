@@ -7,6 +7,7 @@
 
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 interface SecurityGap {
   area: string;
@@ -186,7 +187,7 @@ serveTenant(async (_req, ctx) => {
         `- [${g.severity.toUpperCase()}] ${g.metric}: atual=${g.currentValue}, meta=${g.targetValue}`
       ).join('\n');
 
-      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const aiResponse = await fetchWithTimeout('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${LOVABLE_API_KEY}`,

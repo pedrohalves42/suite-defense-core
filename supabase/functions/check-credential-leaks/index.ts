@@ -1,5 +1,6 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 serveTenant(async (req, ctx) => {
   const { supabase, tenantId, requestId, body } = ctx;
@@ -21,7 +22,7 @@ serveTenant(async (req, ctx) => {
         const sha1 = hash.toUpperCase();
         const prefix = sha1.substring(0, 5);
         const suffix = sha1.substring(5);
-        const resp = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
+        const resp = await fetchWithTimeout(`https://api.pwnedpasswords.com/range/${prefix}`, {
           headers: { 'user-agent': 'CyberShield-Security-Platform' },
         });
         if (resp.ok) {
@@ -49,7 +50,7 @@ serveTenant(async (req, ctx) => {
   if (monitors?.length) {
     for (const monitor of monitors) {
       try {
-        const resp = await fetch('https://haveibeenpwned.com/api/v3/breaches', {
+        const resp = await fetchWithTimeout('https://haveibeenpwned.com/api/v3/breaches', {
           headers: { 'user-agent': 'CyberShield-Security-Platform' },
         });
         if (resp.ok) {
@@ -107,7 +108,7 @@ Vazamentos de dados encontrados: ${results.leaks_found}
 Alertas recentes: ${JSON.stringify(recentAlerts?.slice(0, 5) || [])}
 Forneca: Score de risco (0-100), Top 3 riscos, Recomendacoes prioritarias, Status MFA.`;
 
-      const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const aiResp = await fetchWithTimeout('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -13,9 +13,10 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
-import { corsHeaders } from '../_shared/cors.ts'
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts'
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts'
 import { logger } from '../_shared/logger.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 interface ExecutionResult {
   actions_processed: number
@@ -32,8 +33,9 @@ interface PolicyResponse {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: buildCorsHeaders(origin) })
   }
 
   // V-1103: Defense-in-depth auth guard for cron function
@@ -60,14 +62,14 @@ Deno.serve(async (req) => {
           error: 'SYSTEM_HALTED', 
           message: 'Kill switch is active. Set system_state.mode to normal to resume.' 
         }),
-        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
     // Helper: Invocar resolve-action-policy (PONTO UNICO DE DECISAO)
     async function resolvePolicy(tenantId: string, insightType: string): Promise<PolicyResponse> {
       try {
-        const response = await fetch(
+        const response = await fetchWithTimeout(
           `${supabaseUrl}/functions/v1/resolve-action-policy`,
           {
             method: 'POST',
@@ -141,7 +143,7 @@ Deno.serve(async (req) => {
           message: 'No pending actions',
           actions_processed: 0 
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -433,7 +435,7 @@ Deno.serve(async (req) => {
         duration_ms: duration,
         ...result
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
@@ -461,7 +463,7 @@ Deno.serve(async (req) => {
         error: error instanceof Error ? error.message : 'Internal server error',
         request_id: requestId
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     )
   }
 })

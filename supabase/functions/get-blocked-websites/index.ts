@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { logger } from '../_shared/logger.ts';
 import { hashToken } from '../_shared/token-hash.ts';
@@ -8,14 +8,15 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   if (req.method !== 'GET') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   }
 
@@ -27,7 +28,7 @@ Deno.serve(async (req) => {
     if (!agentToken) {
       return new Response(JSON.stringify({ error: 'Missing agent token' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -56,7 +57,7 @@ Deno.serve(async (req) => {
       logger.warn('Invalid agent token for blocked websites request');
       return new Response(JSON.stringify({ error: 'Invalid agent token' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -76,7 +77,7 @@ Deno.serve(async (req) => {
           }), 
           {
             status: 401,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
           }
         );
       }
@@ -105,7 +106,7 @@ Deno.serve(async (req) => {
       logger.error('Failed to fetch blocked websites', blockedError);
       return new Response(
         JSON.stringify({ error: 'Failed to fetch blocked websites' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -185,7 +186,7 @@ Deno.serve(async (req) => {
       }), 
       {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       }
     );
 
@@ -195,7 +196,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ error: 'Internal server error' }), 
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       }
     );
   }

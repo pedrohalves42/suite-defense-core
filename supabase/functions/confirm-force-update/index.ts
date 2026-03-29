@@ -1,6 +1,6 @@
 import { requireEnv } from '../_shared/env.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { hashToken } from '../_shared/token-hash.ts';
@@ -25,8 +25,9 @@ const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
  * - old_version: string (versao anterior)
  */
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const requestId = crypto.randomUUID();
@@ -44,7 +45,7 @@ Deno.serve(async (req) => {
       logger.warn('[confirm-force-update] Missing X-Agent-Token', { requestId });
       return new Response(
         JSON.stringify({ error: 'Missing agent token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -63,7 +64,7 @@ Deno.serve(async (req) => {
       logger.error('[confirm-force-update] Token invalido', { requestId, error: tokenError });
       return new Response(
         JSON.stringify({ error: 'Invalid token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -117,7 +118,7 @@ Deno.serve(async (req) => {
     } catch {
       return new Response(
         JSON.stringify({ error: 'Invalid JSON body' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -126,7 +127,7 @@ Deno.serve(async (req) => {
     if (!new_version) {
       return new Response(
         JSON.stringify({ error: 'new_version is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -151,7 +152,7 @@ Deno.serve(async (req) => {
           new_version: new_version,
           idempotent: true
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -175,7 +176,7 @@ Deno.serve(async (req) => {
           target_version: agent.force_update_version,
           reported_version: new_version,
         }),
-        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 409, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -229,7 +230,7 @@ Deno.serve(async (req) => {
           new_version: new_version,
           awaiting_heartbeat: true,
         }),
-        { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 202, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -251,7 +252,7 @@ Deno.serve(async (req) => {
       logger.error('[confirm-force-update] Erro ao limpar force update', { requestId, error: updateError });
       return new Response(
         JSON.stringify({ error: 'Failed to clear pending force update' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -292,7 +293,7 @@ Deno.serve(async (req) => {
         new_version: new_version,
         old_version: old_version || agent.agent_version
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
@@ -301,7 +302,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ error: 'Internal server error', message: err.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });

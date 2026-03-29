@@ -4,8 +4,10 @@ import { createAuditLog } from '../_shared/audit.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logSecurityEvent, extractIpAddress } from '../_shared/security-log.ts';
 import { handleValidationError, corsHeaders } from '../_shared/error-handler.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 serveTenant(async (req, ctx) => {
+  const origin = req.headers.get("origin");
   const { supabase, tenantId, userId, requestId, body: rawData } = ctx;
 
   // Role checks ? serveTenant validates JWT + tenant, but not roles
@@ -27,7 +29,7 @@ serveTenant(async (req, ctx) => {
     
     return new Response(
       JSON.stringify({ error: { code: 'FORBIDDEN', message: 'Acesso negado. Necessario ser admin, operator ou super_admin.' } }), 
-      { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 
@@ -39,7 +41,7 @@ serveTenant(async (req, ctx) => {
   if (!rateLimitResult.allowed) {
     return new Response(
       JSON.stringify({ error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Rate limit excedido', resetAt: rateLimitResult.resetAt } }),
-      { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 
@@ -99,7 +101,7 @@ serveTenant(async (req, ctx) => {
     });
     return new Response(
       JSON.stringify({ error: { code: 'AGENT_NOT_FOUND', message: 'Agente nao encontrado.' } }), 
-      { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 
@@ -107,7 +109,7 @@ serveTenant(async (req, ctx) => {
   if (agentData.scheduling_paused) {
     return new Response(
       JSON.stringify({ error: { code: 'AGENT_PAUSED', message: `Agente '${agentName}' esta com agendamento pausado: ${agentData.scheduling_paused_reason || 'versao incompativel, aguardando atualizacao manual'}` } }), 
-      { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 409, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 
@@ -131,7 +133,7 @@ serveTenant(async (req, ctx) => {
 
     return new Response(
       JSON.stringify({ error: { code: 'AGENT_OFFLINE', message: `Agente '${agentName}' esta offline ha mais de 2 horas (ultimo heartbeat: ${lastHeartbeat}). Nao e possivel criar jobs para agentes inacessiveis.` } }), 
-      { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 409, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 
@@ -150,7 +152,7 @@ serveTenant(async (req, ctx) => {
     });
     return new Response(
       JSON.stringify({ error: { code: 'TENANT_NOT_FOUND', message: 'Tenant nao encontrado.' } }), 
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 
@@ -158,7 +160,7 @@ serveTenant(async (req, ctx) => {
   if (!hasSuperAdminRole && tenantId !== agentData.tenant_id) {
     return new Response(
       JSON.stringify({ error: { code: 'FORBIDDEN', message: 'Agente pertence a outro tenant.' } }), 
-      { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 
@@ -193,7 +195,7 @@ serveTenant(async (req, ctx) => {
     if (!newJobId) {
       return new Response(
         JSON.stringify({ error: { code: 'JOB_ALREADY_EXISTS', message: `Ja existe um job ativo do tipo '${type}' para o agente '${agentName}'.` } }),
-        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 409, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -246,6 +248,6 @@ serveTenant(async (req, ctx) => {
       expiresAt: (job as Record<string, unknown>).expires_at,
       warning: agentOfflineWarning,
     }), 
-    { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    { status: 201, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
   );
 });

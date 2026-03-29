@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
-import { corsHeaders } from '../_shared/cors.ts'
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts'
 import { logger } from '../_shared/logger.ts';
 
 /**
@@ -29,8 +29,9 @@ interface Deviation {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders, status: 204 })
+    return new Response(null, { headers: buildCorsHeaders(origin), status: 204 })
   }
 
   const supabase = createClient(
@@ -39,7 +40,7 @@ Deno.serve(async (req) => {
     { auth: { persistSession: false } }
   )
 
-  const headers = { ...corsHeaders, 'Content-Type': 'application/json' }
+  const headers = { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
 
   try {
     // GET: query drift events

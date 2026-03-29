@@ -1,6 +1,6 @@
 import { requireEnv } from '../_shared/env.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logger } from '../_shared/logger.ts';
@@ -27,8 +27,9 @@ interface WebActivityPayload {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   try {
@@ -39,7 +40,7 @@ Deno.serve(async (req) => {
     if (!agentToken) {
       return new Response(JSON.stringify({ error: 'Missing agent token' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -68,7 +69,7 @@ Deno.serve(async (req) => {
       logger.warn('Invalid agent token');
       return new Response(JSON.stringify({ error: 'Invalid agent token' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
 
@@ -86,7 +87,7 @@ Deno.serve(async (req) => {
           }), 
           {
             status: 401,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
           }
         );
       }
@@ -108,7 +109,7 @@ Deno.serve(async (req) => {
         }), 
         {
           status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         }
       );
     }
@@ -133,7 +134,7 @@ Deno.serve(async (req) => {
           details: 'Failed to parse request body',
           bodyLength: rawBody.length
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -155,7 +156,7 @@ Deno.serve(async (req) => {
           error: 'items array is required',
           details: `agent_id: ${!!effectiveAgentId}, items: ${!!payload.items}, isArray: ${Array.isArray(payload.items)}`
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -163,7 +164,7 @@ Deno.serve(async (req) => {
       logger.info('No web activity items to store');
       return new Response(
         JSON.stringify({ success: true, inserted: 0 }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -357,7 +358,7 @@ Deno.serve(async (req) => {
       }), 
       {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       }
     );
 
@@ -376,7 +377,7 @@ Deno.serve(async (req) => {
       }), 
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       }
     );
   }

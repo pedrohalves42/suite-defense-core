@@ -4,10 +4,10 @@ import { verifyHmacSignature } from "../_shared/hmac.ts";
 import { hashToken } from "../_shared/token-hash.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { logger } from '../_shared/logger.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 // HARDENED: Restrict CORS ? this endpoint is called by PowerShell agents, not browsers
 const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || "https://cybershield-audit.lovable.app";
-const corsHeaders = {
   "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-agent-token, x-hmac-signature, x-timestamp, x-nonce",
 };
@@ -16,7 +16,7 @@ const AgentTokenSchema = z.string().regex(/^[A-Za-z0-9]{64}$/, "Invalid agent to
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const requestId = crypto.randomUUID();
@@ -41,7 +41,7 @@ serve(async (req) => {
           error: "Invalid JSON body", 
           request_id: requestId 
         }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
       );
     }
 
@@ -55,7 +55,7 @@ serve(async (req) => {
           error_code: "MISSING_TOKEN",
           request_id: requestId 
         }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
       );
     }
 
@@ -69,7 +69,7 @@ serve(async (req) => {
           error_code: "INVALID_TOKEN_FORMAT",
           request_id: requestId 
         }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
       );
     }
 
@@ -89,7 +89,7 @@ serve(async (req) => {
           error_code: "TOKEN_NOT_FOUND",
           request_id: requestId 
         }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
       );
     }
 
@@ -101,7 +101,7 @@ serve(async (req) => {
           error_code: "TOKEN_INACTIVE",
           request_id: requestId 
         }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 403, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
       );
     }
 
@@ -113,7 +113,7 @@ serve(async (req) => {
           error_code: "TOKEN_EXPIRED",
           request_id: requestId 
         }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 403, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
       );
     }
 
@@ -142,7 +142,7 @@ serve(async (req) => {
           error_code: "HMAC_INVALID",
           request_id: requestId 
         }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
       );
     }
     
@@ -231,7 +231,7 @@ serve(async (req) => {
             request_id: requestId,
             message: "Telemetry already recorded (idempotent)"
           }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
         );
       }
       
@@ -300,7 +300,7 @@ serve(async (req) => {
         agent_id: agent.id,
       }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" },
         status: 200,
       }
     );
@@ -316,7 +316,7 @@ serve(async (req) => {
         message: error.message 
       }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" },
         status: 500,
       }
     );

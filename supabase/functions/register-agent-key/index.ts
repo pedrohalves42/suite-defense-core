@@ -18,6 +18,7 @@ import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-
 import { hashToken } from '../_shared/token-hash.ts'
 import { logSecurityEvent } from '../_shared/security-log.ts'
 import { logger } from '../_shared/logger.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 interface RegisterKeyRequest {
   public_key: string           // PEM or Base64 encoded public key
@@ -26,6 +27,7 @@ interface RegisterKeyRequest {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   // CORS preflight
   if (req.method === 'OPTIONS') {
     return handleCorsPreflightRequest()
@@ -57,7 +59,7 @@ Deno.serve(async (req) => {
       })
       return new Response(
         JSON.stringify({ error: 'X-Agent-Token header required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -82,7 +84,7 @@ Deno.serve(async (req) => {
       })
       return new Response(
         JSON.stringify({ error: 'Invalid or inactive token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -93,7 +95,7 @@ Deno.serve(async (req) => {
       logger.error('[register-agent-key] CRITICAL: Agent without HMAC secret:', agent.agent_name)
       return new Response(
         JSON.stringify({ error: 'HMAC secret not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -125,7 +127,7 @@ Deno.serve(async (req) => {
           message: hmacResult.errorMessage,
           transient: hmacResult.transient
         }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -136,14 +138,14 @@ Deno.serve(async (req) => {
     if (!payload.public_key || typeof payload.public_key !== 'string') {
       return new Response(
         JSON.stringify({ error: 'public_key is required (string)' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
     if (!payload.key_fingerprint || typeof payload.key_fingerprint !== 'string') {
       return new Response(
         JSON.stringify({ error: 'key_fingerprint is required (string, SHA256 hex)' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -151,7 +153,7 @@ Deno.serve(async (req) => {
     if (!/^[a-fA-F0-9]{64}$/.test(payload.key_fingerprint)) {
       return new Response(
         JSON.stringify({ error: 'key_fingerprint must be 64 hex characters (SHA256)' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -161,7 +163,7 @@ Deno.serve(async (req) => {
     if (!['ECDSA-P256-SHA256', 'Ed25519', 'RSA-2048-SHA256', 'RSA-2048-XML', 'RSA-2048-CSP'].includes(algorithm)) {
       return new Response(
         JSON.stringify({ error: 'algorithm must be ECDSA-P256-SHA256, Ed25519, RSA-2048-SHA256, RSA-2048-XML, or RSA-2048-CSP' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -212,7 +214,7 @@ Deno.serve(async (req) => {
           mode_used: 'none',
           modes_tried: computedFingerprints.map(entry => entry.mode)
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
     
@@ -237,7 +239,7 @@ Deno.serve(async (req) => {
             key_id: existingKey.id,
             version: existingKey.version
           }),
-          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 409, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         )
       }
       
@@ -256,7 +258,7 @@ Deno.serve(async (req) => {
           version: existingKey.version,
           already_registered: true
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -315,7 +317,7 @@ Deno.serve(async (req) => {
       logger.error('[register-agent-key] Error registering key:', registerError)
       return new Response(
         JSON.stringify({ error: 'Failed to register key', details: registerError.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -344,7 +346,7 @@ Deno.serve(async (req) => {
         registered_at: new Date().toISOString(),
         algorithm
       }),
-      { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 201, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {

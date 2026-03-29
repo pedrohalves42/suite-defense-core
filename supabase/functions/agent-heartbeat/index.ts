@@ -19,8 +19,10 @@ import { hashToken } from '../_shared/token-hash.ts'
 import { encodeBase64 } from "https://deno.land/std@0.208.0/encoding/base64.ts"
 import { applyWindowsScriptHotfix } from '../_shared/windows-script-hotfix.ts'
 import { signJob } from '../_shared/crypto-utils.ts'
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   // CORS preflight
   if (req.method === 'OPTIONS') {
     return handleCorsPreflightRequest()
@@ -42,7 +44,7 @@ Deno.serve(async (req) => {
     if (!agentToken) {
       return new Response(
         JSON.stringify({ error: 'Token do agente necessario' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 401 }
       )
     }
 
@@ -60,7 +62,7 @@ Deno.serve(async (req) => {
     if (!tokenValidation.success) {
       return new Response(
         JSON.stringify({ error: 'Formato de token invalido' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 400 }
       )
     }
 
@@ -120,7 +122,7 @@ Deno.serve(async (req) => {
     if (!token?.agents) {
       return new Response(
         JSON.stringify({ error: 'Token invalido' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 401 }
       )
     }
 
@@ -146,7 +148,7 @@ Deno.serve(async (req) => {
       logger.error('[PROXY] Agent without HMAC secret', { agentName: agent.agent_name })
       return new Response(
         JSON.stringify({ error: 'HMAC secret not configured for agent' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
     
@@ -173,7 +175,7 @@ Deno.serve(async (req) => {
           received_timestamp: hmacResult.receivedTimestamp,
           max_skew_seconds: hmacResult.maxSkewSeconds
         }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
  
@@ -201,7 +203,7 @@ Deno.serve(async (req) => {
           error: 'Rate limit excedido',
           resetAt: rateLimitResult.resetAt 
         }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -226,7 +228,7 @@ Deno.serve(async (req) => {
 
         return new Response(
           JSON.stringify({ error: 'Failed to handle archived agent heartbeat' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         )
       }
 
@@ -253,7 +255,7 @@ Deno.serve(async (req) => {
             poll_interval_seconds: 3600,
             jobs: [],
           }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+          { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 200 }
         )
       }
 
@@ -448,7 +450,7 @@ Deno.serve(async (req) => {
             override_safe_mode: overrideValid
           }),
           {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
             status: 200
           }
         )
@@ -566,7 +568,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify(response),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
         status: 200
       }
     )

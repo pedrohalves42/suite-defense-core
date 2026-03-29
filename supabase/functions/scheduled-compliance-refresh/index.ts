@@ -4,12 +4,13 @@
  */
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   const authError = assertInternalCaller(req);
@@ -33,7 +34,7 @@ Deno.serve(async (req) => {
       logger.error(`[${requestId}] Failed to fetch tenants:`, tenantErr);
       return new Response(
         JSON.stringify({ error: 'Failed to fetch tenants' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -79,13 +80,13 @@ Deno.serve(async (req) => {
     logger.info(`[${requestId}] Compliance refresh complete`);
 
     return new Response(JSON.stringify(summary), {
-      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   } catch (err) {
     logger.error(`[${requestId}] Fatal error:`, err);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });

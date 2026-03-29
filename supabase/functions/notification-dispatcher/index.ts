@@ -1,7 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
+import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 /**
  * notification-dispatcher ? Consolidated notification function
@@ -41,14 +42,15 @@ interface NotificationRequest {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   if (req.method !== 'POST') {
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      { status: 405, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
     );
   }
 
@@ -71,7 +73,7 @@ Deno.serve(async (req) => {
       if (!authHeader) {
         return new Response(
           JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
         );
       }
 
@@ -80,7 +82,7 @@ Deno.serve(async (req) => {
       if (authErr || !user) {
         return new Response(
           JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
         );
       }
 
@@ -94,7 +96,7 @@ Deno.serve(async (req) => {
       if (!role || !['admin', 'super_admin'].includes(role.role)) {
         return new Response(
           JSON.stringify({ error: 'Forbidden' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
         );
       }
 
@@ -108,14 +110,14 @@ Deno.serve(async (req) => {
     if (callerTenantId && callerTenantId !== tenant_id) {
       return new Response(
         JSON.stringify({ error: 'Forbidden: tenant mismatch' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
       );
     }
 
     if (!channel || !type || !tenant_id || !message) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields: channel, type, tenant_id, message' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
       );
     }
 
@@ -137,13 +139,13 @@ Deno.serve(async (req) => {
         logger.error(`[notification-dispatcher][${requestId}] Insert error:`, insertErr.message);
         return new Response(
           JSON.stringify({ error: insertErr.message, requestId }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
         );
       }
 
       return new Response(
         JSON.stringify({ success: true, channel: 'in_app', requestId, duration_ms: Date.now() - startedAt }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
       );
     }
 
@@ -169,7 +171,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, channel: 'in_app', fallback: true, requestId }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
       );
     }
 
@@ -187,7 +189,7 @@ Deno.serve(async (req) => {
           const chatId = ch.config?.chat_id;
           const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN') || ch.config?.bot_token;
           if (chatId && botToken) {
-            const telegramRes = await fetch(
+            const telegramRes = await fetchWithTimeout(
               `https://api.telegram.org/bot${botToken}/sendMessage`,
               {
                 method: 'POST',
@@ -229,13 +231,13 @@ Deno.serve(async (req) => {
         requestId,
         duration_ms: Date.now() - startedAt,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
     );
   } catch (error) {
     logger.error(`[notification-dispatcher][${requestId}] Fatal:`, error);
     return new Response(
       JSON.stringify({ error: 'Internal error', message: String(error), requestId }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
     );
   }
 });

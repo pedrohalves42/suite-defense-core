@@ -1,5 +1,5 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 
 export interface CachedBuild {
@@ -51,7 +51,7 @@ export async function checkBuildCache(
           cached: true,
           message: 'Build recuperado do cache (mesmo tenant/script/versao)',
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     } else {
       logger.info(`[${requestId}] Cache expired or expiring soon`, {

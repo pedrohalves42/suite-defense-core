@@ -1,7 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { logger } from '../_shared/logger.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
-const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
@@ -17,9 +17,10 @@ interface DlqActionRequest {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   try {
@@ -28,7 +29,7 @@ Deno.serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -49,7 +50,7 @@ Deno.serve(async (req) => {
       logger.error('[dlq-action] Auth error:', userError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -60,7 +61,7 @@ Deno.serve(async (req) => {
     if (!action) {
       return new Response(
         JSON.stringify({ error: 'Missing action parameter' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -75,7 +76,7 @@ Deno.serve(async (req) => {
     if (rolesError || !userRoles?.length) {
       return new Response(
         JSON.stringify({ error: 'User has no tenant access' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -86,7 +87,7 @@ Deno.serve(async (req) => {
     if (!isAdminOrOperator) {
       return new Response(
         JSON.stringify({ error: 'Insufficient permissions - admin/operator required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -96,14 +97,14 @@ Deno.serve(async (req) => {
         if (!dlqItemId) {
           return new Response(
             JSON.stringify({ error: 'Missing dlqItemId' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
         if (resolutionSource === 'human' && (!resolutionNotes || resolutionNotes.trim().length < 5)) {
           return new Response(
             JSON.stringify({ error: 'Resolution notes required (min 5 chars)' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -117,14 +118,14 @@ Deno.serve(async (req) => {
         if (itemError || !item) {
           return new Response(
             JSON.stringify({ error: 'DLQ item not found' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
         if (!isSuperAdmin && !userTenantIds.includes(item.tenant_id)) {
           return new Response(
             JSON.stringify({ error: 'No access to this tenant' }),
-            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -144,14 +145,14 @@ Deno.serve(async (req) => {
           logger.error('[dlq-action] Resolve failed:', updateError);
           return new Response(
             JSON.stringify({ error: 'Failed to resolve item' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
         logger.info(`[dlq-action] Resolved item ${dlqItemId}`);
         return new Response(
           JSON.stringify({ success: true, dlqItemId }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -159,14 +160,14 @@ Deno.serve(async (req) => {
         if (!dlqItemIds?.length) {
           return new Response(
             JSON.stringify({ error: 'Missing dlqItemIds' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
         if (resolutionSource === 'human' && (!resolutionNotes || resolutionNotes.trim().length < 5)) {
           return new Response(
             JSON.stringify({ error: 'Resolution notes required (min 5 chars)' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -179,7 +180,7 @@ Deno.serve(async (req) => {
         if (itemsError || !items?.length) {
           return new Response(
             JSON.stringify({ error: 'DLQ items not found' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -189,7 +190,7 @@ Deno.serve(async (req) => {
           if (unauthorizedItems.length > 0) {
             return new Response(
               JSON.stringify({ error: 'No access to some items' }),
-              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
             );
           }
         }
@@ -210,14 +211,14 @@ Deno.serve(async (req) => {
           logger.error('[dlq-action] Batch resolve failed:', updateError);
           return new Response(
             JSON.stringify({ error: 'Failed to resolve items' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
         logger.info(`[dlq-action] Resolved ${dlqItemIds.length} items`);
         return new Response(
           JSON.stringify({ success: true, count: dlqItemIds.length }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -225,7 +226,7 @@ Deno.serve(async (req) => {
         if (!dlqItemId) {
           return new Response(
             JSON.stringify({ error: 'Missing dlqItemId' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -239,14 +240,14 @@ Deno.serve(async (req) => {
         if (itemError || !item) {
           return new Response(
             JSON.stringify({ error: 'DLQ item not found' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
         if (!isSuperAdmin && !userTenantIds.includes(item.tenant_id)) {
           return new Response(
             JSON.stringify({ error: 'No access to this tenant' }),
-            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -254,7 +255,7 @@ Deno.serve(async (req) => {
         if (!['exhausted', 'resolved'].includes(item.status)) {
           return new Response(
             JSON.stringify({ error: 'Can only delete exhausted or resolved items' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
@@ -268,21 +269,21 @@ Deno.serve(async (req) => {
           logger.error('[dlq-action] Delete failed:', deleteError);
           return new Response(
             JSON.stringify({ error: 'Failed to delete item' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
           );
         }
 
         logger.info(`[dlq-action] Deleted item ${dlqItemId}`);
         return new Response(
           JSON.stringify({ success: true }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
       }
 
       default:
         return new Response(
           JSON.stringify({ error: `Unknown action: ${action}` }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
         );
     }
 
@@ -290,7 +291,7 @@ Deno.serve(async (req) => {
     logger.error('[dlq-action] Unexpected error:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 });

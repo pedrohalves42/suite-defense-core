@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 
@@ -7,8 +7,9 @@ import { logger } from '../_shared/logger.ts';
  * Check Production Health
  */
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   // V-1131: Defense-in-depth auth guard for cron function
@@ -211,7 +212,7 @@ Deno.serve(async (req) => {
       JSON.stringify(result),
       { 
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       }
     );
 
@@ -239,7 +240,7 @@ Deno.serve(async (req) => {
       }),
       { 
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       }
     );
   }

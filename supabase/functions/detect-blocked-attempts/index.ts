@@ -1,11 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: buildCorsHeaders(origin) })
   }
 
   // V-1138: Defense-in-depth auth guard for cron function
@@ -55,7 +56,7 @@ Deno.serve(async (req) => {
           suggestion: isTimeout ? 'Add indexes: CREATE INDEX idx_awa_domain_visited ON agent_web_activity(domain, visited_at); CREATE INDEX idx_baa_agent_domain ON blocked_access_attempts(agent_id, domain, attempted_at);' : undefined,
           requestId 
         }),
-        { status: isTimeout ? 504 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: isTimeout ? 504 : 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       )
     }
 
@@ -80,7 +81,7 @@ Deno.serve(async (req) => {
         duration_ms: Date.now() - startedAt,
         requestId
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     )
 
   } catch (err) {
@@ -107,7 +108,7 @@ Deno.serve(async (req) => {
         error: errMsg,
         requestId 
       }),
-      { status: isTimeout ? 504 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: isTimeout ? 504 : 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     )
   }
 })

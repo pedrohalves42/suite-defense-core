@@ -1,15 +1,16 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   const requestId = crypto.randomUUID();
   
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   try {
@@ -42,7 +43,7 @@ Deno.serve(async (req) => {
       
       return new Response(JSON.stringify({ success: false }), { 
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       });
     }
 
@@ -60,7 +61,7 @@ Deno.serve(async (req) => {
       logger.error('Build record not found', { requestId, build_id });
       return new Response(JSON.stringify({ success: false, error: 'Build not found' }), { 
         status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       });
     }
 
@@ -71,7 +72,7 @@ Deno.serve(async (req) => {
       logger.error('Agent name not found', { requestId, build_id });
       return new Response(JSON.stringify({ success: false, error: 'Agent not found' }), { 
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       });
     }
 
@@ -100,7 +101,7 @@ Deno.serve(async (req) => {
         
       return new Response(JSON.stringify({ success: false, error: 'Upload failed' }), { 
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       });
     }
 
@@ -113,7 +114,7 @@ Deno.serve(async (req) => {
       logger.error('Failed to create signed URL', { requestId, build_id });
       return new Response(JSON.stringify({ success: false, error: 'URL generation failed' }), { 
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       });
     }
 
@@ -145,7 +146,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ success: true }), { 
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
@@ -153,7 +154,7 @@ Deno.serve(async (req) => {
     logger.error('Callback failed', { error: errorMessage, requestId });
     return new Response(JSON.stringify({ success: false, error: errorMessage }), { 
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
     });
   }
 });

@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger, loggerWithContext } from '../_shared/logger.ts';
 import {
   DiagnosticJobPayloadSchema,
@@ -28,7 +28,7 @@ serve(async (req) => {
   const log = loggerWithContext(requestId);
 
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
   try {
@@ -701,7 +701,7 @@ serve(async (req) => {
         result: executionResult,
         error: errorMessage
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
 
   } catch (error: Record<string, unknown>) {
@@ -713,7 +713,7 @@ serve(async (req) => {
       }),
       { 
         status: error.message.includes('Unauthorized') || error.message.includes('Forbidden') ? 403 : 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
       }
     );
   }
