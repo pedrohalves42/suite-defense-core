@@ -28,10 +28,9 @@ verify_jwt = false
 [functions.sync-stripe-subscriptions]
 verify_jwt = false
 
-# === Trial Period Functions ===
+# === Trial Period Functions - DISABLED schedule COST-OPT-V9 (covered by system-maintenance) ===
 [functions.check-trial-expiration]
 verify_jwt = false
-schedule = "0 6 * * *"
 
 [functions.send-trial-reminder]
 verify_jwt = false
@@ -539,10 +538,9 @@ verify_jwt = false
 [functions.generate-executive-report]
 verify_jwt = false
 
-# === Weekly Security Report (Sunday at 23:00 UTC) ===
+# === Weekly Security Report - DISABLED schedule COST-OPT-V9 (invoke manually) ===
 [functions.generate-weekly-report]
 verify_jwt = false
-schedule = "0 23 * * 0"
 
 # === One-Click Approval via Token (public endpoint) ===
 [functions.approve-via-token]
