@@ -5,7 +5,7 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "node_modules", "supabase/functions", "eslint-plugin-multitenant", "public", "scripts", "dns-filter", "tools", "electron", "*.config.*"] },
+  { ignores: ["dist", "node_modules", "supabase/functions", "eslint-plugin-multitenant", "public", "scripts", "dns-filter", "tools", "electron", "*.config.*", "src/integrations/supabase/types.ts"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
