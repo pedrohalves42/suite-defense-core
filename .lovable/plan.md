@@ -464,3 +464,293 @@ Justificativa:
 | "58 funcoes sem auth" | Na verdade sao ~88 |
 
 **Veredicto final**: O sistema e real, funcional e substancial. Nao e vaporware. A complexidade do agente, a cadeia criptografica e a infraestrutura de middleware sao diferenciais genuinos. Os debitos tecnicos existem mas sao tipicos de software em iteracao rapida. O custo de replicacao e significativo -- principalmente pela seguranca aplicada e pelo agente endpoint, que sao as partes que nenhum framework ou biblioteca resolve por voce.
+
+---
+
+# Plano de Correção — 3 Bugs Críticos do Agente v5.0.15
+
+**Data:** 2026-03-29
+**Origem:** Análise forense de logs de produção (pcteste1)
+
+## Resumo Executivo
+
+| # | Problema | Severidade | Estado Atual | Correção |
+|---|----------|-----------|--------------|----------|
+| P1 | TOCTOU violation recorrente → agent termination | **CRÍTICO** | Hotfix parcial (self-heal funciona para cache stale, mas falha para BOM/update race) | 4 correções no script |
+| P2 | Falha ECDSA no boot → DEGRADED temporário | **ALTO** | Hotfix v5.0.15-keygen-v2 (dry-run ECDsaCng) já implementado, mas boot ainda mostra DEGRADED | 2 correções no script |
+| P3 | Baseline de processos corrompendo (duplicate key) | **MÉDIO** | Hotfix v5.0.15-baseline (Get-SafeBaselineProp + ConvertTo-SafePSO) já implementado, mas erro persiste | 3 correções no script |
+
+## Arquivo Único Afetado
+
+`supabase/functions/_shared/agent-scripts/cybershield-agent-windows-v5.ps1` (7.184 linhas)
++ sync para `public/agent-scripts/cybershield-agent-windows-v5.ps1`
+
+---
+
+## P1 — TOCTOU Violation Recorrente (CRÍTICO)
+
+### Evidência no Log
+```
+[INTEGRITY] RUNTIME TOCTOU VIOLATION: Script modified while running!
+Boot: acb30b..., Now: 19e4be24...
+TOCTOU VIOLATION DETECTED - terminating agent immediately
+```
+Ocorre repetidamente entre 24-29 de março, causando crash-loop com restart a cada poucos minutos.
+
+### Análise do Código Atual (linhas 814-888)
+
+O mecanismo `Test-RuntimeIntegrity` funciona assim:
+1. Lê hash esperado do cache JSON/TXT
+2. Computa `Get-FileHash` do arquivo em disco
+3. Se diferem → compara com `$Global:BootScriptHash`
+4. Se `currentHash == BootScriptHash` → self-heal (cache stale)
+5. Se `currentHash != BootScriptHash` → verifica `$Global:UpdateInProgress`
+6. Se não está em update → **TOCTOU VIOLATION → termina agente**
+
+### Causa Raiz Identificada
+
+**Hipótese principal: Divergência de encoding/BOM durante auto-update.**
+
+O fluxo de auto-update salva o novo script com encoding possivelmente diferente (UTF-8 com BOM vs sem BOM). O `Get-FileHash` do PowerShell computa hash sobre os bytes brutos, incluindo BOM. Quando o agente reinicia após update:
+- `$Global:BootScriptHash` = hash com BOM (novo arquivo)
+- Cache `expected_script_hash.json` = hash sem BOM (computado pelo servidor)
+- Self-heal atualiza cache para match → OK no boot
+
+Mas se outro processo (AV, deploy, sync) reescreve o arquivo com BOM diferente durante a execução, `currentHash` muda e ≠ `BootScriptHash` → TOCTOU violation real ou falso positivo.
+
+### Correções (4 mudanças)
+
+#### P1.1 — Hash BOM-safe em Test-RuntimeIntegrity
+**Linha 841** — Substituir `Get-FileHash` por leitura raw com strip de BOM:
+
+```powershell
+# ANTES:
+$currentHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256).Hash.ToLower()
+
+# DEPOIS:
+$scriptBytes = [System.IO.File]::ReadAllBytes($PSCommandPath)
+if ($scriptBytes.Length -ge 3 -and $scriptBytes[0] -eq 0xEF -and $scriptBytes[1] -eq 0xBB -and $scriptBytes[2] -eq 0xBF) {
+    $scriptBytes = $scriptBytes[3..($scriptBytes.Length - 1)]
+}
+$sha256 = [System.Security.Cryptography.SHA256]::Create()
+$hashBytes = $sha256.ComputeHash($scriptBytes)
+$currentHash = [BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
+$sha256.Dispose()
+```
+
+Aplicar a **mesma normalização** em:
+- `$Global:BootScriptHash` (linha 553)
+- Boot hash validation (linhas 385, 405, 436)
+- Qualquer outro ponto que compute hash do script
+
+#### P1.2 — Grace period pós-update
+**Após o bloco UpdateInProgress (linha 876)** — Adicionar:
+
+```powershell
+# Grace period: skip TOCTOU check for 30s after update completes
+if ($Global:UpdateCompletedAt -and ((Get-Date) - $Global:UpdateCompletedAt).TotalSeconds -lt 30) {
+    Write-Log "[INTEGRITY] Post-update grace period active - skipping TOCTOU check" "DEBUG"
+    return $true
+}
+```
+
+E no fluxo de auto-update, setar `$Global:UpdateCompletedAt = Get-Date` quando `UpdateInProgress` volta a `$false`.
+
+#### P1.3 — Atomic update (download-verify-rename)
+No fluxo de auto-update do agente, garantir que:
+1. Novo script é baixado para `$BaseDir\cybershield-agent-update.tmp`
+2. Hash SHA-256 é validado contra o esperado
+3. `$Global:UpdateInProgress = $true`
+4. `Move-Item -Path $tmpPath -Destination $PSCommandPath -Force` (atômico em NTFS)
+5. `$Global:UpdateInProgress = $false; $Global:UpdateCompletedAt = Get-Date`
+
+Verificar se o código atual já faz isso ou se escreve diretamente.
+
+#### P1.4 — Log estruturado para diagnóstico
+Adicionar ao `else` de TOCTOU violation (linha 878):
+
+```powershell
+Write-Log "[INTEGRITY] TOCTOU details: BootHash=$($Global:BootScriptHash.Substring(0,16)), CurrentHash=$($currentHash.Substring(0,16)), CacheHash=$($expectedHash.Substring(0,16)), UpdateInProgress=$($Global:UpdateInProgress), UpdateCompletedAt=$($Global:UpdateCompletedAt)" "ERROR"
+```
+
+---
+
+## P2 — Falha Criptográfica no Boot (ALTO)
+
+### Evidência no Log
+```
+[BOOT] No signing key available after Initialize-AgentKeys. Attempting RSA-2048 emergency generation...
+[BOOT] RSA-2048-CSP emergency key generated and persisted. Signing ready.
+[KEYS] Loaded existing keypair (RSA-2048-XML, version: 56)
+[FSM] State transition: INITIALIZING -> AUTHENTICATING
+```
+
+### Análise do Código Atual (linhas 1557-1693)
+
+O hotfix v5.0.15-keygen-v2 está correto em sua lógica:
+1. Tenta instanciar `ECDsaCng(256)` e chamar `ExportPkcs8PrivateKey()`
+2. Se falha → `$canExportPkcs8 = $false`
+3. Se `$false` → chama `Initialize-RSACspKeys` diretamente
+
+**Mas** o log mostra que o agente ainda entra em estado "No signing key available after Initialize-AgentKeys", o que significa que o caller de `Initialize-AgentKeys` recebe `$false` ou `$null` **antes** do fallback RSA completar.
+
+### Causa Raiz Provável
+
+O caller (provavelmente no bloco de boot/FSM) chama `Initialize-AgentKeys` e verifica `$Global:AgentPrivateKey` imediatamente. Se o dry-run ECDSA **throw** (em vez de falhar silenciosamente), o `try/catch` externo (linha 1565) captura e retorna `$false` **sem** chamar `Initialize-RSACspKeys`.
+
+Verificação necessária: o `catch` em linha 1587-1599 pode lançar exceção não capturada se `ECDsaCng::new(256)` falhar de forma inesperada.
+
+### Correções (2 mudanças)
+
+#### P2.1 — Fallback RSA no catch externo
+**Linha 4303-4308 equivalente no Initialize-AgentKeys** — Garantir que o `catch` externo (linha equivalente) chama `Initialize-RSACspKeys`:
+
+```powershell
+# No catch externo de Initialize-AgentKeys:
+} catch {
+    Write-Log "[KEYS] Key initialization error: $($_.Exception.Message) - attempting RSA fallback" "WARN"
+    try {
+        return Initialize-RSACspKeys
+    } catch {
+        Write-Log "[KEYS] RSA fallback also failed: $($_.Exception.Message)" "ERROR"
+        return $false
+    }
+}
+```
+
+#### P2.2 — Eliminar "emergency generation" duplicada no caller
+Localizar o código que faz "Attempting RSA-2048 emergency generation" (provável no boot sequence). Esse código é redundante se `Initialize-AgentKeys` já faz o fallback. Unificar para que exista **um único path** para geração de chaves RSA.
+
+---
+
+## P3 — Baseline de Processos Corrompendo (MÉDIO)
+
+### Evidência no Log
+```
+[BASELINE] Failed to detect process anomalies: O item já foi adicionado. Chave contida no dicionário: 'name'
+[BASELINE] Corrupted baseline detected (duplicate key). Rebuilding baseline...
+[BASELINE] Created baseline with 65 processes
+```
+
+### Análise do Código Atual (linhas 4202-4438)
+
+O código tem 3 camadas de proteção:
+1. `Get-SafeBaselineProp` — acesso seguro via `PSObject.Properties.Match()`
+2. `ConvertTo-SafePSO` — conversão para PSCustomObject limpo
+3. Dedup no load e no save via `HashSet<string>`
+
+**Mas o erro persiste.** A exceção "O item já foi adicionado" ocorre em **ConvertFrom-Json** (PS 5.1), não no código de acesso. O `ConvertFrom-Json` do PS 5.1 cria um PSCustomObject com NoteProperties, e se o JSON tem chaves duplicadas, ele tenta adicionar a mesma NoteProperty duas vezes → crash.
+
+### Causa Raiz
+
+O JSON salvo pode ter chaves duplicadas dentro de um mesmo objeto. Isso acontece quando:
+1. `ConvertTo-Json` serializa um `[ordered]@{}` que foi convertido para PSCustomObject com propriedades duplicadas
+2. Ou quando o arquivo é corrompido por escrita concorrente (dois ciclos de baseline rodando simultaneamente)
+
+### Correções (3 mudanças)
+
+#### P3.1 — Serialização manual (bypass ConvertTo-Json)
+Criar `ConvertTo-BaselineJson` que produz JSON sem depender de `ConvertTo-Json`:
+
+```powershell
+function ConvertTo-BaselineJson {
+    param([array]$Baseline)
+    $sb = [System.Text.StringBuilder]::new(4096)
+    [void]$sb.Append('[')
+    $first = $true
+    foreach ($e in $Baseline) {
+        if (-not $first) { [void]$sb.Append(',') }
+        $first = $false
+        $n = ((Get-SafeBaselineProp $e 'name') -replace '\\', '\\\\' -replace '"', '\"')
+        $c = ((Get-SafeBaselineProp $e 'company') -replace '\\', '\\\\' -replace '"', '\"')
+        $d = ((Get-SafeBaselineProp $e 'description') -replace '\\', '\\\\' -replace '"', '\"')
+        $f = ((Get-SafeBaselineProp $e 'first_seen') -replace '\\', '\\\\' -replace '"', '\"')
+        [void]$sb.Append("{`"name`":`"$n`",`"company`":")
+        if ($c) { [void]$sb.Append("`"$c`"") } else { [void]$sb.Append("null") }
+        [void]$sb.Append(",`"description`":")
+        if ($d) { [void]$sb.Append("`"$d`"") } else { [void]$sb.Append("null") }
+        [void]$sb.Append(",`"first_seen`":`"$f`"}")
+    }
+    [void]$sb.Append(']')
+    return $sb.ToString()
+}
+```
+
+Substituir **todas** as chamadas `ConvertTo-SafePSO | ConvertTo-Json -Depth 5` por `ConvertTo-BaselineJson`.
+
+#### P3.2 — Leitura resiliente (bypass ConvertFrom-Json para baseline)
+Wrap `ConvertFrom-Json` com fallback regex:
+
+```powershell
+function Import-BaselineSafe {
+    param([string]$RawJson)
+    $entries = @()
+    $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    try {
+        $parsed = $RawJson | ConvertFrom-Json -ErrorAction Stop
+        foreach ($item in $parsed) {
+            $name = Get-SafeBaselineProp $item 'name'
+            if ($name -and -not $seen.Contains($name)) {
+                [void]$seen.Add($name)
+                $entries += [ordered]@{
+                    name = $name
+                    company = Get-SafeBaselineProp $item 'company'
+                    description = Get-SafeBaselineProp $item 'description'
+                    first_seen = Get-SafeBaselineProp $item 'first_seen'
+                }
+            }
+        }
+    } catch {
+        Write-Log "[BASELINE] ConvertFrom-Json failed, using regex recovery: $($_.Exception.Message)" "WARN"
+        $nameMatches = [regex]::Matches($RawJson, '"name"\s*:\s*"([^"]*)"')
+        foreach ($m in $nameMatches) {
+            $name = $m.Groups[1].Value
+            if ($name -and -not $seen.Contains($name)) {
+                [void]$seen.Add($name)
+                $entries += [ordered]@{ name = $name; company = $null; description = "recovered"; first_seen = (Get-Date).ToString("o") }
+            }
+        }
+    }
+    return $entries
+}
+```
+
+#### P3.3 — Mutex para escrita de baseline
+Prevenir escrita concorrente:
+
+```powershell
+$baselineMutex = [System.Threading.Mutex]::new($false, "CyberShield_Baseline_Write")
+try {
+    [void]$baselineMutex.WaitOne(5000)
+    $jsonContent = ConvertTo-BaselineJson -Baseline $Global:ProcessBaseline
+    [System.IO.File]::WriteAllText($Global:ProcessBaselinePath, $jsonContent, [System.Text.UTF8Encoding]::new($false))
+} finally {
+    $baselineMutex.ReleaseMutex()
+}
+```
+
+---
+
+## Ordem de Implementação
+
+| Etapa | Mudanças | Linhas Afetadas | Estimativa |
+|-------|----------|----------------|------------|
+| 1 | P1.1 — Hash BOM-safe (5 pontos) | 553, 385, 405, 436, 841 | 15 min |
+| 2 | P1.2 — Grace period pós-update | 876 + auto-update block | 10 min |
+| 3 | P1.3 — Atomic update verification | auto-update flow | 10 min |
+| 4 | P1.4 — Log estruturado TOCTOU | 878 | 5 min |
+| 5 | P2.1 — Fallback RSA no catch externo | ~1693 | 5 min |
+| 6 | P2.2 — Eliminar emergency duplicada | boot sequence | 10 min |
+| 7 | P3.1 — ConvertTo-BaselineJson | nova função + 3 call sites | 15 min |
+| 8 | P3.2 — Import-BaselineSafe | nova função + 1 call site | 10 min |
+| 9 | P3.3 — Mutex de escrita | save baseline | 5 min |
+| 10 | Sync public/ + bump version | sync script | 5 min |
+
+**Total: ~90 min**
+
+## Critérios de Sucesso
+- [ ] Zero `TOCTOU VIOLATION` em 48h após deploy
+- [ ] Boot direto para ENFORCING sem DEGRADED transitório
+- [ ] Zero `Corrupted baseline detected` após primeira inicialização
+- [ ] Hash do script sincronizado entre source e public
+- [ ] Agente v5.0.16 operacional em pcteste1
