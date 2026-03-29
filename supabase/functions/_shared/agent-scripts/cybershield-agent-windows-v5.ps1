@@ -548,9 +548,33 @@ $Global:AutoRepairStats = @{
 # v5.0.13-fix: SecurityDegraded flag (BUG 7 - declare early for robustness)
 $Global:SecurityDegraded = $false
 
-# v5.0.15-hotfix-toctou: Record script hash at boot for TOCTOU self-heal
+# v5.0.16-fix: BOM-safe file hashing for TOCTOU integrity
+# Get-FileHash uses the file as-is (with BOM if present), which causes hash mismatches
+# when the same content is saved with/without BOM by different tools.
+# This function strips UTF-8 BOM before hashing for consistent results.
+function Get-BOMSafeFileHash {
+    param(
+        [Parameter(Mandatory)]
+        [string]$FilePath
+    )
+    try {
+        $rawBytes = [System.IO.File]::ReadAllBytes($FilePath)
+        # Strip UTF-8 BOM (EF BB BF) if present
+        if ($rawBytes.Length -ge 3 -and $rawBytes[0] -eq 0xEF -and $rawBytes[1] -eq 0xBB -and $rawBytes[2] -eq 0xBF) {
+            $rawBytes = $rawBytes[3..($rawBytes.Length - 1)]
+        }
+        $sha = [System.Security.Cryptography.SHA256]::Create()
+        $hashBytes = $sha.ComputeHash($rawBytes)
+        $sha.Dispose()
+        return [BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
+    } catch {
+        throw "Get-BOMSafeFileHash failed for ${FilePath}: $($_.Exception.Message)"
+    }
+}
+
+# v5.0.16-fix: Record script hash at boot for TOCTOU self-heal (BOM-safe)
 try {
-    $Global:BootScriptHash = (Get-FileHash -Path $PSCommandPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+    $Global:BootScriptHash = Get-BOMSafeFileHash -FilePath $PSCommandPath
 } catch {
     $Global:BootScriptHash = $null
 }
