@@ -32,7 +32,7 @@ export function buildAgentReinstallCommand({
     '$hashJson = "$dataDir\\expected_script_hash.json"; $hashTxt = "$dataDir\\expected_script_hash.txt";',
     'if (Test-Path $hashJson) { Remove-Item $hashJson -Force -ErrorAction SilentlyContinue };',
     'if (Test-Path $hashTxt) { Remove-Item $hashTxt -Force -ErrorAction SilentlyContinue };',
-    // v5.0.16-hardening: Create secrets directory with restricted ACL and store tokens in files
+    // v5.0.15-hardening: Create secrets directory with restricted ACL and store tokens in files
     "$secretsDir = \"$dir\\secrets\";",
     "if (!(Test-Path $secretsDir)) { New-Item -ItemType Directory -Path $secretsDir -Force | Out-Null };",
     "try { $acl = New-Object System.Security.AccessControl.DirectorySecurity; $acl.SetAccessRuleProtection($true, $false); $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-18')), 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow'))); $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule((New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')), 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow'))); Set-Acl -Path $secretsDir -AclObject $acl } catch { Write-Host 'ACL set failed (non-critical)' -ForegroundColor Yellow };",
@@ -80,7 +80,7 @@ export function buildAgentReinstallCommand({
     '  [System.IO.File]::WriteAllText($scriptPath, $scriptContent, [System.Text.UTF8Encoding]::new($true));',
     '  $cfg = @{ ServerUrl=$effectiveServerUrl; AgentToken=$agentToken; HMACSecret=$hmacSecret; AgentName=$agentName };',
     '  $cfg | ConvertTo-Json | Set-Content -Path "$dir\\config.json" -Encoding UTF8 -Force;',
-    // v5.0.16-hardening: Scheduled Task WITHOUT tokens on CLI (agent reads from secrets files)
+    // v5.0.15-hardening: Scheduled Task WITHOUT tokens on CLI (agent reads from secrets files)
     "  $taskArgStr = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File \"' + $scriptPath + '\" -ServerUrl \"' + $effectiveServerUrl + '\" -AgentName \"' + $agentName + '\"';",
     "  $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $taskArgStr;",
     '  $trigger1 = New-ScheduledTaskTrigger -AtStartup;',

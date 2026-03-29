@@ -1,6 +1,6 @@
 // CyberShield Agent - Reinstallation Script Content
 // Embedded version for Edge Function delivery
-// Version: 2.1.0 - Secure token storage (v5.0.16-hardening)
+// Version: 2.1.0 - Secure token storage (v5.0.15-hardening)
 
 export const REINSTALL_SCRIPT_CONTENT = `# CyberShield Agent - Clean Reinstall v2.1.0
 param([Parameter(Mandatory=$true)][string]$EnrollmentKey, [Parameter(Mandatory=$true)][string]$ServerUrl)
