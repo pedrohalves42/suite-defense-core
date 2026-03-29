@@ -42,12 +42,12 @@ async function performLogin(page: Page): Promise<boolean> {
  * Extended test fixture that provides an authenticated page
  */
 export const test = base.extend<{ authenticatedPage: Page }>({
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   authenticatedPage: async ({ page }, use) => {
     const success = await performLogin(page);
     if (!success) {
       throw new Error('Authentication failed – check TEST_ADMIN_EMAIL / TEST_ADMIN_PASSWORD');
     }
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(page);
   },
 });
