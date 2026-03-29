@@ -324,9 +324,10 @@ export type PublicHandler = (req: Request, ctx: { supabase: SupabaseClient; requ
 export function servePublic(handler: PublicHandler) {
   Deno.serve(async (req: Request) => {
     const requestId = req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const origin = req.headers.get('origin');
 
     if (req.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
+      return new Response(null, { headers: buildCorsHeaders(origin) });
     }
 
     try {
@@ -343,11 +344,11 @@ export function servePublic(handler: PublicHandler) {
       const result = await handler(req, { supabase, requestId, body });
       
       if (result instanceof Response) return result;
-      return jsonResponse(result, 200, { 'X-Request-ID': requestId });
+      return jsonResponse(result, 200, { 'X-Request-ID': requestId }, origin);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Internal server error';
       logger.error(`[servePublic][${requestId}] Error`, { message: msg });
-      return errorResponse(msg, 500, requestId);
+      return errorResponse(msg, 500, requestId, origin);
     }
   });
 }
