@@ -33,6 +33,7 @@ Deno.serve(async (req) => {
       if (!authResult.success) {
         return authResult.response!;
       }
+
       // Accept POST body with script content
       if (req.method !== 'POST') {
         return new Response(JSON.stringify({

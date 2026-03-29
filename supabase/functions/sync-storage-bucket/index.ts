@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 /**
  * Sync Storage Bucket
@@ -10,6 +11,10 @@ import { logger } from '../_shared/logger.ts';
  */
 
 Deno.serve(async (req) => {
+  // Auth guard: reject unauthenticated calls
+  const authError = await assertInternalCaller(req);
+  if (authError) return authError;
+
   const requestId = crypto.randomUUID();
   
   if (req.method === 'OPTIONS') {

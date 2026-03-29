@@ -7,6 +7,7 @@ import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logger } from '../_shared/logger.ts';
 import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
 import { withAPM } from '../_shared/apm.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -40,6 +41,10 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
     return new Response(null, { headers: corsHeaders });
   }
 
+
+  // Auth guard: require authenticated user or internal caller
+  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
+  if (authError) return authError;
   // Health check endpoint - ANY GET request is treated as health check
   if (req.method === 'GET') {
     try {

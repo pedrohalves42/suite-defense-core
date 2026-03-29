@@ -1,3 +1,4 @@
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 // deno-lint-ignore-file
 
 const corsHeaders = {
@@ -10,6 +11,10 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+
+  // Auth guard: require authenticated user or internal caller
+  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
+  if (authError) return authError;
   const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
   if (!botToken) {
     return new Response(JSON.stringify({ error: 'TELEGRAM_BOT_TOKEN not configured' }), {

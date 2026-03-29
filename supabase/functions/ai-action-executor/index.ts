@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logger, loggerWithContext } from '../_shared/logger.ts';
 import {
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
   DiagnosticJobPayloadSchema,
   SystemAlertPayloadSchema,
   SuggestAgentRestartPayloadSchema,
@@ -31,6 +32,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+
+  // Auth guard: require authenticated user or internal caller
+  const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
+  if (authError) return authError;
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
