@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -14,12 +15,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Validate callback token
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader !== `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`) {
-      logger.warn('Unauthorized callback attempt', { requestId });
-      return new Response('Unauthorized', { status: 401 });
-    }
+    // V-MIG: Replace insecure !== with timing-safe assertInternalCaller
+    const authError = await assertInternalCaller(req);
+    if (authError) return authError;
 
     const { build_id, exe_binary_base64, sha256, size_bytes, github_run_id, error } = await req.json();
 
