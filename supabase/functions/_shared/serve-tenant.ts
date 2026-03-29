@@ -31,7 +31,7 @@
  */
 
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from './cors.ts';
+import { corsHeaders, buildCorsHeaders } from './cors.ts';
 import { securityHeaders } from './security-headers.ts';
 import { requireEnv } from './env.ts';
 import { logger } from './logger.ts';
@@ -106,18 +106,20 @@ type TenantHandler<T = unknown> = (req: Request, ctx: TenantContext<T>) => Promi
 
 // ??? Helpers ?????????????????????????????????????????????????????????????????
 
-function jsonResponse(data: unknown, status = 200, extraHeaders?: Record<string, string>) {
+function jsonResponse(data: unknown, status = 200, extraHeaders?: Record<string, string>, origin?: string | null) {
+  const cors = origin ? buildCorsHeaders(origin) : corsHeaders;
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json', ...extraHeaders },
+    headers: { ...cors, ...securityHeaders, 'Content-Type': 'application/json', ...extraHeaders },
   });
 }
 
-function errorResponse(message: string, status: number, requestId: string) {
+function errorResponse(message: string, status: number, requestId: string, origin?: string | null) {
   return jsonResponse(
     { error: { message, code: status === 401 ? 'UNAUTHORIZED' : status === 403 ? 'FORBIDDEN' : 'ERROR' } },
     status,
-    { 'X-Request-ID': requestId }
+    { 'X-Request-ID': requestId },
+    origin
   );
 }
 
@@ -156,15 +158,16 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
   Deno.serve(async (req: Request) => {
     const requestId = req.headers.get('X-Request-ID') || crypto.randomUUID();
     const startTime = Date.now();
+    const origin = req.headers.get('origin');
 
     // 1. CORS
     if (req.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
+      return new Response(null, { headers: buildCorsHeaders(origin) });
     }
 
     // 2. Method check
     if (methods.length > 0 && !methods.includes(req.method)) {
-      return errorResponse(`Method ${req.method} not allowed`, 405, requestId);
+      return errorResponse(`Method ${req.method} not allowed`, 405, requestId, origin);
     }
 
     try {
@@ -206,13 +209,13 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
         
         if (authError || !authUser) {
         logger.warn(`[serveTenant][${requestId}] Invalid JWT`);
-          return errorResponse('Invalid or expired token', 401, requestId);
+          return errorResponse('Invalid or expired token', 401, requestId, origin);
         }
         userId = authUser.id;
       }
       // 4d. No auth at all
       else {
-        return errorResponse('Authorization required', 401, requestId);
+        return errorResponse('Authorization required', 401, requestId, origin);
       }
 
       // 5. Resolve tenant_id
@@ -231,7 +234,7 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
         if (isInternal) {
           // Internal calls: trust the provided tenant_id
           if (!tenantId) {
-            return errorResponse('tenant_id required for internal calls', 400, requestId);
+            return errorResponse('tenant_id required for internal calls', 400, requestId, origin);
           }
         } else if (userId) {
           // User calls: validate access
@@ -239,15 +242,15 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
             const hasAccess = await verifyUserTenantAccess(supabase, userId, tenantId);
             if (!hasAccess) {
               logger.warn(`[SECURITY][${requestId}] User ${userId} denied access to tenant ${tenantId}`);
-              return errorResponse('Access denied: unauthorized tenant', 403, requestId);
+              return errorResponse('Access denied: unauthorized tenant', 403, requestId, origin);
             }
           } else if (allowFallback) {
             tenantId = await resolveDefaultTenant(supabase, userId);
             if (!tenantId) {
-              return errorResponse('No tenant associated with user', 403, requestId);
+              return errorResponse('No tenant associated with user', 403, requestId, origin);
             }
           } else {
-            return errorResponse('tenant_id required', 400, requestId);
+            return errorResponse('tenant_id required', 400, requestId, origin);
           }
         }
       } else {
@@ -275,6 +278,7 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
             { error: { message: 'Rate limit exceeded', code: 'RATE_LIMITED' } },
             429,
             { 'X-Request-ID': requestId, 'Retry-After': String(retryAfter) },
+            origin,
           );
         }
       }
@@ -303,12 +307,12 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
       return jsonResponse(result, 200, {
         'X-Request-ID': requestId,
         'X-Response-Time': responseTime,
-      });
+      }, origin);
 
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Internal server error';
       logger.error(`[serveTenant][${requestId}] Error`, { message: msg });
-      return errorResponse(msg, 500, requestId);
+      return errorResponse(msg, 500, requestId, origin);
     }
   });
 }
@@ -320,9 +324,10 @@ export type PublicHandler = (req: Request, ctx: { supabase: SupabaseClient; requ
 export function servePublic(handler: PublicHandler) {
   Deno.serve(async (req: Request) => {
     const requestId = req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const origin = req.headers.get('origin');
 
     if (req.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
+      return new Response(null, { headers: buildCorsHeaders(origin) });
     }
 
     try {
@@ -339,11 +344,11 @@ export function servePublic(handler: PublicHandler) {
       const result = await handler(req, { supabase, requestId, body });
       
       if (result instanceof Response) return result;
-      return jsonResponse(result, 200, { 'X-Request-ID': requestId });
+      return jsonResponse(result, 200, { 'X-Request-ID': requestId }, origin);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Internal server error';
       logger.error(`[servePublic][${requestId}] Error`, { message: msg });
-      return errorResponse(msg, 500, requestId);
+      return errorResponse(msg, 500, requestId, origin);
     }
   });
 }
@@ -379,9 +384,10 @@ export interface ServeAgentOptions {
 export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
   Deno.serve(async (req: Request) => {
     const requestId = req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const origin = req.headers.get('origin');
 
     if (req.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
+      return new Response(null, { headers: buildCorsHeaders(origin) });
     }
 
     try {
@@ -432,11 +438,11 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
 
       const result = await handler(req, ctx);
       if (result instanceof Response) return result;
-      return jsonResponse(result, 200, { 'X-Request-ID': requestId });
+      return jsonResponse(result, 200, { 'X-Request-ID': requestId }, origin);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Internal server error';
       logger.error(`[serveAgent][${requestId}] Error`, { message: msg });
-      return errorResponse(msg, 500, requestId);
+      return errorResponse(msg, 500, requestId, origin);
     }
   });
 }
