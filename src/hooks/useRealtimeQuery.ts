@@ -40,7 +40,7 @@ export function useRealtimeQuery<T>({
   realtimeEvents = ['INSERT', 'UPDATE', 'DELETE'],
   fallbackInterval = 1_800_000, // COST-OPT-V8: 30 min default
   enabled = true,
-  staleTime = 30_000,
+  staleTime = 300_000, // COST-OPT-V8: 5 min stale
 }: UseRealtimeQueryOptions<T>) {
   const queryClient = useQueryClient();
   const isVisible = usePageVisibility();
