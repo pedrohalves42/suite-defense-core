@@ -1,7 +1,13 @@
+/**
+ * Rate Limit Check - Hardened with assertInternalCaller
+ * Auth: Internal only (called by other edge functions, not by frontend directly)
+ * 
+ * FIX: Added authentication - was previously completely unauthenticated!
+ */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
-
 
 interface RateLimitConfig {
   maxRequests: number;
@@ -21,6 +27,10 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { headers: buildCorsHeaders(origin) });
   }
 
+  // V-MIG: Add missing authentication guard
+  const authError = await assertInternalCaller(req);
+  if (authError) return authError;
+
   try {
     const { identifier, endpoint, tenant_id } = await req.json();
 
@@ -31,7 +41,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Determine rate limit config for this endpoint category
     const category = Object.keys(ENDPOINT_LIMITS).find((k) => endpoint.startsWith(k)) || "default";
     const config = ENDPOINT_LIMITS[category];
 
@@ -42,7 +51,6 @@ Deno.serve(async (req: Request) => {
 
     const windowStart = new Date(Date.now() - config.windowSeconds * 1000).toISOString();
 
-    // Check current request count in the sliding window
     const { data: existing, error: fetchError } = await supabaseAdmin
       .from("rate_limits")
       .select("id, request_count, blocked_until")
@@ -54,7 +62,6 @@ Deno.serve(async (req: Request) => {
 
     if (fetchError) throw fetchError;
 
-    // Check if currently blocked
     if (existing?.blocked_until) {
       const blockedUntil = new Date(existing.blocked_until);
       if (blockedUntil > new Date()) {
@@ -81,7 +88,6 @@ Deno.serve(async (req: Request) => {
     const isBlocked = currentCount > config.maxRequests;
 
     if (existing) {
-      // Update existing record
       const updateData: Record<string, unknown> = {
         request_count: currentCount,
         last_request_at: new Date().toISOString(),
@@ -95,7 +101,6 @@ Deno.serve(async (req: Request) => {
         .update(updateData)
         .eq("id", existing.id);
     } else {
-      // Insert new record
       await supabaseAdmin.from("rate_limits").insert({
         identifier,
         endpoint,
@@ -138,7 +143,7 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error) {
     logger.error("Rate limit check error:", error);
-    // Fail open ? don't block requests if rate limiter errors
+    // Fail open — don't block requests if rate limiter errors
     return new Response(
       JSON.stringify({ allowed: true, error: "Rate limiter unavailable" }),
       { status: 200, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
