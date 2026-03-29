@@ -4,6 +4,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRef, useEffect } from 'react';
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { useAuth } from '@/hooks/useAuth';
@@ -211,7 +212,7 @@ export function useGamification() {
           toast.success(`🎮 +${totalXP} XP retroativo concedido!`, { duration: 5000, icon: '⚡' });
         }
       } catch (err) {
-        console.error('[Gamification] Retro sync failed:', err);
+        logger.error('[Gamification] Retro sync failed', err);
       }
     })();
   }, [profile, userId, tenantId]);
