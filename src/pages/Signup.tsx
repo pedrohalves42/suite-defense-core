@@ -106,11 +106,14 @@ export default function Signup() {
 
     if (!error && data.user) {
       try {
-        await supabase.functions.invoke('send-welcome-email', {
+        await supabase.functions.invoke('notification-router', {
           body: {
-            email: validation.data.email,
-            fullName: validation.data.fullName,
-            userId: data.user.id,
+            action: 'welcome',
+            payload: {
+              email: validation.data.email,
+              fullName: validation.data.fullName,
+              userId: data.user.id,
+            },
           },
         });
 

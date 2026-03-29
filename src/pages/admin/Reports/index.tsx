@@ -50,11 +50,11 @@ export default function Reports() {
   const { data: report, refetch: refetchReport, isLoading: isLoadingReport } = useQuery({
     queryKey: ['security-report', selectedAgent],
     queryFn: async () => {
-      const params = new URLSearchParams({ format: 'summary' });
-      if (selectedAgent !== 'all') params.append('agent_id', selectedAgent);
+      const payload: Record<string, string> = { format: 'summary' };
+      if (selectedAgent !== 'all') payload.agent_id = selectedAgent;
       const { data, error } = await supabase.functions.invoke(
-        `generate-security-report?${params.toString()}`,
-        { method: 'GET' }
+        'report-router',
+        { body: { action: 'security', payload } }
       );
       if (error) throw error;
       return data as SecurityReport;
@@ -63,11 +63,11 @@ export default function Reports() {
   });
 
   const fetchReportData = async (format: string): Promise<SecurityReport> => {
-    const params = new URLSearchParams({ format });
-    if (selectedAgent !== 'all') params.append('agent_id', selectedAgent);
+    const payload: Record<string, string> = { format };
+    if (selectedAgent !== 'all') payload.agent_id = selectedAgent;
     const { data, error } = await supabase.functions.invoke(
-      `generate-security-report?${params.toString()}`,
-      { method: 'GET' }
+      'report-router',
+      { body: { action: 'security', payload } }
     );
     if (error) throw new Error(`Erro ao buscar dados: ${error.message}`);
     if (!data) throw new Error('Nenhum dado retornado do servidor');
