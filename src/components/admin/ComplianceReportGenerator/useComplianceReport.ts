@@ -18,11 +18,14 @@ export function useComplianceReport() {
     const periodEnd = new Date().toISOString();
     const periodStart = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-    const { data, error } = await supabase.functions.invoke("generate-compliance-report", {
+    const { data, error } = await supabase.functions.invoke("report-router", {
       body: {
-        template,
-        period_start: periodStart,
-        period_end: periodEnd,
+        action: 'compliance',
+        payload: {
+          template,
+          period_start: periodStart,
+          period_end: periodEnd,
+        },
       },
     });
 

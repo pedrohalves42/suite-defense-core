@@ -217,12 +217,15 @@ export default function Settings() {
         return;
       }
       
-      const { data, error } = await supabase.functions.invoke('notification-dispatcher', {
+      const { data, error } = await supabase.functions.invoke('notification-router', {
         body: {
-          event: 'webhook_test',
-          severity: 'info',
-          tenantId: tenant?.id,
-          details: { test: true, timestamp: new Date().toISOString() }
+          action: 'dispatch',
+          payload: {
+            event: 'webhook_test',
+            severity: 'info',
+            tenantId: tenant?.id,
+            details: { test: true, timestamp: new Date().toISOString() }
+          }
         }
       });
 

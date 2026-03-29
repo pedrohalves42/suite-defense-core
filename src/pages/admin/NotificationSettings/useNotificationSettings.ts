@@ -292,8 +292,8 @@ export function useNotificationSettings() {
     setSendingReport(report.id);
     try {
       toast.info('Enviando relatório...');
-      const { error } = await supabase.functions.invoke('send-scheduled-report', {
-        body: { report_id: report.id, tenant_id: tenantId }
+      const { error } = await supabase.functions.invoke('notification-router', {
+        body: { action: 'scheduled-report', payload: { report_id: report.id, tenant_id: tenantId } }
       });
       if (error) throw error;
       toast.success('Relatório enviado com sucesso!');
