@@ -5262,7 +5262,10 @@ function Apply-ForcedUpdate {
         # process for a few seconds/minutes before the restarted scheduled task takes over.
         try {
             Save-SignedHashCache -Hash $actualHash -Signature $updateSignature -Timestamp (Get-Date -Format "o")
-            Write-Log "[FORCE UPDATE] Expected hash cache atualizado para o novo payload" "SUCCESS"
+            # v5.0.16-fix: Also update BootScriptHash so Test-RuntimeIntegrity won't
+            # see the new file as a TOCTOU violation during the grace period before restart
+            $Global:BootScriptHash = $actualHash
+            Write-Log "[FORCE UPDATE] Expected hash cache + BootScriptHash atualizado para o novo payload" "SUCCESS"
         } catch {
             Write-Log "[FORCE UPDATE] Falha ao atualizar expected hash cache: $($_.Exception.Message)" "WARN"
         }
