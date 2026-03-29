@@ -8,6 +8,9 @@ import { logger } from '../_shared/logger.ts'
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import type { AgentContext, AgentUpdate, OSInfo } from './types.ts'
 
+// Re-export types used by callers
+export type { AgentContext, AgentUpdate, OSInfo }
+
 /**
  * Update agent heartbeat status in DB.
  */
