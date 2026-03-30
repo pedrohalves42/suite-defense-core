@@ -748,3 +748,13 @@ verify_jwt = false
 verify_jwt = true
 
 # (publish-threat-ioc already defined above at line 746)
+
+# === Admin Functions (missing from config, already use middleware) ===
+[functions.auto-remediate]
+verify_jwt = true
+
+[functions.quarantine-agent]
+verify_jwt = true
+
+[functions.execute-playbook]
+verify_jwt = true
