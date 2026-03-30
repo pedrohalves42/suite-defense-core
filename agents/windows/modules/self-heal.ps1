@@ -1,9 +1,33 @@
 <#
 .SYNOPSIS
     Watchdog, TOCTOU self-healing and auto-recovery
+    v6.0-fix: Uses BOM-safe hashing aligned with v5 agent
 #>
 
 $script:FaultCount = 0
+
+function Get-BOMSafeFileHash {
+    <#
+    .SYNOPSIS
+        BOM-safe SHA-256 hash. Strips UTF-8 BOM before hashing
+        to ensure consistent results regardless of file encoding.
+    #>
+    param(
+        [Parameter(Mandatory)]
+        [string]$FilePath
+    )
+    try {
+        $rawBytes = [System.IO.File]::ReadAllBytes($FilePath)
+        if ($rawBytes.Length -ge 3 -and $rawBytes[0] -eq 0xEF -and $rawBytes[1] -eq 0xBB -and $rawBytes[2] -eq 0xBF) {
+            $rawBytes = $rawBytes[3..($rawBytes.Length - 1)]
+        }
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        $hashBytes = $sha256.ComputeHash($rawBytes)
+        return [BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
+    } catch {
+        throw "Get-BOMSafeFileHash failed for ${FilePath}: $($_.Exception.Message)"
+    }
+}
 
 function Start-Watchdog {
     Write-Log "Watchdog started (interval: $($script:Config.WatchdogInterval)s)" "INFO"
@@ -49,14 +73,8 @@ function Test-ScriptIntegrity {
         return $false
     }
 
-    # BOM-safe hash: strip UTF-8 BOM before hashing
-    $rawBytes = [System.IO.File]::ReadAllBytes($ScriptPath)
-    if ($rawBytes.Length -ge 3 -and $rawBytes[0] -eq 0xEF -and $rawBytes[1] -eq 0xBB -and $rawBytes[2] -eq 0xBF) {
-        $rawBytes = $rawBytes[3..($rawBytes.Length - 1)]
-    }
-    $sha256 = [System.Security.Cryptography.SHA256]::Create()
-    $hashBytes = $sha256.ComputeHash($rawBytes)
-    $actualHash = ($hashBytes | ForEach-Object { $_.ToString("x2") }) -join ""
+    # v6.0-fix: BOM-safe hash (aligned with v5 Get-BOMSafeFileHash)
+    $actualHash = Get-BOMSafeFileHash -FilePath $ScriptPath
 
     $cachePath = "$script:DataDir\expected_script_hash.json"
     if (Test-Path $cachePath) {
@@ -113,9 +131,9 @@ function Invoke-AgentRecovery {
         if ($response -and $response.script_content) {
             $response.script_content | Out-File $tempFile -Encoding UTF8 -Force
 
-            # Verify hash
+            # Verify hash using BOM-safe method
             if ($response.script_hash) {
-                $downloadHash = Get-PayloadHash -Payload (Get-Content $tempFile -Raw)
+                $downloadHash = Get-BOMSafeFileHash -FilePath $tempFile
                 if ($downloadHash -ne $response.script_hash) {
                     Write-Log "Downloaded script hash mismatch - recovery aborted" "ERROR"
                     return $false

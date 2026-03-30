@@ -4,6 +4,7 @@
 .DESCRIPTION
     Modular security agent orchestrator.
     Loads specialized modules and runs the main heartbeat loop.
+    Single-instance guard via Global mutex.
 #>
 
 param(
@@ -14,6 +15,34 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+# ============================================
+# SINGLE-INSTANCE GUARD (mutex)
+# Prevents multiple agent instances from running simultaneously
+# ============================================
+$script:AgentMutex = $null
+try {
+    $mutexCreated = $false
+    $script:AgentMutex = [System.Threading.Mutex]::new($true, "Global\CyberShieldAgent", [ref]$mutexCreated)
+    if (-not $mutexCreated) {
+        # Another instance already holds the mutex
+        try {
+            $acquired = $script:AgentMutex.WaitOne(0)
+            if (-not $acquired) {
+                Write-Host "[$(Get-Date -Format 'o')] [ERROR] Another CyberShield Agent instance is already running. Exiting." -ForegroundColor Red
+                try {
+                    Write-EventLog -LogName Application -Source "CyberShield" -EntryType Warning -EventId 9010 -Message "Agent startup blocked: another instance is already running (mutex held)."
+                } catch { }
+                exit 0
+            }
+        } catch {
+            Write-Host "[$(Get-Date -Format 'o')] [ERROR] Failed to acquire agent mutex: $($_.Exception.Message). Exiting." -ForegroundColor Red
+            exit 0
+        }
+    }
+} catch {
+    Write-Host "[$(Get-Date -Format 'o')] [WARN] Mutex creation failed: $($_.Exception.Message). Continuing without single-instance guard." -ForegroundColor Yellow
+}
 
 # Load modules
 $modulePath = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "modules"
@@ -63,6 +92,15 @@ function Main {
             # EventLog source may not exist
         }
         exit 1
+    }
+    finally {
+        # Release mutex on exit
+        if ($script:AgentMutex) {
+            try {
+                $script:AgentMutex.ReleaseMutex()
+                $script:AgentMutex.Dispose()
+            } catch { }
+        }
     }
 }
 
