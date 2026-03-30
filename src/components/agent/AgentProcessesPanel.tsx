@@ -24,7 +24,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 interface Process {
   name: string;
