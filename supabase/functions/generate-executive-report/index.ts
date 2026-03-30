@@ -107,225 +107,169 @@ function estimateCostAvoided(data: RiskDelta): number {
   return (data.incidentsPrevented * baseIncidentCost) + (data.threatsBlocked * threatCost);
 }
 
-Deno.serve(async (req) => {
-  const origin = req.headers.get("origin");
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: buildCorsHeaders(origin) });
-  }
-
+serveInternal(async (_req, ctx) => {
+  const { supabase, body: rawBody } = ctx;
   const startedAt = Date.now();
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-  try {
-    // Parse request body
-    let body: { tenantId?: string; date?: string; source?: string } = {};
-    try {
-      body = await req.json();
-    } catch {
-      // Empty body is fine for cron calls
-    }
+  const body = (rawBody || {}) as { tenantId?: string; date?: string; source?: string };
+  const tenantId = body.tenantId;
+  const targetDate = body.date || new Date().toISOString().split('T')[0];
 
-    // Validate origin - accept if:
-    // 1. Has valid internal secret header (timing-safe)
-    // 2. Has valid JWT auth header
-    const internalSecret = req.headers.get('x-internal-secret');
-    const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
-    const isInternalCall = internalSecret && expectedSecret && 
-      await timingSafeEqual(internalSecret, expectedSecret);
-    const authHeader = req.headers.get('Authorization');
-    
-    if (!isInternalCall && !authHeader) {
-      logger.info('[generate-executive-report] Unauthorized: No valid origin');
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      );
-    }
+  // If tenantId provided, generate for specific tenant
+  // Otherwise, generate for all tenants (cron job mode)
+  let tenantIds: string[] = [];
 
-    logger.info(`[generate-executive-report] Authorized call from: ${isInternalCall ? 'internal' : 'jwt'}`);
-    
-    const tenantId = body.tenantId;
-    const targetDate = body.date || new Date().toISOString().split('T')[0];
-
-    // If tenantId provided, generate for specific tenant
-    // Otherwise, generate for all tenants (cron job mode)
-    let tenantIds: string[] = [];
-
-    if (tenantId) {
-      tenantIds = [tenantId];
-    } else {
-      const { data: tenants } = await supabase
-        .from('tenants')
-        .select('id')
-        .eq('is_active', true);
-      tenantIds = tenants?.map(t => t.id) || [];
-    }
-
-    const results: Array<{ tenantId: string; success: boolean; summary?: string; error?: string }> = [];
-
-    for (const tid of tenantIds) {
-      try {
-        // Get tenant info
-        const { data: tenant } = await supabase
-          .from('tenants')
-          .select('name')
-          .eq('id', tid)
-          .single();
-
-        // Get risk scores for the day
-        const dayStart = `${targetDate}T00:00:00Z`;
-        const dayEnd = `${targetDate}T23:59:59Z`;
-
-        const { data: riskScores } = await supabase
-          .from('risk_scores')
-          .select('score, created_at')
-          .eq('tenant_id', tid)
-          .gte('created_at', dayStart)
-          .lte('created_at', dayEnd)
-          .order('created_at', { ascending: true });
-
-        const scoreStart = riskScores?.[0]?.score || null;
-        const scoreEnd = riskScores?.[riskScores.length - 1]?.score || null;
-
-        // Get security events
-        const { data: securityEvents } = await supabase
-          .from('security_events')
-          .select('severity, title, created_at')
-          .eq('tenant_id', tid)
-          .gte('created_at', dayStart)
-          .lte('created_at', dayEnd);
-
-        // Get playbook executions
-        const { data: playbookExecs } = await supabase
-          .from('playbook_executions')
-          .select('status')
-          .eq('tenant_id', tid)
-          .gte('triggered_at', dayStart)
-          .lte('triggered_at', dayEnd);
-
-        // Get approval requests
-        const { data: approvalRequests } = await supabase
-          .from('approval_requests')
-          .select('status')
-          .eq('tenant_id', tid)
-          .gte('created_at', dayStart)
-          .lte('created_at', dayEnd);
-
-        // Get blocked attempts (from policy enforcement)
-        const { data: blockedAttempts } = await supabase
-          .from('policy_enforcement_logs')
-          .select('id')
-          .eq('tenant_id', tid)
-          .eq('blocked', true)
-          .gte('created_at', dayStart)
-          .lte('created_at', dayEnd);
-
-        // Calculate metrics
-        const threatsBlocked = blockedAttempts?.length || 0;
-        const incidentsPrevented = securityEvents?.filter(e => e.severity === 'critical' || e.severity === 'high').length || 0;
-        const actionsExecuted = playbookExecs?.filter(e => e.status === 'completed').length || 0;
-        const actionsPending = approvalRequests?.filter(e => e.status === 'pending').length || 0;
-
-        // Build key events
-        const keyEvents = (securityEvents || [])
-          .filter(e => e.severity === 'high' || e.severity === 'critical')
-          .slice(0, 5)
-          .map(e => ({
-            type: 'security_event',
-            severity: e.severity,
-            description: e.title,
-            timestamp: e.created_at,
-          }));
-
-        const riskData: RiskDelta = {
-          tenantId: tid,
-          tenantName: tenant?.name || 'Unknown',
-          snapshotDate: targetDate,
-          riskScoreStart: scoreStart,
-          riskScoreEnd: scoreEnd,
-          delta: (scoreEnd || 0) - (scoreStart || 0),
-          threatsBlocked,
-          incidentsPrevented,
-          actionsExecuted,
-          actionsPendingApproval: actionsPending,
-          keyEvents,
-        };
-
-        // Generate summary
-        const summary = await generateExecutiveSummary(riskData);
-        const costAvoided = estimateCostAvoided(riskData);
-
-        // Upsert snapshot
-        const { error: upsertError } = await supabase
-          .from('risk_delta_snapshots')
-          .upsert({
-            tenant_id: tid,
-            snapshot_date: targetDate,
-            risk_score_start: scoreStart,
-            risk_score_end: scoreEnd,
-            threats_blocked: threatsBlocked,
-            incidents_prevented: incidentsPrevented,
-            actions_executed: actionsExecuted,
-            actions_pending_approval: actionsPending,
-            estimated_cost_avoided: costAvoided,
-            executive_summary: summary,
-            key_events: keyEvents,
-          }, {
-            onConflict: 'tenant_id,snapshot_date',
-          });
-
-        if (upsertError) {
-          logger.error(`Failed to upsert snapshot for tenant ${tid}:`, upsertError);
-          results.push({ tenantId: tid, success: false, error: upsertError.message });
-        } else {
-          results.push({ tenantId: tid, success: true, summary });
-        }
-      } catch (error) {
-        logger.error(`Error processing tenant ${tid}:`, error);
-        results.push({ tenantId: tid, success: false, error: String(error) });
-      }
-    }
-
-    const result = {
-      success: true,
-      date: targetDate,
-      processed: results.length,
-      results,
-    };
-
-    // Log observability
-    await supabase.rpc('log_scheduled_job_run', {
-      p_job_key: 'generate-executive-report',
-      p_success: true,
-      p_duration_ms: Date.now() - startedAt,
-      p_result: result,
-      p_processed_count: results.filter(r => r.success).length,
-      p_job_source: 'cron'
-    });
-
-    return new Response(
-      JSON.stringify(result),
-      { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    logger.error('Error:', error);
-    
-    // Log error observability
-    try {
-      await supabase.rpc('log_scheduled_job_run', {
-        p_job_key: 'generate-executive-report',
-        p_success: false,
-        p_duration_ms: Date.now() - startedAt,
-        p_error: String(error),
-        p_result: null,
-        p_processed_count: 0,
-        p_job_source: 'cron'
-      });
-    } catch (e) { logger.warn('[generate-executive-report] Failed to log job run:', e); }
-    
-    return new Response(
-      JSON.stringify({ success: false, error: String(error) }),
-      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-    );
+  if (tenantId) {
+    tenantIds = [tenantId];
+  } else {
+    const { data: tenants } = await supabase
+      .from('tenants')
+      .select('id')
+      .eq('is_active', true);
+    tenantIds = tenants?.map(t => t.id) || [];
   }
+
+  const results: Array<{ tenantId: string; success: boolean; summary?: string; error?: string }> = [];
+
+  for (const tid of tenantIds) {
+    try {
+      // Get tenant info
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('name')
+        .eq('id', tid)
+        .single();
+
+      // Get risk scores for the day
+      const dayStart = `${targetDate}T00:00:00Z`;
+      const dayEnd = `${targetDate}T23:59:59Z`;
+
+      const { data: riskScores } = await supabase
+        .from('risk_scores')
+        .select('score, created_at')
+        .eq('tenant_id', tid)
+        .gte('created_at', dayStart)
+        .lte('created_at', dayEnd)
+        .order('created_at', { ascending: true });
+
+      const scoreStart = riskScores?.[0]?.score || null;
+      const scoreEnd = riskScores?.[riskScores.length - 1]?.score || null;
+
+      // Get security events
+      const { data: securityEvents } = await supabase
+        .from('security_events')
+        .select('severity, title, created_at')
+        .eq('tenant_id', tid)
+        .gte('created_at', dayStart)
+        .lte('created_at', dayEnd);
+
+      // Get playbook executions
+      const { data: playbookExecs } = await supabase
+        .from('playbook_executions')
+        .select('status')
+        .eq('tenant_id', tid)
+        .gte('triggered_at', dayStart)
+        .lte('triggered_at', dayEnd);
+
+      // Get approval requests
+      const { data: approvalRequests } = await supabase
+        .from('approval_requests')
+        .select('status')
+        .eq('tenant_id', tid)
+        .gte('created_at', dayStart)
+        .lte('created_at', dayEnd);
+
+      // Get blocked attempts
+      const { data: blockedAttempts } = await supabase
+        .from('policy_enforcement_logs')
+        .select('id')
+        .eq('tenant_id', tid)
+        .eq('blocked', true)
+        .gte('created_at', dayStart)
+        .lte('created_at', dayEnd);
+
+      // Calculate metrics
+      const threatsBlocked = blockedAttempts?.length || 0;
+      const incidentsPrevented = securityEvents?.filter(e => e.severity === 'critical' || e.severity === 'high').length || 0;
+      const actionsExecuted = playbookExecs?.filter(e => e.status === 'completed').length || 0;
+      const actionsPending = approvalRequests?.filter(e => e.status === 'pending').length || 0;
+
+      // Build key events
+      const keyEvents = (securityEvents || [])
+        .filter(e => e.severity === 'high' || e.severity === 'critical')
+        .slice(0, 5)
+        .map(e => ({
+          type: 'security_event',
+          severity: e.severity,
+          description: e.title,
+          timestamp: e.created_at,
+        }));
+
+      const riskData: RiskDelta = {
+        tenantId: tid,
+        tenantName: tenant?.name || 'Unknown',
+        snapshotDate: targetDate,
+        riskScoreStart: scoreStart,
+        riskScoreEnd: scoreEnd,
+        delta: (scoreEnd || 0) - (scoreStart || 0),
+        threatsBlocked,
+        incidentsPrevented,
+        actionsExecuted,
+        actionsPendingApproval: actionsPending,
+        keyEvents,
+      };
+
+      // Generate summary
+      const summary = await generateExecutiveSummary(riskData);
+      const costAvoided = estimateCostAvoided(riskData);
+
+      // Upsert snapshot
+      const { error: upsertError } = await supabase
+        .from('risk_delta_snapshots')
+        .upsert({
+          tenant_id: tid,
+          snapshot_date: targetDate,
+          risk_score_start: scoreStart,
+          risk_score_end: scoreEnd,
+          threats_blocked: threatsBlocked,
+          incidents_prevented: incidentsPrevented,
+          actions_executed: actionsExecuted,
+          actions_pending_approval: actionsPending,
+          estimated_cost_avoided: costAvoided,
+          executive_summary: summary,
+          key_events: keyEvents,
+        }, {
+          onConflict: 'tenant_id,snapshot_date',
+        });
+
+      if (upsertError) {
+        logger.error(`Failed to upsert snapshot for tenant ${tid}:`, upsertError);
+        results.push({ tenantId: tid, success: false, error: upsertError.message });
+      } else {
+        results.push({ tenantId: tid, success: true, summary });
+      }
+    } catch (error) {
+      logger.error(`Error processing tenant ${tid}:`, error);
+      results.push({ tenantId: tid, success: false, error: String(error) });
+    }
+  }
+
+  const result = {
+    success: true,
+    date: targetDate,
+    processed: results.length,
+    results,
+  };
+
+  // Log observability
+  await supabase.rpc('log_scheduled_job_run', {
+    p_job_key: 'generate-executive-report',
+    p_success: true,
+    p_duration_ms: Date.now() - startedAt,
+    p_result: result,
+    p_processed_count: results.filter(r => r.success).length,
+    p_job_source: 'cron',
+  });
+
+  return result;
 });
