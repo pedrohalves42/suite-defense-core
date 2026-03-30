@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
 import type { AgentSnapshot } from './useAgentSnapshot';
 import { logger } from '@/lib/logger';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 /**
  * Hook para lista canônica de snapshots (todos os agentes do tenant)
@@ -18,7 +18,7 @@ import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
  * ```
  */
 export function useAgentSnapshots() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
+  
   const { tenant, loading: tenantLoading } = useTenant();
 
   return useQuery({
@@ -36,8 +36,9 @@ export function useAgentSnapshots() {
       return (data || []) as unknown as AgentSnapshot[];
     },
     enabled: !tenantLoading && !!tenant?.id,
-    staleTime: 60_000,
-    refetchInterval: adaptiveInterval
+    staleTime: 300_000,
+    refetchInterval: false,
+    refetchOnWindowFocus: true
   });
 }
 

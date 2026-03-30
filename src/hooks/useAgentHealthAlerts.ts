@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useTenant } from '@/hooks/useTenant';
 import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 export interface AgentExecutionHealth {
   agent_id: string;
@@ -50,7 +50,6 @@ export interface NonExecutionAlert {
 
 // V-1026 FIX: Add tenant_id filter to prevent cross-tenant data leakage
 export function useAgentExecutionHealth() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant, loading } = useTenant();
 
   return useQuery({
@@ -67,15 +66,15 @@ export function useAgentExecutionHealth() {
       return (data || []) as unknown as AgentExecutionHealth[];
     },
     enabled: !loading && !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    refetchInterval: false,
+    staleTime: 300_000,
+    refetchOnWindowFocus: true,
   });
 }
 
 // V-1026 FIX: Add tenant_id filter
 export function useUnhealthyAgents() {
-  const adaptiveInterval = useAdaptivePolling(300000);
+  
   const { tenant, loading } = useTenant();
 
   return useQuery<AgentExecutionHealth[]>({
@@ -93,9 +92,9 @@ export function useUnhealthyAgents() {
       return (data || []) as AgentExecutionHealth[];
     },
     enabled: !loading && !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    refetchInterval: false,
+    staleTime: 300_000,
+    refetchOnWindowFocus: true,
   });
 }
 

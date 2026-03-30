@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 import { isAgentOnline } from '@/lib/agent-status-constants';
 import { logger } from '@/lib/logger';
 import { toast } from 'sonner';
@@ -12,7 +12,7 @@ import { generateForensicReportPDF } from '@/lib/forensicReportPDF';
 import type { Agent, AgentMetrics, AgentStats, StatusFilter, VersionFilter } from './types';
 
 export function useAgentManagement() {
-  const adaptiveInterval = useAdaptivePolling(300000);
+  
   const { t } = useTranslation();
   const { tenant } = useTenant();
   const { isAdmin, isSuperAdmin } = useUserRole();
@@ -59,7 +59,9 @@ export function useAgentManagement() {
       return (result.data || []) as Agent[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
+    staleTime: 300_000,
+    refetchOnWindowFocus: true,
   });
 
   // Installation status
@@ -110,7 +112,9 @@ export function useAgentManagement() {
       return metricsMap;
     },
     enabled: !!tenant?.id && !!agents && agents.length > 0,
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
+    staleTime: 300_000,
+    refetchOnWindowFocus: true,
   });
 
   // Helper functions

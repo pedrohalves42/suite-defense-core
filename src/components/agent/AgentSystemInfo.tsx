@@ -19,7 +19,7 @@ import {
   Tag
 } from 'lucide-react';
 import { formatRelativeTime, formatBrazilDateTime } from '@/lib/date-utils';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 interface AgentSystemInfoProps {
   agentId: string;
@@ -71,7 +71,7 @@ function InfoRow({
 }
 
 export function AgentSystemInfo({ agentId, tenantId }: AgentSystemInfoProps) {
-  const adaptiveInterval = useAdaptivePolling(300_000);
+  
   const { data: info, isLoading } = useQuery({
     queryKey: ['agent-system-info', agentId],
     queryFn: async (): Promise<AgentInfo | null> => {
@@ -111,8 +111,9 @@ export function AgentSystemInfo({ agentId, tenantId }: AgentSystemInfoProps) {
       } as AgentInfo;
     },
     enabled: !!agentId,
-    staleTime: 120_000,
-    refetchInterval: adaptiveInterval,
+    staleTime: 300_000,
+    refetchInterval: false,
+    refetchOnWindowFocus: true,
   });
 
   if (isLoading) {

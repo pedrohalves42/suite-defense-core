@@ -1,10 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AgentLifecycleState, DashboardAgentCard, LifecycleStage } from '@/types/agent-lifecycle';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 export function useAgentLifecycle(tenantId: string | undefined, loading?: boolean) {
-  const adaptiveInterval = useAdaptivePolling(300000);
   return useQuery<DashboardAgentCard[]>({
     queryKey: ['agent-lifecycle', tenantId],
     queryFn: async () => {
@@ -96,7 +95,6 @@ function getStatusBadge(state: AgentLifecycleState): DashboardAgentCard['status_
 }
 
 export function usePipelineMetrics(tenantId: string | undefined, hoursBack: number | null = null, loading?: boolean) {
-  const adaptiveInterval = useAdaptivePolling(300000);
   return useQuery({
     queryKey: ['pipeline-metrics', tenantId, hoursBack],
     queryFn: async () => {
@@ -117,15 +115,16 @@ export function usePipelineMetrics(tenantId: string | undefined, hoursBack: numb
       return data.metrics;
     },
     enabled: !loading && !!tenantId,  // V-503b: Guard para sincronização
-    refetchInterval: adaptiveInterval,
-    staleTime: 30000, // Cache por 30s
+    refetchInterval: false,
+    staleTime: 300_000,
+    refetchOnWindowFocus: true,
     retry: 2, // Tentar 2 vezes antes de falhar
     retryDelay: 1000, // Esperar 1s entre tentativas
   });
 }
 
 export function useFailureRate(tenantId: string | undefined, hoursBack: number = 1, loading?: boolean) {
-  const adaptiveInterval = useAdaptivePolling(300000);
+  
   return useQuery({
     queryKey: ['failure-rate', tenantId, hoursBack],
     queryFn: async () => {
@@ -142,8 +141,8 @@ export function useFailureRate(tenantId: string | undefined, hoursBack: number =
       return data && data.length > 0 ? data[0] : null;
     },
     enabled: !loading && !!tenantId,  // V-503c: Guard para sincronização
-    refetchInterval: adaptiveInterval,
-    staleTime: 30000,
+    refetchInterval: false,
+    staleTime: 300_000,
     retry: 2,
     retryDelay: 1000
   });

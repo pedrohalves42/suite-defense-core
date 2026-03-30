@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { DiskMetric } from '@/components/agent/AgentCard';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 /**
  * Hook to fetch disk metrics for multiple agents at once
  */
 export function useAgentsDiskMetrics(agentIds: string[]) {
-  const adaptiveInterval = useAdaptivePolling(300000);
+  
   return useQuery({
     queryKey: ['agents-disk-metrics', agentIds.sort().join(',')],
     queryFn: async () => {
@@ -52,7 +52,8 @@ export function useAgentsDiskMetrics(agentIds: string[]) {
       return disksMap;
     },
     enabled: agentIds.length > 0,
-    staleTime: 30000,
-    refetchInterval: adaptiveInterval
+    staleTime: 300_000,
+    refetchInterval: false,
+    refetchOnWindowFocus: true
   });
 }

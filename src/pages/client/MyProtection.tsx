@@ -22,10 +22,10 @@ import {
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format, ptBR } from '@/lib/date-utils';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 export const MyProtection = () => {
-  const adaptiveInterval = useAdaptivePolling(300000);
+  
   const { tenant } = useTenant();
 
   // Fetch all data for unified view
@@ -133,9 +133,9 @@ export const MyProtection = () => {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    refetchInterval: false,
+    staleTime: 300_000,
+    refetchOnWindowFocus: true,
   });
 
   if (isLoading) {

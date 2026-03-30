@@ -23,7 +23,7 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DiskMetricsPanel } from '@/components/agent/DiskMetricsPanel';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 // Health indicator component
 const HealthIndicator = ({ cpu, memory, disk }: { cpu?: number; memory?: number; disk?: number }) => {
@@ -70,7 +70,7 @@ const HealthIndicator = ({ cpu, memory, disk }: { cpu?: number; memory?: number;
 };
 
 export const ClientComputers = () => {
-  const adaptiveInterval = useAdaptivePolling(300_000);
+  
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
@@ -120,9 +120,9 @@ export const ClientComputers = () => {
       })) || [];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    refetchInterval: false,
+    staleTime: 300_000,
+    refetchOnWindowFocus: true,
   });
 
   const requestVerificationMutation = useMutation({
