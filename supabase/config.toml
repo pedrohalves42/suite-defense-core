@@ -548,7 +548,7 @@ verify_jwt = false
 
 # === Auto Execute AI Actions - DISABLED schedule COST-OPT-V5 ===
 [functions.auto-execute-ai-actions]
-verify_jwt = false
+verify_jwt = true
 
 # === AI System Audit (Ana Persona) ===
 [functions.ai-system-audit]
