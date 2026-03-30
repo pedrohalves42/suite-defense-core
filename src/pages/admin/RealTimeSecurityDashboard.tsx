@@ -194,9 +194,8 @@ export default function RealTimeSecurityDashboard() {
       });
       if (error) throw error;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const data = (rpcData as any[] || []).map((a: any) => ({
-        id: a.id as string,
+      const data = (Array.isArray(rpcData) ? rpcData : []).map((a: Record<string, unknown>) => ({
+        id: String(a.id),
         last_heartbeat: a.last_heartbeat as unknown,
         is_isolated: !!a.is_isolated,
       }));

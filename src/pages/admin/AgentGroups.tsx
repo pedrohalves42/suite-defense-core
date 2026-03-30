@@ -67,8 +67,7 @@ export default function AgentGroups() {
     const newGroup = await createGroup.mutateAsync({ name: groupName, description: groupDescription || undefined });
     // If agents were selected, add them to the new group
     if (createSelectedAgentIds.length > 0 && newGroup?.id) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const tenantId = (newGroup as any).tenant_id;
+      const tenantId = (newGroup as Record<string, unknown>).tenant_id as string;
       const inserts = createSelectedAgentIds.map(agent_id => ({ agent_id, group_id: newGroup.id, tenant_id: tenantId }));
       await supabase.from('agents_groups').insert(inserts);
     }

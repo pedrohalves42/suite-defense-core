@@ -36,8 +36,7 @@ export default function SystemHealth() {
         p_include_archived: false,
       });
       if (error) throw error;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const data = ((rpcData || []) as any[]).map((a: any) => ({
+      const data = (Array.isArray(rpcData) ? rpcData : []).map((a: Record<string, unknown>) => ({
         id: String(a.id), status: String(a.status), last_heartbeat: a.last_heartbeat as string | null,
       }));
       
