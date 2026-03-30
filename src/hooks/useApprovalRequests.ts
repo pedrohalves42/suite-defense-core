@@ -3,10 +3,11 @@
  * Fase 1: Two-Man-Rule & Policy Engine Hierárquico
  */
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
+import { useEffect } from 'react';
 import { logger } from '@/lib/logger';
 import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
