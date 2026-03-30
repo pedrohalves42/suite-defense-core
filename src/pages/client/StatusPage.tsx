@@ -10,7 +10,7 @@ import { ptBR } from 'date-fns/locale';
 
 
 const StatusPage = () => {
-  const adaptiveInterval = useAdaptivePolling(300_000);
+  
   const { tenant } = useTenant();
 
   const { data: agents, isLoading } = useQuery({
