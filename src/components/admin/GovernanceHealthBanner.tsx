@@ -35,7 +35,6 @@ interface GovernanceMetrics {
 }
 
 export function GovernanceHealthBanner() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const { requiresMFA, hasMFA, isCompliant } = useMFAEnforcement();
   const [expanded, setExpanded] = useState(false);
