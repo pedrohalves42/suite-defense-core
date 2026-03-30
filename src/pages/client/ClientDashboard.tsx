@@ -20,7 +20,7 @@ import {
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 // Health Score Gauge Component
 const HealthGauge = ({ score }: { score: number }) => {
