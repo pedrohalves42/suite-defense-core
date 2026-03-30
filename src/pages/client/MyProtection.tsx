@@ -25,7 +25,7 @@ import { format, ptBR } from '@/lib/date-utils';
 
 
 export const MyProtection = () => {
-  const adaptiveInterval = useAdaptivePolling(300000);
+  
   const { tenant } = useTenant();
 
   // Fetch all data for unified view
