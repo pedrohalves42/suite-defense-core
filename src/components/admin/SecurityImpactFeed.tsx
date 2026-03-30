@@ -45,11 +45,10 @@ const INCIDENT_COST_MAP: Record<string, number> = {
 };
 
 export function SecurityImpactFeed() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   // Fetch today's remediation actions
-  const { data: remediationActions } = useQuery({
+  const { data: remediationActions } = useRealtimeQuery({
     queryKey: ['impact-feed-remediation', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
@@ -67,9 +66,9 @@ export function SecurityImpactFeed() {
       return data || [];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    realtimeTable: 'auto_remediation_actions',
+    realtimeFilter: `tenant_id=eq.${tenant?.id}`,
+    staleTime: 300_000,
   });
 
   // Fetch today's automation executions
