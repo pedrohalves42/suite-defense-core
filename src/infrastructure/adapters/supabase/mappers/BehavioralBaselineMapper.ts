@@ -1,9 +1,10 @@
 import { BehavioralBaseline, BaselineType } from '@/domain/entities/BehavioralBaseline';
 import { AgentId } from '@/domain/value-objects/AgentId';
 import { TenantId } from '@/domain/value-objects/TenantId';
+import type { BehavioralBaselineInsert } from '@/infrastructure/types/supabase-tables';
 
 export class BehavioralBaselineMapper {
-  static toDomain(row: any): BehavioralBaseline {
+  static toDomain(row: Record<string, unknown>): BehavioralBaseline {
     return BehavioralBaseline.reconstitute({
       id: row.id as string,
       agentId: AgentId.create(row.agent_id as string).value,
@@ -23,7 +24,7 @@ export class BehavioralBaselineMapper {
     });
   }
 
-  static toPersistence(entity: BehavioralBaseline): Record<string, unknown> {
+  static toPersistence(entity: BehavioralBaseline): BehavioralBaselineInsert {
     return {
       id: entity.id,
       agent_id: entity.agentId.toString(),

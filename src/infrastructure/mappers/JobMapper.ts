@@ -1,31 +1,32 @@
 import { Job, JobType, JobStatus, JobPriority } from '@/domain/entities/Job';
 import { JobExecution, type JobExecutionProps } from '@/domain/entities/JobExecution';
+import type { JobInsert, JobExecutionInsert } from '@/infrastructure/types/supabase-tables';
 
 /**
  * Maps between Supabase DB rows and Job/JobExecution domain entities.
  */
 export class JobMapper {
-  static toDomain(row: Record<string, any>): Job {
+  static toDomain(row: Record<string, unknown>): Job {
     return Job.reconstitute({
-      id: row.id,
-      agentId: row.agent_id,
-      tenantId: row.tenant_id,
-      type: row.type ?? 'run_script',
-      payload: row.payload ?? {},
-      priority: row.priority ?? JobPriority.NORMAL,
-      timeoutSeconds: row.timeout_seconds ?? 300,
-      status: row.status ?? 'pending',
-      retryCount: row.retry_count ?? 0,
-      maxRetries: row.max_retries ?? 3,
-      deliveredAt: row.delivered_at ?? null,
-      startedAt: row.started_at ?? null,
-      completedAt: row.completed_at ?? null,
-      result: row.result ?? null,
-      error: row.error ?? null,
+      id: row.id as string,
+      agentId: row.agent_id as string,
+      tenantId: row.tenant_id as string,
+      type: (row.type as string) ?? 'run_script',
+      payload: (row.payload as Record<string, unknown>) ?? {},
+      priority: (row.priority as number) ?? JobPriority.NORMAL,
+      timeoutSeconds: (row.timeout_seconds as number) ?? 300,
+      status: (row.status as string) ?? 'pending',
+      retryCount: (row.retry_count as number) ?? 0,
+      maxRetries: (row.max_retries as number) ?? 3,
+      deliveredAt: (row.delivered_at as string) ?? null,
+      startedAt: (row.started_at as string) ?? null,
+      completedAt: (row.completed_at as string) ?? null,
+      result: (row.result as Record<string, unknown>) ?? null,
+      error: (row.error as string) ?? null,
     });
   }
 
-  static toPersistence(entity: Job): Record<string, any> {
+  static toPersistence(entity: Job): JobInsert {
     return {
       id: entity.id.value,
       agent_id: entity.agentId.value,
@@ -41,35 +42,35 @@ export class JobMapper {
       started_at: entity.startedAt?.toISOString() ?? null,
       completed_at: entity.completedAt?.toISOString() ?? null,
       result: entity.result,
-      error: entity.error,
+      error_message: entity.error,
     };
   }
 
-  static executionToDomain(row: Record<string, any>): JobExecution {
+  static executionToDomain(row: Record<string, unknown>): JobExecution {
     const props: JobExecutionProps = {
-      id: row.id,
-      jobId: row.job_id,
-      agentId: row.agent_id,
-      tenantId: row.tenant_id,
-      executionIndex: row.execution_index ?? 0,
-      nonce: row.nonce ?? '',
-      payloadHash: row.payload_hash ?? '',
-      startedAt: new Date(row.started_at ?? row.created_at),
-      completedAt: row.completed_at ? new Date(row.completed_at) : null,
-      exitCode: row.exit_code ?? null,
-      stdout: row.stdout ?? null,
-      stderr: row.stderr ?? null,
-      outputHash: row.output_hash ?? null,
-      resultSignature: row.result_signature ?? null,
-      signatureVerified: row.signature_verified ?? false,
-      durationMs: row.duration_ms ?? null,
-      createdAt: new Date(row.created_at),
+      id: row.id as string,
+      jobId: row.job_id as string,
+      agentId: row.agent_id as string,
+      tenantId: row.tenant_id as string,
+      executionIndex: (row.execution_index as number) ?? 0,
+      nonce: (row.nonce as string) ?? '',
+      payloadHash: (row.payload_hash as string) ?? '',
+      startedAt: new Date((row.started_at as string) ?? (row.created_at as string)),
+      completedAt: row.completed_at ? new Date(row.completed_at as string) : null,
+      exitCode: (row.exit_code as number) ?? null,
+      stdout: (row.stdout as string) ?? null,
+      stderr: (row.stderr as string) ?? null,
+      outputHash: (row.output_hash as string) ?? null,
+      resultSignature: (row.result_signature as string) ?? null,
+      signatureVerified: (row.signature_verified as boolean) ?? false,
+      durationMs: (row.duration_ms as number) ?? null,
+      createdAt: new Date(row.created_at as string),
     };
 
     return JobExecution.reconstitute(props);
   }
 
-  static executionToPersistence(entity: JobExecution): Record<string, any> {
+  static executionToPersistence(entity: JobExecution): JobExecutionInsert {
     return {
       id: entity.id.value,
       job_id: entity.jobId.value,

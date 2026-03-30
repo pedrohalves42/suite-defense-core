@@ -1,9 +1,10 @@
 import { Certificate, CertStore } from '@/domain/entities/Certificate';
 import { AgentId } from '@/domain/value-objects/AgentId';
 import { TenantId } from '@/domain/value-objects/TenantId';
+import type { CertificateInsert } from '@/infrastructure/types/supabase-tables';
 
 export class CertificateMapper {
-  static toDomain(row: any): Certificate {
+  static toDomain(row: Record<string, unknown>): Certificate {
     return Certificate.reconstitute({
       id: row.id as string,
       agentId: AgentId.create(row.agent_id as string).value,
@@ -22,7 +23,7 @@ export class CertificateMapper {
     });
   }
 
-  static toPersistence(entity: Certificate): Record<string, unknown> {
+  static toPersistence(entity: Certificate): CertificateInsert {
     return {
       id: entity.id,
       agent_id: entity.agentId.toString(),
