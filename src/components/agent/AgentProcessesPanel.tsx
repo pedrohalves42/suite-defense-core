@@ -71,7 +71,7 @@ function getCpuColor(val: number): string {
 }
 
 export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelProps) {
-  const adaptiveInterval = useAdaptivePolling(300000);
+  
   const { data, isLoading, isError } = useQuery({
     queryKey: ['agent-processes', agentId],
     queryFn: async () => {
