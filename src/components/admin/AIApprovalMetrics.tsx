@@ -31,10 +31,9 @@ export interface ApprovalMetrics {
 
 // Export the hook for other components to check suspicious pattern
 export function useApprovalMetrics() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
-  return useQuery({
+  return useRealtimeQuery({
     queryKey: ['ai-approval-metrics', tenant?.id],
     queryFn: async (): Promise<ApprovalMetrics> => {
       if (!tenant?.id) return {
