@@ -66,7 +66,7 @@ interface AIInsight {
 }
 
 export default function AIActionApproval() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { tenant, loading: tenantLoading } = useTenant();
