@@ -12,13 +12,12 @@
  * React Query cuida do cache — múltiplas páginas usando o mesmo queryKey
  * compartilham automaticamente os mesmos dados.
  */
-import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { useAgentSnapshots, getAgentStatusCounts } from '@/hooks/useAgentSnapshots';
 import { subDays } from 'date-fns';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 // === Modelo de custo REALISTA para PMEs brasileiras ===
 // Valores conservadores baseados em custo médio de suporte técnico local
