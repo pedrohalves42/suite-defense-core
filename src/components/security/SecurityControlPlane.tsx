@@ -110,9 +110,9 @@ export function SecurityControlPlane() {
         current_system_mode: String((systemModeResult.data as Record<string, unknown>)?.mode || 'normal')
       };
     },
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 300_000,
+    realtimeTable: 'security_logs',
+    realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
 
   // Run RLS tests manually

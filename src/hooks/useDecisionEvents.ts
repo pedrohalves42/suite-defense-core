@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 
 import type { Json } from '@/integrations/supabase/types';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 export interface DecisionEvent {
   id: string;
@@ -26,11 +26,10 @@ interface UseDecisionEventsOptions {
 }
 
 export function useDecisionEvents(options: UseDecisionEventsOptions = {}) {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const { ruleCode, agentId, limit = 100 } = options;
 
-  return useQuery({
+  return useRealtimeQuery<DecisionEvent[]>({
     queryKey: ['decision-events', tenant?.id, ruleCode, agentId, limit],
     queryFn: async () => {
       let query = supabase
@@ -57,9 +56,9 @@ export function useDecisionEvents(options: UseDecisionEventsOptions = {}) {
       return data as DecisionEvent[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 300_000,
+    realtimeTable: 'decision_events',
+    realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
 }
 

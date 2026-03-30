@@ -1,8 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 export type SystemMode = 'normal' | 'restricted' | 'emergency_stop';
 
@@ -15,19 +15,15 @@ export interface SystemState {
 }
 
 export function useSystemMode() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
-  return useQuery({
+  return useRealtimeQuery<SystemState>({
     queryKey: ['system-mode'],
     queryFn: async () => {
-      // get_system_mode() returns just the enum value (string), not a full object
       const { data: modeValue, error } = await supabase.rpc('get_system_mode');
       
       if (error) throw error;
       
-      // If no active state exists, or mode is just a string, construct a SystemState
       const mode = (typeof modeValue === 'string' ? modeValue : 'normal') as SystemMode;
       
-      // Only fetch full state details if NOT normal
       if (mode !== 'normal') {
         const { data: stateRow } = await supabase
           .from('system_global_state')
@@ -55,8 +51,8 @@ export function useSystemMode() {
         expires_at: null
       } as SystemState;
     },
-    refetchInterval: adaptiveInterval,
-    staleTime: 120_000
+    staleTime: 120_000,
+    realtimeTable: 'system_global_state',
   });
 }
 

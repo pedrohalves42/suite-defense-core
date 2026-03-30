@@ -42,11 +42,10 @@ export interface Approval {
 }
 
 export function usePendingApprovalRequests() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
-  const query = useQuery({
+  const query = useRealtimeQuery<ApprovalRequest[]>({
     queryKey: ['approval-requests', 'pending', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
@@ -67,9 +66,9 @@ export function usePendingApprovalRequests() {
       return (data || []) as ApprovalRequest[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 300_000,
+    realtimeTable: 'approval_requests',
+    realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
 
   // Realtime subscription
