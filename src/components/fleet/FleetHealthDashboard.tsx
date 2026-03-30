@@ -16,7 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { AgentDetailsDrawer } from '@/components/agent/AgentDetailsDrawer';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 interface FleetAgent {
   id: string;
