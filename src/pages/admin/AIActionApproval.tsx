@@ -90,7 +90,7 @@ export default function AIActionApproval() {
   const isSuspiciousPattern = approvalMetrics?.isSuspiciousPattern || false;
 
   // Buscar acoes pendentes - FIX: add tenant_id filter
-  const { data: pendingActions, isLoading } = useQuery({
+  const { data: pendingActions, isLoading } = useRealtimeQuery<AIAction[]>({
     queryKey: ['ai-actions-pending', tenant?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -108,9 +108,9 @@ export default function AIActionApproval() {
       return data as AIAction[];
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 300_000,
+    realtimeTable: 'ai_insights',
+    realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
 
   // Buscar insights recentes (últimos 30 dias) - FIX: add tenant_id filter

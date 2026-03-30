@@ -23,22 +23,19 @@ interface CycleHealth {
 }
 
 export function SystemCyclesHealthCard() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
-  const { data: cycles, isLoading } = useQuery({
+  const { data: cycles, isLoading } = useRealtimeQuery({
     queryKey: ['system-cycles-health', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return null;
 
-      // Run all queries in parallel
       const [
         playbooksResult,
         jobsResult,
         agentsResult,
         dlqResult
       ] = await Promise.all([
-        // Playbooks running > 1h
         supabase
           .from('playbook_executions')
           .select('id', { count: 'exact', head: true })
@@ -46,7 +43,6 @@ export function SystemCyclesHealthCard() {
           .eq('status', 'running')
           .lt('started_at', new Date(Date.now() - 3600000).toISOString()),
         
-        // Jobs delivered but not completed
         supabase
           .from('jobs')
           .select('id', { count: 'exact', head: true })
@@ -54,7 +50,6 @@ export function SystemCyclesHealthCard() {
           .eq('status', 'delivered')
           .is('completed_at', null),
         
-        // Agents offline > 24h - ADR-026: Use RPC then filter client-side
         (async () => {
           const { data } = await supabase.rpc('get_agents_list', {
             p_tenant_id: tenant.id,
@@ -65,7 +60,6 @@ export function SystemCyclesHealthCard() {
           return { count, error: null };
         })(),
         
-        // DLQ pending
         supabase
           .from('failed_jobs_dlq')
           .select('id', { count: 'exact', head: true })
@@ -81,9 +75,9 @@ export function SystemCyclesHealthCard() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 300_000,
+    realtimeTable: 'jobs',
+    realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
 
   if (isLoading) {

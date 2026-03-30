@@ -48,13 +48,13 @@ export function InsightActionPanel() {
   const queryClient = useQueryClient();
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
 
-  const { data: insights, isLoading } = useQuery({
+  const { data: insights, isLoading } = useRealtimeQuery<Insight[]>({
     queryKey: ['pending-insights', tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ai_insights')
         .select('id, tenant_id, insight_type, title, description, severity, recommendation, category, confidence_score, acknowledged, status, created_at')
-        .eq('tenant_id', tenantId)
+        .eq('tenant_id', tenantId!)
         .eq('acknowledged', false)
         .order('severity', { ascending: true })
         .order('created_at', { ascending: false })
@@ -67,11 +67,10 @@ export function InsightActionPanel() {
         recommendation: item.recommendation || null,
       })) as Insight[];
     },
-    // V-302: Guard with !loading to prevent queries before JWT sync completes
     enabled: !loading && !!tenantId,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 300_000,
+    realtimeTable: 'ai_insights',
+    realtimeFilter: tenantId ? `tenant_id=eq.${tenantId}` : undefined,
   });
 
   const acknowledgeMutation = useMutation({

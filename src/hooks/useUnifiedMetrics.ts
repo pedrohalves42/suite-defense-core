@@ -95,14 +95,13 @@ export interface UnifiedMetrics {
 }
 
 export function useUnifiedMetrics() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant, loading: tenantLoading } = useTenant();
   const { data: snapshots, isLoading: snapshotsLoading } = useAgentSnapshots();
   const agentCounts = getAgentStatusCounts(snapshots);
 
-  const { data, isLoading, refetch, isFetched } = useQuery({
+  const { data, isLoading, refetch, isFetched } = useRealtimeQuery<Omit<UnifiedMetrics, 'agents' | 'securityScore' | 'globalStatus'> & { _raw: true }>({
     queryKey: ['unified-metrics', tenant?.id],
-    queryFn: async (): Promise<Omit<UnifiedMetrics, 'agents' | 'securityScore' | 'globalStatus'> & { _raw: true }> => {
+    queryFn: async () => {
       if (!tenant?.id) throw new Error('No tenant');
       const sb = supabase;
       const now = new Date();
@@ -119,9 +118,7 @@ export function useUnifiedMetrics() {
           .select('*', { count: 'exact', head: true })
           .eq('tenant_id', tenant.id)
           .gte('attempted_at', sevenDaysAgo),
-        // Use server-side RPC for accurate, deduplicated evidence counts
         sb.rpc('get_evidence_summary', { p_tenant_id: tenant.id }),
-        // PERF: Server-side count — zero rows transferred
         sb.from('vuln_findings')
           .select('*', { count: 'exact', head: true })
           .eq('tenant_id', tenant.id),
@@ -149,8 +146,6 @@ export function useUnifiedMetrics() {
       const vulnTotal = vulnTotalRes.count || 0;
       const vulnCritical = vulnCriticalRes.count || 0;
 
-
-      // Evidence summary from server-side RPC (deduplicated, no truncation)
       const evidenceSummary = (evidenceSummaryRes.data || {
         auto_repairs: 0, auto_recoveries: 0, policy_drifts: 0,
         critical_prevented: 0, high_prevented: 0, medium_prevented: 0, incidents_contained: 0
@@ -164,10 +159,8 @@ export function useUnifiedMetrics() {
       const mediumPrevented = evidenceSummary.medium_prevented || 0;
       const incidentsContained = evidenceSummary.incidents_contained || 0;
 
-      // Blocked access
       const blockedCount = blockedRes.count || 0;
 
-      // Financial impact — use deduplicated numbers
       const breakdown: Record<string, number> = {
         autoRepairs: autoRepairs * COST_MODEL.auto_repair,
         autoRecoveries: autoRecoveries * COST_MODEL.auto_recovery,
@@ -218,8 +211,9 @@ export function useUnifiedMetrics() {
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 60_000
+    staleTime: 120_000,
+    realtimeTable: 'system_alerts',
+    realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
 
   // PERF-FIX: Memoize agent-dependent computed values to prevent re-render cascade

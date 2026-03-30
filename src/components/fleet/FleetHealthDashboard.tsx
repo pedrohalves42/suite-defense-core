@@ -79,8 +79,9 @@ export function FleetHealthDashboard() {
       })) as FleetAgent[];
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 60_000,
+    staleTime: 120_000,
+    realtimeTable: 'jobs',
+    realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
 
   // Realtime subscription
