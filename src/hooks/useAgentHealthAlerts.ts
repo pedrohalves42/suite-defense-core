@@ -66,9 +66,9 @@ export function useAgentExecutionHealth() {
       return (data || []) as unknown as AgentExecutionHealth[];
     },
     enabled: !loading && !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    refetchInterval: false,
+    staleTime: 300_000,
+    refetchOnWindowFocus: true,
   });
 }
 
