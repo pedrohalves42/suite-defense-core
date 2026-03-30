@@ -29,16 +29,7 @@ import {
   useDeleteTag,
   AgentTag,
 } from '@/hooks/useAgentTags';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 const PRESET_COLORS = [
   '#3b82f6', '#ef4444', '#22c55e', '#f59e0b',
