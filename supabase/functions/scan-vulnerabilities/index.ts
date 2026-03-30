@@ -84,102 +84,22 @@ serveTenant(async (req, ctx) => {
 
     logger.info(`[${requestId}] [SCAN-VULNS] Starting scan for agent ${agent_id}`);
 
-    const { data: software, error: softwareError } = await supabase
-      .from('software_inventory')
-      .select('name, version, vendor')
-      .eq('agent_id', agent_id)
-      .limit(200);
-
-    if (softwareError) throw new Error(softwareError.message || 'Failed to fetch software inventory');
-
-    if (!software || software.length === 0) {
-      return new Response(
-        JSON.stringify({ success: true, message: 'No software inventory to scan', vulnerabilities_found: 0, scan_method: 'dynamic_nvd' }),
-        { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      );
-    }
-
-    logger.info(`[${requestId}] [SCAN-VULNS] Found ${software.length} software items`);
-
-    const softwareKeywords = new Set<string>();
-    const softwareMap = new Map<string, SoftwareItem[]>();
-
-    for (const item of software as SoftwareItem[]) {
-      const name = item.name?.toLowerCase() || '';
-      const keywords = extractKeywords(name);
-      keywords.forEach(kw => {
-        softwareKeywords.add(kw);
-        if (!softwareMap.has(kw)) softwareMap.set(kw, []);
-        softwareMap.get(kw)!.push(item);
-      });
-    }
-
-    const vulnerabilities: Array<Record<string, unknown>> = [];
-    const processedCVEs = new Set<string>();
-
-    for (const keyword of Array.from(softwareKeywords).slice(0, 30)) {
-      const { data: cves, error: cveError } = await supabase
-        .from('cve_database')
-        .select('*')
-        .or(`affected_products.cs.{${keyword}},description.ilike.%${keyword}%,cpe_matches.cs.{${keyword}}`)
-        .gte('cvss_score', 4.0)
-        .order('cvss_score', { ascending: false })
-        .limit(50);
-
-      if (cveError) {
-        logger.info(`[${requestId}] [SCAN-VULNS] Error searching CVEs for "${keyword}":`, cveError.message);
-        continue;
-      }
-
-      if (cves && cves.length > 0) {
-        for (const cve of cves) {
-          if (processedCVEs.has(cve.cve_id)) continue;
-          const matchedSoftware = softwareMap.get(keyword) || [];
-          for (const sw of matchedSoftware) {
-            if (isVersionAffected(sw.version, cve.affected_versions)) {
-              processedCVEs.add(cve.cve_id);
-              const now = new Date().toISOString();
-              vulnerabilities.push({
-                agent_id,
-                tenant_id: tenantId,
-                check_key: cve.cve_id,
-                title: `${cve.cve_id}: ${truncate(cve.description, 100)}`,
-                description: cve.description,
-                severity: normalizeSeverity(cve.severity || getSeverityFromScore(cve.cvss_score)),
-                remediation: generateRemediation(sw.name, cve),
-                first_seen_at: now,
-                last_seen_at: now
-              });
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    // Fallback detection
-    if (vulnerabilities.length === 0) {
-      logger.info(`[${requestId}] [SCAN-VULNS] No dynamic CVEs found, using fallback`);
-      const fallbackVulns = scanWithFallback(software as SoftwareItem[], agent_id, tenantId);
-      vulnerabilities.push(...fallbackVulns);
-    }
+    const scanResult = await scanAgentVulnerabilities(supabase, agent_id, tenantId!, requestId, { mode: 'single' });
 
     // Store findings
-    if (vulnerabilities.length > 0) {
+    if (scanResult.vulnerabilities.length > 0) {
       await supabase.from('vuln_findings').delete().eq('agent_id', agent_id);
-      const { error: insertError } = await supabase.from('vuln_findings').insert(vulnerabilities);
+      const { error: insertError } = await supabase.from('vuln_findings').insert(scanResult.vulnerabilities);
       if (insertError) throw insertError;
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        vulnerabilities_found: vulnerabilities.length,
-        software_scanned: software.length,
-        keywords_searched: softwareKeywords.size,
-        critical_vulns: vulnerabilities.filter(v => v.severity === 'CRITICAL').length,
-        high_vulns: vulnerabilities.filter(v => v.severity === 'HIGH').length,
-        medium_vulns: vulnerabilities.filter(v => v.severity === 'MEDIUM').length,
+        vulnerabilities_found: scanResult.vulnerabilities_found,
+        critical_vulns: scanResult.vulnerabilities.filter(v => v.severity === 'CRITICAL').length,
+        high_vulns: scanResult.vulnerabilities.filter(v => v.severity === 'HIGH').length,
+        medium_vulns: scanResult.vulnerabilities.filter(v => v.severity === 'MEDIUM').length,
         scan_method: 'dynamic_nvd'
       }),
       { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
