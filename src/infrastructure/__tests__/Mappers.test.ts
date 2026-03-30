@@ -17,6 +17,7 @@ describe('AgentMapper', () => {
     os_type: 'windows',
     status: 'active',
     agent_version: '5.0.3',
+    last_heartbeat: new Date().toISOString(),
     last_seen: new Date().toISOString(),
     hmac_secret: 'a'.repeat(64),
     ...overrides,
