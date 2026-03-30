@@ -40,6 +40,7 @@ export class JobMapper {
       status: entity.status,
       priority: entity.priority,
       payload: entity.payload,
+      payload_hash: '',
       retry_count: entity.retryCount,
       delivered_at: entity.deliveredAt?.toISOString() ?? null,
       started_at: entity.startedAt?.toISOString() ?? null,

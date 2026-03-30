@@ -31,6 +31,7 @@ export class AgentMapper {
       id: entity.id.value,
       tenant_id: entity.tenantId.value,
       agent_name: entity.name,
+      hmac_secret: '',
       os_type: entity.osType,
       status: entity.state === AgentState.ACTIVE ? 'active' : entity.state,
       agent_version: entity.version?.normalized ?? null,
