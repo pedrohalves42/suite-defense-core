@@ -78,7 +78,7 @@ const HealthGauge = ({ score }: { score: number }) => {
 };
 
 export const ClientDashboard = () => {
-  const adaptiveInterval = useAdaptivePolling(300_000);
+  
   const { activeTenant: tenant, loading: tenantLoading } = useActiveTenant();
 
   const { data: stats, isLoading } = useQuery({
