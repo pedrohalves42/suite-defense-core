@@ -166,10 +166,9 @@ export function useRegistryEvents(agentId: string, options?: { limit?: number; s
 // ── Telemetry Stats ──
 
 export function useTelemetryStats() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant();
 
-  return useQuery({
+  return useRealtimeQuery({
     queryKey: ['edr-telemetry-stats', activeTenant?.id],
     queryFn: async () => {
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -206,8 +205,9 @@ export function useTelemetryStats() {
       } as TelemetryStats;
     },
     enabled: !loading && !!activeTenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 120_000
+    realtimeTable: 'endpoint_detection_events',
+    realtimeFilter: `tenant_id=eq.${activeTenant?.id}`,
+    staleTime: 300_000,
   });
 }
 
