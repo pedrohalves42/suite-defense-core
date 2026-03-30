@@ -19,11 +19,10 @@ import type {
 
 export function useDetectionEvents(options?: {
   agentId?: string; status?: string; limit?: number }) {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant();
   const limit = options?.limit ?? 100;
 
-  return useQuery({
+  return useRealtimeQuery({
     queryKey: ['edr-detections', activeTenant?.id, options?.agentId, options?.status, limit],
     queryFn: async () => {
       // V-6004: Slim select — avoid fetching large raw_event_data blobs
@@ -42,8 +41,9 @@ export function useDetectionEvents(options?: {
       return (data || []) as unknown as EndpointDetectionEvent[];
     },
     enabled: !loading && !!activeTenant?.id,
-    staleTime: 120_000,
-    refetchInterval: adaptiveInterval
+    realtimeTable: 'endpoint_detection_events',
+    realtimeFilter: `tenant_id=eq.${activeTenant?.id}`,
+    staleTime: 300_000,
   });
 }
 
