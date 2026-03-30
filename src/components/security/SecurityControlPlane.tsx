@@ -5,7 +5,8 @@
  * Shows real-time KPIs for RLS status, security events, system health, and job health.
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
