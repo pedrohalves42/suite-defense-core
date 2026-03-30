@@ -41216,6 +41216,39 @@ export type Database = {
           },
         ]
       }
+      v_event_buffer_pending: {
+        Row: {
+          agent_id: string | null
+          batch_id: string | null
+          event_category: string | null
+          id: string | null
+          payload: Json | null
+          processed_at: string | null
+          received_at: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          batch_id?: string | null
+          event_category?: string | null
+          id?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+          received_at?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          batch_id?: string | null
+          event_category?: string | null
+          id?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+          received_at?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: []
+      }
       v_execution_chain_health: {
         Row: {
           agent_id: string | null
@@ -42110,6 +42143,81 @@ export type Database = {
           },
         ]
       }
+      v_network_events_recent: {
+        Row: {
+          agent_id: string | null
+          bytes_received: number | null
+          bytes_sent: number | null
+          created_at: string | null
+          detection_tags: string[] | null
+          direction: string | null
+          dns_query_type: string | null
+          dns_response: string | null
+          domain: string | null
+          event_time: string | null
+          event_type: string | null
+          geo_country: string | null
+          id: string | null
+          is_suspicious: boolean | null
+          local_address: string | null
+          local_port: number | null
+          process_name: string | null
+          process_pid: number | null
+          protocol: string | null
+          remote_address: string | null
+          remote_port: number | null
+          tenant_id: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          bytes_received?: number | null
+          bytes_sent?: number | null
+          created_at?: string | null
+          detection_tags?: string[] | null
+          direction?: string | null
+          dns_query_type?: string | null
+          dns_response?: string | null
+          domain?: string | null
+          event_time?: string | null
+          event_type?: string | null
+          geo_country?: string | null
+          id?: string | null
+          is_suspicious?: boolean | null
+          local_address?: string | null
+          local_port?: number | null
+          process_name?: string | null
+          process_pid?: number | null
+          protocol?: string | null
+          remote_address?: string | null
+          remote_port?: number | null
+          tenant_id?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          bytes_received?: number | null
+          bytes_sent?: number | null
+          created_at?: string | null
+          detection_tags?: string[] | null
+          direction?: string | null
+          dns_query_type?: string | null
+          dns_response?: string | null
+          domain?: string | null
+          event_time?: string | null
+          event_type?: string | null
+          geo_country?: string | null
+          id?: string | null
+          is_suspicious?: boolean | null
+          local_address?: string | null
+          local_port?: number | null
+          process_name?: string | null
+          process_pid?: number | null
+          protocol?: string | null
+          remote_address?: string | null
+          remote_port?: number | null
+          tenant_id?: string | null
+        }
+        Relationships: []
+      }
       v_normalized_events: {
         Row: {
           agent_id: string | null
@@ -42624,6 +42732,72 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
         ]
+      }
+      v_process_events_recent: {
+        Row: {
+          agent_id: string | null
+          command_line: string | null
+          created_at: string | null
+          detection_tags: string[] | null
+          event_time: string | null
+          event_type: string | null
+          executable_path: string | null
+          id: string | null
+          is_suspicious: boolean | null
+          mitre_tactic: string | null
+          mitre_technique_id: string | null
+          parent_command_line: string | null
+          parent_pid: number | null
+          parent_process_name: string | null
+          pid: number | null
+          process_name: string | null
+          sha256_hash: string | null
+          tenant_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          command_line?: string | null
+          created_at?: string | null
+          detection_tags?: string[] | null
+          event_time?: string | null
+          event_type?: string | null
+          executable_path?: string | null
+          id?: string | null
+          is_suspicious?: boolean | null
+          mitre_tactic?: string | null
+          mitre_technique_id?: string | null
+          parent_command_line?: string | null
+          parent_pid?: number | null
+          parent_process_name?: string | null
+          pid?: number | null
+          process_name?: string | null
+          sha256_hash?: string | null
+          tenant_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          command_line?: string | null
+          created_at?: string | null
+          detection_tags?: string[] | null
+          event_time?: string | null
+          event_type?: string | null
+          executable_path?: string | null
+          id?: string | null
+          is_suspicious?: boolean | null
+          mitre_tactic?: string | null
+          mitre_technique_id?: string | null
+          parent_command_line?: string | null
+          parent_pid?: number | null
+          parent_process_name?: string | null
+          pid?: number | null
+          process_name?: string | null
+          sha256_hash?: string | null
+          tenant_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: []
       }
       v_rbac_metrics: {
         Row: {
@@ -44693,6 +44867,69 @@ export type Database = {
           throttle_reason: string
         }[]
       }
+      get_agent_network_events: {
+        Args: { p_agent_id: string; p_limit?: number; p_tenant_id: string }
+        Returns: {
+          agent_id: string
+          bytes_received: number | null
+          bytes_sent: number | null
+          created_at: string
+          detection_tags: string[] | null
+          direction: string | null
+          dns_query_type: string | null
+          dns_response: string | null
+          domain: string | null
+          event_time: string
+          event_type: string
+          geo_country: string | null
+          id: string
+          is_suspicious: boolean | null
+          local_address: string | null
+          local_port: number | null
+          process_name: string | null
+          process_pid: number | null
+          protocol: string | null
+          remote_address: string | null
+          remote_port: number | null
+          tenant_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "endpoint_network_events_partitioned"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_agent_processes: {
+        Args: { p_agent_id: string; p_limit?: number; p_tenant_id: string }
+        Returns: {
+          agent_id: string
+          command_line: string | null
+          created_at: string
+          detection_tags: string[] | null
+          event_time: string
+          event_type: string
+          executable_path: string | null
+          id: string
+          is_suspicious: boolean | null
+          mitre_tactic: string | null
+          mitre_technique_id: string | null
+          parent_command_line: string | null
+          parent_pid: number | null
+          parent_process_name: string | null
+          pid: number
+          process_name: string
+          sha256_hash: string | null
+          tenant_id: string
+          user_name: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "endpoint_process_events_partitioned"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_agent_snapshot: { Args: { p_agent_id: string }; Returns: Json }
       get_agents_list: {
         Args: { p_include_archived?: boolean; p_tenant_id: string }
@@ -44777,6 +45014,25 @@ export type Database = {
         }[]
       }
       get_mfa_user_count: { Args: { p_tenant_id: string }; Returns: Json }
+      get_pending_events: {
+        Args: { p_limit?: number; p_tenant_id: string }
+        Returns: {
+          agent_id: string
+          batch_id: string | null
+          event_category: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          received_at: string
+          tenant_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "endpoint_event_buffer_partitioned"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_playbook_execution_breakdown: {
         Args: { p_days_back?: number; p_tenant_id: string }
         Returns: {
@@ -45011,6 +45267,7 @@ export type Database = {
       is_emergency_mode: { Args: never; Returns: boolean }
       is_operator_or_viewer: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_table_migrated: { Args: { p_table_name: string }; Returns: boolean }
       log_scheduled_job_run: {
         Args: {
           p_duration_ms?: number
