@@ -630,7 +630,7 @@ verify_jwt = false
 
 # === ADR-026: Multi-Tenant Active Context ===
 [functions.set-active-tenant]
-verify_jwt = false
+verify_jwt = true
 
 # === ADR-032: SLO Burn Rate - DISABLED schedule COST-OPT-V7 (invoke manually) ===
 [functions.evaluate-job-slo]
