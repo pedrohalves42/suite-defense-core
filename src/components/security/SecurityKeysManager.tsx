@@ -13,16 +13,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Key, Plus, Trash2, Shield, AlertCircle, Fingerprint, Info } from 'lucide-react';
 import { useWebAuthn } from '@/hooks/useWebAuthn';
 import { useAuth } from '@/hooks/useAuth';
