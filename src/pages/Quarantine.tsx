@@ -9,10 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Shield, AlertTriangle, CheckCircle, Trash2, RotateCcw, Search, FileWarning } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatBrazilDateTime } from '@/lib/date-utils';
+import { StatsGrid } from '@/components/ui/stats-grid';
+import { SummaryStatCard } from '@/components/ui/summary-stat-card';
 
 export default function Quarantine() {
   const { t } = useTranslation();
@@ -153,43 +155,26 @@ export default function Quarantine() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('quarantinePage.quarantined')}</CardTitle>
-            <FileWarning className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {quarantinedFiles?.data?.filter(f => f.status === 'quarantined').length || 0}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('quarantinePage.restored')}</CardTitle>
-            <RotateCcw className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {quarantinedFiles?.data?.filter(f => f.status === 'restored').length || 0}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('quarantinePage.deleted')}</CardTitle>
-            <Trash2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {quarantinedFiles?.data?.filter(f => f.status === 'deleted').length || 0}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <StatsGrid columns={3}>
+        <SummaryStatCard
+          icon={FileWarning}
+          value={quarantinedFiles?.data?.filter(f => f.status === 'quarantined').length || 0}
+          label={t('quarantinePage.quarantined')}
+          accent="destructive"
+        />
+        <SummaryStatCard
+          icon={RotateCcw}
+          value={quarantinedFiles?.data?.filter(f => f.status === 'restored').length || 0}
+          label={t('quarantinePage.restored')}
+          accent="primary"
+        />
+        <SummaryStatCard
+          icon={Trash2}
+          value={quarantinedFiles?.data?.filter(f => f.status === 'deleted').length || 0}
+          label={t('quarantinePage.deleted')}
+          accent="muted"
+        />
+      </StatsGrid>
 
       {/* Filters */}
       <Card>
@@ -323,26 +308,16 @@ export default function Quarantine() {
       </Card>
 
       {/* Action Dialog */}
-      <AlertDialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {actionType === 'restore' ? t('quarantinePage.restoreFile') : t('quarantinePage.deleteFile')}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {actionType === 'restore'
-                ? t('quarantinePage.restoreConfirm')
-                : t('quarantinePage.deleteConfirm')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('quarantinePage.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmAction}>
-              {t('quarantinePage.confirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={actionDialogOpen}
+        onOpenChange={setActionDialogOpen}
+        title={actionType === 'restore' ? t('quarantinePage.restoreFile') : t('quarantinePage.deleteFile')}
+        description={actionType === 'restore' ? t('quarantinePage.restoreConfirm') : t('quarantinePage.deleteConfirm')}
+        confirmLabel={t('quarantinePage.confirm')}
+        cancelLabel={t('quarantinePage.cancel')}
+        onConfirm={confirmAction}
+        destructive={actionType === 'delete'}
+      />
     </div>
   );
 }

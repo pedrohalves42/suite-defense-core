@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { RefreshCw, GitBranch, Shield, CheckCircle, XCircle, Clock, AlertTriangle, Zap, HelpCircle } from 'lucide-react';
 import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { useTenant } from '@/hooks/useTenant';
+import { LoadingGrid } from '@/components/ui/loading-grid';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -245,17 +246,7 @@ export default function AgentVersionMonitor() {
   };
 
   if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-64" />
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-32" />
-          ))}
-        </div>
-        <Skeleton className="h-96" />
-      </div>
-    );
+    return <LoadingGrid cards={4} cardHeight="h-32" showContent />;
   }
 
   return (

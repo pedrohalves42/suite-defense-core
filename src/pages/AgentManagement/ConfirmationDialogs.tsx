@@ -1,9 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel,
-  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
-  AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { Agent } from './types';
 
 interface ConfirmationDialogsProps {
@@ -23,39 +19,26 @@ export function ConfirmationDialogs({
 
   return (
     <>
-      <AlertDialog open={!!agentToDelete} onOpenChange={() => onDeleteOpenChange(false)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('agentManagementPage.deleteAgent')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('agentManagementPage.deleteConfirm', { name: agentToDelete?.agent_name })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('agentManagementPage.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={onDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {t('agentManagementPage.confirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!agentToDelete}
+        onOpenChange={() => onDeleteOpenChange(false)}
+        title={t('agentManagementPage.deleteAgent')}
+        description={t('agentManagementPage.deleteConfirm', { name: agentToDelete?.agent_name })}
+        confirmLabel={t('agentManagementPage.confirm')}
+        cancelLabel={t('agentManagementPage.cancel')}
+        onConfirm={onDeleteConfirm}
+        destructive
+      />
 
-      <AlertDialog open={!!agentToDisable} onOpenChange={() => onDisableOpenChange(false)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('agentManagementPage.disableAgent')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('agentManagementPage.disableConfirm', { name: agentToDisable?.agent_name })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('agentManagementPage.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={onDisableConfirm}>
-              {t('agentManagementPage.confirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!agentToDisable}
+        onOpenChange={() => onDisableOpenChange(false)}
+        title={t('agentManagementPage.disableAgent')}
+        description={t('agentManagementPage.disableConfirm', { name: agentToDisable?.agent_name })}
+        confirmLabel={t('agentManagementPage.confirm')}
+        cancelLabel={t('agentManagementPage.cancel')}
+        onConfirm={onDisableConfirm}
+      />
     </>
   );
 }

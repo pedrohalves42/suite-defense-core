@@ -6,16 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { UserPlus, UserCog } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useNavigate } from 'react-router-dom';
 import { useTenant } from '@/hooks/useTenant';
 import { MemberCard } from '@/components/members/MemberCard';
@@ -284,28 +275,16 @@ export default function Members() {
         </CardContent>
       </Card>
 
-      <AlertDialog
+      <ConfirmDialog
         open={!!memberToRemove}
         onOpenChange={() => setMemberToRemove(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('adminPages.members.removeMember')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('adminPages.members.removeConfirm', { name: memberToRemove?.profiles?.full_name || memberToRemove?.email })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('adminPages.members.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => memberToRemove && removeMember.mutate(memberToRemove.id)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {t('adminPages.members.remove')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={t('adminPages.members.removeMember')}
+        description={t('adminPages.members.removeConfirm', { name: memberToRemove?.profiles?.full_name || memberToRemove?.email })}
+        confirmLabel={t('adminPages.members.remove')}
+        cancelLabel={t('adminPages.members.cancel')}
+        onConfirm={() => memberToRemove && removeMember.mutate(memberToRemove.id)}
+        destructive
+      />
 
       {/* Create User Modal */}
       <CreateUserForm 
