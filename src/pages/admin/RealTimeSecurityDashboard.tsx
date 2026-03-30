@@ -539,3 +539,4 @@ export default function RealTimeSecurityDashboard() {
     </div>
   );
 }
+
