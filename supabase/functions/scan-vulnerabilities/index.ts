@@ -2,103 +2,13 @@
  * Scan Vulnerabilities - Orchestrator
  * Auth: serveTenant (JWT + tenant isolation)
  * 
- * Decomposed: helpers extracted to vuln-helpers.ts
+ * Core scan logic in scanner.ts, helpers in vuln-helpers.ts
  */
 
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
-import {
-  SoftwareItem,
-  extractKeywords,
-  isVersionAffected,
-  getSeverityFromScore,
-  normalizeSeverity,
-  truncate,
-  generateRemediation,
-  scanWithFallback,
-} from './vuln-helpers.ts';
-
-/** Scan a single agent's vulnerabilities (used by both single and batch mode) */
-async function scanAgentVulnerabilities(
-  supabase: SupabaseClient,
-  agent_id: string,
-  tenant_id: string,
-  requestId: string
-): Promise<{ vulnerabilities_found: number }> {
-  const { data: software, error: softwareError } = await supabase
-    .from('software_inventory')
-    .select('name, version, vendor')
-    .eq('agent_id', agent_id)
-    .limit(200);
-
-  if (softwareError || !software || software.length === 0) {
-    return { vulnerabilities_found: 0 };
-  }
-
-  const softwareKeywords = new Set<string>();
-  const softwareMap = new Map<string, SoftwareItem[]>();
-
-  for (const item of software as SoftwareItem[]) {
-    const name = item.name?.toLowerCase() || '';
-    const keywords = extractKeywords(name);
-    keywords.forEach(kw => {
-      softwareKeywords.add(kw);
-      if (!softwareMap.has(kw)) softwareMap.set(kw, []);
-      softwareMap.get(kw)!.push(item);
-    });
-  }
-
-  const vulnerabilities: Array<Record<string, unknown>> = [];
-  const processedCVEs = new Set<string>();
-
-  for (const keyword of Array.from(softwareKeywords).slice(0, 20)) {
-    const { data: cves } = await supabase
-      .from('cve_database')
-      .select('*')
-      .or(`affected_products.cs.{${keyword}},description.ilike.%${keyword}%`)
-      .gte('cvss_score', 4.0)
-      .order('cvss_score', { ascending: false })
-      .limit(30);
-
-    if (cves && cves.length > 0) {
-      for (const cve of cves) {
-        if (processedCVEs.has(cve.cve_id)) continue;
-        const matchedSoftware = softwareMap.get(keyword) || [];
-        for (const sw of matchedSoftware) {
-          if (isVersionAffected(sw.version, cve.affected_versions)) {
-            processedCVEs.add(cve.cve_id);
-            const now = new Date().toISOString();
-            vulnerabilities.push({
-              agent_id,
-              tenant_id,
-              check_key: cve.cve_id,
-              title: `${cve.cve_id}: ${(cve.description || '').slice(0, 100)}...`,
-              description: cve.description,
-              severity: normalizeSeverity(cve.severity || getSeverityFromScore(cve.cvss_score)),
-              remediation: `Update ${sw.name.split(/[\s\-_]/)[0]} to the latest version`,
-              first_seen_at: now,
-              last_seen_at: now
-            });
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  if (vulnerabilities.length > 0) {
-    const { error: upsertError } = await supabase
-      .from('vuln_findings')
-      .upsert(vulnerabilities, { onConflict: 'agent_id,check_key' });
-    if (upsertError) {
-      logger.error('[scan-vulnerabilities] Upsert error:', upsertError);
-    }
-  }
-
-  return { vulnerabilities_found: vulnerabilities.length };
-}
+import { scanAgentVulnerabilities } from './scanner.ts';
 
 serveTenant(async (req, ctx) => {
   const origin = req.headers.get("origin");
