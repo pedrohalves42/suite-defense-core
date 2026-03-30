@@ -7,16 +7,14 @@ import { NetworkMetricsMapper } from './mappers/NetworkMetricsMapper';
 export class SupabaseNetworkMetricsRepository implements NetworkMetricsRepository {
   async save(metrics: NetworkMetrics): Promise<void> {
     const row = NetworkMetricsMapper.toPersistence(metrics);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await supabase.from('agent_network_metrics').insert(row as any);
+    const { error } = await supabase.from('agent_network_metrics').insert(row);
     if (error) throw new Error(`Failed to save network metrics: ${error.message}`);
   }
 
   async saveBatch(metrics: NetworkMetrics[]): Promise<void> {
     if (metrics.length === 0) return;
     const rows = metrics.map(m => NetworkMetricsMapper.toPersistence(m));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await supabase.from('agent_network_metrics').insert(rows as any);
+    const { error } = await supabase.from('agent_network_metrics').insert(rows);
     if (error) throw new Error(`Failed to save network metrics batch: ${error.message}`);
   }
 

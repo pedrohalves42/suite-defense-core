@@ -13,7 +13,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findById(id: string): Promise<Job | null> {
     const { data, error } = await supabase
       .from('jobs')
-      .select('id, tenant_id, agent_name, agent_id, type, status, priority, payload, payload_hash, result, error_message, created_at, updated_at, started_at, completed_at, expires_at, retry_count, max_retries, idempotency_key')
+      .select('id, tenant_id, agent_name, agent_id, type, status, priority, payload, payload_hash, output, error_message, created_at, started_at, completed_at, expires_at, retry_count, delivery_attempts')
       .eq('id', id)
       .maybeSingle();
 
@@ -24,7 +24,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findPendingByAgent(agentId: AgentId): Promise<Job[]> {
     const { data, error } = await supabase
       .from('jobs')
-      .select('id, tenant_id, agent_name, agent_id, type, status, priority, payload, payload_hash, created_at, expires_at, retry_count, max_retries, idempotency_key')
+      .select('id, tenant_id, agent_name, agent_id, type, status, priority, payload, payload_hash, created_at, expires_at, retry_count, delivery_attempts')
       .eq('agent_id', agentId.value)
       .eq('status', 'pending')
       .order('priority', { ascending: false })
@@ -38,7 +38,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findByTenantAndStatus(tenantId: TenantId, status: JobStatus): Promise<Job[]> {
     const { data, error } = await supabase
       .from('jobs')
-      .select('id, tenant_id, agent_name, agent_id, type, status, priority, payload, payload_hash, created_at, updated_at, expires_at')
+      .select('id, tenant_id, agent_name, agent_id, type, status, priority, payload, payload_hash, created_at, expires_at')
       .eq('tenant_id', tenantId.value)
       .eq('status', status)
       .limit(500);
@@ -50,7 +50,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findExpiredJobs(now: Date): Promise<Job[]> {
     const { data, error } = await supabase
       .from('jobs')
-      .select('id, tenant_id, agent_name, agent_id, type, status, priority, created_at, expires_at, retry_count, max_retries')
+      .select('id, tenant_id, agent_name, agent_id, type, status, priority, created_at, expires_at, retry_count, delivery_attempts')
       .in('status', ['pending', 'queued', 'delivered', 'running'])
       .lt('expires_at', now.toISOString())
       .limit(500);
@@ -63,8 +63,7 @@ export class SupabaseJobRepository implements JobRepository {
     const persistence = JobMapper.toPersistence(job);
     const { error } = await supabase
       .from('jobs')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .upsert(persistence as any, { onConflict: 'id' });
+      .upsert(persistence, { onConflict: 'id' });
 
     if (error) {
       throw new Error(`Failed to save job: ${error.message}`);
@@ -75,8 +74,7 @@ export class SupabaseJobRepository implements JobRepository {
     const persistence = JobMapper.executionToPersistence(execution);
     const { error } = await supabase
       .from('job_executions')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .upsert(persistence as any, { onConflict: 'id' });
+      .upsert(persistence, { onConflict: 'id' });
 
     if (error) {
       throw new Error(`Failed to save job execution: ${error.message}`);
@@ -86,7 +84,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findExecutionsByJobId(jobId: string): Promise<JobExecution[]> {
     const { data, error } = await supabase
       .from('job_executions')
-      .select('id, job_id, execution_index, execution_hash, previous_hash, status, started_at, completed_at, output, error_message')
+      .select('id, job_id, execution_index, execution_hash, previous_execution_hash, status, started_at, completed_at, error_message')
       .eq('job_id', jobId)
       .order('execution_index', { ascending: true });
 
