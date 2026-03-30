@@ -98,4 +98,5 @@ serveTenant(async (_req, ctx) => {
   return { success: true };
 }, {
   methods: ['POST'],
+  rateLimit: { maxRequests: 10, windowMinutes: 1 },
 });

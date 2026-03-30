@@ -105,4 +105,5 @@ serveTenant(async (req, ctx) => {
   return { success: true };
 }, {
   skipTenantValidation: true,
+  rateLimit: { maxRequests: 10, windowMinutes: 1 },
 });
