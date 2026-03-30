@@ -1,23 +1,26 @@
 import { Agent, type AgentProps, AgentState, AgentStatus } from '@/domain/entities/Agent';
 import { AGENT_STATUS_THRESHOLDS } from '@/lib/agent-status-constants';
-import type { AgentInsert } from '@/infrastructure/types/supabase-tables';
+import type { Database } from '@/integrations/supabase/types';
+
+type AgentInsert = Database['public']['Tables']['agents']['Insert'];
 
 /**
  * Maps between Supabase DB rows and Agent domain entities.
  */
 export class AgentMapper {
-  static toDomain(row: Record<string, unknown>): Agent {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static toDomain(row: any): Agent {
     const props: AgentProps = {
-      id: row.id as string,
-      tenantId: row.tenant_id as string,
-      name: (row.agent_name as string) ?? (row.hostname as string) ?? '',
-      osType: (row.os_type as string) ?? 'windows',
-      state: AgentMapper.mapLifecycleState(row.status as string),
-      status: AgentMapper.mapAgentStatus(row.status as string, row.last_seen as string | null),
-      version: (row.agent_version as string) ?? null,
-      lastSeen: (row.last_seen as string) ?? null,
+      id: row.id,
+      tenantId: row.tenant_id,
+      name: row.agent_name ?? row.hostname ?? '',
+      osType: row.os_type ?? 'windows',
+      state: AgentMapper.mapLifecycleState(row.status),
+      status: AgentMapper.mapAgentStatus(row.status, row.last_heartbeat),
+      version: row.agent_version ?? null,
+      lastSeen: row.last_heartbeat ?? null,
       hmacSecret: '', // V-1005: Never expose hmac_secret to domain/UI layer
-      lightModeConfig: (row.light_mode_config as Record<string, unknown>) ?? undefined,
+      lightModeConfig: row.light_mode_config ?? undefined,
     };
 
     return Agent.reconstitute(props);
@@ -31,8 +34,7 @@ export class AgentMapper {
       os_type: entity.osType,
       status: entity.state === AgentState.ACTIVE ? 'active' : entity.state,
       agent_version: entity.version?.normalized ?? null,
-      last_seen: entity.lastSeen?.toISOString() ?? null,
-      light_mode_enabled: entity.isInLightMode(),
+      last_heartbeat: entity.lastSeen?.toISOString() ?? null,
     };
   }
 
@@ -47,13 +49,12 @@ export class AgentMapper {
     }
   }
 
-  private static mapAgentStatus(dbStatus: string, lastSeen: string | null): string {
+  private static mapAgentStatus(dbStatus: string, lastHeartbeat: string | null): string {
     if (dbStatus === 'decommissioned' || dbStatus === 'suspended') {
       return AgentStatus.OFFLINE;
     }
-    // Use centralized threshold from AGENT_STATUS_THRESHOLDS
-    if (!lastSeen) return AgentStatus.OFFLINE;
-    const elapsed = Date.now() - new Date(lastSeen).getTime();
+    if (!lastHeartbeat) return AgentStatus.OFFLINE;
+    const elapsed = Date.now() - new Date(lastHeartbeat).getTime();
     if (elapsed > AGENT_STATUS_THRESHOLDS.OFFLINE_MIN_MINUTES * 60 * 1000) return AgentStatus.OFFLINE;
     return AgentStatus.ONLINE;
   }
