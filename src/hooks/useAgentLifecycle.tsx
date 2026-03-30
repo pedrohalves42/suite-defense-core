@@ -115,8 +115,9 @@ export function usePipelineMetrics(tenantId: string | undefined, hoursBack: numb
       return data.metrics;
     },
     enabled: !loading && !!tenantId,  // V-503b: Guard para sincronização
-    refetchInterval: adaptiveInterval,
-    staleTime: 30000, // Cache por 30s
+    refetchInterval: false,
+    staleTime: 300_000,
+    refetchOnWindowFocus: true,
     retry: 2, // Tentar 2 vezes antes de falhar
     retryDelay: 1000, // Esperar 1s entre tentativas
   });
