@@ -44,11 +44,10 @@ export const ROLLBACK_SUPPORTED: RemediationActionType[] = [
 ];
 
 export const useAutoRemediation = () => {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
-  const actions = useQuery({
+  const actions = useRealtimeQuery({
     queryKey: ['remediation-actions', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
