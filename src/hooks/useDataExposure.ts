@@ -73,8 +73,9 @@ export function useDataExposure() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 120_000
+    realtimeTable: 'data_exposure_findings',
+    realtimeFilter: `tenant_id=eq.${tenant?.id}`,
+    staleTime: 300_000,
   });
 
   const updateStatus = useMutation({

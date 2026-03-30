@@ -62,8 +62,9 @@ export const useAutoRemediation = () => {
       return data as RemediationAction[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 120_000
+    realtimeTable: 'auto_remediation_actions',
+    realtimeFilter: `tenant_id=eq.${tenant?.id}`,
+    staleTime: 300_000,
   });
 
   const executeRemediation = useMutation({
