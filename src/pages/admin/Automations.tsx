@@ -196,63 +196,12 @@ export default function Automations() {
       description="Gerencie jobs agendados, playbooks e automações do sistema"
     >
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Clock className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{scheduledJobs?.length || 0}</p>
-                <p className="text-sm text-muted-foreground">Jobs Agendados</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{enabledJobs}</p>
-                <p className="text-sm text-muted-foreground">Jobs Ativos</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <Zap className="h-5 w-5 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{playbooks?.length || 0}</p>
-                <p className="text-sm text-muted-foreground">Playbooks</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-500/10">
-                <Bot className="h-5 w-5 text-purple-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{enabledPlaybooks}</p>
-                <p className="text-sm text-muted-foreground">Playbooks Ativos</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <StatsGrid columns={4} className="mb-6">
+        <SummaryStatCard icon={Clock} value={scheduledJobs?.length || 0} label="Jobs Agendados" accent="primary" />
+        <SummaryStatCard icon={CheckCircle} value={enabledJobs} label="Jobs Ativos" accent="success" />
+        <SummaryStatCard icon={Zap} value={playbooks?.length || 0} label="Playbooks" accent="info" />
+        <SummaryStatCard icon={Bot} value={enabledPlaybooks} label="Playbooks Ativos" accent="info" />
+      </StatsGrid>
 
       <Tabs defaultValue="jobs" className="space-y-4">
         <TabsList>
