@@ -474,10 +474,6 @@ verify_jwt = true
 [functions.integrity-sentinel]
 verify_jwt = false
 
-# === Chaos Test - DISABLED schedule COST-OPT-V5 ===
-[functions.chaos-test]
-verify_jwt = false
-
 # === ECDSA Release Signing ===
 [functions.sign-release]
 verify_jwt = true
