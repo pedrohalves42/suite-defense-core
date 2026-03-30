@@ -7,7 +7,7 @@ import type { DiskMetric } from '@/components/agent/AgentCard';
  * Hook to fetch disk metrics for multiple agents at once
  */
 export function useAgentsDiskMetrics(agentIds: string[]) {
-  const adaptiveInterval = useAdaptivePolling(300000);
+  
   return useQuery({
     queryKey: ['agents-disk-metrics', agentIds.sort().join(',')],
     queryFn: async () => {
