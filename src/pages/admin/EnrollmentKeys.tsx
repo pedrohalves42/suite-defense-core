@@ -406,28 +406,24 @@ export default function EnrollmentKeys() {
 
       <StatsGrid columns={4}>
         <SummaryStatCard
-          title="Chaves Ativas"
+          label="Chaves Ativas"
           value={stats?.activeCount || 0}
           icon={Key}
-          subtitle="Total de chaves ativas"
         />
         <SummaryStatCard
-          title="Criadas (30d)"
+          label="Criadas (30d)"
           value={stats?.recentCount || 0}
           icon={TrendingUp}
-          subtitle="Ultimos 30 dias"
         />
         <SummaryStatCard
-          title="Usadas (30d)"
+          label="Usadas (30d)"
           value={stats?.usedCount || 0}
           icon={Users}
-          subtitle="Ultimos 30 dias"
         />
         <SummaryStatCard
-          title="Total de Usos"
+          label="Total de Usos"
           value={stats?.totalUses || 0}
           icon={Clock}
-          subtitle="Todos os tempos"
         />
       </StatsGrid>
 
