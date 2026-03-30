@@ -1,8 +1,4 @@
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel,
-  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
-  AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { ProblematicAgent } from './types';
 
 interface CleanupDialogsProps {
@@ -30,47 +26,27 @@ export function CleanupDialogs({
 }: CleanupDialogsProps) {
   return (
     <>
-      <AlertDialog open={!!agentToCleanup} onOpenChange={() => onCloseAgentCleanup()}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Limpeza</AlertDialogTitle>
-            <AlertDialogDescription>
-              Isso irá remover o registro de "{agentToCleanup?.agent_name}" e permitir uma nova instalação.
-              Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => agentToCleanup && onConfirmAgentCleanup(agentToCleanup.id)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {cleanupPending ? 'Limpando...' : 'Confirmar Limpeza'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!agentToCleanup}
+        onOpenChange={() => onCloseAgentCleanup()}
+        title="Confirmar Limpeza"
+        description={`Isso irá remover o registro de "${agentToCleanup?.agent_name}" e permitir uma nova instalação. Esta ação não pode ser desfeita.`}
+        confirmLabel={cleanupPending ? 'Limpando...' : 'Confirmar Limpeza'}
+        onConfirm={() => agentToCleanup && onConfirmAgentCleanup(agentToCleanup.id)}
+        destructive
+        loading={cleanupPending}
+      />
 
-      <AlertDialog open={showBulkCleanupDialog} onOpenChange={onCloseBulkCleanup}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Limpeza em Massa</AlertDialogTitle>
-            <AlertDialogDescription>
-              Isso irá remover os registros de {problematicCount} computadores problemáticos.
-              Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={onConfirmBulkCleanup}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {bulkCleanupPending ? 'Limpando...' : `Limpar ${problematicCount} Computadores`}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showBulkCleanupDialog}
+        onOpenChange={onCloseBulkCleanup}
+        title="Confirmar Limpeza em Massa"
+        description={`Isso irá remover os registros de ${problematicCount} computadores problemáticos. Esta ação não pode ser desfeita.`}
+        confirmLabel={bulkCleanupPending ? 'Limpando...' : `Limpar ${problematicCount} Computadores`}
+        onConfirm={onConfirmBulkCleanup}
+        destructive
+        loading={bulkCleanupPending}
+      />
     </>
   );
 }

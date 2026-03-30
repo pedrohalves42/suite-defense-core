@@ -4,7 +4,7 @@
  * Decomposed from a 1035-line God component into focused subcomponents.
  */
 
-import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingGrid } from '@/components/ui/loading-grid';
 import { JobLiveMonitor } from '@/components/admin/JobLiveMonitor';
 import { AgentHealthAlerts } from '@/components/admin/AgentHealthAlerts';
 import { DynamicValidationSystem } from '@/components/admin/DynamicValidationSystem';
