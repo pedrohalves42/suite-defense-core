@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,12 +9,11 @@ import {
 import { format } from '@/lib/date-utils';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 type Period = '7d' | '30d' | '90d';
 
 export function AIInsightsTrendChart() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
   const [period, setPeriod] = useState<Period>('30d');
 
