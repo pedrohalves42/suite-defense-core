@@ -20,11 +20,10 @@ interface StuckJob {
 }
 
 export function JobsMonitor() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: stuckJobs, isLoading, refetch } = useQuery({
+  const { data: stuckJobs, isLoading, refetch } = useRealtimeQuery({
     queryKey: ['stuck-jobs'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -45,9 +44,9 @@ export function JobsMonitor() {
           : 0
       })) as StuckJob[];
     },
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    realtimeTable: 'jobs',
+    staleTime: 300_000,
+  });
   });
 
   const cancelJob = useMutation({

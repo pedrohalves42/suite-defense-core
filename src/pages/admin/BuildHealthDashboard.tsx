@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,13 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Activity, AlertCircle, CheckCircle2, Clock, XCircle, Trash2 } from "lucide-react";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import { toast } from "sonner";
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 export default function BuildHealthDashboard() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const queryClient = useQueryClient();
   
-  const { data: builds, isLoading } = useQuery({
+  const { data: builds, isLoading } = useRealtimeQuery({
     queryKey: ["recent-builds"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -25,9 +24,8 @@ export default function BuildHealthDashboard() {
       if (error) throw error;
       return data || [];
     },
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    realtimeTable: 'agent_builds',
+    staleTime: 300_000,
   });
 
   const cleanupMutation = useMutation({
