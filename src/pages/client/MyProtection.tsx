@@ -22,7 +22,7 @@ import {
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format, ptBR } from '@/lib/date-utils';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 export const MyProtection = () => {
   const adaptiveInterval = useAdaptivePolling(300000);
