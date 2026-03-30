@@ -112,7 +112,9 @@ export function useAgentManagement() {
       return metricsMap;
     },
     enabled: !!tenant?.id && !!agents && agents.length > 0,
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
+    staleTime: 300_000,
+    refetchOnWindowFocus: true,
   });
 
   // Helper functions

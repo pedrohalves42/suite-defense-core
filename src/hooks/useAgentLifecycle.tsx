@@ -141,8 +141,8 @@ export function useFailureRate(tenantId: string | undefined, hoursBack: number =
       return data && data.length > 0 ? data[0] : null;
     },
     enabled: !loading && !!tenantId,  // V-503c: Guard para sincronização
-    refetchInterval: adaptiveInterval,
-    staleTime: 30000,
+    refetchInterval: false,
+    staleTime: 300_000,
     retry: 2,
     retryDelay: 1000
   });
