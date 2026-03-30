@@ -61,12 +61,10 @@ interface SecurityDashboardData {
 }
 
 export function SecurityControlPlane() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const queryClient = useQueryClient();
   const { tenant, loading: tenantLoading } = useTenant();
 
-  // Fetch security dashboard data
-  const { data: dashboardData, isLoading, refetch } = useQuery({
+  const { data: dashboardData, isLoading, refetch } = useRealtimeQuery<SecurityDashboardData>({
     queryKey: ['security-control-plane', tenant?.id],
     queryFn: async (): Promise<SecurityDashboardData> => {
       if (!tenant?.id) throw new Error('No tenant');
