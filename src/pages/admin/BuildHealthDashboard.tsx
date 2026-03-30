@@ -44,16 +44,8 @@ export default function BuildHealthDashboard() {
   });
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <Badge className="bg-success text-success-foreground"><CheckCircle2 className="w-3 h-3 mr-1" />Sucesso</Badge>;
-      case 'failed':
-        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Falhou</Badge>;
-      case 'building':
-        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1 animate-spin" />Building</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
+    const { label, badgeVariant } = getStatusMapping(status);
+    return <StatusBadge variant={badgeVariant}>{label}</StatusBadge>;
   };
 
   const successRate = builds 
