@@ -8,8 +8,7 @@ import { BehavioralBaselineMapper } from './mappers/BehavioralBaselineMapper';
 export class SupabaseBehavioralBaselineRepository implements BehavioralBaselineRepository {
   async save(baseline: BehavioralBaseline): Promise<void> {
     const row = BehavioralBaselineMapper.toPersistence(baseline);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await supabase.from('agent_behavioral_baseline').upsert(row as any);
+    const { error } = await supabase.from('agent_behavioral_baseline').upsert(row);
     if (error) throw new Error(`Failed to save behavioral baseline: ${error.message}`);
   }
 

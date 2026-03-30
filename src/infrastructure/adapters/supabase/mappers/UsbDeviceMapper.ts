@@ -1,9 +1,10 @@
 import { UsbDevice, DeviceType } from '@/domain/entities/UsbDevice';
 import { AgentId } from '@/domain/value-objects/AgentId';
 import { TenantId } from '@/domain/value-objects/TenantId';
+import type { UsbDeviceInsert } from '@/infrastructure/types/supabase-tables';
 
 export class UsbDeviceMapper {
-  static toDomain(row: any): UsbDevice {
+  static toDomain(row: Record<string, unknown>): UsbDevice {
     return UsbDevice.reconstitute({
       id: row.id as string,
       agentId: AgentId.create(row.agent_id as string).value,
@@ -23,7 +24,7 @@ export class UsbDeviceMapper {
     });
   }
 
-  static toPersistence(entity: UsbDevice): Record<string, unknown> {
+  static toPersistence(entity: UsbDevice): UsbDeviceInsert {
     return {
       id: entity.id,
       agent_id: entity.agentId.toString(),

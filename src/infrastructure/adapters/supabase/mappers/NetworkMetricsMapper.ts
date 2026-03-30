@@ -1,9 +1,10 @@
 import { NetworkMetrics } from '@/domain/entities/NetworkMetrics';
 import { AgentId } from '@/domain/value-objects/AgentId';
 import { TenantId } from '@/domain/value-objects/TenantId';
+import type { NetworkMetricsInsert } from '@/infrastructure/types/supabase-tables';
 
 export class NetworkMetricsMapper {
-  static toDomain(row: any): NetworkMetrics {
+  static toDomain(row: Record<string, unknown>): NetworkMetrics {
     return NetworkMetrics.reconstitute({
       id: row.id as string,
       agentId: AgentId.create(row.agent_id as string).value,
@@ -22,7 +23,7 @@ export class NetworkMetricsMapper {
     });
   }
 
-  static toPersistence(entity: NetworkMetrics): Record<string, unknown> {
+  static toPersistence(entity: NetworkMetrics): NetworkMetricsInsert {
     return {
       id: entity.id,
       agent_id: entity.agentId.toString(),

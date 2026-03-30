@@ -1,0 +1,34 @@
+/**
+ * Integration tests: quarantine-agent
+ * Tests the quarantine-agent admin endpoint.
+ */
+import "https://deno.land/std@0.224.0/dotenv/load.ts";
+import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { callFunction } from "../helpers/test-client.ts";
+
+Deno.test("quarantine-agent → rejects unauthenticated requests", async () => {
+  const rawResponse = await fetch(
+    `${Deno.env.get("VITE_SUPABASE_URL")}/functions/v1/quarantine-agent`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ agent_id: "fake" }),
+    },
+  );
+  const _text = await rawResponse.text();
+  assertEquals(rawResponse.status >= 400, true, `Expected auth rejection, got ${rawResponse.status}`);
+});
+
+Deno.test("quarantine-agent → rejects without JWT", async () => {
+  const { response } = await callFunction("quarantine-agent", {
+    body: { agent_id: "fake-id", reason: "test" },
+  });
+  assertEquals(response.status >= 400, true, `Expected 4xx without JWT, got ${response.status}`);
+});
+
+Deno.test("quarantine-agent → rejects empty payload", async () => {
+  const { response } = await callFunction("quarantine-agent", {
+    body: {},
+  });
+  assertEquals(response.status >= 400, true, `Expected validation error, got ${response.status}`);
+});

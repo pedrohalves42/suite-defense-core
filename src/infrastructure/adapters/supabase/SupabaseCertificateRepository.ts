@@ -8,16 +8,14 @@ import { CertificateMapper } from './mappers/CertificateMapper';
 export class SupabaseCertificateRepository implements CertificateRepository {
   async save(cert: Certificate): Promise<void> {
     const row = CertificateMapper.toPersistence(cert);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await supabase.from('agent_certificates').upsert(row as any);
+    const { error } = await supabase.from('agent_certificates').upsert(row);
     if (error) throw new Error(`Failed to save certificate: ${error.message}`);
   }
 
   async saveBatch(certs: Certificate[]): Promise<void> {
     if (certs.length === 0) return;
     const rows = certs.map(c => CertificateMapper.toPersistence(c));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await supabase.from('agent_certificates').insert(rows as any);
+    const { error } = await supabase.from('agent_certificates').insert(rows);
     if (error) throw new Error(`Failed to save certificate batch: ${error.message}`);
   }
 

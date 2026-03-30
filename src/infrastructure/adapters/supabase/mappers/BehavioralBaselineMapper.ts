@@ -1,8 +1,12 @@
 import { BehavioralBaseline, BaselineType } from '@/domain/entities/BehavioralBaseline';
 import { AgentId } from '@/domain/value-objects/AgentId';
 import { TenantId } from '@/domain/value-objects/TenantId';
+import type { Database, Json } from '@/integrations/supabase/types';
+
+type BehavioralBaselineInsert = Database['public']['Tables']['agent_behavioral_baseline']['Insert'];
 
 export class BehavioralBaselineMapper {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static toDomain(row: any): BehavioralBaseline {
     return BehavioralBaseline.reconstitute({
       id: row.id as string,
@@ -23,13 +27,13 @@ export class BehavioralBaselineMapper {
     });
   }
 
-  static toPersistence(entity: BehavioralBaseline): Record<string, unknown> {
+  static toPersistence(entity: BehavioralBaseline): BehavioralBaselineInsert {
     return {
       id: entity.id,
       agent_id: entity.agentId.toString(),
       tenant_id: entity.tenantId.toString(),
       baseline_type: entity.type,
-      baseline_data: entity.data,
+      baseline_data: entity.data as Json,
       mean_value: entity.thresholds.mean,
       std_deviation: entity.thresholds.stdDev,
       threshold_multiplier: entity.thresholds.multiplier,

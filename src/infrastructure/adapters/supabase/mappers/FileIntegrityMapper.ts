@@ -1,9 +1,10 @@
 import { FileIntegrityCheck, IntegrityStatus, type ScanType, type FileIntegritySeverity } from '@/domain/entities/FileIntegrityCheck';
 import { AgentId } from '@/domain/value-objects/AgentId';
 import { TenantId } from '@/domain/value-objects/TenantId';
+import type { FileIntegrityInsert } from '@/infrastructure/types/supabase-tables';
 
 export class FileIntegrityMapper {
-  static toDomain(row: any): FileIntegrityCheck {
+  static toDomain(row: Record<string, unknown>): FileIntegrityCheck {
     return FileIntegrityCheck.reconstitute({
       id: row.id as string,
       agentId: AgentId.create(row.agent_id as string).value,
@@ -21,7 +22,7 @@ export class FileIntegrityMapper {
     });
   }
 
-  static toPersistence(entity: FileIntegrityCheck): Record<string, unknown> {
+  static toPersistence(entity: FileIntegrityCheck): FileIntegrityInsert {
     return {
       id: entity.id,
       agent_id: entity.agentId.toString(),

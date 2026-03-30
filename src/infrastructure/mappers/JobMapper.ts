@@ -1,11 +1,16 @@
 import { Job, JobType, JobStatus, JobPriority } from '@/domain/entities/Job';
 import { JobExecution, type JobExecutionProps } from '@/domain/entities/JobExecution';
+import type { Database } from '@/integrations/supabase/types';
+
+type JobInsert = Database['public']['Tables']['jobs']['Insert'];
+type JobExecutionInsert = Database['public']['Tables']['job_executions']['Insert'];
 
 /**
  * Maps between Supabase DB rows and Job/JobExecution domain entities.
  */
 export class JobMapper {
-  static toDomain(row: Record<string, any>): Job {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static toDomain(row: any): Job {
     return Job.reconstitute({
       id: row.id,
       agentId: row.agent_id,
@@ -13,39 +18,40 @@ export class JobMapper {
       type: row.type ?? 'run_script',
       payload: row.payload ?? {},
       priority: row.priority ?? JobPriority.NORMAL,
-      timeoutSeconds: row.timeout_seconds ?? 300,
+      timeoutSeconds: row.execution_time_seconds ?? 300,
       status: row.status ?? 'pending',
       retryCount: row.retry_count ?? 0,
-      maxRetries: row.max_retries ?? 3,
+      maxRetries: row.delivery_attempts ?? 3,
       deliveredAt: row.delivered_at ?? null,
       startedAt: row.started_at ?? null,
       completedAt: row.completed_at ?? null,
-      result: row.result ?? null,
-      error: row.error ?? null,
+      result: row.output ?? null,
+      error: row.error_message ?? null,
     });
   }
 
-  static toPersistence(entity: Job): Record<string, any> {
+  static toPersistence(entity: Job): JobInsert {
     return {
       id: entity.id.value,
       agent_id: entity.agentId.value,
+      agent_name: '',
       tenant_id: entity.tenantId.value,
       type: entity.type,
       status: entity.status,
       priority: entity.priority,
       payload: entity.payload,
-      timeout_seconds: entity.timeoutSeconds,
+      payload_hash: '',
       retry_count: entity.retryCount,
-      max_retries: entity.maxRetries,
       delivered_at: entity.deliveredAt?.toISOString() ?? null,
       started_at: entity.startedAt?.toISOString() ?? null,
       completed_at: entity.completedAt?.toISOString() ?? null,
-      result: entity.result,
-      error: entity.error,
+      output: entity.result,
+      error_message: entity.error,
     };
   }
 
-  static executionToDomain(row: Record<string, any>): JobExecution {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static executionToDomain(row: any): JobExecution {
     const props: JobExecutionProps = {
       id: row.id,
       jobId: row.job_id,
@@ -57,23 +63,25 @@ export class JobMapper {
       startedAt: new Date(row.started_at ?? row.created_at),
       completedAt: row.completed_at ? new Date(row.completed_at) : null,
       exitCode: row.exit_code ?? null,
-      stdout: row.stdout ?? null,
-      stderr: row.stderr ?? null,
+      stdout: null,
+      stderr: null,
       outputHash: row.output_hash ?? null,
       resultSignature: row.result_signature ?? null,
       signatureVerified: row.signature_verified ?? false,
-      durationMs: row.duration_ms ?? null,
+      durationMs: row.execution_time_seconds ? row.execution_time_seconds * 1000 : null,
       createdAt: new Date(row.created_at),
     };
 
     return JobExecution.reconstitute(props);
   }
 
-  static executionToPersistence(entity: JobExecution): Record<string, any> {
+  static executionToPersistence(entity: JobExecution): JobExecutionInsert {
     return {
       id: entity.id.value,
       job_id: entity.jobId.value,
       agent_id: entity.agentId.value,
+      agent_name: '',
+      agent_version: '',
       tenant_id: entity.tenantId.value,
       execution_index: entity.executionIndex,
       nonce: entity.nonce,
@@ -81,12 +89,11 @@ export class JobMapper {
       started_at: entity.startedAt.toISOString(),
       completed_at: entity.completedAt?.toISOString() ?? null,
       exit_code: entity.exitCode,
-      stdout: entity.stdout,
-      stderr: entity.stderr,
       output_hash: entity.outputHash,
       result_signature: entity.resultSignature,
       signature_verified: entity.signatureVerified,
-      duration_ms: entity.durationMs,
+      execution_time_seconds: entity.durationMs ? Math.round(entity.durationMs / 1000) : null,
+      previous_execution_hash: null,
     };
   }
 }

@@ -14,7 +14,7 @@ export class SupabaseAgentRepository implements AgentRepository {
     // TUNING v11: slim select — exclude heavy JSON columns
     const { data, error } = await supabase
       .from('agents')
-      .select('id, tenant_id, agent_name, status, enrolled_at, last_heartbeat, last_seen, agent_version, os_type, os_version, platform, ip_address, hostname, scheduling_paused, scheduling_paused_reason, is_isolated, is_throttled, safe_mode_reason, force_update, hmac_secret, created_at, updated_at')
+      .select('id, tenant_id, agent_name, status, enrolled_at, last_heartbeat, agent_version, os_type, os_version, hostname, scheduling_paused, scheduling_paused_reason, is_isolated, is_throttled, safe_mode_reason, hmac_secret')
       .eq('id', id.value)
       .maybeSingle();
 
@@ -25,7 +25,7 @@ export class SupabaseAgentRepository implements AgentRepository {
   async findByNameAndTenant(name: string, tenantId: TenantId): Promise<Agent | null> {
     const { data, error } = await supabase
       .from('agents')
-      .select('id, tenant_id, agent_name, status, enrolled_at, last_heartbeat, last_seen, agent_version, os_type, os_version, platform, ip_address, hostname, scheduling_paused, scheduling_paused_reason, is_isolated, is_throttled, safe_mode_reason, force_update, hmac_secret, created_at, updated_at')
+      .select('id, tenant_id, agent_name, status, enrolled_at, last_heartbeat, agent_version, os_type, os_version, hostname, scheduling_paused, scheduling_paused_reason, is_isolated, is_throttled, safe_mode_reason, hmac_secret')
       .eq('agent_name', name)
       .eq('tenant_id', tenantId.value)
       .maybeSingle();
@@ -37,7 +37,7 @@ export class SupabaseAgentRepository implements AgentRepository {
   async findActiveByTenant(tenantId: TenantId): Promise<Agent[]> {
     const { data, error } = await supabase
       .from('agents')
-      .select('id, tenant_id, agent_name, status, enrolled_at, last_heartbeat, last_seen, agent_version, os_type, os_version, platform, ip_address, hostname, scheduling_paused, scheduling_paused_reason, is_isolated, is_throttled, safe_mode_reason, force_update, created_at, updated_at')
+      .select('id, tenant_id, agent_name, status, enrolled_at, last_heartbeat, agent_version, os_type, os_version, hostname, scheduling_paused, scheduling_paused_reason, is_isolated, is_throttled, safe_mode_reason')
       .eq('tenant_id', tenantId.value)
       .eq('status', 'active')
       .limit(1000);
@@ -49,9 +49,9 @@ export class SupabaseAgentRepository implements AgentRepository {
   async findOfflineAgents(thresholdDate: Date): Promise<Agent[]> {
     const { data, error } = await supabase
       .from('agents')
-      .select('id, tenant_id, agent_name, status, last_heartbeat, last_seen, agent_version, platform, scheduling_paused, is_isolated, created_at, updated_at')
+      .select('id, tenant_id, agent_name, status, last_heartbeat, agent_version, scheduling_paused, is_isolated')
       .eq('status', 'active')
-      .lt('last_seen', thresholdDate.toISOString())
+      .lt('last_heartbeat', thresholdDate.toISOString())
       .limit(500);
 
     if (error || !data) return [];
@@ -62,8 +62,7 @@ export class SupabaseAgentRepository implements AgentRepository {
     const persistence = AgentMapper.toPersistence(agent);
     const { error } = await supabase
       .from('agents')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .upsert(persistence as any);
+      .upsert(persistence);
 
     if (error) {
       throw new Error(`Failed to save agent: ${error.message}`);
