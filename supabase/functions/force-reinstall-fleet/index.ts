@@ -200,4 +200,4 @@ if ($task) {
       ]
     }
   };
-}, { methods: ['POST'] });
+}, { methods: ['POST'], rateLimit: { maxRequests: 3, windowMinutes: 5 } });

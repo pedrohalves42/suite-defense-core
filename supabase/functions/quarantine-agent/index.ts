@@ -1,12 +1,9 @@
 /**
- * Quarantine Agent - Cleaned up to use assertInternalCaller + Zod validation
- * Auth: X-Internal-Secret (internal/cron only)
+ * Quarantine Agent - Migrated to serveInternal middleware
+ * Auth: X-Internal-Secret / service_role (internal/cron only)
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
-import { handleException } from '../_shared/error-handler.ts';
+import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { createAuditLog } from '../_shared/audit.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
@@ -21,144 +18,122 @@ const QuarantineSchema = z.object({
   restrict_file_access: z.boolean().default(true),
 });
 
-Deno.serve(async (req: Request) => {
-  const origin = req.headers.get("origin");
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: buildCorsHeaders(origin) });
-  }
+serveInternal(async (_req, ctx) => {
+  const { supabase, requestId, body } = ctx;
 
-  const requestId = crypto.randomUUID();
-
-  try {
-    // Auth: internal only
-    const authError = await assertInternalCaller(req);
-    if (authError) return authError;
-
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
-
-    // Validate input
-    const rawBody = await req.json();
-    const parsed = QuarantineSchema.safeParse(rawBody);
-    if (!parsed.success) {
-      return new Response(
-        JSON.stringify({ error: parsed.error.flatten().fieldErrors }),
-        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const { agent_id, quarantine_reason, severity, duration_hours, restrict_network, restrict_processes, restrict_file_access } = parsed.data;
-
-    // Validate agent exists
-    const { data: agent, error: agentError } = await supabase
-      .from('agents')
-      .select('id, agent_name, tenant_id, status')
-      .eq('id', agent_id)
-      .single();
-
-    if (agentError || !agent) {
-      return new Response(
-        JSON.stringify({ error: 'Agent not found' }),
-        { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      );
-    }
-
-    logger.info('[quarantine-agent] Quarantining agent', {
-      requestId, agentId: agent_id, agentName: agent.agent_name, reason: quarantine_reason,
-    });
-
-    const quarantineEnd = new Date(Date.now() + duration_hours * 60 * 60 * 1000);
-
-    // Create quarantine record
-    const { data: record, error: qError } = await supabase
-      .from('agent_quarantine')
-      .insert({
-        agent_id,
-        tenant_id: agent.tenant_id,
-        quarantine_reason,
-        severity,
-        duration_hours,
-        restrict_network,
-        restrict_processes,
-        restrict_file_access,
-        quarantined_by: 'system',
-        quarantine_end: quarantineEnd.toISOString(),
-        status: 'active',
-      })
-      .select('id')
-      .single();
-
-    if (qError) throw new Error(`Failed to create quarantine: ${qError.message}`);
-
-    // Update agent status
-    await supabase
-      .from('agents')
-      .update({ status: 'quarantined', updated_at: new Date().toISOString() })
-      .eq('id', agent_id);
-
-    // Cancel pending/queued jobs
-    await supabase
-      .from('jobs')
-      .update({
-        status: 'cancelled',
-        error_message: `[CANCELLED:AGENT_QUARANTINED] ${quarantine_reason}`,
-        completed_at: new Date().toISOString(),
-      })
-      .eq('agent_id', agent_id)
-      .in('status', ['pending', 'queued']);
-
-    // Create system alert
-    await supabase.from('system_alerts').insert({
-      tenant_id: agent.tenant_id,
-      agent_id,
-      alert_type: 'quarantine',
-      severity,
-      title: 'Agent Quarantined',
-      message: `Agent "${agent.agent_name}" quarantined: ${quarantine_reason}`,
-      details: {
-        quarantine_id: record?.id,
-        duration_hours,
-        restrict_network,
-        restrict_processes,
-        restrict_file_access,
-        quarantine_end: quarantineEnd.toISOString(),
-      },
-    });
-
-    // Audit log
-    await createAuditLog({
-      supabase,
-      tenantId: agent.tenant_id,
-      action: 'quarantine_agent',
-      resourceType: 'agents',
-      resourceId: agent_id,
-      details: { quarantine_reason, severity, duration_hours },
-      request: req,
-      success: true,
-    });
-
-    // Domain event
-    await supabase.from('domain_events').insert({
-      aggregate_id: agent_id,
-      aggregate_type: 'agent',
-      event_type: 'AgentQuarantined',
-      payload: { reason: quarantine_reason, severity, duration_hours, quarantine_id: record?.id },
-      occurred_on: new Date().toISOString(),
-      tenant_id: agent.tenant_id,
-    });
-
+  // Validate input
+  const parsed = QuarantineSchema.safeParse(body);
+  if (!parsed.success) {
     return new Response(
-      JSON.stringify({
-        success: true,
-        quarantine_id: record?.id,
-        agent_name: agent.agent_name,
-        quarantine_end: quarantineEnd.toISOString(),
-      }),
-      { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: parsed.error.flatten().fieldErrors }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
-    return handleException(error, requestId, 'quarantine-agent');
   }
+
+  const { agent_id, quarantine_reason, severity, duration_hours, restrict_network, restrict_processes, restrict_file_access } = parsed.data;
+
+  // Validate agent exists
+  const { data: agent, error: agentError } = await supabase
+    .from('agents')
+    .select('id, agent_name, tenant_id, status')
+    .eq('id', agent_id)
+    .single();
+
+  if (agentError || !agent) {
+    return new Response(
+      JSON.stringify({ error: 'Agent not found' }),
+      { status: 404, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  logger.info('[quarantine-agent] Quarantining agent', {
+    requestId, agentId: agent_id, agentName: agent.agent_name, reason: quarantine_reason,
+  });
+
+  const quarantineEnd = new Date(Date.now() + duration_hours * 60 * 60 * 1000);
+
+  // Create quarantine record
+  const { data: record, error: qError } = await supabase
+    .from('agent_quarantine')
+    .insert({
+      agent_id,
+      tenant_id: agent.tenant_id,
+      quarantine_reason,
+      severity,
+      duration_hours,
+      restrict_network,
+      restrict_processes,
+      restrict_file_access,
+      quarantined_by: 'system',
+      quarantine_end: quarantineEnd.toISOString(),
+      status: 'active',
+    })
+    .select('id')
+    .single();
+
+  if (qError) throw new Error(`Failed to create quarantine: ${qError.message}`);
+
+  // Update agent status
+  await supabase
+    .from('agents')
+    .update({ status: 'quarantined', updated_at: new Date().toISOString() })
+    .eq('id', agent_id);
+
+  // Cancel pending/queued jobs
+  await supabase
+    .from('jobs')
+    .update({
+      status: 'cancelled',
+      error_message: `[CANCELLED:AGENT_QUARANTINED] ${quarantine_reason}`,
+      completed_at: new Date().toISOString(),
+    })
+    .eq('agent_id', agent_id)
+    .in('status', ['pending', 'queued']);
+
+  // Create system alert
+  await supabase.from('system_alerts').insert({
+    tenant_id: agent.tenant_id,
+    agent_id,
+    alert_type: 'quarantine',
+    severity,
+    title: 'Agent Quarantined',
+    message: `Agent "${agent.agent_name}" quarantined: ${quarantine_reason}`,
+    details: {
+      quarantine_id: record?.id,
+      duration_hours,
+      restrict_network,
+      restrict_processes,
+      restrict_file_access,
+      quarantine_end: quarantineEnd.toISOString(),
+    },
+  });
+
+  // Audit log
+  await createAuditLog({
+    supabase,
+    tenantId: agent.tenant_id,
+    action: 'quarantine_agent',
+    resourceType: 'agents',
+    resourceId: agent_id,
+    details: { quarantine_reason, severity, duration_hours },
+    request: _req,
+    success: true,
+  });
+
+  // Domain event
+  await supabase.from('domain_events').insert({
+    aggregate_id: agent_id,
+    aggregate_type: 'agent',
+    event_type: 'AgentQuarantined',
+    payload: { reason: quarantine_reason, severity, duration_hours, quarantine_id: record?.id },
+    occurred_on: new Date().toISOString(),
+    tenant_id: agent.tenant_id,
+  });
+
+  return {
+    success: true,
+    quarantine_id: record?.id,
+    agent_name: agent.agent_name,
+    quarantine_end: quarantineEnd.toISOString(),
+  };
 });

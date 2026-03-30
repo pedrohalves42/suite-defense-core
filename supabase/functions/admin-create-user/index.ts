@@ -226,5 +226,5 @@ serveTenant(async (_req, ctx) => {
     { status: 201, headers: { 'Content-Type': 'application/json' } }
   );
 }, {
-  skipTenantValidation: true,
+  skipTenantValidation: true, rateLimit: { maxRequests: 10, windowMinutes: 1 },
 });

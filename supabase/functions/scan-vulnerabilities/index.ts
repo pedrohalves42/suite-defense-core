@@ -427,7 +427,7 @@ serveTenant(async (req, ctx) => {
       { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
-});
+}, { rateLimit: { maxRequests: 5, windowMinutes: 1 } });
 
 // Extract searchable keywords from software name with improved normalization
 function extractKeywords(name: string): string[] {

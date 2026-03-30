@@ -1,15 +1,15 @@
+/**
+ * AI System Analyzer - Migrated to serveInternal middleware
+ * Auth: X-Internal-Secret / service_role (cron only)
+ */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
+import { serveInternal } from '../_shared/serve-tenant.ts';
 import { sanitizeForAI, anonymizeAgentName } from '../_shared/ai-sanitizer.ts';
 import { callAIJson, getAIProviderHealth, type AIMessage } from '../_shared/ai-provider-helper.ts';
 import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from '../_shared/ai-metrics.ts';
 import { persistAIMetrics } from '../_shared/ai-metrics-persistence.ts';
 import { AIEvidence, buildEvidence, calculateConfidence, generateReasoningSummary, extractDataSources } from '../_shared/ai-evidence-types.ts';
 import { logger } from '../_shared/logger.ts';
-
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 interface AnalysisData {
   problematicJobs: Array<Record<string, unknown>>;
@@ -123,331 +123,279 @@ async function incrementAIQuotaUsage(
   }
 }
 
-Deno.serve(async (req) => {
-  const origin = req.headers.get("origin");
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: buildCorsHeaders(origin) });
-  }
-
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+serveInternal(async (_req, ctx) => {
+  const { supabase } = ctx;
   const startedAt = Date.now();
 
-  try {
-    // KILL SWITCH CHECK (ADR-FINAL) - Halt all automation if system is in halt_jobs mode
-    const { data: systemMode } = await supabase.rpc('get_system_mode_safe');
-    if (systemMode === 'halt_jobs') {
-      logger.info('[ai-system-analyzer] SYSTEM_HALTED: Kill switch active, skipping analysis');
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'SYSTEM_HALTED', 
-          message: 'Kill switch is active. Set system_state.mode to normal to resume.' 
-        }),
-        { status: 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      );
-    }
-
-    logger.info('[ai-system-analyzer] Starting analysis cycle...');
-
-    // Buscar todos os tenants ativos
-    const { data: tenants, error: tenantsError } = await supabase
-      .from('tenants')
-      .select('id, name');
-
-    if (tenantsError) {
-      logger.error('[ai-system-analyzer] Error fetching tenants:', tenantsError);
-      throw tenantsError;
-    }
-
-    if (!tenants || tenants.length === 0) {
-      logger.info('[ai-system-analyzer] No tenants found, skipping analysis');
-      return new Response(JSON.stringify({ message: 'No tenants to analyze' }), {
-        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
-        status: 200,
-      });
-    }
-
-    logger.info(`[ai-system-analyzer] Analyzing ${tenants.length} tenant(s)`);
-
-    const insights: AIInsight[] = [];
-    const skippedTenants: { id: string; name: string; reason: string }[] = [];
-
-    for (const tenant of tenants) {
-      try {
-        // P0 FIX: Verificar elegibilidade do tenant antes de processar
-        const eligibility = await checkTenantAIEligibility(supabase, tenant.id);
-        
-        if (!eligibility.eligible) {
-          logger.info(`[ai-system-analyzer] Skipping tenant ${tenant.name}: ${eligibility.reason}`);
-          skippedTenants.push({ id: tenant.id, name: tenant.name, reason: eligibility.reason! });
-          continue;
-        }
-
-        logger.info(`[ai-system-analyzer] Analyzing tenant: ${tenant.name} (${tenant.id})`);
-
-        // Coletar dados dos ultimos 7 dias para analise
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - 7);
-
-        // 0. Buscar agentes com hostnames amigaveis para usar em vez de agent_name tecnico
-        const { data: agentsList } = await supabase
-          .from('agents')
-          .select('id, agent_name, hostname, display_name')
-          .eq('tenant_id', tenant.id);
-        
-        // Criar mapa de agent_id -> nome amigavel (prioridade: display_name > hostname > agent_name)
-        const agentFriendlyNames = new Map<string, string>();
-        for (const agent of (agentsList || [])) {
-          const friendlyName = agent.display_name || agent.hostname || agent.agent_name;
-          agentFriendlyNames.set(agent.id, friendlyName);
-        }
-
-        // 1. Jobs problematicos
-        const { data: problematicJobs } = await supabase
-          .from('v_problematic_jobs')
-          .select('*')
-          .eq('tenant_id', tenant.id)
-          .gte('created_at', cutoffDate.toISOString())
-          .limit(100);
-
-        // 2. Metricas de instalacao
-        const { data: installationStats } = await supabase
-          .from('installation_analytics')
-          .select('*')
-          .eq('tenant_id', tenant.id)
-          .gte('created_at', cutoffDate.toISOString())
-          .order('created_at', { ascending: false })
-          .limit(500);
-
-        // 3. Metricas de agentes
-        const { data: agentMetrics } = await supabase
-          .from('agent_system_metrics_partitioned')
-          .select('*')
-          .eq('tenant_id', tenant.id)
-          .gte('collected_at', cutoffDate.toISOString())
-          .order('collected_at', { ascending: false })
-          .limit(500);
-        
-        // Enriquecer metricas com nomes amigaveis
-        const enrichedAgentMetrics = (agentMetrics || []).map(metric => ({
-          ...metric,
-          friendly_name: agentFriendlyNames.get(metric.agent_id) || metric.agent_name || metric.agent_id.slice(0, 8)
-        }));
-
-        // 4. Alertas do sistema
-        const { data: systemAlerts } = await supabase
-          .from('system_alerts')
-          .select('*')
-          .eq('tenant_id', tenant.id)
-          .gte('created_at', cutoffDate.toISOString())
-          .order('created_at', { ascending: false })
-          .limit(100);
-
-        // 5. Estatisticas de jobs
-        const { data: jobStats } = await supabase
-          .from('jobs')
-          .select('status, type, created_at')
-          .eq('tenant_id', tenant.id)
-          .gte('created_at', cutoffDate.toISOString())
-          .limit(1000); // [OK]  CRITICO: Previne DoS em escala (P0 fix)
-
-        const analysisData: AnalysisData = {
-          problematicJobs: problematicJobs || [],
-          failurePatterns: installationStats?.filter(s => s.success === false) || [],
-          agentMetrics: enrichedAgentMetrics || [],
-          installationStats: installationStats || [],
-          systemAlerts: systemAlerts || [],
-        };
-
-        // Se nao ha dados suficientes, pular este tenant
-        const totalDataPoints = 
-          analysisData.problematicJobs.length +
-          analysisData.failurePatterns.length +
-          analysisData.agentMetrics.length +
-          analysisData.systemAlerts.length;
-
-        if (totalDataPoints < 5) {
-          logger.info(`[ai-system-analyzer] Insufficient data for tenant ${tenant.name}, skipping`);
-          continue;
-        }
-
-        // Chamar IA para analise
-        const tenantInsights = await analyzeWithAI(tenant.id, tenant.name, analysisData, jobStats || []);
-        
-        // P0 FIX: Incrementar quota apos gerar insights
-        if (tenantInsights.length > 0) {
-          await incrementAIQuotaUsage(supabase, tenant.id, tenantInsights.length);
-        }
-        
-        insights.push(...tenantInsights);
-
-      } catch (tenantError) {
-        logger.error(`[ai-system-analyzer] Error analyzing tenant ${tenant.name}:`, tenantError);
-        // Continuar com proximo tenant em caso de erro
-        continue;
-      }
-    }
-
-    // Deduplication: auto-resolve existing open insights with same title before inserting new ones
-    if (insights.length > 0) {
-      const newTitles = insights.map(i => i.title);
-      const tenantIds = [...new Set(insights.map(i => i.tenant_id))];
-      
-      for (const tid of tenantIds) {
-        const titlesForTenant = insights.filter(i => i.tenant_id === tid).map(i => i.title);
-        const { error: dedupError } = await supabase
-          .from('ai_insights')
-          .update({
-            status: 'resolved',
-            resolved_at: new Date().toISOString(),
-            resolution_method: 'manual_dismiss',
-            final_outcome: 'no_action_required',
-            acknowledged: true,
-            acknowledged_at: new Date().toISOString(),
-          })
-          .eq('tenant_id', tid)
-          .in('status', ['open', 'in_progress'])
-          .in('title', titlesForTenant);
-        
-        if (dedupError) {
-          logger.warn('[ai-system-analyzer] Dedup error:', dedupError.message);
-        }
-      }
-    }
-
-    // Salvar insights no banco
-    if (insights.length > 0) {
-      const { data: insertedInsights, error: insertError } = await supabase
-        .from('ai_insights')
-        .insert(insights)
-        .select();
-
-      if (insertError) {
-        logger.error('[ai-system-analyzer] Error saving insights:', insertError);
-        throw insertError;
-      }
-
-      logger.info(`[ai-system-analyzer] Successfully saved ${insights.length} insights (deduped old ones)`);
-
-      // FASE 2: Gerar acoes sugeridas baseadas nos insights
-      if (insertedInsights && insertedInsights.length > 0) {
-        const suggestedActions = await generateSuggestedActions(insertedInsights);
-        
-        if (suggestedActions.length > 0) {
-          const { error: actionError } = await supabase
-            .from('ai_actions')
-            .insert(suggestedActions);
-
-          if (actionError) {
-            logger.error(`[ai-system-analyzer] Error inserting suggested actions:`, actionError);
-          } else {
-            logger.info(`[ai-system-analyzer] Generated ${suggestedActions.length} suggested actions`);
-          }
-        }
-
-        // FASE 2: Dispatch insights to ai-insight-dispatcher pipeline
-        for (const insight of insertedInsights) {
-          try {
-            const dispatchResponse = await supabase.functions.invoke('ai-insight-dispatcher', {
-              body: {
-                insight: {
-                  ...insight,
-                  auto_action_mode: insight.severity === 'critical' ? 'auto_with_approval' : 'suggest',
-                  recommended_actions: [],
-                },
-                source: 'ai-system-analyzer',
-              },
-            });
-            
-            if (dispatchResponse.error) {
-              logger.warn(`[ai-system-analyzer] Dispatch failed for insight ${insight.id}:`, dispatchResponse.error);
-            }
-          } catch (dispatchErr) {
-            logger.warn('[ai-system-analyzer] Insight dispatch error:', dispatchErr);
-          }
-        }
-        logger.info(`[ai-system-analyzer] Dispatched ${insertedInsights.length} insights to pipeline`);
-      }
-    } else {
-      logger.info('[ai-system-analyzer] No insights generated');
-    }
-
-    // ?? AUTO-RESOLVE: Close stale in_progress tasks (>48h without progress) ??
-    try {
-      const { data: resolvedTasks, error: resolveError } = await supabase
-        .from('tasks')
-        .update({
-          status: 'resolved',
-          closed_at: new Date().toISOString(),
-          closure_reason: 'Auto-resolved: condicao normalizada ou tarefa sem progresso por 48h',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('status', 'in_progress')
-        .lt('updated_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())
-        .select('id');
-
-      if (resolveError) {
-        logger.warn('[ai-system-analyzer] Auto-resolve tasks error:', resolveError.message);
-      } else if (resolvedTasks && resolvedTasks.length > 0) {
-        logger.info(`[ai-system-analyzer] Auto-resolved ${resolvedTasks.length} stale in_progress tasks`);
-      }
-    } catch (e) {
-      logger.warn('[ai-system-analyzer] Auto-resolve tasks failed:', e);
-    }
-
-    const result = { 
-      success: true, 
-      insightsGenerated: insights.length,
-      tenantsAnalyzed: tenants.length - skippedTenants.length,
-      tenantsSkipped: skippedTenants.length,
-      skippedDetails: skippedTenants.map(t => ({ name: t.name, reason: t.reason }))
-    };
-
-    // Log observability
-    await supabase.rpc('log_scheduled_job_run', {
-      p_job_key: 'ai-system-analyzer',
-      p_success: true,
-      p_duration_ms: Date.now() - startedAt,
-      p_result: result,
-      p_processed_count: insights.length,
-      p_job_source: 'cron'
-    });
-
-    return new Response(
-      JSON.stringify(result), 
-      {
-        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
-
-  } catch (error) {
-    logger.error('[ai-system-analyzer] Fatal error:', error);
-    
-    // Log error observability
-    try {
-      await supabase.rpc('log_scheduled_job_run', {
-        p_job_key: 'ai-system-analyzer',
-        p_success: false,
-        p_duration_ms: Date.now() - startedAt,
-        p_error: error instanceof Error ? error.message : 'Unknown error',
-        p_result: null,
-        p_processed_count: 0,
-        p_job_source: 'cron'
-      });
-    } catch (e) { logger.warn('[ai-system-analyzer] Failed to log job run:', e); }
-    
+  // KILL SWITCH CHECK (ADR-FINAL)
+  const { data: systemMode } = await supabase.rpc('get_system_mode_safe');
+  if (systemMode === 'halt_jobs') {
+    logger.info('[ai-system-analyzer] SYSTEM_HALTED: Kill switch active, skipping analysis');
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      }), 
-      {
-        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
-        status: 500,
-      }
+        error: 'SYSTEM_HALTED', 
+        message: 'Kill switch is active. Set system_state.mode to normal to resume.' 
+      }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
     );
   }
+
+  logger.info('[ai-system-analyzer] Starting analysis cycle...');
+
+  // Buscar todos os tenants ativos
+  const { data: tenants, error: tenantsError } = await supabase
+    .from('tenants')
+    .select('id, name');
+
+  if (tenantsError) {
+    logger.error('[ai-system-analyzer] Error fetching tenants:', tenantsError);
+    throw tenantsError;
+  }
+
+  if (!tenants || tenants.length === 0) {
+    logger.info('[ai-system-analyzer] No tenants found, skipping analysis');
+    return { message: 'No tenants to analyze' };
+  }
+
+  logger.info(`[ai-system-analyzer] Analyzing ${tenants.length} tenant(s)`);
+
+  const insights: AIInsight[] = [];
+  const skippedTenants: { id: string; name: string; reason: string }[] = [];
+
+  for (const tenant of tenants) {
+    try {
+      const eligibility = await checkTenantAIEligibility(supabase, tenant.id);
+      
+      if (!eligibility.eligible) {
+        logger.info(`[ai-system-analyzer] Skipping tenant ${tenant.name}: ${eligibility.reason}`);
+        skippedTenants.push({ id: tenant.id, name: tenant.name, reason: eligibility.reason! });
+        continue;
+      }
+
+      logger.info(`[ai-system-analyzer] Analyzing tenant: ${tenant.name} (${tenant.id})`);
+
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - 7);
+
+      // Buscar agentes com hostnames amigaveis
+      const { data: agentsList } = await supabase
+        .from('agents')
+        .select('id, agent_name, hostname, display_name')
+        .eq('tenant_id', tenant.id);
+      
+      const agentFriendlyNames = new Map<string, string>();
+      for (const agent of (agentsList || [])) {
+        const friendlyName = agent.display_name || agent.hostname || agent.agent_name;
+        agentFriendlyNames.set(agent.id, friendlyName);
+      }
+
+      // 1. Jobs problematicos
+      const { data: problematicJobs } = await supabase
+        .from('v_problematic_jobs')
+        .select('*')
+        .eq('tenant_id', tenant.id)
+        .gte('created_at', cutoffDate.toISOString())
+        .limit(100);
+
+      // 2. Metricas de instalacao
+      const { data: installationStats } = await supabase
+        .from('installation_analytics')
+        .select('*')
+        .eq('tenant_id', tenant.id)
+        .gte('created_at', cutoffDate.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(500);
+
+      // 3. Metricas de agentes
+      const { data: agentMetrics } = await supabase
+        .from('agent_system_metrics_partitioned')
+        .select('*')
+        .eq('tenant_id', tenant.id)
+        .gte('collected_at', cutoffDate.toISOString())
+        .order('collected_at', { ascending: false })
+        .limit(500);
+      
+      const enrichedAgentMetrics = (agentMetrics || []).map(metric => ({
+        ...metric,
+        friendly_name: agentFriendlyNames.get(metric.agent_id) || metric.agent_name || metric.agent_id.slice(0, 8)
+      }));
+
+      // 4. Alertas do sistema
+      const { data: systemAlerts } = await supabase
+        .from('system_alerts')
+        .select('*')
+        .eq('tenant_id', tenant.id)
+        .gte('created_at', cutoffDate.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      // 5. Estatisticas de jobs
+      const { data: jobStats } = await supabase
+        .from('jobs')
+        .select('status, type, created_at')
+        .eq('tenant_id', tenant.id)
+        .gte('created_at', cutoffDate.toISOString())
+        .limit(1000);
+
+      const analysisData: AnalysisData = {
+        problematicJobs: problematicJobs || [],
+        failurePatterns: installationStats?.filter(s => s.success === false) || [],
+        agentMetrics: enrichedAgentMetrics || [],
+        installationStats: installationStats || [],
+        systemAlerts: systemAlerts || [],
+      };
+
+      const totalDataPoints = 
+        analysisData.problematicJobs.length +
+        analysisData.failurePatterns.length +
+        analysisData.agentMetrics.length +
+        analysisData.systemAlerts.length;
+
+      if (totalDataPoints < 5) {
+        logger.info(`[ai-system-analyzer] Insufficient data for tenant ${tenant.name}, skipping`);
+        continue;
+      }
+
+      const tenantInsights = await analyzeWithAI(tenant.id, tenant.name, analysisData, jobStats || []);
+      
+      if (tenantInsights.length > 0) {
+        await incrementAIQuotaUsage(supabase, tenant.id, tenantInsights.length);
+      }
+      
+      insights.push(...tenantInsights);
+
+    } catch (tenantError) {
+      logger.error(`[ai-system-analyzer] Error analyzing tenant ${tenant.name}:`, tenantError);
+      continue;
+    }
+  }
+
+  // Deduplication: auto-resolve existing open insights
+  if (insights.length > 0) {
+    const tenantIds = [...new Set(insights.map(i => i.tenant_id))];
+    
+    for (const tid of tenantIds) {
+      const titlesForTenant = insights.filter(i => i.tenant_id === tid).map(i => i.title);
+      const { error: dedupError } = await supabase
+        .from('ai_insights')
+        .update({
+          status: 'resolved',
+          resolved_at: new Date().toISOString(),
+          resolution_method: 'manual_dismiss',
+          final_outcome: 'no_action_required',
+          acknowledged: true,
+          acknowledged_at: new Date().toISOString(),
+        })
+        .eq('tenant_id', tid)
+        .in('status', ['open', 'in_progress'])
+        .in('title', titlesForTenant);
+      
+      if (dedupError) {
+        logger.warn('[ai-system-analyzer] Dedup error:', dedupError.message);
+      }
+    }
+  }
+
+  // Salvar insights no banco
+  if (insights.length > 0) {
+    const { data: insertedInsights, error: insertError } = await supabase
+      .from('ai_insights')
+      .insert(insights)
+      .select();
+
+    if (insertError) {
+      logger.error('[ai-system-analyzer] Error saving insights:', insertError);
+      throw insertError;
+    }
+
+    logger.info(`[ai-system-analyzer] Successfully saved ${insights.length} insights (deduped old ones)`);
+
+    // FASE 2: Gerar acoes sugeridas
+    if (insertedInsights && insertedInsights.length > 0) {
+      const suggestedActions = await generateSuggestedActions(insertedInsights);
+      
+      if (suggestedActions.length > 0) {
+        const { error: actionError } = await supabase
+          .from('ai_actions')
+          .insert(suggestedActions);
+
+        if (actionError) {
+          logger.error(`[ai-system-analyzer] Error inserting suggested actions:`, actionError);
+        } else {
+          logger.info(`[ai-system-analyzer] Generated ${suggestedActions.length} suggested actions`);
+        }
+      }
+
+      // Dispatch insights to pipeline
+      for (const insight of insertedInsights) {
+        try {
+          const dispatchResponse = await supabase.functions.invoke('ai-insight-dispatcher', {
+            body: {
+              insight: {
+                ...insight,
+                auto_action_mode: insight.severity === 'critical' ? 'auto_with_approval' : 'suggest',
+                recommended_actions: [],
+              },
+              source: 'ai-system-analyzer',
+            },
+          });
+          
+          if (dispatchResponse.error) {
+            logger.warn(`[ai-system-analyzer] Dispatch failed for insight ${insight.id}:`, dispatchResponse.error);
+          }
+        } catch (dispatchErr) {
+          logger.warn('[ai-system-analyzer] Insight dispatch error:', dispatchErr);
+        }
+      }
+      logger.info(`[ai-system-analyzer] Dispatched ${insertedInsights.length} insights to pipeline`);
+    }
+  } else {
+    logger.info('[ai-system-analyzer] No insights generated');
+  }
+
+  // AUTO-RESOLVE stale tasks
+  try {
+    const { data: resolvedTasks, error: resolveError } = await supabase
+      .from('tasks')
+      .update({
+        status: 'resolved',
+        closed_at: new Date().toISOString(),
+        closure_reason: 'Auto-resolved: condicao normalizada ou tarefa sem progresso por 48h',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('status', 'in_progress')
+      .lt('updated_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())
+      .select('id');
+
+    if (resolveError) {
+      logger.warn('[ai-system-analyzer] Auto-resolve tasks error:', resolveError.message);
+    } else if (resolvedTasks && resolvedTasks.length > 0) {
+      logger.info(`[ai-system-analyzer] Auto-resolved ${resolvedTasks.length} stale in_progress tasks`);
+    }
+  } catch (e) {
+    logger.warn('[ai-system-analyzer] Auto-resolve tasks failed:', e);
+  }
+
+  const result = { 
+    success: true, 
+    insightsGenerated: insights.length,
+    tenantsAnalyzed: tenants.length - skippedTenants.length,
+    tenantsSkipped: skippedTenants.length,
+    skippedDetails: skippedTenants.map(t => ({ name: t.name, reason: t.reason }))
+  };
+
+  // Log observability
+  await supabase.rpc('log_scheduled_job_run', {
+    p_job_key: 'ai-system-analyzer',
+    p_success: true,
+    p_duration_ms: Date.now() - startedAt,
+    p_result: result,
+    p_processed_count: insights.length,
+    p_job_source: 'cron'
+  });
+
+  return result;
 });
 
 async function analyzeWithAI(
