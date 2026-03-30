@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
 import type { AgentSnapshot } from './useAgentSnapshot';
 import { logger } from '@/lib/logger';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 /**
  * Hook para lista canônica de snapshots (todos os agentes do tenant)
