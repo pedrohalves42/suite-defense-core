@@ -97,7 +97,6 @@ function DurationBar({ current, avg }: { current: number | null; avg: number | n
 }
 
 export default function CronHealthDashboard() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
   const [expandedCron, setExpandedCron] = useState<string | null>(null);
 

@@ -42,7 +42,6 @@ export interface ScheduledJobsHealthSummary {
 }
 
 export function useScheduledJobsHealth() {
-  const adaptiveInterval2 = useAdaptivePolling(300_000);
   const queryClient = useQueryClient();
   const { tenant } = useTenant();
 

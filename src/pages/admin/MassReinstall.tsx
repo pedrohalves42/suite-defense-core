@@ -123,7 +123,6 @@ Write-Host "=== Diagnóstico Concluído ===" -ForegroundColor Cyan
 `;
 
 export default function MassReinstall() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const [copiedScript, setCopiedScript] = useState<string | null>(null);
   const [enrollmentKey, setEnrollmentKey] = useState<string>('');
   const { tenant } = useTenant();

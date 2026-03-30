@@ -47,7 +47,6 @@ interface ProblematicAgent {
 }
 
 export default function ProblematicAgentsManager() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
   const { toast } = useToast();
   const queryClient = useQueryClient();

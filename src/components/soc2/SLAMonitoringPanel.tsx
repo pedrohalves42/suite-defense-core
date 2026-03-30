@@ -35,7 +35,6 @@ function getMetricStatus(current: number, slo: number, sla: number, isLatency: b
 }
 
 export function SLAMonitoringPanel() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
 
   const { data: metrics, isLoading } = useQuery({

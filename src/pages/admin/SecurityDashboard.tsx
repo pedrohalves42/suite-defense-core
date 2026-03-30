@@ -45,7 +45,6 @@ interface FailedAttempt {
 }
 
 export default function SecurityDashboard() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const queryClient = useQueryClient();
   const { isSuperAdmin } = useSuperAdmin();
   const { tenant } = useTenant();

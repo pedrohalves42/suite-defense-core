@@ -10,7 +10,6 @@ import { WifiOff, Clock, Key, AlertTriangle, AlertCircle } from 'lucide-react';
 import type { ProblematicAgent, ProblemCounts, IssueInfo } from './types';
 
 export function useDiagnosticsCenter() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const [searchParams, setSearchParams] = useSearchParams();
   const preSelectedAgentId = searchParams.get('agent');
   const viewMode = searchParams.get('view') as 'default' | 'soc' | null;

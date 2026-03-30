@@ -24,7 +24,6 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 import { useTenant } from "@/hooks/useTenant";
 
 export default function SystemHealth() {
-  const adaptiveInterval2 = useAdaptivePolling(300_000);
   const { tenant, loading: tenantLoading } = useTenant();
 
   const { data: agentStats, isLoading: loadingAgents } = useQuery({
