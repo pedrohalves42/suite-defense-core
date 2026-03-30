@@ -50,7 +50,6 @@ export interface NonExecutionAlert {
 
 // V-1026 FIX: Add tenant_id filter to prevent cross-tenant data leakage
 export function useAgentExecutionHealth() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant, loading } = useTenant();
 
   return useQuery({
