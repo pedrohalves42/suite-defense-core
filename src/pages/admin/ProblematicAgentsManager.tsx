@@ -7,16 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { AlertCircle, Trash2, RotateCcw, AlertTriangle, CheckCircle } from 'lucide-react';
 import { formatBrazilDateTime } from '@/lib/date-utils';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useState } from 'react';
 import { AgentStatusBadges } from '@/components/agents/AgentStatusBadges';
 import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
