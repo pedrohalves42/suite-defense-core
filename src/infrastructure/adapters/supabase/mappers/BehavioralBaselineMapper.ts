@@ -33,7 +33,7 @@ export class BehavioralBaselineMapper {
       agent_id: entity.agentId.toString(),
       tenant_id: entity.tenantId.toString(),
       baseline_type: entity.type,
-      baseline_data: entity.data,
+      baseline_data: entity.data as Json,
       mean_value: entity.thresholds.mean,
       std_deviation: entity.thresholds.stdDev,
       threshold_multiplier: entity.thresholds.multiplier,
