@@ -16,7 +16,7 @@ import { Brain, ThumbsUp, ThumbsDown, AlertTriangle, CheckCircle, MessageSquare,
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { logger } from '@/lib/logger';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 export interface ApprovalMetrics {
   total_actions: number;
