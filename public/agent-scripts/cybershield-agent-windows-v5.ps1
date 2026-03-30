@@ -992,7 +992,12 @@ function Save-SignedHashCache {
             }
             Write-Log "[INTEGRITY] Ed25519 signature verified for hash cache update" "DEBUG"
         } else {
-            Write-Log "[INTEGRITY] Hash cache update has no signature - accepting with warning (legacy server)" "WARN"
+            # v5.0.15-fix-toctou: REJECT unsigned hash updates entirely.
+            # Accepting unsigned hashes from the server causes TOCTOU false positives
+            # because the server computes hash with different normalization (hotfix + CRLF).
+            # The agent's local BOM-safe hash will never match, causing crash-restart loops.
+            Write-Log "[INTEGRITY] Hash cache update has no signature - REJECTING to prevent TOCTOU mismatch (server hash may differ from local)" "WARN"
+            return
         }
 
         $cacheDir = Join-Path $Global:BaseDir "data"
