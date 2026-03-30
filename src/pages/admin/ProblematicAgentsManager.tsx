@@ -280,65 +280,28 @@ export default function ProblematicAgentsManager() {
       )}
 
       {/* Cleanup Single Agent Dialog */}
-      <AlertDialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Resetar computador {selectedAgent?.agent_name ?? 'Unknown'}?</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>Esta ação irá:</p>
-              <ul className="list-disc list-inside space-y-1 text-sm">
-                <li>Invalidar as credenciais atuais ({selectedAgent?.token_count ?? 0})</li>
-                <li>Cancelar verificações pendentes ({selectedAgent?.pending_jobs_count ?? 0})</li>
-                <li>Preparar o computador para nova instalação</li>
-              </ul>
-              <p className="font-semibold mt-3">
-                Após o reset, você precisará reinstalar o programa neste computador.
-              </p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => selectedAgent?.id && cleanupAgent.mutate(selectedAgent.id)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Confirmar Reset
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showCleanupDialog}
+        onOpenChange={setShowCleanupDialog}
+        title={`Resetar computador ${selectedAgent?.agent_name ?? 'Unknown'}?`}
+        description={`Esta ação irá invalidar as credenciais atuais (${selectedAgent?.token_count ?? 0}), cancelar verificações pendentes (${selectedAgent?.pending_jobs_count ?? 0}) e preparar o computador para nova instalação. Após o reset, você precisará reinstalar o programa neste computador.`}
+        confirmLabel="Confirmar Reset"
+        destructive
+        loading={cleanupAgent.isPending}
+        onConfirm={() => selectedAgent?.id && cleanupAgent.mutate(selectedAgent.id)}
+      />
 
       {/* Cleanup All Agents Dialog */}
-      <AlertDialog open={showCleanupAllDialog} onOpenChange={setShowCleanupAllDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Resetar todos os computadores com problema?</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>Esta ação irá resetar <strong>{agents?.length || 0} computadores</strong>:</p>
-              <ul className="list-disc list-inside space-y-1 text-sm">
-                <li>Invalidar todas as credenciais</li>
-                <li>Cancelar todas as verificações pendentes</li>
-                <li>Preparar os computadores para nova instalação</li>
-              </ul>
-              <p className="font-semibold mt-3 text-destructive">
-                ⚠️ Esta é uma operação em massa. Use com cautela!
-              </p>
-              <p className="text-sm">
-                Após o reset, você precisará reinstalar o programa em cada computador individualmente.
-              </p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => cleanupAllAgents.mutate()}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Confirmar Reset em Massa
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showCleanupAllDialog}
+        onOpenChange={setShowCleanupAllDialog}
+        title="Resetar todos os computadores com problema?"
+        description={`Esta ação irá resetar ${agents?.length || 0} computadores: invalidar todas as credenciais, cancelar todas as verificações pendentes e preparar para nova instalação. ⚠️ Esta é uma operação em massa. Use com cautela!`}
+        confirmLabel="Confirmar Reset em Massa"
+        destructive
+        loading={cleanupAllAgents.isPending}
+        onConfirm={() => cleanupAllAgents.mutate()}
+      />
     </div>
   );
 }

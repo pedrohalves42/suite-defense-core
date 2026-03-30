@@ -309,33 +309,16 @@ export function AgentQuickActions({
         </Button>
       </div>
 
-      <AlertDialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Limpar Computador com Problemas</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação irá:
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>Invalidar todas as credenciais do computador <strong>{agentName}</strong></li>
-                <li>Remover tarefas pendentes</li>
-                <li>Resetar o status para reinstalação</li>
-              </ul>
-              <p className="mt-3 text-destructive font-medium">
-                O computador precisará ser reinstalado com uma nova chave de instalação.
-              </p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => cleanupMutation.mutate()}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Confirmar Limpeza
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showCleanupDialog}
+        onOpenChange={setShowCleanupDialog}
+        title="Limpar Computador com Problemas"
+        description={`Esta ação irá invalidar todas as credenciais do computador ${agentName}, remover tarefas pendentes e resetar para reinstalação. O computador precisará ser reinstalado com uma nova chave.`}
+        confirmLabel="Confirmar Limpeza"
+        destructive
+        loading={cleanupMutation.isPending}
+        onConfirm={() => cleanupMutation.mutate()}
+      />
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent className="max-w-lg">

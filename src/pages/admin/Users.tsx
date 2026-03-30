@@ -326,39 +326,23 @@ export default function Users() {
         )}
       </EnterpriseCard>
 
-      <AlertDialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {selectedUser?.is_active ? 'Desativar' : 'Ativar'} Usuario
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja {selectedUser?.is_active ? 'desativar' : 'ativar'} o usuario{' '}
-              <strong>{selectedUser?.email}</strong>?
-              {selectedUser?.is_active && (
-                <span className="block mt-2 text-destructive">
-                  O usuario nao podera mais acessar o sistema.
-                </span>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (selectedUser) {
-                  updateUserStatus.mutate({
-                    userId: selectedUser.user_id,
-                    isActive: !selectedUser.is_active,
-                  });
-                }
-              }}
-            >
-              Confirmar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={statusDialogOpen}
+        onOpenChange={setStatusDialogOpen}
+        title={`${selectedUser?.is_active ? 'Desativar' : 'Ativar'} Usuario`}
+        description={`Tem certeza que deseja ${selectedUser?.is_active ? 'desativar' : 'ativar'} o usuario ${selectedUser?.email}?${selectedUser?.is_active ? ' O usuario nao podera mais acessar o sistema.' : ''}`}
+        confirmLabel="Confirmar"
+        destructive={!!selectedUser?.is_active}
+        loading={updateUserStatus.isPending}
+        onConfirm={() => {
+          if (selectedUser) {
+            updateUserStatus.mutate({
+              userId: selectedUser.user_id,
+              isActive: !selectedUser.is_active,
+            });
+          }
+        }}
+      />
     </div>
   );
 }

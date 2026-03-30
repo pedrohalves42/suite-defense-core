@@ -302,30 +302,21 @@ export default function AgentTags() {
       </Dialog>
 
       {/* Delete Confirm */}
-      <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remover Tag</AlertDialogTitle>
-            <AlertDialogDescription>
-              A tag "{selectedTag?.name}" será removida de todos os agentes. Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={async () => {
-                if (selectedTag) {
-                  await deleteTag.mutateAsync(selectedTag.id);
-                  setIsDeleteOpen(false);
-                }
-              }}
-            >
-              Remover
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        title="Remover Tag"
+        description={`A tag "${selectedTag?.name}" será removida de todos os agentes. Esta ação não pode ser desfeita.`}
+        confirmLabel="Remover"
+        destructive
+        loading={deleteTag.isPending}
+        onConfirm={async () => {
+          if (selectedTag) {
+            await deleteTag.mutateAsync(selectedTag.id);
+            setIsDeleteOpen(false);
+          }
+        }}
+      />
     </AdminPageLayout>
   );
 }
