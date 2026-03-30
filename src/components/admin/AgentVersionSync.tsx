@@ -41,7 +41,7 @@ interface AgentVersionSyncProps {
 
 export function AgentVersionSync({
   latestVersions }: AgentVersionSyncProps) {
-  const adaptiveInterval = useAdaptivePolling(300000);
+  
   const queryClient = useQueryClient();
   const { activeTenant: tenant, loading: tenantLoading } = useActiveTenant();
   const [syncingAll, setSyncingAll] = useState(false);
