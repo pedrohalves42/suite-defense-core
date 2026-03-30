@@ -36,15 +36,16 @@ serveTenant(async (req, ctx) => {
         );
       }
 
-      logger.info(`[${requestId}] [SCAN-VULNS] Batch scanning ${agents.length} agents`);
-
       let totalVulns = 0;
       let agentsScanned = 0;
       const results: { agent_id: string; agent_name: string; vulns_found: number }[] = [];
 
       for (const agent of agents) {
         try {
-          const scanResult = await scanAgentVulnerabilities(supabase, agent.id, agent.tenant_id, requestId);
+          const scanResult = await scanAgentVulnerabilities(supabase, agent.id, agent.tenant_id, requestId, { mode: 'batch' });
+          if (scanResult.vulnerabilities.length > 0) {
+            await supabase.from('vuln_findings').upsert(scanResult.vulnerabilities, { onConflict: 'agent_id,check_key' });
+          }
           totalVulns += scanResult.vulnerabilities_found;
           agentsScanned++;
           results.push({ agent_id: agent.id, agent_name: agent.agent_name, vulns_found: scanResult.vulnerabilities_found });
@@ -55,29 +56,15 @@ serveTenant(async (req, ctx) => {
 
       // Trigger playbooks for critical vulnerabilities
       if (totalVulns > 0) {
-        const criticalAgents = results.filter(r => r.vulns_found > 0);
-        for (const agentResult of criticalAgents.slice(0, 5)) {
+        for (const agentResult of results.filter(r => r.vulns_found > 0).slice(0, 5)) {
           try {
-            const { data: criticalVulns } = await supabase
-              .from('vuln_findings')
-              .select('id, severity')
-              .eq('agent_id', agentResult.agent_id)
-              .eq('severity', 'CRITICAL')
-              .limit(1);
-
+            const { data: criticalVulns } = await supabase.from('vuln_findings').select('id, severity').eq('agent_id', agentResult.agent_id).eq('severity', 'CRITICAL').limit(1);
             if (criticalVulns && criticalVulns.length > 0) {
               await supabase.functions.invoke('evaluate-playbook-triggers', {
-                body: {
-                  tenant_id: tenantId,
-                  trigger_type: 'vulnerability_critical',
-                  agent_id: agentResult.agent_id,
-                  context: { vulns_found: agentResult.vulns_found, agent_name: agentResult.agent_name }
-                }
+                body: { tenant_id: tenantId, trigger_type: 'vulnerability_critical', agent_id: agentResult.agent_id, context: { vulns_found: agentResult.vulns_found, agent_name: agentResult.agent_name } }
               });
             }
-          } catch (triggerError) {
-            logger.error(`[${requestId}] [SCAN-VULNS] Error triggering playbook:`, triggerError);
-          }
+          } catch (triggerError) { logger.error(`[${requestId}] [SCAN-VULNS] Error triggering playbook:`, triggerError); }
         }
       }
 
