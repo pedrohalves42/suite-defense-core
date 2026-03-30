@@ -12,7 +12,7 @@ import { generateForensicReportPDF } from '@/lib/forensicReportPDF';
 import type { Agent, AgentMetrics, AgentStats, StatusFilter, VersionFilter } from './types';
 
 export function useAgentManagement() {
-  const adaptiveInterval = useAdaptivePolling(300000);
+  
   const { t } = useTranslation();
   const { tenant } = useTenant();
   const { isAdmin, isSuperAdmin } = useUserRole();
