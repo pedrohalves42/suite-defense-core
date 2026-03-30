@@ -4,7 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { HardDrive, Server, Database } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 interface DiskMetric {
   drive_letter: string;
