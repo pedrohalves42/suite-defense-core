@@ -45,10 +45,9 @@ const statusConfig: Record<string, { label: string; icon: React.ElementType; cla
 };
 
 export function SoarExecutionsCard() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
 
-  const { data: summaryData, isLoading } = useQuery({
+  const { data: summaryData, isLoading } = useRealtimeQuery({
     queryKey: ['soar-execution-summary', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
