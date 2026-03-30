@@ -209,52 +209,12 @@ export default function InsightTriageCenter() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-destructive/50 bg-destructive/5">
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              <div>
-                <p className="text-2xl font-bold text-destructive">{criticalCount}</p>
-                <p className="text-sm text-muted-foreground">Críticos</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-orange-500/50 bg-orange-500/5">
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-orange-500" />
-              <div>
-                <p className="text-2xl font-bold text-orange-500">{highCount}</p>
-                <p className="text-sm text-muted-foreground">Alta Prioridade</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="text-2xl font-bold">{insights?.length || 0}</p>
-                <p className="text-sm text-muted-foreground">Total Pendentes</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              <div>
-                <p className="text-2xl font-bold">{selectedInsights.size}</p>
-                <p className="text-sm text-muted-foreground">Selecionados</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <StatsGrid columns={4}>
+        <SummaryStatCard icon={AlertTriangle} value={criticalCount} label="Críticos" accent="destructive" />
+        <SummaryStatCard icon={AlertTriangle} value={highCount} label="Alta Prioridade" accent="warning" />
+        <SummaryStatCard icon={Brain} value={insights?.length || 0} label="Total Pendentes" accent="muted" />
+        <SummaryStatCard icon={CheckCircle} value={selectedInsights.size} label="Selecionados" accent="success" />
+      </StatsGrid>
 
       {/* Quick Actions */}
       <Card>
