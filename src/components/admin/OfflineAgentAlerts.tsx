@@ -12,7 +12,7 @@ import { formatRelativeTime } from '@/lib/date-utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { logger } from '@/lib/logger';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 interface OfflineAgent {
   agent_id: string;
