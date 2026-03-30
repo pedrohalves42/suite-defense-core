@@ -90,9 +90,7 @@ export function SecurityImpactFeed() {
       return data || [];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 300_000,
   });
 
   // Fetch today's playbook executions
