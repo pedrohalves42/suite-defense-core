@@ -57,7 +57,8 @@ async function fetchTokens(tenantId: string): Promise<DashboardAgentToken[]> {
 
 // PERF-FIX: Slim select for rate_limits — avoid fetching metadata blobs
 async function fetchRateLimits(tenantId: string): Promise<DashboardRateLimit[]> {
-  const { data, error } = await (supabase.from("rate_limits" as never) )
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any).from("rate_limits")
     .select("id, tenant_id, identifier, endpoint, request_count, last_request_at, blocked_until")
     .eq("tenant_id", tenantId).order("last_request_at", { ascending: false }).limit(100);
   if (error) throw error;

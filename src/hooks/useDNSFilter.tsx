@@ -216,7 +216,8 @@ export function useDNSFilter() {
 
       const { data, error } = await (supabase
         .from('jobs')
-        .insert(jobs as never) )
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .insert(jobs as any) )
         .select('id');
 
       if (error) throw error;
