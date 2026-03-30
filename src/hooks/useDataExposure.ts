@@ -37,11 +37,10 @@ export interface DataExposureSummary {
 }
 
 export function useDataExposure() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
-  const query = useQuery({
+  const query = useRealtimeQuery({
     queryKey: ['data-exposure', tenant?.id],
     queryFn: async (): Promise<DataExposureSummary> => {
       // PERF-FIX: Slim select — avoid fetching large details/sample_preview blobs
