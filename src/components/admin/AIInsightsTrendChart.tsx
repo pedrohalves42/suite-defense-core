@@ -19,7 +19,7 @@ export function AIInsightsTrendChart() {
 
   const daysMap: Record<Period, number> = { '7d': 7, '30d': 30, '90d': 90 };
 
-  const { data: trendData, isLoading } = useQuery({
+  const { data: trendData, isLoading } = useRealtimeQuery({
     queryKey: ['ai-insights-trend', tenant?.id, period],
     queryFn: async () => {
       if (!tenant?.id) return [];
