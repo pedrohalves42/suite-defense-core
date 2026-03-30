@@ -3,7 +3,7 @@
  * Mostra atividade, impedimentos e custos evitados no dia.
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { useAgentSnapshots, getAgentStatusCounts } from '@/hooks/useAgentSnapshots';
