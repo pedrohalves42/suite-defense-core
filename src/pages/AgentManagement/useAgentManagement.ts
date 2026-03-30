@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 import { isAgentOnline } from '@/lib/agent-status-constants';
 import { logger } from '@/lib/logger';
 import { toast } from 'sonner';
