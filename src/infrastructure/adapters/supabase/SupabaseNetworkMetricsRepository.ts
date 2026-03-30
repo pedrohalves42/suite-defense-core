@@ -7,7 +7,8 @@ import { NetworkMetricsMapper } from './mappers/NetworkMetricsMapper';
 export class SupabaseNetworkMetricsRepository implements NetworkMetricsRepository {
   async save(metrics: NetworkMetrics): Promise<void> {
     const row = NetworkMetricsMapper.toPersistence(metrics);
-    const { error } = await supabase.from('agent_network_metrics').insert(row as never);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await supabase.from('agent_network_metrics').insert(row as any);
     if (error) throw new Error(`Failed to save network metrics: ${error.message}`);
   }
 
