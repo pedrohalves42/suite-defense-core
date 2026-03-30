@@ -47,7 +47,7 @@ export function useAgentSystemMetrics(agentId: string | undefined) {
  * P0 CRIT-02: Fixed race condition - waits for tenant sync before querying
  */
 export function useAgentsSystemMetrics(agentIds: string[]) {
-  const adaptiveInterval = useAdaptivePolling(300000);
+  
   const { activeTenant, loading: tenantLoading } = useActiveTenant();
   
   return useQuery({
