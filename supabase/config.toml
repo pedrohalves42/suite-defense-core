@@ -618,7 +618,7 @@ verify_jwt = true
 # === Log Integrity Verification (weekly Sunday at 2:00 UTC) COST-OPT-V5 ===
 # verify-log-integrity - DISABLED schedule COST-OPT-V8 (invoke manually)
 [functions.verify-log-integrity]
-verify_jwt = false
+verify_jwt = true
 
 # === Confidence Gap Trend Analysis ===
 [functions.analyze-confidence-gap-trend]
