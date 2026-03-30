@@ -46,12 +46,11 @@ interface DailySummary {
 }
 
 export function DailySummaryCard() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const { data: snapshots } = useAgentSnapshots();
   const agentCounts = getAgentStatusCounts(snapshots);
 
-  const { data: summary, isLoading } = useQuery({
+  const { data: summary, isLoading } = useRealtimeQuery({
     queryKey: ['daily-summary', tenant?.id],
     queryFn: async (): Promise<DailySummary | null> => {
       if (!tenant?.id) return null;

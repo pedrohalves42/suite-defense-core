@@ -41,7 +41,7 @@ const severityConfig = {
 };
 
 export function InsightActionPanel() {
-  const adaptiveInterval = useAdaptivePolling(300000);
+  // V-302: Add loading guard to prevent race conditions during tenant sync
   // V-302: Add loading guard to prevent race conditions during tenant sync
   const { activeTenant, loading } = useActiveTenant();
   const tenantId = activeTenant?.id;

@@ -33,13 +33,11 @@ interface FleetAgent {
 }
 
 export function FleetHealthDashboard() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant, loading: tenantLoading } = useTenant();
   const queryClient = useQueryClient();
   const [selectedAgent, setSelectedAgent] = useState<{ id: string; name: string } | null>(null);
 
-  // ADR-026: Use RPC to bypass agents_deny_direct_select RLS policy
-  const { data: agents = [], isLoading } = useQuery({
+  const { data: agents = [], isLoading } = useRealtimeQuery<FleetAgent[]>({
     queryKey: ['fleet-health', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
