@@ -8,7 +8,8 @@ import { FileIntegrityMapper } from './mappers/FileIntegrityMapper';
 export class SupabaseFileIntegrityRepository implements FileIntegrityRepository {
   async save(check: FileIntegrityCheck): Promise<void> {
     const row = FileIntegrityMapper.toPersistence(check);
-    const { error } = await supabase.from('agent_file_integrity').upsert(row as never);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await supabase.from('agent_file_integrity').upsert(row as any);
     if (error) throw new Error(`Failed to save file integrity check: ${error.message}`);
   }
 
