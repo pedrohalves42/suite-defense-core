@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useTenant } from '@/hooks/useTenant';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface AgentExecutionHealth {
@@ -100,10 +101,9 @@ export function useUnhealthyAgents() {
 
 // V-1026 FIX: Add tenant_id filter
 export function useNonExecutionAlerts() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant, loading } = useTenant();
 
-  return useQuery({
+  return useRealtimeQuery<NonExecutionAlert[]>({
     queryKey: ['non-execution-alerts', tenant?.id],
     queryFn: async (): Promise<NonExecutionAlert[]> => {
       if (!tenant?.id) return [];
@@ -120,9 +120,9 @@ export function useNonExecutionAlerts() {
       return (data || []) as NonExecutionAlert[];
     },
     enabled: !loading && !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 300_000,
+    realtimeTable: 'system_alerts',
+    realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
 }
 

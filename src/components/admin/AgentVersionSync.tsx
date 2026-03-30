@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { prepareJobForInsert } from "@/lib/job-utils";
 import { useActiveTenant } from "@/hooks/useActiveTenant";
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 import {
   Collapsible,
   CollapsibleContent,
@@ -41,7 +41,7 @@ interface AgentVersionSyncProps {
 
 export function AgentVersionSync({
   latestVersions }: AgentVersionSyncProps) {
-  const adaptiveInterval = useAdaptivePolling(300000);
+  
   const queryClient = useQueryClient();
   const { activeTenant: tenant, loading: tenantLoading } = useActiveTenant();
   const [syncingAll, setSyncingAll] = useState(false);
@@ -53,12 +53,11 @@ export function AgentVersionSync({
     latest_version: string;
   } | null>(null);
 
-  const { data: agents = [], isLoading } = useQuery({
+  const { data: agents = [], isLoading } = useRealtimeQuery<Agent[]>({
     queryKey: ['agents-for-sync', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
       
-      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
       const { data, error } = await supabase.rpc('get_agents_list', {
         p_tenant_id: tenant.id,
         p_include_archived: false
@@ -81,9 +80,9 @@ export function AgentVersionSync({
         .sort((a: Agent, b: Agent) => a.agent_name.localeCompare(b.agent_name));
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 300_000,
+    realtimeTable: 'agents',
+    realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
 
   const getLatestVersionForAgent = (agent: Agent): string => {

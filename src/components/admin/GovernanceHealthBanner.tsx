@@ -24,7 +24,7 @@ import {
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 interface GovernanceMetrics {
   totalUsers: number;
@@ -35,7 +35,6 @@ interface GovernanceMetrics {
 }
 
 export function GovernanceHealthBanner() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const { requiresMFA, hasMFA, isCompliant } = useMFAEnforcement();
   const [expanded, setExpanded] = useState(false);
@@ -93,7 +92,7 @@ export function GovernanceHealthBanner() {
   });
 
   // Fetch governance metrics
-  const { data: metrics, isLoading } = useQuery({
+  const { data: metrics, isLoading } = useRealtimeQuery<GovernanceMetrics>({
     queryKey: ['governance-metrics', tenant?.id],
     queryFn: async (): Promise<GovernanceMetrics> => {
       if (!tenant?.id) return {
@@ -104,7 +103,6 @@ export function GovernanceHealthBanner() {
         totalAlerts: 0,
       };
 
-      // Get users with MFA (simplified - checking AMR claim would require more complex logic)
       const { data: users } = await supabase
         .from('user_roles')
         .select('user_id, role')
@@ -113,7 +111,6 @@ export function GovernanceHealthBanner() {
       const totalUsers = new Set(users?.map(u => u.user_id) || []).size;
       const privilegedUsers = users?.filter(u => u.role === 'admin' || u.role === 'super_admin').length || 0;
       
-      // Get MFA coverage using dedicated RPC that queries auth.mfa_factors
       let usersWithMFA = 0;
       try {
         const { data: mfaData } = await supabase.rpc('get_mfa_user_count', {
@@ -127,7 +124,6 @@ export function GovernanceHealthBanner() {
         // Fallback: ignore errors
       }
 
-      // Get critical alerts
       const { data: alerts } = await supabase
         .from('system_alerts')
         .select('id, severity')
@@ -146,9 +142,9 @@ export function GovernanceHealthBanner() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 300_000,
+    realtimeTable: 'system_alerts',
+    realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
 
   // Calculate health score

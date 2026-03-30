@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ import { AutoApprovalPanel } from '@/components/admin/AutoApprovalPanel';
 import { RollbackTestPanel } from '@/components/admin/RollbackTestPanel';
 import { useTenant } from '@/hooks/useTenant';
 import { logger } from '@/lib/logger';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 interface AIAction {
   id: string;
@@ -65,7 +66,7 @@ interface AIInsight {
 }
 
 export default function AIActionApproval() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { tenant, loading: tenantLoading } = useTenant();
@@ -89,7 +90,7 @@ export default function AIActionApproval() {
   const isSuspiciousPattern = approvalMetrics?.isSuspiciousPattern || false;
 
   // Buscar acoes pendentes - FIX: add tenant_id filter
-  const { data: pendingActions, isLoading } = useQuery({
+  const { data: pendingActions, isLoading } = useRealtimeQuery<AIAction[]>({
     queryKey: ['ai-actions-pending', tenant?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -107,9 +108,9 @@ export default function AIActionApproval() {
       return data as AIAction[];
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 300_000,
+    realtimeTable: 'ai_insights',
+    realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
 
   // Buscar insights recentes (últimos 30 dias) - FIX: add tenant_id filter

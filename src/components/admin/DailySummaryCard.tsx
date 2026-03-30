@@ -3,7 +3,7 @@
  * Mostra atividade, impedimentos e custos evitados no dia.
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { useAgentSnapshots, getAgentStatusCounts } from '@/hooks/useAgentSnapshots';
@@ -17,7 +17,7 @@ import {
 import { format, ptBR } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 // Cost mapping per action type (R$)
 const ACTION_COST_MAP: Record<string, number> = {
@@ -46,12 +46,11 @@ interface DailySummary {
 }
 
 export function DailySummaryCard() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const { data: snapshots } = useAgentSnapshots();
   const agentCounts = getAgentStatusCounts(snapshots);
 
-  const { data: summary, isLoading } = useQuery({
+  const { data: summary, isLoading } = useRealtimeQuery({
     queryKey: ['daily-summary', tenant?.id],
     queryFn: async (): Promise<DailySummary | null> => {
       if (!tenant?.id) return null;
@@ -133,9 +132,9 @@ export function DailySummaryCard() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 300_000,
+    realtimeTable: 'jobs',
+    realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
 
   if (isLoading) {

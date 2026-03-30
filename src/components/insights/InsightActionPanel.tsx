@@ -15,11 +15,11 @@ import {
   Loader2,
   ChevronRight
 } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 interface Insight {
   id: string;
@@ -41,20 +41,20 @@ const severityConfig = {
 };
 
 export function InsightActionPanel() {
-  const adaptiveInterval = useAdaptivePolling(300000);
+  // V-302: Add loading guard to prevent race conditions during tenant sync
   // V-302: Add loading guard to prevent race conditions during tenant sync
   const { activeTenant, loading } = useActiveTenant();
   const tenantId = activeTenant?.id;
   const queryClient = useQueryClient();
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
 
-  const { data: insights, isLoading } = useQuery({
+  const { data: insights, isLoading } = useRealtimeQuery<Insight[]>({
     queryKey: ['pending-insights', tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ai_insights')
         .select('id, tenant_id, insight_type, title, description, severity, recommendation, category, confidence_score, acknowledged, status, created_at')
-        .eq('tenant_id', tenantId)
+        .eq('tenant_id', tenantId!)
         .eq('acknowledged', false)
         .order('severity', { ascending: true })
         .order('created_at', { ascending: false })
@@ -67,11 +67,10 @@ export function InsightActionPanel() {
         recommendation: item.recommendation || null,
       })) as Insight[];
     },
-    // V-302: Guard with !loading to prevent queries before JWT sync completes
     enabled: !loading && !!tenantId,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 300_000,
+    realtimeTable: 'ai_insights',
+    realtimeFilter: tenantId ? `tenant_id=eq.${tenantId}` : undefined,
   });
 
   const acknowledgeMutation = useMutation({

@@ -11,12 +11,12 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { AgentDetailsDrawer } from '@/components/agent/AgentDetailsDrawer';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 interface FleetAgent {
   id: string;
@@ -33,13 +33,11 @@ interface FleetAgent {
 }
 
 export function FleetHealthDashboard() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant, loading: tenantLoading } = useTenant();
   const queryClient = useQueryClient();
   const [selectedAgent, setSelectedAgent] = useState<{ id: string; name: string } | null>(null);
 
-  // ADR-026: Use RPC to bypass agents_deny_direct_select RLS policy
-  const { data: agents = [], isLoading } = useQuery({
+  const { data: agents = [], isLoading } = useRealtimeQuery<FleetAgent[]>({
     queryKey: ['fleet-health', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
@@ -79,8 +77,9 @@ export function FleetHealthDashboard() {
       })) as FleetAgent[];
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 60_000,
+    staleTime: 120_000,
+    realtimeTable: 'jobs',
+    realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
 
   // Realtime subscription

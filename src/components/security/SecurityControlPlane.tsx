@@ -5,7 +5,8 @@
  * Shows real-time KPIs for RLS status, security events, system health, and job health.
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,7 +32,7 @@ import { formatBrazilDateTime } from '@/lib/date-utils';
 import { TenantClaimAlerts } from './TenantClaimAlerts';
 import { useTenant } from '@/hooks/useTenant';
 import { PipelineHealthInline } from '@/components/pipeline/PipelineHealthInline';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,12 +61,10 @@ interface SecurityDashboardData {
 }
 
 export function SecurityControlPlane() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const queryClient = useQueryClient();
   const { tenant, loading: tenantLoading } = useTenant();
 
-  // Fetch security dashboard data
-  const { data: dashboardData, isLoading, refetch } = useQuery({
+  const { data: dashboardData, isLoading, refetch } = useRealtimeQuery<SecurityDashboardData>({
     queryKey: ['security-control-plane', tenant?.id],
     queryFn: async (): Promise<SecurityDashboardData> => {
       if (!tenant?.id) throw new Error('No tenant');
@@ -111,9 +110,9 @@ export function SecurityControlPlane() {
         current_system_mode: String((systemModeResult.data as Record<string, unknown>)?.mode || 'normal')
       };
     },
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 300_000,
+    realtimeTable: 'security_logs',
+    realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
 
   // Run RLS tests manually
