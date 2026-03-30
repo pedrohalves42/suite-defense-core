@@ -23,16 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Badge } from "@/components/ui/badge";
 import { isProcessProtected, isServiceProtected, PROTECTED_PROCESSES, PROTECTED_SERVICES } from "@/lib/job-labels";
 import { logger } from '@/lib/logger';
