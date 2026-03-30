@@ -271,7 +271,8 @@ serveTenant(async (req, ctx) => {
   };
 }, {
   methods: ['POST'],
-  skipTenantValidation: true, // Accepts both internal and JWT calls
+  skipTenantValidation: true,
+  rateLimit: { maxRequests: 10, windowMinutes: 1 },
 });
 
 function buildJobPayload(actionType: ActionType, details: Record<string, unknown>) {
