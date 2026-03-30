@@ -151,42 +151,16 @@ export function MFASettings() {
         onSuccess={() => setEnrollDialogOpen(false)}
       />
 
-      <AlertDialog open={disableDialogOpen} onOpenChange={setDisableDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-destructive" />
-              Desativar MFA?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Isso removerá a autenticação de dois fatores da sua conta. 
-              Você precisará configurar novamente se quiser reativar.
-              {isPrivilegedUser && (
-                <span className="block mt-2 font-medium text-warning">
-                  ⚠️ Como administrador, é altamente recomendado manter o MFA ativo.
-                </span>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={disabling}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDisableMFA}
-              disabled={disabling}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {disabling ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Desativando...
-                </>
-              ) : (
-                'Desativar MFA'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={disableDialogOpen}
+        onOpenChange={setDisableDialogOpen}
+        title="Desativar MFA?"
+        description={`Isso removerá a autenticação de dois fatores da sua conta. Você precisará configurar novamente se quiser reativar.${isPrivilegedUser ? ' ⚠️ Como administrador, é altamente recomendado manter o MFA ativo.' : ''}`}
+        confirmLabel="Desativar MFA"
+        destructive
+        loading={disabling}
+        onConfirm={handleDisableMFA}
+      />
     </>
   );
 }
