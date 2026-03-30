@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { AlertTriangle, Clock, RefreshCw, Trash2, CheckCircle, XCircle, Loader2 
 import { formatRelativeTimePt } from '@/lib/agent-utils';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { JobStatusSimplified } from '@/components/admin/JobStatusSimplified';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 interface StuckJob {
   id: string;
