@@ -1,488 +1,54 @@
+/**
+ * poll-jobs - Agent job polling endpoint
+ * MODULARIZED: Auth in auth-handler.ts, job logic in job-claimer.ts
+ * 
+ * Auth: Deno.serve (raw body needed for HMAC verification)
+ */
 import { requireEnv } from '../_shared/env.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
-import { normalizeVersion } from '../_shared/hexagonal/update-decision-service.ts'
-import { AgentTokenSchema } from '../_shared/validation.ts'
-import { handleException, corsHeaders } from '../_shared/error-handler.ts'
-import { verifyHmacSignature } from '../_shared/hmac.ts'
-import { checkRateLimit } from '../_shared/rate-limit.ts'
-import { logger } from '../_shared/logger.ts'
-import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
-import { hashToken } from '../_shared/token-hash.ts'
-import { signJob } from '../_shared/crypto-utils.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { handleException } from '../_shared/error-handler.ts';
+import { checkRateLimit } from '../_shared/rate-limit.ts';
+import { logger } from '../_shared/logger.ts';
+import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
+import { authenticateAndValidateAgent } from './auth-handler.ts';
+import { emptyResponse, checkOfflineGuard, checkBacklogLimit, claimAndBuildResponse } from './job-claimer.ts';
+
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
-  // QUAL-01: Proper HTTP method validation
-  if (req.method === 'OPTIONS') {
-    return handleCorsPreflightRequest()
-  }
-  
-  const methodError = validateHttpMethod(req, ['POST', 'GET'])
-  if (methodError) return methodError
+  if (req.method === 'OPTIONS') return handleCorsPreflightRequest();
+  const methodError = validateHttpMethod(req, ['POST', 'GET']);
+  if (methodError) return methodError;
 
   try {
-    const supabaseUrl = requireEnv('SUPABASE_URL')
-    const supabaseKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY')
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabase = createClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'));
 
-    // Verificar token do agente
-    const agentToken = req.headers.get('X-Agent-Token')
-    if (!agentToken) {
-      return new Response(
-        JSON.stringify({ error: 'Token do agente necessario' }),
-        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 401 }
-      )
-    }
+    // Authenticate agent
+    const authResult = await authenticateAndValidateAgent(req, supabase, origin);
+    if (!authResult.success) return authResult.response;
+    const agent = authResult.agent;
 
-    // Validar formato do token
-    const tokenValidation = AgentTokenSchema.safeParse(agentToken)
-    if (!tokenValidation.success) {
-      return new Response(
-        JSON.stringify({ error: 'Formato de token invalido' }),
-        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 400 }
-      )
-    }
-
-    // FASE 2: Buscar agente pelo hash do token
-    const tokenHash = await hashToken(agentToken)
-    // TUNING: Expanded join to include tenant_id, last_heartbeat, status
-    // Eliminates separate agentData query below
-    const { data: token } = await supabase
-      .from('agent_tokens')
-      .select('agent_id, agents!inner(agent_name, hmac_secret, agent_version, tenant_id, last_heartbeat, status)')
-      .eq('token_hash', tokenHash)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (!token?.agents) {
-      return new Response(
-        JSON.stringify({ error: 'Token invalido' }),
-        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 401 }
-      )
-    }
-
-    const agent = Array.isArray(token.agents) ? token.agents[0] : token.agents
- 
-    // DIAGNOSTIC: Log HTTP method and HMAC header presence for fleet analysis
-    const httpMethod = req.method
-    const hasHmacSignature = !!req.headers.get('X-HMAC-Signature')
-    const hasHmacTimestamp = !!(req.headers.get('X-HMAC-Timestamp') || req.headers.get('X-Timestamp'))
-    const hasHmacNonce = !!(req.headers.get('X-HMAC-Nonce') || req.headers.get('X-Nonce'))
-    const hasAnyHmacHeader = hasHmacSignature || hasHmacTimestamp || hasHmacNonce
-    
-    if (httpMethod === 'GET') {
-      logger.warn('DIAGNOSTIC: Agent using GET method (pre-hotfix script)', {
-        agentName: agent.agent_name,
-        method: httpMethod,
-        hasHmacHeaders: hasAnyHmacHeader,
-        ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
-      })
-    }
-    
-    if (!hasAnyHmacHeader) {
-      logger.warn('DIAGNOSTIC: Agent poll-jobs request WITHOUT HMAC headers', {
-        agentName: agent.agent_name,
-        method: httpMethod,
-        hasSignature: hasHmacSignature,
-        hasTimestamp: hasHmacTimestamp,
-        hasNonce: hasHmacNonce,
-        ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
-      })
-    }
-
-    // V-702 FIX: HMAC enforcement for modern agents (v5.0.12+)
-    const HMAC_REQUIRED_MIN_VERSION = '5.0.12'
-    const agentVersionStr = (agent as Record<string, unknown>).agent_version || ''
-    const currentNormV = normalizeVersion(agentVersionStr)
-    const hmacMinNormV = normalizeVersion(HMAC_REQUIRED_MIN_VERSION)
-    const isModernAgent = !!(currentNormV && hmacMinNormV && currentNormV >= hmacMinNormV)
-
-    // TUNING: agentData now comes from initial join ? zero extra queries
-    const agentData = {
-      id: token.agent_id,
-      tenant_id: (agent as Record<string, unknown>).tenant_id || null,
-      last_heartbeat: (agent as Record<string, unknown>).last_heartbeat || null,
-      status: (agent as Record<string, unknown>).status || null,
-      agent_version: (agent as Record<string, unknown>).agent_version || null,
-    }
-
-    if (hasAnyHmacHeader) {
-      const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret, {
-        agentId: token.agent_id,
-        tenantId: agentData.tenant_id || undefined,
-        endpoint: 'poll-jobs',
-        ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined
-      })
-      if (!hmacResult.valid) {
-        if (isModernAgent) {
-          // V-702: BLOCK modern agents with invalid HMAC
-          logger.error('SECURITY: HMAC verification FAILED for modern agent poll-jobs - BLOCKED', {
-            agent: agent.agent_name,
-            agentVersion: agentVersionStr,
-            errorCode: hmacResult.errorCode,
-            ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
-          })
-          return new Response(
-            JSON.stringify({ error: 'HMAC verification failed', code: 'HMAC_INVALID' }),
-            { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-          )
-        }
-        logger.warn('HMAC verification failed - accepting legacy agent poll-jobs', {
-          agent: agent.agent_name,
-          agentVersion: agentVersionStr,
-          errorCode: hmacResult.errorCode,
-          ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
-        })
-      } else {
-        logger.debug('HMAC verified for poll-jobs', { agent: agent.agent_name })
-      }
-    } else {
-      if (isModernAgent) {
-        // V-702: BLOCK modern agents without HMAC headers
-        logger.error('SECURITY: Modern agent poll-jobs WITHOUT HMAC headers - BLOCKED', {
-          agent: agent.agent_name,
-          agentVersion: agentVersionStr,
-          ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
-        })
-        return new Response(
-          JSON.stringify({ error: 'HMAC headers required', code: 'HMAC_MISSING' }),
-          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-        )
-      }
-      logger.warn('Poll-jobs accepted without HMAC (legacy agent)', {
-        agent: agent.agent_name,
-        agentVersion: agentVersionStr,
-        ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
-      })
-    }
-
-    // Rate limiting ? TUNING: 120/min was absurd for 600s interval; 6/min allows burst retries
-    const rateLimitResult = await checkRateLimit(supabase, agent.agent_name, 'poll-jobs', {
-      maxRequests: 6,
-      windowMinutes: 1,
-      blockMinutes: 5,
-    })
-
+    // Rate limiting
+    const rateLimitResult = await checkRateLimit(supabase, agent.agentName, 'poll-jobs', { maxRequests: 6, windowMinutes: 1, blockMinutes: 5 });
     if (!rateLimitResult.allowed) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Rate limit excedido',
-          resetAt: rateLimitResult.resetAt 
-        }),
-        { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      )
+      return new Response(JSON.stringify({ error: 'Rate limit excedido', resetAt: rateLimitResult.resetAt }), { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
     }
 
-    logger.debug('Agent polling', { agentName: agent.agent_name })
+    logger.debug('Agent polling', { agentName: agent.agentName });
 
-    // TUNING: agentData already fetched above (single query), reused here
+    // Offline guard (>2h)
+    const offlineGuard = await checkOfflineGuard(supabase, agent, origin);
+    if (offlineGuard) return offlineGuard;
 
-    // COMPAT: Detectar versao do agente para formato de resposta
-    const agentVersionForCompat = agentData.agent_version || 'v0.0.0'
-    const parseVersion = (v: string): number[] => {
-      const m = v.replace(/^v/, '').match(/^(\d+)\.(\d+)\.(\d+)/)
-      return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : [0, 0, 0]
-    }
-    const agentVer = parseVersion(agentVersionForCompat)
-    // Agentes <= v5.0.11 esperam array plano; >= v5.0.12 suportam formato encapsulado
-    const isLegacyAgent = agentVer[0] < 5 || (agentVer[0] === 5 && agentVer[1] === 0 && agentVer[2] <= 11)
-    
-    if (isLegacyAgent) {
-      logger.warn('COMPAT: Legacy agent detected, will use flat array response', {
-        agentName: agent.agent_name,
-        agentVersion: agentVersionForCompat,
-      })
-    }
+    // Backlog limit check
+    const backlogGuard = await checkBacklogLimit(supabase, agent, origin);
+    if (backlogGuard) return backlogGuard;
 
-    // VALIDACAO CRITICA: Nao entregar jobs para agentes que estavam offline >2h
-    // Alinhado com o guard de criacao de jobs (create-job, seed-collection-jobs)
-    const now = new Date()
-    const lastHeartbeat = agentData.last_heartbeat ? new Date(agentData.last_heartbeat) : null
-    const hoursSinceHeartbeat = lastHeartbeat 
-      ? (now.getTime() - lastHeartbeat.getTime()) / (1000 * 60 * 60)
-      : Infinity
+    // Claim and deliver jobs
+    logger.info('Fetching jobs for agent', { agentName: agent.agentName, agentId: agent.agentId });
+    return await claimAndBuildResponse(supabase, agent, origin);
 
-    // Se estava offline >2h, primeiro apenas atualizar heartbeat e retornar vazio
-    // Na proxima poll (apos heartbeat atualizado), jobs serao entregues normalmente
-    if (hoursSinceHeartbeat > 2) {
-      logger.warn('Agent was offline >2h, updating heartbeat but not delivering jobs yet', {
-        agentName: agent.agent_name,
-        hoursSinceHeartbeat: hoursSinceHeartbeat.toFixed(2),
-        lastHeartbeat: agentData.last_heartbeat
-      })
-      
-      // Atualizar apenas heartbeat (sem entregar jobs)
-      await supabase
-        .from('agents')
-        .update({ last_heartbeat: now.toISOString(), status: 'active' })
-        .eq('id', token.agent_id)
-      
-      await supabase
-        .from('agent_tokens')
-        .update({ last_used_at: now.toISOString() })
-        .eq('token_hash', tokenHash)
-      
-      return new Response(
-        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }), // COST-OPT-V6
-        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 200 }
-      )
-    }
-
-    // COST-OPT v4.1: Removido update de last_heartbeat aqui ? ja feito pelo heartbeat dedicado (10min)
-    // Apenas atualizar last_used_at do token para tracking de uso
-    await supabase
-      .from('agent_tokens')
-      .update({ last_used_at: now.toISOString() })
-      .eq('token_hash', tokenHash)
-
-    logger.info('Fetching jobs for agent', { agentName: agent.agent_name, agentId: token.agent_id })
-    
-    // SSA-026: Verificar backlog do agente antes de entregar mais jobs
-    const MAX_PENDING_JOBS = 50
-    const { count: pendingCount, error: countError } = await supabase
-      .from('jobs')
-      .select('*', { count: 'exact', head: true })
-      .eq('agent_id', token.agent_id)
-      .in('status', ['queued', 'delivered'])
-
-    if (!countError && (pendingCount || 0) >= MAX_PENDING_JOBS) {
-      logger.warn('SSA-026: Agent hit job limit, not delivering new jobs', { 
-        agentName: agent.agent_name, 
-        pendingCount, 
-        maxLimit: MAX_PENDING_JOBS 
-      })
-      return new Response(
-        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }), // COST-OPT-V6
-        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 200 }
-      )
-    }
-    
-    // P0-003: Usar RPC claim_jobs_for_agent para claiming atomico com locking
-    // Isso previne race conditions e garante que apenas um processo pode reclamar cada job
-    // A RPC ja filtra por expires_at > NOW() e ja marca como 'delivered' atomicamente
-    // FASE 4: Agora tambem cria job_executions para trilha de auditoria imutavel
-    interface ClaimedJob {
-      job_id: string
-      job_type: string
-      payload: Record<string, unknown>
-      execution_id: string    // ID da execucao (job_executions)
-      nonce: string           // Nonce unico para esta execucao
-      payload_hash: string    // SHA256 do payload para verificacao
-      expires_at: string
-      // Hash Chain fields (P1.5)
-      execution_index: number | null
-      previous_execution_hash: string | null
-    }
-    
-    // TUNING: tenant_id already available from agentData fetched above
-    
-    const { data: jobs, error: jobsError } = await supabase
-      .rpc('claim_jobs_for_agent', {
-        p_agent_id: token.agent_id,
-        p_limit: 3
-      }) as { data: ClaimedJob[] | null, error: { message: string } | null }
-
-    if (jobsError) {
-      logger.error('Error claiming jobs', { 
-        error: jobsError.message, 
-        errorFull: JSON.stringify(jobsError),
-        agentName: agent.agent_name,
-        agentId: token.agent_id
-      })
-      return new Response(
-        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }), // COST-OPT-V6
-        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 200 }
-      )
-    }
-
-    // LOG CRITICO: mostrar jobs reclamados atomicamente (com execution_id)
-    logger.info('Jobs claimed atomically with executions', { 
-      agentName: agent.agent_name,
-      jobCount: jobs?.length ?? 0,
-      jobIds: jobs?.map((j: ClaimedJob) => j.job_id) ?? [],
-      jobTypes: jobs?.map((j: ClaimedJob) => j.job_type) ?? [],
-      executionIds: jobs?.map((j: ClaimedJob) => j.execution_id) ?? []
-    })
-
-    // Filtro de validacao (null, ID, type, payload, execution_id)
-    const validJobs = (jobs || []).filter((job: ClaimedJob) => {
-      if (!job) {
-        logger.warn('NULL job detected, filtering out')
-        return false
-      }
-      if (!job.job_id || typeof job.job_id !== 'string') {
-        logger.warn('Job without valid job_id', { job })
-        return false
-      }
-      if (!job.job_type || typeof job.job_type !== 'string') {
-        logger.warn('Job without valid job_type', { jobId: job.job_id })
-        return false
-      }
-      // Payload pode ser {} mas nao null/undefined
-      if (job.payload === undefined || job.payload === null) {
-        logger.warn('Job without payload', { jobId: job.job_id })
-        return false
-      }
-      // Execution ID e obrigatorio na nova arquitetura
-      if (!job.execution_id || typeof job.execution_id !== 'string') {
-        logger.warn('Job without execution_id', { jobId: job.job_id })
-        return false
-      }
-      return true
-    })
-
-    logger.info('Valid jobs after filtering', { 
-      count: validJobs.length,
-      validJobIds: validJobs.map((j: ClaimedJob) => j.job_id)
-    })
-
-    // Se nao ha jobs validos, retornar array vazio imediatamente
-    if (validJobs.length === 0) {
-      logger.debug('No valid jobs to return', { agentName: agent.agent_name })
-      return new Response(
-        JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }), // COST-OPT-V6
-        { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 200 }
-      )
-    }
-
-    // SSA-004: Sign jobs with Ed25519 for RCE prevention
-    const privateKey = Deno.env.get('ED25519_PRIVATE_KEY')
-    const signingEnabled = !!privateKey
-    
-    if (!signingEnabled) {
-      logger.warn('ED25519_PRIVATE_KEY not configured - jobs will be unsigned', { agentName: agent.agent_name })
-    }
-
-    // Preparar resposta - jobs ja foram marcados como delivered pela RPC
-    // Agora inclui execution_id, nonce e payload_hash para trilha de auditoria
-    const jobsResponse = await Promise.all(validJobs.map(async (j: ClaimedJob) => {
-      const jobPayload = j.payload || {}
-      
-      // Sign the job - MANDATORY when key is configured (SSA-004)
-      let signatureInfo: { payload_signature?: string; signing_alg?: string } = {}
-      
-      if (signingEnabled && privateKey) {
-        try {
-          const signed = await signJob(j.job_id, j.job_type, jobPayload, privateKey)
-          signatureInfo = {
-            payload_signature: signed.signature,
-            signing_alg: signed.algorithm
-          }
-          logger.debug('Job signed successfully', { jobId: j.job_id, algorithm: signed.algorithm })
-        } catch (signError) {
-          logger.error('CRITICAL: Failed to sign job - SKIPPING delivery to prevent unsigned job', { 
-            jobId: j.job_id, 
-            jobType: j.job_type,
-            error: signError instanceof Error ? signError.message : 'Unknown error'
-          })
-          // Return null to filter out this job - never deliver unsigned jobs
-          return null
-        }
-      }
-      
-      return {
-        id: j.job_id,
-        type: j.job_type,
-        job_type: j.job_type,  // V-ZEROGAP: compat with v5 agents that read job_type
-        payload: jobPayload,
-        approved: true,
-        agent_id: token.agent_id,
-        expires_at: j.expires_at,
-        // FASE 4: Trilha de auditoria imutavel
-        execution_id: j.execution_id,
-        nonce: j.nonce,
-        payload_hash: j.payload_hash,
-        // P1.5: Hash Chain context for agent
-        execution_index: j.execution_index,
-        previous_execution_hash: j.previous_execution_hash,
-        ...signatureInfo
-      }
-    })).then(results => results.filter(Boolean))
-
-    // LOG CRITICO: mostrar exatamente o que sera retornado (com execution tracking)
-    logger.info('Jobs to return to agent with execution tracking', { 
-      agentName: agent.agent_name,
-      responseCount: jobsResponse.length,
-      signingEnabled,
-      executionIds: jobsResponse.map(j => j!.execution_id),
-      response: JSON.stringify(jobsResponse)
-    })
-
-    // Jobs ja foram marcados como 'delivered' atomicamente pela RPC claim_jobs_for_agent
-    // E job_executions criadas para trilha de auditoria
-    logger.success('Jobs delivered via atomic claim with audit trail', { 
-      jobIds: validJobs.map((j: ClaimedJob) => j.job_id), 
-      executionIds: validJobs.map((j: ClaimedJob) => j.execution_id),
-      count: validJobs.length 
-    })
-
-    // Retornar jobs ao agente
-    // COMPAT: Legacy agents (<= v5.0.11) recebem array plano
-    // Novos agentes (>= v5.0.12) recebem { jobs, poll_interval_seconds }
-    if (isLegacyAgent) {
-      logger.info('COMPAT: Returning flat array for legacy agent', {
-        agentName: agent.agent_name,
-        agentVersion: agentVersionForCompat,
-        jobCount: jobsResponse.length,
-      })
-      // PROTECAO: Para agentes legacy, entregar APENAS jobs de recuperacao
-      // Jobs operacionais serao desperdicados (agente nao consegue parsea-los corretamente)
-      const recoveryTypes = ['update_agent', 'reinstall_agent', 'force_update']
-      const recoveryJobs = jobsResponse.filter(j => j && recoveryTypes.includes(j.type || j.job_type || ''))
-      const blockedCount = jobsResponse.length - recoveryJobs.length
-      
-      if (blockedCount > 0) {
-        logger.warn('COMPAT: Blocked operational jobs for legacy agent (would waste cycles)', {
-          agentName: agent.agent_name,
-           agentVersion: agentVersionForCompat,
-          blocked: blockedCount,
-          delivered: recoveryJobs.length,
-          blockedTypes: jobsResponse
-            .filter(j => j && !recoveryTypes.includes(j.type || j.job_type || ''))
-            .map(j => j!.type || j!.job_type),
-        })
-        
-        // Cancelar os jobs bloqueados para liberar a fila de dedup
-        const blockedJobIds = jobsResponse
-          .filter(j => j && !recoveryTypes.includes(j.type || j.job_type || ''))
-          .map(j => j!.id)
-          .filter(Boolean)
-        
-        if (blockedJobIds.length > 0) {
-          await supabase
-            .from('jobs')
-            .update({ 
-              status: 'cancelled', 
-              error_message: `Blocked: agent ${agentVersionForCompat} is legacy and cannot process this job type. Update required.`
-            })
-            .in('id', blockedJobIds)
-        }
-      }
-      
-      return new Response(
-        JSON.stringify(recoveryJobs),
-        {
-          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
-          status: 200
-        }
-      )
-    }
-
-    // Novo formato encapsulado para agentes modernos
-    const responsePayload = {
-      jobs: jobsResponse,
-      poll_interval_seconds: 600, // COST-OPT-V6: 300s ? 600s (jobs now come via heartbeat)
-    };
-    return new Response(
-      JSON.stringify(responsePayload),
-      {
-        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
-        status: 200
-      }
-    )
   } catch (error) {
-    return handleException(error, crypto.randomUUID(), 'poll-jobs')
+    return handleException(error, crypto.randomUUID(), 'poll-jobs');
   }
-})
+});
