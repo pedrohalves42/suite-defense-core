@@ -50,7 +50,6 @@ export function useDetectionEvents(options?: {
 // ── Process Events ──
 
 export function useProcessEvents(agentId: string, options?: { limit?: number; suspiciousOnly?: boolean }) {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant();
   const limit = options?.limit ?? 200;
 
