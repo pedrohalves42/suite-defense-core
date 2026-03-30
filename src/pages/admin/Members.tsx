@@ -275,28 +275,16 @@ export default function Members() {
         </CardContent>
       </Card>
 
-      <AlertDialog
+      <ConfirmDialog
         open={!!memberToRemove}
         onOpenChange={() => setMemberToRemove(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('adminPages.members.removeMember')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('adminPages.members.removeConfirm', { name: memberToRemove?.profiles?.full_name || memberToRemove?.email })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('adminPages.members.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => memberToRemove && removeMember.mutate(memberToRemove.id)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {t('adminPages.members.remove')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={t('adminPages.members.removeMember')}
+        description={t('adminPages.members.removeConfirm', { name: memberToRemove?.profiles?.full_name || memberToRemove?.email })}
+        confirmLabel={t('adminPages.members.remove')}
+        cancelLabel={t('adminPages.members.cancel')}
+        onConfirm={() => memberToRemove && removeMember.mutate(memberToRemove.id)}
+        destructive
+      />
 
       {/* Create User Modal */}
       <CreateUserForm 

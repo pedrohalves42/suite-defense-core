@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingGrid } from '@/components/ui/loading-grid';
 import { 
   Shield, Clock, AlertTriangle, Trash2, RotateCcw, 
   Settings2, History, CheckCircle, XCircle, Loader2, Pause

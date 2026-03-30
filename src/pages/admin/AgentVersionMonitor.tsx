@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { RefreshCw, GitBranch, Shield, CheckCircle, XCircle, Clock, AlertTriangle, Zap, HelpCircle } from 'lucide-react';
 import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { useTenant } from '@/hooks/useTenant';
+import { LoadingGrid } from '@/components/ui/loading-grid';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 

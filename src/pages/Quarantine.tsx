@@ -13,6 +13,8 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Shield, AlertTriangle, CheckCircle, Trash2, RotateCcw, Search, FileWarning } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatBrazilDateTime } from '@/lib/date-utils';
+import { StatsGrid } from '@/components/ui/stats-grid';
+import { SummaryStatCard } from '@/components/ui/summary-stat-card';
 
 export default function Quarantine() {
   const { t } = useTranslation();
