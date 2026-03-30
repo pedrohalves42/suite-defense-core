@@ -71,7 +71,7 @@ function InfoRow({
 }
 
 export function AgentSystemInfo({ agentId, tenantId }: AgentSystemInfoProps) {
-  const adaptiveInterval = useAdaptivePolling(300_000);
+  
   const { data: info, isLoading } = useQuery({
     queryKey: ['agent-system-info', agentId],
     queryFn: async (): Promise<AgentInfo | null> => {
