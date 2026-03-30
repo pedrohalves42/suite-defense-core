@@ -194,9 +194,10 @@ export default function RealTimeSecurityDashboard() {
       });
       if (error) throw error;
 
-      const data = (Array.isArray(rpcData) ? rpcData : []).map((a: Record<string, unknown>) => ({
+      const rawArr = Array.isArray(rpcData) ? rpcData : [];
+      const data = (rawArr as unknown as Array<{ id: string; last_heartbeat: unknown; is_isolated: boolean }>).map(a => ({
         id: String(a.id),
-        last_heartbeat: a.last_heartbeat as unknown,
+        last_heartbeat: a.last_heartbeat,
         is_isolated: !!a.is_isolated,
       }));
 
