@@ -8,7 +8,8 @@ import { CertificateMapper } from './mappers/CertificateMapper';
 export class SupabaseCertificateRepository implements CertificateRepository {
   async save(cert: Certificate): Promise<void> {
     const row = CertificateMapper.toPersistence(cert);
-    const { error } = await supabase.from('agent_certificates').upsert(row as never);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await supabase.from('agent_certificates').upsert(row as any);
     if (error) throw new Error(`Failed to save certificate: ${error.message}`);
   }
 
