@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Shield, AlertTriangle, CheckCircle, Trash2, RotateCcw, Search, FileWarning } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatBrazilDateTime } from '@/lib/date-utils';
