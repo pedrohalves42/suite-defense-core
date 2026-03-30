@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { prepareJobForInsert } from "@/lib/job-utils";
 import { useActiveTenant } from "@/hooks/useActiveTenant";
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 import {
   Collapsible,
   CollapsibleContent,
