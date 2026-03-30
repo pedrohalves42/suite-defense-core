@@ -124,7 +124,7 @@ export function usePipelineMetrics(tenantId: string | undefined, hoursBack: numb
 }
 
 export function useFailureRate(tenantId: string | undefined, hoursBack: number = 1, loading?: boolean) {
-  const adaptiveInterval = useAdaptivePolling(300000);
+  
   return useQuery({
     queryKey: ['failure-rate', tenantId, hoursBack],
     queryFn: async () => {
