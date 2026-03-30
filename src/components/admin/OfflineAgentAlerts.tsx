@@ -129,7 +129,7 @@ function isWithinBusinessHours(businessHours: BusinessHours): boolean {
 }
 
 export function OfflineAgentAlerts() {
-  const adaptiveInterval = useAdaptivePolling(300000);
+  
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
   const [acknowledgedAgents, setAcknowledgedAgents] = useState<Set<string>>(new Set());
