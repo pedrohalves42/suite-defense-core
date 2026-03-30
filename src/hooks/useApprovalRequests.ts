@@ -72,30 +72,7 @@ export function usePendingApprovalRequests() {
     realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
 
-  // Realtime subscription
-  useEffect(() => {
-    if (!tenant?.id) return;
-
-    const channel = supabase
-      .channel('approval-requests-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'approval_requests',
-          filter: `tenant_id=eq.${tenant.id}`
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['approval-requests'] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [tenant?.id, queryClient]);
+  // Realtime subscription handled by useRealtimeQuery
 
   return query;
 }
