@@ -122,3 +122,4 @@ export const useAgentReleases = () => {
     isRegistering: registerRelease.isPending
   };
 };
+

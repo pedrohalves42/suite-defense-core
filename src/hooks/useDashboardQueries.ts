@@ -191,3 +191,4 @@ export function useDashboardQueries() {
     refresh: () => queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
   };
 }
+

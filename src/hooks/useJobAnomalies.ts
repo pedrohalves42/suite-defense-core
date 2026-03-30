@@ -165,3 +165,4 @@ function getDefaultDescription(anomalyType: string): string {
   
   return descriptions[anomalyType] || `Anomalia do tipo: ${anomalyType}`;
 }
+
