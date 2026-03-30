@@ -75,7 +75,7 @@ export function PipelineHealthCard({
 }) {
   const { data, isLoading, isError, error } = usePipelineHealth(tenantId, {
     enabled: !tenantLoading && !!tenantId,
-    refetchIntervalMs: 60000,
+    // refetchIntervalMs removed: pipeline uses staleTime + refetchOnWindowFocus (ADR-052)
   });
 
   const overall = data?.overall_status ?? 'unknown';

@@ -120,8 +120,8 @@ export function useAIInsightsData() {
 
   const insights = data?.insights || [];
   const stats = data?.statistics || { total: 0, critical: 0, warning: 0, info: 0, acknowledged: 0, pending: 0 };
-  const pendingInsights = insights.filter(i => !['resolved', 'rejected'].includes(String((i as any).status || 'open')));
-  const acknowledgedInsights = insights.filter(i => ['resolved', 'rejected'].includes(String((i as any).status || '')));
+  const pendingInsights = insights.filter(i => !['resolved', 'rejected'].includes(String(i.status || 'open')));
+  const acknowledgedInsights = insights.filter(i => ['resolved', 'rejected'].includes(String(i.status || '')));
 
   return {
     isLoading, insights, stats, pendingInsights, acknowledgedInsights,

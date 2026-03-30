@@ -71,7 +71,7 @@ export function InsightCard({
             </div>
           </div>
           <div className="flex flex-col gap-2 items-end">
-            <Badge variant={getSeverityColor(insight.severity) as any}>{insight.severity}</Badge>
+            <Badge variant={getSeverityColor(insight.severity) as "default" | "secondary" | "destructive" | "outline"}>{insight.severity}</Badge>
             <Badge variant="outline">{getTypeLabel(insight.insight_type)}</Badge>
           </div>
         </div>

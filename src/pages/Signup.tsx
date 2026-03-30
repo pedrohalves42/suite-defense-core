@@ -133,9 +133,8 @@ export default function Signup() {
     if (error) {
       logger.error('[Signup Error]', {
         message: error.message,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        status: (error as any).status,
-        code: (error as any).code,
+        status: 'status' in error ? (error as { status?: number }).status : undefined,
+        code: 'code' in error ? (error as { code?: string }).code : undefined,
         details: error
       });
       logger.error('Signup failed', { email: validation.data.email, error: error.message });
