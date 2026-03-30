@@ -59,7 +59,9 @@ export function useAgentManagement() {
       return (result.data || []) as Agent[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
+    staleTime: 300_000,
+    refetchOnWindowFocus: true,
   });
 
   // Installation status

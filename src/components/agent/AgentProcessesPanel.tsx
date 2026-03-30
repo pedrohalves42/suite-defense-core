@@ -137,8 +137,9 @@ export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelPr
       };
     },
     enabled: !!agentId,
-    staleTime: 30000,
-    refetchInterval: adaptiveInterval,
+    staleTime: 300_000,
+    refetchInterval: false,
+    refetchOnWindowFocus: true,
   });
 
   if (isLoading) {

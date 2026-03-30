@@ -36,8 +36,9 @@ export function useAgentSnapshots() {
       return (data || []) as unknown as AgentSnapshot[];
     },
     enabled: !tenantLoading && !!tenant?.id,
-    staleTime: 60_000,
-    refetchInterval: adaptiveInterval
+    staleTime: 300_000,
+    refetchInterval: false,
+    refetchOnWindowFocus: true
   });
 }
 

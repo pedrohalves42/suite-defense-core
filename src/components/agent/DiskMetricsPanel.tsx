@@ -56,8 +56,9 @@ export const DiskMetricsPanel = ({ agentId, compact = false }: DiskMetricsPanelP
       return data as DiskMetric[];
     },
     enabled: !!agentId,
-    refetchInterval: adaptiveInterval,
-    staleTime: 30000,
+    refetchInterval: false,
+    staleTime: 300_000,
+    refetchOnWindowFocus: true,
   });
 
   if (isLoading) {

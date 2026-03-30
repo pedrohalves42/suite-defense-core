@@ -111,8 +111,9 @@ export function AgentSystemInfo({ agentId, tenantId }: AgentSystemInfoProps) {
       } as AgentInfo;
     },
     enabled: !!agentId,
-    staleTime: 120_000,
-    refetchInterval: adaptiveInterval,
+    staleTime: 300_000,
+    refetchInterval: false,
+    refetchOnWindowFocus: true,
   });
 
   if (isLoading) {

@@ -52,7 +52,8 @@ export function useAgentsDiskMetrics(agentIds: string[]) {
       return disksMap;
     },
     enabled: agentIds.length > 0,
-    staleTime: 30000,
-    refetchInterval: adaptiveInterval
+    staleTime: 300_000,
+    refetchInterval: false,
+    refetchOnWindowFocus: true
   });
 }

@@ -4,7 +4,6 @@ import { AgentLifecycleState, DashboardAgentCard, LifecycleStage } from '@/types
 
 
 export function useAgentLifecycle(tenantId: string | undefined, loading?: boolean) {
-  const adaptiveInterval = useAdaptivePolling(300000);
   return useQuery<DashboardAgentCard[]>({
     queryKey: ['agent-lifecycle', tenantId],
     queryFn: async () => {

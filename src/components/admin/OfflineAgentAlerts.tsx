@@ -206,7 +206,9 @@ export function OfflineAgentAlerts() {
       });
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
+    staleTime: 300_000,
+    refetchOnWindowFocus: true,
   });
 
   // Realtime subscription for agent status changes

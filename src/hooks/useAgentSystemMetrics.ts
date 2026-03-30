@@ -82,7 +82,8 @@ export function useAgentsSystemMetrics(agentIds: string[]) {
       return metricsMap;
     },
     enabled: !tenantLoading && !!activeTenant?.id && agentIds.length > 0, // P0 CRIT-02: Race condition fix
-    staleTime: 30000,
-    refetchInterval: adaptiveInterval
+    staleTime: 300_000,
+    refetchInterval: false,
+    refetchOnWindowFocus: true
   });
 }

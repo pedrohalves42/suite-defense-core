@@ -28,8 +28,9 @@ const StatusPage = () => {
       return data || [];
     },
     enabled: !!tenant,
-    refetchInterval: adaptiveInterval,
-    staleTime: 120_000,
+    refetchInterval: false,
+    staleTime: 300_000,
+    refetchOnWindowFocus: true,
   });
 
   const onlineCount = agents?.filter((a: Record<string, unknown>) => a.status === 'online').length || 0;
