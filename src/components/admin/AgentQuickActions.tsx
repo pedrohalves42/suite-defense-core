@@ -7,7 +7,6 @@ import { Trash2, Key, Stethoscope, Loader2, Clock, ShieldOff, RefreshCcw, UserX 
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -15,6 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useNavigate } from 'react-router-dom';
 import { useAgentActions } from '@/hooks/useAgentActions';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
