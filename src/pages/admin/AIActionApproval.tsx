@@ -21,7 +21,7 @@ import { AutoApprovalPanel } from '@/components/admin/AutoApprovalPanel';
 import { RollbackTestPanel } from '@/components/admin/RollbackTestPanel';
 import { useTenant } from '@/hooks/useTenant';
 import { logger } from '@/lib/logger';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 interface AIAction {
   id: string;
