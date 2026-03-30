@@ -3,7 +3,6 @@
  * Shows playbook execution summary by trigger type and status
  */
 
-import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Zap, CheckCircle, XCircle, Clock, AlertTriangle, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from '@/lib/date-utils';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 interface SoarSummary {
   status: string;
