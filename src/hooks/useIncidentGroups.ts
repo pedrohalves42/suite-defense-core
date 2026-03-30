@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface IncidentGroup {
   id: string;
@@ -34,7 +33,6 @@ export interface IncidentStatus {
 }
 
 export const useIncidentGroups = (limit = 50) => {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { activeTenant, loading } = useActiveTenant(); // ADR-030 CRIT-01
 
   return useQuery({
@@ -70,7 +68,7 @@ export const useIncidentGroups = (limit = 50) => {
       })) as IncidentGroup[];
     },
     enabled: !loading && !!activeTenant?.id, // ADR-030 CRIT-01
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
     staleTime: 30000
   });
 };

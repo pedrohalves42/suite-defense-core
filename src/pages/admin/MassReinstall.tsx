@@ -12,7 +12,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { useTenant } from '@/hooks/useTenant';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -149,8 +148,8 @@ export default function MassReinstall() {
       return agents;
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 

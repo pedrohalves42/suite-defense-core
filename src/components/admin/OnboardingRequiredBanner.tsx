@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AutomatedOnboardingWizard } from '@/components/onboarding/AutomatedOnboardingWizard';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface OnboardingStep {
   id: string;
@@ -32,7 +31,6 @@ interface OnboardingStep {
 }
 
 export function OnboardingRequiredBanner() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const [showWizard, setShowWizard] = useState(false);
 
@@ -77,8 +75,8 @@ export function OnboardingRequiredBanner() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 

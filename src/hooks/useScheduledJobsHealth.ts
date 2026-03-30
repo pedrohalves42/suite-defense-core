@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useTenant } from './useTenant';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface ScheduledJobRun {
   id: string;
@@ -43,7 +42,6 @@ export interface ScheduledJobsHealthSummary {
 }
 
 export function useScheduledJobsHealth() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const adaptiveInterval2 = useAdaptivePolling(300_000);
   const queryClient = useQueryClient();
   const { tenant } = useTenant();
@@ -62,7 +60,7 @@ export function useScheduledJobsHealth() {
       return (data || []) as unknown as JobHealthStatus[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
     staleTime: 30000
   });
 
@@ -80,7 +78,7 @@ export function useScheduledJobsHealth() {
       return (data || []) as unknown as ScheduledJobRun[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval2,
+    refetchInterval: false,
     staleTime: 120_000
   });
 
@@ -103,7 +101,7 @@ export function useScheduledJobsHealth() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
     staleTime: 30000
   });
 

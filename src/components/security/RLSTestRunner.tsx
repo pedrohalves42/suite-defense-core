@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { MetricDisplay } from '@/components/ui/metric-display';
 import { Play, CheckCircle, XCircle, Clock, RefreshCw, Shield, AlertTriangle } from 'lucide-react';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface RLSTestResult {
   id: string;
@@ -21,7 +20,6 @@ interface RLSTestResult {
 }
 
 export function RLSTestRunner() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const queryClient = useQueryClient();
   const [lastRunTime, setLastRunTime] = useState<string | null>(null);
 
@@ -38,8 +36,8 @@ export function RLSTestRunner() {
       if (error) throw error;
       return data as RLSTestResult[];
     },
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 

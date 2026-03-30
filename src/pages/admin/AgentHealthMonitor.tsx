@@ -27,7 +27,6 @@ import { SimpleAgentList } from '@/components/dashboard/SimpleAgentList';
 import { useSimpleModeContext } from '@/hooks/useSimpleMode';
 import { BatchActionBar } from '@/components/fleet/BatchActionBar';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 type StatusFilter = 'all' | 'problems' | 'protected' | 'offline';
 
@@ -41,7 +40,6 @@ interface SelectedAgent {
 }
 
 export default function AgentHealthMonitor() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   // V-FIX: Use loading guard to prevent race condition during tenant sync
   const { tenant, loading: tenantLoading } = useTenant();
   const [liveHeartbeats, setLiveHeartbeats] = useState<number>(0);
@@ -65,8 +63,8 @@ export default function AgentHealthMonitor() {
       return data;
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 

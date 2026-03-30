@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface AutonomyMetrics {
   total_decisions: number;
@@ -46,7 +45,6 @@ interface DecisionTimelineItem {
 }
 
 export const useAutonomyMetrics = (days: number = 7) => {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   return useQuery({
@@ -63,14 +61,13 @@ export const useAutonomyMetrics = (days: number = 7) => {
       return data as unknown as AutonomyMetrics;
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 };
 
 export const useAuditTrailIntegrity = () => {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   return useQuery({
@@ -86,14 +83,13 @@ export const useAuditTrailIntegrity = () => {
       return data as unknown as AuditTrailIntegrity;
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 };
 
 export const useDecisionTimeline = (options?: { limit?: number; ruleCode?: string; agentId?: string }) => {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   return useQuery({
@@ -112,8 +108,8 @@ export const useDecisionTimeline = (options?: { limit?: number; ruleCode?: strin
       return (data || []) as unknown as DecisionTimelineItem[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 };

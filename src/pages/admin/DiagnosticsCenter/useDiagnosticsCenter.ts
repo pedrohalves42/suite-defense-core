@@ -5,7 +5,6 @@ import { supabase } from '@/integrations/supabase/client';
 import type { RpcAgentRow } from '@/types/rpc';
 import { useTenant } from '@/hooks/useTenant';
 import { deriveAgentState } from '@/lib/agent-state-machine';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 import { toast } from 'sonner';
 import { WifiOff, Clock, Key, AlertTriangle, AlertCircle } from 'lucide-react';
 import type { ProblematicAgent, ProblemCounts, IssueInfo } from './types';
@@ -42,8 +41,8 @@ export function useDiagnosticsCenter() {
       });
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 
@@ -59,8 +58,8 @@ export function useDiagnosticsCenter() {
       if (error) throw error;
       return (data || []) as unknown as ProblematicAgent[];
     },
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
     enabled: !tenantLoading && !!tenant?.id,
   });
@@ -83,8 +82,8 @@ export function useDiagnosticsCenter() {
       return names as string[];
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 

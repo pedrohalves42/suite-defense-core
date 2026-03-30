@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface CoverageGate {
   gate: string;
@@ -19,7 +18,6 @@ export interface CoverageResult {
 }
 
 export function useCoverageGates() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant, loading } = useTenant(); // ADR-030 CRIT-01
 
   return useQuery({
@@ -33,8 +31,8 @@ export function useCoverageGates() {
       return data as unknown as CoverageResult;
     },
     enabled: !loading && !!tenant?.id, // ADR-030 CRIT-01
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 }

@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface TrendDataPoint {
   date: string;
@@ -11,7 +10,6 @@ interface TrendDataPoint {
 }
 
 export function useInstallationTrend(days: number = 7) {
-  const adaptiveInterval = useAdaptivePolling(300000);
   return useQuery({
     queryKey: ['installation-trend', days],
     queryFn: async (): Promise<TrendDataPoint[]> => {
@@ -65,7 +63,7 @@ export function useInstallationTrend(days: number = 7) {
       
       return result.sort((a, b) => a.date.localeCompare(b.date));
     },
-    refetchInterval: adaptiveInterval,
-    staleTime: 120000, // 2 minutes
+    refetchInterval: false,
+    staleTime: 600_000, // 2 minutes
   });
 }

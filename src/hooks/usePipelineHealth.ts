@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export type PipelineSignalKey = 'heartbeats' | 'jobs' | 'web_activity' | 'dns_policy';
 export type PipelineFreshnessStatus = 'fresh' | 'stale' | 'critical' | 'disabled' | 'no_data' | 'unknown';
@@ -74,8 +73,8 @@ export function usePipelineHealth(
   return useQuery({
     queryKey: ['pipeline-health', tenantId],
     enabled: enabled && !!tenantId,
-    refetchInterval: adaptiveInterval,
-    staleTime: 30000,
+    refetchInterval: false,
+    staleTime: 600_000,
     queryFn: async (): Promise<PipelineHealth> => {
       if (!tenantId) throw new Error('tenantId is required');
 

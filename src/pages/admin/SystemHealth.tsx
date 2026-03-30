@@ -22,10 +22,8 @@ import JobTestRunner from "@/components/admin/JobTestRunner";
 import { format, ptBR } from '@/lib/date-utils';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useTenant } from "@/hooks/useTenant";
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export default function SystemHealth() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const adaptiveInterval2 = useAdaptivePolling(300_000);
   const { tenant, loading: tenantLoading } = useTenant();
 
@@ -69,7 +67,7 @@ export default function SystemHealth() {
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
   });
 
   const { data: jobStats, isLoading: loadingJobs } = useQuery({
@@ -116,7 +114,7 @@ export default function SystemHealth() {
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
   });
 
   const { data: jobsOverTime, isLoading: loadingTimeline } = useQuery({
@@ -150,8 +148,8 @@ export default function SystemHealth() {
       return Object.values(hourlyData).slice(-12);
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: adaptiveInterval2,
-    staleTime: 120_000,
+    refetchInterval: false,
+    staleTime: 600_000,
   });
 
   const { data: aiInsightsStats, isLoading: loadingInsights } = useQuery({
@@ -176,8 +174,8 @@ export default function SystemHealth() {
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: adaptiveInterval2,
-    staleTime: 120_000,
+    refetchInterval: false,
+    staleTime: 600_000,
   });
 
   const { data: performanceMetrics, isLoading: loadingPerformance } = useQuery({
@@ -219,8 +217,8 @@ export default function SystemHealth() {
         .sort((a, b) => b.avgDuration - a.avgDuration)
         .slice(0, 5);
     },
-    refetchInterval: adaptiveInterval2,
-    staleTime: 120_000,
+    refetchInterval: false,
+    staleTime: 600_000,
   });
 
   const isLoading = loadingAgents || loadingJobs || loadingPerformance || loadingTimeline || loadingInsights;

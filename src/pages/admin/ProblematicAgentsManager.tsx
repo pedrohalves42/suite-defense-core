@@ -21,7 +21,6 @@ import { useState } from 'react';
 import { AgentStatusBadges } from '@/components/agents/AgentStatusBadges';
 import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface ProblematicAgent {
   id: string | null;
@@ -72,8 +71,8 @@ export default function ProblematicAgentsManager() {
       return (data || []) as unknown as ProblematicAgent[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 

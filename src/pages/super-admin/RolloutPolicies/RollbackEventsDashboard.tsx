@@ -4,10 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ShieldAlert, RotateCcw, RefreshCw } from "lucide-react";
 import { format, ptBR } from '@/lib/date-utils';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export function RollbackEventsDashboard() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { data: rollbacks, isLoading } = useQuery({
     queryKey: ['rollback-events'],
     queryFn: async () => {
@@ -19,8 +17,8 @@ export function RollbackEventsDashboard() {
       if (error) throw error;
       return data;
     },
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 

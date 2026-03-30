@@ -15,7 +15,6 @@ import { HelpTooltip } from '@/components/ui/tech-tooltip';
 import { motion } from 'framer-motion';
 import { SecurityControlPlane } from '@/components/security/SecurityControlPlane';
 import { ThreatIntelDashboard } from '@/components/security/ThreatIntelDashboard';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface SecurityLog {
   id: string;
@@ -66,8 +65,8 @@ export default function SecurityDashboard() {
       return data as SecurityLog[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 
@@ -94,8 +93,8 @@ export default function SecurityDashboard() {
         uniqueIps,
       };
     },
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 
@@ -111,8 +110,8 @@ export default function SecurityDashboard() {
       if (error) throw error;
       return data as BlockedIP[];
     },
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
     enabled: isSuperAdmin,
   });
@@ -131,8 +130,8 @@ export default function SecurityDashboard() {
       if (error) throw error;
       return data as FailedAttempt[];
     },
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
     enabled: isSuperAdmin,
   });

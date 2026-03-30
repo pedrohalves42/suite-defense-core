@@ -12,7 +12,6 @@ import { Users, ShieldCheck, Eye, UserCog, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { logger } from '@/lib/logger';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface RBACMetrics {
   role: string;
@@ -20,7 +19,6 @@ interface RBACMetrics {
 }
 
 export function RBACMetricsCard() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   const { data: metrics, isLoading } = useQuery({
@@ -52,8 +50,8 @@ export function RBACMetricsCard() {
       }));
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 

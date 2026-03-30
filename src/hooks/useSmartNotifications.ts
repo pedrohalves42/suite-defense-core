@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
 import { logger } from '@/lib/logger';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface SmartNotification {
   type: string;
@@ -48,7 +47,7 @@ export function useSmartNotifications() {
       return [];
     },
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
     staleTime: 120_000
   });
 

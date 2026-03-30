@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 /**
  * Hook for admin access to full agent release data including sensitive fields.
@@ -9,7 +8,6 @@ import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
  * SECURITY: Only accessible to authenticated admins via get-agent-script-content function.
  */
 export const useAdminAgentReleases = () => {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { user } = useAuth();
   
   const { data: releases = [], isLoading, error, refetch } = useQuery({
@@ -24,8 +22,8 @@ export const useAdminAgentReleases = () => {
       if (error) throw error;
       return data?.releases || [];
     },
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 

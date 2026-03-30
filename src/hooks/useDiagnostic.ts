@@ -14,7 +14,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { type AgentState } from '@/lib/agent-state-machine';
 import { isAgentHealthy } from '@/lib/health-rules';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 import { 
   type DiagnosticIssue, 
   type DiagnosticSummary, 
@@ -44,7 +43,6 @@ export function useDiagnostic(
   tenantId: string | null,
   agentState?: AgentState | null
 ) {
-  const adaptiveInterval = useAdaptivePolling(300000);
   return useQuery({
     queryKey: ['agent-diagnostic', agentName, tenantId],
     queryFn: async (): Promise<DiagnosticResult> => {
@@ -114,7 +112,6 @@ export function useDiagnostic(
       };
     },
     enabled: !!agentName && !!tenantId,
-    staleTime: 30000, // 30 seconds
-    refetchInterval: adaptiveInterval
-  });
+    staleTime: 600_000, // 30 seconds
+    refetchInterval: false,});
 }
