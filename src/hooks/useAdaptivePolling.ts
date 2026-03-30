@@ -1,9 +1,12 @@
+import { usePageVisibility } from './usePageVisibility';
+
 /**
- * COST-OPT-V9: Polling completely disabled to reduce Cloud costs.
- * All 104 files that call this hook now get `false` (no polling).
- * Use refetchOnWindowFocus or manual refetch() instead.
- * Only useSubscription.tsx retains its own polling interval.
+ * Adaptive polling hook: returns the polling interval (ms) when the tab
+ * is visible, or `false` when hidden to save Cloud costs.
+ * Enforces a minimum of 120 000 ms (2 min) to keep costs low.
  */
-export function useAdaptivePolling(_baseIntervalMs: number): false {
-  return false;
+export function useAdaptivePolling(baseIntervalMs: number): number | false {
+  const isVisible = usePageVisibility();
+  if (!isVisible) return false;
+  return Math.max(baseIntervalMs, 120_000);
 }

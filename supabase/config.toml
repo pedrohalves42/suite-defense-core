@@ -186,7 +186,7 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.list-reports]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-security-report]
 verify_jwt = true
@@ -287,7 +287,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.auto-quarantine]
-verify_jwt = false
+verify_jwt = true
 
 # === Contact Functions ===
 [functions.submit-contact]
@@ -311,7 +311,7 @@ verify_jwt = false
 
 # === AI Insights Functions - DISABLED schedule COST-OPT-V5 (invoke manually) ===
 [functions.ai-system-analyzer]
-verify_jwt = false
+verify_jwt = true
 
 [functions.ai-get-insights]
 verify_jwt = true
@@ -429,7 +429,7 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.scan-vulnerabilities]
-verify_jwt = false
+verify_jwt = true
 
 [functions.sync-cve-database]
 verify_jwt = true
@@ -492,7 +492,7 @@ verify_jwt = true
 
 # === Playbooks System ===
 [functions.evaluate-playbook-triggers]
-verify_jwt = false
+verify_jwt = true
 
 # === Subscription Management V4 ===
 [functions.manage-subscription]
@@ -536,11 +536,11 @@ verify_jwt = false
 
 # === Executive Report Generator - DISABLED schedule COST-OPT-V5 ===
 [functions.generate-executive-report]
-verify_jwt = false
+verify_jwt = true
 
 # === Weekly Security Report - DISABLED schedule COST-OPT-V9 (invoke manually) ===
 [functions.generate-weekly-report]
-verify_jwt = false
+verify_jwt = true
 
 # === One-Click Approval via Token (public endpoint) ===
 [functions.approve-via-token]
@@ -568,7 +568,7 @@ verify_jwt = true
 
 # === Action Center ===
 [functions.action-center-feed]
-verify_jwt = false
+verify_jwt = true
 
 # === Invoke Scheduled Jobs (every 12 hours) COST-OPT-V7 ===
 # invoke-scheduled-jobs - DISABLED schedule COST-OPT-V8 (covered by system-maintenance)
@@ -603,7 +603,7 @@ verify_jwt = true
 
 # === Resolve Action Policy (Enterprise Policy Engine) ===
 [functions.resolve-action-policy]
-verify_jwt = false
+verify_jwt = true
 
 # === ADR-008: Admin Create User (username/password) ===
 [functions.admin-create-user]
@@ -669,7 +669,7 @@ verify_jwt = true
 
 # === Force Reinstall Fleet (Nuclear Reinstall Commands) ===
 [functions.force-reinstall-fleet]
-verify_jwt = false
+verify_jwt = true
 
 # === Agent Data Collection Functions ===
 [functions.collect-usb-devices]
@@ -690,32 +690,32 @@ verify_jwt = false
 
 # === Security Advisor (AI-powered tips) ===
 [functions.security-advisor]
-verify_jwt = false
+verify_jwt = true
 
 # === AI Insight Dispatcher (Phase 2) ===
 [functions.ai-insight-dispatcher]
-verify_jwt = false
+verify_jwt = true
 
 # === AI Provider Status ===
 [functions.ai-provider-status]
-verify_jwt = false
+verify_jwt = true
 
 # === Phase 3: AI Prediction & Correlation - ALL DISABLED schedule COST-OPT-V5 ===
 # Predict agent failures (invoke manually)
 [functions.ai-predict-agent-failure]
-verify_jwt = false
+verify_jwt = true
 
 # Correlate alerts for RCA (invoke manually)
 [functions.ai-correlate-alerts]
-verify_jwt = false
+verify_jwt = true
 
 # Behavioral anomaly detection (invoke manually)
 [functions.ai-behavioral-anomaly-detector]
-verify_jwt = false
+verify_jwt = true
 
 # === Phase 4: AI Security Copilot ===
 [functions.ai-security-copilot]
-verify_jwt = false
+verify_jwt = true
 
 # === Phase 2: Data Exposure & Ransomware Detection ===
 [functions.submit-data-exposure]
@@ -734,7 +734,7 @@ verify_jwt = false
 
 # === P2: Zero-touch Deploy ===
 [functions.generate-deploy-package]
-verify_jwt = false
+verify_jwt = true
 
 # REMOVED: sync-scripts-direct (consolidated into release-sync)
 
@@ -749,6 +749,6 @@ verify_jwt = false
 
 # === Threat Intelligence Lookup (on-demand) ===
 [functions.threat-intelligence-lookup]
-verify_jwt = false
+verify_jwt = true
 
 # (publish-threat-ioc already defined above at line 746)
