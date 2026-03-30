@@ -17,7 +17,7 @@ import {
 import { format, ptBR } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 // Cost mapping per action type (R$)
 const ACTION_COST_MAP: Record<string, number> = {
