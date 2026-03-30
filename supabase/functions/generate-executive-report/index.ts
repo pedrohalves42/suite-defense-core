@@ -1,15 +1,10 @@
-import { requireEnv } from '../_shared/env.ts';
-// Edge Function: Generate Executive Report (Daily Risk Delta Narrative)
-// Fase 2: Narrativa Executiva Continua
-
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+/**
+ * Generate Executive Report - Migrated to serveInternal middleware
+ * Auth: X-Internal-Secret / service_role (cron/internal)
+ */
+import { serveInternal } from '../_shared/serve-tenant.ts';
 import { callAISimple } from '../_shared/ai-provider-helper.ts';
-import { timingSafeEqual } from '../_shared/crypto-utils.ts';
 import { logger } from '../_shared/logger.ts';
-
-const SUPABASE_URL = requireEnv('SUPABASE_URL');
-const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
 
 interface RiskDelta {
   tenantId: string;

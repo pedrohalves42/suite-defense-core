@@ -1,15 +1,15 @@
+/**
+ * AI System Analyzer - Migrated to serveInternal middleware
+ * Auth: X-Internal-Secret / service_role (cron only)
+ */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
+import { serveInternal } from '../_shared/serve-tenant.ts';
 import { sanitizeForAI, anonymizeAgentName } from '../_shared/ai-sanitizer.ts';
 import { callAIJson, getAIProviderHealth, type AIMessage } from '../_shared/ai-provider-helper.ts';
 import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from '../_shared/ai-metrics.ts';
 import { persistAIMetrics } from '../_shared/ai-metrics-persistence.ts';
 import { AIEvidence, buildEvidence, calculateConfidence, generateReasoningSummary, extractDataSources } from '../_shared/ai-evidence-types.ts';
 import { logger } from '../_shared/logger.ts';
-
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 interface AnalysisData {
   problematicJobs: Array<Record<string, unknown>>;
