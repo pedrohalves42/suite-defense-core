@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { StatsGrid } from '@/components/ui/stats-grid';
+import { SummaryStatCard } from '@/components/ui/summary-stat-card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -402,51 +404,28 @@ export default function EnrollmentKeys() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Chaves Ativas</CardTitle>
-            <Key className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.activeCount || 0}</div>
-            <p className="text-xs text-muted-foreground">Total de chaves ativas</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Criadas (30d)</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.recentCount || 0}</div>
-            <p className="text-xs text-muted-foreground">Ultimos 30 dias</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Usadas (30d)</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.usedCount || 0}</div>
-            <p className="text-xs text-muted-foreground">Ultimos 30 dias</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Usos</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalUses || 0}</div>
-            <p className="text-xs text-muted-foreground">Todos os tempos</p>
-          </CardContent>
-        </Card>
-      </div>
+      <StatsGrid columns={4}>
+        <SummaryStatCard
+          label="Chaves Ativas"
+          value={stats?.activeCount || 0}
+          icon={Key}
+        />
+        <SummaryStatCard
+          label="Criadas (30d)"
+          value={stats?.recentCount || 0}
+          icon={TrendingUp}
+        />
+        <SummaryStatCard
+          label="Usadas (30d)"
+          value={stats?.usedCount || 0}
+          icon={Users}
+        />
+        <SummaryStatCard
+          label="Total de Usos"
+          value={stats?.totalUses || 0}
+          icon={Clock}
+        />
+      </StatsGrid>
 
       <Card>
         <CardHeader>

@@ -13,16 +13,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Key, Plus, Trash2, Shield, AlertCircle, Fingerprint, Info } from 'lucide-react';
 import { useWebAuthn } from '@/hooks/useWebAuthn';
 import { useAuth } from '@/hooks/useAuth';
@@ -239,22 +230,15 @@ export function SecurityKeysManager() {
       </Dialog>
 
       {/* Revoke confirmation */}
-      <AlertDialog open={!!revokeTarget} onOpenChange={(open) => !open && setRevokeTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remover fator de autenticação</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja remover este fator? Sua conta ficará menos protegida.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRevoke} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Remover
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!revokeTarget}
+        onOpenChange={(open) => !open && setRevokeTarget(null)}
+        title="Remover fator de autenticação"
+        description="Tem certeza que deseja remover este fator? Sua conta ficará menos protegida."
+        confirmLabel="Remover"
+        destructive
+        onConfirm={handleRevoke}
+      />
     </>
   );
 }

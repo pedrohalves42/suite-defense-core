@@ -23,16 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Badge } from "@/components/ui/badge";
 import { isProcessProtected, isServiceProtected, PROTECTED_PROCESSES, PROTECTED_SERVICES } from "@/lib/job-labels";
 import { logger } from '@/lib/logger';
@@ -347,41 +338,16 @@ export function ProcessControlDispatcher({ agents }: { agents: Agent[] }) {
         </CardContent>
       </Card>
 
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              Confirmar Ação Destrutiva
-            </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>Você está prestes a executar:</p>
-              <div className="bg-muted p-3 rounded-md">
-                <p><strong>Ação:</strong> {selectedJob?.name}</p>
-                <p><strong>Alvo:</strong> {targetName}</p>
-                <p><strong>Agente:</strong> {agents.find(a => a.id === selectedAgentId)?.agent_name}</p>
-                <p><strong>Risco:</strong> <Badge variant={selectedJob?.riskLevel === 'critical' ? 'destructive' : 'secondary'}>{selectedJob?.riskLevel === 'critical' ? 'Crítico' : 'Alto'}</Badge></p>
-              </div>
-              <p className="text-destructive font-medium">
-                Esta ação será registrada no audit log e pode afetar o funcionamento do sistema remoto.
-              </p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={createProcessControlJob}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isCreatingJob ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                'Confirmar Execução'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        title="Confirmar Ação Destrutiva"
+        description={`Você está prestes a executar: ${selectedJob?.name} no alvo "${targetName}" (Agente: ${agents.find(a => a.id === selectedAgentId)?.agent_name}). Risco: ${selectedJob?.riskLevel === 'critical' ? 'Crítico' : 'Alto'}. Esta ação será registrada no audit log e pode afetar o funcionamento do sistema remoto.`}
+        confirmLabel="Confirmar Execução"
+        destructive
+        loading={isCreatingJob}
+        onConfirm={createProcessControlJob}
+      />
     </>
   );
 }
