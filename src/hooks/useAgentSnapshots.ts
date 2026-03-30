@@ -18,7 +18,7 @@ import { logger } from '@/lib/logger';
  * ```
  */
 export function useAgentSnapshots() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
+  
   const { tenant, loading: tenantLoading } = useTenant();
 
   return useQuery({
