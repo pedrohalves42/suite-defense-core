@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,18 +9,17 @@ import {
 import { format } from '@/lib/date-utils';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 type Period = '7d' | '30d' | '90d';
 
 export function AIInsightsTrendChart() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
   const [period, setPeriod] = useState<Period>('30d');
 
   const daysMap: Record<Period, number> = { '7d': 7, '30d': 30, '90d': 90 };
 
-  const { data: trendData, isLoading } = useQuery({
+  const { data: trendData, isLoading } = useRealtimeQuery({
     queryKey: ['ai-insights-trend', tenant?.id, period],
     queryFn: async () => {
       if (!tenant?.id) return [];
@@ -40,9 +38,9 @@ export function AIInsightsTrendChart() {
       return data || [];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    realtimeTable: 'ai_insights',
+    realtimeFilter: `tenant_id=eq.${tenant?.id}`,
+    staleTime: 300_000,
   });
 
   const chartData = useMemo(() => {

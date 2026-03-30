@@ -20,7 +20,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 interface ImpactMetric {
   icon: React.ElementType;
@@ -45,11 +45,10 @@ const INCIDENT_COST_MAP: Record<string, number> = {
 };
 
 export function SecurityImpactFeed() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   // Fetch today's remediation actions
-  const { data: remediationActions } = useQuery({
+  const { data: remediationActions } = useRealtimeQuery({
     queryKey: ['impact-feed-remediation', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
@@ -67,9 +66,9 @@ export function SecurityImpactFeed() {
       return data || [];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    realtimeTable: 'auto_remediation_actions',
+    realtimeFilter: `tenant_id=eq.${tenant?.id}`,
+    staleTime: 300_000,
   });
 
   // Fetch today's automation executions
@@ -91,13 +90,11 @@ export function SecurityImpactFeed() {
       return data || [];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 300_000,
   });
 
   // Fetch today's playbook executions
-  const { data: playbookExecs } = useQuery({
+  const { data: playbookExecs } = useRealtimeQuery({
     queryKey: ['impact-feed-playbooks', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
@@ -114,9 +111,9 @@ export function SecurityImpactFeed() {
       return data || [];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    realtimeTable: 'playbook_executions',
+    realtimeFilter: `tenant_id=eq.${tenant?.id}`,
+    staleTime: 300_000,
   });
 
   // Fetch weekly trend for comparison
@@ -136,9 +133,7 @@ export function SecurityImpactFeed() {
       return { actions: count || 0, avgDaily: Math.round((count || 0) / 7) };
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 300_000,
   });
 
   const impactMetrics: ImpactMetric[] = useMemo(() => {

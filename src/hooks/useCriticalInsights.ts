@@ -1,19 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveTenant } from "@/hooks/useActiveTenant";
 import { logger } from "@/lib/logger";
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 export function useCriticalInsights() {
-  const adaptiveInterval = useAdaptivePolling(300000);
-  const { activeTenant, loading } = useActiveTenant(); // V-1045 FIX: Use standard tenant hook
+  const { activeTenant, loading } = useActiveTenant();
 
-  return useQuery({
+  return useRealtimeQuery({
     queryKey: ["critical-insights-count", activeTenant?.id],
     queryFn: async () => {
       if (!activeTenant?.id) return 0;
       
-      // Count critical/high unacknowledged insights
       const { count, error } = await supabase
         .from("ai_insights")
         .select("id", { count: "exact", head: true })
@@ -29,7 +26,8 @@ export function useCriticalInsights() {
       return count || 0;
     },
     enabled: !loading && !!activeTenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 30000
+    realtimeTable: 'ai_insights',
+    realtimeFilter: `tenant_id=eq.${activeTenant?.id}`,
+    staleTime: 300_000,
   });
 }

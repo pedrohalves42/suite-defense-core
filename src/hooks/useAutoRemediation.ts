@@ -1,8 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 export type RemediationActionType =
   | 'kill_process'
@@ -44,11 +44,10 @@ export const ROLLBACK_SUPPORTED: RemediationActionType[] = [
 ];
 
 export const useAutoRemediation = () => {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
-  const actions = useQuery({
+  const actions = useRealtimeQuery({
     queryKey: ['remediation-actions', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
@@ -63,8 +62,9 @@ export const useAutoRemediation = () => {
       return data as RemediationAction[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 120_000
+    realtimeTable: 'auto_remediation_actions',
+    realtimeFilter: `tenant_id=eq.${tenant?.id}`,
+    staleTime: 300_000,
   });
 
   const executeRemediation = useMutation({

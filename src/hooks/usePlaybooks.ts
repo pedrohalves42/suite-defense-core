@@ -2,9 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
 import { toast } from 'sonner';
-import { useEffect } from 'react';
 import { logger } from '@/lib/logger';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 export interface PlaybookAction {
   id: string;
@@ -65,7 +64,6 @@ export interface PlaybookExecution {
 }
 
 export function usePlaybooks() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
 
   return useQuery({
@@ -89,11 +87,9 @@ export function usePlaybooks() {
 }
 
 export function usePendingPlaybookExecutions() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
-  const queryClient = useQueryClient();
 
-  const query = useQuery({
+  return useRealtimeQuery({
     queryKey: ['playbook-executions-pending', tenant?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -112,42 +108,10 @@ export function usePendingPlaybookExecutions() {
       return (data || []) as unknown as PlaybookExecution[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 120_000
+    realtimeTable: 'playbook_executions',
+    realtimeFilter: `tenant_id=eq.${tenant?.id}`,
+    staleTime: 300_000,
   });
-
-  // Subscribe to realtime updates
-  useEffect(() => {
-    if (!tenant?.id) return;
-
-    const channel = supabase
-      .channel('playbook-executions-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'playbook_executions',
-          filter: `tenant_id=eq.${tenant.id}`
-        },
-        (payload) => {
-          logger.debug('[usePlaybooks] Realtime update:', payload);
-          queryClient.invalidateQueries({ 
-            queryKey: ['playbook-executions-pending', tenant.id] 
-          });
-          queryClient.invalidateQueries({ 
-            queryKey: ['playbook-executions-history', tenant.id] 
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [tenant?.id, queryClient]);
-
-  return query;
 }
 
 export function usePlaybookExecutionHistory(limit = 50) {

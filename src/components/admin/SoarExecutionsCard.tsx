@@ -3,7 +3,6 @@
  * Shows playbook execution summary by trigger type and status
  */
 
-import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Zap, CheckCircle, XCircle, Clock, AlertTriangle, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from '@/lib/date-utils';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 interface SoarSummary {
   status: string;
@@ -46,10 +45,9 @@ const statusConfig: Record<string, { label: string; icon: React.ElementType; cla
 };
 
 export function SoarExecutionsCard() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
 
-  const { data: summaryData, isLoading } = useQuery({
+  const { data: summaryData, isLoading } = useRealtimeQuery({
     queryKey: ['soar-execution-summary', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
@@ -65,9 +63,9 @@ export function SoarExecutionsCard() {
       return data || [];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    realtimeTable: 'playbook_executions',
+    realtimeFilter: `tenant_id=eq.${tenant?.id}`,
+    staleTime: 300_000,
   });
 
   const executions = summaryData || [];

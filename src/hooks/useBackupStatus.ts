@@ -1,7 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface BackupStatusRecord {
   id: string;
@@ -34,10 +33,9 @@ export interface BackupSummary {
 }
 
 export function useBackupStatus() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
 
-  return useQuery({
+  return useRealtimeQuery({
     queryKey: ['backup-status', tenant?.id],
     queryFn: async (): Promise<BackupSummary> => {
       const { data, error } = await supabase
@@ -70,7 +68,8 @@ export function useBackupStatus() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 120_000
+    realtimeTable: 'backup_status',
+    realtimeFilter: `tenant_id=eq.${tenant?.id}`,
+    staleTime: 300_000,
   });
 }

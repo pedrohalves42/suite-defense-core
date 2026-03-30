@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 export interface DataExposureFinding {
   id: string;
@@ -37,11 +37,10 @@ export interface DataExposureSummary {
 }
 
 export function useDataExposure() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
-  const query = useQuery({
+  const query = useRealtimeQuery({
     queryKey: ['data-exposure', tenant?.id],
     queryFn: async (): Promise<DataExposureSummary> => {
       // PERF-FIX: Slim select — avoid fetching large details/sample_preview blobs
@@ -74,8 +73,9 @@ export function useDataExposure() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 120_000
+    realtimeTable: 'data_exposure_findings',
+    realtimeFilter: `tenant_id=eq.${tenant?.id}`,
+    staleTime: 300_000,
   });
 
   const updateStatus = useMutation({
