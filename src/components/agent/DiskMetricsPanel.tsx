@@ -44,7 +44,7 @@ const getProgressColor = (percent: number) => {
 };
 
 export const DiskMetricsPanel = ({ agentId, compact = false }: DiskMetricsPanelProps) => {
-  const adaptiveInterval = useAdaptivePolling(300000);
+  
   const { data: disks, isLoading, error } = useQuery({
     queryKey: ['agent-disks', agentId],
     queryFn: async () => {
