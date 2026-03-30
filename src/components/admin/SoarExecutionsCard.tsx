@@ -63,9 +63,9 @@ export function SoarExecutionsCard() {
       return data || [];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    realtimeTable: 'playbook_executions',
+    realtimeFilter: `tenant_id=eq.${tenant?.id}`,
+    staleTime: 300_000,
   });
 
   const executions = summaryData || [];
