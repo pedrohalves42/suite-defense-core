@@ -9,14 +9,13 @@ import { useNavigate } from 'react-router-dom';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
 
 export function AIInsightsSummary() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const navigate = useNavigate();
 
-  const { data: insights, isLoading } = useQuery({
+  const { data: insights, isLoading } = useRealtimeQuery({
     queryKey: ['ai-insights-summary', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return null;
