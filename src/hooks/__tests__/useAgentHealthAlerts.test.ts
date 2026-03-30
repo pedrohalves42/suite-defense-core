@@ -36,6 +36,11 @@ vi.mock('@/integrations/supabase/client', () => ({
       match: mockMatch,
       insert: mockInsert,
     })),
+    channel: vi.fn(() => ({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+    })),
+    removeChannel: vi.fn(),
     functions: {
       invoke: vi.fn().mockResolvedValue({ data: { success: true }, error: null }),
     },

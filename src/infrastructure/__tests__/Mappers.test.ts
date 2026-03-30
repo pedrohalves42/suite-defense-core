@@ -17,6 +17,7 @@ describe('AgentMapper', () => {
     os_type: 'windows',
     status: 'active',
     agent_version: '5.0.3',
+    last_heartbeat: new Date().toISOString(),
     last_seen: new Date().toISOString(),
     hmac_secret: 'a'.repeat(64),
     ...overrides,
@@ -34,14 +35,14 @@ describe('AgentMapper', () => {
     expect(agent.version.value).toBe('0.0.0');
   });
 
-  it('toDomain maps offline status for old last_seen', () => {
+  it('toDomain maps offline status for old last_heartbeat', () => {
     const oldDate = new Date(Date.now() - 60 * 60 * 1000).toISOString(); // 60 min > 30 min threshold
-    const agent = AgentMapper.toDomain(makeRow({ last_seen: oldDate }));
+    const agent = AgentMapper.toDomain(makeRow({ last_heartbeat: oldDate }));
     expect(agent.status).toBe(AgentStatus.OFFLINE);
   });
 
-  it('toDomain maps online status for recent last_seen', () => {
-    const agent = AgentMapper.toDomain(makeRow({ last_seen: new Date().toISOString() }));
+  it('toDomain maps online status for recent last_heartbeat', () => {
+    const agent = AgentMapper.toDomain(makeRow({ last_heartbeat: new Date().toISOString() }));
     expect(agent.status).toBe(AgentStatus.ONLINE);
   });
 
