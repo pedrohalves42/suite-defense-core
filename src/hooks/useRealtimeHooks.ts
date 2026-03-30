@@ -62,11 +62,12 @@ export function useRealtimeAlerts(tenantId: string | undefined, opts?: { activeO
     queryKey: ['rt-alerts', tenantId, activeOnly],
     queryFn: async () => {
       if (!tenantId) return [];
-      const q = supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q: any = supabase
         .from('system_alerts')
         .select('id, alert_type, severity, title, description, is_active, created_at, resolved_at')
         .eq('tenant_id', tenantId);
-      if (activeOnly) q.eq('is_active', true);
+      if (activeOnly) q = q.eq('is_active', true);
       const { data, error } = await q.order('created_at', { ascending: false }).limit(100);
       if (error) throw error;
       return data || [];
