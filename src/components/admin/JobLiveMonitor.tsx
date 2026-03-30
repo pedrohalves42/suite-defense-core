@@ -31,7 +31,7 @@ import { JOB_TYPE_LABELS } from '@/lib/job-labels';
 import { getFailureExplanation, formatErrorForUser } from '@/lib/leigo-translator';
 import { useSimplifiedMessage } from '@/hooks/useSimplifiedMessage';
 import { getJobStatusInfo } from '@/components/admin/JobStatusSimplified';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 interface LiveJob {
   id: string;
