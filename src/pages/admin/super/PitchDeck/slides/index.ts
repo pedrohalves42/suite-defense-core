@@ -1,0 +1,10 @@
+export { SlideTitle } from './SlideTitle';
+export { SlideProblem } from './SlideProblem';
+export { SlideSolution } from './SlideSolution';
+export { SlideMarket } from './SlideMarket';
+export { SlideProduct } from './SlideProduct';
+export { SlideTraction } from './SlideTraction';
+export { SlideBusinessModel } from './SlideBusinessModel';
+export { SlideTeam } from './SlideTeam';
+export { SlideFinancial } from './SlideFinancial';
+export { SlideAsk } from './SlideAsk';
