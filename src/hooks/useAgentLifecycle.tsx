@@ -95,7 +95,6 @@ function getStatusBadge(state: AgentLifecycleState): DashboardAgentCard['status_
 }
 
 export function usePipelineMetrics(tenantId: string | undefined, hoursBack: number | null = null, loading?: boolean) {
-  const adaptiveInterval = useAdaptivePolling(300000);
   return useQuery({
     queryKey: ['pipeline-metrics', tenantId, hoursBack],
     queryFn: async () => {
