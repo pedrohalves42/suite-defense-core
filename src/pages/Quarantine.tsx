@@ -323,26 +323,16 @@ export default function Quarantine() {
       </Card>
 
       {/* Action Dialog */}
-      <AlertDialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {actionType === 'restore' ? t('quarantinePage.restoreFile') : t('quarantinePage.deleteFile')}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {actionType === 'restore'
-                ? t('quarantinePage.restoreConfirm')
-                : t('quarantinePage.deleteConfirm')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('quarantinePage.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmAction}>
-              {t('quarantinePage.confirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={actionDialogOpen}
+        onOpenChange={setActionDialogOpen}
+        title={actionType === 'restore' ? t('quarantinePage.restoreFile') : t('quarantinePage.deleteFile')}
+        description={actionType === 'restore' ? t('quarantinePage.restoreConfirm') : t('quarantinePage.deleteConfirm')}
+        confirmLabel={t('quarantinePage.confirm')}
+        cancelLabel={t('quarantinePage.cancel')}
+        onConfirm={confirmAction}
+        destructive={actionType === 'delete'}
+      />
     </div>
   );
 }
