@@ -19,7 +19,7 @@ import {
   Tag
 } from 'lucide-react';
 import { formatRelativeTime, formatBrazilDateTime } from '@/lib/date-utils';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 interface AgentSystemInfoProps {
   agentId: string;
