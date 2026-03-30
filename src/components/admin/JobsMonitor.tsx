@@ -47,7 +47,6 @@ export function JobsMonitor() {
     realtimeTable: 'jobs',
     staleTime: 300_000,
   });
-  });
 
   const cancelJob = useMutation({
     mutationFn: async (jobId: string) => {
