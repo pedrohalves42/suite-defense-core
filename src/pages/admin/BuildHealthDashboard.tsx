@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Activity, AlertCircle, Clock, Trash2 } from "lucide-react";
+import { Activity, AlertCircle, CheckCircle, Clock, Trash2 } from "lucide-react";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import { toast } from "sonner";
 import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
