@@ -4,7 +4,7 @@
  * Decomposed from a 1035-line God component into focused subcomponents.
  */
 
-import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingGrid } from '@/components/ui/loading-grid';
 import { JobLiveMonitor } from '@/components/admin/JobLiveMonitor';
 import { AgentHealthAlerts } from '@/components/admin/AgentHealthAlerts';
 import { DynamicValidationSystem } from '@/components/admin/DynamicValidationSystem';
@@ -20,17 +20,7 @@ export default function DiagnosticsCenter() {
   const ctx = useDiagnosticsCenter();
 
   if (ctx.agentsLoading) {
-    return (
-      <div className="space-y-6 p-6">
-        <Skeleton className="h-10 w-80" />
-        <div className="grid gap-4 md:grid-cols-3">
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-        </div>
-        <Skeleton className="h-96" />
-      </div>
-    );
+    return <LoadingGrid cards={3} showContent />;
   }
 
   return (

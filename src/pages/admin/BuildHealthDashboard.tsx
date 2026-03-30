@@ -1,13 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Activity, AlertCircle, CheckCircle2, Clock, XCircle, Trash2 } from "lucide-react";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Activity, AlertCircle, CheckCircle, Clock, Trash2 } from "lucide-react";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import { toast } from "sonner";
 import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
+import { getStatusMapping } from '@/lib/status-utils';
 
 export default function BuildHealthDashboard() {
   const queryClient = useQueryClient();
@@ -44,16 +45,8 @@ export default function BuildHealthDashboard() {
   });
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <Badge className="bg-success text-success-foreground"><CheckCircle2 className="w-3 h-3 mr-1" />Sucesso</Badge>;
-      case 'failed':
-        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Falhou</Badge>;
-      case 'building':
-        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1 animate-spin" />Building</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
+    const { label, badgeVariant } = getStatusMapping(status);
+    return <StatusBadge variant={badgeVariant}>{label}</StatusBadge>;
   };
 
   const successRate = builds 
@@ -122,7 +115,7 @@ export default function BuildHealthDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Taxa de Sucesso</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-success" />
+            <CheckCircle className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{successRate}%</div>
