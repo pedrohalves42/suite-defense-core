@@ -649,9 +649,9 @@ verify_jwt = false
 verify_jwt = false
 
 # === Security Operations Framework ===
-# V-002 Fix: Allow cron calls without JWT (function validates internally via x-cron-source header)
+# V-002 Fix: Now uses verify_jwt=true; internal calls use service_role key as JWT
 [functions.run-rls-tests]
-verify_jwt = false
+verify_jwt = true
 
 # === Security Hardening Edge Functions (Phase 3) ===
 [functions.delete-invite]
