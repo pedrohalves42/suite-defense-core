@@ -133,9 +133,7 @@ export function SecurityImpactFeed() {
       return { actions: count || 0, avgDaily: Math.round((count || 0) / 7) };
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 300_000,
   });
 
   const impactMetrics: ImpactMetric[] = useMemo(() => {
