@@ -15,7 +15,8 @@ export class SupabaseNetworkMetricsRepository implements NetworkMetricsRepositor
   async saveBatch(metrics: NetworkMetrics[]): Promise<void> {
     if (metrics.length === 0) return;
     const rows = metrics.map(m => NetworkMetricsMapper.toPersistence(m));
-    const { error } = await supabase.from('agent_network_metrics').insert(rows as never);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await supabase.from('agent_network_metrics').insert(rows as any);
     if (error) throw new Error(`Failed to save network metrics batch: ${error.message}`);
   }
 
