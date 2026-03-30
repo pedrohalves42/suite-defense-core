@@ -43,7 +43,7 @@ verify_jwt = true
 
 # === Agent Functions ===
 [functions.promote-agent-v5]
-verify_jwt = false
+verify_jwt = true
 
 # REMOVED: sync-agent-script (consolidated into release-sync)
 
