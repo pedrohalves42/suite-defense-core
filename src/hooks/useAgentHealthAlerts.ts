@@ -74,7 +74,7 @@ export function useAgentExecutionHealth() {
 
 // V-1026 FIX: Add tenant_id filter
 export function useUnhealthyAgents() {
-  const adaptiveInterval = useAdaptivePolling(300000);
+  
   const { tenant, loading } = useTenant();
 
   return useQuery<AgentExecutionHealth[]>({
