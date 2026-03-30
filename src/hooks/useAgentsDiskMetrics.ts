@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { DiskMetric } from '@/components/agent/AgentCard';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
+
 
 /**
  * Hook to fetch disk metrics for multiple agents at once
