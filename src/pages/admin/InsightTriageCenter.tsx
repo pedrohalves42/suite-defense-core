@@ -10,6 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Brain, CheckCircle, XCircle, AlertTriangle, Clock, ThumbsUp, ThumbsDown, RefreshCw, Filter } from 'lucide-react';
+import { StatsGrid } from '@/components/ui/stats-grid';
+import { SummaryStatCard } from '@/components/ui/summary-stat-card';
 import { formatBrazil } from '@/lib/date-utils';
 
 interface AIInsight {

@@ -11,6 +11,8 @@ import {
   Clock, Play, CheckCircle, XCircle, AlertTriangle, 
   Zap, Bot, RefreshCw, Calendar, Timer
 } from 'lucide-react';
+import { StatsGrid } from '@/components/ui/stats-grid';
+import { SummaryStatCard } from '@/components/ui/summary-stat-card';
 import { format, formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';

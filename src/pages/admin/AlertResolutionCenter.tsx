@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { AlertTriangle, CheckCircle, Archive, RefreshCw, Cpu, HardDrive, Wifi, Shield, Lightbulb, Zap } from 'lucide-react';
+import { StatsGrid } from '@/components/ui/stats-grid';
+import { SummaryStatCard } from '@/components/ui/summary-stat-card';
 import { format, ptBR } from '@/lib/date-utils';
 import { getAlertExplanation, ALERT_TYPE_LABELS } from '@/lib/leigo-translator';
 import { ExplainableAlert } from '@/components/ui/explainable-alert';

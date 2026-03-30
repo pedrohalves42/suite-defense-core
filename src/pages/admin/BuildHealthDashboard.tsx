@@ -1,13 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Activity, AlertCircle, CheckCircle2, Clock, XCircle, Trash2 } from "lucide-react";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Activity, AlertCircle, Clock, Trash2 } from "lucide-react";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import { toast } from "sonner";
 import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
+import { getStatusMapping } from '@/lib/status-utils';
 
 export default function BuildHealthDashboard() {
   const queryClient = useQueryClient();
