@@ -70,7 +70,7 @@ const HealthIndicator = ({ cpu, memory, disk }: { cpu?: number; memory?: number;
 };
 
 export const ClientComputers = () => {
-  const adaptiveInterval = useAdaptivePolling(300_000);
+  
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
