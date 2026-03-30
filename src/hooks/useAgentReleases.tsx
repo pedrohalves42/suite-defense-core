@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export const useAgentReleases = () => {
   const adaptiveInterval = useAdaptivePolling(600_000);
@@ -20,7 +19,7 @@ export const useAgentReleases = () => {
       if (error) throw error;
       return data;
     },
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
     refetchOnWindowFocus: true,
     staleTime: 300_000
   });

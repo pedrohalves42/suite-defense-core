@@ -6,10 +6,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Activity, TrendingUp, TrendingDown, CheckCircle2, Clock, RefreshCw } from "lucide-react";
 import { format, ptBR } from '@/lib/date-utils';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export function RolloutTelemetryDashboard() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const [selectedDecision, setSelectedDecision] = useState<string>('all');
 
   const { data: decisions, isLoading } = useQuery({
@@ -25,8 +23,8 @@ export function RolloutTelemetryDashboard() {
       if (error) throw error;
       return data;
     },
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 

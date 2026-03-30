@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { useTenant } from './useTenant';
 import { logger } from '@/lib/logger';
 import { useEffect } from 'react';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface ActionItem {
   item_id: string;
@@ -66,7 +65,7 @@ export function useActionCenter() {
     },
     // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
     enabled: !tenantLoading && !!tenant?.id,
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
     staleTime: 120_000
   });
 

@@ -13,7 +13,6 @@ import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTenant } from "@/hooks/useTenant";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 import {
   BarChart,
   Bar,
@@ -117,8 +116,8 @@ export default function CronHealthDashboard() {
       return (data || []) as unknown as CronHealthRecord[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 120_000,
+    refetchInterval: false,
+    staleTime: 600_000,
   });
 
   // Tenant-scoped job stats for cross-reference
@@ -143,8 +142,8 @@ export default function CronHealthDashboard() {
       return { total, completed, failed, successRate: total > 0 ? Math.round((completed / total) * 100) : 100 };
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 120_000,
+    refetchInterval: false,
+    staleTime: 600_000,
   });
 
   const healthyCrons = records.filter(r => getStatusInfo(r).status === 'healthy').length;

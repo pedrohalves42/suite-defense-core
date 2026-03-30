@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import type { ThreatIntelStats } from '@/domain/entities/ThreatIndicator';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export function useThreatIntelStats() {
   const adaptiveInterval = useAdaptivePolling(300_000);
@@ -18,7 +17,7 @@ export function useThreatIntelStats() {
       return data as unknown as ThreatIntelStats;
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
     staleTime: 60_000
   });
 }

@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface SLODefinition {
   id: string;
@@ -37,7 +36,6 @@ export interface SLOAlert {
 }
 
 export const useSLOData = () => {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   // V-9001 FIX: Add tenantId to queryKey to prevent cross-tenant cache pollution
@@ -121,7 +119,6 @@ export const useSLOData = () => {
 
 // Calculate real-time SLO metrics from actual data
 export const useCalculatedSLOs = () => {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   return useQuery({
@@ -201,8 +198,8 @@ export const useCalculatedSLOs = () => {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 };

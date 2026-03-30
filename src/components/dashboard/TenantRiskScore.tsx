@@ -7,7 +7,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { useMemo } from 'react';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface RiskDimension {
   label: string;
@@ -38,7 +37,6 @@ const levelConfig = {
 };
 
 export function TenantRiskScore() {
-  const adaptiveInterval = useAdaptivePolling(5);
   const { tenant } = useTenant();
 
   const { data: riskData, isLoading } = useQuery({
@@ -122,8 +120,8 @@ export function TenantRiskScore() {
       };
     },
     enabled: !!tenant?.id,
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: adaptiveInterval,
+    staleTime: 600_000,
+    refetchInterval: false,
   });
 
   if (isLoading || !riskData) {

@@ -21,7 +21,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { logger } from '@/lib/logger';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 import {
   Table,
   TableBody,
@@ -71,7 +70,6 @@ interface OperationsSummary {
 }
 
 export default function SystemOperations() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
@@ -88,8 +86,8 @@ export default function SystemOperations() {
       return data as unknown as OperationsSummary;
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 
@@ -106,8 +104,8 @@ export default function SystemOperations() {
       return data as StuckJob[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 
@@ -123,8 +121,8 @@ export default function SystemOperations() {
       if (error) throw error;
       return data as EdgeFunctionStat[];
     },
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 

@@ -12,7 +12,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { prepareJobForInsert } from "@/lib/job-utils";
 import { logger } from '@/lib/logger';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 import { 
   FlaskConical, 
   Play, 
@@ -48,7 +47,6 @@ type TestState = 'idle' | 'creating' | 'polling' | 'completed' | 'failed' | 'tim
 const STATUS_STEPS = ['queued', 'delivered', 'completed'];
 
 export default function JobTestRunner() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
@@ -78,8 +76,8 @@ export default function JobTestRunner() {
         .sort((a: Agent, b: Agent) => a.agent_name.localeCompare(b.agent_name));
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 

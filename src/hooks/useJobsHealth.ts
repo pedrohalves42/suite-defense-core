@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { tenantQuery } from '@/lib/tenantQuery';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface AgentOperationalInfo {
   id: string;
@@ -54,7 +53,6 @@ export interface JobsHealthSummary {
  * ADR-029 CRIT-04: Added loading guard to prevent race conditions
  */
 export const useJobsHealth = () => {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const adaptiveInterval2 = useAdaptivePolling(300_000);
   const { activeTenant, loading } = useActiveTenant();  // ADR-029 CRIT-04: Add loading
   const tenantId = activeTenant?.id;
@@ -81,7 +79,7 @@ export const useJobsHealth = () => {
       }));
     },
     enabled: !loading && !!tenantId,  // ADR-029 CRIT-04: Guard with loading state
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
     staleTime: 10000
   });
 
@@ -101,7 +99,7 @@ export const useJobsHealth = () => {
       return (data || []) as JobHourlyTrend[];
     },
     enabled: !loading && !!tenantId,  // ADR-029 CRIT-04: Guard with loading state
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
     staleTime: 30000
   });
 
@@ -121,8 +119,7 @@ export const useJobsHealth = () => {
       return data || [];
     },
     enabled: !loading && !!tenantId,
-    refetchInterval: adaptiveInterval
-  });
+    refetchInterval: false,});
 
   // Operational: paused agents & outdated versions
   const agentOpsQuery = useQuery({
@@ -137,7 +134,7 @@ export const useJobsHealth = () => {
       return (data || []) as AgentOperationalInfo[];
     },
     enabled: !loading && !!tenantId,
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
     staleTime: 30000
   });
 
@@ -184,7 +181,7 @@ export const useJobsHealth = () => {
         .sort((a, b) => b.count - a.count);
     },
     enabled: !loading && !!tenantId,
-    refetchInterval: adaptiveInterval2,
+    refetchInterval: false,
     staleTime: 120_000
   });
 

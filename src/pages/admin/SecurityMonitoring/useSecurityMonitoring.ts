@@ -2,7 +2,6 @@ import { useState, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 import { subHours } from 'date-fns';
 import { toast } from 'sonner';
 import { getAttackTypeLabel } from '@/lib/ui-dictionary';
@@ -221,8 +220,8 @@ export function useSecurityMonitoring() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 

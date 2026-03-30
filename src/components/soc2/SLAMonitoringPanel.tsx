@@ -11,7 +11,6 @@ import { Activity, Clock, Server, Shield, Zap, AlertTriangle, CheckCircle2, Tren
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface SLAMetric {
   name: string;
@@ -159,8 +158,8 @@ export function SLAMonitoringPanel() {
       ];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 120_000,
+    refetchInterval: false,
+    staleTime: 600_000,
   });
 
   const statusConfig = {

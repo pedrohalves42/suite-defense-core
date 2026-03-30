@@ -17,7 +17,6 @@ import { DismissInsightDialog } from "@/components/insights/DismissInsightDialog
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/hooks/useTenant";
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 interface AIInsight {
   id: string;
   tenant_id: string;
@@ -44,7 +43,6 @@ interface Statistics {
 }
 
 export default function AIInsights() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const queryClient = useQueryClient();
   const { tenant } = useTenant();
   const [dismissDialogOpen, setDismissDialogOpen] = useState(false);
@@ -65,8 +63,8 @@ export default function AIInsights() {
       if (error) throw error;
       return data as { insights: AIInsight[]; statistics: Statistics };
     },
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 

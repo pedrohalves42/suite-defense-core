@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface CronHealthEntry {
   cron_name: string;
@@ -39,8 +38,8 @@ export function CronHealthAlert() {
       return (data || []) as unknown as CronHealthEntry[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 

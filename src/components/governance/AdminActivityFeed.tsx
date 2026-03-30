@@ -8,7 +8,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Shield, Trash2, UserMinus, Key, AlertTriangle, Settings } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 /**
  * AdminActivityFeed — HUM-003 mitigation
@@ -65,8 +64,8 @@ export function AdminActivityFeed({
       return (data || []) as AuditEntry[];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 120_000,
+    refetchInterval: false,
+    staleTime: 600_000,
   });
 
   if (isLoading) {

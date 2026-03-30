@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 export interface IncidentSLOState {
   id: string;
@@ -140,7 +139,7 @@ export const useIncidentGroupsWithSLO = (limit = 50) => {
       return (data || []) as unknown as IncidentGroupWithSLO[];
     },
     enabled: !loading && !!activeTenant?.id, // ADR-029 CRIT-04
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
     staleTime: 120_000
   });
 };
@@ -178,7 +177,7 @@ export const useIncidentSLOSummary = () => {
       };
     },
     enabled: !loading && !!activeTenant?.id, // ADR-029 CRIT-04
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
     staleTime: 120_000
   });
 };

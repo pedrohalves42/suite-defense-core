@@ -25,7 +25,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { logger } from '@/lib/logger';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 import { MetricTile } from './components/MetricTile';
 import { ActionRow } from './components/ActionRow';
@@ -74,8 +73,8 @@ export default function ExecutiveDashboard() {
       };
     },
     enabled: !!tenantId,
-    refetchInterval: adaptiveInterval,
-    staleTime: 120_000,
+    refetchInterval: false,
+    staleTime: 600_000,
   });
 
   const [complianceTriggered, setComplianceTriggered] = useState(false);

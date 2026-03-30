@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { useAdaptivePolling } from '@/hooks/useAdaptivePolling';
 
 interface BaselineProfile {
   type: string;
@@ -30,7 +29,6 @@ interface BaselineProfile {
 }
 
 export function TenantBaselineProfile() {
-  const adaptiveInterval = useAdaptivePolling(300000);
   const { tenant } = useTenant();
 
   // Fetch baselines for all agents
@@ -48,8 +46,8 @@ export function TenantBaselineProfile() {
       return data || [];
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 
@@ -99,8 +97,8 @@ export function TenantBaselineProfile() {
       };
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 
@@ -138,8 +136,8 @@ export function TenantBaselineProfile() {
       return { peakStart, peakEnd, hourCounts, maxCount };
     },
     enabled: !!tenant?.id,
-    refetchInterval: adaptiveInterval,
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: false,
+    staleTime: 600_000,
     refetchOnWindowFocus: false,
   });
 

@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useTenant } from "@/hooks/useTenant";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
-import { useAdaptivePolling } from "@/hooks/useAdaptivePolling";
 import { logger } from "@/lib/logger";
 import type {
   DashboardAgent, DashboardJob, DashboardReport,
@@ -130,7 +129,7 @@ export function useDashboardQueries() {
     queryFn: () => fetchVirusScans(tenantId!),
     enabled,
     staleTime: STALE_TIME,
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
     refetchOnWindowFocus: true,
   });
 
@@ -139,7 +138,7 @@ export function useDashboardQueries() {
     queryFn: () => fetchReports(tenantId!),
     enabled,
     staleTime: STALE_TIME,
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
     refetchOnWindowFocus: true,
   });
 
@@ -148,7 +147,7 @@ export function useDashboardQueries() {
     queryFn: () => fetchTokens(tenantId!),
     enabled,
     staleTime: STALE_TIME,
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
     refetchOnWindowFocus: true,
   });
 
@@ -157,7 +156,7 @@ export function useDashboardQueries() {
     queryFn: () => fetchRateLimits(tenantId!),
     enabled,
     staleTime: STALE_TIME,
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
     refetchOnWindowFocus: true,
   });
 
@@ -166,14 +165,14 @@ export function useDashboardQueries() {
     queryFn: () => fetchAuditLogs(tenantId!),
     enabled,
     staleTime: STALE_TIME,
-    refetchInterval: adaptiveInterval,
+    refetchInterval: false,
     refetchOnWindowFocus: true,
   });
 
   const tenantNames = useQuery({
     queryKey: ["dashboard", "tenantNames"],
     queryFn: fetchTenantNames,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 600_000,
   });
 
   const loading = agents.isLoading || jobs.isLoading || reports.isLoading;
