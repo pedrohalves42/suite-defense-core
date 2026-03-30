@@ -102,7 +102,6 @@ export function useDashboardQueries() {
   const queryClient = useQueryClient();
   const tenantId = tenant?.id;
   const enabled = !!tenantId && isOnline;
-  const adaptiveInterval = useAdaptivePolling(300_000);
 
   // Agents & Jobs use Realtime (tables already have publications)
   const agents = useRealtimeQuery<DashboardAgent[]>({

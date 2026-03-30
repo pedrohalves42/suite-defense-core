@@ -10,7 +10,6 @@ import type { SecurityData, TimeRange, UnifiedEvent } from './types';
 import { alertTypeLabels, remediableAlerts, eventTypeLabels } from './types';
 
 export function useSecurityMonitoring() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const [timeRange, setTimeRange] = useState<TimeRange>('24h');
   const [eventFilter, setEventFilter] = useState<string>('all');
   const [isScanning, setIsScanning] = useState(false);

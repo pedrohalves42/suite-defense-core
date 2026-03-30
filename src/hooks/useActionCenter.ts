@@ -45,7 +45,6 @@ export interface ActionCenterFeed {
 
 
 export function useActionCenter() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   // V-FIX: Use loading guard to prevent race condition during tenant sync
   const { tenant, loading: tenantLoading } = useTenant();
   const queryClient = useQueryClient();

@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
-import { useAdaptivePolling } from './useAdaptivePolling';
+
 
 export interface RiskBreakdown {
   antivirus_issues?: number;
@@ -32,8 +32,6 @@ export const useRiskScore = () => {
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
 
-  const refetchInterval = useAdaptivePolling(300_000);
-
   // Fetch latest risk score
   const { data: riskScore, isLoading, error } = useQuery<RiskScore | null>({
     queryKey: ['risk-score', tenant?.id],
@@ -53,8 +51,8 @@ export const useRiskScore = () => {
       return data as RiskScore | null;
     },
     enabled: !!tenant?.id,
-    staleTime: 60000,
-    refetchInterval,
+    staleTime: 600_000,
+    refetchInterval: false,
   });
 
   // Fetch risk score history (last 30 days)

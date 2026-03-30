@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 
 export const useAgentReleases = () => {
-  const adaptiveInterval = useAdaptivePolling(600_000);
   const queryClient = useQueryClient();
 
   // SECURITY: Use agent_releases_public view (Phase 3 hardening - column privileges block script_content)

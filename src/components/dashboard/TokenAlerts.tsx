@@ -23,7 +23,6 @@ interface ExpiringToken {
 }
 
 export function TokenAlerts() {
-  const adaptiveInterval = useAdaptivePolling(3_600_000);
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({

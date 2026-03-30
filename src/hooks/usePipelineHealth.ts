@@ -68,7 +68,6 @@ export function usePipelineHealth(
   }
 ) {
   const enabled = opts?.enabled ?? true;
-  const adaptiveInterval = useAdaptivePolling(opts?.refetchIntervalMs ?? 300000);
 
   return useQuery({
     queryKey: ['pipeline-health', tenantId],

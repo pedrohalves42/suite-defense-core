@@ -17,7 +17,6 @@ interface SmartNotification {
  * Designed for the Simple Mode dashboard
  */
 export function useSmartNotifications() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant, loading: tenantLoading } = useTenant();
 
   const { data: notifications, isLoading, refetch } = useQuery({

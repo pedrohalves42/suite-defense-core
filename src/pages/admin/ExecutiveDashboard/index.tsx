@@ -35,7 +35,6 @@ import { NavButton } from './components/NavButton';
 import { translateCategory, getHealthStatus } from './utils';
 
 export default function ExecutiveDashboard() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { metrics, isLoading: unifiedLoading, refetch: refetchUnified, tenant } = useUnifiedMetrics();
   const tenantId = tenant?.id;
   const { data: riskDelta } = useTodayRiskDelta();

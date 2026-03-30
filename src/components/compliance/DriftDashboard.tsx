@@ -36,7 +36,6 @@ const severityConfig = {
 } as const;
 
 export function DriftDashboard() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
 
   const { data: events, isLoading } = useQuery({

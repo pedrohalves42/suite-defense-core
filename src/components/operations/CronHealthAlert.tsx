@@ -23,7 +23,6 @@ interface CronHealthEntry {
  * Read-only component showing cron job health status.
  */
 export function CronHealthAlert() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
 
   const { data: cronJobs, isLoading, refetch } = useQuery({

@@ -121,7 +121,6 @@ export function getErrorBudgetColor(consumed: number): string {
  */
 export const useIncidentGroupsWithSLO = (limit = 50) => {
   const { activeTenant, loading } = useActiveTenant(); // ADR-029 CRIT-04
-  const adaptiveInterval = useAdaptivePolling(300_000);
 
   return useQuery({
     queryKey: ['incident-groups-slo', activeTenant?.id, limit],
@@ -149,7 +148,6 @@ export const useIncidentGroupsWithSLO = (limit = 50) => {
  */
 export const useIncidentSLOSummary = () => {
   const { activeTenant, loading } = useActiveTenant(); // ADR-029 CRIT-04
-  const adaptiveInterval = useAdaptivePolling(300_000);
 
   return useQuery({
     queryKey: ['incident-slo-summary', activeTenant?.id],

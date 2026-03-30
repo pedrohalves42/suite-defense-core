@@ -4,7 +4,6 @@ import { useTenant } from '@/hooks/useTenant';
 import type { ThreatIntelStats } from '@/domain/entities/ThreatIndicator';
 
 export function useThreatIntelStats() {
-  const adaptiveInterval = useAdaptivePolling(300_000);
   const { tenant } = useTenant();
 
   return useQuery({
