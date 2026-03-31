@@ -1,5 +1,14 @@
 import { logger } from "./logger.ts";
-import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+
+// Use a minimal interface to avoid esm.sh import that breaks the frontend bundler
+interface SupabaseClientLike {
+  from(table: string): {
+    upsert(rows: Record<string, unknown>[], options?: { onConflict: string }): Promise<{ error: { message: string } | null }>;
+    select(columns: string): {
+      in(column: string, values: string[]): Promise<{ data: unknown[] | null; error: { message: string } | null }>;
+    };
+  };
+}
 
 /**
  * Batch query utilities for N+1 prevention
