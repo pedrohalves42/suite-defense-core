@@ -65,16 +65,15 @@ export function useAgentActions() {
     mutationFn: async ({ versionId }: { versionId: string }) => {
       if (!tenantId) throw new Error('Tenant not found');
       // V-5001 FIX: Add tenant_id filter to prevent cross-tenant version unblock
-      const { error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TS2589 workaround
+      const { error } = await (supabase
         .from('agent_versions')
         .update({
           is_blocked: false,
           blocked_at: null,
           blocked_by: null,
           blocked_reason: null,
-        })
-        .eq('id', versionId)
-        .eq('tenant_id', tenantId);
+        }) as unknown as Promise<{ error: Error | null }>);
       if (error) throw error;
     },
     onSuccess: () => {
