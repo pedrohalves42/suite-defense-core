@@ -30,7 +30,7 @@ function hexToBytes(hex: string): Uint8Array {
   return bytes;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: buildCorsHeaders(origin) });
   }

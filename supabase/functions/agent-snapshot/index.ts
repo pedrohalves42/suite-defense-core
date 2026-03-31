@@ -14,7 +14,7 @@ import { logger } from '../_shared/logger.ts';
  * - Erros claros (sem falha silenciosa)
  */
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const correlationId = crypto.randomUUID()
 
   // CORS preflight
