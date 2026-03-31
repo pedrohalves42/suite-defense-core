@@ -41,7 +41,7 @@ export async function batchQuery<T, R>(
  * Upsert items in batches to avoid payload size limits.
  */
 export async function batchUpsert(
-  supabase: SupabaseClient,
+  supabase: SupabaseClientLike,
   table: string,
   items: Record<string, unknown>[],
   conflictKey: string,
@@ -73,7 +73,7 @@ export async function batchUpsert(
  * Avoids the 1000-row default limit per query.
  */
 export async function batchFetchByIds<T = Record<string, unknown>>(
-  supabase: SupabaseClient,
+  supabase: SupabaseClientLike,
   table: string,
   idColumn: string,
   ids: string[],
