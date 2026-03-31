@@ -1194,3 +1194,239 @@ Semana 8 (S8): [FASE 4] Remediação de findings + relatório final
 ### Fase E6 — Agente Windows modularização
 ### Fase E7 — Banco/escala (particionamento)
 ### Fase E8 — Maturidade operacional (SLOs, pen-test, runbooks)
+
+---
+
+# Plano de Consolidação de Edge Functions via Roteadores
+
+**Data: 2026-03-31**
+**Objetivo: Reduzir cold starts, simplificar deploy, otimizar custos**
+
+## Situação Atual
+- **248 funções** (excluindo `_shared` e `__tests__`)
+- **10 funções** são proxy stubs (delegam para roteadores via HTTP)
+- **107 funções** distintas invocadas pelo frontend
+- **7 roteadores** existentes: cleanup-router, submit-router, collect-router, notification-router, report-router, ops-router, ai-router
+- Maioria dos cron jobs desabilitados (cobertos por `system-maintenance`)
+
+## Problema
+248 Edge Functions = 248 cold starts potenciais, ~248 containers Deno isolados. Deploy recompila tudo. Custo e latência desnecessários.
+
+---
+
+## Fase 1 — Eliminar Proxy Stubs (QUICK WIN)
+**Impacto: -10 funções | Risco: BAIXO | Esforço: 1 sessão**
+
+Funções que são meros proxies HTTP para `cleanup-router`:
+
+| Proxy Stub | Router Action |
+|---|---|
+| cleanup-telemetry | `telemetry` |
+| cleanup-stuck-jobs | `stuck-jobs` |
+| cleanup-stale-reports | `stale-reports` |
+| cleanup-stale-updates | `stale-updates` |
+| cleanup-stale-playbooks | `stale-playbooks` |
+| cleanup-stuck-builds | `stuck-builds` |
+| cleanup-offline-agents-jobs | `offline-agents-jobs` |
+| cleanup-jobs | `jobs` |
+
+**Ação:** Atualizar `config.toml` e invocações para chamar `cleanup-router` diretamente. Remover diretórios proxy.
+
+---
+
+## Fase 2 — Novos Roteadores por Domínio (MÉDIO PRAZO)
+**Impacto: -80~100 funções | Risco: MÉDIO**
+
+### 2A. `admin-router` (serveTenant, admin role) — 12 funções
+| Action | Função Original |
+|---|---|
+| `create-user` | admin-create-user |
+| `list-users` | list-users |
+| `list-all-users` | list-all-users-admin |
+| `update-user-role` | update-user-role |
+| `update-user-status` | update-user-status |
+| `update-member-role` | update-member-role |
+| `remove-member` | remove-member |
+| `change-password` | change-password |
+| `delete-invite` | delete-invite |
+| `send-invite` | send-invite |
+| `validate-invite` | validate-invite |
+| `accept-invite` | accept-invite |
+
+### 2B. `billing-router` (serveTenant) — 16 funções
+| Action | Função Original |
+|---|---|
+| `create-checkout` | create-checkout |
+| `customer-portal` | customer-portal |
+| `check-subscription` | check-subscription |
+| `manage-subscription` | manage-subscription |
+| `list-invoices` | list-invoices |
+| `create-stripe-products` | create-stripe-products |
+| `create-stripe-products-ext` | create-stripe-products-extended |
+| `create-trial` | create-trial-subscription |
+| `create-custom-trial` | create-custom-trial |
+| `subscription-analytics` | subscription-analytics |
+| `stripe-health-check` | stripe-health-check |
+| `revenue-projections` | revenue-projections |
+| `sales-pipeline` | sales-pipeline |
+| `unit-economics` | unit-economics |
+| `cohort-analysis` | cohort-analysis |
+| `send-trial-reminder` | send-trial-reminder |
+
+**Nota:** `stripe-webhook` permanece standalone (raw body para verificação Stripe).
+
+### 2C. `security-router` (serveTenant/serveInternal) — 15 funções
+| Action | Função Original |
+|---|---|
+| `advisor` | security-advisor |
+| `scan-vulnerabilities` | scan-vulnerabilities |
+| `check-credential-leaks` | check-credential-leaks |
+| `auto-block-threats` | auto-block-threats |
+| `auto-quarantine` | auto-quarantine |
+| `auto-remediate` | auto-remediate |
+| `rollback-remediation` | rollback-remediation |
+| `quarantine-agent` | quarantine-agent |
+| `classify-shadow-it` | classify-shadow-it |
+| `run-attack-simulation` | run-attack-simulation |
+| `populate-security-graph` | populate-security-graph |
+| `siem-export` | siem-export |
+| `run-rls-tests` | run-rls-tests |
+| `export-evidence-bundle` | export-evidence-bundle |
+| `threat-intel-lookup` | threat-intelligence-lookup |
+
+### 2D. `agent-mgmt-router` (serveTenant) — 9 funções
+| Action | Função Original |
+|---|---|
+| `snapshot` | agent-snapshot |
+| `dashboard-data` | get-agent-dashboard-data |
+| `timeline` | get-agent-timeline |
+| `config` | get-agent-config |
+| `policy` | get-agent-policy |
+| `diagnose` | diagnose-agent |
+| `version-management` | agent-version-management |
+| `create-job` | create-job |
+| `create-reinstall-jobs` | create-reinstall-jobs |
+
+### 2E. `check-router` (serveInternal/serveTenant) — 10 funções
+| Action | Função Original |
+|---|---|
+| `failed-logins` | check-failed-logins |
+| `clear-failed-logins` | clear-failed-logins |
+| `record-failed-login` | record-failed-login |
+| `agent-integrity` | check-agent-integrity |
+| `pending-agents` | check-pending-agents |
+| `production-health` | check-production-health |
+| `tenant-quotas` | check-tenant-quotas |
+| `task-sla-breach` | check-task-sla-breach |
+| `installation-health` | check-installation-health |
+| `stuck-jobs` | check-stuck-jobs |
+
+### 2F. `sync-router` (serveInternal/serveTenant) — 4 funções
+| Action | Função Original |
+|---|---|
+| `blocked-websites` | sync-blocked-websites |
+| `cve-database` | sync-cve-database |
+| `storage-bucket` | sync-storage-bucket |
+| `threat-feeds` | sync-threat-feeds |
+
+### 2G. `build-router` (serveTenant) — 9 funções
+| Action | Função Original |
+|---|---|
+| `build-exe` | build-agent-exe |
+| `callback` | build-callback |
+| `generate-portable` | generate-portable-installer |
+| `generate-enrollment` | generate-enrollment-key |
+| `auto-enrollment` | auto-generate-enrollment |
+| `validate-pipeline` | validate-build-pipeline |
+| `setup-script` | setup-agent-script |
+| `pipeline-metrics` | get-installation-pipeline-metrics |
+| `check-name` | check-agent-name-availability |
+
+### 2H. `playbook-router` (serveTenant/serveInternal) — 5 funções
+| Action | Função Original |
+|---|---|
+| `execute` | execute-playbook |
+| `execute-action` | execute-playbook-action |
+| `evaluate-triggers` | evaluate-playbook-triggers |
+| `process-trigger-logs` | process-playbook-trigger-logs |
+| `evaluate-automation` | evaluate-automation-rules |
+
+---
+
+## Fase 3 — Funções que DEVEM Permanecer Standalone
+
+| Função | Razão |
+|---|---|
+| `heartbeat` | HMAC raw body + state machine |
+| `poll-jobs` | HMAC raw body + job claiming |
+| `enroll-agent` | Enrollment key auth |
+| `register-agent-key` | HMAC raw body |
+| `stripe-webhook` | Stripe signature raw body |
+| `saml-sso` | SAML XML flow |
+| `scim-provisioning` | SCIM bearer token |
+| `serve-installer` | Streaming file serving |
+| `soar-engine` | Orchestration complexo |
+| `track-installation-event` | Triplo fluxo de auth |
+| `submit-antivirus-status` | HMAC raw body |
+| `submit-software-inventory` | HMAC raw body |
+| `submit-system-metrics` | HMAC raw body |
+| `submit-web-activity` | HMAC raw body |
+| `submit-vuln-findings` | HMAC raw body |
+| `submit-rollback-event` | HMAC raw body |
+| `submit-processes` | HMAC raw body |
+| `submit-job-result` | Side-effects complexos |
+| `health` | Sync script raw body |
+| `system-maintenance` | Cron orchestrator |
+
+---
+
+## Resultado Esperado
+
+| Métrica | Antes | Depois |
+|---|---|---|
+| Total de funções | 248 | ~60-70 |
+| Cold starts distintos | 248 | ~60-70 |
+| Roteadores | 7 | 15 |
+| Proxy stubs | 10 | 0 |
+| Deploy time | Alto | ~-60% |
+
+## Prioridade de Execução
+
+1. **Fase 1** — proxy stubs (1 sessão, impacto imediato)
+2. **Fase 2B** — billing-router (16 funções, alto uso frontend)
+3. **Fase 2A** — admin-router (12 funções)
+4. **Fase 2C** — security-router (15 funções)
+5. **Fase 2E** — check-router (10 funções)
+6. **Fase 2D** — agent-mgmt-router (9 funções)
+7. **Fase 2F** — sync-router (4 funções)
+8. **Fase 2G** — build-router (9 funções)
+9. **Fase 2H** — playbook-router (5 funções)
+
+## Padrão de Implementação
+
+```typescript
+import { serveTenant } from '../_shared/serve-tenant.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const Schema = z.object({
+  action: z.string().min(1).max(64),
+  payload: z.record(z.unknown()).optional().default({}),
+});
+
+const HANDLERS: Record<string, Handler> = { /* ... */ };
+
+serveTenant(async (req, ctx) => {
+  const parsed = Schema.safeParse(ctx.body);
+  if (!parsed.success) return errorResponse(400, parsed.error);
+  const handler = HANDLERS[parsed.data.action];
+  if (!handler) return errorResponse(404, 'Unknown action');
+  return handler(ctx, parsed.data.payload);
+});
+```
+
+## Regras de Migração
+1. **NUNCA** mover funções HMAC para roteadores (raw body obrigatório)
+2. **SEMPRE** manter retrocompatibilidade durante transição
+3. **SEMPRE** atualizar frontend em paralelo
+4. **TESTAR** cada roteador antes de remover standalone
+5. **ATUALIZAR** MIGRATION_GUIDE.md após cada fase
