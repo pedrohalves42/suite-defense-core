@@ -170,7 +170,8 @@ export async function evaluateForTenant(
       return { evaluated: 0, triggered: 0, blocked: rules.length, decisions: 1 };
     }
   } catch (e) {
-    logger.warn('[Enterprise Engine v2] Global circuit breaker check failed (fail-open):', e);
+    logger.error('[Enterprise Engine v2] Circuit breaker check failed - BLOCKING (fail-closed)', { error: e instanceof Error ? e.message : String(e) });
+    return { evaluated: 0, triggered: 0, blocked: rules.length, decisions: 1 };
   }
 
   // Tenant daily quota
@@ -181,7 +182,8 @@ export async function evaluateForTenant(
       return { evaluated: 0, triggered: 0, blocked: rules.length, decisions: 1 };
     }
   } catch (e) {
-    logger.warn('[Enterprise Engine v2] Tenant quota check failed (fail-open):', e);
+    logger.error('[Enterprise Engine v2] Tenant quota check failed - BLOCKING (fail-closed)', { error: e instanceof Error ? e.message : String(e) });
+    return { evaluated: 0, triggered: 0, blocked: rules.length, decisions: 1 };
   }
 
   const { data: metrics } = await supabase
