@@ -235,7 +235,7 @@ export default function EvidenceBundlePage() {
     if (!exportResult?.bundle) return;
     const { loadLogoForPDF } = await import('@/lib/pdfLogoHelper');
     const logoDataUrl = await loadLogoForPDF();
-    const doc = generatePDF(exportResult.bundle, exportResult, logoDataUrl);
+    const doc = await generatePDF(exportResult.bundle, exportResult, logoDataUrl);
     doc.save(`evidence-bundle-${exportResult.auditId}.pdf`);
   };
 
