@@ -162,7 +162,7 @@ async function handleCheckProductionHealth(supabase: SupabaseClientType, request
   // CHECK 3: Queued jobs
   const { count: queuedJobsCount, error: jobsError } = await supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('status', 'queued').lt('created_at', thirtyMinutesAgo.toISOString());
   if (!jobsError && queuedJobsCount && queuedJobsCount > 100) {
-    alerts.push({ tenant_id: null, alert_type: 'jobs_stuck', severity: 'high', title: `${queuedJobsCount} jobs em fila ha mais de 30 minutos`, message: 'Jobs nao estao sendo processados.', details: { queued_count: queuedJobsCount } });
+    alerts.push({ tenant_id: null, alert_type: 'jobs_stuck', severity: 'high', title: `${queuedJobsCount} jobs em fila ha mais de 30 minutos`, message: 'Jobs nao estao sendo processados.', details: { queued_count: queuedJobsCount }, trace_id: requestId });
   }
 
   if (alerts.length > 0) {
