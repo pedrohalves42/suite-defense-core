@@ -23,20 +23,20 @@ const mdLoaders: Record<string, () => Promise<string>> = import.meta.glob(
   { query: '?raw', import: 'default', eager: false }
 ) as unknown as Record<string, () => Promise<string>>;
 
-function getDocContent(path: string): string | null {
-  const keys = Object.keys(mdFiles);
+async function getDocContent(path: string): Promise<string | null> {
+  const keys = Object.keys(mdLoaders);
   const candidates = [
     `/docs/${path}`,
     `/public/docs/${path}`,
   ];
   for (const c of candidates) {
-    if (mdFiles[c]) return mdFiles[c];
+    if (mdLoaders[c]) return mdLoaders[c]();
   }
   // Fuzzy match by filename
   const filename = path.split('/').pop();
   if (filename) {
     const match = keys.find(k => k.endsWith(`/${filename}`));
-    if (match) return mdFiles[match];
+    if (match) return mdLoaders[match]();
   }
   return null;
 }
