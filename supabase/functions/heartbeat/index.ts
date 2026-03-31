@@ -124,5 +124,4 @@ Deno.serve(async (req) => {
   } catch (error) {
     return handleException(error, traceId, 'heartbeat')
   }
-  }
 })
