@@ -61,10 +61,12 @@ async function handleResetDailyQuotas(supabase: SB, requestId: string) {
   return { success: true, message: 'Daily quotas reset successfully' };
 }
 
-async function handleLogDomainEvent(supabase: SB, _requestId: string, payload: Record<string, unknown>) {
+async function handleLogDomainEvent(supabase: SB, requestId: string, payload: Record<string, unknown>) {
   const events = Array.isArray(payload) ? payload : [payload];
   if (events.length === 0) return { success: true, inserted: 0 };
-  const { error } = await supabase.from('domain_events').insert(events);
+  // Propagate trace_id to each event for distributed tracing
+  const eventsWithTrace = events.map(e => ({ ...e, trace_id: (e as Record<string, unknown>).trace_id || requestId }));
+  const { error } = await supabase.from('domain_events').insert(eventsWithTrace);
   if (error) throw new Error(error.message);
   return { success: true, inserted: events.length };
 }
