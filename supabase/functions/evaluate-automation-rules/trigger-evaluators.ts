@@ -134,7 +134,8 @@ export async function evaluateSecurityCheck(
     for (const agentId of affectedAgents) {
       if (!matchesScope(rule, agentId)) continue;
       const agent = agents.find((a) => a.id === agentId);
-      candidates.push({ agentId, triggerData: { event_type: 'firewall_disabled', check: checkType, agent_name: (agent as any)?.agent_name || 'Unknown', severity: 'high', message: `Firewall desabilitado no agente '${(agent as any)?.agent_name}'` } });
+      const agentName = (agent?.agent_name as string) || 'Unknown';
+      candidates.push({ agentId, triggerData: { event_type: 'firewall_disabled', check: checkType, agent_name: agentName, severity: 'high', message: `Firewall desabilitado no agente '${agentName}'` } });
     }
   } else if (checkType === 'unauthorized_usb') {
     const { data: usbDevices } = await supabase.from('agent_usb_devices').select('id, agent_id, device_id, device_name').in('agent_id', agentIds).eq('is_blocked', false);
