@@ -167,7 +167,15 @@ Deno.serve(async (req) => {
       p_device_quantity: 30,
     });
 
-    logger.info(`[create-custom-trial] Created ${trial_days}-day trial for ${company_name} (${email})`);
+    // SEC: temp_password is logged server-side only — never returned in the response body
+    logger.info(`[create-custom-trial] Created ${trial_days}-day trial for ${company_name} (${email}). Credential delivery must use a secure out-of-band channel.`);
+
+    // Store temp password hash for password-reset flow instead of exposing it
+    // The super admin should trigger a password reset email for the new user
+    await serviceClient.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+    });
 
     return new Response(JSON.stringify({
       success: true,
@@ -177,8 +185,9 @@ Deno.serve(async (req) => {
       company_name,
       trial_days,
       trial_end: trialEnd.toISOString(),
-      temp_password: tempPassword,
       custom_trial_id: customTrial?.id,
+      password_reset_sent: true,
+      message: 'Trial created. A password reset link was sent to the user email.',
     }), {
       headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
