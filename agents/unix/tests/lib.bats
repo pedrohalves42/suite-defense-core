@@ -185,3 +185,143 @@ EOF
     state=$(get_saved_state)
     [ "$state" = "ENFORCING" ]
 }
+
+# ============================================
+#  NETWORK WATCHDOG TESTS
+# ============================================
+
+@test "test_network_connectivity: function exists" {
+    declare -f test_network_connectivity > /dev/null
+}
+
+@test "CONSECUTIVE_NETWORK_FAILURES: starts at zero" {
+    [ "$CONSECUTIVE_NETWORK_FAILURES" -eq 0 ]
+}
+
+@test "MAX_CONSECUTIVE_FAILURES: has sane default" {
+    [ "$MAX_CONSECUTIVE_FAILURES" -gt 0 ]
+}
+
+# ============================================
+#  PROCESS BASELINE TESTS
+# ============================================
+
+@test "initialize_process_baseline: creates baseline file" {
+    # Mock _list_process_names
+    _list_process_names() { echo -e "bash\nssh\ncron"; }
+    export -f _list_process_names
+    rm -f "$PROCESS_BASELINE_PATH"
+    initialize_process_baseline
+    [ -f "$PROCESS_BASELINE_PATH" ]
+}
+
+@test "initialize_process_baseline: baseline has valid JSON" {
+    _list_process_names() { echo -e "bash\nssh"; }
+    export -f _list_process_names
+    rm -f "$PROCESS_BASELINE_PATH"
+    initialize_process_baseline
+    jq -e '.[0].name' "$PROCESS_BASELINE_PATH" > /dev/null
+}
+
+@test "get_process_anomalies: returns JSON with anomaly_count" {
+    _list_process_names() { echo "bash"; }
+    export -f _list_process_names
+    PROCESS_BASELINE=("bash")
+    PROCESS_BASELINE_MAP=([bash]=1)
+    local result
+    result=$(get_process_anomalies)
+    echo "$result" | jq -e '.anomaly_count' > /dev/null
+}
+
+@test "get_process_anomalies: detects new process" {
+    _list_process_names() { echo -e "bash\nnew_process"; }
+    export -f _list_process_names
+    PROCESS_BASELINE=("bash")
+    declare -gA PROCESS_BASELINE_MAP=([bash]=1)
+    local result
+    result=$(get_process_anomalies)
+    local count
+    count=$(echo "$result" | jq -r '.anomaly_count')
+    [ "$count" -ge 1 ]
+}
+
+# ============================================
+#  JOB EXECUTION TESTS
+# ============================================
+
+@test "execute_job: returns valid JSON result" {
+    _dispatch_job() { echo '{"result":"ok"}'; }
+    export -f _dispatch_job
+    EXECUTION_CHAIN_INDEX=0
+    EXECUTION_CHAIN_LAST_HASH="genesis"
+    local job='{"id":"j1","execution_id":"e1","job_type":"test"}'
+    local result
+    result=$(execute_job "$job")
+    echo "$result" | jq -e '.status' > /dev/null
+    echo "$result" | jq -e '.execution_hash' > /dev/null
+}
+
+@test "execute_job: includes output_hash" {
+    _dispatch_job() { echo '{"pong":true}'; }
+    export -f _dispatch_job
+    EXECUTION_CHAIN_INDEX=0
+    EXECUTION_CHAIN_LAST_HASH="genesis"
+    local job='{"id":"j2","execution_id":"e2","job_type":"ping"}'
+    local result
+    result=$(execute_job "$job")
+    local hash
+    hash=$(echo "$result" | jq -r '.output_hash')
+    [ ${#hash} -eq 64 ]
+}
+
+# ============================================
+#  COMMON JOB HANDLER TESTS
+# ============================================
+
+@test "integration_test_handler: returns pong" {
+    local result
+    result=$(integration_test_handler)
+    local pong
+    pong=$(echo "$result" | jq -r '.pong')
+    [ "$pong" = "true" ]
+}
+
+@test "integration_test_handler: includes agent version" {
+    local result
+    result=$(integration_test_handler)
+    local version
+    version=$(echo "$result" | jq -r '.agent_version')
+    [ "$version" = "$AGENT_VERSION" ]
+}
+
+@test "update_agent_handler: returns success" {
+    local result
+    result=$(update_agent_handler)
+    local success
+    success=$(echo "$result" | jq -r '.success')
+    [ "$success" = "true" ]
+}
+
+# ============================================
+#  ADAPTIVE SLEEP & CONSTANTS TESTS
+# ============================================
+
+@test "AGENT_VERSION: is set" {
+    [ -n "$AGENT_VERSION" ]
+}
+
+@test "POLL_INTERVAL: has sane default" {
+    [ "$POLL_INTERVAL" -ge 10 ]
+}
+
+@test "JOB_POLL_INTERVAL: has sane default" {
+    [ "$JOB_POLL_INTERVAL" -ge 10 ]
+}
+
+@test "ADAPTIVE_MIN_SLEEP: is positive" {
+    [ "$ADAPTIVE_MIN_SLEEP" -gt 0 ]
+}
+
+@test "RUNTIME_INTEGRITY_INTERVAL: is positive" {
+    [ "$RUNTIME_INTEGRITY_INTERVAL" -gt 0 ]
+}
