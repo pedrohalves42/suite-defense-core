@@ -77,7 +77,7 @@ async function handleHmacCleanupScheduled(supabase: SB, requestId: string) {
   const { data, error } = await supabase.rpc('cleanup_hmac_nonces');
   if (error) { logger.error(`[hmac-cleanup-scheduled][${requestId}] Error:`, error); throw error; }
   const duration = Date.now() - startedAt;
-  try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'hmac-cleanup-scheduled', p_success: true, p_duration_ms: duration, p_result: { cleaned: data }, p_processed_count: data || 0, p_job_source: 'cron' }); } catch { /* non-critical */ }
+  try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'hmac-cleanup-scheduled', p_success: true, p_duration_ms: duration, p_result: { cleaned: data }, p_processed_count: data || 0, p_job_source: 'cron' }); } catch (err) { console.warn('[sync-router] hmac-cleanup log failed', err); }
   return { success: true, cleaned_nonces: data, duration_ms: duration };
 }
 
