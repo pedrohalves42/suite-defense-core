@@ -32,8 +32,8 @@ const StatusPage = () => {
     refetchOnWindowFocus: true,
   });
 
-  const onlineCount = agents?.filter((a: Record<string, unknown>) => a.status === 'online').length || 0;
-  const offlineCount = agents?.filter((a: Record<string, unknown>) => a.status === 'offline').length || 0;
+  const onlineCount = agents?.filter(a => a.status === 'online').length || 0;
+  const offlineCount = agents?.filter(a => a.status === 'offline').length || 0;
   const totalCount = agents?.length || 0;
   const uptimePercent = totalCount > 0 ? Math.round((onlineCount / totalCount) * 100) : 0;
 
