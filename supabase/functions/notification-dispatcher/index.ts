@@ -43,10 +43,10 @@ serveTenant(async (_req, ctx) => {
       .from('notifications')
       .insert({
         tenant_id: tenantId,
-        title: body.subject || type,
+        title: subject || type,
         message,
         type: severity === 'critical' ? 'error' : severity === 'warning' ? 'warning' : 'info',
-        metadata: { ...metadata, notification_type: type, agent_name: body.agent_name },
+        metadata: { ...metadata, notification_type: type, agent_name },
       });
 
     if (insertErr) {
