@@ -57,10 +57,15 @@ function Invoke-SecureApi {
 
     for ($attempt = 0; $attempt -le $MaxRetries; $attempt++) {
         try {
+            # Generate or reuse trace ID for end-to-end correlation
+            $traceId = if ($script:CurrentTraceId) { $script:CurrentTraceId } else { New-TraceId }
+
             $headers = @{
                 "Authorization" = "Bearer $($script:Config.AgentToken)"
                 "Content-Type"  = "application/json"
                 "X-Agent-Id"    = $script:Config.AgentId
+                "X-Trace-ID"    = $traceId
+                "X-Request-ID"  = $traceId
             }
 
             # Build body JSON
