@@ -2,6 +2,7 @@
  * Threat intel loading and matching for flush-event-buffer
  * Extraído de flush-event-buffer/index.ts
  */
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 
 export interface ThreatIndicator {
@@ -18,7 +19,7 @@ export interface ThreatIntelCache {
   domains: Map<string, ThreatIndicator>;
 }
 
-export async function loadThreatIntel(supabase: any): Promise<ThreatIntelCache> {
+export async function loadThreatIntel(supabase: SupabaseClient): Promise<ThreatIntelCache> {
   const ips = new Map<string, ThreatIndicator>();
   const hashes = new Map<string, ThreatIndicator>();
   const domains = new Map<string, ThreatIndicator>();
@@ -53,7 +54,7 @@ export interface BaselineData {
   threshold_multiplier: number;
 }
 
-export async function loadBaselines(supabase: any): Promise<Map<string, BaselineData>> {
+export async function loadBaselines(supabase: SupabaseClient): Promise<Map<string, BaselineData>> {
   const baselines = new Map<string, BaselineData>();
   try {
     const { data } = await supabase

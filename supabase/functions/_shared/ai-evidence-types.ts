@@ -6,7 +6,7 @@ export interface AIEvidence {
   source_table: string;      // Database table/source of this evidence
   source_id?: string;        // Optional: specific record ID
   timestamp: string;         // When this evidence was collected
-  value: any;                // The actual value/data
+  value: unknown;            // The actual value/data
   severity?: 'info' | 'warning' | 'critical'; // Evidence severity
 }
 
@@ -20,7 +20,7 @@ export interface AIEvidencePack {
 export interface AIResponseWithEvidence {
   // Analysis results
   insights: string[];
-  suggestions: any[];
+  suggestions: Record<string, unknown>[];
   riskFactors?: string[];
   healthScore?: number;
   
@@ -35,7 +35,7 @@ export interface AIResponseWithEvidence {
 export function buildEvidence(
   dataPoint: string,
   sourceTable: string,
-  value: any,
+  value: unknown,
   sourceId?: string,
   severity?: 'info' | 'warning' | 'critical'
 ): AIEvidence {
@@ -56,10 +56,10 @@ export function extractDataSources(evidence: AIEvidence[]): string[] {
 
 // Helper to calculate confidence based on evidence quality
 export function calculateConfidence(evidence: AIEvidence[], hasAIAnalysis: boolean): number {
-  if (evidence.length === 0) return 0.3; // Low confidence without evidence
+  if (evidence.length === 0) return 0.3;
   
   const baseConfidence = hasAIAnalysis ? 0.7 : 0.5;
-  const evidenceBonus = Math.min(0.25, evidence.length * 0.05); // Up to 0.25 bonus
+  const evidenceBonus = Math.min(0.25, evidence.length * 0.05);
   const criticalEvidence = evidence.filter(e => e.severity === 'critical').length;
   const criticalBonus = criticalEvidence > 0 ? 0.05 : 0;
   
