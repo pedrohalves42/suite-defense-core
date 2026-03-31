@@ -60,7 +60,7 @@ export async function findTenantByCustomerOrMetadata(
 /**
  * Handle checkout.session.completed
  */
-export async function handleCheckoutCompleted(supabase: any, session: Stripe.Checkout.Session): Promise<void> {
+export async function handleCheckoutCompleted(supabase: SupabaseClient, session: Stripe.Checkout.Session): Promise<void> {
   logger.info(`[STRIPE-WEBHOOK] Checkout completed: ${session.id}`);
   const customerId = session.customer as string;
   const tenantId = session.metadata?.tenant_id;
