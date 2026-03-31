@@ -31,7 +31,9 @@ export default function BuildHealthDashboard() {
 
   const cleanupMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('cleanup-stuck-builds');
+      const { data, error } = await supabase.functions.invoke('cleanup-router', {
+        body: { action: 'stuck-builds' }
+      });
       if (error) throw error;
       return data;
     },

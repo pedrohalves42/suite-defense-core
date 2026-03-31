@@ -129,8 +129,8 @@ export default function SystemOperations() {
   // Cleanup stuck jobs mutation
   const cleanupMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('cleanup-stuck-jobs', {
-        body: { tenant_id: tenant?.id }
+      const { data, error } = await supabase.functions.invoke('cleanup-router', {
+        body: { action: 'stuck-jobs', tenant_id: tenant?.id }
       });
       if (error) throw error;
       return data;

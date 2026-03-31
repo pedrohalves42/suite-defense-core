@@ -57,7 +57,7 @@ serveInternal(async (_req, ctx) => {
 
   const nameToFunction: Record<string, string> = {
     'Autonomous SAFE_MODE': 'autonomous-safe-mode',
-    'Auto Cleanup Jobs': 'auto-cleanup-jobs',
+    'Auto Cleanup Jobs': 'cleanup-router',
     'Auto Execute AI Actions': 'auto-execute-ai-actions',
     'Watchdog Non-Execution': 'watchdog-non-execution',
     'AI System Analyzer': 'ai-system-analyzer',
