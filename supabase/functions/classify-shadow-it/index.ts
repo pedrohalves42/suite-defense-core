@@ -30,7 +30,7 @@ async function classifyWithAI(list: string[]) {
       const r = await fetchWithTimeout(p.url, { method: 'POST', headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: p.model, messages: [{ role: 'system', content: 'Cybersecurity Shadow IT expert.' }, { role: 'user', content: prompt }], temperature: 0.1, max_tokens: 2048, response_format: { type: 'json_object' } }) });
       if (!r.ok) continue;
       const d = await r.json(); const c = d.choices?.[0]?.message?.content; if (c) return JSON.parse(c);
-    } catch { continue; }
+    } catch (err) { console.warn('[classify-shadow-it] AI provider failed', err); continue; }
   }
   return {};
 }
