@@ -393,7 +393,8 @@ export interface ServeAgentOptions {
  */
 export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
   Deno.serve(async (req: Request) => {
-    const requestId = req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const requestId = traceId;
     const origin = req.headers.get('origin');
 
     if (req.method === 'OPTIONS') {
