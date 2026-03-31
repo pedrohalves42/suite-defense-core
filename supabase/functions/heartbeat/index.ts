@@ -122,6 +122,7 @@ Deno.serve(async (req) => {
       supabase, agent, updateData, osInfo.agent_version, platform, origin,
     )
   } catch (error) {
-    return handleException(error, crypto.randomUUID(), 'heartbeat')
+    return handleException(error, traceId, 'heartbeat')
+  }
   }
 })
