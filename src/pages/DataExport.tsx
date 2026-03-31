@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { Download, FileSpreadsheet, FileText, Calendar, CheckCircle, Loader2 } from 'lucide-react';
 import { subDays } from 'date-fns';
 import { formatBrazilDateTime } from '@/lib/date-utils';
-import ExcelJS from 'exceljs';
+// ExcelJS loaded dynamically in exportToExcel() for code-splitting
 import { logger } from '@/lib/logger';
 
 type ExportType = 'agents' | 'scans' | 'jobs' | 'quarantine' | 'audit_logs';
