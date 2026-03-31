@@ -122,7 +122,7 @@ async function handleCheckInstallationHealth(supabase: SupabaseClientType, reque
       const failureRatePct = healthData.failure_rate_pct || 0;
       const threshold = healthData.threshold || 30;
       if (failureRatePct > threshold) {
-        const { error: alertError } = await supabase.from('system_alerts').insert({ severity: 'high', alert_type: 'installation_failure', title: 'Alta taxa de falha em instalacoes', message: `Taxa de falha: ${failureRatePct}% (threshold: ${threshold}%)`, details: healthData, tenant_id: tenant.id });
+        const { error: alertError } = await supabase.from('system_alerts').insert({ severity: 'high', alert_type: 'installation_failure', title: 'Alta taxa de falha em instalacoes', message: `Taxa de falha: ${failureRatePct}% (threshold: ${threshold}%)`, details: healthData, tenant_id: tenant.id, trace_id: requestId });
         if (!alertError) alertsCreated++;
       }
     }
