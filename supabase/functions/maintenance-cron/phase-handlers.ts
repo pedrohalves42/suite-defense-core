@@ -103,7 +103,7 @@ export async function cleanupStuckJobs(supabase: SupabaseClient, now: string, re
     try {
       const { data: zombieResult } = await supabase.rpc('cleanup_zombie_executions');
       if (zombieResult) result.stuck_jobs.zombies = (zombieResult as Record<string, unknown>).total || 0;
-    } catch { /* non-critical */ }
+    } catch (err) { console.warn('[maintenance] cleanup_zombie_executions failed', err); }
   } catch (e) { logger.warn('[maintenance] Phase 2 error:', e); }
 }
 

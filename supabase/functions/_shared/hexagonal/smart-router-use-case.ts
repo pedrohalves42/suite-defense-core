@@ -144,7 +144,8 @@ export class SmartRouterUseCase {
     try {
       this.cachedCapabilities = await this.router.fetchProviderMetrics();
       this.cacheTimestamp = Date.now();
-    } catch {
+    } catch (err) {
+      console.warn('[smart-router] fetchProviderMetrics failed, using cached', err);
       if (!this.cachedCapabilities) {
         this.cachedCapabilities = [];
       }

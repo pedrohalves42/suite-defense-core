@@ -128,7 +128,8 @@ export async function verifyHmacSignature(
   let body = ''
   try {
     body = await request.clone().text()
-  } catch {
+  } catch (err) {
+    console.warn('[hmac] Failed to read request body', err);
     body = ''
   }
 
@@ -137,7 +138,8 @@ export async function verifyHmacSignature(
     if (body.trim().startsWith('{') || body.trim().startsWith('[')) {
       compactBody = JSON.stringify(JSON.parse(body))
     }
-  } catch {
+  } catch (err) {
+    console.warn('[hmac] JSON compact parse failed, using raw body', err);
     compactBody = body
   }
 
@@ -174,8 +176,8 @@ export async function verifyHmacSignature(
 
   try {
     keyVariants.push({ name: 'hex', data: hexToBytes(hmacSecret) })
-  } catch {
-    // skip invalid hex, fallback to utf8 variant
+  } catch (err) {
+    console.warn('[hmac] Invalid hex key, falling back to utf8', err);
   }
   keyVariants.push({ name: 'utf8', data: encoder.encode(hmacSecret) })
 

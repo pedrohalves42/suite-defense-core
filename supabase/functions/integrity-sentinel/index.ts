@@ -115,8 +115,8 @@ serveInternal(async (_req, ctx) => {
     };
   } catch (err) {
     logger.error('[integrity-sentinel] Unhandled error:', err);
-    try { await supabase.rpc('update_cron_health', { p_cron_name: 'integrity-sentinel-15min', p_success: false, p_error: err instanceof Error ? err.message : 'Unknown error' }); } catch { /* */ }
-    try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'integrity-sentinel', p_success: false, p_duration_ms: Date.now() - startTime, p_error: err instanceof Error ? err.message : 'Unknown error', p_result: null, p_processed_count: 0, p_job_source: 'cron' }); } catch { /* */ }
+    try { await supabase.rpc('update_cron_health', { p_cron_name: 'integrity-sentinel-15min', p_success: false, p_error: err instanceof Error ? err.message : 'Unknown error' }); } catch (e) { console.warn('[integrity-sentinel] cron health update failed', e); }
+    try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'integrity-sentinel', p_success: false, p_duration_ms: Date.now() - startTime, p_error: err instanceof Error ? err.message : 'Unknown error', p_result: null, p_processed_count: 0, p_job_source: 'cron' }); } catch (e) { console.warn('[integrity-sentinel] log_scheduled_job_run failed', e); }
     throw err;
   }
 });

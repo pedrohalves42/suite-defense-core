@@ -129,8 +129,8 @@ serveTenant(async (_req, ctx) => {
       status: errors.length > 0 ? 'partial' : 'sent',
       metadata: { dispatched, errors, severity, requestId },
     });
-  } catch {
-    // Non-critical
+  } catch (err) {
+    console.warn('[notification-dispatcher] Failed to log notification (non-critical)', err);
   }
 
   return {

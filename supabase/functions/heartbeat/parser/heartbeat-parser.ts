@@ -40,8 +40,8 @@ export function parseHeartbeatPayload(rawBody: string): OSInfo {
       return jsonParsed as OSInfo
     }
     return result.data as OSInfo
-  } catch {
-    // Body vazio ou invalido é OK para heartbeats legacy
+  } catch (err) {
+    console.warn('[heartbeat-parser] Body parse failed (legacy agent OK)', err);
     return {}
   }
 }

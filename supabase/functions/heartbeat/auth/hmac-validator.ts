@@ -98,7 +98,7 @@ export async function validateHeartbeatHmac(
   let rawBody = ''
   try {
     rawBody = await req.clone().text()
-  } catch { rawBody = '' }
+  } catch (err) { console.warn('[hmac-validator] Failed to read legacy body', err); rawBody = '' }
 
   logger.warn('Heartbeat accepted without HMAC (legacy agent)', {
     agentName, agentVersion, ip,

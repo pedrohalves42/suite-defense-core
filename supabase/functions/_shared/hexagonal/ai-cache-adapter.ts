@@ -176,7 +176,8 @@ export class SupabaseAICacheAdapter implements AICachePort {
       const oldestEntry = statsData?.[0]?.created_at || null;
 
       return { totalEntries, totalHits, avgHitCount, oldestEntry };
-    } catch {
+    } catch (err) {
+      console.warn('[ai-cache-adapter] getStats failed', err);
       return { totalEntries: 0, totalHits: 0, avgHitCount: 0, oldestEntry: null };
     }
   }

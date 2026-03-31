@@ -72,7 +72,7 @@ export async function handleSecurity(
       payload: { title, message, severity, details }, results,
       created_at: new Date().toISOString(),
     });
-  } catch { /* non-critical */ }
+  } catch (err) { console.warn('[notification-router] audit log insert failed', err); }
 
   const anySuccessful = results.some(r => r.success);
   return { success: anySuccessful, results, nonce };
@@ -108,7 +108,7 @@ async function sendSecurityEmail(
     const actions = (payload.details as Record<string, unknown>)?.actions as Array<{ type: string; label: string; risk: string }>;
     const expiresAt = (payload.details as Record<string, unknown>)?.expires_at as string;
     let expiresFormatted = '';
-    if (expiresAt) try { expiresFormatted = new Date(expiresAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }); } catch { expiresFormatted = expiresAt; }
+    if (expiresAt) try { expiresFormatted = new Date(expiresAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }); } catch (err) { console.warn('[notification-router] date format error', err); expiresFormatted = expiresAt; }
 
     const emailHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:20px;background-color:#f5f5f5;margin:0;">

@@ -57,7 +57,7 @@ async function checkBlastRadius(supabase: SupabaseClient, rule: Record<string, u
   try {
     const { data: adaptiveLimit } = await supabase.rpc('get_adaptive_blast_radius', { p_tenant_id: tenantId, p_action_type: rule.action_type || 'create_job', p_severity: severity || 'medium' });
     if (adaptiveLimit != null) maxPercent = adaptiveLimit;
-  } catch { /* fallback */ }
+  } catch (err) { console.warn('[protection-pipeline] get_adaptive_blast_radius failed, using fallback', err); }
 
   const { count } = await supabase
     .from('automation_execution_log').select('agent_id', { count: 'exact', head: true })
@@ -81,7 +81,7 @@ export async function tryAcquireRuleLock(supabase: SupabaseClient, ruleId: strin
   try {
     const { data } = await supabase.rpc('try_acquire_rule_lock', { p_rule_id: ruleId });
     return data === true;
-  } catch { return true; }
+  } catch (err) { console.warn('[protection-pipeline] try_acquire_rule_lock failed (fail-open)', err); return true; }
 }
 
 export async function runProtectionPipeline(

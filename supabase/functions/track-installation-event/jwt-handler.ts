@@ -113,8 +113,8 @@ export async function handleJwtMode(
       .limit(1)
       .maybeSingle();
     agent_id = agent?.id || null;
-  } catch {
-    logger.debug('[track-installation-event] Agent lookup failed (non-critical)', { requestId });
+  } catch (err) {
+    logger.debug('[track-installation-event] Agent lookup failed (non-critical)', { requestId, err });
   }
 
   const { error: insertError } = await supabase.from('installation_analytics').insert({

@@ -87,7 +87,7 @@ serveInternal(async (_req, ctx) => {
 
   try {
     await supabase.rpc('update_cron_health', { p_cron_name: 'security-monitor', p_success: true, p_details: result });
-  } catch { /* best effort */ }
+  } catch (err) { console.warn('[security-monitor] cron health update failed', err); }
 
   logger.info(`[${requestId}] security-monitor: Completed in ${result.duration_ms}ms`);
   return { success: true, ...result };
