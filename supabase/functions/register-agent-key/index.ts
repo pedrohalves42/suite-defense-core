@@ -56,13 +56,14 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'unauthorized', code: hmacResult.errorCode, message: hmacResult.errorMessage, transient: hmacResult.transient }), { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
     }
 
-    // 4. Parse and validate payload
-    const payload = await req.json();
-    if (!payload.public_key || typeof payload.public_key !== 'string') return new Response(JSON.stringify({ error: 'public_key is required (string)' }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
-    if (!payload.key_fingerprint || typeof payload.key_fingerprint !== 'string') return new Response(JSON.stringify({ error: 'key_fingerprint is required (string, SHA256 hex)' }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
-    if (!/^[a-fA-F0-9]{64}$/.test(payload.key_fingerprint)) return new Response(JSON.stringify({ error: 'key_fingerprint must be 64 hex characters (SHA256)' }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
-    const algorithm = payload.algorithm || 'ECDSA-P256-SHA256';
-    if (!['ECDSA-P256-SHA256', 'Ed25519', 'RSA-2048-SHA256', 'RSA-2048-XML', 'RSA-2048-CSP'].includes(algorithm)) return new Response(JSON.stringify({ error: 'Invalid algorithm' }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
+    // 4. Parse and validate payload with Zod
+    const rawPayload = await req.json();
+    const validated = RegisterKeySchema.safeParse(rawPayload);
+    if (!validated.success) {
+      return new Response(JSON.stringify({ error: 'Invalid payload', issues: validated.error.flatten().fieldErrors }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
+    }
+    const payload = validated.data;
+    const algorithm = payload.algorithm;
 
     // 5. Verify fingerprint
     const computedFingerprints = await computeAllKeyFingerprints(payload.public_key);

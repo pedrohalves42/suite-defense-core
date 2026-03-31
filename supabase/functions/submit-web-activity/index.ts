@@ -5,15 +5,34 @@ import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { loadBlockedPatterns } from './dns-classifier.ts';
 import { WebActivityItem, prepareItems, deduplicateItems, persistActivity } from './activity-processor.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const WebActivityItemSchema = z.object({
+  url: z.string().max(2048).optional(),
+  domain: z.string().max(255).optional(),
+  title: z.string().max(500).optional(),
+  visited_at: z.string().optional(),
+  duration_seconds: z.number().int().min(0).optional(),
+  browser: z.string().max(100).optional(),
+}).passthrough();
+
+const SubmitWebActivitySchema = z.object({
+  agent_id: z.string().uuid().optional(),
+  items: z.array(WebActivityItemSchema).max(1000),
+});
 
 serveAgent(async (_req, ctx) => {
   const { supabase, agentId, agentName, tenantId, body } = ctx;
-  const payload = body as { agent_id?: string; items?: WebActivityItem[] };
 
-  const effectiveAgentId = payload.agent_id || agentId;
+  const parsed = SubmitWebActivitySchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
 
-  if (!effectiveAgentId || !Array.isArray(payload.items)) {
-    return new Response(JSON.stringify({ error: 'items array is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  const effectiveAgentId = parsed.data.agent_id || agentId;
+
+  if (!effectiveAgentId) {
+    return new Response(JSON.stringify({ error: 'agent_id is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
   if (!payload.items.length) {

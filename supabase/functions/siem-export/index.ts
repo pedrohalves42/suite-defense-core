@@ -53,12 +53,24 @@ function mapSeverityToSyslog(severity: string): number {
   return 4 * 8 + (severityMap[severity?.toLowerCase()] || 4);
 }
 
+const SiemExportSchema = z.object({
+  format: z.enum(['cef', 'syslog', 'json']).default('cef'),
+  since: z.string().datetime().optional(),
+  limit: z.number().int().min(1).max(1000).default(500),
+  tenant_id: z.string().uuid().optional(),
+});
+
 serveTenant(async (_req, ctx) => {
   const { supabase, tenantId, requestId, body } = ctx;
 
-  const format = body.format || 'cef';
-  const since = body.since || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const limit = Math.min(body.limit || 500, 1000);
+  const parsed = SiemExportSchema.safeParse(body || {});
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  const format = parsed.data.format;
+  const since = parsed.data.since || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const limit = parsed.data.limit;
 
   // Collect events from multiple sources
   const [alertsRes, quarantineRes, vulnRes] = await Promise.all([

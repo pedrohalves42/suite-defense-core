@@ -2,6 +2,20 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { buildCorsHeaders } from '../_shared/cors.ts'
 import { logger } from '../_shared/logger.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const OncallSchema = z.object({
+  action: z.enum(['alert', 'who-is-oncall', 'escalate', 'schedule', 'alerts']).default('who-is-oncall'),
+  summary: z.string().min(1).max(1000).optional(),
+  severity: z.enum(['critical', 'high', 'medium', 'low']).optional(),
+  source: z.string().max(255).optional(),
+  details: z.record(z.unknown()).optional(),
+  tenantId: z.string().uuid().optional(),
+  incidentId: z.string().max(255).optional(),
+  name: z.string().max(255).optional(),
+  timezone: z.string().max(100).optional(),
+  rotation: z.array(z.unknown()).optional(),
+}).passthrough();
 
 /**
  * On-Call Rotation / PagerDuty Integration
@@ -25,8 +39,15 @@ Deno.serve(async (req) => {
   const PAGERDUTY_SCHEDULE_ID = Deno.env.get('PAGERDUTY_SCHEDULE_ID') || ''
 
   try {
-    const body = await req.json().catch(() => ({}))
-    const action = body.action || 'who-is-oncall'
+    const rawBody = await req.json().catch(() => ({}))
+    const parsed = OncallSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), {
+        status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
+      })
+    }
+    const body = parsed.data;
+    const action = body.action;
 
     // ??? CREATE ALERT ???
     if (action === 'alert') {

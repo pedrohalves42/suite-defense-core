@@ -3,24 +3,31 @@
  */
 import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-interface AvItem {
-  engine_name: string;
-  engine_version?: string;
-  status?: string;
-  last_update_at?: string;
-  last_scan_at?: string;
-  threats_found?: number;
-  raw_data?: unknown;
-}
+const AvItemSchema = z.object({
+  engine_name: z.string().min(1).max(255),
+  engine_version: z.string().max(100).optional(),
+  status: z.string().max(50).optional(),
+  last_update_at: z.string().optional(),
+  last_scan_at: z.string().optional(),
+  threats_found: z.number().int().min(0).optional(),
+  raw_data: z.unknown().optional(),
+});
+
+const SubmitAvSchema = z.object({
+  agent_id: z.string().uuid(),
+  items: z.array(AvItemSchema).max(100),
+});
 
 serveAgent(async (_req, ctx) => {
   const { supabase, agentName, tenantId, body } = ctx;
-  const payload = body as { agent_id?: string; items?: AvItem[] };
 
-  if (!payload.agent_id || !Array.isArray(payload.items)) {
-    return new Response(JSON.stringify({ error: 'agent_id and items are required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  const parsed = SubmitAvSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
+  const payload = parsed.data;
 
   if (!payload.items.length) {
     return { success: true, inserted: 0 };

@@ -4,6 +4,11 @@
  */
 import { servePublic } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const RecordFailedLoginSchema = z.object({
+  email: z.string().email().max(255).optional(),
+}).passthrough();
 
 function extractIpAddress(req: Request): string {
   const cfConnectingIp = req.headers.get('cf-connecting-ip');
@@ -15,15 +20,16 @@ function extractIpAddress(req: Request): string {
   return 'unknown';
 }
 
-interface RecordFailedLoginRequest {
-  email?: string;
-}
-
 servePublic(async (req, ctx) => {
   const { supabase, requestId } = ctx;
 
+  const parsed = RecordFailedLoginSchema.safeParse(ctx.body || {});
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
   const ipAddress = extractIpAddress(req);
-  const { email } = (ctx.body || {}) as RecordFailedLoginRequest;
+  const { email } = parsed.data;
   const userAgent = req.headers.get('user-agent');
 
   if (!ipAddress || ipAddress === 'unknown') {

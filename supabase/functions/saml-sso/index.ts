@@ -1,6 +1,19 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { buildCorsHeaders } from '../_shared/cors.ts'
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const SamlSchema = z.object({
+  action: z.enum(['metadata', 'login', 'acs', 'configure', 'config']).default('metadata'),
+  tenantId: z.string().uuid().optional(),
+  samlResponse: z.string().max(100000).optional(),
+  relayState: z.string().max(500).optional(),
+  provider: z.string().max(100).optional(),
+  entityId: z.string().max(500).optional(),
+  ssoUrl: z.string().url().max(2048).optional(),
+  certificate: z.string().max(10000).optional(),
+  attributeMapping: z.record(z.string()).optional(),
+}).passthrough();
 
 /**
  * SAML 2.0 SSO Edge Function
@@ -25,8 +38,15 @@ Deno.serve(async (req) => {
   )
 
   try {
-    const body = await req.json().catch(() => ({}))
-    const action = body.action || 'metadata'
+    const rawBody = await req.json().catch(() => ({}))
+    const parsed = SamlSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), {
+        status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
+      })
+    }
+    const body = parsed.data;
+    const action = body.action
 
     // ??? METADATA ???
     if (action === 'metadata') {

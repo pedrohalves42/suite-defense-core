@@ -7,32 +7,33 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-interface NotificationRequest {
-  channel: 'email' | 'telegram' | 'whatsapp' | 'in_app';
-  type: string;
-  tenant_id: string;
-  recipients?: string[];
-  subject?: string;
-  message: string;
-  severity?: 'info' | 'warning' | 'critical';
-  metadata?: Record<string, unknown>;
-  agent_name?: string;
-}
+const NotificationSchema = z.object({
+  channel: z.enum(['email', 'telegram', 'whatsapp', 'in_app']),
+  type: z.string().min(1).max(100),
+  tenant_id: z.string().uuid().optional(),
+  recipients: z.array(z.string()).max(100).optional(),
+  subject: z.string().max(500).optional(),
+  message: z.string().min(1).max(5000),
+  severity: z.enum(['info', 'warning', 'critical']).default('info'),
+  metadata: z.record(z.unknown()).optional(),
+  agent_name: z.string().max(255).optional(),
+});
 
 serveTenant(async (_req, ctx) => {
   const { supabase, tenantId, requestId } = ctx;
   const startedAt = Date.now();
-  const body = ctx.body as NotificationRequest;
 
-  const { channel, type, message, severity = 'info', metadata = {} } = body;
-
-  if (!channel || !type || !message) {
+  const parsed = NotificationSchema.safeParse(ctx.body);
+  if (!parsed.success) {
     return new Response(
-      JSON.stringify({ error: 'Missing required fields: channel, type, message' }),
+      JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }),
       { status: 400, headers: { 'Content-Type': 'application/json' } },
     );
   }
+
+  const { channel, type, message, severity, metadata = {}, subject, agent_name } = parsed.data;
 
   logger.info(`[notification-dispatcher][${requestId}] channel=${channel} type=${type} severity=${severity}`);
 

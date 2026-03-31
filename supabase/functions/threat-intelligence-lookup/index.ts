@@ -254,23 +254,24 @@ function determineTargetType(target: string): 'url' | 'ip' | 'domain' {
 
 // ─── serveTenant migration ───────────────────────────────────────────────────
 
-interface ThreatIntelBody {
-  target?: string;
-  skip_cache?: boolean;
-}
+const ThreatIntelSchema = z.object({
+  target: z.string().min(1).max(2048),
+  skip_cache: z.boolean().default(false),
+  tenant_id: z.string().uuid().optional(),
+});
 
-serveTenant<ThreatIntelBody>(async (_req, ctx) => {
+serveTenant(async (_req, ctx) => {
   const { supabase, tenantId, requestId, body } = ctx;
   
-  const target = body?.target;
-  const skip_cache = body?.skip_cache ?? false;
-  
-  if (!target || typeof target !== 'string') {
+  const parsed = ThreatIntelSchema.safeParse(body);
+  if (!parsed.success) {
     return new Response(
-      JSON.stringify({ error: 'target is required' }),
+      JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
+
+  const { target, skip_cache } = parsed.data;
   
   const targetType = determineTargetType(target);
   const normalizedTarget = target.trim().toLowerCase();
