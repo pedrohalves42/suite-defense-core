@@ -63,7 +63,7 @@ serveTenant(async (req, ctx) => {
         target_type: 'security',
         details: { ip_address: clientIp, user_agent: req.headers.get('user-agent'), timestamp: new Date().toISOString() }
       });
-    } catch { /* non-blocking */ }
+    } catch (err) { console.warn('[set-active-tenant] audit log insert failed', err); }
 
     return new Response(
       JSON.stringify({ error: 'IP not authorized for super admin access', code: 'IP_BLOCKED' }),
