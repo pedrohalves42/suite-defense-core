@@ -1,5 +1,6 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 // ?? CEF Format ??
 function toCEF(event: Record<string, unknown>): string {
