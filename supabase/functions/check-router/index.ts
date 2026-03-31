@@ -185,7 +185,7 @@ async function handleDetectBlockedAttempts(supabase: SupabaseClientType, request
 
   if (error) {
     const isTimeout = error.code === '57014' || (error.message as string)?.includes('timeout');
-    try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'detect-blocked-attempts', p_success: false, p_duration_ms: Date.now() - startedAt, p_error: isTimeout ? 'RPC timeout' : (error.message as string), p_result: null, p_processed_count: 0, p_job_source: 'cron' }); } catch { /* best effort */ }
+    try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'detect-blocked-attempts', p_success: false, p_duration_ms: Date.now() - startedAt, p_error: isTimeout ? 'RPC timeout' : (error.message as string), p_result: null, p_processed_count: 0, p_job_source: 'cron' }); } catch (err) { console.warn('[check-router] log_scheduled_job_run failed', err); }
     return { status: isTimeout ? 'timeout' : 'error', error: isTimeout ? 'Query timed out' : (error.message as string), requestId };
   }
 
