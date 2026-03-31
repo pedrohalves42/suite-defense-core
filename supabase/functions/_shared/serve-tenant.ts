@@ -510,7 +510,7 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
 
       const result = await handler(req, ctx);
       if (result instanceof Response) return result;
-      return jsonResponse(result, 200, { 'X-Request-ID': requestId }, origin);
+      return jsonResponse(result, 200, { 'X-Request-ID': requestId, 'X-Trace-ID': traceId }, origin);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Internal server error';
       const log = loggerWithContext({ requestId });
