@@ -66,6 +66,7 @@ interface ComplianceReportBody {
 }
 
 serveTenant<ComplianceReportBody>(async (_req, ctx) => {
+  const origin = _req.headers.get("origin");
   const { supabase, tenantId, requestId, body } = ctx;
 
   logger.info(`[generate-compliance-report][${requestId}] Starting for tenant: ${tenantId}`);

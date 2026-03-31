@@ -12,6 +12,7 @@ interface NotificationPayload {
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
+  const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: buildCorsHeaders(origin) });
   }

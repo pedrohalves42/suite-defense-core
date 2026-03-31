@@ -47,6 +47,7 @@ interface AIAnalysis {
 }
 
 serveTenant(async (_req, ctx) => {
+  const origin = _req.headers.get("origin");
   const { body } = ctx;
   const { agent, context }: { agent: Agent; context: AgentContext } = body;
 

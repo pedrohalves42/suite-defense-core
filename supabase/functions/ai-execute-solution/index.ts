@@ -13,6 +13,7 @@ interface ExecuteSolutionRequest {
 }
 
 serveTenant(async (_req, ctx) => {
+  const origin = _req.headers.get("origin");
   const { tenantId, supabase, body } = ctx;
   const { action_id, solution_type, parameters = {} } = body as ExecuteSolutionRequest;
 

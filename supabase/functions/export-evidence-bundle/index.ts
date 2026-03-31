@@ -34,6 +34,7 @@ async function hashData(data: string): Promise<string> {
 }
 
 serveTenant<EvidenceRequest>(async (_req, ctx) => {
+  const origin = _req.headers.get("origin");
   const { supabase, tenantId, userId, requestId, body } = ctx;
   const { periodStart, periodEnd, bundleType, includeOptions, agentId } = body;
 

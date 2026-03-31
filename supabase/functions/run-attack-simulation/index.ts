@@ -6,6 +6,7 @@ import { serveTenant } from '../_shared/serve-tenant.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 
 serveTenant(async (_req, ctx) => {
+  const origin = _req.headers.get("origin");
   const { tenantId, supabase, body } = ctx;
   const { simulation_type } = body;
 

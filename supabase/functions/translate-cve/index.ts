@@ -10,6 +10,7 @@ interface TranslateCveBody {
 }
 
 serveTenant<TranslateCveBody>(async (_req, ctx) => {
+  const origin = _req.headers.get("origin");
   const { body, requestId } = ctx;
   const { cve_id, description } = body;
 
