@@ -16,7 +16,7 @@ function isValidUUID(value: string | undefined | null): value is string {
  * Find tenant by customer_id OR by metadata.tenant_id
  */
 export async function findTenantByCustomerOrMetadata(
-  supabase: any,
+  supabase: SupabaseClient,
   customerId: string,
   metadata?: Stripe.Metadata | null
 ): Promise<{ tenant_id: string; plan_id: string | null } | null> {
