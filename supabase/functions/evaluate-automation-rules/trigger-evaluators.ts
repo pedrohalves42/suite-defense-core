@@ -49,7 +49,7 @@ export async function evaluateProcessAnomaly(
     .in('agent_id', agentIds)
     .order('collected_at', { ascending: false });
 
-  const latestProcesses = new Map<string, any>();
+  const latestProcesses = new Map<string, Record<string, unknown>>();
   (processData || []).forEach((p: Record<string, unknown>) => {
     if (!latestProcesses.has(p.agent_id as string)) latestProcesses.set(p.agent_id as string, p);
   });
