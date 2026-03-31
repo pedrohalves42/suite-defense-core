@@ -61,7 +61,7 @@ serveTenant(async (req, ctx) => {
 
   // ??? GENERATE ???
   if (action === 'generate') {
-    const { agentId } = body;
+    const { agentId } = parsed.data;
     if (!agentId) {
       return new Response(
         JSON.stringify({ error: 'agentId required' }),
