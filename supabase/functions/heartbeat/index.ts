@@ -39,6 +39,7 @@ const HEARTBEAT_EXTRA_FIELDS = [
 
 Deno.serve(async (req) => {
   const origin = req.headers.get('origin')
+  const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID()
 
   if (req.method === 'OPTIONS') return handleCorsPreflightRequest()
 
