@@ -86,7 +86,7 @@ export async function handleCheckoutCompleted(supabase: SupabaseClient, session:
 /**
  * Handle customer.subscription.created and customer.subscription.updated
  */
-export async function handleSubscriptionUpdate(supabase: any, subscription: Stripe.Subscription, eventId: string, eventType: string): Promise<void> {
+export async function handleSubscriptionUpdate(supabase: SupabaseClient, subscription: Stripe.Subscription, eventId: string, eventType: string): Promise<void> {
   logger.info(`[STRIPE-WEBHOOK] Processing subscription: ${subscription.id}`);
   const customerId = subscription.customer as string;
 
