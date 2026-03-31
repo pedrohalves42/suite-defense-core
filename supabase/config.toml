@@ -489,9 +489,7 @@ verify_jwt = true
 [functions.execute-playbook-action]
 verify_jwt = true
 
-# === Auto Cleanup Jobs - DISABLED COST-OPT-V6 (redundant with system-maintenance) ===
-[functions.auto-cleanup-jobs]
-verify_jwt = false
+# REMOVED: auto-cleanup-jobs (consolidated into cleanup-router, action: 'auto-cleanup-jobs')
 
 # === System Maintenance (daily at 3 AM UTC) COST-OPT-V6 - consolidated cleanup ===
 [functions.system-maintenance]
