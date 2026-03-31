@@ -35,7 +35,7 @@ describe('batch utilities', () => {
       };
       const items = Array.from({ length: 5 }, (_, i) => ({ id: i }));
 
-      const result = await batchUpsert(mockSupabase as unknown, 'tbl', items, 'id', 2);
+      const result = await batchUpsert(mockSupabase as unknown as Parameters<typeof batchUpsert>[0], 'tbl', items, 'id', 2);
 
       expect(result.success).toBe(5);
       expect(result.failed).toBe(0);

@@ -1,7 +1,7 @@
 import { logger } from "./logger.ts";
 
 // Use a minimal interface to avoid esm.sh import that breaks the frontend bundler
-interface SupabaseClientLike {
+export interface SupabaseClientLike {
   from(table: string): {
     upsert(rows: Record<string, unknown>[], options?: { onConflict: string }): Promise<{ error: { message: string } | null }>;
     select(columns: string): {
