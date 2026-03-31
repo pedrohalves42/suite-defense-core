@@ -3,7 +3,6 @@
  * Modules: types, action-guards, mode-handlers
  */
 import { requireEnv } from '../_shared/env.ts';
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { timingSafeEqual } from '../_shared/crypto-utils.ts';
 import { logger } from '../_shared/logger.ts';
@@ -11,7 +10,7 @@ import { buildCorsHeaders } from '../_shared/cors.ts';
 import type { AIInsight } from './types.ts';
 import { handleAutoExecute, handleAutoWithApproval } from './mode-handlers.ts';
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: buildCorsHeaders(origin) });
   }
