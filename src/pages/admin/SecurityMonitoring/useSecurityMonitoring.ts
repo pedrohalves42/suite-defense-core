@@ -76,11 +76,10 @@ export function useSecurityMonitoring() {
         .filter(e => e.severity !== 'info' && e.severity !== 'debug')
         .forEach(e => {
         const eventData = e.event_data || {};
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const ed = eventData as any;
-        const alertType = ed.alert_type as string || '';
-        const alertMsg = ed.alert_message as string || '';
-        const details = ed.details || {} as any;
+        const ed = eventData as Record<string, unknown>;
+        const alertType = (ed.alert_type as string) || '';
+        const alertMsg = (ed.alert_message as string) || '';
+        const details = (ed.details || {}) as Record<string, unknown>;
         const skipRemediation = details?.skip_remediation === true;
 
         let label: string;
