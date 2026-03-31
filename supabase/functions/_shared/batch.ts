@@ -1,5 +1,14 @@
 import { logger } from "./logger.ts";
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+
+// Use a minimal interface to avoid esm.sh import that breaks the frontend bundler
+interface SupabaseClientLike {
+  from(table: string): {
+    upsert(rows: Record<string, unknown>[], options?: { onConflict: string }): Promise<{ error: { message: string } | null }>;
+    select(columns: string): {
+      in(column: string, values: string[]): Promise<{ data: unknown[] | null; error: { message: string } | null }>;
+    };
+  };
+}
 
 /**
  * Batch query utilities for N+1 prevention
@@ -32,7 +41,7 @@ export async function batchQuery<T, R>(
  * Upsert items in batches to avoid payload size limits.
  */
 export async function batchUpsert(
-  supabase: SupabaseClient,
+  supabase: SupabaseClientLike,
   table: string,
   items: Record<string, unknown>[],
   conflictKey: string,
@@ -64,7 +73,7 @@ export async function batchUpsert(
  * Avoids the 1000-row default limit per query.
  */
 export async function batchFetchByIds<T = Record<string, unknown>>(
-  supabase: SupabaseClient,
+  supabase: SupabaseClientLike,
   table: string,
   idColumn: string,
   ids: string[],
