@@ -180,5 +180,5 @@ function calculateNextRun(cronExpr: string, from: Date): Date | null {
 
     next.setHours(next.getHours() + 1); next.setMinutes(0); next.setSeconds(0); next.setMilliseconds(0);
     return next;
-  } catch (err) { console.warn('[invoke-scheduled-jobs] getNextRunDate failed', err); return null; }
+  } catch (err) { logger.warn('[invoke-scheduled-jobs] getNextRunDate failed', err); return null; }
 }

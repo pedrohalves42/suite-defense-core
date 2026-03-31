@@ -77,7 +77,7 @@ serveTenant(async (_req, ctx) => {
     const hasAny = !!starterPlan?.stripe_price_id || !!proPlan?.stripe_price_id;
     response.checks.products_configured.status = both ? 'ok' : hasAny ? 'partial' : 'missing';
     if (!both) response.overall_status = 'degraded';
-  } catch (err) { console.warn('[stripe-health-check] products check failed', err); }
+  } catch (err) { logger.warn('[stripe-health-check] products check failed', err); }
 
   // Check 3: Webhook
   response.checks.webhook_configured = {

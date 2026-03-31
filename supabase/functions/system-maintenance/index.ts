@@ -72,7 +72,7 @@ serveInternal(async (_req, ctx) => {
       p_status: totalErrors > 0 ? 'partial' : 'success',
       p_details: { results, duration_ms: Date.now() - startedAt },
     });
-  } catch (err) { console.warn('[system-maintenance] log_scheduled_job_run failed', err); }
+  } catch (err) { logger.warn('[system-maintenance] log_scheduled_job_run failed', err); }
 
   return {
     success: true, requestId,

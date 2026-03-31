@@ -177,7 +177,7 @@ export class SupabaseAICacheAdapter implements AICachePort {
 
       return { totalEntries, totalHits, avgHitCount, oldestEntry };
     } catch (err) {
-      console.warn('[ai-cache-adapter] getStats failed', err);
+      logger.warn('[ai-cache-adapter] getStats failed', err);
       return { totalEntries: 0, totalHits: 0, avgHitCount: 0, oldestEntry: null };
     }
   }

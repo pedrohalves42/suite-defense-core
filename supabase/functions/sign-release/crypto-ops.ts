@@ -1,3 +1,4 @@
+import { logger } from '../_shared/logger.ts';
 /**
  * Cryptographic utilities for ECDSA and Ed25519 operations.
  * Extracted from sign-release monolith for reusability and testability.
@@ -104,7 +105,7 @@ export async function verifyWithPublicKey(
       encoder.encode(content)
     );
   } catch (err) {
-    console.warn('[sign-release] Signature verification failed', err);
+    logger.warn('[sign-release] Signature verification failed', err);
     return false;
   }
 }

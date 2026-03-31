@@ -1,3 +1,4 @@
+import { logger } from '../../_shared/logger.ts';
 /**
  * Heartbeat payload parser module.
  * Parses raw body into typed OSInfo and builds AgentUpdate data.
@@ -41,7 +42,7 @@ export function parseHeartbeatPayload(rawBody: string): OSInfo {
     }
     return result.data as OSInfo
   } catch (err) {
-    console.warn('[heartbeat-parser] Body parse failed (legacy agent OK)', err);
+    logger.warn('[heartbeat-parser] Body parse failed (legacy agent OK)', err);
     return {}
   }
 }

@@ -1,3 +1,4 @@
+import { logger } from '../_shared/logger.ts';
 /**
  * Fingerprint computation utilities for register-agent-key
  * Extraído de register-agent-key/index.ts
@@ -61,7 +62,7 @@ export async function computeAllKeyFingerprints(publicKey: string): Promise<Fing
     const decoded = atob(normalizedB64);
     const decodedBytes = Uint8Array.from(decoded, (c) => c.charCodeAt(0));
     candidates.push({ fingerprint: await sha256Hex(decodedBytes), mode: 'decoded_bytes' });
-  } catch (err) { console.warn('[fingerprint-utils] invalid base64 decode', err); }
+  } catch (err) { logger.warn('[fingerprint-utils] invalid base64 decode', err); }
 
   candidates.push({ fingerprint: await sha256Hex(new TextEncoder().encode(normalizedB64)), mode: 'normalized_base64_utf8' });
   candidates.push({ fingerprint: await sha256Hex(utf16LeBytes(normalizedB64)), mode: 'normalized_base64_utf16le' });
