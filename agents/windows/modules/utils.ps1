@@ -1,10 +1,19 @@
 <#
 .SYNOPSIS
-    Logging, retry with exponential backoff + jitter, and general utility functions
+    Logging, retry with exponential backoff + jitter, tracing, and general utility functions
 #>
 
 $script:LogDir = "$env:ProgramData\CyberShield\Logs"
 $script:LogFile = $null
+
+function New-TraceId {
+    <#
+    .SYNOPSIS
+        Generates a unique trace ID (UUID v4) for end-to-end request tracing.
+        Propagated via X-Trace-ID header to correlate agent → backend → database.
+    #>
+    return [guid]::NewGuid().ToString()
+}
 
 function Write-Log {
     param(
