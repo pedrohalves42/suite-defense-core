@@ -3,7 +3,7 @@ import { CreateJobSchemaEnhanced } from '../_shared/validation.ts';
 import { createAuditLog } from '../_shared/audit.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logSecurityEvent, extractIpAddress } from '../_shared/security-log.ts';
-import { handleValidationError, corsHeaders } from '../_shared/error-handler.ts';
+import { handleValidationError } from '../_shared/error-handler.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 
 serveTenant(async (req, ctx) => {

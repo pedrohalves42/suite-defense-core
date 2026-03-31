@@ -10,7 +10,7 @@
  */
 
 import { requireEnv, optionalEnv } from '../_shared/env.ts';
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { createErrorResponse, ErrorCode } from '../_shared/error-handler.ts';
 import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';

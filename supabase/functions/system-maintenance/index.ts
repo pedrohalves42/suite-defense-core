@@ -3,7 +3,7 @@
  * Replaces 7 individual cleanup functions.
  * Migrated to serveInternal middleware
  */
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import {
@@ -31,7 +31,7 @@ const ALL_TASKS: TaskName[] = [
   'stuck_builds', 'stuck_jobs', 'offline_agents_jobs', 'security_cleanup',
 ];
 
-const TASK_MAP: Record<TaskName, (sb: ReturnType<typeof createClient>) => Promise<TaskResult>> = {
+const TASK_MAP: Record<TaskName, (sb: SupabaseClient) => Promise<TaskResult>> = {
   stale_updates: cleanStaleUpdates,
   stale_reports: cleanStaleReports,
   stale_playbooks: cleanStalePlaybooks,

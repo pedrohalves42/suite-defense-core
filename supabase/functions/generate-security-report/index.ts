@@ -1,5 +1,4 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 
 // ==================== CRYPTO FUNCTIONS ====================

@@ -1,6 +1,6 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 // Real SHA256 using Web Crypto API
 async function generateSHA256(data: string): Promise<string> {

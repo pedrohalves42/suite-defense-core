@@ -3,7 +3,7 @@
  * Previously used validateCallerTenant() directly ? now handled by middleware.
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 serveTenant(async (_req, ctx) => {
   const { tenantId, supabase, body } = ctx;

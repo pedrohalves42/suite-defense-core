@@ -1,7 +1,7 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { aiSimpleComplete, getProviderStatus } from '../_shared/ai-multi-provider.ts';
 import { logger } from '../_shared/logger.ts';
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 
 interface TranslateCveBody {
   tenant_id?: string;
