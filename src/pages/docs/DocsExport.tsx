@@ -142,7 +142,7 @@ const DocsExport = () => {
     .filter((c) => selectedCategories.has(c.name))
     .reduce((s, c) => s + c.docs.length, 0);
 
-  const availableTotal = Object.keys(mdFiles).length;
+  const availableTotal = Object.keys(mdLoaders).length;
 
   return (
     <div className="container mx-auto p-6 max-w-5xl space-y-6">
