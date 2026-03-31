@@ -110,7 +110,12 @@ serveTenant(async (req, ctx) => {
       }), { status: 429, headers: { 'Content-Type': 'application/json' } });
     }
   } catch (blastErr) {
-    logger.warn(`[auto-remediate] Blast radius check failed (fail-open): ${blastErr}`);
+    logger.error('[auto-remediate] Blast radius check failed - BLOCKING (fail-closed)', { error: blastErr instanceof Error ? blastErr.message : String(blastErr) });
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'BLAST_RADIUS_UNAVAILABLE',
+      message: 'Blast radius check unavailable - remediation blocked for safety',
+    }), { status: 503, headers: { 'Content-Type': 'application/json' } });
   }
 
   // Global Circuit Breaker

@@ -81,7 +81,11 @@ export async function tryAcquireRuleLock(supabase: SupabaseClient, ruleId: strin
   try {
     const { data } = await supabase.rpc('try_acquire_rule_lock', { p_rule_id: ruleId });
     return data === true;
-  } catch (err) { console.warn('[protection-pipeline] try_acquire_rule_lock failed (fail-open)', err); return true; }
+  } catch (err) {
+    const { logger } = await import('../_shared/logger.ts');
+    logger.error('[protection-pipeline] try_acquire_rule_lock failed - BLOCKING (fail-closed)', { error: err instanceof Error ? err.message : String(err) });
+    return false;
+  }
 }
 
 export async function runProtectionPipeline(

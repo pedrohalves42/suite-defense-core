@@ -202,8 +202,9 @@ Deno.serve(async (req: Request) => {
             continue;
           }
         } catch (e) {
-          // Fail-open for blast radius check
-          logger.warn(`[${requestId}] [SOAR] Blast radius check failed (fail-open):`, e);
+          logger.error(`[${requestId}] [SOAR] Blast radius check failed - BLOCKING (fail-closed)`, { error: e instanceof Error ? e.message : String(e) });
+          results.push({ event_type: event.event_type, rule: rule.name, action: rule.action_type, status: 'blast_radius_unavailable' });
+          continue;
         }
 
         if (rule.requires_approval) {
