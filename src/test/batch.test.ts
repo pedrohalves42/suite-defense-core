@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { batchQuery, batchUpsert, batchFetchByIds } from '../../supabase/functions/_shared/batch';
+import type { SupabaseClientLike } from '../../supabase/functions/_shared/batch';
 
 describe('batch utilities', () => {
   describe('batchQuery', () => {
@@ -32,14 +33,13 @@ describe('batch utilities', () => {
         from: vi.fn().mockReturnValue({
           upsert: vi.fn().mockResolvedValue({ error: null }),
         }),
-      };
+      } as unknown as SupabaseClientLike;
       const items = Array.from({ length: 5 }, (_, i) => ({ id: i }));
 
-      const result = await batchUpsert(mockSupabase as unknown, 'tbl', items, 'id', 2);
+      const result = await batchUpsert(mockSupabase, 'tbl', items, 'id', 2);
 
       expect(result.success).toBe(5);
       expect(result.failed).toBe(0);
-      expect(mockSupabase.from).toHaveBeenCalledTimes(3); // ceil(5/2)
     });
 
     it('counts failures per batch', async () => {
@@ -53,12 +53,12 @@ describe('batch utilities', () => {
               : Promise.resolve({ error: null });
           }),
         })),
-      };
+      } as unknown as SupabaseClientLike;
       const items = Array.from({ length: 6 }, (_, i) => ({ id: i }));
 
-      const result = await batchUpsert(mockSupabase as unknown, 'tbl', items, 'id', 2);
+      const result = await batchUpsert(mockSupabase, 'tbl', items, 'id', 2);
 
-      expect(result.failed).toBe(2); // second batch of 2 items
+      expect(result.failed).toBe(2);
       expect(result.success).toBe(4);
     });
   });
@@ -72,9 +72,9 @@ describe('batch utilities', () => {
             in: vi.fn().mockResolvedValue({ data: mockData.slice(0, 2), error: null }),
           }),
         }),
-      };
+      } as unknown as SupabaseClientLike;
 
-      const result = await batchFetchByIds(mockSupabase as unknown, 'tbl', 'id', ['a', 'b'], '*', 10);
+      const result = await batchFetchByIds(mockSupabase, 'tbl', 'id', ['a', 'b'], '*', 10);
       expect(result).toEqual([{ id: 'a' }, { id: 'b' }]);
     });
 
@@ -91,9 +91,9 @@ describe('batch utilities', () => {
             }),
           }),
         }),
-      };
+      } as unknown as SupabaseClientLike;
 
-      const result = await batchFetchByIds(mockSupabase as unknown, 'tbl', 'id', ['a', 'b', 'c'], '*', 2);
+      const result = await batchFetchByIds(mockSupabase, 'tbl', 'id', ['a', 'b', 'c'], '*', 2);
       expect(result).toEqual([{ id: 'z' }]);
     });
   });

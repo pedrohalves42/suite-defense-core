@@ -33,6 +33,14 @@ const NAMESPACE_TARGETS: Record<string, string> = {
   'cleanup': 'cleanup-router',
   'notify': 'notification-router',
   'automation': 'evaluate-automation-rules',
+  'admin': 'admin-router',
+  'billing': 'billing-router',
+  'security': 'security-router',
+  'agent': 'agent-mgmt-router',
+  'check': 'check-router',
+  'sync': 'sync-router',
+  'build': 'build-router',
+  'playbook': 'playbook-router',
 };
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -72,6 +80,10 @@ function buildBody(namespace: string, subAction: string, payload: Record<string,
   if (namespace === 'automation') {
     // evaluate-automation-rules expects flat body { tenant_id: ... }
     return JSON.stringify(payload);
+  }
+  // All new domain routers expect { action: '...', payload: {...} }
+  if (['admin', 'billing', 'security', 'agent', 'check', 'sync', 'build', 'playbook'].includes(namespace)) {
+    return JSON.stringify({ action: subAction, payload });
   }
   return JSON.stringify(payload);
 }
