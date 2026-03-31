@@ -19,12 +19,12 @@ const StatusPage = () => {
       if (!tenant) return [];
       const { data, error } = await supabase
         .from('agents')
-        .select('id, hostname, status, last_seen, agent_version')
+        .select('id, hostname, status, last_heartbeat, agent_version')
         .eq('tenant_id', tenant?.id ?? '')
         .eq('is_archived', false)
         .order('hostname');
       if (error) throw error;
-      return data || [];
+      return (data || []) as unknown as Array<{ id: string; hostname: string; status: string; last_heartbeat: string | null; agent_version: string | null }>;
     },
     enabled: !!tenant,
     refetchInterval: false,
