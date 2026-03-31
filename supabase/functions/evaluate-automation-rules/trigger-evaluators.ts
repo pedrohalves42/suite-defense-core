@@ -11,6 +11,7 @@ export interface TriggerCandidate {
 
 export async function evaluateMetricThreshold(
   supabase: SupabaseClient, rule: Record<string, unknown>, tenantId: string, agents: Array<Record<string, unknown>>, latestMetrics: Map<string, Record<string, unknown>>
+
 ): Promise<TriggerCandidate[]> {
   const conditions = rule.trigger_conditions as Record<string, unknown>;
   const candidates: TriggerCandidate[] = [];
@@ -48,7 +49,7 @@ export async function evaluateProcessAnomaly(
     .in('agent_id', agentIds)
     .order('collected_at', { ascending: false });
 
-  const latestProcesses = new Map<string, any>();
+  const latestProcesses = new Map<string, Record<string, unknown>>();
   (processData || []).forEach((p: Record<string, unknown>) => {
     if (!latestProcesses.has(p.agent_id as string)) latestProcesses.set(p.agent_id as string, p);
   });
@@ -114,7 +115,7 @@ export async function evaluateSecurityCheck(
     const { data: avData } = await supabase
       .from('antivirus_status').select('agent_id, engine_name, status, last_update_at')
       .in('agent_id', agentIds).order('collected_at', { ascending: false });
-    const latestAv = new Map<string, any>();
+    const latestAv = new Map<string, Record<string, unknown>>();
     (avData || []).forEach((av: Record<string, unknown>) => { if (!latestAv.has(av.agent_id as string)) latestAv.set(av.agent_id as string, av); });
     for (const agent of agents) {
       if (!matchesScope(rule, agent.id as string)) continue;
@@ -133,23 +134,26 @@ export async function evaluateSecurityCheck(
     for (const agentId of affectedAgents) {
       if (!matchesScope(rule, agentId)) continue;
       const agent = agents.find((a) => a.id === agentId);
-      candidates.push({ agentId, triggerData: { event_type: 'firewall_disabled', check: checkType, agent_name: (agent as any)?.agent_name || 'Unknown', severity: 'high', message: `Firewall desabilitado no agente '${(agent as any)?.agent_name}'` } });
+      const agentName = (agent?.agent_name as string) || 'Unknown';
+      candidates.push({ agentId, triggerData: { event_type: 'firewall_disabled', check: checkType, agent_name: agentName, severity: 'high', message: `Firewall desabilitado no agente '${agentName}'` } });
     }
   } else if (checkType === 'unauthorized_usb') {
     const { data: usbDevices } = await supabase.from('agent_usb_devices').select('id, agent_id, device_id, device_name').in('agent_id', agentIds).eq('is_blocked', false);
     for (const usb of (usbDevices || [])) {
       if (!matchesScope(rule, usb.agent_id)) continue;
       const agent = agents.find((a) => a.id === usb.agent_id);
-      candidates.push({ agentId: usb.agent_id, triggerData: { event_type: 'unauthorized_usb', check: checkType, agent_name: (agent as any)?.agent_name || 'Unknown', device_id: usb.device_id, device_name: usb.device_name, severity: 'high', message: `USB nao autorizado (${usb.device_name || usb.device_id}) no agente '${(agent as any)?.agent_name}'` } });
+      const agentName = (agent?.agent_name as string) || 'Unknown';
+      candidates.push({ agentId: usb.agent_id, triggerData: { event_type: 'unauthorized_usb', check: checkType, agent_name: agentName, device_id: usb.device_id, device_name: usb.device_name, severity: 'high', message: `USB nao autorizado (${usb.device_name || usb.device_id}) no agente '${agentName}'` } });
     }
   } else if (checkType === 'vulnerable_software') {
     const { data: vulns } = await supabase.from('vuln_findings').select('id, agent_id, check_key, title, severity').in('agent_id', agentIds).in('severity', ['critical', 'high']).is('acknowledged_at', null).limit(50);
-    const agentVulns = new Map<string, any[]>();
+    const agentVulns = new Map<string, Record<string, unknown>[]>();
     (vulns || []).forEach((v: Record<string, unknown>) => { if (!agentVulns.has(v.agent_id as string)) agentVulns.set(v.agent_id as string, []); agentVulns.get(v.agent_id as string)!.push(v); });
     for (const [agentId, agentVulnList] of agentVulns) {
       if (!matchesScope(rule, agentId)) continue;
       const agent = agents.find((a) => a.id === agentId);
-      candidates.push({ agentId, triggerData: { event_type: 'vulnerable_software', check: checkType, agent_name: (agent as any)?.agent_name || 'Unknown', vuln_count: agentVulnList.length, top_vulns: agentVulnList.slice(0, 3).map((v: Record<string, unknown>) => v.title), severity: 'critical', message: `${agentVulnList.length} vulnerabilidade(s) critica(s)` } });
+      const agentName = (agent?.agent_name as string) || 'Unknown';
+      candidates.push({ agentId, triggerData: { event_type: 'vulnerable_software', check: checkType, agent_name: agentName, vuln_count: agentVulnList.length, top_vulns: agentVulnList.slice(0, 3).map((v) => v.title), severity: 'critical', message: `${agentVulnList.length} vulnerabilidade(s) critica(s)` } });
     }
   }
   return candidates;

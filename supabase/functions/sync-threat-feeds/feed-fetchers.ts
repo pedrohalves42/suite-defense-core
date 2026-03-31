@@ -34,7 +34,7 @@ export async function fetchMalwareBazaarRecent(): Promise<RawIndicator[]> {
     }
 
     const text = await resp.text();
-    let data: any;
+    let data: Record<string, unknown>;
     try { data = JSON.parse(text); } catch { logger.warn('MalwareBazaar returned non-JSON:', text.substring(0, 200)); return await fetchMalwareBazaarCSV(); }
 
     if (data.query_status === 'ok' && Array.isArray(data.data)) {
@@ -89,7 +89,7 @@ export async function fetchURLhaus(): Promise<RawIndicator[]> {
 
     if (!resp.ok) { await resp.text(); return await fetchURLhausCSV(); }
     const text = await resp.text();
-    let data: any;
+    let data: Record<string, unknown>;
     try { data = JSON.parse(text); } catch { return await fetchURLhausCSV(); }
 
     if (data.query_status === 'ok' && Array.isArray(data.urls)) {
@@ -141,7 +141,7 @@ export async function fetchFeodoTracker(): Promise<RawIndicator[]> {
     const resp = await fetchWithTimeout('https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.json');
     if (!resp.ok) { logger.warn(`Feodo Tracker HTTP ${resp.status}`); return indicators; }
     const text = await resp.text();
-    let data: any;
+    let data: unknown;
     try { data = JSON.parse(text); } catch { logger.warn('Feodo Tracker returned non-JSON'); return indicators; }
     const entries = Array.isArray(data) ? data : [];
     for (const entry of entries) {

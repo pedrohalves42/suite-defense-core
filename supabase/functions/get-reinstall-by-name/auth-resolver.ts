@@ -6,7 +6,7 @@
 import { hashToken } from '../_shared/token-hash.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
 interface AuthResult {
   tenantId: string | null;
@@ -25,7 +25,7 @@ function sanitizeEnrollmentKey(value: string | null): string | null {
 export async function resolveAuth(
   req: Request,
   url: URL,
-  adminClient: any,
+  adminClient: SupabaseClient,
   supabaseUrl: string,
   requestId: string,
   origin: string | null,

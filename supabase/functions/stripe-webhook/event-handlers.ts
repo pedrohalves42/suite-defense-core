@@ -3,6 +3,7 @@
  * Extraído de stripe-webhook/index.ts para modularização
  */
 import Stripe from "https://esm.sh/stripe@18.5.0";
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 
 // V4: UUID validation regex
@@ -16,7 +17,7 @@ function isValidUUID(value: string | undefined | null): value is string {
  * Find tenant by customer_id OR by metadata.tenant_id
  */
 export async function findTenantByCustomerOrMetadata(
-  supabase: any,
+  supabase: SupabaseClient,
   customerId: string,
   metadata?: Stripe.Metadata | null
 ): Promise<{ tenant_id: string; plan_id: string | null } | null> {
@@ -60,7 +61,7 @@ export async function findTenantByCustomerOrMetadata(
 /**
  * Handle checkout.session.completed
  */
-export async function handleCheckoutCompleted(supabase: any, session: Stripe.Checkout.Session): Promise<void> {
+export async function handleCheckoutCompleted(supabase: SupabaseClient, session: Stripe.Checkout.Session): Promise<void> {
   logger.info(`[STRIPE-WEBHOOK] Checkout completed: ${session.id}`);
   const customerId = session.customer as string;
   const tenantId = session.metadata?.tenant_id;
@@ -86,7 +87,7 @@ export async function handleCheckoutCompleted(supabase: any, session: Stripe.Che
 /**
  * Handle customer.subscription.created and customer.subscription.updated
  */
-export async function handleSubscriptionUpdate(supabase: any, subscription: Stripe.Subscription, eventId: string, eventType: string): Promise<void> {
+export async function handleSubscriptionUpdate(supabase: SupabaseClient, subscription: Stripe.Subscription, eventId: string, eventType: string): Promise<void> {
   logger.info(`[STRIPE-WEBHOOK] Processing subscription: ${subscription.id}`);
   const customerId = subscription.customer as string;
 
@@ -174,7 +175,7 @@ export async function handleSubscriptionUpdate(supabase: any, subscription: Stri
 /**
  * Handle customer.subscription.trial_will_end
  */
-export async function handleTrialEnding(supabase: any, subscription: Stripe.Subscription): Promise<void> {
+export async function handleTrialEnding(supabase: SupabaseClient, subscription: Stripe.Subscription): Promise<void> {
   logger.info(`[STRIPE-WEBHOOK] Trial ending soon: ${subscription.id}`);
   const customerId = subscription.customer as string;
   const tenantSub = await findTenantByCustomerOrMetadata(supabase, customerId, subscription.metadata);
@@ -198,7 +199,7 @@ export async function handleTrialEnding(supabase: any, subscription: Stripe.Subs
 /**
  * Handle customer.subscription.deleted
  */
-export async function handleSubscriptionDeleted(supabase: any, stripe: Stripe, subscription: Stripe.Subscription, eventId: string): Promise<void> {
+export async function handleSubscriptionDeleted(supabase: SupabaseClient, stripe: Stripe, subscription: Stripe.Subscription, eventId: string): Promise<void> {
   logger.info(`[STRIPE-WEBHOOK] Subscription deleted: ${subscription.id}`);
   const customerId = subscription.customer as string;
   const metadata = subscription.metadata;
@@ -268,7 +269,7 @@ export async function handleSubscriptionDeleted(supabase: any, stripe: Stripe, s
 /**
  * Handle invoice.payment_failed
  */
-export async function handlePaymentFailed(supabase: any, invoice: Stripe.Invoice): Promise<void> {
+export async function handlePaymentFailed(supabase: SupabaseClient, invoice: Stripe.Invoice): Promise<void> {
   logger.info(`[STRIPE-WEBHOOK] Payment failed for invoice: ${invoice.id}`);
   const customerId = invoice.customer as string;
   const tenantSub = await findTenantByCustomerOrMetadata(supabase, customerId, null);

@@ -74,8 +74,8 @@ serveTenant(async (_req, ctx) => {
       pro: { exists: !!proPlan?.stripe_price_id, price_id: proPlan?.stripe_price_id || null },
     };
     const both = !!starterPlan?.stripe_price_id && !!proPlan?.stripe_price_id;
-    const any = !!starterPlan?.stripe_price_id || !!proPlan?.stripe_price_id;
-    response.checks.products_configured.status = both ? 'ok' : any ? 'partial' : 'missing';
+    const hasAny = !!starterPlan?.stripe_price_id || !!proPlan?.stripe_price_id;
+    response.checks.products_configured.status = both ? 'ok' : hasAny ? 'partial' : 'missing';
     if (!both) response.overall_status = 'degraded';
   } catch {}
 
