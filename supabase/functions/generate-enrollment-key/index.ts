@@ -1,5 +1,4 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
-import { corsHeaders } from '../_shared/error-handler.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { buildCorsHeaders } from '../_shared/cors.ts';
