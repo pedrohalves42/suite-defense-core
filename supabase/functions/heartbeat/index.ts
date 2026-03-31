@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    logger.debug('Heartbeat received', { agentName: agent.agent_name })
+    logger.debug('Heartbeat received', { agentName: agent.agent_name, traceId })
 
     // ── 5. Update agent status + parallel side-effects ──────
     await updateAgentStatus(supabase, agent.id, agent.agent_name, updateData)
