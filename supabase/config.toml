@@ -173,9 +173,7 @@ verify_jwt = true
 [functions.diagnose-agent]
 verify_jwt = true
 
-# Build cleanup - DISABLED COST-OPT-V6 (covered by system-maintenance)
-[functions.cleanup-stuck-builds]
-verify_jwt = false
+# REMOVED: cleanup-stuck-builds (consolidated into cleanup-router, action: 'stuck-builds')
 
 # Build watchdog - DISABLED COST-OPT-V6 (covered by system-maintenance)
 [functions.build-watchdog]
