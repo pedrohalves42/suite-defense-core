@@ -90,7 +90,8 @@ export default function WebActivity() {
       const jobs = await Promise.all(
         onlineAgents.map(agent => prepareJobForInsert({ tenant_id: tenantId, agent_id: agent.agent_id, agent_name: agent.hostname || 'unknown', type: 'collect_web_activity', status: 'queued', priority: 8, payload: { max_domains: 500, browsers: ['chrome', 'firefox', 'edge', 'brave', 'opera', 'vivaldi'], days_back: 30, source: 'manual-bulk' }, approved: true }))
       );
-      const { error: insertError } = await supabase.from('jobs').insert(jobs);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TS2589 workaround
+      const { error: insertError } = await (supabase as Record<string, any>).from('jobs').insert(jobs);
       if (insertError) throw insertError;
       toast.success(`Coleta disparada para ${onlineAgents.length} computador${onlineAgents.length > 1 ? 'es' : ''}`);
     } catch (err) {

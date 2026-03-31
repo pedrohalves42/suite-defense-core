@@ -185,7 +185,7 @@ export function useCreateApprovalRequest() {
     }) => {
       const { data, error } = await supabase.rpc('create_approval_request', {
         p_action_type: actionType,
-        p_action_payload: actionPayload as unknown as Json,
+        p_action_payload: actionPayload as unknown as Parameters<typeof supabase.rpc>[1],
         p_target_agent_id: targetAgentId || null,
         p_playbook_execution_id: playbookExecutionId || null
       });
