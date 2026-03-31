@@ -1,17 +1,16 @@
 /**
- * auto-cleanup-jobs -> PROXY to cleanup-router
- * Migrated to serveInternal middleware
+ * auto-cleanup-jobs -> PROXY to ops-router
  */
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 serveInternal(async (_req, ctx) => {
   const { body } = ctx;
-  const url = `${Deno.env.get('SUPABASE_URL')}/functions/v1/cleanup-router`;
+  const url = `${Deno.env.get('SUPABASE_URL')}/functions/v1/ops-router`;
   const resp = await fetchWithTimeout(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` },
-    body: JSON.stringify({ action: 'auto-cleanup-jobs', ...(body as Record<string, unknown> || {}) }),
+    body: JSON.stringify({ action: 'cleanup:auto-cleanup-jobs', payload: body || {} }),
   });
   return await resp.json();
 });
