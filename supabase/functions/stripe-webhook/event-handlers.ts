@@ -198,7 +198,7 @@ export async function handleTrialEnding(supabase: SupabaseClient, subscription: 
 /**
  * Handle customer.subscription.deleted
  */
-export async function handleSubscriptionDeleted(supabase: any, stripe: Stripe, subscription: Stripe.Subscription, eventId: string): Promise<void> {
+export async function handleSubscriptionDeleted(supabase: SupabaseClient, stripe: Stripe, subscription: Stripe.Subscription, eventId: string): Promise<void> {
   logger.info(`[STRIPE-WEBHOOK] Subscription deleted: ${subscription.id}`);
   const customerId = subscription.customer as string;
   const metadata = subscription.metadata;
