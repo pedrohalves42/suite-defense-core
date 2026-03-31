@@ -11,14 +11,17 @@ import { logger } from '@/lib/logger';
 export class PersistentDomainEventPublisher implements DomainEventDispatcher {
   async dispatch(event: DomainEvent): Promise<void> {
     try {
-      const { error } = await supabase.functions.invoke('log-domain-event', {
+      const { error } = await supabase.functions.invoke('sync-router', {
         body: {
-          aggregate_id: event.aggregateId,
-          aggregate_type: this.inferAggregateType(event.eventType),
-          event_type: event.eventType,
-          payload: this.buildPayload(event) as unknown as Json,
-          occurred_on: event.occurredOn.toISOString(),
-          tenant_id: this.extractTenantId(event),
+          action: 'log-domain-event',
+          payload: {
+            aggregate_id: event.aggregateId,
+            aggregate_type: this.inferAggregateType(event.eventType),
+            event_type: event.eventType,
+            payload: this.buildPayload(event) as unknown as Json,
+            occurred_on: event.occurredOn.toISOString(),
+            tenant_id: this.extractTenantId(event),
+          },
         },
       });
 
