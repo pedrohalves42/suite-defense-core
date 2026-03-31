@@ -145,7 +145,7 @@ async function handleCheckProductionHealth(supabase: SupabaseClientType, request
   if (!heartbeatError && (!recentHeartbeats || recentHeartbeats.length === 0)) {
     const { count: activeAgentsCount } = await supabase.from('agents').select('*', { count: 'exact', head: true }).in('status', ['active', 'pending']);
     if (activeAgentsCount && activeAgentsCount > 0) {
-      alerts.push({ tenant_id: null, alert_type: 'no_heartbeats', severity: 'high', title: 'Nenhum heartbeat na ultima hora', message: `${activeAgentsCount} agente(s) ativo(s) sem heartbeat.`, details: { active_agents_count: activeAgentsCount } });
+      alerts.push({ tenant_id: null, alert_type: 'no_heartbeats', severity: 'high', title: 'Nenhum heartbeat na ultima hora', message: `${activeAgentsCount} agente(s) ativo(s) sem heartbeat.`, details: { active_agents_count: activeAgentsCount }, trace_id: requestId });
     }
   }
 
