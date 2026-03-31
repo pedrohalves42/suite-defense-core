@@ -107,7 +107,7 @@ const DocsExport = () => {
 
       for (const category of categories) {
         for (const doc of category.docs) {
-          const content = getDocContent(doc.path);
+          const content = await getDocContent(doc.path);
           if (content) {
             selectedDocs.push({
               title: doc.title,
