@@ -59,18 +59,20 @@ serveTenant(async (req, ctx) => {
             b.Domain?.toLowerCase().includes(monitor.email_domain.toLowerCase()) ||
             b.Name?.toLowerCase().includes(monitor.email_domain.split('.')[0].toLowerCase())
           );
-          for (const breach of domainBreaches.slice(0, 10)) {
-            const { error } = await supabase.from('credential_leaks').upsert({
-              tenant_id: tenantId,
-              email: `*@${monitor.email_domain}`,
-              breach_name: breach.Name,
-              breach_source: breach.Domain || 'haveibeenpwned.com',
-              breach_date: breach.BreachDate ? new Date(breach.BreachDate).toISOString() : null,
-              data_types_exposed: breach.DataClasses || [],
-              severity: classifyBreachSeverity(breach.DataClasses || []),
-              detected_at: new Date().toISOString(),
-            }, { onConflict: 'id' });
-            if (!error) results.leaks_found++;
+          // Batch upsert all breach records instead of N+1
+          const breachRows = domainBreaches.slice(0, 10).map((breach: Record<string, unknown>) => ({
+            tenant_id: tenantId,
+            email: `*@${monitor.email_domain}`,
+            breach_name: breach.Name,
+            breach_source: (breach.Domain as string) || 'haveibeenpwned.com',
+            breach_date: breach.BreachDate ? new Date(breach.BreachDate as string).toISOString() : null,
+            data_types_exposed: (breach.DataClasses as string[]) || [],
+            severity: classifyBreachSeverity((breach.DataClasses as string[]) || []),
+            detected_at: new Date().toISOString(),
+          }));
+          if (breachRows.length > 0) {
+            const { error } = await supabase.from('credential_leaks').upsert(breachRows, { onConflict: 'id' });
+            if (!error) results.leaks_found += breachRows.length;
           }
         }
         await new Promise(r => setTimeout(r, 1600));

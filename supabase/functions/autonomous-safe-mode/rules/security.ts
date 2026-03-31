@@ -324,14 +324,13 @@ export async function processAgentDivergentRule(supabase: SupabaseClient, rule: 
 
   const agents: RuleResult['agents'] = [];
 
-  for (const divergent of divergentAgents.slice(0, 10)) {
-    const { data: agentInfo } = await supabase
-      .from('agents')
-      .select('agent_name')
-      .eq('id', divergent.agent_id)
-      .single();
+  // Batch fetch agent names for divergent agents instead of N+1
+  const divAgentIds = divergentAgents.slice(0, 10).map(d => d.agent_id);
+  const { data: divAgentInfos } = await supabase.from('agents').select('id, agent_name').in('id', divAgentIds);
+  const divAgentNameMap = new Map((divAgentInfos || []).map(a => [a.id, a.agent_name]));
 
-    const agentName = agentInfo?.agent_name || divergent.agent_id.substring(0, 8);
+  for (const divergent of divergentAgents.slice(0, 10)) {
+    const agentName = divAgentNameMap.get(divergent.agent_id) || divergent.agent_id.substring(0, 8);
 
     await supabase.from('ai_insights').insert({
       tenant_id: divergent.tenant_id,

@@ -38,19 +38,30 @@ export async function handleCleanupStuckJobs(supabase: SupabaseClient, requestId
       if (!failError) failedDeliveredCount = allIds.length;
     }
 
-    for (const job of retryable) {
-      const { data: fullJob } = await supabase
+    if (retryable.length > 0) {
+      // Batch fetch all retryable job details in one query instead of N+1
+      const retryableIds = retryable.map(j => j.id);
+      const { data: fullJobs } = await supabase
         .from('jobs')
-        .select('tenant_id, agent_id, agent_name, type, payload, priority, expires_at')
-        .eq('id', job.id)
-        .single();
-      if (fullJob?.type) {
-        await supabase.from('jobs').insert({
-          tenant_id: fullJob.tenant_id, agent_id: fullJob.agent_id, agent_name: fullJob.agent_name, type: fullJob.type,
-          payload: fullJob.payload || {}, status: 'queued', approved: true, priority: fullJob.priority,
-          expires_at: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
-          delivery_attempts: (job.delivery_attempts || 0) + 1,
+        .select('id, tenant_id, agent_id, agent_name, type, payload, priority, expires_at, is_recurring')
+        .in('id', retryableIds);
+
+      const retryRows = (fullJobs || [])
+        .filter(fj => fj.is_recurring && fj.agent_id)
+        .map(fj => {
+          const originalRetryable = retryable.find(r => r.id === fj.id);
+          return {
+            type: fj.type, agent_id: fj.agent_id, agent_name: fj.agent_name, tenant_id: fj.tenant_id,
+            status: 'queued', approved: true, priority: fj.priority,
+            payload: { ...(fj.payload as Record<string, unknown>), retry_of: fj.id, retry_count: ((fj.payload as Record<string, unknown>)?.retry_count as number || 0) + 1 },
+            is_recurring: true, parent_job_id: fj.id,
+            expires_at: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
+            delivery_attempts: (originalRetryable?.delivery_attempts || 0) + 1,
+          };
         });
+
+      if (retryRows.length > 0) {
+        await supabase.from('jobs').insert(retryRows);
       }
     }
   }

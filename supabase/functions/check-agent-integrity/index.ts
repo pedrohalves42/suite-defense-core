@@ -94,8 +94,17 @@ serveInternal(async (_req, ctx) => {
   const agentsToDeactivate = issues.filter(i => i.minutes_since_heartbeat && i.minutes_since_heartbeat > 60).map(i => i.agent_id);
   if (agentsToDeactivate.length > 0) await supabase.from('agents').update({ status: 'inactive' }).in('id', agentsToDeactivate);
 
-  for (const issue of issues.filter(i => i.issue_type === 'removed_after_reboot' || i.issue_type === 'persistent_failure')) {
-    await supabase.from('agent_events').insert({ agent_id: issue.agent_id, tenant_id: issue.tenant_id, event_type: issue.issue_type === 'persistent_failure' ? 'persistent_failure_detected' : 'integrity_check_failed', details: { issue_type: issue.issue_type, last_heartbeat: issue.last_heartbeat, minutes_since_heartbeat: issue.minutes_since_heartbeat, failure_count: issue.failure_count, detected_at: new Date().toISOString() } });
+  // Batch insert agent_events instead of N+1
+  const eventsToInsert = issues
+    .filter(i => i.issue_type === 'removed_after_reboot' || i.issue_type === 'persistent_failure')
+    .map(issue => ({
+      agent_id: issue.agent_id,
+      tenant_id: issue.tenant_id,
+      event_type: issue.issue_type === 'persistent_failure' ? 'persistent_failure_detected' : 'integrity_check_failed',
+      details: { issue_type: issue.issue_type, last_heartbeat: issue.last_heartbeat, minutes_since_heartbeat: issue.minutes_since_heartbeat, failure_count: issue.failure_count, detected_at: new Date().toISOString() }
+    }));
+  if (eventsToInsert.length > 0) {
+    await supabase.from('agent_events').insert(eventsToInsert);
   }
 
   const durationMs = Date.now() - startedAt;

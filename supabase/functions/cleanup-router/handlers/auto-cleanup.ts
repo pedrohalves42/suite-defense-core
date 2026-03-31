@@ -39,16 +39,21 @@ export async function handleAutoCleanupJobs(supabase: SupabaseClient, requestId:
   // Retry recurring jobs
   let retriedCount = 0;
   if (enableRetry && failedJobs && failedJobs.length > 0) {
-    for (const failedJob of failedJobs) {
-      const { data: originalJob } = await supabase.from('jobs').select('type, agent_id, agent_name, tenant_id, payload, is_recurring').eq('id', failedJob.id).single();
-      if (originalJob?.is_recurring && originalJob?.agent_id) {
-        const { error: retryError } = await supabase.from('jobs').insert({
-          type: originalJob.type, agent_id: originalJob.agent_id, agent_name: originalJob.agent_name, tenant_id: originalJob.tenant_id, status: 'queued', approved: true,
-          payload: { ...(originalJob.payload as Record<string, unknown>), retry_of: failedJob.id, retry_count: ((originalJob.payload as Record<string, unknown>)?.retry_count as number || 0) + 1 },
-          is_recurring: true, parent_job_id: failedJob.id,
-        });
-        if (!retryError) retriedCount++;
-      }
+    // Batch fetch all failed job details in one query instead of N+1
+    const failedIds = failedJobs.map(j => j.id);
+    const { data: fullJobs } = await supabase.from('jobs').select('id, type, agent_id, agent_name, tenant_id, payload, is_recurring').in('id', failedIds);
+
+    const retryRows = (fullJobs || [])
+      .filter(fj => fj.is_recurring && fj.agent_id)
+      .map(fj => ({
+        type: fj.type, agent_id: fj.agent_id, agent_name: fj.agent_name, tenant_id: fj.tenant_id, status: 'queued', approved: true,
+        payload: { ...(fj.payload as Record<string, unknown>), retry_of: fj.id, retry_count: ((fj.payload as Record<string, unknown>)?.retry_count as number || 0) + 1 },
+        is_recurring: true, parent_job_id: fj.id,
+      }));
+
+    if (retryRows.length > 0) {
+      const { error: retryError } = await supabase.from('jobs').insert(retryRows);
+      if (!retryError) retriedCount = retryRows.length;
     }
   }
 
