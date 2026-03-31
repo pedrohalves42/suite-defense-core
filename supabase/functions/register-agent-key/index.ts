@@ -14,6 +14,13 @@ import { logSecurityEvent } from '../_shared/security-log.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { computeAllKeyFingerprints } from './fingerprint-utils.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const RegisterKeySchema = z.object({
+  public_key: z.string().min(1).max(10000),
+  key_fingerprint: z.string().regex(/^[a-fA-F0-9]{64}$/, 'Must be 64 hex characters (SHA256)'),
+  algorithm: z.enum(['ECDSA-P256-SHA256', 'Ed25519', 'RSA-2048-SHA256', 'RSA-2048-XML', 'RSA-2048-CSP']).default('ECDSA-P256-SHA256'),
+});
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
