@@ -9,13 +9,16 @@
 
 import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-interface BaselinePayload {
-  baseline_type: string;
-  data_points: number[];
-  period_start?: string;
-  period_end?: string;
-}
+const VALID_BASELINE_TYPES = ['cpu_usage', 'memory_usage', 'process_count', 'network_traffic', 'disk_io', 'login_frequency'] as const;
+
+const BaselineSchema = z.object({
+  baseline_type: z.enum(VALID_BASELINE_TYPES),
+  data_points: z.array(z.number().finite()).min(1, 'data_points must have at least 1 element').max(10000),
+  period_start: z.string().datetime().optional(),
+  period_end: z.string().datetime().optional(),
+});
 
 function calculateStats(data: number[]): { mean: number; stdDev: number } {
   if (data.length === 0) return { mean: 0, stdDev: 0 };
@@ -39,22 +42,15 @@ serveAgent(async (_req, ctx) => {
   const { supabase, agentId, agentName, tenantId, requestId, body } = ctx;
   const startedAt = Date.now();
 
-  const { baseline_type, data_points, period_start, period_end }: BaselinePayload = body;
-
-  if (!baseline_type || !Array.isArray(data_points) || data_points.length === 0) {
+  const parsed = BaselineSchema.safeParse(body);
+  if (!parsed.success) {
     return new Response(
-      JSON.stringify({ error: 'baseline_type and non-empty data_points array required' }),
+      JSON.stringify({ error: 'Validation failed', details: parsed.error.flatten().fieldErrors }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
-  const validTypes = ['cpu_usage', 'memory_usage', 'process_count', 'network_traffic', 'disk_io', 'login_frequency'];
-  if (!validTypes.includes(baseline_type)) {
-    return new Response(
-      JSON.stringify({ error: `baseline_type must be one of: ${validTypes.join(', ')}` }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
+  const { baseline_type, data_points, period_start, period_end } = parsed.data;
 
   logger.info(`[${requestId}] [update-baseline] Agent ${agentName}: ${baseline_type} with ${data_points.length} points`);
 

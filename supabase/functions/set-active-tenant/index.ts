@@ -5,6 +5,11 @@
 
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const SetTenantSchema = z.object({
+  tenant_id: z.string().uuid('tenant_id must be a valid UUID'),
+});
 
 function extractClientIp(req: Request): string {
   const forwardedFor = req.headers.get('x-forwarded-for');
@@ -25,6 +30,17 @@ serveTenant(async (req, ctx) => {
       { status: 401, headers: { 'Content-Type': 'application/json' } }
     );
   }
+
+  // Validate payload
+  const parsed = SetTenantSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(
+      JSON.stringify({ error: 'Validation failed', details: parsed.error.flatten().fieldErrors }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const { tenant_id } = parsed.data;
 
   logger.info(`[set-active-tenant][${requestId}] User ${userId} requesting tenant switch`);
 
@@ -52,14 +68,6 @@ serveTenant(async (req, ctx) => {
     return new Response(
       JSON.stringify({ error: 'IP not authorized for super admin access', code: 'IP_BLOCKED' }),
       { status: 403, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  const tenant_id = body?.tenant_id;
-  if (!tenant_id) {
-    return new Response(
-      JSON.stringify({ error: 'tenant_id is required' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
 

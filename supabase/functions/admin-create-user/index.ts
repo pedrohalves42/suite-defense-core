@@ -5,14 +5,23 @@
 
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-interface CreateUserRequest {
-  username: string;
-  password: string;
-  full_name: string;
-  role: 'admin' | 'operator' | 'viewer';
-  tenant_id: string;
-}
+const CreateUserSchema = z.object({
+  username: z.string()
+    .min(3, 'Username must be at least 3 characters')
+    .max(32, 'Username must be at most 32 characters')
+    .regex(/^[a-zA-Z][a-zA-Z0-9_-]*$/, 'Username must start with a letter, contain only letters, numbers, _ or -'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .max(72, 'Password must be at most 72 characters')
+    .regex(/[A-Z]/, 'Password must contain an uppercase letter')
+    .regex(/[a-z]/, 'Password must contain a lowercase letter')
+    .regex(/[0-9]/, 'Password must contain a number'),
+  full_name: z.string().min(1, 'Full name is required').max(255),
+  role: z.enum(['admin', 'operator', 'viewer']),
+  tenant_id: z.string().uuid('tenant_id must be a valid UUID'),
+});
 
 serveTenant(async (_req, ctx) => {
   const { supabase, userId, requestId, body } = ctx;
@@ -24,15 +33,15 @@ serveTenant(async (_req, ctx) => {
     );
   }
 
-  const { username, password, full_name, role, tenant_id } = body as CreateUserRequest;
-
-  // Validate tenant_id
-  if (!tenant_id) {
+  const parsed = CreateUserSchema.safeParse(body);
+  if (!parsed.success) {
     return new Response(
-      JSON.stringify({ success: false, error: 'tenant_id is required' }),
+      JSON.stringify({ success: false, error: 'Validation failed', details: parsed.error.flatten().fieldErrors }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
+
+  const { username, password, full_name, role, tenant_id } = parsed.data;
 
   // Verify caller is admin in the target tenant
   const { data: callerRole, error: roleError } = await supabase
@@ -51,46 +60,6 @@ serveTenant(async (_req, ctx) => {
   }
 
   logger.info(`[admin-create-user][${requestId}] Admin verified: ${userId}, tenant: ${tenant_id}`);
-
-  // Validation
-  if (!username || !password || !full_name || !role) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Missing required fields: username, password, full_name, role' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  // Username validation
-  const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_-]{2,31}$/;
-  if (!usernameRegex.test(username)) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Username must start with a letter, contain only letters, numbers, _ or -, and be 3-32 characters' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  // Password validation
-  if (password.length < 8 || password.length > 72) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Password must be 8-72 characters' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Password must contain uppercase, lowercase, and number' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  // Role validation
-  if (!['admin', 'operator', 'viewer'].includes(role)) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Invalid role. Must be admin, operator, or viewer' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
 
   // Check if username already exists
   const { data: existingUser } = await supabase
