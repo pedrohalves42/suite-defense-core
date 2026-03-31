@@ -254,6 +254,7 @@ export default function DataExport() {
   };
 
   const exportToExcel = async (data: any[], filename: string) => {
+    const ExcelJS = (await import('exceljs')).default;
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Dados');
 
