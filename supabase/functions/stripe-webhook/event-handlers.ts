@@ -268,7 +268,7 @@ export async function handleSubscriptionDeleted(supabase: SupabaseClient, stripe
 /**
  * Handle invoice.payment_failed
  */
-export async function handlePaymentFailed(supabase: any, invoice: Stripe.Invoice): Promise<void> {
+export async function handlePaymentFailed(supabase: SupabaseClient, invoice: Stripe.Invoice): Promise<void> {
   logger.info(`[STRIPE-WEBHOOK] Payment failed for invoice: ${invoice.id}`);
   const customerId = invoice.customer as string;
   const tenantSub = await findTenantByCustomerOrMetadata(supabase, customerId, null);

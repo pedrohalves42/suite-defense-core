@@ -147,12 +147,13 @@ export async function evaluateSecurityCheck(
     }
   } else if (checkType === 'vulnerable_software') {
     const { data: vulns } = await supabase.from('vuln_findings').select('id, agent_id, check_key, title, severity').in('agent_id', agentIds).in('severity', ['critical', 'high']).is('acknowledged_at', null).limit(50);
-    const agentVulns = new Map<string, any[]>();
+    const agentVulns = new Map<string, Record<string, unknown>[]>();
     (vulns || []).forEach((v: Record<string, unknown>) => { if (!agentVulns.has(v.agent_id as string)) agentVulns.set(v.agent_id as string, []); agentVulns.get(v.agent_id as string)!.push(v); });
     for (const [agentId, agentVulnList] of agentVulns) {
       if (!matchesScope(rule, agentId)) continue;
       const agent = agents.find((a) => a.id === agentId);
-      candidates.push({ agentId, triggerData: { event_type: 'vulnerable_software', check: checkType, agent_name: (agent as any)?.agent_name || 'Unknown', vuln_count: agentVulnList.length, top_vulns: agentVulnList.slice(0, 3).map((v: Record<string, unknown>) => v.title), severity: 'critical', message: `${agentVulnList.length} vulnerabilidade(s) critica(s)` } });
+      const agentName = (agent?.agent_name as string) || 'Unknown';
+      candidates.push({ agentId, triggerData: { event_type: 'vulnerable_software', check: checkType, agent_name: agentName, vuln_count: agentVulnList.length, top_vulns: agentVulnList.slice(0, 3).map((v) => v.title), severity: 'critical', message: `${agentVulnList.length} vulnerabilidade(s) critica(s)` } });
     }
   }
   return candidates;

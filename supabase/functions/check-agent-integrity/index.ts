@@ -73,8 +73,7 @@ serveInternal(async (_req, ctx) => {
 
   for (const immediateAlert of immediateAlertsToSend) {
     try {
-      // deno-lint-ignore no-explicit-any
-      const a = immediateAlert as any;
+      const a = immediateAlert as { alertId: string; agent: Record<string, unknown>; failureCount: number; minutesSinceHeartbeat: number };
       await supabase.functions.invoke('security-alert-dispatcher', { body: { type: 'agent_persistent_failure', severity: 'critical', immediate: true, tenant_id: a.agent.tenant_id, agent_id: a.agent.id, agent_name: a.agent.agent_name, failure_count: a.failureCount, minutes_since_heartbeat: a.minutesSinceHeartbeat, message: `CRITICO: Agente "${a.agent.agent_name}" com ${a.failureCount} falhas consecutivas.` } });
       await supabase.from('persistent_failure_alerts').update({ last_alert_sent_at: new Date().toISOString() }).eq('id', a.alertId);
     } catch (alertError) { logger.warn(`[${requestId}] Failed to send immediate alert:`, alertError); }

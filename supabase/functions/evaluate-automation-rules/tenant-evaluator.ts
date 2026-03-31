@@ -190,7 +190,7 @@ export async function evaluateForTenant(
     .in('agent_id', agentIds)
     .order('collected_at', { ascending: false });
 
-  const latestMetrics = new Map<string, any>();
+  const latestMetrics = new Map<string, Record<string, unknown>>();
   (metrics || []).forEach((m: Record<string, unknown>) => {
     if (!latestMetrics.has(m.agent_id as string)) latestMetrics.set(m.agent_id as string, m);
   });

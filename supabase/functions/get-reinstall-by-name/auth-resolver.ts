@@ -25,7 +25,7 @@ function sanitizeEnrollmentKey(value: string | null): string | null {
 export async function resolveAuth(
   req: Request,
   url: URL,
-  adminClient: any,
+  adminClient: SupabaseClient,
   supabaseUrl: string,
   requestId: string,
   origin: string | null,
