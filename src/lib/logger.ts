@@ -24,18 +24,21 @@ async function flushLogs() {
 
   try {
     await supabase.functions.invoke('sync-router', {
-      body: entries.map((entry) => ({
-        aggregate_id: 'frontend',
-        aggregate_type: 'frontend_log',
-        event_type: `FrontendLog_${entry.level}`,
-        payload: {
-          message: entry.message,
-          context: sanitizeForLog(entry.context) as Record<string, string | number | boolean | null> | undefined,
-          url: typeof window !== 'undefined' ? window.location.href : undefined,
-          user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
-        },
-        occurred_on: entry.timestamp,
-      })),
+      body: {
+        action: 'log-domain-event',
+        payload: entries.map((entry) => ({
+          aggregate_id: 'frontend',
+          aggregate_type: 'frontend_log',
+          event_type: `FrontendLog_${entry.level}`,
+          payload: {
+            message: entry.message,
+            context: sanitizeForLog(entry.context) as Record<string, string | number | boolean | null> | undefined,
+            url: typeof window !== 'undefined' ? window.location.href : undefined,
+            user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+          },
+          occurred_on: entry.timestamp,
+        })),
+      },
     });
   } catch {
     // Best-effort — don't crash the app if logging fails
