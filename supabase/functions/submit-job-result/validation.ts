@@ -2,10 +2,29 @@
  * Payload validation and normalization for submit-job-result
  */
 
+import { z } from 'https://esm.sh/zod@3.23.8'
 import { logger } from '../_shared/logger.ts'
-import { corsHeaders } from '../_shared/error-handler.ts'
 import type { ParsedPayload } from './types.ts'
 import { buildCorsHeaders } from '../_shared/cors.ts';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const SubmitJobResultSchema = z.object({
+  job_id: z.string().min(1, 'job_id is required'),
+  status: z.enum(['completed', 'failed']),
+  output: z.unknown().optional(),
+  error_message: z.string().max(10000).nullable().optional(),
+  execution_time_seconds: z.number().nonnegative().nullable().optional(),
+  started_at: z.string().nullable().optional(),
+  finished_at: z.string().nullable().optional(),
+  execution_id: z.string().nullable().optional(),
+  nonce: z.string().max(256).nullable().optional(),
+  result_signature: z.string().max(1024).nullable().optional(),
+  signature_algorithm: z.string().max(64).nullable().optional(),
+  execution_hash: z.string().max(256).nullable().optional(),
+  previous_execution_hash: z.string().max(256).nullable().optional(),
+  execution_index: z.number().int().nonnegative().nullable().optional(),
+})
 
 /**
  * Extracts and validates the payload from a raw request body.
@@ -15,67 +34,32 @@ export function validateAndParsePayload(payload: Record<string, unknown>):
   { success: true; data: ParsedPayload } | 
   { success: false; response: Response } {
   
-  const job_id = payload.job_id
-  const status = payload.status
-  const output = payload.output
-  const error_message = payload.error_message as string | null || null
-  const execution_time_seconds = payload.execution_time_seconds as number | null ?? null
-  const started_at = payload.started_at as string | null || null
-  const finished_at = payload.finished_at as string | null || null
-  const raw_execution_id = payload.execution_id as string | null || null
-  const nonce = payload.nonce as string | null || null
-  const result_signature = payload.result_signature as string | null || null
-  const signature_algorithm = payload.signature_algorithm as string | null || null
-  const execution_hash = payload.execution_hash as string | null || null
-  const previous_execution_hash = payload.previous_execution_hash as string | null || null
-  const execution_index = payload.execution_index as number | null ?? null
-
-  // Validate job_id
-  if (!job_id || typeof job_id !== 'string') {
+  const parsed = SubmitJobResultSchema.safeParse(payload)
+  if (!parsed.success) {
     return {
       success: false,
       response: new Response(
-        JSON.stringify({ error: 'Invalid payload: job_id required (string)' }),
-        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Validation failed', details: parsed.error.flatten().fieldErrors }),
+        { status: 400, headers: { ...buildCorsHeaders(null), 'Content-Type': 'application/json' } }
       )
     }
   }
 
-  // Validate status
-  if (!status || !['completed', 'failed'].includes(status as string)) {
-    return {
-      success: false,
-      response: new Response(
-        JSON.stringify({ error: 'status must be "completed" or "failed"' }),
-        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      )
-    }
+  const data = parsed.data
+
+  // Warn if execution_time_seconds provided without timestamps
+  if (data.execution_time_seconds != null && (!data.started_at || !data.finished_at)) {
+    logger.warn('[submit-job-result] execution_time_seconds provided without timestamps', {
+      job_id: data.job_id,
+      execution_time_seconds: data.execution_time_seconds,
+      has_started_at: !!data.started_at,
+      has_finished_at: !!data.finished_at
+    })
   }
 
-  // Validate execution_time_seconds if provided
-  if (execution_time_seconds !== undefined && execution_time_seconds !== null) {
-    if (typeof execution_time_seconds !== 'number' || execution_time_seconds < 0) {
-      return {
-        success: false,
-        response: new Response(
-          JSON.stringify({ error: 'execution_time_seconds must be a positive number' }),
-          { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-        )
-      }
-    }
-
-    if (!started_at || !finished_at) {
-      logger.warn('[submit-job-result] execution_time_seconds provided without timestamps', {
-        job_id,
-        execution_time_seconds,
-        has_started_at: !!started_at,
-        has_finished_at: !!finished_at
-      })
-    }
-  }
-
-  // Normalize execution_id: remove "exec-" prefix
+  // Normalize execution_id: remove "exec-" prefix and validate UUID
   let execution_id: string | null = null
+  const raw_execution_id = data.execution_id ?? null
   if (raw_execution_id && typeof raw_execution_id === 'string') {
     let normalized = raw_execution_id
     if (raw_execution_id.startsWith('exec-')) {
@@ -85,14 +69,13 @@ export function validateAndParsePayload(payload: Record<string, unknown>):
         normalized
       })
     }
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (uuidRegex.test(normalized)) {
+    if (UUID_REGEX.test(normalized)) {
       execution_id = normalized
     } else {
       logger.warn('[submit-job-result] [P2.1] execution_id is not a valid UUID after normalization', {
         original: raw_execution_id,
         normalized,
-        job_id
+        job_id: data.job_id
       })
     }
   }
@@ -100,21 +83,21 @@ export function validateAndParsePayload(payload: Record<string, unknown>):
   return {
     success: true,
     data: {
-      job_id: job_id as string,
-      status: status as 'completed' | 'failed',
-      output,
-      error_message,
-      execution_time_seconds,
-      started_at,
-      finished_at,
+      job_id: data.job_id,
+      status: data.status,
+      output: data.output,
+      error_message: data.error_message ?? null,
+      execution_time_seconds: data.execution_time_seconds ?? null,
+      started_at: data.started_at ?? null,
+      finished_at: data.finished_at ?? null,
       execution_id,
       raw_execution_id,
-      nonce,
-      result_signature,
-      signature_algorithm,
-      execution_hash,
-      previous_execution_hash,
-      execution_index,
+      nonce: data.nonce ?? null,
+      result_signature: data.result_signature ?? null,
+      signature_algorithm: data.signature_algorithm ?? null,
+      execution_hash: data.execution_hash ?? null,
+      previous_execution_hash: data.previous_execution_hash ?? null,
+      execution_index: data.execution_index ?? null,
     }
   }
 }
