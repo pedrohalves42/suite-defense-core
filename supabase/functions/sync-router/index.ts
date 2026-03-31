@@ -91,7 +91,7 @@ async function handleProcessTenantSuspensions(supabase: SB, requestId: string) {
     const { error: agentError } = await supabase.from('agents').update({ status: 'suspended' }).eq('tenant_id', tenant.id).in('status', ['active', 'pending']);
     if (!agentError) processed++;
   }
-  try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'process-tenant-suspensions', p_success: true, p_duration_ms: Date.now() - startedAt, p_result: { tenants_found: suspendedTenants?.length || 0, agents_suspended: processed }, p_processed_count: processed, p_job_source: 'cron' }); } catch { /* non-critical */ }
+  try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'process-tenant-suspensions', p_success: true, p_duration_ms: Date.now() - startedAt, p_result: { tenants_found: suspendedTenants?.length || 0, agents_suspended: processed }, p_processed_count: processed, p_job_source: 'cron' }); } catch (err) { console.warn('[sync-router] tenant-suspensions log failed', err); }
   return { success: true, tenants_processed: suspendedTenants?.length || 0, agents_suspended: processed };
 }
 
