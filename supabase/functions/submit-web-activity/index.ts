@@ -35,14 +35,14 @@ serveAgent(async (_req, ctx) => {
     return new Response(JSON.stringify({ error: 'agent_id is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
-  if (!payload.items.length) {
+  if (!parsed.data.items.length) {
     return { success: true, inserted: 0 };
   }
 
-  logger.info(`Storing ${payload.items.length} web activity items for agent ${agentName}`);
+  logger.info(`Storing ${parsed.data.items.length} web activity items for agent ${agentName}`);
 
   const blockedPatterns = await loadBlockedPatterns(supabase, tenantId);
-  const prepared = prepareItems(payload.items, effectiveAgentId, tenantId, blockedPatterns);
+  const prepared = prepareItems(parsed.data.items as WebActivityItem[], effectiveAgentId, tenantId, blockedPatterns);
   const deduped = deduplicateItems(prepared);
 
   if (deduped.length < prepared.length) {
@@ -52,7 +52,7 @@ serveAgent(async (_req, ctx) => {
   const { insertedCount, updatedCount } = await persistActivity(supabase, effectiveAgentId, deduped);
   logger.info(`Web activity processed: ${insertedCount} inserted, ${updatedCount} updated`);
 
-  return { success: true, inserted: payload.items.length };
+  return { success: true, inserted: parsed.data.items.length };
 }, {
   hmacVerify: true,
   rateLimit: { endpoint: 'submit-web-activity', maxRequests: 20, windowMinutes: 60, blockMinutes: 10 },

@@ -145,7 +145,7 @@ serveTenant(async (req, ctx) => {
 
   // ??? REVOKE ???
   if (action === 'revoke') {
-    const { agentId, reason } = body;
+    const { agentId, reason } = parsed.data;
     if (!agentId) {
       return new Response(
         JSON.stringify({ error: 'agentId required' }),
