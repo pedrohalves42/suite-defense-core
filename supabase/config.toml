@@ -561,9 +561,7 @@ verify_jwt = true
 [functions.invoke-scheduled-jobs]
 verify_jwt = false
 
-# === P0: Cleanup Stale Playbooks - DISABLED COST-OPT-V6 (covered by system-maintenance) ===
-[functions.cleanup-stale-playbooks]
-verify_jwt = false
+# REMOVED: cleanup-stale-playbooks (consolidated into cleanup-router, action: 'stale-playbooks')
 
 # === P0: Process Failed Jobs - DISABLED schedule COST-OPT-V7 (covered by system-maintenance) ===
 [functions.process-failed-jobs]
