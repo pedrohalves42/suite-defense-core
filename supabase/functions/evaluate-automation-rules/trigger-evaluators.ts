@@ -115,7 +115,7 @@ export async function evaluateSecurityCheck(
     const { data: avData } = await supabase
       .from('antivirus_status').select('agent_id, engine_name, status, last_update_at')
       .in('agent_id', agentIds).order('collected_at', { ascending: false });
-    const latestAv = new Map<string, any>();
+    const latestAv = new Map<string, Record<string, unknown>>();
     (avData || []).forEach((av: Record<string, unknown>) => { if (!latestAv.has(av.agent_id as string)) latestAv.set(av.agent_id as string, av); });
     for (const agent of agents) {
       if (!matchesScope(rule, agent.id as string)) continue;
