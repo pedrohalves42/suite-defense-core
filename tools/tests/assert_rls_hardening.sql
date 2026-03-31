@@ -63,6 +63,30 @@ BEGIN
       'SECURITY VALIDATION FAILED: Critical tables without RLS: %. See ADR-026.',
       tables_without_rls;
   END IF;
+
+  -- ADR-026: Check ALL partitions of telemetry tables have RLS enabled
+  SELECT array_agg(pt.relname::text) INTO tables_without_rls
+  FROM pg_inherits i
+  JOIN pg_class pt ON pt.oid = i.inhrelid
+  JOIN pg_class parent ON parent.oid = i.inhparent
+  WHERE pt.relnamespace = 'public'::regnamespace
+    AND pt.relkind = 'r'
+    AND pt.relrowsecurity = false
+    AND parent.relname IN (
+      'endpoint_event_buffer_partitioned',
+      'endpoint_network_events_partitioned',
+      'endpoint_process_events_partitioned',
+      'agent_system_metrics_partitioned',
+      'audit_logs',
+      'hmac_signatures',
+      'job_executions'
+    );
+
+  IF array_length(tables_without_rls, 1) > 0 THEN
+    RAISE EXCEPTION 
+      'SECURITY VALIDATION FAILED: Partitions without RLS: %. Run SELECT ensure_partition_rls(); to fix. See ADR-026.',
+      tables_without_rls;
+  END IF;
   
-  RAISE NOTICE 'SECURITY VALIDATION PASSED: RLS hardening verified (ADR-023 + ADR-026)';
+  RAISE NOTICE 'SECURITY VALIDATION PASSED: RLS hardening verified (ADR-023 + ADR-026) including all partitions';
 END $$;
