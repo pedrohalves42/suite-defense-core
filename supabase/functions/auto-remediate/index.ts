@@ -130,7 +130,12 @@ serveTenant(async (req, ctx) => {
       }), { status: 429, headers: { 'Content-Type': 'application/json' } });
     }
   } catch (err) {
-    console.warn('[auto-remediate] Circuit breaker check failed (fail-open)', err);
+    logger.error('[auto-remediate] Circuit breaker check failed - BLOCKING (fail-closed)', { error: err instanceof Error ? err.message : String(err) });
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'CIRCUIT_BREAKER_UNAVAILABLE',
+      message: 'Circuit breaker indisponivel. Remediacao bloqueada por seguranca.',
+    }), { status: 503, headers: { 'Content-Type': 'application/json' } });
   }
 
   // Create remediation action record
