@@ -81,6 +81,10 @@ function buildBody(namespace: string, subAction: string, payload: Record<string,
     // evaluate-automation-rules expects flat body { tenant_id: ... }
     return JSON.stringify(payload);
   }
+  // All new domain routers expect { action: '...', payload: {...} }
+  if (['admin', 'billing', 'security', 'agent', 'check', 'sync', 'build', 'playbook'].includes(namespace)) {
+    return JSON.stringify({ action: subAction, payload });
+  }
   return JSON.stringify(payload);
 }
 
