@@ -129,8 +129,8 @@ serveTenant(async (req, ctx) => {
         message: 'Circuit breaker aberto: muitas remediacoes nos ultimos 10 minutos. Aguarde o cooldown.',
       }), { status: 429, headers: { 'Content-Type': 'application/json' } });
     }
-  } catch {
-    // Fail-open
+  } catch (err) {
+    console.warn('[auto-remediate] Circuit breaker check failed (fail-open)', err);
   }
 
   // Create remediation action record
