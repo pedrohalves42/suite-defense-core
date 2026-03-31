@@ -110,8 +110,8 @@ export async function getCached<T>(
       p_value: JSON.parse(JSON.stringify(freshValue)),
       p_ttl_seconds: ttlSeconds,
     });
-  } catch {
-    // Cache write failure is non-fatal
+  } catch (err) {
+    console.warn('[cache] DB write failed (non-fatal)', { key, err });
   }
 
   return freshValue;
