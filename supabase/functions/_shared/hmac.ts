@@ -138,7 +138,8 @@ export async function verifyHmacSignature(
     if (body.trim().startsWith('{') || body.trim().startsWith('[')) {
       compactBody = JSON.stringify(JSON.parse(body))
     }
-  } catch {
+  } catch (err) {
+    console.warn('[hmac] JSON compact parse failed, using raw body', err);
     compactBody = body
   }
 
