@@ -17,8 +17,7 @@ const StatusPage = () => {
     queryKey: ['status-page-agents', tenant],
     queryFn: async () => {
       if (!tenant) return [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('agents')
         .select('id, hostname, status, last_seen, agent_version')
         .eq('tenant_id', tenant?.id ?? '')

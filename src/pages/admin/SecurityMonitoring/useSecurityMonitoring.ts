@@ -262,8 +262,8 @@ export function useSecurityMonitoring() {
       });
       if (error) throw error;
       toast.success(`Remediação enviada para ${event.agentName}`);
-    } catch (err: any) {
-      toast.error(`Erro: ${err.message}`);
+    } catch (err: unknown) {
+      toast.error(`Erro: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     }
   };
 

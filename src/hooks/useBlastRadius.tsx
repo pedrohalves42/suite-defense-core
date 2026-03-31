@@ -60,8 +60,7 @@ export const useCheckBlastRadius = () => {
         throw new Error('Tenant not found');
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .rpc('check_blast_radius', {
           p_tenant_id: tenant.id,
           p_action_type: actionType,

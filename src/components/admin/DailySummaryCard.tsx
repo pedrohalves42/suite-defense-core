@@ -70,8 +70,7 @@ export function DailySummaryCard() {
       ]);
 
       const jobs: Array<{ status: string }> = jobsRes.data || [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const actions: Array<{ action_type: string; status: string }> = (actionsRes.data as any[]) || [];
+      const actions: Array<{ action_type: string; status: string }> = (actionsRes.data as unknown as Array<{ action_type: string; status: string }>) || [];
 
       const jobsSuccess = jobs.filter(j => j.status === 'completed').length;
       const jobsFailed = jobs.filter(j => j.status === 'failed').length;

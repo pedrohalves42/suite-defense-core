@@ -218,11 +218,10 @@ export default function DNSFilter() {
                             {site.reason || '-'}
                           </TableCell>
                           <TableCell>
-                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                            {(site as any).agent_groups ? (
+                            {(site as unknown as { agent_groups?: { name: string } }).agent_groups ? (
                               <Badge variant="outline" className="gap-1">
                                 <Users className="h-3 w-3" />
-                                {(site as any).agent_groups.name}
+                                {(site as unknown as { agent_groups?: { name: string } }).agent_groups!.name}
                               </Badge>
                             ) : (
                               <Badge variant="secondary">Todos</Badge>

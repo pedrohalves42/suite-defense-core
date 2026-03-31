@@ -214,10 +214,9 @@ export function useDNSFilter() {
         },
       }));
 
-      const { data, error } = await (supabase
+      const { data, error } = await supabase
         .from('jobs')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .insert(jobs as any) )
+        .insert(jobs)
         .select('id');
 
       if (error) throw error;

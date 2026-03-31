@@ -65,8 +65,7 @@ export const useTenantBranding = () => {
       } else {
         ({ data, error } = await supabase
           .from('tenant_branding')
-           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-           .insert(payload as any)
+          .insert(payload as Record<string, unknown> & { tenant_id: string })
           .select()
           .single());
       }
