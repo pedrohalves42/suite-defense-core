@@ -117,7 +117,8 @@ Deno.serve(async (req) => {
       if (jsonContent.includes('```json')) jsonContent = jsonContent.replace(/```json\n?/g, '').replace(/```\n?/g, '');
       else if (jsonContent.includes('```')) jsonContent = jsonContent.replace(/```\n?/g, '');
       analysisResult = JSON.parse(jsonContent.trim());
-    } catch {
+    } catch (err) {
+      console.warn('[ai-red-team] JSON parse failed', err);
       return new Response(JSON.stringify({ error: 'Failed to parse AI analysis', raw: aiResult.content }), { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
     }
 

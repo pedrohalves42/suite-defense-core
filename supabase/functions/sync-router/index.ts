@@ -109,7 +109,7 @@ async function handleFlushEventBuffer(supabase: SB, requestId: string) {
   logger.info(`[flush-event-buffer][${requestId}] Starting event buffer flush`);
   const { data, error } = await supabase.rpc('flush_event_buffer');
   if (error) throw error;
-  try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'flush-event-buffer', p_success: true, p_duration_ms: Date.now() - startedAt, p_result: { flushed: data }, p_processed_count: data || 0, p_job_source: 'cron' }); } catch { /* non-critical */ }
+  try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'flush-event-buffer', p_success: true, p_duration_ms: Date.now() - startedAt, p_result: { flushed: data }, p_processed_count: data || 0, p_job_source: 'cron' }); } catch (err) { console.warn('[sync-router] flush-event-buffer log failed', err); }
   return { success: true, flushed: data, duration_ms: Date.now() - startedAt };
 }
 

@@ -45,7 +45,7 @@ serveTenant(async (req, ctx) => {
   const results: Record<string, any> = {}; const unknown: string[] = [];
   for (const name of software_names) { const l = classifyLocally(name); if (l) results[name] = { ...l, source: 'local_rules' }; else unknown.push(name); }
   if (unknown.length) {
-    try { const ai = await classifyWithAI(unknown); for (const [n, c] of Object.entries(ai)) results[n] = { ...(c as Record<string, unknown>), source: 'ai' }; } catch { /* fallback */ }
+    try { const ai = await classifyWithAI(unknown); for (const [n, c] of Object.entries(ai)) results[n] = { ...(c as Record<string, unknown>), source: 'ai' }; } catch (err) { console.warn('[classify-shadow-it] AI classification failed, using fallback', err); }
     for (const n of unknown) { if (!results[n]) results[n] = { category: 'unknown', risk: 'review', score: 50, source: 'fallback' }; }
   }
   const rows = Object.entries(results).map(([n, d]) => ({ tenant_id: tenantId, software_name: n, category: d.category, risk_level: d.risk, risk_score: d.score, classification_source: d.source, agent_id: agent_id || null, classified_at: new Date().toISOString() }));

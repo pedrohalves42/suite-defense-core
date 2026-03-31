@@ -77,7 +77,8 @@ Deno.serve(async (req) => {
     let analysisResult: Record<string, unknown> | null = null;
     try {
       analysisResult = safeParseJSON(aiResult.content, 'ai-system-audit');
-    } catch {
+    } catch (err) {
+      console.warn('[ai-system-audit] JSON parse failed, using fallback', err);
       analysisResult = createFallbackAudit('AI_JSON_PARSE_ERROR');
     }
 
