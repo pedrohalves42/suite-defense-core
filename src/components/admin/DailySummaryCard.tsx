@@ -65,8 +65,7 @@ export function DailySummaryCard() {
       const [jobsRes, blockedRes, actionsRes, alertsRes] = await Promise.all([
         sb.from('jobs').select('status').eq('tenant_id', tenant.id).gte('created_at', todayISO),
         sb.from('blocked_access_attempts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('attempted_at', todayISO),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (sb as any).from('autonomy_actions').select('action_type, status').eq('tenant_id', tenant.id).gte('created_at', todayISO),
+        sb.from('autonomy_actions').select('action_type, status').eq('tenant_id', tenant.id).gte('created_at', todayISO),
         sb.from('system_alerts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('created_at', todayISO),
       ]);
 
