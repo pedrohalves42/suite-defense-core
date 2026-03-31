@@ -93,8 +93,8 @@ export async function getCached<T>(
         }
         return value;
       }
-    } catch {
-      // Table read failed → fall through to fetcher
+    } catch (err) {
+      console.warn('[cache] DB read failed, falling through to fetcher', { key, err });
     }
   }
 
