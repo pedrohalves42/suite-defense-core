@@ -37,7 +37,9 @@ const EVIDENCE_OPTIONS = [
   { key: 'auditLogs', label: 'Logs de Auditoria', icon: '📝', description: 'Trilha de auditoria imutável completa' },
 ] as const;
 
-function generatePDF(bundleData: Record<string, unknown>, result: ExportResult, logoDataUrl?: string | null) {
+async function generatePDF(bundleData: Record<string, unknown>, result: ExportResult, logoDataUrl?: string | null) {
+  const { default: jsPDF } = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
 

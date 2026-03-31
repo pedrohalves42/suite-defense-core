@@ -97,6 +97,7 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks: {
           pdf: ['jspdf', 'jspdf-autotable'],
+          excel: ['exceljs'],
         },
       },
     },
