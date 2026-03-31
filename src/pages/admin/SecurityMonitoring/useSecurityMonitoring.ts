@@ -117,7 +117,7 @@ export function useSecurityMonitoring() {
 
         unifiedEvents.push({
           id: e.id, type: alertType || e.event_type, label, detail,
-          severity: ed.severity || e.severity,
+          severity: (ed.severity as string) || e.severity,
           created_at: e.created_at, source: 'evidence_logs',
           agentName: e.agent_name, alertType,
           remediable: !skipRemediation && remediableAlerts.has(alertType),
