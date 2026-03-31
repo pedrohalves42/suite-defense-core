@@ -326,7 +326,8 @@ export type PublicHandler = (req: Request, ctx: { supabase: SupabaseClient; requ
 
 export function servePublic(handler: PublicHandler) {
   Deno.serve(async (req: Request) => {
-    const requestId = req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const requestId = traceId;
     const origin = req.headers.get('origin');
 
     if (req.method === 'OPTIONS') {
