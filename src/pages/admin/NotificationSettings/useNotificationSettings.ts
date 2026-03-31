@@ -200,9 +200,9 @@ export function useNotificationSettings() {
   const handleTestNotification = useCallback(async (channel: NotificationChannel) => {
     try {
       toast.info('Enviando notificação de teste...');
-      const { error } = await supabase.functions.invoke('notification-router', {
+      const { error } = await supabase.functions.invoke('ops-router', {
         body: {
-          action: 'dispatch',
+          action: 'notify:dispatch',
           payload: {
             tenant_id: tenantId,
             alert_type: 'test',
