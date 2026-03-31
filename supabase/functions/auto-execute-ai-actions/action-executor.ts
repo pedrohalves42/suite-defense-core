@@ -2,19 +2,28 @@
  * Action execution logic for auto-execute-ai-actions
  * Extraído de auto-execute-ai-actions/index.ts
  */
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
+
+interface ActionRecord {
+  id: string;
+  action_type: string;
+  action_payload: Record<string, unknown>;
+  tenant_id: string;
+  insight_id: string | null;
+}
 
 /**
  * Execute a single action by type and return the result.
  */
 export async function executeAction(
-  supabase: any,
-  action: Record<string, any>,
+  supabase: SupabaseClient,
+  action: ActionRecord,
   requestId: string,
 ): Promise<Record<string, unknown> | null> {
   switch (action.action_type) {
     case 'create_system_alert': {
-      const payload = action.action_payload as Record<string, unknown>;
+      const payload = action.action_payload;
       const validAlertTypes = [
         'agent_offline', 'high_cpu', 'high_memory', 'high_disk',
         'job_failed', 'security_threat', 'memory_warning',
@@ -54,7 +63,7 @@ export async function executeAction(
 
     default:
       logger.info(`[${requestId}] Action type ${action.action_type} not auto-executable`);
-      return null; // signals skip
+      return null;
   }
 }
 
@@ -62,7 +71,7 @@ export async function executeAction(
  * Records a successful execution in ai_actions and ai_action_executions.
  */
 export async function recordExecution(
-  supabase: any,
+  supabase: SupabaseClient,
   actionId: string,
   tenantId: string,
   insightId: string | null,
@@ -99,7 +108,7 @@ export async function recordExecution(
  * Records a failed execution.
  */
 export async function recordFailure(
-  supabase: any,
+  supabase: SupabaseClient,
   actionId: string,
   insightId: string | null,
   errorMessage: string,

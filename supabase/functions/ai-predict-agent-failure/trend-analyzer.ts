@@ -18,6 +18,20 @@ export interface AgentTrend {
   samples: number;
 }
 
+interface MetricRow {
+  agent_id: string;
+  cpu_usage_percent?: number;
+  memory_usage_percent?: number;
+  disk_usage_percent?: number;
+}
+
+interface AgentInfo {
+  display_name?: string;
+  hostname?: string;
+  agent_name?: string;
+  status?: string;
+}
+
 function calcTrend(values: number[]): string {
   if (values.length < 4) return 'stable';
   const mid = Math.floor(values.length / 2);
@@ -38,8 +52,8 @@ function avg(arr: number[]): number {
 /**
  * Build trend analysis per agent from raw metrics.
  */
-export function buildAgentTrends(metrics: any[], agentMap: Map<string, any>): AgentTrend[] {
-  const agentMetrics = new Map<string, typeof metrics>();
+export function buildAgentTrends(metrics: MetricRow[], agentMap: Map<string, AgentInfo>): AgentTrend[] {
+  const agentMetrics = new Map<string, MetricRow[]>();
   for (const m of metrics) {
     if (!agentMetrics.has(m.agent_id)) agentMetrics.set(m.agent_id, []);
     agentMetrics.get(m.agent_id)!.push(m);
@@ -51,9 +65,9 @@ export function buildAgentTrends(metrics: any[], agentMap: Map<string, any>): Ag
     const agent = agentMap.get(agentId);
     const name = agent?.display_name || agent?.hostname || agent?.agent_name || agentId.slice(0, 8);
 
-    const cpuValues = agentData.map(m => m.cpu_usage_percent).filter(v => v != null) as number[];
-    const memValues = agentData.map(m => m.memory_usage_percent).filter(v => v != null) as number[];
-    const diskValues = agentData.map(m => m.disk_usage_percent).filter(v => v != null) as number[];
+    const cpuValues = agentData.map(m => m.cpu_usage_percent).filter((v): v is number => v != null);
+    const memValues = agentData.map(m => m.memory_usage_percent).filter((v): v is number => v != null);
+    const diskValues = agentData.map(m => m.disk_usage_percent).filter((v): v is number => v != null);
 
     trends.push({
       agent_id: agentId,
