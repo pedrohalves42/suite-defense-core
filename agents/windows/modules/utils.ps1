@@ -18,7 +18,8 @@ function New-TraceId {
 function Write-Log {
     param(
         [string]$Message,
-        [string]$Level = "INFO"
+        [string]$Level = "INFO",
+        [string]$TraceId = $null
     )
 
     if (-not $script:LogFile) {
@@ -28,13 +29,15 @@ function Write-Log {
         $script:LogFile = "$script:LogDir\agent_$(Get-Date -Format 'yyyy-MM-dd').log"
     }
 
+    $tid = if ($TraceId) { $TraceId } elseif ($script:CurrentTraceId) { $script:CurrentTraceId } else { "" }
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "$timestamp [$Level] $Message" | Out-File -FilePath $script:LogFile -Append -Encoding UTF8
+    $tracePrefix = if ($tid) { " [trace:$tid]" } else { "" }
+    "$timestamp [$Level]$tracePrefix $Message" | Out-File -FilePath $script:LogFile -Append -Encoding UTF8
 
     switch ($Level) {
-        "ERROR" { Write-Host "[ERROR] $Message" -ForegroundColor Red }
-        "WARN"  { Write-Host "[WARN] $Message" -ForegroundColor Yellow }
-        default { Write-Host "[INFO] $Message" -ForegroundColor Green }
+        "ERROR" { Write-Host "[ERROR]$tracePrefix $Message" -ForegroundColor Red }
+        "WARN"  { Write-Host "[WARN]$tracePrefix $Message" -ForegroundColor Yellow }
+        default { Write-Host "[INFO]$tracePrefix $Message" -ForegroundColor Green }
     }
 }
 
