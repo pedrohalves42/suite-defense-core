@@ -1,5 +1,5 @@
 import { logger } from "./logger.ts";
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
 /**
  * Batch query utilities for N+1 prevention
