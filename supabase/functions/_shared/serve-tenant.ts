@@ -355,7 +355,7 @@ export function servePublic(handler: PublicHandler) {
   });
 }
 
-// ??? serveAgent: For agent-authenticated endpoints ??????????????????????????
+// ═══ serveAgent: For agent-authenticated endpoints ═══════════════════════════
 
 export interface AgentContext {
   agentId: string;
@@ -367,6 +367,8 @@ export interface AgentContext {
   supabase: SupabaseClient;
   requestId: string;
   body: unknown;
+  /** Raw body text (available when hmacVerify is true) */
+  rawBody?: string;
   req: Request;
 }
 
@@ -375,13 +377,16 @@ export type AgentHandler = (req: Request, ctx: AgentContext) => Promise<Response
 export interface ServeAgentOptions {
   /** Additional columns to select from the agents table beyond the defaults */
   extraAgentFields?: string[];
+  /** Enable HMAC verification before handler execution. Default: false */
+  hmacVerify?: boolean;
+  /** Optional rate limiting config */
+  rateLimit?: RateLimitOption;
 }
 
 /**
  * Middleware for agent-authenticated endpoints.
  * Uses X-Agent-Token header + token_hash lookup.
- * 
- * @param options.extraAgentFields - Additional agent columns to fetch (e.g. ['status', 'agent_version', 'force_update_version'])
+ * Optionally verifies HMAC signature (hmacVerify: true).
  */
 export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
   Deno.serve(async (req: Request) => {
@@ -398,6 +403,9 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
         requireEnv('SUPABASE_SERVICE_ROLE_KEY')
       );
 
+      // Clone request BEFORE any body consumption (needed for HMAC verification)
+      const reqClone = options?.hmacVerify ? req.clone() : req;
+
       // Import agent auth dynamically to avoid circular deps
       const { authenticateAgent } = await import('./agent-auth.ts');
       const authResult = await authenticateAgent(supabase, req, requestId, {
@@ -408,33 +416,91 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
         return authResult.response;
       }
 
+      const agent = authResult.agent;
+
+      // HMAC verification (optional, defense-in-depth)
+      let rawBody: string | undefined;
+      if (options?.hmacVerify) {
+        if (!agent.hmac_secret) {
+          logger.error(`[serveAgent][${requestId}] Agent ${agent.agent_name} missing HMAC secret`);
+          return errorResponse('HMAC secret not configured for agent', 500, requestId, origin);
+        }
+
+        const { verifyHmacSignature } = await import('./hmac.ts');
+        const hmacResult = await verifyHmacSignature(supabase, reqClone, agent.agent_name, agent.hmac_secret, {
+          agentId: agent.id,
+          tenantId: agent.tenant_id,
+          endpoint: requestId,
+        });
+
+        if (!hmacResult.valid) {
+          logger.warn(`[serveAgent][${requestId}] HMAC failed for ${agent.agent_name}`, {
+            errorCode: hmacResult.errorCode,
+          });
+          return jsonResponse(
+            { error: 'unauthorized', code: hmacResult.errorCode, message: hmacResult.errorMessage, transient: hmacResult.transient },
+            401,
+            { 'X-Request-ID': requestId },
+            origin,
+          );
+        }
+        rawBody = hmacResult.rawBody;
+      }
+
+      // Rate limiting (optional)
+      if (options?.rateLimit) {
+        const { checkRateLimit } = await import('./rate-limit.ts');
+        const rlResult = await checkRateLimit(supabase, agent.agent_name, options.rateLimit.endpoint, {
+          maxRequests: options.rateLimit.maxRequests ?? 60,
+          windowMinutes: options.rateLimit.windowMinutes ?? 1,
+          blockMinutes: options.rateLimit.blockMinutes ?? 5,
+        });
+        if (!rlResult.allowed) {
+          const retryAfter = rlResult.resetAt
+            ? Math.max(1, Math.ceil((rlResult.resetAt.getTime() - Date.now()) / 1000))
+            : 60;
+          return jsonResponse(
+            { error: { message: 'Rate limit exceeded', code: 'RATE_LIMITED' } },
+            429,
+            { 'X-Request-ID': requestId, 'Retry-After': String(retryAfter) },
+            origin,
+          );
+        }
+      }
+
+      // Parse body
       let body: unknown = {};
       if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
         try {
-          const contentEncoding = req.headers.get('Content-Encoding');
-          if (contentEncoding === 'gzip') {
-            // COST-OPT v10: Decompress gzip payloads from agents (~30% bandwidth savings)
-            const compressed = await req.arrayBuffer();
-            const ds = new DecompressionStream('gzip');
-            const decompressed = new Response(
-              new Blob([compressed]).stream().pipeThrough(ds)
-            );
-            body = await decompressed.json();
+          if (rawBody !== undefined) {
+            // Body already read during HMAC — parse from raw text
+            body = JSON.parse(rawBody);
           } else {
-            body = await req.json();
+            const contentEncoding = req.headers.get('Content-Encoding');
+            if (contentEncoding === 'gzip') {
+              const compressed = await req.arrayBuffer();
+              const ds = new DecompressionStream('gzip');
+              const decompressed = new Response(
+                new Blob([compressed]).stream().pipeThrough(ds)
+              );
+              body = await decompressed.json();
+            } else {
+              body = await req.json();
+            }
           }
         } catch { body = {}; }
       }
 
       const ctx: AgentContext = {
-        agentId: authResult.agent.id,
-        agentName: authResult.agent.agent_name,
-        tenantId: authResult.agent.tenant_id,
-        hmacSecret: authResult.agent.hmac_secret,
+        agentId: agent.id,
+        agentName: agent.agent_name,
+        tenantId: agent.tenant_id,
+        hmacSecret: agent.hmac_secret,
         agentData: authResult.agentData,
         supabase,
         requestId,
         body,
+        rawBody,
         req,
       };
 
