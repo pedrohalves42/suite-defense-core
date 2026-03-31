@@ -41,13 +41,13 @@ export default function Invites() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notification-router`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ops-router`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ action: 'invite', payload: { email, role } }),
+        body: JSON.stringify({ action: 'notify:invite', payload: { email, role } }),
       });
 
       if (!response.ok) {

@@ -108,7 +108,7 @@ export default function Signup() {
       try {
         await supabase.functions.invoke('ops-router', {
           body: {
-            action: 'welcome',
+            action: 'notify:welcome',
             payload: {
               email: validation.data.email,
               fullName: validation.data.fullName,
