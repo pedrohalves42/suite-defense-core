@@ -31,7 +31,7 @@ const ALL_TASKS: TaskName[] = [
   'stuck_builds', 'stuck_jobs', 'offline_agents_jobs', 'security_cleanup',
 ];
 
-const TASK_MAP: Record<TaskName, (sb: ReturnType<typeof createClient>) => Promise<TaskResult>> = {
+const TASK_MAP: Record<TaskName, (sb: SupabaseClient) => Promise<TaskResult>> = {
   stale_updates: cleanStaleUpdates,
   stale_reports: cleanStaleReports,
   stale_playbooks: cleanStalePlaybooks,
