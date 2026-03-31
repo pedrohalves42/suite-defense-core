@@ -20,6 +20,7 @@ interface LogEntry {
   message: string;
   data?: unknown;
   requestId?: string;
+  traceId?: string;
   tenantId?: string;
   agentId?: string;
   duration_ms?: number;
@@ -28,6 +29,8 @@ interface LogEntry {
 /** Optional context bag passed to loggerWithContext */
 export interface LogContext {
   requestId: string;
+  /** End-to-end trace ID propagated from agent. Falls back to requestId if not provided. */
+  traceId?: string;
   tenantId?: string;
   agentId?: string;
 }
@@ -75,6 +78,8 @@ function formatLogEntry(entry: LogEntry): string {
 function enrichEntry(entry: LogEntry, ctx?: Partial<LogContext>): LogEntry {
   if (!ctx) return entry;
   if (ctx.requestId) entry.requestId = ctx.requestId;
+  if (ctx.traceId) entry.traceId = ctx.traceId;
+  else if (ctx.requestId) entry.traceId = ctx.requestId;
   if (ctx.tenantId) entry.tenantId = ctx.tenantId;
   if (ctx.agentId) entry.agentId = ctx.agentId;
   return entry;

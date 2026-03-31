@@ -156,7 +156,8 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
   } = options || {};
 
   Deno.serve(async (req: Request) => {
-    const requestId = req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const requestId = traceId;
     const startTime = Date.now();
     const origin = req.headers.get('origin');
 
@@ -306,6 +307,7 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
 
       return jsonResponse(result, 200, {
         'X-Request-ID': requestId,
+        'X-Trace-ID': traceId,
         'X-Response-Time': responseTime,
       }, origin);
 
@@ -324,7 +326,8 @@ export type PublicHandler = (req: Request, ctx: { supabase: SupabaseClient; requ
 
 export function servePublic(handler: PublicHandler) {
   Deno.serve(async (req: Request) => {
-    const requestId = req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const requestId = traceId;
     const origin = req.headers.get('origin');
 
     if (req.method === 'OPTIONS') {
@@ -345,7 +348,7 @@ export function servePublic(handler: PublicHandler) {
       const result = await handler(req, { supabase, requestId, body });
       
       if (result instanceof Response) return result;
-      return jsonResponse(result, 200, { 'X-Request-ID': requestId }, origin);
+      return jsonResponse(result, 200, { 'X-Request-ID': requestId, 'X-Trace-ID': traceId }, origin);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Internal server error';
       const log = loggerWithContext({ requestId });
@@ -390,7 +393,8 @@ export interface ServeAgentOptions {
  */
 export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
   Deno.serve(async (req: Request) => {
-    const requestId = req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const requestId = traceId;
     const origin = req.headers.get('origin');
 
     if (req.method === 'OPTIONS') {
@@ -506,7 +510,7 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
 
       const result = await handler(req, ctx);
       if (result instanceof Response) return result;
-      return jsonResponse(result, 200, { 'X-Request-ID': requestId }, origin);
+      return jsonResponse(result, 200, { 'X-Request-ID': requestId, 'X-Trace-ID': traceId }, origin);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Internal server error';
       const log = loggerWithContext({ requestId });
@@ -533,9 +537,10 @@ export type InternalHandler = (req: Request, ctx: InternalContext) => Promise<Re
  */
 export function serveInternal(handler: InternalHandler) {
   Deno.serve(async (req: Request) => {
-    const requestId = req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const requestId = traceId;
     const origin = req.headers.get('origin');
-    const log = loggerWithContext({ requestId });
+    const log = loggerWithContext({ requestId, traceId });
 
     if (req.method === 'OPTIONS') {
       return new Response(null, { headers: buildCorsHeaders(origin) });
@@ -559,7 +564,7 @@ export function serveInternal(handler: InternalHandler) {
 
       const result = await handler(req, { supabase, requestId, body });
       if (result instanceof Response) return result;
-      return jsonResponse(result, 200, { 'X-Request-ID': requestId }, origin);
+      return jsonResponse(result, 200, { 'X-Request-ID': requestId, 'X-Trace-ID': traceId }, origin);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Internal server error';
       log.error(`[serveInternal] Error`, { message: msg });

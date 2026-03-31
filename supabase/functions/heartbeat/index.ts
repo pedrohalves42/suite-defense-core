@@ -39,6 +39,7 @@ const HEARTBEAT_EXTRA_FIELDS = [
 
 Deno.serve(async (req) => {
   const origin = req.headers.get('origin')
+  const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID()
 
   if (req.method === 'OPTIONS') return handleCorsPreflightRequest()
 
@@ -104,7 +105,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    logger.debug('Heartbeat received', { agentName: agent.agent_name })
+    logger.debug('Heartbeat received', { agentName: agent.agent_name, traceId })
 
     // ── 5. Update agent status + parallel side-effects ──────
     await updateAgentStatus(supabase, agent.id, agent.agent_name, updateData)
@@ -121,6 +122,7 @@ Deno.serve(async (req) => {
       supabase, agent, updateData, osInfo.agent_version, platform, origin,
     )
   } catch (error) {
-    return handleException(error, crypto.randomUUID(), 'heartbeat')
+    return handleException(error, traceId, 'heartbeat')
+  }
   }
 })

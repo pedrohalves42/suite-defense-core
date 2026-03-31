@@ -1,15 +1,25 @@
 <#
 .SYNOPSIS
-    Logging, retry with exponential backoff + jitter, and general utility functions
+    Logging, retry with exponential backoff + jitter, tracing, and general utility functions
 #>
 
 $script:LogDir = "$env:ProgramData\CyberShield\Logs"
 $script:LogFile = $null
 
+function New-TraceId {
+    <#
+    .SYNOPSIS
+        Generates a unique trace ID (UUID v4) for end-to-end request tracing.
+        Propagated via X-Trace-ID header to correlate agent → backend → database.
+    #>
+    return [guid]::NewGuid().ToString()
+}
+
 function Write-Log {
     param(
         [string]$Message,
-        [string]$Level = "INFO"
+        [string]$Level = "INFO",
+        [string]$TraceId = $null
     )
 
     if (-not $script:LogFile) {
@@ -19,13 +29,15 @@ function Write-Log {
         $script:LogFile = "$script:LogDir\agent_$(Get-Date -Format 'yyyy-MM-dd').log"
     }
 
+    $tid = if ($TraceId) { $TraceId } elseif ($script:CurrentTraceId) { $script:CurrentTraceId } else { "" }
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "$timestamp [$Level] $Message" | Out-File -FilePath $script:LogFile -Append -Encoding UTF8
+    $tracePrefix = if ($tid) { " [trace:$tid]" } else { "" }
+    "$timestamp [$Level]$tracePrefix $Message" | Out-File -FilePath $script:LogFile -Append -Encoding UTF8
 
     switch ($Level) {
-        "ERROR" { Write-Host "[ERROR] $Message" -ForegroundColor Red }
-        "WARN"  { Write-Host "[WARN] $Message" -ForegroundColor Yellow }
-        default { Write-Host "[INFO] $Message" -ForegroundColor Green }
+        "ERROR" { Write-Host "[ERROR]$tracePrefix $Message" -ForegroundColor Red }
+        "WARN"  { Write-Host "[WARN]$tracePrefix $Message" -ForegroundColor Yellow }
+        default { Write-Host "[INFO]$tracePrefix $Message" -ForegroundColor Green }
     }
 }
 
@@ -48,10 +60,15 @@ function Invoke-SecureApi {
 
     for ($attempt = 0; $attempt -le $MaxRetries; $attempt++) {
         try {
+            # Generate or reuse trace ID for end-to-end correlation
+            $traceId = if ($script:CurrentTraceId) { $script:CurrentTraceId } else { New-TraceId }
+
             $headers = @{
                 "Authorization" = "Bearer $($script:Config.AgentToken)"
                 "Content-Type"  = "application/json"
                 "X-Agent-Id"    = $script:Config.AgentId
+                "X-Trace-ID"    = $traceId
+                "X-Request-ID"  = $traceId
             }
 
             # Build body JSON
