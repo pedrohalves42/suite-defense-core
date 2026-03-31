@@ -1,21 +1,12 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { handleException, corsHeaders } from '../_shared/error-handler.ts';
-import { AgentTokenSchema } from '../_shared/validation.ts';
-import { verifyHmacSignature } from '../_shared/hmac.ts';
-import { checkRateLimit } from '../_shared/rate-limit.ts';
-import { checkQuotaAvailable } from '../_shared/quota.ts';
-import { hashToken } from '../_shared/token-hash.ts';
+/**
+ * scan-virus — Migrated to serveAgent middleware with HMAC verification.
+ */
+import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { checkQuotaAvailable } from '../_shared/quota.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
-/** Extended timeout for this function's external calls */
 const FETCH_TIMEOUT_MS = 30000;
-import { buildCorsHeaders } from '../_shared/cors.ts';
-
-interface ScanRequest {
-  filePath: string;
-  fileHash: string;
-}
 
 interface ScanResult {
   isMalicious: boolean;
@@ -23,378 +14,94 @@ interface ScanResult {
   totalScans: number;
   permalink?: string;
   scanDate?: string;
-  scans?: any;
+  scans?: unknown;
   scannerUsed: 'hybrid_analysis' | 'virustotal';
 }
 
-// Hybrid Analysis API scan
 async function scanWithHybridAnalysis(fileHash: string, apiKey: string): Promise<ScanResult | null> {
   try {
-    logger.info(`[Hybrid Analysis] Scanning hash: ${fileHash}`);
-    
-    // Query for existing scan report
-    const reportResponse = await fetchWithTimeout(
-      `https://www.hybrid-analysis.com/api/v2/report/${fileHash}/summary`, { timeoutMs: FETCH_TIMEOUT_MS,
-        headers: {
-          'api-key': apiKey,
-          'User-Agent': 'CyberShield',
-        }
-      }
-    );
-
-    if (reportResponse.status === 404) {
-      logger.info('[Hybrid Analysis] File not found in database');
-      return null;
-    }
-
-    if (!reportResponse.ok) {
-      const error = await reportResponse.text();
-      logger.error(`[Hybrid Analysis] API error: ${reportResponse.status} - ${error}`);
-      return null;
-    }
-
-    const reportData = await reportResponse.json();
-    
-    // Extract threat level
-    const threatScore = reportData.threat_score || 0;
-    const verdict = reportData.verdict || 'no specific threat';
-    const isMalicious = threatScore >= 50 || verdict.includes('malicious');
-    
-    logger.info(`[Hybrid Analysis] Result: ${verdict} (score: ${threatScore})`);
-    
-    return {
-      isMalicious,
-      positives: isMalicious ? threatScore : 0,
-      totalScans: 100,
-      permalink: `https://www.hybrid-analysis.com/sample/${fileHash}`,
-      scanDate: reportData.analysis_start_time,
-      scans: reportData,
-      scannerUsed: 'hybrid_analysis'
-    };
-  } catch (error) {
-    logger.error('[Hybrid Analysis] Scan failed:', error);
-    return null;
-  }
+    const resp = await fetchWithTimeout(`https://www.hybrid-analysis.com/api/v2/report/${fileHash}/summary`, {
+      timeoutMs: FETCH_TIMEOUT_MS, headers: { 'api-key': apiKey, 'User-Agent': 'CyberShield' },
+    });
+    if (resp.status === 404 || !resp.ok) return null;
+    const data = await resp.json();
+    const threatScore = data.threat_score || 0;
+    const isMalicious = threatScore >= 50 || (data.verdict || '').includes('malicious');
+    return { isMalicious, positives: isMalicious ? threatScore : 0, totalScans: 100, permalink: `https://www.hybrid-analysis.com/sample/${fileHash}`, scanDate: data.analysis_start_time, scans: data, scannerUsed: 'hybrid_analysis' };
+  } catch { return null; }
 }
 
-// VirusTotal API scan
 async function scanWithVirusTotal(fileHash: string, apiKey: string): Promise<ScanResult | null> {
   try {
-    logger.info(`[VirusTotal] Scanning hash: ${fileHash}`);
-    
-    const vtResponse = await fetchWithTimeout(
-      `https://www.virustotal.com/vtapi/v2/file/report?apikey=${apiKey}&resource=${fileHash}`
-    );
-
-    if (!vtResponse.ok) {
-      logger.error(`[VirusTotal] API error: ${vtResponse.status}`);
-      return null;
-    }
-
-    const vtData = await vtResponse.json();
-
-    // response_code: 1 = found, 0 = not found, -2 = queued
-    if (vtData.response_code === 0) {
-      logger.info('[VirusTotal] File not found in database');
-      return null;
-    }
-
-    if (vtData.response_code === -2) {
-      logger.info('[VirusTotal] Analysis queued');
-      return null;
-    }
-
-    const positives = vtData.positives || 0;
-    const total = vtData.total || 0;
-    const isMalicious = positives > 0;
-
-    logger.info(`[VirusTotal] Result: ${positives}/${total} detections`);
-
-    return {
-      isMalicious,
-      positives,
-      totalScans: total,
-      permalink: vtData.permalink,
-      scanDate: vtData.scan_date,
-      scans: vtData.scans,
-      scannerUsed: 'virustotal'
-    };
-  } catch (error) {
-    logger.error('[VirusTotal] Scan failed:', error);
-    return null;
-  }
+    const resp = await fetchWithTimeout(`https://www.virustotal.com/vtapi/v2/file/report?apikey=${apiKey}&resource=${fileHash}`);
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (data.response_code !== 1) return null;
+    return { isMalicious: data.positives > 0, positives: data.positives || 0, totalScans: data.total || 0, permalink: data.permalink, scanDate: data.scan_date, scans: data.scans, scannerUsed: 'virustotal' };
+  } catch { return null; }
 }
 
-Deno.serve(async (req) => {
-  const origin = req.headers.get("origin");
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: buildCorsHeaders(origin) });
+serveAgent(async (_req, ctx) => {
+  const { supabase, agentName, tenantId, body, requestId } = ctx;
+  const { filePath, fileHash } = body as { filePath?: string; fileHash?: string };
+
+  const hybridAnalysisApiKey = Deno.env.get('HYBRID_ANALYSIS_API_KEY');
+  const virusTotalApiKey = Deno.env.get('VIRUSTOTAL_API_KEY');
+
+  if (!hybridAnalysisApiKey && !virusTotalApiKey) {
+    return new Response(JSON.stringify({ error: 'Nenhum servico de scan configurado' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const requestId = crypto.randomUUID();
-
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const hybridAnalysisApiKey = Deno.env.get('HYBRID_ANALYSIS_API_KEY');
-    const virusTotalApiKey = Deno.env.get('VIRUSTOTAL_API_KEY');
-    
-    if (!hybridAnalysisApiKey && !virusTotalApiKey) {
-      return new Response(
-        JSON.stringify({ error: 'Nenhum servico de scan configurado' }),
-        { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Validar token
-    const agentToken = req.headers.get('X-Agent-Token');
-    if (!agentToken) {
-      return new Response(
-        JSON.stringify({ error: 'Token do agente necessario' }),
-        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const tokenValidation = AgentTokenSchema.safeParse(agentToken);
-    if (!tokenValidation.success) {
-      return new Response(
-        JSON.stringify({ error: 'Formato de token invalido' }),
-        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Buscar agente e token com tenant_id via hash (P0 security fix)
-    const tokenHash = await hashToken(agentToken);
-    const { data: token } = await supabase
-      .from('agent_tokens')
-      .select('agent_id, agents!inner(agent_name, hmac_secret, tenant_id)')
-      .eq('token_hash', tokenHash)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (!token?.agents) {
-      return new Response(
-        JSON.stringify({ error: 'Token invalido' }),
-        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const agent = Array.isArray(token.agents) ? token.agents[0] : token.agents;
-    
-    // Validar tenant_id existe
-    if (!agent.tenant_id) {
-      logger.error(`[${requestId}] Agent ${agent.agent_name} has no tenant_id`);
-      return new Response(
-        JSON.stringify({ error: 'Configuracao invalida do agente' }),
-        { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Verificar HMAC se configurado
-    if (agent.hmac_secret) {
-      const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret);
-      if (!hmacResult.valid) {
-        return new Response(
-          JSON.stringify({ 
-            error: 'unauthorized',
-            code: hmacResult.errorCode,
-            message: hmacResult.errorMessage,
-            transient: hmacResult.transient
-          }),
-          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
-    // Rate limiting
-    const rateLimitResult = await checkRateLimit(supabase, agent.agent_name, 'scan-virus', {
-      maxRequests: 10,
-      windowMinutes: 1,
-      blockMinutes: 5,
-    });
-
-    if (!rateLimitResult.allowed) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Rate limit excedido',
-          resetAt: rateLimitResult.resetAt 
-        }),
-        { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Atualizar last_used_at do token via hash (P0 security fix)
-    await supabase
-      .from('agent_tokens')
-      .update({ last_used_at: new Date().toISOString() })
-      .eq('token_hash', tokenHash);
-
-    // Parse do body
-    const { filePath, fileHash }: ScanRequest = await req.json();
-
-    if (!filePath || !fileHash) {
-      return new Response(
-        JSON.stringify({ error: 'filePath e fileHash sao obrigatorios' }),
-        { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      );
-    }
-
-    logger.info(`[${agent.agent_name}] Scanning file: ${filePath} (${fileHash})`);
-
-    // Check scan quota before proceeding
-    const quotaCheck = await checkQuotaAvailable(supabase, agent.tenant_id, 'max_scans_per_month');
-    
-    if (!quotaCheck.allowed) {
-      logger.info(`[${agent.agent_name}] Scan quota exceeded: ${quotaCheck.current}/${quotaCheck.limit}`);
-      return new Response(
-        JSON.stringify({ 
-          error: quotaCheck.error || 'Quota de scans excedida',
-          quotaUsed: quotaCheck.current,
-          quotaLimit: quotaCheck.limit
-        }),
-        { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Check daily advanced scans quota
-    const dailyQuotaCheck = await checkQuotaAvailable(supabase, agent.tenant_id, 'advanced_scans_daily');
-    
-    if (!dailyQuotaCheck.allowed) {
-      logger.info(`[${agent.agent_name}] Daily advanced scan quota exceeded: ${dailyQuotaCheck.current}/${dailyQuotaCheck.limit}`);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Limite diario de scans avancados atingido',
-          message: 'Voce atingiu o limite de scans avancados do dia. Faca upgrade para o plano Pro para scans ilimitados.',
-          quotaUsed: dailyQuotaCheck.current,
-          quotaLimit: dailyQuotaCheck.limit
-        }),
-        { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Verificar scan existente recente (ultimas 24h)
-    const { data: existingScan } = await supabase
-      .from('virus_scans')
-      .select('*')
-      .eq('file_hash', fileHash)
-      .gte('scanned_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-      .order('scanned_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (existingScan) {
-      return new Response(
-        JSON.stringify({
-          cached: true,
-          isMalicious: existingScan.is_malicious,
-          positives: existingScan.positives,
-          totalScans: existingScan.total_scans,
-          permalink: existingScan.virustotal_permalink,
-          scannedAt: existingScan.scanned_at,
-        }),
-        { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Try Hybrid Analysis first (primary scanner)
-    let scanResult: ScanResult | null = null;
-    
-    if (hybridAnalysisApiKey) {
-      logger.info(`[${agent.agent_name}] Trying Hybrid Analysis first...`);
-      scanResult = await scanWithHybridAnalysis(fileHash, hybridAnalysisApiKey);
-    }
-    
-    // Fallback to VirusTotal if Hybrid Analysis failed or not configured
-    if (!scanResult && virusTotalApiKey) {
-      logger.info(`[${agent.agent_name}] Falling back to VirusTotal...`);
-      scanResult = await scanWithVirusTotal(fileHash, virusTotalApiKey);
-    }
-    
-    // If both failed, return error
-    if (!scanResult) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Arquivo nao encontrado em nenhum servico de scan',
-          message: 'Envie o arquivo para analise ou tente novamente mais tarde' 
-        }),
-        { status: 404, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Save scan result
-    const { data: scanRecord, error: scanError } = await supabase
-      .from('virus_scans')
-      .insert({
-        agent_name: agent.agent_name,
-        tenant_id: agent.tenant_id,
-        file_hash: fileHash,
-        file_path: filePath,
-        scan_result: scanResult.scans,
-        is_malicious: scanResult.isMalicious,
-        positives: scanResult.positives,
-        total_scans: scanResult.totalScans,
-        virustotal_permalink: scanResult.permalink,
-      })
-      .select()
-      .order('scanned_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (scanError) {
-      logger.error('[SCAN-VIRUS] Error storing scan result:', scanError);
-    }
-
-    // Increment daily scan quota usage
-    await supabase.rpc('update_quota_usage', {
-      p_tenant_id: agent.tenant_id,
-      p_feature_key: 'advanced_scans_daily',
-      p_delta: 1
-    });
-    logger.info(`[${agent.agent_name}] Advanced scan quota incremented`);
-
-    // Auto-quarantine if malicious and enabled
-    if (scanResult.isMalicious && scanRecord) {
-      logger.info(`[SCAN-VIRUS] Malware detected by ${scanResult.scannerUsed}, triggering auto-quarantine`);
-      
-      try {
-        const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
-        
-        await supabase.functions.invoke('auto-quarantine', {
-          headers: {
-            'X-Internal-Secret': internalSecret || '',
-          },
-          body: {
-            virus_scan_id: scanRecord.id,
-            agent_name: agent.agent_name,
-            file_path: filePath,
-            file_hash: fileHash,
-            positives: scanResult.positives,
-            total_scans: scanResult.totalScans
-          }
-        });
-      } catch (quarantineError) {
-        logger.error('[SCAN-VIRUS] Auto-quarantine failed:', quarantineError);
-        // Don't fail the scan if quarantine fails
-      }
-    }
-
-    return new Response(
-      JSON.stringify({
-        isMalicious: scanResult.isMalicious,
-        positives: scanResult.positives,
-        totalScans: scanResult.totalScans,
-        permalink: scanResult.permalink,
-        scanDate: scanResult.scanDate,
-        scans: scanResult.scans,
-        scannerUsed: scanResult.scannerUsed,
-      }),
-      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    return handleException(error, requestId, 'scan-virus');
+  if (!filePath || !fileHash) {
+    return new Response(JSON.stringify({ error: 'filePath e fileHash sao obrigatorios' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
+
+  // Quota checks
+  const quotaCheck = await checkQuotaAvailable(supabase, tenantId, 'max_scans_per_month');
+  if (!quotaCheck.allowed) {
+    return new Response(JSON.stringify({ error: quotaCheck.error || 'Quota de scans excedida', quotaUsed: quotaCheck.current, quotaLimit: quotaCheck.limit }), { status: 429, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  const dailyQuotaCheck = await checkQuotaAvailable(supabase, tenantId, 'advanced_scans_daily');
+  if (!dailyQuotaCheck.allowed) {
+    return new Response(JSON.stringify({ error: 'Limite diario de scans avancados atingido', quotaUsed: dailyQuotaCheck.current, quotaLimit: dailyQuotaCheck.limit }), { status: 429, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // Check cached scan
+  const { data: existingScan } = await supabase.from('virus_scans').select('*').eq('file_hash', fileHash).gte('scanned_at', new Date(Date.now() - 86400000).toISOString()).order('scanned_at', { ascending: false }).limit(1).maybeSingle();
+
+  if (existingScan) {
+    return { cached: true, isMalicious: existingScan.is_malicious, positives: existingScan.positives, totalScans: existingScan.total_scans, permalink: existingScan.virustotal_permalink, scannedAt: existingScan.scanned_at };
+  }
+
+  // Scan
+  let scanResult: ScanResult | null = null;
+  if (hybridAnalysisApiKey) scanResult = await scanWithHybridAnalysis(fileHash, hybridAnalysisApiKey);
+  if (!scanResult && virusTotalApiKey) scanResult = await scanWithVirusTotal(fileHash, virusTotalApiKey);
+
+  if (!scanResult) {
+    return new Response(JSON.stringify({ error: 'Arquivo nao encontrado em nenhum servico de scan' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  const { data: scanRecord } = await supabase.from('virus_scans').insert({
+    agent_name: agentName, tenant_id: tenantId, file_hash: fileHash, file_path: filePath,
+    scan_result: scanResult.scans, is_malicious: scanResult.isMalicious, positives: scanResult.positives,
+    total_scans: scanResult.totalScans, virustotal_permalink: scanResult.permalink,
+  }).select().order('scanned_at', { ascending: false }).limit(1).maybeSingle();
+
+  await supabase.rpc('update_quota_usage', { p_tenant_id: tenantId, p_feature_key: 'advanced_scans_daily', p_delta: 1 });
+
+  if (scanResult.isMalicious && scanRecord) {
+    try {
+      await supabase.functions.invoke('auto-quarantine', {
+        headers: { 'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '' },
+        body: { virus_scan_id: scanRecord.id, agent_name: agentName, file_path: filePath, file_hash: fileHash, positives: scanResult.positives, total_scans: scanResult.totalScans },
+      });
+    } catch (e) { logger.error('[SCAN-VIRUS] Auto-quarantine failed:', e); }
+  }
+
+  return { isMalicious: scanResult.isMalicious, positives: scanResult.positives, totalScans: scanResult.totalScans, permalink: scanResult.permalink, scanDate: scanResult.scanDate, scans: scanResult.scans, scannerUsed: scanResult.scannerUsed };
+}, {
+  hmacVerify: true,
+  rateLimit: { endpoint: 'scan-virus', maxRequests: 10, windowMinutes: 1, blockMinutes: 5 },
 });
