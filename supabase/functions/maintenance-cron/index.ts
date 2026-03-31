@@ -34,7 +34,7 @@ serveInternal(async (_req, ctx) => {
     const err = error as Error;
     logger.error(`[maintenance-cron][${requestId}] Fatal error:`, err.message);
     result.duration_ms = Date.now() - startTime;
-    try { await supabase.rpc('mark_cron_failure', { p_cron_name: 'maintenance-cron', p_error: err.message }); } catch { /* non-critical */ }
+    try { await supabase.rpc('mark_cron_failure', { p_cron_name: 'maintenance-cron', p_error: err.message }); } catch (e) { console.warn('[maintenance-cron] mark_cron_failure failed', e); }
     throw error;
   }
 });

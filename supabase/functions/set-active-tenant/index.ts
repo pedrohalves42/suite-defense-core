@@ -141,7 +141,7 @@ serveTenant(async (req, ctx) => {
         target_id: tenant_id,
         details: { previous_tenant_id: previousTenantId, new_tenant_id: tenant_id, timestamp: new Date().toISOString(), atomic_switch: true },
       });
-    } catch { /* non-blocking */ }
+    } catch (err) { console.warn('[set-active-tenant] audit log for tenant_switched failed', err); }
   }
 
   logger.info(`[set-active-tenant][${requestId}] Successfully switched user ${userId} to tenant ${tenant_id}`);

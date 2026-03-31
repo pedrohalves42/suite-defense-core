@@ -103,7 +103,8 @@ export async function verifyWithPublicKey(
       signatureBuffer,
       encoder.encode(content)
     );
-  } catch {
+  } catch (err) {
+    console.warn('[sign-release] Signature verification failed', err);
     return false;
   }
 }

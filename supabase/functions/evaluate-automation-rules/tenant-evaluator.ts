@@ -286,7 +286,7 @@ export async function evaluateForTenant(
   try {
     const { data: score } = await supabase.rpc('recalculate_tenant_risk_score', { p_tenant_id: tenantId });
     riskScore = score;
-  } catch { /* Non-critical */ }
+  } catch (err) { console.warn('[tenant-evaluator] recalculate_tenant_risk_score failed', err); }
 
   return { evaluated: rules.length, triggered: totalTriggered, blocked: totalBlocked, decisions: totalDecisions, risk_score: riskScore };
 }
