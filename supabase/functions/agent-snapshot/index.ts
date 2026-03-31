@@ -1,110 +1,55 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0"
-import { buildCorsHeaders } from '../_shared/cors.ts'
+/**
+ * agent-snapshot — Migrated to serveTenant
+ * Retorna snapshot unico e consistente do agente.
+ * Fonte unica de verdade para todas as UIs.
+ */
+import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 
-/**
- * agent-snapshot - Edge Function Canonica
- * 
- * Retorna snapshot unico e consistente do agente.
- * Fonte unica de verdade para todas as UIs (Monitoramento, Diagnostico, Central de Acoes).
- * 
- * Garantias:
- * - Tenant isolado via RLS
- * - Correlation ID para debug
- * - Erros claros (sem falha silenciosa)
- */
+serveTenant(async (_req, ctx) => {
+  const { supabase, requestId, body } = ctx;
+  const { agent_id } = body as { agent_id?: string };
 
-Deno.serve(async (req) => {
-  const correlationId = crypto.randomUUID()
-
-  // CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: buildCorsHeaders(origin) })
-  }
-
-  try {
-    // Apenas POST
-    if (req.method !== 'POST') {
-      return jsonError(405, 'Method not allowed', correlationId)
-    }
-
-    // Cliente com contexto do usuario
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      return jsonError(401, 'Missing authorization header', correlationId)
-    }
-
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } }
-    )
-
-    // Autenticacao
-    const { data: authData, error: authError } = await supabase.auth.getUser()
-    if (authError || !authData?.user) {
-      logger.error('[agent-snapshot][AUTH_ERROR]', { authError, correlationId })
-      return jsonError(401, 'Unauthorized', correlationId)
-    }
-
-    // Parse body
-    let body: { agent_id?: string }
-    try {
-      body = await req.json()
-    } catch {
-      return jsonError(400, 'Invalid JSON body', correlationId)
-    }
-
-    const { agent_id } = body
-    if (!agent_id) {
-      return jsonError(400, 'agent_id is required', correlationId)
-    }
-
-    // Validar formato UUID
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-    if (!uuidRegex.test(agent_id)) {
-      return jsonError(400, 'Invalid agent_id format', correlationId)
-    }
-
-    // Chamada RPC (fonte unica de verdade)
-    const { data: snapshot, error: rpcError } = await supabase
-      .rpc('get_agent_snapshot', { p_agent_id: agent_id })
-
-    if (rpcError) {
-      logger.error('[agent-snapshot][RPC_ERROR]', { rpcError, agent_id, correlationId })
-      return jsonError(500, 'Failed to fetch agent snapshot', correlationId)
-    }
-
-    if (!snapshot) {
-      return jsonError(404, 'Agent not found or access denied', correlationId)
-    }
-
-    // Resposta padronizada
+  if (!agent_id) {
     return new Response(
-      JSON.stringify({
-        data: {
-          ...snapshot,
-          meta: { 
-            correlation_id: correlationId, 
-            snapshot_at: new Date().toISOString() 
-          }
-        }
-      }),
-      { 
-        status: 200, 
-        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
-      }
-    )
-
-  } catch (err) {
-    logger.error('[agent-snapshot][UNHANDLED_ERROR]', { err, correlationId })
-    return jsonError(500, 'Unexpected error', correlationId)
+      JSON.stringify({ error: 'agent_id is required', correlation_id: requestId }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
   }
-})
 
-function jsonError(status: number, message: string, correlationId: string) {
-  return new Response(
-    JSON.stringify({ error: message, correlation_id: correlationId }),
-    { status, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-  )
-}
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(agent_id)) {
+    return new Response(
+      JSON.stringify({ error: 'Invalid agent_id format', correlation_id: requestId }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const { data: snapshot, error: rpcError } = await supabase
+    .rpc('get_agent_snapshot', { p_agent_id: agent_id });
+
+  if (rpcError) {
+    logger.error('[agent-snapshot][RPC_ERROR]', { rpcError, agent_id, correlationId: requestId });
+    return new Response(
+      JSON.stringify({ error: 'Failed to fetch agent snapshot', correlation_id: requestId }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (!snapshot) {
+    return new Response(
+      JSON.stringify({ error: 'Agent not found or access denied', correlation_id: requestId }),
+      { status: 404, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  return {
+    data: {
+      ...snapshot,
+      meta: { correlation_id: requestId, snapshot_at: new Date().toISOString() },
+    },
+  };
+}, {
+  methods: ['POST'],
+  skipTenantValidation: true,
+});
