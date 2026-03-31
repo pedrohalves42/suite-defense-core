@@ -128,7 +128,8 @@ export async function verifyHmacSignature(
   let body = ''
   try {
     body = await request.clone().text()
-  } catch {
+  } catch (err) {
+    console.warn('[hmac] Failed to read request body', err);
     body = ''
   }
 
