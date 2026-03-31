@@ -122,7 +122,7 @@ async function handleCheckInstallationHealth(supabase: SupabaseClientType, reque
       const failureRatePct = healthData.failure_rate_pct || 0;
       const threshold = healthData.threshold || 30;
       if (failureRatePct > threshold) {
-        const { error: alertError } = await supabase.from('system_alerts').insert({ severity: 'high', alert_type: 'installation_failure', title: 'Alta taxa de falha em instalacoes', message: `Taxa de falha: ${failureRatePct}% (threshold: ${threshold}%)`, details: healthData, tenant_id: tenant.id });
+        const { error: alertError } = await supabase.from('system_alerts').insert({ severity: 'high', alert_type: 'installation_failure', title: 'Alta taxa de falha em instalacoes', message: `Taxa de falha: ${failureRatePct}% (threshold: ${threshold}%)`, details: healthData, tenant_id: tenant.id, trace_id: requestId });
         if (!alertError) alertsCreated++;
       }
     }
@@ -145,7 +145,7 @@ async function handleCheckProductionHealth(supabase: SupabaseClientType, request
   if (!heartbeatError && (!recentHeartbeats || recentHeartbeats.length === 0)) {
     const { count: activeAgentsCount } = await supabase.from('agents').select('*', { count: 'exact', head: true }).in('status', ['active', 'pending']);
     if (activeAgentsCount && activeAgentsCount > 0) {
-      alerts.push({ tenant_id: null, alert_type: 'no_heartbeats', severity: 'high', title: 'Nenhum heartbeat na ultima hora', message: `${activeAgentsCount} agente(s) ativo(s) sem heartbeat.`, details: { active_agents_count: activeAgentsCount } });
+      alerts.push({ tenant_id: null, alert_type: 'no_heartbeats', severity: 'high', title: 'Nenhum heartbeat na ultima hora', message: `${activeAgentsCount} agente(s) ativo(s) sem heartbeat.`, details: { active_agents_count: activeAgentsCount }, trace_id: requestId });
     }
   }
 
@@ -155,14 +155,14 @@ async function handleCheckProductionHealth(supabase: SupabaseClientType, request
     const failureCount = installations.filter(i => i.success === false).length;
     const failureRate = failureCount / installations.length;
     if (failureRate > 0.30) {
-      alerts.push({ tenant_id: null, alert_type: 'high_installation_failure', severity: 'critical', title: `Alta taxa de falha: ${(failureRate * 100).toFixed(1)}%`, message: `${failureCount} de ${installations.length} instalacoes falharam.`, details: { failure_rate: failureRate, failed_count: failureCount, total_count: installations.length } });
+      alerts.push({ tenant_id: null, alert_type: 'high_installation_failure', severity: 'critical', title: `Alta taxa de falha: ${(failureRate * 100).toFixed(1)}%`, message: `${failureCount} de ${installations.length} instalacoes falharam.`, details: { failure_rate: failureRate, failed_count: failureCount, total_count: installations.length }, trace_id: requestId });
     }
   }
 
   // CHECK 3: Queued jobs
   const { count: queuedJobsCount, error: jobsError } = await supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('status', 'queued').lt('created_at', thirtyMinutesAgo.toISOString());
   if (!jobsError && queuedJobsCount && queuedJobsCount > 100) {
-    alerts.push({ tenant_id: null, alert_type: 'jobs_stuck', severity: 'high', title: `${queuedJobsCount} jobs em fila ha mais de 30 minutos`, message: 'Jobs nao estao sendo processados.', details: { queued_count: queuedJobsCount } });
+    alerts.push({ tenant_id: null, alert_type: 'jobs_stuck', severity: 'high', title: `${queuedJobsCount} jobs em fila ha mais de 30 minutos`, message: 'Jobs nao estao sendo processados.', details: { queued_count: queuedJobsCount }, trace_id: requestId });
   }
 
   if (alerts.length > 0) {

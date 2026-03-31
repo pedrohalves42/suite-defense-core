@@ -1331,6 +1331,7 @@ export type Database = {
           state_after: string | null
           state_before: string | null
           tenant_id: string
+          trace_id: string | null
         }
         Insert: {
           agent_id?: string | null
@@ -1345,6 +1346,7 @@ export type Database = {
           state_after?: string | null
           state_before?: string | null
           tenant_id: string
+          trace_id?: string | null
         }
         Update: {
           agent_id?: string | null
@@ -1359,6 +1361,7 @@ export type Database = {
           state_after?: string | null
           state_before?: string | null
           tenant_id?: string
+          trace_id?: string | null
         }
         Relationships: [
           {
@@ -7166,6 +7169,7 @@ export type Database = {
           processed_at: string | null
           status: string
           tenant_id: string
+          trace_id: string | null
         }
         Insert: {
           action_data?: Json
@@ -7176,6 +7180,7 @@ export type Database = {
           processed_at?: string | null
           status?: string
           tenant_id: string
+          trace_id?: string | null
         }
         Update: {
           action_data?: Json
@@ -7186,6 +7191,7 @@ export type Database = {
           processed_at?: string | null
           status?: string
           tenant_id?: string
+          trace_id?: string | null
         }
         Relationships: [
           {
@@ -9130,6 +9136,7 @@ export type Database = {
           response_time_ms: number | null
           status_code: number
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
         }
         Insert: {
@@ -9142,6 +9149,7 @@ export type Database = {
           response_time_ms?: number | null
           status_code: number
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
         }
         Update: {
@@ -9154,6 +9162,7 @@ export type Database = {
           response_time_ms?: number | null
           status_code?: number
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
         }
         Relationships: [
@@ -9987,6 +9996,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -10006,6 +10016,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10025,6 +10036,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10047,6 +10059,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -10066,6 +10079,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10085,6 +10099,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10107,6 +10122,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -10126,6 +10142,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10145,6 +10162,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10167,6 +10185,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -10186,6 +10205,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10205,6 +10225,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10227,6 +10248,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -10246,6 +10268,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10265,6 +10288,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10287,6 +10311,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -10306,6 +10331,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10325,6 +10351,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10347,6 +10374,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -10366,6 +10394,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10385,6 +10414,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10407,6 +10437,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -10426,6 +10457,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10445,6 +10477,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10467,6 +10500,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -10486,6 +10520,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10505,6 +10540,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10527,6 +10563,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -10546,6 +10583,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10565,6 +10603,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10587,6 +10626,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -10606,6 +10646,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10625,6 +10666,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10647,6 +10689,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -10666,6 +10709,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10685,6 +10729,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10707,6 +10752,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -10726,6 +10772,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10745,6 +10792,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10767,6 +10815,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -10786,6 +10835,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10805,6 +10855,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10827,6 +10878,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -10846,6 +10898,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10865,6 +10918,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10887,6 +10941,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -10906,6 +10961,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10925,6 +10981,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10947,6 +11004,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -10966,6 +11024,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10985,6 +11044,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11007,6 +11067,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -11026,6 +11087,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11045,6 +11107,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11067,6 +11130,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -11086,6 +11150,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11105,6 +11170,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11127,6 +11193,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -11146,6 +11213,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11165,6 +11233,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11187,6 +11256,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -11206,6 +11276,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11225,6 +11296,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11247,6 +11319,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -11266,6 +11339,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11285,6 +11359,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11307,6 +11382,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -11326,6 +11402,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11345,6 +11422,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11367,6 +11445,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -11386,6 +11465,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11405,6 +11485,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11427,6 +11508,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -11446,6 +11528,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11465,6 +11548,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11487,6 +11571,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -11506,6 +11591,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11525,6 +11611,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11547,6 +11634,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -11566,6 +11654,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11585,6 +11674,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11607,6 +11697,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -11626,6 +11717,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11645,6 +11737,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11667,6 +11760,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -11686,6 +11780,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11705,6 +11800,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11727,6 +11823,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -11746,6 +11843,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11765,6 +11863,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11787,6 +11886,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -11806,6 +11906,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11825,6 +11926,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11847,6 +11949,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -11866,6 +11969,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11885,6 +11989,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11907,6 +12012,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -11926,6 +12032,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11945,6 +12052,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -11967,6 +12075,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -11986,6 +12095,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -12005,6 +12115,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -12027,6 +12138,7 @@ export type Database = {
           state_before: Json | null
           success: boolean
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -12046,6 +12158,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -12065,6 +12178,7 @@ export type Database = {
           state_before?: Json | null
           success?: boolean
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -12677,6 +12791,7 @@ export type Database = {
           rule_name: string | null
           severity: string | null
           tenant_id: string
+          trace_id: string | null
           trigger_data: Json | null
         }
         Insert: {
@@ -12694,6 +12809,7 @@ export type Database = {
           rule_name?: string | null
           severity?: string | null
           tenant_id: string
+          trace_id?: string | null
           trigger_data?: Json | null
         }
         Update: {
@@ -12711,6 +12827,7 @@ export type Database = {
           rule_name?: string | null
           severity?: string | null
           tenant_id?: string
+          trace_id?: string | null
           trigger_data?: Json | null
         }
         Relationships: [
@@ -12783,6 +12900,7 @@ export type Database = {
           rule_id: string
           success: boolean | null
           tenant_id: string
+          trace_id: string | null
         }
         Insert: {
           action_type: string
@@ -12794,6 +12912,7 @@ export type Database = {
           rule_id: string
           success?: boolean | null
           tenant_id: string
+          trace_id?: string | null
         }
         Update: {
           action_type?: string
@@ -12805,6 +12924,7 @@ export type Database = {
           rule_id?: string
           success?: boolean | null
           tenant_id?: string
+          trace_id?: string | null
         }
         Relationships: [
           {
@@ -16170,6 +16290,7 @@ export type Database = {
           occurred_on: string
           payload: Json
           tenant_id: string | null
+          trace_id: string | null
         }
         Insert: {
           aggregate_id: string
@@ -16181,6 +16302,7 @@ export type Database = {
           occurred_on?: string
           payload?: Json
           tenant_id?: string | null
+          trace_id?: string | null
         }
         Update: {
           aggregate_id?: string
@@ -16192,6 +16314,7 @@ export type Database = {
           occurred_on?: string
           payload?: Json
           tenant_id?: string | null
+          trace_id?: string | null
         }
         Relationships: [
           {
@@ -25640,6 +25763,7 @@ export type Database = {
           sent_at: string | null
           status: string
           tenant_id: string
+          trace_id: string | null
         }
         Insert: {
           alert_id?: string | null
@@ -25654,6 +25778,7 @@ export type Database = {
           sent_at?: string | null
           status?: string
           tenant_id: string
+          trace_id?: string | null
         }
         Update: {
           alert_id?: string | null
@@ -25668,6 +25793,7 @@ export type Database = {
           sent_at?: string | null
           status?: string
           tenant_id?: string
+          trace_id?: string | null
         }
         Relationships: [
           {
@@ -27386,6 +27512,7 @@ export type Database = {
           rule_type: string
           target: string
           tenant_id: string
+          trace_id: string | null
         }
         Insert: {
           action_taken: string
@@ -27399,6 +27526,7 @@ export type Database = {
           rule_type: string
           target: string
           tenant_id: string
+          trace_id?: string | null
         }
         Update: {
           action_taken?: string
@@ -27412,6 +27540,7 @@ export type Database = {
           rule_type?: string
           target?: string
           tenant_id?: string
+          trace_id?: string | null
         }
         Relationships: [
           {
@@ -28409,6 +28538,7 @@ export type Database = {
           risk_score: number
           tenant_id: string
           threshold: number
+          trace_id: string | null
         }
         Insert: {
           agent_id?: string | null
@@ -28425,6 +28555,7 @@ export type Database = {
           risk_score: number
           tenant_id: string
           threshold: number
+          trace_id?: string | null
         }
         Update: {
           agent_id?: string | null
@@ -28441,6 +28572,7 @@ export type Database = {
           risk_score?: number
           tenant_id?: string
           threshold?: number
+          trace_id?: string | null
         }
         Relationships: [
           {
@@ -29892,6 +30024,7 @@ export type Database = {
           previous_value: number | null
           rule_applied: string
           tenant_id: string
+          trace_id: string | null
         }
         Insert: {
           audit_id?: string | null
@@ -29905,6 +30038,7 @@ export type Database = {
           previous_value?: number | null
           rule_applied: string
           tenant_id: string
+          trace_id?: string | null
         }
         Update: {
           audit_id?: string | null
@@ -29918,6 +30052,7 @@ export type Database = {
           previous_value?: number | null
           rule_applied?: string
           tenant_id?: string
+          trace_id?: string | null
         }
         Relationships: [
           {
@@ -30029,6 +30164,7 @@ export type Database = {
           status: string
           tenant_id: string
           title: string
+          trace_id: string | null
           updated_at: string
         }
         Insert: {
@@ -30050,6 +30186,7 @@ export type Database = {
           status?: string
           tenant_id: string
           title: string
+          trace_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -30071,6 +30208,7 @@ export type Database = {
           status?: string
           tenant_id?: string
           title?: string
+          trace_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -30400,6 +30538,7 @@ export type Database = {
           request_id: string | null
           severity: string
           tenant_id: string
+          trace_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -30414,6 +30553,7 @@ export type Database = {
           request_id?: string | null
           severity: string
           tenant_id: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -30428,6 +30568,7 @@ export type Database = {
           request_id?: string | null
           severity?: string
           tenant_id?: string
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -32842,6 +32983,7 @@ export type Database = {
           status: string | null
           tenant_id: string
           title: string
+          trace_id: string | null
         }
         Insert: {
           acknowledged?: boolean | null
@@ -32869,6 +33011,7 @@ export type Database = {
           status?: string | null
           tenant_id: string
           title: string
+          trace_id?: string | null
         }
         Update: {
           acknowledged?: boolean | null
@@ -32896,6 +33039,7 @@ export type Database = {
           status?: string | null
           tenant_id?: string
           title?: string
+          trace_id?: string | null
         }
         Relationships: [
           {
@@ -33095,6 +33239,7 @@ export type Database = {
           score_system_identity: number
           tenant_id: string
           tokens_used: number | null
+          trace_id: string | null
         }
         Insert: {
           ai_model?: string | null
@@ -33136,6 +33281,7 @@ export type Database = {
           score_system_identity: number
           tenant_id: string
           tokens_used?: number | null
+          trace_id?: string | null
         }
         Update: {
           ai_model?: string | null
@@ -33177,6 +33323,7 @@ export type Database = {
           score_system_identity?: number
           tenant_id?: string
           tokens_used?: number | null
+          trace_id?: string | null
         }
         Relationships: [
           {
@@ -45186,6 +45333,17 @@ export type Database = {
       get_system_mode_safe: { Args: never; Returns: string }
       get_tenant_mfa_policy: { Args: { _tenant_id: string }; Returns: Json }
       get_threat_intel_stats: { Args: { p_tenant_id: string }; Returns: Json }
+      get_trace_timeline: {
+        Args: { p_trace_id: string }
+        Returns: {
+          created_at: string
+          event_id: string
+          event_type: string
+          source: string
+          summary: string
+          tenant_id: string
+        }[]
+      }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: {
