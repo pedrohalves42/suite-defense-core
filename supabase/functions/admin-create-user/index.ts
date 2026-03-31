@@ -43,14 +43,6 @@ serveTenant(async (_req, ctx) => {
 
   const { username, password, full_name, role, tenant_id } = parsed.data;
 
-  // Validate tenant_id
-  if (!tenant_id) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'tenant_id is required' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
   // Verify caller is admin in the target tenant
   const { data: callerRole, error: roleError } = await supabase
     .from('user_roles')
@@ -68,46 +60,6 @@ serveTenant(async (_req, ctx) => {
   }
 
   logger.info(`[admin-create-user][${requestId}] Admin verified: ${userId}, tenant: ${tenant_id}`);
-
-  // Validation
-  if (!username || !password || !full_name || !role) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Missing required fields: username, password, full_name, role' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  // Username validation
-  const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_-]{2,31}$/;
-  if (!usernameRegex.test(username)) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Username must start with a letter, contain only letters, numbers, _ or -, and be 3-32 characters' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  // Password validation
-  if (password.length < 8 || password.length > 72) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Password must be 8-72 characters' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Password must contain uppercase, lowercase, and number' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  // Role validation
-  if (!['admin', 'operator', 'viewer'].includes(role)) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Invalid role. Must be admin, operator, or viewer' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
 
   // Check if username already exists
   const { data: existingUser } = await supabase

@@ -8,6 +8,18 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { requireEnv } from '../_shared/env.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const ChangePasswordSchema = z.object({
+  current_password: z.string().min(1, 'Current password is required'),
+  new_password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .max(72, 'Password must be at most 72 characters')
+    .regex(/[a-z]/, 'Must contain a lowercase letter')
+    .regex(/[A-Z]/, 'Must contain an uppercase letter')
+    .regex(/\d/, 'Must contain a number')
+    .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Must contain a special character'),
+});
 
 // Rate limiting per user (in-memory, resets on function restart)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -47,25 +59,16 @@ serveTenant(async (req, ctx) => {
     );
   }
 
-  // Validate payload
-  const currentPassword = body?.current_password;
-  const newPassword = body?.new_password;
-
-  if (!currentPassword || !newPassword) {
+  // Validate payload with Zod
+  const parsed = ChangePasswordSchema.safeParse(body);
+  if (!parsed.success) {
     return new Response(
-      JSON.stringify({ error: 'Current password and new password are required' }),
+      JSON.stringify({ error: 'Validation failed', details: parsed.error.flatten().fieldErrors }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
-  // Validate new password strength
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,72}$/;
-  if (!passwordRegex.test(newPassword)) {
-    return new Response(
-      JSON.stringify({ error: 'New password must be 8-72 characters with uppercase, lowercase, number and special character' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
+  const { current_password: currentPassword, new_password: newPassword } = parsed.data;
 
   // Create user-context client to verify current password
   const authHeader = req.headers.get('Authorization')!;
