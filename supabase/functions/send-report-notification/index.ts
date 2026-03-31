@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';

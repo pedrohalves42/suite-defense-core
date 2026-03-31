@@ -1,5 +1,5 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
