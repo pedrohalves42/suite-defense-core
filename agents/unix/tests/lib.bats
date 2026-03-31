@@ -46,20 +46,20 @@ teardown() {
 
 @test "FSM: DEGRADED can go to ENFORCING" {
     CURRENT_STATE="DEGRADED"
-    run set_agent_state "ENFORCING" "recovered"
-    [ "$status" -eq 0 ]
+    set_agent_state "ENFORCING" "recovered"
+    [ "$CURRENT_STATE" = "ENFORCING" ]
 }
 
 @test "FSM: SAFE_MODE can only go to INITIALIZING" {
     CURRENT_STATE="SAFE_MODE"
-    run set_agent_state "INITIALIZING" "restart"
-    [ "$status" -eq 0 ]
+    set_agent_state "INITIALIZING" "restart"
+    [ "$CURRENT_STATE" = "INITIALIZING" ]
 }
 
 @test "FSM: SAFE_MODE cannot go to ENFORCING" {
     CURRENT_STATE="SAFE_MODE"
-    run set_agent_state "ENFORCING" "test"
-    [ "$status" -ne 0 ]
+    ! set_agent_state "ENFORCING" "test" 2>/dev/null
+    [ "$CURRENT_STATE" = "SAFE_MODE" ]
 }
 
 @test "FSM: state persisted to file" {
