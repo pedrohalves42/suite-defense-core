@@ -3,10 +3,11 @@
 | Campo | Valor |
 |-------|-------|
 | **Código** | SLA-001 |
-| **Versão** | 1.0 |
+| **Versao** | 2.0 |
 | **Status** | Aprovado |
-| **Data Efetiva** | 2025-01-01 |
-| **Revisão** | 2026-01-01 |
+| **Data Efetiva** | 2026-03-31 |
+| **Revisao** | 2026-09-30 |
+| **Referencia SLO** | docs/slos/SLO_DEFINITIONS.md |
 
 ---
 
