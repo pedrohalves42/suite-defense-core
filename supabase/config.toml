@@ -163,8 +163,7 @@ verify_jwt = false
 [functions.cleanup-orphaned-data]
 verify_jwt = true
 
-[functions.cleanup-jobs]
-verify_jwt = true
+# REMOVED: cleanup-jobs (consolidated into cleanup-router, action: 'jobs')
 
 # REMOVED: check-expiring-enrollment-keys (consolidated into security-monitor)
 
