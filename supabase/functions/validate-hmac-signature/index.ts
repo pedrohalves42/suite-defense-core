@@ -31,6 +31,7 @@ function hexToBytes(hex: string): Uint8Array {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: buildCorsHeaders(origin) });
   }

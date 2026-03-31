@@ -15,6 +15,7 @@ const corsHeaders: Record<string, string> = {
 const AgentTokenSchema = z.string().regex(/^[A-Za-z0-9]{64}$/, "Invalid agent token format");
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: buildCorsHeaders(origin) });
   }

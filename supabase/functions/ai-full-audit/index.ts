@@ -14,6 +14,7 @@ import {
 } from './helpers.ts';
 
 serveTenant(async (req, ctx) => {
+  const origin = req.headers.get("origin");
   const { supabase: serviceClient, tenantId, userId, isInternal, requestId } = ctx;
 
   logger.info(`[ai-full-audit] Starting FULL audit v2.3 for tenant ${tenantId} [requestId: ${requestId}]`);
