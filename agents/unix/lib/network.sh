@@ -55,8 +55,10 @@ invoke_secure_request() {
 
         retry_count=$((retry_count + 1))
         if [[ "$http_code" =~ ^(502|503|504|429|000)$ && $retry_count -lt $max_retries ]]; then
-            local delay=$((base_delay * (2 ** (retry_count - 1))))
-            [[ $delay -gt $max_delay ]] && delay=$max_delay
+            local base=$((base_delay * (2 ** (retry_count - 1))))
+            [[ $base -gt $max_delay ]] && base=$max_delay
+            local jitter=$(( RANDOM % (base / 2 + 1) ))
+            local delay=$(( base + jitter ))
             log "WARN" "[NETWORK] Request failed (attempt $retry_count/$max_retries), retrying in ${delay}s (HTTP: $http_code)"
             sleep "$delay"
         else
