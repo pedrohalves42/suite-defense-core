@@ -307,6 +307,7 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
 
       return jsonResponse(result, 200, {
         'X-Request-ID': requestId,
+        'X-Trace-ID': traceId,
         'X-Response-Time': responseTime,
       }, origin);
 
