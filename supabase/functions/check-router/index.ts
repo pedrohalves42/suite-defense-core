@@ -155,7 +155,7 @@ async function handleCheckProductionHealth(supabase: SupabaseClientType, request
     const failureCount = installations.filter(i => i.success === false).length;
     const failureRate = failureCount / installations.length;
     if (failureRate > 0.30) {
-      alerts.push({ tenant_id: null, alert_type: 'high_installation_failure', severity: 'critical', title: `Alta taxa de falha: ${(failureRate * 100).toFixed(1)}%`, message: `${failureCount} de ${installations.length} instalacoes falharam.`, details: { failure_rate: failureRate, failed_count: failureCount, total_count: installations.length } });
+      alerts.push({ tenant_id: null, alert_type: 'high_installation_failure', severity: 'critical', title: `Alta taxa de falha: ${(failureRate * 100).toFixed(1)}%`, message: `${failureCount} de ${installations.length} instalacoes falharam.`, details: { failure_rate: failureRate, failed_count: failureCount, total_count: installations.length }, trace_id: requestId });
     }
   }
 
