@@ -87,6 +87,29 @@ BEGIN
       'SECURITY VALIDATION FAILED: Partitions without RLS: %. Run SELECT ensure_partition_rls(); to fix. See ADR-026.',
       tables_without_rls;
   END IF;
+
+  -- ADR-026: Check natively partitioned parents have at least one RLS policy
+  -- (PostgreSQL automatically propagates parent policies to partitions)
+  SELECT array_agg(parent.relname::text) INTO tables_without_rls
+  FROM pg_class parent
+  JOIN pg_namespace n ON n.oid = parent.relnamespace
+  WHERE n.nspname = 'public'
+    AND parent.relkind = 'p'  -- partitioned table
+    AND parent.relrowsecurity = true
+    AND parent.relname IN (
+      'audit_logs',
+      'hmac_signatures',
+      'job_executions'
+    )
+    AND NOT EXISTS (
+      SELECT 1 FROM pg_policy pol WHERE pol.polrelid = parent.oid
+    );
+
+  IF array_length(tables_without_rls, 1) > 0 THEN
+    RAISE EXCEPTION 
+      'SECURITY VALIDATION FAILED: Partitioned parents without policies: %. Partitions inherit parent policies, so fix the parent. See ADR-026.',
+      tables_without_rls;
+  END IF;
   
   RAISE NOTICE 'SECURITY VALIDATION PASSED: RLS hardening verified (ADR-023 + ADR-026) including all partitions';
 END $$;
