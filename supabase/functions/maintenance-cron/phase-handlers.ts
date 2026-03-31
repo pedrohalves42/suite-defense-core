@@ -75,18 +75,23 @@ export async function cleanupStuckJobs(supabase: SupabaseClient, now: string, re
       const retryable = stuckDelivered.filter((j: JobRow) => (j.delivery_attempts || 0) < MAX_DELIVERY_ATTEMPTS - 1 && !(j.expires_at && new Date(j.expires_at) < new Date(now)));
       const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
 
-      for (const job of retryable) {
-        const { data: agentCheck } = await supabase.from('agents').select('last_heartbeat, status, scheduling_paused').eq('id', job.agent_id).maybeSingle();
-        const isOnline = agentCheck && agentCheck.status === 'active' && !agentCheck.scheduling_paused && agentCheck.last_heartbeat && agentCheck.last_heartbeat > twoHoursAgo;
-        if (!isOnline) continue;
+      // Batch fetch agent status for all retryable jobs instead of N+1
+      const retryableAgentIds = [...new Set(retryable.map((j: JobRow) => j.agent_id).filter(Boolean))];
+      const { data: agentChecks } = await supabase.from('agents').select('id, last_heartbeat, status, scheduling_paused').in('id', retryableAgentIds);
+      const onlineAgents = new Set((agentChecks || []).filter(a => a.status === 'active' && !a.scheduling_paused && a.last_heartbeat && a.last_heartbeat > twoHoursAgo).map(a => a.id));
 
-        const { error: insertError } = await supabase.from('jobs').insert({
+      const retryRows = retryable
+        .filter((job: JobRow) => onlineAgents.has(job.agent_id))
+        .map((job: JobRow) => ({
           tenant_id: job.tenant_id, agent_id: job.agent_id, agent_name: job.agent_name, type: job.type,
           payload: job.payload || {}, status: 'queued', approved: true, priority: job.priority,
           expires_at: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
           delivery_attempts: (job.delivery_attempts || 0) + 1,
-        });
-        if (!insertError) result.stuck_jobs.recreated++;
+        }));
+
+      if (retryRows.length > 0) {
+        const { error: insertError } = await supabase.from('jobs').insert(retryRows);
+        if (!insertError) result.stuck_jobs.recreated = retryRows.length;
       }
     }
 
@@ -178,17 +183,20 @@ export async function runRemainingPhases(supabase: SupabaseClient, now: string, 
       allStale.set(a.id, a as StaleAgent);
     }
 
-    for (const agent of allStale.values()) {
+    // Batch update all stale agents and insert evidence logs instead of N+1
+    const staleIds = [...allStale.keys()];
+    if (staleIds.length > 0) {
       const { error } = await supabase.from('agents')
         .update({ force_update_version: null, force_update_reason: null, force_update_at: null, force_update_delivery_count: 0 })
-        .eq('id', agent.id);
+        .in('id', staleIds);
       if (!error) {
-        result.stale_updates.cleaned++;
-        await supabase.from('agent_evidence_logs').insert({
+        result.stale_updates.cleaned = staleIds.length;
+        const evidenceRows = [...allStale.values()].map(agent => ({
           agent_id: agent.id, agent_name: agent.agent_name, agent_version: agent.agent_version, tenant_id: agent.tenant_id,
           event_type: 'force_update_auto_cancelled', event_data: { cancelled_version: agent.force_update_version, cleaned_by: 'maintenance-cron' },
           evidence_hash: crypto.randomUUID(), severity: 'warn',
-        });
+        }));
+        await supabase.from('agent_evidence_logs').insert(evidenceRows);
       }
     }
   } catch (e) { logger.warn('[maintenance] Phase 7 error:', e); }

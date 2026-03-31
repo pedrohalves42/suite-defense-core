@@ -273,13 +273,15 @@ export async function evaluateForTenant(
   if (allExecutions.length > 0) {
     await supabase.from('automation_executions').insert(allExecutions);
     const triggeredRuleIds = [...new Set(allExecutions.map((e) => e.rule_id))];
-    for (const ruleId of triggeredRuleIds) {
+    // Batch update all triggered rules instead of N+1
+    const updatePromises = triggeredRuleIds.map(ruleId => {
       const rule = rules.find((r: Record<string, unknown>) => r.id === ruleId);
-      await supabase.from('automation_rules').update({
+      return supabase.from('automation_rules').update({
         last_triggered_at: new Date().toISOString(),
         trigger_count: (rule?.trigger_count || 0) + 1,
       }).eq('id', ruleId);
-    }
+    });
+    await Promise.all(updatePromises);
   }
 
   let riskScore: number | undefined;

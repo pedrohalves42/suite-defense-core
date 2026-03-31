@@ -79,25 +79,29 @@ export async function processSilentFailureDetection(supabase: SupabaseClient, ru
       error: insightError?.message
     });
 
-    for (const failure of tenantFailures) {
-      await supabase.from('decision_events').insert({
-        tenant_id: tenantId,
-        rule_code: rule.code,
-        agent_id: failure.agent_id,
-        agent_name: failure.agent_name || 'Unknown',
-        action: 'DETECT_SILENT_FAILURE',
-        decision_source: 'system',
-        decision_type: 'autonomous',
-        evidence: {
-          job_id: failure.job_id,
-          job_type: failure.job_type,
-          completed_at: failure.completed_at,
-          violation_type: failure.violation_type,
-          detected_at: new Date().toISOString()
-        },
-        actions_executed: actionsExecuted
-      });
+    // Batch insert decision_events and build agents array instead of N+1
+    const decisionRows = tenantFailures.map(failure => ({
+      tenant_id: tenantId,
+      rule_code: rule.code,
+      agent_id: failure.agent_id,
+      agent_name: failure.agent_name || 'Unknown',
+      action: 'DETECT_SILENT_FAILURE',
+      decision_source: 'system',
+      decision_type: 'autonomous',
+      evidence: {
+        job_id: failure.job_id,
+        job_type: failure.job_type,
+        completed_at: failure.completed_at,
+        violation_type: failure.violation_type,
+        detected_at: new Date().toISOString()
+      },
+      actions_executed: actionsExecuted
+    }));
+    if (decisionRows.length > 0) {
+      await supabase.from('decision_events').insert(decisionRows);
+    }
 
+    for (const failure of tenantFailures) {
       agents.push({
         agent_id: failure.agent_id,
         agent_name: failure.agent_name || 'Unknown',
@@ -306,14 +310,13 @@ export async function processProgressiveDegradationRule(supabase: SupabaseClient
 
   const agents: RuleResult['agents'] = [];
 
-  for (const degrading of degradingAgents.slice(0, 10)) {
-    const { data: agentInfo } = await supabase
-      .from('agents')
-      .select('agent_name')
-      .eq('id', degrading.agent_id)
-      .single();
+  // Batch fetch agent names for all degrading agents instead of N+1
+  const degradingIds = degradingAgents.slice(0, 10).map(d => d.agent_id);
+  const { data: agentInfos } = await supabase.from('agents').select('id, agent_name').in('id', degradingIds);
+  const agentNameMap = new Map((agentInfos || []).map(a => [a.id, a.agent_name]));
 
-    const agentName = agentInfo?.agent_name || degrading.agent_id.substring(0, 8);
+  for (const degrading of degradingAgents.slice(0, 10)) {
+    const agentName = agentNameMap.get(degrading.agent_id) || degrading.agent_id.substring(0, 8);
 
     await supabase.from('ai_insights').insert({
       tenant_id: degrading.tenant_id,

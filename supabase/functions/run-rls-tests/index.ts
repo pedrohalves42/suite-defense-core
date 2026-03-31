@@ -151,16 +151,18 @@ serveInternal(async (_req, ctx) => {
 
   // Record results
   const now = new Date().toISOString();
-  for (const result of results) {
-    await supabase.from('rls_test_results').insert({
-      test_run_id: testRunId,
-      test_name: result.test_name,
-      table_name: result.table_name,
-      passed: result.passed,
-      failure_reason: result.failure_reason,
-      tested_at: now,
-      details: { request_id: requestId },
-    });
+  // Batch insert all test results at once instead of N+1
+  const testResultRows = results.map(result => ({
+    test_run_id: testRunId,
+    test_name: result.test_name,
+    table_name: result.table_name,
+    passed: result.passed,
+    failure_reason: result.failure_reason,
+    tested_at: now,
+    details: { request_id: requestId },
+  }));
+  if (testResultRows.length > 0) {
+    await supabase.from('rls_test_results').insert(testResultRows);
   }
 
   // Update cron health check

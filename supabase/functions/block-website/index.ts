@@ -50,20 +50,20 @@ serveInternal(async (req, ctx) => {
   const { data: targetAgents } = await agentQuery;
 
   const jobsCreated: string[] = [];
-  for (const agent of targetAgents || []) {
-    const { data: job, error: jobError } = await supabase
+  if (targetAgents && targetAgents.length > 0) {
+    // Batch insert all jobs at once instead of N+1
+    const jobRows = targetAgents.map(agent => ({
+      agent_id: agent.id, agent_name: agent.agent_name, tenant_id: agent.tenant_id,
+      type: 'sync_blocked_websites', status: 'pending',
+      payload: { action: 'block_website', block_id: blockRecord?.id, url, reason },
+      priority: 2,
+      expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+    }));
+    const { data: insertedJobs } = await supabase
       .from('jobs')
-      .insert({
-        agent_id: agent.id, agent_name: agent.agent_name, tenant_id: agent.tenant_id,
-        type: 'sync_blocked_websites', status: 'pending',
-        payload: { action: 'block_website', block_id: blockRecord?.id, url, reason },
-        priority: 2,
-        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-      })
-      .select('id')
-      .single();
-
-    if (!jobError && job) jobsCreated.push(job.id);
+      .insert(jobRows)
+      .select('id');
+    if (insertedJobs) jobsCreated.push(...insertedJobs.map(j => j.id));
   }
 
   await supabase.from('system_alerts').insert({

@@ -80,17 +80,31 @@ serveInternal(async (_req, ctx) => {
   }
 
   if (alertsToCreate.length > 0) {
-    for (const alert of alertsToCreate) {
-      const { data: existing } = await supabase.from('system_alerts').select('id').eq('agent_id', alert.agent_id).eq('alert_type', alert.alert_type).eq('resolved', false).maybeSingle();
-      if (!existing) await supabase.from('system_alerts').insert(alert);
+    // Batch: fetch all existing unresolved alerts for these agents in one query
+    const alertAgentIds = alertsToCreate.map(a => a.agent_id);
+    const alertTypes = [...new Set(alertsToCreate.map(a => a.alert_type))];
+    const { data: existingAlerts } = await supabase.from('system_alerts').select('agent_id, alert_type').in('agent_id', alertAgentIds).in('alert_type', alertTypes).eq('resolved', false);
+    const existingSet = new Set((existingAlerts || []).map(e => `${e.agent_id}:${e.alert_type}`));
+    const newAlerts = alertsToCreate.filter(a => !existingSet.has(`${a.agent_id}:${a.alert_type}`));
+    if (newAlerts.length > 0) {
+      await supabase.from('system_alerts').insert(newAlerts);
     }
   }
 
   const agentsToDeactivate = issues.filter(i => i.minutes_since_heartbeat && i.minutes_since_heartbeat > 60).map(i => i.agent_id);
   if (agentsToDeactivate.length > 0) await supabase.from('agents').update({ status: 'inactive' }).in('id', agentsToDeactivate);
 
-  for (const issue of issues.filter(i => i.issue_type === 'removed_after_reboot' || i.issue_type === 'persistent_failure')) {
-    await supabase.from('agent_events').insert({ agent_id: issue.agent_id, tenant_id: issue.tenant_id, event_type: issue.issue_type === 'persistent_failure' ? 'persistent_failure_detected' : 'integrity_check_failed', details: { issue_type: issue.issue_type, last_heartbeat: issue.last_heartbeat, minutes_since_heartbeat: issue.minutes_since_heartbeat, failure_count: issue.failure_count, detected_at: new Date().toISOString() } });
+  // Batch insert agent_events instead of N+1
+  const eventsToInsert = issues
+    .filter(i => i.issue_type === 'removed_after_reboot' || i.issue_type === 'persistent_failure')
+    .map(issue => ({
+      agent_id: issue.agent_id,
+      tenant_id: issue.tenant_id,
+      event_type: issue.issue_type === 'persistent_failure' ? 'persistent_failure_detected' : 'integrity_check_failed',
+      details: { issue_type: issue.issue_type, last_heartbeat: issue.last_heartbeat, minutes_since_heartbeat: issue.minutes_since_heartbeat, failure_count: issue.failure_count, detected_at: new Date().toISOString() }
+    }));
+  if (eventsToInsert.length > 0) {
+    await supabase.from('agent_events').insert(eventsToInsert);
   }
 
   const durationMs = Date.now() - startedAt;
