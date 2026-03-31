@@ -2,6 +2,7 @@
  * Enrollment key validation logic
  * Extraído de enroll-agent/index.ts para modularização
  */
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { createAuditLog } from '../_shared/audit.ts';
 import { getTokenPrefix } from '../_shared/token-hash.ts';
 import { logger } from '../_shared/logger.ts';
