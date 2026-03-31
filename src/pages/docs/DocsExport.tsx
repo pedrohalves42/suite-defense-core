@@ -17,26 +17,26 @@ import { generatePDFFromMarkdown, generateConsolidatedPDF } from "@/lib/markdown
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
-// Import all markdown files at build time using Vite's glob import
-const mdFiles: Record<string, string> = import.meta.glob(
+// Import markdown files lazily (not eager) to avoid bundling all docs into this chunk
+const mdLoaders: Record<string, () => Promise<string>> = import.meta.glob(
   ['/docs/**/*.md', '/public/docs/**/*.md'],
-  { query: '?raw', import: 'default', eager: true }
-);
+  { query: '?raw', import: 'default', eager: false }
+) as unknown as Record<string, () => Promise<string>>;
 
-function getDocContent(path: string): string | null {
-  const keys = Object.keys(mdFiles);
+async function getDocContent(path: string): Promise<string | null> {
+  const keys = Object.keys(mdLoaders);
   const candidates = [
     `/docs/${path}`,
     `/public/docs/${path}`,
   ];
   for (const c of candidates) {
-    if (mdFiles[c]) return mdFiles[c];
+    if (mdLoaders[c]) return mdLoaders[c]();
   }
   // Fuzzy match by filename
   const filename = path.split('/').pop();
   if (filename) {
     const match = keys.find(k => k.endsWith(`/${filename}`));
-    if (match) return mdFiles[match];
+    if (match) return mdLoaders[match]();
   }
   return null;
 }
@@ -76,7 +76,7 @@ const DocsExport = () => {
     async (doc: { title: string; path: string }) => {
       setDownloading(doc.path);
       try {
-        const content = getDocContent(doc.path);
+        const content = await getDocContent(doc.path);
         if (!content) {
           toast.error(`Documento não encontrado: ${doc.title}`);
           return;
@@ -107,7 +107,7 @@ const DocsExport = () => {
 
       for (const category of categories) {
         for (const doc of category.docs) {
-          const content = getDocContent(doc.path);
+          const content = await getDocContent(doc.path);
           if (content) {
             selectedDocs.push({
               title: doc.title,
@@ -142,7 +142,7 @@ const DocsExport = () => {
     .filter((c) => selectedCategories.has(c.name))
     .reduce((s, c) => s + c.docs.length, 0);
 
-  const availableTotal = Object.keys(mdFiles).length;
+  const availableTotal = Object.keys(mdLoaders).length;
 
   return (
     <div className="container mx-auto p-6 max-w-5xl space-y-6">

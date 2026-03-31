@@ -25,8 +25,7 @@ import { cn } from '@/lib/utils';
 import { format, ptBR } from '@/lib/date-utils';
 import { subDays } from 'date-fns';
 import { DateRange } from 'react-day-picker';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+// jsPDF and autoTable loaded dynamically in generatePDF() for code-splitting
 
 const EVIDENCE_OPTIONS = [
   { key: 'securityEvents', label: 'Eventos de Segurança', icon: '🔒', description: 'Alertas, ameaças e incidentes detectados' },
@@ -38,7 +37,9 @@ const EVIDENCE_OPTIONS = [
   { key: 'auditLogs', label: 'Logs de Auditoria', icon: '📝', description: 'Trilha de auditoria imutável completa' },
 ] as const;
 
-function generatePDF(bundleData: Record<string, unknown>, result: ExportResult, logoDataUrl?: string | null) {
+async function generatePDF(bundleData: Record<string, unknown>, result: ExportResult, logoDataUrl?: string | null) {
+  const { default: jsPDF } = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -234,7 +235,7 @@ export default function EvidenceBundlePage() {
     if (!exportResult?.bundle) return;
     const { loadLogoForPDF } = await import('@/lib/pdfLogoHelper');
     const logoDataUrl = await loadLogoForPDF();
-    const doc = generatePDF(exportResult.bundle, exportResult, logoDataUrl);
+    const doc = await generatePDF(exportResult.bundle, exportResult, logoDataUrl);
     doc.save(`evidence-bundle-${exportResult.auditId}.pdf`);
   };
 
