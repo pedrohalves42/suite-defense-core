@@ -100,20 +100,25 @@ async function executeAction(
           agentDetail.scheduling_paused;
 
         if (isOffline) {
-          logger.info(`[evaluate-automation-rules] Skipping job creation for offline agent ${(agent as any).agent_name}`);
-          return { status: 'skipped', result: { reason: 'agent_offline', agent_name: (agent as any).agent_name } };
+          const agentName = (agent as Record<string, unknown>).agent_name as string;
+          logger.info(`[evaluate-automation-rules] Skipping job creation for offline agent ${agentName}`);
+          return { status: 'skipped', result: { reason: 'agent_offline', agent_name: agentName } };
         }
       }
+
+      const agentName = (agent as Record<string, unknown>)?.agent_name as string || 'Unknown';
+      const jobType = (actionConfig as Record<string, unknown>)?.job_type as string || 'health_report';
+      const actionParams = (actionConfig as Record<string, unknown>)?.params as Record<string, unknown> | undefined;
 
       const { data: jobData, error: jobError } = await supabase
         .from('jobs')
         .insert({
           tenant_id: tenantId,
           agent_id: agentId,
-          agent_name: (agent as any)?.agent_name || 'Unknown',
-          type: (actionConfig as any)?.job_type || 'health_report',
+          agent_name: agentName,
+          type: jobType,
           status: 'queued',
-          payload: { source: 'automation_rule', rule_id: rule.id, ...triggerData, ...(actionConfig as any)?.params },
+          payload: { source: 'automation_rule', rule_id: rule.id, ...triggerData, ...actionParams },
         })
         .select('id')
         .maybeSingle();
