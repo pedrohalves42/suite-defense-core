@@ -174,7 +174,7 @@ export async function handleSubscriptionUpdate(supabase: SupabaseClient, subscri
 /**
  * Handle customer.subscription.trial_will_end
  */
-export async function handleTrialEnding(supabase: any, subscription: Stripe.Subscription): Promise<void> {
+export async function handleTrialEnding(supabase: SupabaseClient, subscription: Stripe.Subscription): Promise<void> {
   logger.info(`[STRIPE-WEBHOOK] Trial ending soon: ${subscription.id}`);
   const customerId = subscription.customer as string;
   const tenantSub = await findTenantByCustomerOrMetadata(supabase, customerId, subscription.metadata);
