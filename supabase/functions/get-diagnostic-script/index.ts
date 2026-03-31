@@ -344,4 +344,4 @@ servePublic(async (req, ctx) => {
   return new Response(DIAGNOSTIC_SCRIPT, {
     headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain; charset=utf-8', 'Content-Disposition': 'inline; filename="diagnose-agent.ps1"' },
   });
-}, { methods: ['GET'] });
+});
