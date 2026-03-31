@@ -20,6 +20,7 @@ interface LogEntry {
   message: string;
   data?: unknown;
   requestId?: string;
+  traceId?: string;
   tenantId?: string;
   agentId?: string;
   duration_ms?: number;
@@ -28,6 +29,8 @@ interface LogEntry {
 /** Optional context bag passed to loggerWithContext */
 export interface LogContext {
   requestId: string;
+  /** End-to-end trace ID propagated from agent. Falls back to requestId if not provided. */
+  traceId?: string;
   tenantId?: string;
   agentId?: string;
 }
