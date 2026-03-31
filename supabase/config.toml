@@ -209,13 +209,8 @@ verify_jwt = false
 [functions.check-stuck-jobs]
 verify_jwt = false
 
-# P1-01: Cleanup stuck jobs - DISABLED schedule COST-OPT-V7 (covered by system-maintenance)
-[functions.cleanup-stuck-jobs]
-verify_jwt = false
-
-# P1-02: Cleanup jobs for offline agents - DISABLED schedule COST-OPT-V7 (covered by system-maintenance)
-[functions.cleanup-offline-agents-jobs]
-verify_jwt = false
+# REMOVED: cleanup-stuck-jobs (consolidated into cleanup-router, action: 'stuck-jobs')
+# REMOVED: cleanup-offline-agents-jobs (consolidated into cleanup-router, action: 'offline-agents-jobs')
 
 # Network Anomalies Analysis - DISABLED COST-OPT-V6 (insufficient volume for 1 agent)
 [functions.analyze-network-anomalies]
