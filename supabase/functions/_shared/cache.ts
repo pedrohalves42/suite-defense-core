@@ -94,7 +94,7 @@ export async function getCached<T>(
         return value;
       }
     } catch (err) {
-      console.warn('[cache] DB read failed, falling through to fetcher', { key, err });
+      logger.warn('[cache] DB read failed, falling through to fetcher', { key, err });
     }
   }
 
@@ -111,7 +111,7 @@ export async function getCached<T>(
       p_ttl_seconds: ttlSeconds,
     });
   } catch (err) {
-    console.warn('[cache] DB write failed (non-fatal)', { key, err });
+    logger.warn('[cache] DB write failed (non-fatal)', { key, err });
   }
 
   return freshValue;
@@ -125,7 +125,7 @@ export async function invalidateCache(
   try {
     await supabase.from('kv_cache').delete().eq('key', key);
   } catch (err) {
-    console.warn('[cache] invalidateCache failed (non-fatal)', { key, err });
+    logger.warn('[cache] invalidateCache failed (non-fatal)', { key, err });
   }
 }
 
@@ -144,7 +144,7 @@ export async function invalidateCacheByPrefix(
     if (error) return 0;
     return (data as number) || 0;
   } catch (err) {
-    console.warn('[cache] invalidateCacheByPrefix failed', { prefix, err });
+    logger.warn('[cache] invalidateCacheByPrefix failed', { prefix, err });
     return 0;
   }
 }

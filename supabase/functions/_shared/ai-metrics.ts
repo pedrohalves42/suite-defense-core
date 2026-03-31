@@ -93,7 +93,7 @@ export function extractTokenUsage(response: Record<string, unknown>): { prompt?:
       };
     }
   } catch (err) {
-    console.warn('[ai-metrics] extractTokenUsage parse error', err);
+    logger.warn('[ai-metrics] extractTokenUsage parse error', err);
   }
   return {};
 }

@@ -168,7 +168,7 @@ serveInternal(async (_req, ctx) => {
       p_success: true,
       p_error: null,
     });
-  } catch (err) { console.warn('[security-alert-dispatcher] cron health update failed', err); }
+  } catch (err) { logger.warn('[security-alert-dispatcher] cron health update failed', err); }
 
   return {
     success: true,

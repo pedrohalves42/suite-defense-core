@@ -129,7 +129,7 @@ export async function verifyHmacSignature(
   try {
     body = await request.clone().text()
   } catch (err) {
-    console.warn('[hmac] Failed to read request body', err);
+    logger.warn('[hmac] Failed to read request body', err);
     body = ''
   }
 
@@ -139,7 +139,7 @@ export async function verifyHmacSignature(
       compactBody = JSON.stringify(JSON.parse(body))
     }
   } catch (err) {
-    console.warn('[hmac] JSON compact parse failed, using raw body', err);
+    logger.warn('[hmac] JSON compact parse failed, using raw body', err);
     compactBody = body
   }
 
@@ -177,7 +177,7 @@ export async function verifyHmacSignature(
   try {
     keyVariants.push({ name: 'hex', data: hexToBytes(hmacSecret) })
   } catch (err) {
-    console.warn('[hmac] Invalid hex key, falling back to utf8', err);
+    logger.warn('[hmac] Invalid hex key, falling back to utf8', err);
   }
   keyVariants.push({ name: 'utf8', data: encoder.encode(hmacSecret) })
 

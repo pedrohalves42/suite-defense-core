@@ -254,7 +254,7 @@ export async function evaluateForTenant(
       const success = status === 'executed';
 
       if (success) {
-        try { await supabase.rpc('increment_tenant_quota', { p_tenant_id: tenantId }); } catch (err) { console.warn('[tenant-evaluator] increment_tenant_quota failed', err); }
+        try { await supabase.rpc('increment_tenant_quota', { p_tenant_id: tenantId }); } catch (err) { logger.warn('[tenant-evaluator] increment_tenant_quota failed', err); }
       }
 
       await logExecution(supabase, tenantId, candidate.agentId, rule.id, rule.action_type, success, protection.idempotencyKey, { ...result, execution_time_ms: execTimeMs });
@@ -290,7 +290,7 @@ export async function evaluateForTenant(
   try {
     const { data: score } = await supabase.rpc('recalculate_tenant_risk_score', { p_tenant_id: tenantId });
     riskScore = score;
-  } catch (err) { console.warn('[tenant-evaluator] recalculate_tenant_risk_score failed', err); }
+  } catch (err) { logger.warn('[tenant-evaluator] recalculate_tenant_risk_score failed', err); }
 
   return { evaluated: rules.length, triggered: totalTriggered, blocked: totalBlocked, decisions: totalDecisions, risk_score: riskScore };
 }

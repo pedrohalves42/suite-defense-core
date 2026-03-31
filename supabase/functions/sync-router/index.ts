@@ -77,7 +77,7 @@ async function handleHmacCleanupScheduled(supabase: SB, requestId: string) {
   const { data, error } = await supabase.rpc('cleanup_hmac_nonces');
   if (error) { logger.error(`[hmac-cleanup-scheduled][${requestId}] Error:`, error); throw error; }
   const duration = Date.now() - startedAt;
-  try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'hmac-cleanup-scheduled', p_success: true, p_duration_ms: duration, p_result: { cleaned: data }, p_processed_count: data || 0, p_job_source: 'cron' }); } catch (err) { console.warn('[sync-router] hmac-cleanup log failed', err); }
+  try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'hmac-cleanup-scheduled', p_success: true, p_duration_ms: duration, p_result: { cleaned: data }, p_processed_count: data || 0, p_job_source: 'cron' }); } catch (err) { logger.warn('[sync-router] hmac-cleanup log failed', err); }
   return { success: true, cleaned_nonces: data, duration_ms: duration };
 }
 
@@ -91,7 +91,7 @@ async function handleProcessTenantSuspensions(supabase: SB, requestId: string) {
     const { error: agentError } = await supabase.from('agents').update({ status: 'suspended' }).eq('tenant_id', tenant.id).in('status', ['active', 'pending']);
     if (!agentError) processed++;
   }
-  try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'process-tenant-suspensions', p_success: true, p_duration_ms: Date.now() - startedAt, p_result: { tenants_found: suspendedTenants?.length || 0, agents_suspended: processed }, p_processed_count: processed, p_job_source: 'cron' }); } catch (err) { console.warn('[sync-router] tenant-suspensions log failed', err); }
+  try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'process-tenant-suspensions', p_success: true, p_duration_ms: Date.now() - startedAt, p_result: { tenants_found: suspendedTenants?.length || 0, agents_suspended: processed }, p_processed_count: processed, p_job_source: 'cron' }); } catch (err) { logger.warn('[sync-router] tenant-suspensions log failed', err); }
   return { success: true, tenants_processed: suspendedTenants?.length || 0, agents_suspended: processed };
 }
 
@@ -100,7 +100,7 @@ async function handleScheduledComplianceRefresh(supabase: SB, requestId: string)
   logger.info(`[scheduled-compliance-refresh][${requestId}] Starting compliance refresh`);
   const { data, error } = await supabase.rpc('refresh_compliance_scores');
   if (error) throw error;
-  try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'scheduled-compliance-refresh', p_success: true, p_duration_ms: Date.now() - startedAt, p_result: { refreshed: data }, p_processed_count: data || 0, p_job_source: 'cron' }); } catch (err) { console.warn('[sync-router] compliance-refresh log failed', err); }
+  try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'scheduled-compliance-refresh', p_success: true, p_duration_ms: Date.now() - startedAt, p_result: { refreshed: data }, p_processed_count: data || 0, p_job_source: 'cron' }); } catch (err) { logger.warn('[sync-router] compliance-refresh log failed', err); }
   return { success: true, refreshed: data, duration_ms: Date.now() - startedAt };
 }
 
@@ -109,7 +109,7 @@ async function handleFlushEventBuffer(supabase: SB, requestId: string) {
   logger.info(`[flush-event-buffer][${requestId}] Starting event buffer flush`);
   const { data, error } = await supabase.rpc('flush_event_buffer');
   if (error) throw error;
-  try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'flush-event-buffer', p_success: true, p_duration_ms: Date.now() - startedAt, p_result: { flushed: data }, p_processed_count: data || 0, p_job_source: 'cron' }); } catch (err) { console.warn('[sync-router] flush-event-buffer log failed', err); }
+  try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'flush-event-buffer', p_success: true, p_duration_ms: Date.now() - startedAt, p_result: { flushed: data }, p_processed_count: data || 0, p_job_source: 'cron' }); } catch (err) { logger.warn('[sync-router] flush-event-buffer log failed', err); }
   return { success: true, flushed: data, duration_ms: Date.now() - startedAt };
 }
 

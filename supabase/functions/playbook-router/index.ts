@@ -63,10 +63,10 @@ async function handleAutoTriageInsights(supabase: SB, requestId: string) {
   const triagedCount = updated?.length || 0;
 
   if (triagedCount > 0) {
-    try { await supabase.from('audit_logs').insert({ action: 'auto_triage_insights', resource_type: 'ai_insight', resource_id: 'system_cron', details: { triaged_count: triagedCount, insight_ids: updated?.map(i => i.id) || [] }, success: true, trace_id: requestId }); } catch (err) { console.warn('[playbook-router] audit log failed', err); }
+    try { await supabase.from('audit_logs').insert({ action: 'auto_triage_insights', resource_type: 'ai_insight', resource_id: 'system_cron', details: { triaged_count: triagedCount, insight_ids: updated?.map(i => i.id) || [] }, success: true, trace_id: requestId }); } catch (err) { logger.warn('[playbook-router] audit log failed', err); }
   }
 
-  try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'auto-triage-insights', p_success: true, p_duration_ms: Date.now() - startedAt, p_result: { triaged: triagedCount }, p_processed_count: triagedCount, p_job_source: 'cron' }); } catch (err) { console.warn('[playbook-router] log_scheduled_job_run failed', err); }
+  try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'auto-triage-insights', p_success: true, p_duration_ms: Date.now() - startedAt, p_result: { triaged: triagedCount }, p_processed_count: triagedCount, p_job_source: 'cron' }); } catch (err) { logger.warn('[playbook-router] log_scheduled_job_run failed', err); }
   return { success: true, triaged: triagedCount, message: `Auto-triaged ${triagedCount} informational insights`, duration_ms: Date.now() - startedAt };
 }
 

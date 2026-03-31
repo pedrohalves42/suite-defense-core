@@ -30,7 +30,7 @@ serveAgent(async (req, ctx) => {
       if (!hmacResult.valid) {
         logger.warn('[serve-agent-update] HMAC failed but accepting (token-authenticated)', { requestId, agentName, errorCode: hmacResult.errorCode });
       }
-    } catch (err) { console.warn('[serve-agent-update] HMAC check failed (best-effort)', err); }
+    } catch (err) { logger.warn('[serve-agent-update] HMAC check failed (best-effort)', err); }
   }
 
   const platform = ((agentData.os_type as string) || 'windows').toLowerCase();

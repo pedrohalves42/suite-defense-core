@@ -63,7 +63,7 @@ serveTenant(async (req, ctx) => {
         target_type: 'security',
         details: { ip_address: clientIp, user_agent: req.headers.get('user-agent'), timestamp: new Date().toISOString() }
       });
-    } catch (err) { console.warn('[set-active-tenant] audit log insert failed', err); }
+    } catch (err) { logger.warn('[set-active-tenant] audit log insert failed', err); }
 
     return new Response(
       JSON.stringify({ error: 'IP not authorized for super admin access', code: 'IP_BLOCKED' }),
@@ -141,7 +141,7 @@ serveTenant(async (req, ctx) => {
         target_id: tenant_id,
         details: { previous_tenant_id: previousTenantId, new_tenant_id: tenant_id, timestamp: new Date().toISOString(), atomic_switch: true },
       });
-    } catch (err) { console.warn('[set-active-tenant] audit log for tenant_switched failed', err); }
+    } catch (err) { logger.warn('[set-active-tenant] audit log for tenant_switched failed', err); }
   }
 
   logger.info(`[set-active-tenant][${requestId}] Successfully switched user ${userId} to tenant ${tenant_id}`);

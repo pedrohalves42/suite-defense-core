@@ -113,7 +113,7 @@ function isIPInCIDR(ip: string, cidr: string): boolean {
     const maskBits = mask === 0 ? 0 : (~0 << (32 - mask)) >>> 0
     return (ipNum & maskBits) === (netNum & maskBits)
   } catch (err) {
-    console.warn('[ip-allowlist] CIDR match error', { cidr, err });
+    logger.warn('[ip-allowlist] CIDR match error', { cidr, err });
     return false
   }
 }
