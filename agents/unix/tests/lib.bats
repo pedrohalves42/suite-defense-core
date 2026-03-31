@@ -27,8 +27,8 @@ teardown() {
 
 @test "FSM: valid transition INITIALIZING -> AUTHENTICATING" {
     CURRENT_STATE="INITIALIZING"
-    run set_agent_state "AUTHENTICATING" "test"
-    [ "$status" -eq 0 ]
+    set_agent_state "AUTHENTICATING" "test"
+    [ "$CURRENT_STATE" = "AUTHENTICATING" ]
 }
 
 @test "FSM: invalid transition INITIALIZING -> ENFORCING" {
