@@ -28,7 +28,7 @@ async function scanWithHybridAnalysis(fileHash: string, apiKey: string): Promise
     const threatScore = data.threat_score || 0;
     const isMalicious = threatScore >= 50 || (data.verdict || '').includes('malicious');
     return { isMalicious, positives: isMalicious ? threatScore : 0, totalScans: 100, permalink: `https://www.hybrid-analysis.com/sample/${fileHash}`, scanDate: data.analysis_start_time, scans: data, scannerUsed: 'hybrid_analysis' };
-  } catch { return null; }
+  } catch (err) { console.warn('[scan-virus] Hybrid Analysis scan failed', err); return null; }
 }
 
 async function scanWithVirusTotal(fileHash: string, apiKey: string): Promise<ScanResult | null> {
