@@ -1,7 +1,12 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+/**
+ * get-diagnostic-script — Migrated to servePublic middleware
+ * Serves a PowerShell diagnostic script via GET (no auth required).
+ */
+import { servePublic } from '../_shared/serve-tenant.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
 const DIAGNOSTIC_SCRIPT = `#Requires -RunAsAdministrator
 # CyberShield Agent Diagnostic Script
@@ -165,7 +170,7 @@ if (Test-Path $agentPath) {
         
         # Extract version from script
         $scriptContent = Get-Content $agentScripts[0].FullName -Raw -ErrorAction SilentlyContinue
-        if ($scriptContent -match '\\$AgentVersion\\s*=\\s*["'']([^"'']+)["'']') {
+        if ($scriptContent -match '\\$AgentVersion\\s*=\\s*["'']([ ^"'']+)["'']') {
             $Report.agent.version = $Matches[1]
             Write-Success "Agent version: $($Matches[1])"
         }
@@ -299,24 +304,19 @@ if ($JsonOnly) {
 Write-Host "============================================================" -ForegroundColor Cyan
 `;
 
-Deno.serve(async (req) => {
-  const origin = req.headers.get("origin");
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: buildCorsHeaders(origin) });
-  }
+servePublic(async (req, ctx) => {
+  const { requestId } = ctx;
+  const origin = req.headers.get('origin');
 
-  // Only allow GET requests
   if (req.method !== 'GET') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
+      status: 405, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   }
 
   const clientIP = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
   const userAgent = req.headers.get('user-agent') || 'unknown';
 
-  // Rate limiting: 10 requests per 5 minutes, block for 15 minutes if exceeded
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -324,40 +324,24 @@ Deno.serve(async (req) => {
     );
 
     const { allowed, remainingRequests, resetAt } = await checkRateLimit(
-      supabase,
-      clientIP,
-      'get-diagnostic-script',
+      supabase, clientIP, 'get-diagnostic-script',
       { maxRequests: 10, windowMinutes: 5, blockMinutes: 15 }
     );
 
     if (!allowed) {
       const retryAfter = resetAt ? Math.ceil((resetAt.getTime() - Date.now()) / 1000) : 900;
       logger.warn(`[get-diagnostic-script] Rate limit exceeded for IP: ${clientIP}`);
-      
-      return new Response(JSON.stringify({ 
-        error: 'Rate limit exceeded', 
-        retry_after_seconds: retryAfter 
-      }), {
-        status: 429,
-        headers: { 
-          ...buildCorsHeaders(origin), 
-          'Content-Type': 'application/json',
-          'Retry-After': retryAfter.toString()
-        },
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded', retry_after_seconds: retryAfter }), {
+        status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json', 'Retry-After': retryAfter.toString() },
       });
     }
 
     logger.info(`[get-diagnostic-script] Access from IP: ${clientIP}, UA: ${userAgent.slice(0, 50)}, remaining: ${remainingRequests}`);
   } catch (rateLimitError) {
-    // If rate limiting fails, log and continue (don't block legitimate requests)
     logger.error('[get-diagnostic-script] Rate limit check failed:', rateLimitError);
   }
 
   return new Response(DIAGNOSTIC_SCRIPT, {
-    headers: {
-      ...buildCorsHeaders(origin),
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Content-Disposition': 'inline; filename="diagnose-agent.ps1"',
-    },
+    headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain; charset=utf-8', 'Content-Disposition': 'inline; filename="diagnose-agent.ps1"' },
   });
-});
+}, { methods: ['GET'] });
