@@ -567,9 +567,7 @@ verify_jwt = false
 [functions.process-failed-jobs]
 verify_jwt = false
 
-# === P1: Cleanup Stale Reports - DISABLED COST-OPT-V6 (covered by system-maintenance) ===
-[functions.cleanup-stale-reports]
-verify_jwt = false
+# REMOVED: cleanup-stale-reports (consolidated into cleanup-router, action: 'stale-reports')
 
 # REMOVED: job-health-monitor (consolidated into health-monitor)
 
