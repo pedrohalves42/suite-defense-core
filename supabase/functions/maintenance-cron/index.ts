@@ -26,8 +26,8 @@ serveInternal(async (_req, ctx) => {
     logger.info(`[maintenance-cron][${requestId}] Completed in ${result.duration_ms}ms: ${result.total_operations} operations`);
 
     recordMetric({ function_name: 'maintenance-cron', operation_type: 'edge_function', duration_ms: result.duration_ms, status_code: 200, metadata: result as unknown as Record<string, any> }).catch(() => {});
-    try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'maintenance-cron-consolidated', p_success: true, p_duration_ms: result.duration_ms, p_result: result, p_processed_count: result.total_operations, p_job_source: 'cron' }); } catch { /* non-critical */ }
-    try { await supabase.rpc('update_cron_health', { p_cron_name: 'maintenance-cron', p_success: true, p_details: result }); } catch { /* non-critical */ }
+    try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'maintenance-cron-consolidated', p_success: true, p_duration_ms: result.duration_ms, p_result: result, p_processed_count: result.total_operations, p_job_source: 'cron' }); } catch (err) { console.warn('[maintenance-cron] log_scheduled_job_run failed', err); }
+    try { await supabase.rpc('update_cron_health', { p_cron_name: 'maintenance-cron', p_success: true, p_details: result }); } catch (err) { console.warn('[maintenance-cron] update_cron_health failed', err); }
 
     return { success: true, ...result };
   } catch (error) {
