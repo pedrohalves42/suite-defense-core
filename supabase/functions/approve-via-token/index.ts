@@ -4,7 +4,6 @@
  * No auth required - the token IS the secret.
  */
 import { servePublic } from '../_shared/serve-tenant.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logger } from '../_shared/logger.ts';
 

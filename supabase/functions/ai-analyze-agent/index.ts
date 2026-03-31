@@ -3,7 +3,7 @@
  * Previously had NO authentication at all.
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 import { sanitizeForAI } from '../_shared/ai-sanitizer.ts';
 import { callAIJson } from '../_shared/ai-provider-helper.ts';
 import { AIEvidence, buildEvidence, calculateConfidence, generateReasoningSummary, extractDataSources } from '../_shared/ai-evidence-types.ts';

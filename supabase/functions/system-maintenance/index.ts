@@ -3,7 +3,7 @@
  * Replaces 7 individual cleanup functions.
  * Migrated to serveInternal middleware
  */
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import {

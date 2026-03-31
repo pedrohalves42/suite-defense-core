@@ -3,7 +3,7 @@
  * Previously had NO caller authentication.
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 
 interface ExecuteSolutionRequest {
