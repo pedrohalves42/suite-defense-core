@@ -188,8 +188,8 @@ export function AutomationRulesPanel() {
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) return;
 
-      const { data, error } = await supabase.functions.invoke('evaluate-automation-rules', {
-        body: { tenant_id: tenant.id },
+      const { data, error } = await supabase.functions.invoke('ops-router', {
+        body: { action: 'automation:evaluate', payload: { tenant_id: tenant.id } },
         headers: { Authorization: `Bearer ${session.session.access_token}` },
       });
 

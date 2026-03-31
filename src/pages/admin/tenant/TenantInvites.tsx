@@ -43,8 +43,8 @@ export default function TenantInvites() {
   // Create invite mutation
   const createInvite = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("notification-router", {
-        body: { action: 'invite', payload: { email: newInviteEmail, role: newInviteRole } },
+      const { data, error } = await supabase.functions.invoke("ops-router", {
+        body: { action: 'notify:invite', payload: { email: newInviteEmail, role: newInviteRole } },
       });
 
       if (error) throw error;
