@@ -1,137 +1,80 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
+/**
+ * setup-agent-script - Migrated to serveInternal
+ * Sets up agent script in storage
+ */
+import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-Deno.serve(async (req) => {
-  const origin = req.headers.get("origin");
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: buildCorsHeaders(origin) });
-  }
-
-  const requestId = crypto.randomUUID();
+serveInternal(async (_req, ctx) => {
+  const { supabase, requestId } = ctx;
   logger.info(`[${requestId}] Setup agent script in storage`);
 
   try {
-    // Create Supabase client with service role
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-    // FASE 1 CRITICO: Fetch agent script from storage
-    logger.info(`[${requestId}] Fetching agent script from storage`);
-    
     const { validateAgentScriptContent } = await import('../_shared/agent-script-validator.ts');
-    
-    // Buscar script do storage bucket
+
+    // Fetch script from storage bucket
+    logger.info(`[${requestId}] Fetching agent script from storage`);
     const { data: fileData, error: storageError } = await supabase.storage
       .from('agent-installers')
       .download('scripts/cybershield-agent-windows-v3.ps1');
-    
+
     if (storageError || !fileData) {
-      logger.error(`[${requestId}] Failed to fetch script from storage:`, storageError);
-      return new Response(
-        JSON.stringify({
-          error: 'Agent script not found',
-          message: 'Script not found in storage bucket',
-          requestId
-        }),
-        {
-          status: 503,
-          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
-        }
-      );
+      logger.info(`[${requestId}] Script not in storage, fetching from agent_releases table`);
+      const { data: release, error: releaseError } = await supabase
+        .from('agent_releases')
+        .select('script_content, version, sha256')
+        .eq('platform', 'windows')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (releaseError || !release?.script_content) {
+        return new Response(
+          JSON.stringify({ error: 'No agent script found in storage or releases table', details: releaseError?.message }),
+          { status: 404, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const validation = validateAgentScriptContent(release.script_content);
+      if (!validation.valid) {
+        return new Response(
+          JSON.stringify({ error: 'Agent script validation failed', details: validation.errors }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Upload to storage
+      const scriptBlob = new Blob([release.script_content], { type: 'text/plain' });
+      const { error: uploadError } = await supabase.storage
+        .from('agent-installers')
+        .upload('scripts/cybershield-agent-windows-v3.ps1', scriptBlob, { upsert: true, contentType: 'text/plain' });
+
+      if (uploadError) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to upload script to storage', details: uploadError.message }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      logger.info(`[${requestId}] Script uploaded from releases table (v${release.version})`);
+      return {
+        success: true, source: 'agent_releases', version: release.version,
+        sha256: release.sha256, size: release.script_content.length,
+      };
     }
-    
+
     const scriptContent = await fileData.text();
-    
-    if (!validateAgentScriptContent(scriptContent)) {
-      logger.error(`[${requestId}] CRITICAL: Script validation failed`);
-      return new Response(
-        JSON.stringify({
-          error: 'Agent script validation failed',
-          message: 'Script content is invalid or corrupted',
-          requestId
-        }),
-        {
-          status: 503,
-          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
-        }
-      );
-    }
-    
-    logger.info(`[${requestId}] Agent script validated`, { 
-      size: scriptContent.length,
-      sizeKB: (scriptContent.length / 1024).toFixed(2)
-    });
+    const validation = validateAgentScriptContent(scriptContent);
 
-    // Upload to storage bucket
-    const { data, error } = await supabase.storage
-      .from('agent-installers')
-      .upload('cybershield-agent-windows.ps1', scriptContent, {
-        contentType: 'text/plain',
-        upsert: true
-      });
+    logger.info(`[${requestId}] Script found in storage (${scriptContent.length} bytes, valid=${validation.valid})`);
 
-    if (error) {
-      logger.error(`[${requestId}] Storage upload failed:`, error);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Failed to upload to storage',
-          details: error.message,
-          requestId
-        }),
-        { 
-          status: 500,
-          headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    // Calculate hash for verification
-    const { calculateScriptHash } = await import('../_shared/agent-script-validator.ts');
-    const hash = await calculateScriptHash(scriptContent);
-
-    logger.info(`[${requestId}] Agent script uploaded successfully`);
-    logger.info(`[${requestId}] Size: ${scriptContent.length} bytes`);
-    logger.info(`[${requestId}] SHA256: ${hash}`);
-
-    // Generate signed URL (valid for 15 minutes) instead of public URL
-    const { data: signedUrlData } = await supabase.storage
-      .from('agent-installers')
-      .createSignedUrl('cybershield-agent-windows.ps1', 900); // 15 minutes
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Agent script uploaded to storage successfully',
-        size: scriptContent.length,
-        sha256: hash,
-        path: data.path,
-        signedUrl: signedUrlData?.signedUrl || null,
-        requestId,
-        timestamp: new Date().toISOString()
-      }),
-      {
-        status: 200,
-        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
-      }
-    );
-
+    return {
+      success: true, source: 'storage', size: scriptContent.length,
+      valid: validation.valid, validation_errors: validation.errors,
+    };
   } catch (error) {
-    logger.error(`[${requestId}] Setup failed:`, error);
-    return new Response(
-      JSON.stringify({
-        error: 'Setup failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
-        requestId,
-        timestamp: new Date().toISOString()
-      }),
-      {
-        status: 500,
-        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }
-      }
-    );
+    logger.error(`[${requestId}] Error:`, error);
+    throw error;
   }
 });
