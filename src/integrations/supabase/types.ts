@@ -44693,6 +44693,7 @@ export type Database = {
         Args: { p_retention_months?: number; p_table_name: string }
         Returns: number
       }
+      ensure_partition_rls: { Args: never; Returns: undefined }
       ensure_tenant_features: {
         Args: {
           p_device_quantity?: number
