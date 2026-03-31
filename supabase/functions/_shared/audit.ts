@@ -39,6 +39,7 @@ export async function createAuditLog({
       details: { ...details, _warning: 'Missing tenant_id - compliance violation' },
       ip_address: request.headers.get('x-forwarded-for'),
       user_agent: request.headers.get('user-agent'),
+      trace_id: request.headers.get('X-Trace-ID') || request.headers.get('X-Request-ID') || null,
       success,
     });
     return;
