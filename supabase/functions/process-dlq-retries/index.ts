@@ -1,9 +1,11 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
-import { createRequestContext, mergeHeaders } from '../_shared/request-context.ts';
+/**
+ * process-dlq-retries — DLQ retry processor (cron)
+ * Migrated to serveInternal middleware.
+ */
+import { serveInternal } from '../_shared/serve-tenant.ts';
+import { createRequestContext } from '../_shared/request-context.ts';
 import { getDLQEntriesForRetry, calculateNextRetry } from '../_shared/dlq.ts';
 import { logger, loggerWithContext } from '../_shared/logger.ts';
-import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 
 // ZERO-GAP: Failure classes that should NEVER be retried
 const UNRECOVERABLE_FAILURE_CLASSES = new Set([
@@ -39,35 +41,21 @@ interface DLQEntryRow {
 
 function isUnrecoverable(entry: DLQEntryRow): string | null {
   if (entry.failure_class && UNRECOVERABLE_FAILURE_CLASSES.has(entry.failure_class)) {
-    return `Unrecoverable failure_class: ${entry.failure_class}`
+    return `Unrecoverable failure_class: ${entry.failure_class}`;
   }
-  const errorMsg = entry.error_message || ''
+  const errorMsg = entry.error_message || '';
   for (const pattern of UNRECOVERABLE_ERROR_PATTERNS) {
     if (errorMsg.includes(pattern)) {
-      return `Unrecoverable error pattern: ${pattern}`
+      return `Unrecoverable error pattern: ${pattern}`;
     }
   }
-  return null
+  return null;
 }
 
-Deno.serve(async (req) => {
-  const origin = req.headers.get("origin");
+serveInternal(async (_req, ctx) => {
+  const { supabase, requestId } = ctx;
   const startedAt = Date.now();
-  const ctx = createRequestContext(req, 'process-dlq-retries');
-  const log = loggerWithContext(ctx.requestId);
-  
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: mergeHeaders(buildCorsHeaders(origin), ctx) });
-  }
-
-  // V-1125: Defense-in-depth auth guard for cron function
-  const authError = assertInternalCaller(req);
-  if (authError) return authError;
-
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  );
+  const log = loggerWithContext({ requestId });
 
   const results = {
     processed: 0,
@@ -83,7 +71,7 @@ Deno.serve(async (req) => {
 
     const rawEntries = await getDLQEntriesForRetry(supabase, 20);
     const entries = rawEntries as unknown as DLQEntryRow[];
-    
+
     log.info('Found entries for retry', { count: entries.length });
 
     if (entries.length === 0) {
@@ -93,13 +81,10 @@ Deno.serve(async (req) => {
         p_duration_ms: Date.now() - startedAt,
         p_result: { message: 'No DLQ entries to process' },
         p_processed_count: 0,
-        p_job_source: 'cron'
+        p_job_source: 'cron',
       });
 
-      return new Response(
-        JSON.stringify({ success: true, requestId: ctx.requestId, results }),
-        { status: 200, headers: mergeHeaders(buildCorsHeaders(origin), ctx) }
-      );
+      return { success: true, requestId, results };
     }
 
     for (const entry of entries) {
@@ -107,7 +92,7 @@ Deno.serve(async (req) => {
 
       try {
         // ZERO-GAP: Check if this entry is unrecoverable BEFORE retrying
-        const unrecoverableReason = isUnrecoverable(entry)
+        const unrecoverableReason = isUnrecoverable(entry);
         if (unrecoverableReason) {
           log.info('Skipping unrecoverable DLQ entry', {
             id: entry.id,
@@ -115,9 +100,9 @@ Deno.serve(async (req) => {
             failure_class: entry.failure_class,
             reason: unrecoverableReason,
             agent: entry.agent_name,
-          })
+          });
 
-          // Mark as exhausted immediately ? do NOT create a new job
+          // Mark as exhausted immediately — do NOT create a new job
           await supabase
             .from('failed_jobs_dlq')
             .update({
@@ -129,10 +114,10 @@ Deno.serve(async (req) => {
                 exhausted_at: new Date().toISOString(),
               },
             })
-            .eq('id', entry.id)
+            .eq('id', entry.id);
 
-          results.skipped_unrecoverable++
-          continue
+          results.skipped_unrecoverable++;
+          continue;
         }
 
         // Mark as retrying
@@ -155,13 +140,13 @@ Deno.serve(async (req) => {
           });
 
         if (jobError) {
-          // Dedup index block is acceptable ? skip silently
+          // Dedup index block is acceptable — skip silently
           if (jobError.message?.includes('idx_jobs_dedup_active')) {
             log.info('DLQ retry skipped: active job already exists', {
               id: entry.id,
               job_type: entry.job_type,
               agent: entry.agent_name,
-            })
+            });
             // Mark back to pending with delayed retry
             await supabase
               .from('failed_jobs_dlq')
@@ -169,8 +154,8 @@ Deno.serve(async (req) => {
                 status: 'pending',
                 next_retry_at: calculateNextRetry(entry.retry_count + 1),
               })
-              .eq('id', entry.id)
-            continue
+              .eq('id', entry.id);
+            continue;
           }
           throw new Error(`Failed to recreate job: ${jobError.message}`);
         }
@@ -247,13 +232,10 @@ Deno.serve(async (req) => {
       p_duration_ms: Date.now() - startedAt,
       p_result: results,
       p_processed_count: results.processed,
-      p_job_source: 'cron'
+      p_job_source: 'cron',
     });
 
-    return new Response(
-      JSON.stringify({ success: true, requestId: ctx.requestId, results }),
-      { status: 200, headers: mergeHeaders(buildCorsHeaders(origin), ctx) }
-    );
+    return { success: true, requestId, results };
   } catch (err) {
     log.error('Unexpected error', err);
 
@@ -264,12 +246,12 @@ Deno.serve(async (req) => {
       p_error: err instanceof Error ? err.message : 'Unknown error',
       p_result: results,
       p_processed_count: results.processed,
-      p_job_source: 'cron'
+      p_job_source: 'cron',
     });
 
     return new Response(
-      JSON.stringify({ error: 'Internal server error', requestId: ctx.requestId }),
-      { status: 500, headers: mergeHeaders(buildCorsHeaders(origin), ctx) }
+      JSON.stringify({ error: 'Internal server error', requestId }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
     );
   }
 });

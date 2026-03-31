@@ -17,19 +17,22 @@ scan-virus, serve-agent-update, serve-dns-filter, submit-antivirus-status,
 submit-rollback-event, submit-software-inventory, submit-system-metrics,
 submit-vuln-findings, submit-web-activity, upload-report, update-baseline.
 
-### ✅ Migrated to `serveInternal` (Phase 2)
+### ✅ Migrated to `serveInternal` (Phase 2 + Phase 3)
 analyze-network-anomalies, auto-generate-report, autonomous-safe-mode,
 check-agent-integrity, check-pending-agents, check-production-health,
 cleanup-stale-reports, cleanup-stale-updates, cleanup-stuck-jobs,
-cleanup-telemetry, compute-compliance-benchmarks, generate-executive-report,
-process-scheduled-jobs, scheduled-compliance-refresh, sync-stripe-subscriptions.
+cleanup-telemetry, compute-compliance-benchmarks, drift-detect,
+generate-executive-report, mitre-sync, process-dlq-retries,
+process-scheduled-jobs, scheduled-compliance-refresh,
+security-alert-dispatcher, sync-stripe-subscriptions.
 
 ### ✅ Migrated to `servePublic` (Phase 2)
 api-tenant-features, get-latest-agent-script, get-reinstall-preserve-script,
 log-domain-event, verify-compliance-report.
 
-### ✅ Migrated to `serveTenant` (Phase 2)
-accept-invite, create-stripe-products, revenue-projections, token-rotate,
+### ✅ Migrated to `serveTenant` (Phase 2 + Phase 3)
+accept-invite, create-stripe-products, notification-dispatcher,
+recover-agent-credentials, revenue-projections, token-rotate,
 update-member-role.
 
 ### ⚠️ Keep Raw `Deno.serve()` — Special Cases
