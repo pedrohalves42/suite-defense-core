@@ -74,7 +74,7 @@ serveTenant(async (_req, ctx) => {
     // Fallback to in-app
     await supabase.from('notifications').insert({
       tenant_id: tenantId,
-      title: body.subject || type,
+      title: subject || type,
       message: `[${channel} unavailable] ${message}`,
       type: 'warning',
       metadata: { ...metadata, original_channel: channel, fallback: true },
