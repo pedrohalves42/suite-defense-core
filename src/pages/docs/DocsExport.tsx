@@ -17,11 +17,11 @@ import { generatePDFFromMarkdown, generateConsolidatedPDF } from "@/lib/markdown
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
-// Import all markdown files at build time using Vite's glob import
-const mdFiles: Record<string, string> = import.meta.glob(
+// Import markdown files lazily (not eager) to avoid bundling all docs into this chunk
+const mdLoaders: Record<string, () => Promise<string>> = import.meta.glob(
   ['/docs/**/*.md', '/public/docs/**/*.md'],
-  { query: '?raw', import: 'default', eager: true }
-);
+  { query: '?raw', import: 'default', eager: false }
+) as unknown as Record<string, () => Promise<string>>;
 
 function getDocContent(path: string): string | null {
   const keys = Object.keys(mdFiles);
