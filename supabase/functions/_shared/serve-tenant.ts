@@ -156,7 +156,8 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
   } = options || {};
 
   Deno.serve(async (req: Request) => {
-    const requestId = req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const requestId = traceId;
     const startTime = Date.now();
     const origin = req.headers.get('origin');
 
