@@ -2,6 +2,7 @@
  * Agent authentication and HMAC verification for poll-jobs
  * Extraído de poll-jobs/index.ts para modularização
  */
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { normalizeVersion } from '../_shared/hexagonal/update-decision-service.ts';
 import { AgentTokenSchema } from '../_shared/validation.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
@@ -24,12 +25,21 @@ export interface AuthenticatedAgent {
   isLegacyAgent: boolean;
 }
 
+interface AgentRecord {
+  agent_name: string;
+  hmac_secret: string;
+  agent_version: string;
+  tenant_id: string;
+  last_heartbeat: string | null;
+  status: string;
+}
+
 /**
  * Authenticates agent via X-Agent-Token, validates HMAC, and returns agent data.
  */
 export async function authenticateAndValidateAgent(
   req: Request,
-  supabase: any,
+  supabase: SupabaseClient,
   origin: string | null,
 ): Promise<{ success: true; agent: AuthenticatedAgent } | { success: false; response: Response }> {
   const agentToken = req.headers.get('X-Agent-Token');
@@ -74,8 +84,8 @@ export async function authenticateAndValidateAgent(
     };
   }
 
-  const agent = Array.isArray(token.agents) ? token.agents[0] : token.agents;
-  const agentVersionStr = (agent as Record<string, unknown>).agent_version || '';
+  const agent: AgentRecord = Array.isArray(token.agents) ? token.agents[0] : token.agents;
+  const agentVersionStr = agent.agent_version || '';
   const currentNormV = normalizeVersion(agentVersionStr);
   const hmacMinNormV = normalizeVersion(HMAC_REQUIRED_MIN_VERSION);
   const isModernAgent = !!(currentNormV && hmacMinNormV && currentNormV >= hmacMinNormV);
@@ -105,7 +115,7 @@ export async function authenticateAndValidateAgent(
   if (hasAnyHmacHeader) {
     const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret, {
       agentId: token.agent_id,
-      tenantId: (agent as Record<string, unknown>).tenant_id || undefined,
+      tenantId: agent.tenant_id || undefined,
       endpoint: 'poll-jobs',
       ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined,
     });
@@ -143,9 +153,9 @@ export async function authenticateAndValidateAgent(
       agentName: agent.agent_name,
       hmacSecret: agent.hmac_secret,
       agentVersion: agentVersionStr,
-      tenantId: (agent as Record<string, unknown>).tenant_id as string || null,
-      lastHeartbeat: (agent as Record<string, unknown>).last_heartbeat as string || null,
-      status: (agent as Record<string, unknown>).status as string || null,
+      tenantId: agent.tenant_id || null,
+      lastHeartbeat: agent.last_heartbeat || null,
+      status: agent.status || null,
       tokenHash,
       isModernAgent,
       isLegacyAgent,

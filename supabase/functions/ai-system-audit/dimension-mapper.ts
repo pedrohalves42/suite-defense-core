@@ -19,13 +19,13 @@ export const DIMENSION_MAPPING: Record<string, { scoreCol: string; analysisCol: 
 export function buildAuditInsertData(
   tenantId: string,
   userId: string,
-  analysisResult: any,
-  metrics: any,
+  analysisResult: Record<string, unknown>,
+  metrics: Record<string, unknown>,
   aiModel: string,
   promptHash: string,
   tokensUsed: number,
-): Record<string, any> {
-  const insertData: Record<string, any> = {
+): Record<string, unknown> {
+  const insertData: Record<string, unknown> = {
     tenant_id: tenantId,
     created_by: userId,
     overall_score: analysisResult.overall_score,

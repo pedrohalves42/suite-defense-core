@@ -10,6 +10,8 @@ import { processAndEnrichEvents } from './event-processor.ts';
 
 const BATCH_SIZE = 5000;
 
+interface InsertResult { table: string; count: number; error?: string }
+
 serveInternal(async (_req, ctx) => {
   const { supabase, requestId } = ctx;
   const startTime = Date.now();
@@ -29,13 +31,22 @@ serveInternal(async (_req, ctx) => {
   const { processEvents, fileEvents, networkEvents, registryEvents, processedIds, threatMatches, anomalyAlerts } = processAndEnrichEvents(rows, threatIntel, baselines);
 
   // Step 4: Batch insert into final tables
-  const insertPromises: Promise<{ table: string; count: number; error?: string }>[] = [];
-  if (processEvents.length > 0) insertPromises.push(supabase.from('endpoint_process_events').insert(processEvents).then(({ error }: any) => ({ table: 'process', count: error ? 0 : processEvents.length, error: error?.message })));
-  if (fileEvents.length > 0) insertPromises.push(supabase.from('endpoint_file_events').insert(fileEvents).then(({ error }: any) => ({ table: 'file', count: error ? 0 : fileEvents.length, error: error?.message })));
-  if (networkEvents.length > 0) insertPromises.push(supabase.from('endpoint_network_events').insert(networkEvents).then(({ error }: any) => ({ table: 'network', count: error ? 0 : networkEvents.length, error: error?.message })));
-  if (registryEvents.length > 0) insertPromises.push(supabase.from('endpoint_registry_events').insert(registryEvents).then(({ error }: any) => ({ table: 'registry', count: error ? 0 : registryEvents.length, error: error?.message })));
-  if (threatMatches.length > 0) insertPromises.push(supabase.from('threat_matches').insert(threatMatches).then(({ error }: any) => ({ table: 'threat_matches', count: error ? 0 : threatMatches.length, error: error?.message })));
-  if (anomalyAlerts.length > 0) insertPromises.push(supabase.from('system_alerts').insert(anomalyAlerts).then(({ error }: any) => ({ table: 'anomaly_alerts', count: error ? 0 : anomalyAlerts.length, error: error?.message })));
+  const insertPromises: Promise<InsertResult>[] = [];
+  const insertBatch = (table: string, fromTable: string, items: Record<string, unknown>[]) => {
+    if (items.length > 0) {
+      insertPromises.push(
+        supabase.from(fromTable).insert(items).then(({ error }: { error: { message: string } | null }) => ({
+          table, count: error ? 0 : items.length, error: error?.message
+        }))
+      );
+    }
+  };
+  insertBatch('process', 'endpoint_process_events', processEvents);
+  insertBatch('file', 'endpoint_file_events', fileEvents);
+  insertBatch('network', 'endpoint_network_events', networkEvents);
+  insertBatch('registry', 'endpoint_registry_events', registryEvents);
+  insertBatch('threat_matches', 'threat_matches', threatMatches);
+  insertBatch('anomaly_alerts', 'system_alerts', anomalyAlerts);
 
   const results = await Promise.all(insertPromises);
 
@@ -48,7 +59,7 @@ serveInternal(async (_req, ctx) => {
     if (successIds.length > 0) await supabase.from('endpoint_event_buffer').update({ processed_at: new Date().toISOString() }).in('id', successIds);
   } else {
     const CHUNK = 500;
-    const markPromises: Promise<any>[] = [];
+    const markPromises: Promise<unknown>[] = [];
     for (let i = 0; i < processedIds.length; i += CHUNK) {
       markPromises.push(supabase.from('endpoint_event_buffer').update({ processed_at: new Date().toISOString() }).in('id', processedIds.slice(i, i + CHUNK)));
     }

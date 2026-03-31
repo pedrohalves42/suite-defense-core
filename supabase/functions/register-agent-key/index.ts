@@ -77,8 +77,8 @@ Deno.serve(async (req) => {
     try {
       const { data: orphanKeys } = await supabase.from('agent_signing_keys').select('id, key_fingerprint, algorithm, created_at').eq('agent_id', agent.id).eq('is_active', true).is('revoked_at', null);
       if (orphanKeys && orphanKeys.length > 1) {
-        const sorted = orphanKeys.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        const toDeactivate = sorted.slice(1).map((k: any) => k.id);
+        const sorted = orphanKeys.sort((a: Record<string, string>, b: Record<string, string>) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        const toDeactivate = sorted.slice(1).map((k: Record<string, string>) => k.id);
         if (toDeactivate.length > 0) await supabase.from('agent_signing_keys').update({ is_active: false, valid_until: new Date().toISOString() }).in('id', toDeactivate);
       }
     } catch { /* non-fatal */ }

@@ -2,6 +2,7 @@
  * Agent creation and re-enrollment logic
  * Extraído de enroll-agent/index.ts para modularização
  */
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { createAuditLog } from '../_shared/audit.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
@@ -16,7 +17,7 @@ interface AgentHandlerResult {
  * Handles re-enrollment of an existing agent via RPC with cross-tenant validation.
  */
 export async function handleReEnrollment(
-  supabase: any,
+  supabase: SupabaseClient,
   existingAgentId: string,
   agentName: string,
   hmacSecret: string,
@@ -153,7 +154,7 @@ export async function handleReEnrollment(
  * Creates a new agent record.
  */
 export async function createNewAgent(
-  supabase: any,
+  supabase: SupabaseClient,
   tenantId: string,
   agentName: string,
   hmacSecret: string,

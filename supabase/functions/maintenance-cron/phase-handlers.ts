@@ -2,6 +2,7 @@
  * Phase handlers for maintenance-cron
  * Extraído de maintenance-cron/index.ts
  */
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 
 const STUCK_TIMEOUT_MINUTES = 10;
@@ -41,8 +42,12 @@ export function createEmptyResult(): ConsolidatedResult {
   };
 }
 
+interface JobRow { id: string; agent_name?: string; type?: string; delivered_at?: string; delivery_attempts?: number; expires_at?: string; tenant_id?: string; agent_id?: string; payload?: Record<string, unknown>; priority?: number }
+interface IdRow { id: string }
+interface TenantRow { tenant_id: string }
+
 /** Phase 1: Core maintenance RPC */
-export async function runMaintenanceRpc(supabase: any, result: ConsolidatedResult): Promise<void> {
+export async function runMaintenanceRpc(supabase: SupabaseClient, result: ConsolidatedResult): Promise<void> {
   try {
     const { data, error } = await supabase.rpc('run_maintenance_v2', { p_expire_limit: 500, p_archive_limit: 1000 });
     if (error) logger.error('[maintenance] run_maintenance_v2 failed:', error.message);
@@ -51,7 +56,7 @@ export async function runMaintenanceRpc(supabase: any, result: ConsolidatedResul
 }
 
 /** Phase 2: Stuck delivered jobs → failed */
-export async function cleanupStuckJobs(supabase: any, now: string, result: ConsolidatedResult): Promise<void> {
+export async function cleanupStuckJobs(supabase: SupabaseClient, now: string, result: ConsolidatedResult): Promise<void> {
   try {
     const cutoffTime = new Date(Date.now() - STUCK_TIMEOUT_MINUTES * 60 * 1000).toISOString();
     const { data: stuckDelivered } = await supabase
@@ -61,13 +66,13 @@ export async function cleanupStuckJobs(supabase: any, now: string, result: Conso
       .lt('delivered_at', cutoffTime);
 
     if (stuckDelivered && stuckDelivered.length > 0) {
-      const allIds = stuckDelivered.map((j: any) => j.id);
+      const allIds = stuckDelivered.map((j: JobRow) => j.id);
       const { error: failError } = await supabase.from('jobs')
         .update({ status: 'failed', completed_at: now, error_message: '[CLEANUP] Job delivered but agent never submitted result', failure_class: 'AGENT_STALLED' })
         .in('id', allIds);
       if (!failError) result.stuck_jobs.failed = allIds.length;
 
-      const retryable = stuckDelivered.filter((j: any) => (j.delivery_attempts || 0) < MAX_DELIVERY_ATTEMPTS - 1 && !(j.expires_at && new Date(j.expires_at) < new Date(now)));
+      const retryable = stuckDelivered.filter((j: JobRow) => (j.delivery_attempts || 0) < MAX_DELIVERY_ATTEMPTS - 1 && !(j.expires_at && new Date(j.expires_at) < new Date(now)));
       const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
 
       for (const job of retryable) {
@@ -90,7 +95,7 @@ export async function cleanupStuckJobs(supabase: any, now: string, result: Conso
     if (expiredJobs && expiredJobs.length > 0) {
       const { error: expireError } = await supabase.from('jobs')
         .update({ status: 'failed', error_message: '[DLQ:EXPIRED_TTL] Job expired (TTL exceeded)', completed_at: now, failure_class: 'EXPIRED' })
-        .in('id', expiredJobs.map((j: any) => j.id));
+        .in('id', expiredJobs.map((j: IdRow) => j.id));
       if (!expireError) result.stuck_jobs.expired = expiredJobs.length;
     }
 
@@ -103,7 +108,7 @@ export async function cleanupStuckJobs(supabase: any, now: string, result: Conso
 }
 
 /** Phase 3: Auto cleanup old jobs */
-export async function autoCleanupJobs(supabase: any, now: string, result: ConsolidatedResult): Promise<void> {
+export async function autoCleanupJobs(supabase: SupabaseClient, now: string, result: ConsolidatedResult): Promise<void> {
   try {
     const { data: systemMode } = await supabase.rpc('get_system_mode_safe');
     if (systemMode === 'halt_jobs') return;
@@ -124,7 +129,7 @@ export async function autoCleanupJobs(supabase: any, now: string, result: Consol
 }
 
 /** Phase 4-9: Remaining cleanup phases */
-export async function runRemainingPhases(supabase: any, now: string, result: ConsolidatedResult): Promise<void> {
+export async function runRemainingPhases(supabase: SupabaseClient, now: string, result: ConsolidatedResult): Promise<void> {
   // Phase 4: Offline agents
   try {
     const { data } = await supabase.rpc('cleanup_offline_agents_jobs');
@@ -139,7 +144,7 @@ export async function runRemainingPhases(supabase: any, now: string, result: Con
     if (staleExecs && staleExecs.length > 0) {
       const { error } = await supabase.from('playbook_executions')
         .update({ status: 'failed', completed_at: now, notes: `Timeout automatico: execucao excedeu ${PLAYBOOK_TIMEOUT_MINUTES} minutos` })
-        .in('id', staleExecs.map((e: any) => e.id));
+        .in('id', staleExecs.map((e: IdRow) => e.id));
       if (!error) result.stale_playbooks.cleaned = staleExecs.length;
     }
   } catch (e) { logger.warn('[maintenance] Phase 5 error:', e); }
@@ -151,7 +156,7 @@ export async function runRemainingPhases(supabase: any, now: string, result: Con
     if (staleReports && staleReports.length > 0) {
       const { error } = await supabase.from('security_reports')
         .update({ status: 'failed', error_message: `Relatorio travado por mais de ${REPORT_STALE_HOURS}h`, updated_at: now })
-        .in('id', staleReports.map((r: any) => r.id));
+        .in('id', staleReports.map((r: IdRow) => r.id));
       if (!error) result.stale_reports.cleaned = staleReports.length;
     }
   } catch (e) { logger.warn('[maintenance] Phase 6 error:', e); }
@@ -166,10 +171,11 @@ export async function runRemainingPhases(supabase: any, now: string, result: Con
       .select('id, agent_name, tenant_id, agent_version, force_update_version, force_update_at, force_update_delivery_count, force_update_reason')
       .not('force_update_version', 'is', null).gte('force_update_delivery_count', UPDATE_MAX_DELIVERY_COUNT);
 
-    const allStale = new Map<string, any>();
+    interface StaleAgent { id: string; agent_name: string; tenant_id: string; agent_version: string; force_update_version: string; force_update_at: string; force_update_delivery_count: number; force_update_reason: string }
+    const allStale = new Map<string, StaleAgent>();
     for (const a of [...(staleByTime || []), ...(staleByCount || [])]) {
       if (a.force_update_reason === 'auto_retrigger_72h_offline' && (a.force_update_delivery_count || 0) === 0) continue;
-      allStale.set(a.id, a);
+      allStale.set(a.id, a as StaleAgent);
     }
 
     for (const agent of allStale.values()) {
@@ -199,7 +205,7 @@ export async function runRemainingPhases(supabase: any, now: string, result: Con
     const { error: cleanupError } = await supabase.rpc('cleanup_expired_telemetry');
     result.telemetry.cleanup_done = !cleanupError;
     const { data: tenants } = await supabase.from('telemetry_retention_config').select('tenant_id').eq('is_enabled', true);
-    const uniqueTenants = [...new Set((tenants || []).map((t: any) => t.tenant_id))];
+    const uniqueTenants = [...new Set((tenants || []).map((t: TenantRow) => t.tenant_id))];
     const CONCURRENCY = 5;
     for (let i = 0; i < uniqueTenants.length; i += CONCURRENCY) {
       const batch = uniqueTenants.slice(i, i + CONCURRENCY);

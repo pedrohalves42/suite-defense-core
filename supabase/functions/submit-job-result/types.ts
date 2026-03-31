@@ -44,7 +44,7 @@ export interface SideEffectAccumulator {
 }
 
 export interface SubmitContext {
-  supabase: any;
+  supabase: import('https://esm.sh/@supabase/supabase-js@2.74.0').SupabaseClient;
   agent: AuthenticatedAgentInfo;
   agentVersion: string;
   job: JobRecord;

@@ -2,6 +2,7 @@
  * Job claiming, validation, signing and response building for poll-jobs
  * Extraído de poll-jobs/index.ts para modularização
  */
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { signJob } from '../_shared/crypto-utils.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
@@ -21,9 +22,6 @@ interface ClaimedJob {
 
 const MAX_PENDING_JOBS = 50;
 
-/**
- * Creates the empty response for legacy or modern agents.
- */
 export function emptyResponse(isLegacyAgent: boolean, origin: string | null): Response {
   return new Response(
     JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }),
@@ -31,12 +29,8 @@ export function emptyResponse(isLegacyAgent: boolean, origin: string | null): Re
   );
 }
 
-/**
- * Checks offline guard (>2h) and updates heartbeat if needed.
- * Returns a Response if agent should not receive jobs yet, null otherwise.
- */
 export async function checkOfflineGuard(
-  supabase: any,
+  supabase: SupabaseClient,
   agent: AuthenticatedAgent,
   origin: string | null,
 ): Promise<Response | null> {
@@ -58,16 +52,12 @@ export async function checkOfflineGuard(
     return emptyResponse(agent.isLegacyAgent, origin);
   }
 
-  // Update token last_used_at
   await supabase.from('agent_tokens').update({ last_used_at: now.toISOString() }).eq('token_hash', agent.tokenHash);
   return null;
 }
 
-/**
- * Checks backlog limit. Returns empty response if limit reached.
- */
 export async function checkBacklogLimit(
-  supabase: any,
+  supabase: SupabaseClient,
   agent: AuthenticatedAgent,
   origin: string | null,
 ): Promise<Response | null> {
@@ -84,11 +74,8 @@ export async function checkBacklogLimit(
   return null;
 }
 
-/**
- * Claims jobs atomically, validates, signs, and builds the response payload.
- */
 export async function claimAndBuildResponse(
-  supabase: any,
+  supabase: SupabaseClient,
   agent: AuthenticatedAgent,
   origin: string | null,
 ): Promise<Response> {
@@ -100,7 +87,6 @@ export async function claimAndBuildResponse(
     return emptyResponse(agent.isLegacyAgent, origin);
   }
 
-  // Validate claimed jobs
   const validJobs = (jobs || []).filter((job: ClaimedJob) => {
     if (!job || !job.job_id || typeof job.job_id !== 'string') return false;
     if (!job.job_type || typeof job.job_type !== 'string') return false;
@@ -113,7 +99,6 @@ export async function claimAndBuildResponse(
     return emptyResponse(agent.isLegacyAgent, origin);
   }
 
-  // Sign jobs
   const privateKey = Deno.env.get('ED25519_PRIVATE_KEY');
   const signingEnabled = !!privateKey;
 
@@ -149,7 +134,6 @@ export async function claimAndBuildResponse(
 
   logger.info('Jobs delivered via atomic claim with audit trail', { agentName: agent.agentName, count: jobsResponse.length });
 
-  // Legacy agent compat
   if (agent.isLegacyAgent) {
     const recoveryTypes = ['update_agent', 'reinstall_agent', 'force_update'];
     const recoveryJobs = jobsResponse.filter(j => j && recoveryTypes.includes(j.type || j.job_type || ''));

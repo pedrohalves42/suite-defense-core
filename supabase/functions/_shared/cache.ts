@@ -1,16 +1,12 @@
 import { logger } from "./logger.ts";
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+
 /**
  * Two-tier cache: in-memory (per-invocation) + Supabase kv_cache table (cross-invocation)
- * No Redis dependency ? works on existing Supabase infrastructure.
- *
- * Usage:
- *   import { getCached, invalidateCache } from '../_shared/cache.ts';
+ * No Redis dependency → works on existing Supabase infrastructure.
  */
 
-// SupabaseClient type used loosely to avoid Deno-only import issues in build
-type SupabaseClient = any;
-
-// ??? Tier 1: In-Memory Cache (per Edge Function invocation) ???
+// ─── Tier 1: In-Memory Cache (per Edge Function invocation) ───
 
 interface CacheEntry<T = unknown> {
   value: T;
@@ -55,16 +51,14 @@ class MemoryCache {
     this.store.clear();
   }
 
-  /** Iterate keys (for prefix-based invalidation) */
   keys(): IterableIterator<string> {
     return this.store.keys();
   }
 }
 
-// Singleton ? lives for the duration of one Edge Function invocation
 export const memoryCache = new MemoryCache();
 
-// ??? Cache Options ???
+// ─── Cache Options ───
 
 export interface CacheOptions {
   ttlSeconds?: number;
@@ -72,14 +66,10 @@ export interface CacheOptions {
   skipMemoryCache?: boolean;
 }
 
-const DEFAULT_TTL = 300; // 5 minutes
+const DEFAULT_TTL = 300;
 
-// ??? Tier 2: Supabase kv_cache table (cross-invocation) ???
+// ─── Tier 2: Supabase kv_cache table (cross-invocation) ───
 
-/**
- * Get a value from cache (memory ? kv_cache RPC ? fetcher).
- * Stores result back into both tiers on miss.
- */
 export async function getCached<T>(
   supabase: SupabaseClient,
   key: string,
@@ -88,17 +78,14 @@ export async function getCached<T>(
 ): Promise<T> {
   const { ttlSeconds = DEFAULT_TTL, forceRefresh = false, skipMemoryCache = false } = options;
 
-  // 1. Check memory cache
   if (!skipMemoryCache && !forceRefresh) {
     const memValue = memoryCache.get<T>(key);
     if (memValue !== null) return memValue;
   }
 
-  // 2. Check kv_cache table via RPC
   if (!forceRefresh) {
     try {
       const { data, error } = await supabase.rpc('get_cached_value', { p_key: key });
-
       if (!error && data !== null) {
         const value = data as T;
         if (!skipMemoryCache) {
@@ -107,19 +94,16 @@ export async function getCached<T>(
         return value;
       }
     } catch {
-      // Table read failed ? fall through to fetcher
+      // Table read failed → fall through to fetcher
     }
   }
 
-  // 3. Cache miss ? call fetcher
   const freshValue = await fetcher();
 
-  // Store in memory
   if (!skipMemoryCache) {
     memoryCache.set(key, freshValue, ttlSeconds);
   }
 
-  // Store in kv_cache table via RPC (fire-and-forget)
   try {
     await supabase.rpc('set_cached_value', {
       p_key: key,
@@ -133,9 +117,6 @@ export async function getCached<T>(
   return freshValue;
 }
 
-/**
- * Invalidate a specific cache key from both tiers.
- */
 export async function invalidateCache(
   supabase: SupabaseClient,
   key: string
@@ -148,14 +129,10 @@ export async function invalidateCache(
   }
 }
 
-/**
- * Invalidate all cache entries matching a prefix.
- */
 export async function invalidateCacheByPrefix(
   supabase: SupabaseClient,
   prefix: string
 ): Promise<number> {
-  // Clear matching memory cache entries
   for (const key of Array.from(memoryCache.keys())) {
     if (key.startsWith(prefix)) {
       memoryCache.delete(key);
@@ -171,10 +148,6 @@ export async function invalidateCacheByPrefix(
   }
 }
 
-/**
- * Clean up expired entries from kv_cache.
- * Call periodically (e.g., from a cron Edge Function).
- */
 export async function cleanupExpiredCache(
   supabase: SupabaseClient
 ): Promise<number> {
@@ -186,7 +159,25 @@ export async function cleanupExpiredCache(
   return (data as number) || 0;
 }
 
-// ??? Domain-specific helpers ???
+// ─── Domain-specific helpers ───
+
+interface AgentSummary {
+  id: string;
+  name: string;
+  version: string;
+  status: string;
+  last_seen_at: string | null;
+  ip_address: string | null;
+}
+
+interface MitreRule {
+  technique_id: string;
+  name: string;
+  description: string;
+  tactic: string;
+  platform: string;
+  severity: string;
+}
 
 export async function getTenantConfig(
   supabase: SupabaseClient,
@@ -220,7 +211,7 @@ export async function getAgentsByTenant(
   supabase: SupabaseClient,
   tenantId: string,
   options: CacheOptions = {}
-): Promise<any[]> {
+): Promise<AgentSummary[]> {
   return getCached(
     supabase,
     `tenant:${tenantId}:agents`,
@@ -267,7 +258,7 @@ export async function getMitreRules(
   supabase: SupabaseClient,
   tactic?: string,
   options: CacheOptions = {}
-): Promise<any[]> {
+): Promise<MitreRule[]> {
   const key = tactic ? `mitre:rules:${tactic}` : 'mitre:rules:all';
 
   return getCached(

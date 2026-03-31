@@ -1,18 +1,29 @@
 import type { DeterministicCriteria } from './types.ts';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
+
+interface RedTeamMetrics {
+  agents?: { offline?: number };
+  ai_actions?: { approval_rate?: number; human_reviewed?: number };
+  rollbacks?: { total?: number };
+  users?: { count?: number };
+  dlq?: { current?: number };
+  critical_alerts?: { open?: number };
+}
 
 /**
  * Build a deterministic Red Team assessment when AI providers are unavailable.
  */
-export function buildDeterministicAssessment(metrics: any) {
+export function buildDeterministicAssessment(metrics: RedTeamMetrics | null) {
+  const m = metrics || {};
   const binaryCriteria: DeterministicCriteria = {
-    offline_agents_exist: (metrics?.agents?.offline || 0) > 0,
-    human_approval_rate_zero: (metrics?.ai_actions?.approval_rate || 0) === 0,
-    human_reviewed_zero: (metrics?.ai_actions?.human_reviewed || 0) === 0,
-    rollback_never_tested: (metrics?.rollbacks?.total || 0) === 0,
-    single_user_system: (metrics?.users?.count || 0) <= 1,
-    dlq_has_items: (metrics?.dlq?.current || 0) > 0,
-    critical_alerts_open: (metrics?.critical_alerts?.open || 0) > 0,
+    offline_agents_exist: (m?.agents?.offline || 0) > 0,
+    human_approval_rate_zero: (m?.ai_actions?.approval_rate || 0) === 0,
+    human_reviewed_zero: (m?.ai_actions?.human_reviewed || 0) === 0,
+    rollback_never_tested: (m?.rollbacks?.total || 0) === 0,
+    single_user_system: (m?.users?.count || 0) <= 1,
+    dlq_has_items: (m?.dlq?.current || 0) > 0,
+    critical_alerts_open: (m?.critical_alerts?.open || 0) > 0,
   };
 
   const criteriaCount = Object.values(binaryCriteria).filter(Boolean).length;
@@ -47,7 +58,7 @@ export function buildDeterministicAssessment(metrics: any) {
 /**
  * Save a deterministic assessment to the database.
  */
-export async function saveDeterministicAssessment(supabase: any, tenantId: string, result: ReturnType<typeof buildDeterministicAssessment>, metrics: any) {
+export async function saveDeterministicAssessment(supabase: SupabaseClient, tenantId: string, result: ReturnType<typeof buildDeterministicAssessment>, metrics: Record<string, unknown> | null) {
   const { data: savedAssessment } = await supabase
     .from('red_team_assessments')
     .insert({
