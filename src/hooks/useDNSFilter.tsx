@@ -214,10 +214,11 @@ export function useDNSFilter() {
         },
       }));
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TS2589 workaround for deep Supabase types
-      const { data, error } = await (supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TS2589 workaround
+      const { data, error } = await (supabase as Record<string, any>)
         .from('jobs')
-        .insert(jobs as Parameters<ReturnType<typeof supabase.from<'jobs'>>['insert']>[0]) as unknown as Promise<{ data: Array<{ id: string }> | null; error: Error | null }>);
+        .insert(jobs)
+        .select('id');
 
       if (error) throw error;
       return { jobsCreated: data?.length || 0, agents: agents.map(a => a.agent_name), message: '' };
