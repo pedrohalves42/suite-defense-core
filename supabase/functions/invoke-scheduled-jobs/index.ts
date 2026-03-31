@@ -38,7 +38,7 @@ serveInternal(async (_req, ctx) => {
   const jobTypeToFunction: Record<string, string> = {
     'edge_function': '',
     'autonomous_safe_mode': 'autonomous-safe-mode',
-    'auto_cleanup': 'auto-cleanup-jobs',
+    'auto_cleanup': 'cleanup-router',
     'auto_execute_ai': 'auto-execute-ai-actions',
     'watchdog_non_execution': 'watchdog-non-execution',
     'ai_system_analyzer': 'ai-system-analyzer',
