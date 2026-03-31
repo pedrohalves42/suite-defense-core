@@ -3,6 +3,8 @@
  * Single source of truth for all heartbeat-related interfaces.
  */
 
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
+
 export interface OSInfo {
   os_type?: string;
   platform?: string; // Legacy field
@@ -77,7 +79,7 @@ export interface AgentUpdate {
 }
 
 export interface HeartbeatContext {
-  supabase: import('https://esm.sh/@supabase/supabase-js@2.74.0').SupabaseClient;
+  supabase: SupabaseClient;
   agent: AgentContext;
   osInfo: OSInfo;
   updateData: AgentUpdate;
