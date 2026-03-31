@@ -34,7 +34,7 @@ export async function fetchMalwareBazaarRecent(): Promise<RawIndicator[]> {
     }
 
     const text = await resp.text();
-    let data: any;
+    let data: Record<string, unknown>;
     try { data = JSON.parse(text); } catch { logger.warn('MalwareBazaar returned non-JSON:', text.substring(0, 200)); return await fetchMalwareBazaarCSV(); }
 
     if (data.query_status === 'ok' && Array.isArray(data.data)) {
