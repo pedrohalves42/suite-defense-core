@@ -2,7 +2,6 @@
  * ai-red-team-assessment — Modularized
  * Modules: types, metrics-collector, deterministic-fallback, assessment-saver
  */
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { AIPromptRegistry, logPromptUsage } from "../_shared/ai-prompt-registry.ts";
 import { callAI, type AIMessage } from "../_shared/ai-provider-helper.ts";
@@ -12,7 +11,7 @@ import { collectMetrics } from './metrics-collector.ts';
 import { buildDeterministicAssessment, saveDeterministicAssessment } from './deterministic-fallback.ts';
 import { saveAssessment } from './assessment-saver.ts';
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: buildCorsHeaders(origin) });
   }

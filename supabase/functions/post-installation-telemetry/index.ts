@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { verifyHmacSignature } from "../_shared/hmac.ts";
 import { hashToken } from "../_shared/token-hash.ts";
@@ -15,7 +14,7 @@ const corsHeaders: Record<string, string> = {
 
 const AgentTokenSchema = z.string().regex(/^[A-Za-z0-9]{64}$/, "Invalid agent token format");
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: buildCorsHeaders(origin) });
   }
