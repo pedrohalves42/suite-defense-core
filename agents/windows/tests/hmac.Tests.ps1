@@ -3,11 +3,10 @@ BeforeAll {
 }
 
 Describe "Compute-HMAC" {
-    It "Returns a non-empty base64 string" {
+    It "Returns a non-empty lowercase hex string (64 chars)" {
         $result = Compute-HMAC -Message "hello" -Secret "secret"
         $result | Should -Not -BeNullOrEmpty
-        # Should be valid base64
-        { [Convert]::FromBase64String($result) } | Should -Not -Throw
+        $result | Should -MatchExactly '^[0-9a-f]{64}$'
     }
 
     It "Returns consistent results for same input" {
@@ -27,6 +26,30 @@ Describe "Compute-HMAC" {
         $r2 = Compute-HMAC -Message "message" -Secret "key-b"
         $r1 | Should -Not -Be $r2
     }
+
+    It "Decodes hex secret correctly (64-char hex key)" {
+        $hexSecret = "aa" * 32
+        $result = Compute-HMAC -Message "test" -Secret $hexSecret
+        $result | Should -MatchExactly '^[0-9a-f]{64}$'
+    }
+
+    It "Falls back to UTF-8 for non-hex secrets" {
+        $result = Compute-HMAC -Message "test" -Secret "not-a-hex-key"
+        $result | Should -MatchExactly '^[0-9a-f]{64}$'
+    }
+}
+
+Describe "New-HmacNonce" {
+    It "Returns a 32-char lowercase hex string" {
+        $nonce = New-HmacNonce
+        $nonce | Should -MatchExactly '^[0-9a-f]{32}$'
+    }
+
+    It "Returns unique values on consecutive calls" {
+        $n1 = New-HmacNonce
+        $n2 = New-HmacNonce
+        $n1 | Should -Not -Be $n2
+    }
 }
 
 Describe "Test-HMAC" {
@@ -37,7 +60,7 @@ Describe "Test-HMAC" {
     }
 
     It "Returns false for invalid signature" {
-        $result = Test-HMAC -Message "test" -Signature "bm90LWEtdmFsaWQtc2lnbmF0dXJl" -Secret "mysecret"
+        $result = Test-HMAC -Message "test" -Signature "00" * 32 -Secret "mysecret"
         $result | Should -BeFalse
     }
 
