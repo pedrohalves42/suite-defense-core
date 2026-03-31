@@ -102,7 +102,7 @@ serveTenant(async (req, ctx) => {
 
   // ??? VALIDATE ???
   if (action === 'validate') {
-    const { agentId, token: agentToken, hmacSecret } = body;
+    const { agentId, token: agentToken, hmacSecret } = parsed.data;
     if (!agentId || !agentToken) {
       return { valid: false, error: 'agentId and token required' };
     }
