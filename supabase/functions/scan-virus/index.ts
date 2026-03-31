@@ -38,7 +38,7 @@ async function scanWithVirusTotal(fileHash: string, apiKey: string): Promise<Sca
     const data = await resp.json();
     if (data.response_code !== 1) return null;
     return { isMalicious: data.positives > 0, positives: data.positives || 0, totalScans: data.total || 0, permalink: data.permalink, scanDate: data.scan_date, scans: data.scans, scannerUsed: 'virustotal' };
-  } catch { return null; }
+  } catch (err) { console.warn('[scan-virus] VirusTotal scan failed', err); return null; }
 }
 
 serveAgent(async (_req, ctx) => {

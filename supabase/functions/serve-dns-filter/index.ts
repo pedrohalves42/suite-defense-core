@@ -55,7 +55,7 @@ serveAgent(async (_req, ctx) => {
         }
       }
     }
-  } catch { /* blocked_websites may not exist */ }
+  } catch (err) { console.warn('[serve-dns-filter] blocked_websites query failed', err); }
 
   logger.info(`[${requestId}] Serving ${blockedDomains.length} blocked domains to ${agentName}`);
 

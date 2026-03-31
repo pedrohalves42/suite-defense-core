@@ -69,7 +69,7 @@ serveInternal(async (_req, ctx) => {
   result.success = result.errors.length === 0;
   result.duration_ms = Date.now() - startedAt;
 
-  try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'release-sync', p_status: result.success ? 'success' : 'partial', p_details: { ...result, requestId } }); } catch { /* */ }
+  try { await supabase.rpc('log_scheduled_job_run', { p_job_key: 'release-sync', p_status: result.success ? 'success' : 'partial', p_details: { ...result, requestId } }); } catch (err) { console.warn('[release-sync] log_scheduled_job_run failed', err); }
 
   return { ...result, requestId };
 });

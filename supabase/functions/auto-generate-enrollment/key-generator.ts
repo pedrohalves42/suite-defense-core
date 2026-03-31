@@ -64,7 +64,8 @@ export async function validateHmacSecret(
     );
     await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().encode(testPayload));
     return true;
-  } catch {
+  } catch (err) {
+    console.warn('[key-generator] HMAC key validation failed', err);
     return false;
   }
 }

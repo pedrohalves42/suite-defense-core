@@ -25,7 +25,7 @@ serveAgent(async (req, ctx) => {
       if (!hmacResult.valid) {
         logger.warn('[confirm-force-update] HMAC failed, accepting token-only', { requestId, errorCode: hmacResult.errorCode, agentName });
       }
-    } catch { /* HMAC check is best-effort */ }
+    } catch (err) { console.warn('[confirm-force-update] HMAC check failed (best-effort)', err); }
   }
 
   const { new_version, old_version } = body as { new_version?: string; old_version?: string };

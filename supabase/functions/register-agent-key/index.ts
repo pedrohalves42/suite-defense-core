@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
         const toDeactivate = sorted.slice(1).map((k: Record<string, string>) => k.id);
         if (toDeactivate.length > 0) await supabase.from('agent_signing_keys').update({ is_active: false, valid_until: new Date().toISOString() }).in('id', toDeactivate);
       }
-    } catch { /* non-fatal */ }
+    } catch (err) { console.warn('[register-agent-key] orphan key deactivation failed', err); }
 
     // 8. Register new key
     const { data: registerResult, error: registerError } = await supabase.rpc('register_agent_signing_key', { p_agent_id: agent.id, p_public_key: payload.public_key, p_fingerprint: providedFp, p_algorithm: algorithm });
