@@ -76,7 +76,7 @@ const DocsExport = () => {
     async (doc: { title: string; path: string }) => {
       setDownloading(doc.path);
       try {
-        const content = getDocContent(doc.path);
+        const content = await getDocContent(doc.path);
         if (!content) {
           toast.error(`Documento não encontrado: ${doc.title}`);
           return;
