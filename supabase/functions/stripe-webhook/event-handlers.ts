@@ -3,6 +3,7 @@
  * Extraído de stripe-webhook/index.ts para modularização
  */
 import Stripe from "https://esm.sh/stripe@18.5.0";
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 
 // V4: UUID validation regex
