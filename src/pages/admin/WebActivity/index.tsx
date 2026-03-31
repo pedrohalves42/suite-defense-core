@@ -85,7 +85,8 @@ export default function WebActivity() {
       const tenantId = onlineAgents[0]?.tenant_id;
       if (!tenantId) throw new Error('Tenant não identificado');
       const agentIds = onlineAgents.map(a => a.agent_id);
-      await supabase.from('jobs').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('tenant_id', tenantId).eq('type', 'collect_web_activity').in('status', ['queued', 'pending']).in('agent_id', agentIds);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TS2589 workaround
+      await (supabase as Record<string, any>).from('jobs').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('tenant_id', tenantId).eq('type', 'collect_web_activity').in('status', ['queued', 'pending']).in('agent_id', agentIds);
       const jobs = await Promise.all(
         onlineAgents.map(agent => prepareJobForInsert({ tenant_id: tenantId, agent_id: agent.agent_id, agent_name: agent.hostname || 'unknown', type: 'collect_web_activity', status: 'queued', priority: 8, payload: { max_domains: 500, browsers: ['chrome', 'firefox', 'edge', 'brave', 'opera', 'vivaldi'], days_back: 30, source: 'manual-bulk' }, approved: true }))
       );
