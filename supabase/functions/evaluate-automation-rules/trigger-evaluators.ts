@@ -142,7 +142,8 @@ export async function evaluateSecurityCheck(
     for (const usb of (usbDevices || [])) {
       if (!matchesScope(rule, usb.agent_id)) continue;
       const agent = agents.find((a) => a.id === usb.agent_id);
-      candidates.push({ agentId: usb.agent_id, triggerData: { event_type: 'unauthorized_usb', check: checkType, agent_name: (agent as any)?.agent_name || 'Unknown', device_id: usb.device_id, device_name: usb.device_name, severity: 'high', message: `USB nao autorizado (${usb.device_name || usb.device_id}) no agente '${(agent as any)?.agent_name}'` } });
+      const agentName = (agent?.agent_name as string) || 'Unknown';
+      candidates.push({ agentId: usb.agent_id, triggerData: { event_type: 'unauthorized_usb', check: checkType, agent_name: agentName, device_id: usb.device_id, device_name: usb.device_name, severity: 'high', message: `USB nao autorizado (${usb.device_name || usb.device_id}) no agente '${agentName}'` } });
     }
   } else if (checkType === 'vulnerable_software') {
     const { data: vulns } = await supabase.from('vuln_findings').select('id, agent_id, check_key, title, severity').in('agent_id', agentIds).in('severity', ['critical', 'high']).is('acknowledged_at', null).limit(50);
