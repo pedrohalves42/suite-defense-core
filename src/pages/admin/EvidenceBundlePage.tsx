@@ -25,8 +25,7 @@ import { cn } from '@/lib/utils';
 import { format, ptBR } from '@/lib/date-utils';
 import { subDays } from 'date-fns';
 import { DateRange } from 'react-day-picker';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+// jsPDF and autoTable loaded dynamically in generatePDF() for code-splitting
 
 const EVIDENCE_OPTIONS = [
   { key: 'securityEvents', label: 'Eventos de Segurança', icon: '🔒', description: 'Alertas, ameaças e incidentes detectados' },
