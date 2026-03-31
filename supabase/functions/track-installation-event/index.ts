@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
-import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 import { handleAgentTokenMode } from './agent-token-handler.ts';
 import { handleAnonymousMode, handleJwtMode } from './jwt-handler.ts';
 
