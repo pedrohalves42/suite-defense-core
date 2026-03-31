@@ -80,9 +80,14 @@ serveInternal(async (_req, ctx) => {
   }
 
   if (alertsToCreate.length > 0) {
-    for (const alert of alertsToCreate) {
-      const { data: existing } = await supabase.from('system_alerts').select('id').eq('agent_id', alert.agent_id).eq('alert_type', alert.alert_type).eq('resolved', false).maybeSingle();
-      if (!existing) await supabase.from('system_alerts').insert(alert);
+    // Batch: fetch all existing unresolved alerts for these agents in one query
+    const alertAgentIds = alertsToCreate.map(a => a.agent_id);
+    const alertTypes = [...new Set(alertsToCreate.map(a => a.alert_type))];
+    const { data: existingAlerts } = await supabase.from('system_alerts').select('agent_id, alert_type').in('agent_id', alertAgentIds).in('alert_type', alertTypes).eq('resolved', false);
+    const existingSet = new Set((existingAlerts || []).map(e => `${e.agent_id}:${e.alert_type}`));
+    const newAlerts = alertsToCreate.filter(a => !existingSet.has(`${a.agent_id}:${a.alert_type}`));
+    if (newAlerts.length > 0) {
+      await supabase.from('system_alerts').insert(newAlerts);
     }
   }
 
