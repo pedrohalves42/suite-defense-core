@@ -33,6 +33,14 @@ const NAMESPACE_TARGETS: Record<string, string> = {
   'cleanup': 'cleanup-router',
   'notify': 'notification-router',
   'automation': 'evaluate-automation-rules',
+  'admin': 'admin-router',
+  'billing': 'billing-router',
+  'security': 'security-router',
+  'agent': 'agent-mgmt-router',
+  'check': 'check-router',
+  'sync': 'sync-router',
+  'build': 'build-router',
+  'playbook': 'playbook-router',
 };
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
