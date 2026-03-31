@@ -17,15 +17,15 @@ const StatusPage = () => {
     queryKey: ['status-page-agents', tenant],
     queryFn: async () => {
       if (!tenant) return [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TS2589 workaround
+      const { data, error } = await (supabase as Record<string, any>)
         .from('agents')
-        .select('id, hostname, status, last_seen, agent_version')
+        .select('id, hostname, status, last_heartbeat, agent_version')
         .eq('tenant_id', tenant?.id ?? '')
         .eq('is_archived', false)
         .order('hostname');
       if (error) throw error;
-      return data || [];
+      return (data || []) as Array<{ id: string; hostname: string; status: string; last_heartbeat: string | null; agent_version: string | null }>;
     },
     enabled: !!tenant,
     refetchInterval: false,
@@ -33,8 +33,8 @@ const StatusPage = () => {
     refetchOnWindowFocus: true,
   });
 
-  const onlineCount = agents?.filter((a: Record<string, unknown>) => a.status === 'online').length || 0;
-  const offlineCount = agents?.filter((a: Record<string, unknown>) => a.status === 'offline').length || 0;
+  const onlineCount = agents?.filter(a => a.status === 'online').length || 0;
+  const offlineCount = agents?.filter(a => a.status === 'offline').length || 0;
   const totalCount = agents?.length || 0;
   const uptimePercent = totalCount > 0 ? Math.round((onlineCount / totalCount) * 100) : 0;
 

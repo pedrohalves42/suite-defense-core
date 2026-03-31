@@ -65,14 +65,13 @@ export function DailySummaryCard() {
       const [jobsRes, blockedRes, actionsRes, alertsRes] = await Promise.all([
         sb.from('jobs').select('status').eq('tenant_id', tenant.id).gte('created_at', todayISO),
         sb.from('blocked_access_attempts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('attempted_at', todayISO),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (sb as any).from('autonomy_actions').select('action_type, status').eq('tenant_id', tenant.id).gte('created_at', todayISO),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- autonomy_actions not in generated types
+        (sb as Record<string, any>).from('autonomy_actions').select('action_type, status').eq('tenant_id', tenant.id).gte('created_at', todayISO),
         sb.from('system_alerts').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('created_at', todayISO),
       ]);
 
       const jobs: Array<{ status: string }> = jobsRes.data || [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const actions: Array<{ action_type: string; status: string }> = (actionsRes.data as any[]) || [];
+      const actions: Array<{ action_type: string; status: string }> = (actionsRes.data as unknown as Array<{ action_type: string; status: string }>) || [];
 
       const jobsSuccess = jobs.filter(j => j.status === 'completed').length;
       const jobsFailed = jobs.filter(j => j.status === 'failed').length;

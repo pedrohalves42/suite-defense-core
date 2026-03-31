@@ -60,8 +60,8 @@ export const useCheckBlastRadius = () => {
         throw new Error('Tenant not found');
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in generated types
+      const { data, error } = await (supabase as unknown as { rpc: (fn: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: Error | null }> })
         .rpc('check_blast_radius', {
           p_tenant_id: tenant.id,
           p_action_type: actionType,
