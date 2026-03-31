@@ -90,7 +90,7 @@ export function AutomationRulesPanel() {
       const [rulesRes, execRes] = await Promise.all([
         supabase
           .from('automation_rules')
-          .select('id, name, description, trigger_metric, trigger_operator, trigger_value, action_type, action_config, is_active, cooldown_minutes, last_triggered_at, priority, created_at, tenant_id, dry_run')
+          .select('id, name, description, trigger_type, trigger_conditions, action_type, action_config, is_active, cooldown_minutes, last_triggered_at, priority, created_at, tenant_id, dry_run')
           .eq('tenant_id', tenant.id)
           .order('priority', { ascending: true }),
         supabase
