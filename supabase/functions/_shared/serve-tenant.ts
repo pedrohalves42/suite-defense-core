@@ -537,9 +537,10 @@ export type InternalHandler = (req: Request, ctx: InternalContext) => Promise<Re
  */
 export function serveInternal(handler: InternalHandler) {
   Deno.serve(async (req: Request) => {
-    const requestId = req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
+    const requestId = traceId;
     const origin = req.headers.get('origin');
-    const log = loggerWithContext({ requestId });
+    const log = loggerWithContext({ requestId, traceId });
 
     if (req.method === 'OPTIONS') {
       return new Response(null, { headers: buildCorsHeaders(origin) });
