@@ -252,7 +252,7 @@ export async function evaluateForTenant(
       const success = status === 'executed';
 
       if (success) {
-        try { await supabase.rpc('increment_tenant_quota', { p_tenant_id: tenantId }); } catch { /* non-critical */ }
+        try { await supabase.rpc('increment_tenant_quota', { p_tenant_id: tenantId }); } catch (err) { console.warn('[tenant-evaluator] increment_tenant_quota failed', err); }
       }
 
       await logExecution(supabase, tenantId, candidate.agentId, rule.id, rule.action_type, success, protection.idempotencyKey, { ...result, execution_time_ms: execTimeMs });
