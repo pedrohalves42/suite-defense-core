@@ -124,8 +124,8 @@ export async function invalidateCache(
   memoryCache.delete(key);
   try {
     await supabase.from('kv_cache').delete().eq('key', key);
-  } catch {
-    // Non-fatal
+  } catch (err) {
+    console.warn('[cache] invalidateCache failed (non-fatal)', { key, err });
   }
 }
 
