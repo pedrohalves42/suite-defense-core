@@ -2,6 +2,7 @@
  * Agent creation and re-enrollment logic
  * Extraído de enroll-agent/index.ts para modularização
  */
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { createAuditLog } from '../_shared/audit.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
