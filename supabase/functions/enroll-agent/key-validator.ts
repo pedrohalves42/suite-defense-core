@@ -30,7 +30,7 @@ export async function hashEnrollmentKey(enrollmentKey: string): Promise<string> 
  * Validates an enrollment key: checks hash match, expiration, and usage limits.
  */
 export async function validateEnrollmentKey(
-  supabase: any,
+  supabase: SupabaseClient,
   enrollmentKey: string,
   agentName: string,
   requestId: string,

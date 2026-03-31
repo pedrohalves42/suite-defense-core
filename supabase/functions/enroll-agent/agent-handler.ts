@@ -154,7 +154,7 @@ export async function handleReEnrollment(
  * Creates a new agent record.
  */
 export async function createNewAgent(
-  supabase: any,
+  supabase: SupabaseClient,
   tenantId: string,
   agentName: string,
   hmacSecret: string,
