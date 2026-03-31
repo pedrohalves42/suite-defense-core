@@ -183,17 +183,20 @@ export async function runRemainingPhases(supabase: SupabaseClient, now: string, 
       allStale.set(a.id, a as StaleAgent);
     }
 
-    for (const agent of allStale.values()) {
+    // Batch update all stale agents and insert evidence logs instead of N+1
+    const staleIds = [...allStale.keys()];
+    if (staleIds.length > 0) {
       const { error } = await supabase.from('agents')
         .update({ force_update_version: null, force_update_reason: null, force_update_at: null, force_update_delivery_count: 0 })
-        .eq('id', agent.id);
+        .in('id', staleIds);
       if (!error) {
-        result.stale_updates.cleaned++;
-        await supabase.from('agent_evidence_logs').insert({
+        result.stale_updates.cleaned = staleIds.length;
+        const evidenceRows = [...allStale.values()].map(agent => ({
           agent_id: agent.id, agent_name: agent.agent_name, agent_version: agent.agent_version, tenant_id: agent.tenant_id,
           event_type: 'force_update_auto_cancelled', event_data: { cancelled_version: agent.force_update_version, cleaned_by: 'maintenance-cron' },
           evidence_hash: crypto.randomUUID(), severity: 'warn',
-        });
+        }));
+        await supabase.from('agent_evidence_logs').insert(evidenceRows);
       }
     }
   } catch (e) { logger.warn('[maintenance] Phase 7 error:', e); }
