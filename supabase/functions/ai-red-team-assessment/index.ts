@@ -76,11 +76,12 @@ Deno.serve(async (req) => {
     logPromptUsage('red-team-analysis-template', analysisTemplate.hash, tenantId, 'ai-red-team-assessment');
 
     // Collect metrics
-    let metrics: any, anaSummary: string;
+    let metrics: Record<string, unknown>, anaSummary: string;
     try {
       ({ metrics, anaSummary } = await collectMetrics(serviceClient, tenantId, isInternalCall, userClient));
-    } catch (err: any) {
-      return new Response(JSON.stringify({ error: 'Failed to fetch system metrics', stage: err.stage, details: { code: err.code, message: err.message } }), { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
+    } catch (err: unknown) {
+      const e = err as Record<string, unknown>;
+      return new Response(JSON.stringify({ error: 'Failed to fetch system metrics', stage: e.stage, details: { code: e.code, message: e.message } }), { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
     }
 
     // Call AI

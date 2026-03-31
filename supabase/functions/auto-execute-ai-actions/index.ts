@@ -75,9 +75,10 @@ serveInternal(async (_req, ctx) => {
       if (action.insight_id) result.insights_resolved++;
       result.actions_executed++;
       logger.info(`[${requestId}] Auto-executed action ${action.id} (policy_source=${policy.source})`);
-    } catch (execError: any) {
+    } catch (execError: unknown) {
+      const errMsg = execError instanceof Error ? execError.message : String(execError);
       logger.error(`[${requestId}] Failed to execute action ${action.id}:`, execError);
-      result.errors.push(`${action.id}: ${execError.message}`);
+      result.errors.push(`${action.id}: ${errMsg}`);
       await recordFailure(supabase, action.id, action.insight_id, execError.message);
     }
   }

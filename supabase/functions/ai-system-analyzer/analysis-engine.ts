@@ -200,8 +200,7 @@ export async function generateSuggestedActions(insights: Array<Record<string, un
 
     let actionType: string | null = null;
     let actionPayload: Record<string, unknown> = {};
-    // deno-lint-ignore no-explicit-any
-    const evidence = insight.evidence as any;
+    const evidence = insight.evidence as Record<string, unknown> | undefined;
 
     switch (insight.insight_type) {
       case 'agent_health':

@@ -26,8 +26,8 @@ export async function processNetworkInfo(ctx: SubmitContext): Promise<void> {
       return 'public'
     }
 
-    const privateIps = ipAddresses.filter((ip: any) => classifyIp(String(ip.ip || '')) === 'private')
-    const publicIps = ipAddresses.filter((ip: any) => classifyIp(String(ip.ip || '')) === 'public')
+    const privateIps = ipAddresses.filter((ip: Record<string, unknown>) => classifyIp(String(ip.ip || '')) === 'private')
+    const publicIps = ipAddresses.filter((ip: Record<string, unknown>) => classifyIp(String(ip.ip || '')) === 'public')
 
     const networkAdapters = adapters.length > 0
       ? adapters.map((a, idx) => ({
