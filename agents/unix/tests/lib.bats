@@ -33,8 +33,9 @@ teardown() {
 
 @test "FSM: invalid transition INITIALIZING -> ENFORCING" {
     CURRENT_STATE="INITIALIZING"
-    run set_agent_state "ENFORCING" "test"
-    [ "$status" -ne 0 ]
+    # Should fail - not a valid transition
+    ! set_agent_state "ENFORCING" "test" 2>/dev/null
+    [ "$CURRENT_STATE" = "INITIALIZING" ]
 }
 
 @test "FSM: same-state transition is no-op" {
