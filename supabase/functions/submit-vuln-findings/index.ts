@@ -3,22 +3,29 @@
  */
 import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-interface VulnFinding {
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  check_key: string;
-  title: string;
-  description?: string;
-  remediation?: string;
-}
+const VulnFindingSchema = z.object({
+  severity: z.enum(['low', 'medium', 'high', 'critical']),
+  check_key: z.string().min(1).max(255),
+  title: z.string().min(1).max(500),
+  description: z.string().max(2000).optional(),
+  remediation: z.string().max(2000).optional(),
+});
+
+const SubmitVulnSchema = z.object({
+  agent_id: z.string().uuid(),
+  findings: z.array(VulnFindingSchema).max(500),
+});
 
 serveAgent(async (_req, ctx) => {
   const { supabase, agentName, tenantId, body } = ctx;
-  const payload = body as { agent_id?: string; findings?: VulnFinding[] };
 
-  if (!payload.agent_id || !Array.isArray(payload.findings)) {
-    return new Response(JSON.stringify({ error: 'agent_id and findings are required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  const parsed = SubmitVulnSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
+  const payload = parsed.data;
 
   if (!payload.findings.length) {
     return { success: true, upserted: 0 };

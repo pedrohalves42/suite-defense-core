@@ -1,10 +1,20 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 /**
- * Token Rotation Service ? SEC-008
+ * Token Rotation Service → SEC-008
  * Hash-only storage, 30-day TTL, 7-day rotation window
  */
+
+const TokenRotateSchema = z.object({
+  action: z.enum(['needs-rotation', 'generate', 'validate', 'revoke']).optional(),
+  agentId: z.string().uuid().optional(),
+  token: z.string().min(1).max(256).optional(),
+  hmacSecret: z.string().min(1).max(256).optional(),
+  reason: z.string().max(500).optional(),
+  tenant_id: z.string().uuid().optional(),
+}).passthrough();
 
 const TOKEN_TTL_DAYS = 30;
 const ROTATION_WINDOW_DAYS = 7;
@@ -25,7 +35,12 @@ async function hashToken(token: string): Promise<string> {
 serveTenant(async (req, ctx) => {
   const { supabase, tenantId, userId, requestId, body } = ctx;
 
-  const action = body.action || (req.method === 'GET' ? 'needs-rotation' : undefined);
+  const parsed = TokenRotateSchema.safeParse(body || {});
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  const action = parsed.data.action || (req.method === 'GET' ? 'needs-rotation' : undefined);
 
   // ??? NEEDS ROTATION ???
   if (action === 'needs-rotation' || req.method === 'GET') {
@@ -46,7 +61,7 @@ serveTenant(async (req, ctx) => {
 
   // ??? GENERATE ???
   if (action === 'generate') {
-    const { agentId } = body;
+    const { agentId } = parsed.data;
     if (!agentId) {
       return new Response(
         JSON.stringify({ error: 'agentId required' }),
@@ -87,7 +102,7 @@ serveTenant(async (req, ctx) => {
 
   // ??? VALIDATE ???
   if (action === 'validate') {
-    const { agentId, token: agentToken, hmacSecret } = body;
+    const { agentId, token: agentToken, hmacSecret } = parsed.data;
     if (!agentId || !agentToken) {
       return { valid: false, error: 'agentId and token required' };
     }
@@ -130,7 +145,7 @@ serveTenant(async (req, ctx) => {
 
   // ??? REVOKE ???
   if (action === 'revoke') {
-    const { agentId, reason } = body;
+    const { agentId, reason } = parsed.data;
     if (!agentId) {
       return new Response(
         JSON.stringify({ error: 'agentId required' }),

@@ -3,33 +3,36 @@ import { hashToken } from '../_shared/token-hash.ts';
 import { corsSecurityHeaders, secureJsonResponse, secureErrorResponse, secureCorsPreflightResponse } from '../_shared/security-headers.ts';
 import { logger } from '../_shared/logger.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-interface ProcessEntry {
-  pid: number;
-  name: string;
-  cpu_percent: number;
-  memory_mb: number;
-  user: string;
-  command_line?: string;
-  start_time?: string;
-}
+const ProcessEntrySchema = z.object({
+  pid: z.number().int(),
+  name: z.string().min(1).max(255),
+  cpu_percent: z.number().min(0).max(100),
+  memory_mb: z.number().min(0),
+  user: z.string().max(255),
+  command_line: z.string().max(2048).optional(),
+  start_time: z.string().optional(),
+});
 
-interface ServiceEntry {
-  name: string;
-  display_name: string;
-  status: string;
-  startup_type: string;
-  description?: string;
-}
+const ServiceEntrySchema = z.object({
+  name: z.string().min(1).max(255),
+  display_name: z.string().max(500),
+  status: z.string().max(50),
+  startup_type: z.string().max(50),
+  description: z.string().max(1000).optional(),
+});
 
-interface ProcessPayload {
-  processes: ProcessEntry[];
-  services: ServiceEntry[];
-  total_processes?: number;
-  total_services?: number;
-  services_running?: number;
-  services_stopped?: number;
-}
+const ProcessPayloadSchema = z.object({
+  processes: z.array(ProcessEntrySchema).max(500).default([]),
+  services: z.array(ServiceEntrySchema).max(300).default([]),
+  total_processes: z.number().int().optional(),
+  total_services: z.number().int().optional(),
+  services_running: z.number().int().optional(),
+  services_stopped: z.number().int().optional(),
+});
+
+type ProcessEntry = z.infer<typeof ProcessEntrySchema>;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -68,11 +71,13 @@ Deno.serve(async (req) => {
     const agentId = tokenData.agent_id;
     const tenantId = (tokenData.agents as Record<string, unknown>).tenant_id;
 
-    const payload: ProcessPayload = await req.json();
+    const rawBody = await req.json().catch(() => null);
+    const parsed = ProcessPayloadSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return secureErrorResponse(`Invalid payload: ${parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ')}`, 400);
+    }
 
-    // Limit array sizes to prevent abuse
-    const processes = (payload.processes || []).slice(0, 500);
-    const services = (payload.services || []).slice(0, 300);
+    const { processes, services } = parsed.data;
 
     // Detect new/suspicious processes by comparing with last snapshot
     let newProcesses: ProcessEntry[] = [];

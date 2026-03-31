@@ -1,24 +1,22 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const CreateReinstallJobsSchema = z.object({
+  agent_names: z.array(z.string().min(1).max(255)).max(500).optional(),
+  target_version: z.string().max(50).optional(),
+  tenant_id: z.string().uuid().optional(),
+});
 
 serveTenant(async (req, ctx) => {
   const { supabase, tenantId, userId, requestId, body } = ctx;
 
-  // Admin check
-  const { data: roles } = await supabase
-    .from('user_roles')
-    .select('role, tenant_id')
-    .eq('user_id', userId);
-
-  const adminRole = roles?.find(r => ['admin', 'super_admin'].includes(r.role) && r.tenant_id === tenantId);
-  if (!adminRole) {
-    return new Response(
-      JSON.stringify({ error: 'Requires admin role' }),
-      { status: 403, headers: { 'Content-Type': 'application/json' } }
-    );
+  const parsed = CreateReinstallJobsSchema.safeParse(body || {});
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const { agent_names, target_version } = body || {};
+  const { agent_names, target_version } = parsed.data;
 
   let agentsToReinstall: { id: string; agent_name: string; agent_version: string | null; tenant_id: string }[] = [];
 

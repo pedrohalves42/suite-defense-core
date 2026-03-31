@@ -1,19 +1,23 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-interface CreateTicketRequest {
-  integration_id: string;
-  summary: string;
-  description?: string;
-  priority?: string;
-  source_type: 'alert' | 'vulnerability' | 'remediation' | 'compliance' | 'manual';
-  source_id?: string;
-  agent_id?: string;
-  agent_name?: string;
-}
+const CreateTicketSchema = z.object({
+  integration_id: z.string().uuid(),
+  summary: z.string().min(1).max(500),
+  description: z.string().max(5000).optional(),
+  priority: z.enum(['critical', 'high', 'medium', 'low', 'info']).optional(),
+  source_type: z.enum(['alert', 'vulnerability', 'remediation', 'compliance', 'manual']),
+  source_id: z.string().uuid().optional(),
+  agent_id: z.string().uuid().optional(),
+  agent_name: z.string().max(255).optional(),
+  tenant_id: z.string().uuid().optional(),
+});
 
-// ?? Jira API ??
+type CreateTicketRequest = z.infer<typeof CreateTicketSchema>;
+
+// 🔌 Jira API 🔌
 async function createJiraTicket(
   integration: Record<string, unknown>,
   ticket: CreateTicketRequest
@@ -62,7 +66,7 @@ async function createJiraTicket(
   return { id: data.id, key: data.key, url: `${baseUrl}/browse/${data.key}` };
 }
 
-// ?? ServiceNow API ??
+// 🔌 ServiceNow API 🔌
 async function createServiceNowTicket(
   integration: Record<string, unknown>,
   ticket: CreateTicketRequest
@@ -120,14 +124,14 @@ function mapPriorityToServiceNow(priority: string): number {
 serveTenant(async (req, ctx) => {
   const { supabase, tenantId, userId, requestId, body } = ctx;
 
-  const ticketBody: CreateTicketRequest = body;
-
-  if (!ticketBody.integration_id || !ticketBody.summary || !ticketBody.source_type) {
+  const parsed = CreateTicketSchema.safeParse(body);
+  if (!parsed.success) {
     return new Response(
-      JSON.stringify({ error: 'integration_id, summary, and source_type are required' }),
+      JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
+  const ticketBody = parsed.data;
 
   // Get integration
   const { data: integration, error: intErr } = await supabase
