@@ -8,9 +8,16 @@ SCRIPT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")" && pwd)"
 setup() {
     source "$SCRIPT_DIR/test_helper.sh"
     setup_test_env
-    # Source lib.sh (it checks for direct execution via BASH_SOURCE)
-    # We need to source it indirectly
     source "$SCRIPT_DIR/../lib.sh" 2>/dev/null || true
+    # Re-declare associative arrays (lost in BATS subshell)
+    declare -gA STATE_TRANSITIONS=(
+        ["INITIALIZING"]="AUTHENTICATING SAFE_MODE"
+        ["AUTHENTICATING"]="SYNCING DEGRADED SAFE_MODE"
+        ["SYNCING"]="ENFORCING DEGRADED SAFE_MODE"
+        ["ENFORCING"]="SYNCING DEGRADED SAFE_MODE"
+        ["DEGRADED"]="AUTHENTICATING SYNCING ENFORCING SAFE_MODE"
+        ["SAFE_MODE"]="INITIALIZING"
+    )
 }
 
 teardown() {
