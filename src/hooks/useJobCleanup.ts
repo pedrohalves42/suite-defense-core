@@ -143,8 +143,8 @@ export function useJobCleanup() {
     mutationFn: async (cleanupFilters: CleanupFilters): Promise<CleanupResult> => {
       logger.info('[useJobCleanup] Starting cleanup', { filters: cleanupFilters });
 
-      const { data, error } = await supabase.functions.invoke('cleanup-jobs', {
-        body: cleanupFilters
+      const { data, error } = await supabase.functions.invoke('cleanup-router', {
+        body: { action: 'jobs', ...cleanupFilters }
       });
 
       if (error) {

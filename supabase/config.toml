@@ -163,8 +163,7 @@ verify_jwt = false
 [functions.cleanup-orphaned-data]
 verify_jwt = true
 
-[functions.cleanup-jobs]
-verify_jwt = true
+# REMOVED: cleanup-jobs (consolidated into cleanup-router, action: 'jobs')
 
 # REMOVED: check-expiring-enrollment-keys (consolidated into security-monitor)
 
@@ -174,9 +173,7 @@ verify_jwt = true
 [functions.diagnose-agent]
 verify_jwt = true
 
-# Build cleanup - DISABLED COST-OPT-V6 (covered by system-maintenance)
-[functions.cleanup-stuck-builds]
-verify_jwt = false
+# REMOVED: cleanup-stuck-builds (consolidated into cleanup-router, action: 'stuck-builds')
 
 # Build watchdog - DISABLED COST-OPT-V6 (covered by system-maintenance)
 [functions.build-watchdog]
@@ -212,13 +209,8 @@ verify_jwt = false
 [functions.check-stuck-jobs]
 verify_jwt = false
 
-# P1-01: Cleanup stuck jobs - DISABLED schedule COST-OPT-V7 (covered by system-maintenance)
-[functions.cleanup-stuck-jobs]
-verify_jwt = false
-
-# P1-02: Cleanup jobs for offline agents - DISABLED schedule COST-OPT-V7 (covered by system-maintenance)
-[functions.cleanup-offline-agents-jobs]
-verify_jwt = false
+# REMOVED: cleanup-stuck-jobs (consolidated into cleanup-router, action: 'stuck-jobs')
+# REMOVED: cleanup-offline-agents-jobs (consolidated into cleanup-router, action: 'offline-agents-jobs')
 
 # Network Anomalies Analysis - DISABLED COST-OPT-V6 (insufficient volume for 1 agent)
 [functions.analyze-network-anomalies]
@@ -497,9 +489,7 @@ verify_jwt = true
 [functions.execute-playbook-action]
 verify_jwt = true
 
-# === Auto Cleanup Jobs - DISABLED COST-OPT-V6 (redundant with system-maintenance) ===
-[functions.auto-cleanup-jobs]
-verify_jwt = false
+# REMOVED: auto-cleanup-jobs (consolidated into cleanup-router, action: 'auto-cleanup-jobs')
 
 # === System Maintenance (daily at 3 AM UTC) COST-OPT-V6 - consolidated cleanup ===
 [functions.system-maintenance]
@@ -571,17 +561,13 @@ verify_jwt = true
 [functions.invoke-scheduled-jobs]
 verify_jwt = false
 
-# === P0: Cleanup Stale Playbooks - DISABLED COST-OPT-V6 (covered by system-maintenance) ===
-[functions.cleanup-stale-playbooks]
-verify_jwt = false
+# REMOVED: cleanup-stale-playbooks (consolidated into cleanup-router, action: 'stale-playbooks')
 
 # === P0: Process Failed Jobs - DISABLED schedule COST-OPT-V7 (covered by system-maintenance) ===
 [functions.process-failed-jobs]
 verify_jwt = false
 
-# === P1: Cleanup Stale Reports - DISABLED COST-OPT-V6 (covered by system-maintenance) ===
-[functions.cleanup-stale-reports]
-verify_jwt = false
+# REMOVED: cleanup-stale-reports (consolidated into cleanup-router, action: 'stale-reports')
 
 # REMOVED: job-health-monitor (consolidated into health-monitor)
 
