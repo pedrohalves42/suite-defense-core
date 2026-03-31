@@ -72,7 +72,7 @@ export async function handleSecurity(
       payload: { title, message, severity, details }, results,
       created_at: new Date().toISOString(),
     });
-  } catch { /* non-critical */ }
+  } catch (err) { console.warn('[notification-router] audit log insert failed', err); }
 
   const anySuccessful = results.some(r => r.success);
   return { success: anySuccessful, results, nonce };
