@@ -143,7 +143,8 @@ export async function invalidateCacheByPrefix(
     const { data, error } = await supabase.rpc('invalidate_cache_prefix', { p_prefix: prefix });
     if (error) return 0;
     return (data as number) || 0;
-  } catch {
+  } catch (err) {
+    console.warn('[cache] invalidateCacheByPrefix failed', { prefix, err });
     return 0;
   }
 }

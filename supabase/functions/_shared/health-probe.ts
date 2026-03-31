@@ -64,7 +64,8 @@ export async function validateSchema(supabase: SupabaseClient): Promise<{
       if (error && error.message.includes('does not exist')) {
         missingTables.push(table);
       }
-    } catch {
+    } catch (err) {
+      console.warn('[health-probe] Table check failed', { table, err });
       missingTables.push(table);
     }
   }

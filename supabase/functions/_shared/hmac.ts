@@ -176,8 +176,8 @@ export async function verifyHmacSignature(
 
   try {
     keyVariants.push({ name: 'hex', data: hexToBytes(hmacSecret) })
-  } catch {
-    // skip invalid hex, fallback to utf8 variant
+  } catch (err) {
+    console.warn('[hmac] Invalid hex key, falling back to utf8', err);
   }
   keyVariants.push({ name: 'utf8', data: encoder.encode(hmacSecret) })
 

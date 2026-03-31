@@ -257,8 +257,8 @@ serveTenant(async (req, ctx) => {
       },
       headers: { 'X-Internal-Secret': internalSecret || '' },
     });
-  } catch {
-    // Non-fatal
+  } catch (err) {
+    console.warn('[auto-remediate] Notification dispatch failed (non-fatal)', err);
   }
 
   return {

@@ -92,8 +92,8 @@ export function extractTokenUsage(response: Record<string, unknown>): { prompt?:
         total: response.usage.total_tokens,
       };
     }
-  } catch {
-    // Ignore parsing errors
+  } catch (err) {
+    console.warn('[ai-metrics] extractTokenUsage parse error', err);
   }
   return {};
 }
