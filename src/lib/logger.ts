@@ -23,7 +23,7 @@ async function flushLogs() {
   const entries = LOG_BUFFER.splice(0, MAX_BUFFER_SIZE);
 
   try {
-    await supabase.functions.invoke('log-domain-event', {
+    await supabase.functions.invoke('sync-router', {
       body: entries.map((entry) => ({
         aggregate_id: 'frontend',
         aggregate_type: 'frontend_log',
