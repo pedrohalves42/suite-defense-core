@@ -6,7 +6,7 @@
  * (service_role for cron + JWT for admin + per-tenant evaluation).
  * The internal logic is decomposed into modules for maintainability.
  */
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsSecurityHeaders, secureJsonResponse, secureErrorResponse, secureCorsPreflightResponse } from '../_shared/security-headers.ts';
 import { logger } from '../_shared/logger.ts';
 

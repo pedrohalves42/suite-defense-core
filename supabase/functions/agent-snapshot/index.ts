@@ -1,6 +1,5 @@
-import { serve } from "https://deno.land/std@0.203.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts'
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0"
+import { buildCorsHeaders } from '../_shared/cors.ts'
 import { logger } from '../_shared/logger.ts';
 
 /**
@@ -15,7 +14,7 @@ import { logger } from '../_shared/logger.ts';
  * - Erros claros (sem falha silenciosa)
  */
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const correlationId = crypto.randomUUID()
 
   // CORS preflight

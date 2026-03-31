@@ -1,5 +1,4 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { serve } from 'https://deno.land/std@0.190.0/http/server.ts';
 import { Resend } from 'https://esm.sh/resend@2.0.0';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
@@ -22,7 +21,7 @@ interface ScheduledReport {
   hour: number;
 }
 
-serve(async (req: Request) => {
+Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: buildCorsHeaders(origin) });

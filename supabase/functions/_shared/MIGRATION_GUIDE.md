@@ -9,7 +9,14 @@
 | `servePublic` | Public endpoints, no auth | Rate limiting only |
 | `serveInternal` | Cron/internal, service_role | X-Internal-Secret |
 
-## Migration Status (Phase 2 Complete)
+## Migration Status (Phase 3 Complete)
+
+### Phase 3 Cleanups Applied
+- Removed all dead `corsHeaders` imports (only `buildCorsHeaders` kept)
+- Migrated 18 functions from deprecated `serve()` (deno.land/std) to `Deno.serve()`
+- Pinned all supabase SDK imports to `@2.74.0` (was `@2`, `@2.39.3`)
+- Normalized Zod imports to `esm.sh/zod@3.23.8` (was `deno.land/x/zod`)
+- Removed empty lines and dead code from raw functions
 
 ### ✅ Migrated to `serveAgent` (Phase 1 — 14 functions)
 ack-job, check-agent-updates, confirm-force-update, get-blocked-websites, list-reports,

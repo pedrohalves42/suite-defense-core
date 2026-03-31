@@ -2,7 +2,6 @@
  * ai-quality-check — Modularized
  * Module: handlers
  */
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
@@ -11,7 +10,7 @@ import { handlePromptInventory, handleQualityCheck, handleDriftAnalysis } from '
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: buildCorsHeaders(origin) });
 
   try {

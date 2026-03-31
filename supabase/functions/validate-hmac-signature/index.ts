@@ -1,7 +1,6 @@
 import { requireEnv } from '../_shared/env.ts';
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders, buildCorsHeaders } from "../_shared/cors.ts";
+import { buildCorsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit } from "../_shared/rate-limit.ts";
 import { logger } from '../_shared/logger.ts';
 
@@ -31,7 +30,7 @@ function hexToBytes(hex: string): Uint8Array {
   return bytes;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: buildCorsHeaders(origin) });
   }
