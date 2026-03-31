@@ -89,7 +89,7 @@ export async function fetchURLhaus(): Promise<RawIndicator[]> {
 
     if (!resp.ok) { await resp.text(); return await fetchURLhausCSV(); }
     const text = await resp.text();
-    let data: any;
+    let data: Record<string, unknown>;
     try { data = JSON.parse(text); } catch { return await fetchURLhausCSV(); }
 
     if (data.query_status === 'ok' && Array.isArray(data.urls)) {
