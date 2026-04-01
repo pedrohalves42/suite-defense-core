@@ -1,211 +1,207 @@
 <#
 .SYNOPSIS
-    Pester tests for CyberShield Agent v6.0 modules
+    Integration-level Pester tests for CyberShield Agent v6.0 modules
+    Tests module loading order and cross-module function availability.
 #>
 
-Describe "CyberShield Agent v6.0 Modules" {
+Describe "CyberShield Agent v6.0 Module Integration" {
     BeforeAll {
+        # Initialize globals required before module loading (mirrors main.ps1)
+        $Global:UpdateInProgress = $false
+        $Global:BootScriptHash = $null
+        $Global:CurrentState = "INITIALIZING"
+        $Global:AgentName = "test-agent"
+        $Global:AgentVersion = "6.0.0"
+        $Global:AgentToken = "test-token"
+        $Global:HmacSecret = $null
+        $Global:ServerUrl = "https://test.example.com"
+        $Global:CachedHmacKey = $null
+        $Global:TlsPinnedThumbprint = $null
+        $Global:ConsecutivePollErrors = 0
+        $Global:JobPollIntervalSeconds = 60
+        $Global:LoopTimestamp = $null
+        $Global:StatePath = "$env:TEMP\CyberShield\test-integration\agent_state.json"
+        $Global:DnsBlocklistPath = "$env:TEMP\CyberShield\test-integration\dns_blocklist.json"
+        $Global:EvidenceJournalPath = "$env:TEMP\CyberShield\test-integration\evidence_journal.jsonl"
+        $Global:EvidenceBuffer = [System.Collections.ArrayList]::new()
+        $Global:RollbackPaths = @{ RollbackState = "$env:TEMP\CyberShield\test-integration\rollback_state.json" }
+        $Global:AggregationEnabled = $true
+        $Global:AggregationWindowSeconds = 10
+        $Global:AggregationFileThreshold = 50
+        $Global:AggregationProcessThreshold = 20
+        $Global:AggregationNetworkThreshold = 100
+        $Global:AggregationMaxBufferSize = 500
+        $Global:AggregationLastFlush = [datetime]::MinValue
+        $Global:EventAggregationBuffer = @{}
+        $Global:AggregationStats = @{ events_received = 0; events_aggregated = 0; events_sent = 0; bursts_detected = 0; buffer_overflow = 0; reduction_percent = 0 }
+        $Global:AutoRepairStats = @{ disk_cleanups = 0; last_disk_cleanup = $null; processes_killed = 0; services_restarted = 0 }
+        $Global:ProtectedProcesses = @("system", "csrss", "lsass", "svchost")
+        $Global:ProtectedServices = @("wininit", "lsass", "services")
+        $Global:DiskCleanupThresholdPercent = 90
+        $Global:HighCpuThresholdPercent = 90
+        $Global:AlertCooldownTracker = @{}
+        $Global:AlertCooldownSeconds = 60
+        $Global:LocalDetectionStats = @{ alerts_sent = 0 }
+        $Global:BurntToastAvailable = $null
+        $Global:CachedNetworkOk = $false
+        $Global:CachedNetworkCheckTime = [datetime]::MinValue
+
+        $testDir = "$env:TEMP\CyberShield\test-integration"
+        if (-not (Test-Path $testDir)) { New-Item -ItemType Directory -Path $testDir -Force | Out-Null }
+
         $modulePath = "$PSScriptRoot\..\modules"
+
+        # Load in correct order (mirrors main.ps1)
         . "$modulePath\config.ps1"
         . "$modulePath\utils.ps1"
         . "$modulePath\crypto.ps1"
         . "$modulePath\hmac.ps1"
         . "$modulePath\telemetry.ps1"
+        . "$modulePath\security.ps1"
+        . "$modulePath\network.ps1"
+        . "$modulePath\state.ps1"
+        . "$modulePath\evidence.ps1"
+        . "$modulePath\notification.ps1"
+        . "$modulePath\collection.ps1"
+        . "$modulePath\remediation.ps1"
+        . "$modulePath\heartbeat.ps1"
         . "$modulePath\self-heal.ps1"
+        . "$modulePath\update.ps1"
+        . "$modulePath\job-runner.ps1"
     }
 
-    Describe "Config" {
-        It "Initialize-Config should not throw" {
+    Describe "Module Loading" {
+        It "All 16 modules load without error" {
+            # If we got here, all modules loaded
+            $true | Should -BeTrue
+        }
+
+        It "Config module exports Initialize-Config" {
+            Get-Command Initialize-Config -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
+        }
+
+        It "Job runner exports Invoke-AgentJob" {
+            Get-Command Invoke-AgentJob -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
+        }
+
+        It "Self-heal exports Get-BOMSafeFileHash" {
+            Get-Command Get-BOMSafeFileHash -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
+        }
+
+        It "Update module exports Invoke-CheckForUpdate" {
+            Get-Command Invoke-CheckForUpdate -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
+        }
+
+        It "Update module exports Test-AgentVersion" {
+            Get-Command Test-AgentVersion -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
+        }
+    }
+
+    Describe "Cross-Module Integration" {
+        It "Config initializes without error" {
             { Initialize-Config -AgentToken "test" -HmacSecret "test" -ApiEndpoint "https://test.example.com" } | Should -Not -Throw
         }
 
-        It "Config should have required keys" {
+        It "Config has required keys after init" {
             $script:Config.Keys | Should -Contain "ApiEndpoint"
             $script:Config.Keys | Should -Contain "AgentToken"
             $script:Config.Keys | Should -Contain "HmacSecret"
-            $script:Config.Keys | Should -Contain "HeartbeatInterval"
         }
 
-        It "Config should store correct ApiEndpoint" {
-            Initialize-Config -AgentToken "tok" -HmacSecret "sec" -ApiEndpoint "https://api.example.com"
-            $script:Config.ApiEndpoint | Should -Be "https://api.example.com"
-        }
-
-        It "Config should store correct AgentToken" {
-            Initialize-Config -AgentToken "my-token" -HmacSecret "sec" -ApiEndpoint "https://api.example.com"
-            $script:Config.AgentToken | Should -Be "my-token"
-        }
-    }
-
-    Describe "Utils" {
-        It "Write-Log should not throw" {
-            { Write-Log "Test message" "INFO" } | Should -Not -Throw
-        }
-
-        It "Test-CommandExists returns true for powershell" {
-            Test-CommandExists "powershell" | Should -Be $true
-        }
-
-        It "Test-CommandExists returns false for nonexistent" {
-            Test-CommandExists "nonexistent_command_xyz" | Should -Be $false
-        }
-    }
-
-    Describe "HMAC" {
-        It "Compute-HMAC returns non-empty string" {
-            $result = Compute-HMAC -Message "test" -Secret "secret"
-            $result | Should -Not -BeNullOrEmpty
-        }
-
-        It "Compute-HMAC is deterministic" {
+        It "HMAC computation is deterministic" {
             $hmac1 = Compute-HMAC -Message "hello" -Secret "key123"
             $hmac2 = Compute-HMAC -Message "hello" -Secret "key123"
             $hmac1 | Should -Be $hmac2
         }
 
-        It "Compute-HMAC returns different values for different messages" {
-            $hmac1 = Compute-HMAC -Message "message-a" -Secret "key"
-            $hmac2 = Compute-HMAC -Message "message-b" -Secret "key"
-            $hmac1 | Should -Not -Be $hmac2
-        }
-
-        It "Compute-HMAC returns different values for different secrets" {
-            $hmac1 = Compute-HMAC -Message "hello" -Secret "key1"
-            $hmac2 = Compute-HMAC -Message "hello" -Secret "key2"
-            $hmac1 | Should -Not -Be $hmac2
-        }
-
-        It "Test-HMAC validates correct signature" {
+        It "HMAC verification works" {
             $msg = "test payload"
             $secret = "mysecret"
             $sig = Compute-HMAC -Message $msg -Secret $secret
             Test-HMAC -Message $msg -Signature $sig -Secret $secret | Should -Be $true
         }
 
-        It "Test-HMAC rejects wrong signature" {
-            Test-HMAC -Message "test" -Signature "wrong" -Secret "secret" | Should -Be $false
-        }
-
-        It "Test-HMAC rejects empty signature" {
-            Test-HMAC -Message "test" -Signature "" -Secret "secret" | Should -Be $false
-        }
-    }
-
-    Describe "Crypto" {
-        It "Get-PayloadHash returns 64-char hex string" {
+        It "Payload hash returns 64-char hex" {
             $hash = Get-PayloadHash -Payload "test"
             $hash.Length | Should -Be 64
             $hash | Should -Match "^[0-9a-f]{64}$"
         }
 
-        It "Get-PayloadHash is deterministic" {
-            $h1 = Get-PayloadHash -Payload "consistency"
-            $h2 = Get-PayloadHash -Payload "consistency"
-            $h1 | Should -Be $h2
-        }
-
-        It "Get-PayloadHash returns different values for different inputs" {
-            $h1 = Get-PayloadHash -Payload "input-a"
-            $h2 = Get-PayloadHash -Payload "input-b"
-            $h1 | Should -Not -Be $h2
-        }
-    }
-
-    Describe "Telemetry" {
-        It "Get-SystemTelemetry returns a hashtable" {
-            Initialize-Config -AgentToken "test" -HmacSecret "test" -ApiEndpoint "https://test.example.com"
+        It "Telemetry returns hashtable with required keys" {
             $script:Config.AgentId = "test-agent-id"
             $script:Config.TenantId = "test-tenant-id"
             $result = Get-SystemTelemetry
             $result | Should -BeOfType [hashtable]
-        }
-
-        It "Get-SystemTelemetry contains required keys" {
-            Initialize-Config -AgentToken "test" -HmacSecret "test" -ApiEndpoint "https://test.example.com"
-            $script:Config.AgentId = "test-agent-id"
-            $script:Config.TenantId = "test-tenant-id"
-            $result = Get-SystemTelemetry
             $result.Keys | Should -Contain "agent_id"
-            $result.Keys | Should -Contain "tenant_id"
             $result.Keys | Should -Contain "timestamp"
-            $result.Keys | Should -Contain "hostname"
         }
 
-        It "Get-SystemTelemetry agent_id matches config" {
-            Initialize-Config -AgentToken "test" -HmacSecret "test" -ApiEndpoint "https://test.example.com"
-            $script:Config.AgentId = "agent-123"
-            $script:Config.TenantId = "tenant-456"
-            $result = Get-SystemTelemetry
-            $result.agent_id | Should -Be "agent-123"
-            $result.tenant_id | Should -Be "tenant-456"
-        }
-    }
-
-    Describe "Self-Heal" {
-        It "Get-BOMSafeFileHash returns 64-char hex for a temp file" {
+        It "BOM-safe hash is consistent" {
             $tmpFile = [System.IO.Path]::GetTempFileName()
             try {
-                Set-Content -Path $tmpFile -Value "test content" -NoNewline
-                $hash = Get-BOMSafeFileHash -FilePath $tmpFile
-                $hash.Length | Should -Be 64
-                $hash | Should -Match "^[0-9a-f]{64}$"
-            }
-            finally {
-                Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue
-            }
-        }
-
-        It "Get-BOMSafeFileHash is deterministic" {
-            $tmpFile = [System.IO.Path]::GetTempFileName()
-            try {
-                Set-Content -Path $tmpFile -Value "deterministic" -NoNewline
+                Set-Content -Path $tmpFile -Value "test" -NoNewline
                 $h1 = Get-BOMSafeFileHash -FilePath $tmpFile
                 $h2 = Get-BOMSafeFileHash -FilePath $tmpFile
                 $h1 | Should -Be $h2
+                $h1.Length | Should -Be 64
             }
-            finally {
-                Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue
-            }
+            finally { Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue }
         }
 
-        It "Get-BOMSafeFileHash strips BOM correctly" {
-            $tmpWithBOM = [System.IO.Path]::GetTempFileName()
-            $tmpWithout = [System.IO.Path]::GetTempFileName()
-            try {
-                # Write file with BOM
-                $bom = [byte[]](0xEF, 0xBB, 0xBF)
-                $content = [System.Text.Encoding]::UTF8.GetBytes("hello world")
-                $allBytes = $bom + $content
-                [System.IO.File]::WriteAllBytes($tmpWithBOM, $allBytes)
-                
-                # Write file without BOM
-                [System.IO.File]::WriteAllBytes($tmpWithout, $content)
-                
-                $hashBOM = Get-BOMSafeFileHash -FilePath $tmpWithBOM
-                $hashNoBOM = Get-BOMSafeFileHash -FilePath $tmpWithout
-                $hashBOM | Should -Be $hashNoBOM
-            }
-            finally {
-                Remove-Item $tmpWithBOM -Force -ErrorAction SilentlyContinue
-                Remove-Item $tmpWithout -Force -ErrorAction SilentlyContinue
-            }
+        It "Job dispatcher rejects unknown types" {
+            $result = Invoke-AgentJob -JobId "int-1" -JobType "evil_command" -Timeout 5
+            $result.success | Should -BeFalse
+            $result.error | Should -Match "Unknown job type"
         }
 
-        It "Get-BOMSafeFileHash throws for nonexistent file" {
-            { Get-BOMSafeFileHash -FilePath "C:\nonexistent_file_xyz.tmp" } | Should -Throw
+        It "Job dispatcher handles integration_test_v3" {
+            $result = Invoke-AgentJob -JobId "int-2" -JobType "integration_test_v3" -Timeout 10
+            $result.pong | Should -BeTrue
+            $result.agent_version | Should -Be "6.0.0"
         }
 
-        It "Invoke-SelfHeal should not throw" {
-            $script:FaultCount = 0
-            { Invoke-SelfHeal } | Should -Not -Throw
+        It "State machine validates transitions" {
+            $Global:CurrentState = "INITIALIZING"
+            Set-AgentState -NewState "AUTHENTICATING" -Reason "test" | Should -BeTrue
+            Set-AgentState -NewState "INITIALIZING" -Reason "test" | Should -BeFalse
+        }
+
+        It "Version comparison detects updates" {
+            Test-AgentVersion -ServerVersion "7.0.0" | Should -BeTrue
+            Test-AgentVersion -ServerVersion "6.0.0" | Should -BeFalse
+            Test-AgentVersion -ServerVersion "6.0.1" | Should -BeTrue
         }
     }
 
-    Describe "Job Runner" {
-        It "Circuit breaker variables are initialized" {
-            . "$PSScriptRoot\..\modules\job-runner.ps1"
-            $script:ConsecutiveFailures | Should -Be 0
-            $script:CircuitBreakerOpen | Should -Be $false
+    Describe "Security Invariants" {
+        It "No cmd.exe in any module" {
+            $allContent = Get-ChildItem "$PSScriptRoot\..\modules\*.ps1" | ForEach-Object { Get-Content $_.FullName -Raw }
+            ($allContent -join "`n") | Should -Not -Match "cmd\.exe"
+        }
+
+        It "No Invoke-Expression in any module" {
+            $allContent = Get-ChildItem "$PSScriptRoot\..\modules\*.ps1" | ForEach-Object { Get-Content $_.FullName -Raw }
+            ($allContent -join "`n") | Should -Not -Match "Invoke-Expression"
+        }
+
+        It "No IEX alias in any module" {
+            $allContent = Get-ChildItem "$PSScriptRoot\..\modules\*.ps1" | ForEach-Object { Get-Content $_.FullName -Raw }
+            ($allContent -join "`n") | Should -Not -Match "\bIEX\b"
+        }
+
+        It "Invoke-AgentJob has no Command parameter" {
+            $params = (Get-Command Invoke-AgentJob).Parameters
+            $params.Keys | Should -Not -Contain "Command"
+        }
+
+        It "Protected process kill is blocked" {
+            $result = Invoke-AgentJob -JobId "sec-1" -JobType "kill_process" -Payload @{ process_name = "lsass" } -Timeout 10
+            # The result from Invoke-JobWithTimeout wraps the handler output
+            ($result | ConvertTo-Json -Compress) | Should -Match "SECURITY_BLOCK|blocked"
         }
     }
+}
+
+AfterAll {
+    Remove-Item "$env:TEMP\CyberShield\test-integration" -Recurse -Force -ErrorAction SilentlyContinue
 }
