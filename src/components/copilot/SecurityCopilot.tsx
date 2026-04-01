@@ -148,7 +148,7 @@ export const SecurityCopilot = () => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ messages: allMessages }),
+      body: JSON.stringify({ action: 'security-copilot', payload: { messages: allMessages } }),
     });
 
     if (!resp.ok || !resp.body) {

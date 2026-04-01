@@ -142,7 +142,7 @@ export function useAIActionApprovalData() {
   const handleAnalyzeNow = async () => {
     setIsAnalyzing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('ai-system-analyzer');
+      const { data, error } = await supabase.functions.invoke('ai-router', { body: { action: 'system-analyzer' } });
       if (error) throw error;
       toast({ title: 'Análise Concluída', description: `${data.insightsGenerated || 0} insights gerados para ${data.tenantsAnalyzed || 0} tenant(s).` });
       queryClient.invalidateQueries({ queryKey: ['ai-actions-pending'] });

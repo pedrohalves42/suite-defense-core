@@ -102,8 +102,8 @@ export function useAIInsightsData() {
 
   const executeSolutionMutation = useMutation({
     mutationFn: async ({ actionId, solutionType, parameters }: { actionId: string; solutionType: string; parameters?: any }) => {
-      const { data, error } = await supabase.functions.invoke('ai-execute-solution', {
-        body: { action_id: actionId, solution_type: solutionType, parameters }
+      const { data, error } = await supabase.functions.invoke('ai-router', {
+        body: { action: 'execute-solution', payload: { action_id: actionId, solution_type: solutionType, parameters } }
       });
       if (error) throw error;
       return data;
