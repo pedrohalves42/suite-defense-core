@@ -3,11 +3,48 @@ import { AgentId } from '../../../../domain/value-objects/AgentId';
 import { TenantId } from '../../../../domain/value-objects/TenantId';
 
 /**
+ * Raw DB row shape for process_snapshots.
+ */
+interface ProcessSnapshotRow {
+  id: string;
+  agent_id: string;
+  tenant_id: string;
+  processes?: RawProcessEntry[];
+  services?: RawServiceEntry[];
+  new_processes?: RawProcessEntry[];
+  suspicious_processes?: RawProcessEntry[];
+  total_processes?: number;
+  total_services?: number;
+  services_running?: number;
+  services_stopped?: number;
+  collected_at: string;
+  created_at: string;
+}
+
+interface RawProcessEntry {
+  pid: number;
+  name: string;
+  cpu_percent?: number;
+  memory_mb?: number;
+  user?: string;
+  command_line?: string;
+  start_time?: string;
+}
+
+interface RawServiceEntry {
+  name: string;
+  display_name?: string;
+  status: string;
+  startup_type?: string;
+  description?: string;
+}
+
+/**
  * Maps between ProcessSnapshot domain entity and Supabase database rows.
  */
 export class ProcessSnapshotMapper {
-  static toDomain(row: any): ProcessSnapshot {
-    const processes: ProcessEntry[] = (row.processes || []).map((p: any) => ({
+  static toDomain(row: ProcessSnapshotRow): ProcessSnapshot {
+    const processes: ProcessEntry[] = (row.processes || []).map((p) => ({
       pid: p.pid,
       name: p.name,
       cpuPercent: p.cpu_percent ?? 0,
@@ -17,7 +54,7 @@ export class ProcessSnapshotMapper {
       startTime: p.start_time ? new Date(p.start_time) : undefined,
     }));
 
-    const services: ServiceEntry[] = (row.services || []).map((s: any) => ({
+    const services: ServiceEntry[] = (row.services || []).map((s) => ({
       name: s.name,
       displayName: s.display_name ?? s.name,
       status: s.status,
@@ -25,7 +62,7 @@ export class ProcessSnapshotMapper {
       description: s.description,
     }));
 
-    const newProcesses: ProcessEntry[] = (row.new_processes || []).map((p: any) => ({
+    const newProcesses: ProcessEntry[] = (row.new_processes || []).map((p) => ({
       pid: p.pid,
       name: p.name,
       cpuPercent: p.cpu_percent ?? 0,
@@ -34,7 +71,7 @@ export class ProcessSnapshotMapper {
       commandLine: p.command_line,
     }));
 
-    const suspiciousProcesses: ProcessEntry[] = (row.suspicious_processes || []).map((p: any) => ({
+    const suspiciousProcesses: ProcessEntry[] = (row.suspicious_processes || []).map((p) => ({
       pid: p.pid,
       name: p.name,
       cpuPercent: p.cpu_percent ?? 0,

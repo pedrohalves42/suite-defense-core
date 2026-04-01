@@ -152,8 +152,8 @@ ${result.chain_valid
  * Compute a diff between state_before and state_after
  */
 export function computeStateDiff(
-  before: any | null,
-  after: any | null
+  before: Record<string, unknown> | null,
+  after: Record<string, unknown> | null
 ): { key: string; before: unknown; after: unknown; changed: boolean }[] {
   const diff: { key: string; before: unknown; after: unknown; changed: boolean }[] = [];
   
