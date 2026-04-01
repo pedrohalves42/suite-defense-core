@@ -28,11 +28,11 @@ serveAgent(async (req, ctx) => {
     } catch (err) { logger.warn('[confirm-force-update] HMAC check failed (best-effort)', err); }
   }
 
-  const { new_version, old_version } = body as { new_version?: string; old_version?: string };
-
-  if (!new_version) {
-    return new Response(JSON.stringify({ error: 'new_version is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  const parsed = ConfirmForceUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
+  const { new_version, old_version } = parsed.data;
 
   const currentNorm = normalizeVersion(agentData.agent_version as string | null);
   const newNorm = normalizeVersion(new_version);

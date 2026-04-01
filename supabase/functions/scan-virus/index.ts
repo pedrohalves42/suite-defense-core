@@ -49,17 +49,18 @@ async function scanWithVirusTotal(fileHash: string, apiKey: string): Promise<Sca
 
 serveAgent(async (_req, ctx) => {
   const { supabase, agentName, tenantId, body, requestId } = ctx;
-  const { filePath, fileHash } = body as { filePath?: string; fileHash?: string };
+
+  const parsed = ScanVirusSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const { filePath, fileHash } = parsed.data;
 
   const hybridAnalysisApiKey = Deno.env.get('HYBRID_ANALYSIS_API_KEY');
   const virusTotalApiKey = Deno.env.get('VIRUSTOTAL_API_KEY');
 
   if (!hybridAnalysisApiKey && !virusTotalApiKey) {
     return new Response(JSON.stringify({ error: 'Nenhum servico de scan configurado' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
-  }
-
-  if (!filePath || !fileHash) {
-    return new Response(JSON.stringify({ error: 'filePath e fileHash sao obrigatorios' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
   // Quota checks
