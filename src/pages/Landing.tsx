@@ -85,6 +85,8 @@ const Landing = () => {
             <ComparisonSection />
             {/* 11. Preview do produto */}
             <ProductPreviewSection />
+            {/* 11.5. Planos e preços */}
+            <PricingSection />
             {/* 12. Oferta + Formulário */}
             <OfferFormSection />
             {/* 13. FAQ */}
