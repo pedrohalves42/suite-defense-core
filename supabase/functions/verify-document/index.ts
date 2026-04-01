@@ -14,17 +14,19 @@ servePublic(async (req, ctx) => {
   const { supabase, requestId } = ctx;
 
   const url = new URL(req.url);
-  const documentName = url.searchParams.get('name');
+  const rawName = url.searchParams.get('name');
+  const nameResult = DocumentNameSchema.safeParse(rawName);
 
-  if (!documentName) {
+  if (!nameResult.success) {
     return new Response(
       JSON.stringify({ 
-        error: 'Missing required parameter: name',
+        error: 'Invalid or missing parameter: name',
         usage: 'GET /verify-document?name=DOCUMENT_NAME'
       }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
+  const documentName = nameResult.data;
 
   const { data: doc, error } = await supabase
     .from('signed_documents')
