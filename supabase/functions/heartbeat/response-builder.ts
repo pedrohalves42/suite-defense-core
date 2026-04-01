@@ -49,7 +49,10 @@ export async function buildNormalResponse(
           }
         }
 
-        const normalizedScript = normalizeForWindows(currentScript)
+        const isWindows = platform === 'windows' || platform === 'Windows'
+        const normalizedScript = isWindows
+          ? normalizeForWindows(currentScript)
+          : currentScript.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
         const currentBytes = new TextEncoder().encode(normalizedScript)
         const hashBuffer = await crypto.subtle.digest('SHA-256', currentBytes)
         currentScriptSha256 = Array.from(new Uint8Array(hashBuffer))
