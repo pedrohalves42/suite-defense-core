@@ -566,10 +566,52 @@
       "badge": "Planos",
       "title": "Planos que cabem na sua operação",
       "subtitle": "Escolha o plano ideal para o tamanho do seu ambiente",
-      "plans": {},
       "perMonth": "/mês",
       "baseDevices": "dispositivos inclusos",
-      "extraDevice": "por dispositivo extra"
+      "extraDevice": "por dispositivo extra",
+      "plans": {
+        "starter": {
+          "name": "Starter Compliance",
+          "description": "Monitoramento e compliance básico para PMEs que precisam de visibilidade e controle dos endpoints.",
+          "cta": "Solicitar assessment",
+          "features": {
+            "0": "RMM + EDR integrado",
+            "1": "Compliance básico com evidências",
+            "2": "Alertas e notificações",
+            "3": "Dashboard de visibilidade",
+            "4": "Relatórios de conformidade",
+            "5": "Suporte em português"
+          }
+        },
+        "business": {
+          "badge": "Mais popular",
+          "name": "Business",
+          "description": "Operação completa com scans ilimitados, analytics avançado e automação para equipes que precisam escalar.",
+          "cta": "Solicitar assessment",
+          "features": {
+            "0": "Tudo do Starter +",
+            "1": "Scans de vulnerabilidade ilimitados",
+            "2": "Analytics avançado",
+            "3": "Automação e remediação",
+            "4": "Relatórios executivos",
+            "5": "Suporte prioritário"
+          }
+        },
+        "enterprise": {
+          "name": "Enterprise / MSP",
+          "priceLabel": "A partir de",
+          "description": "Para operações com +200 dispositivos, multi-tenant, SLA dedicado, API e white label.",
+          "cta": "Falar com especialista",
+          "features": {
+            "0": "Tudo do Business +",
+            "1": "Multi-tenant completo",
+            "2": "SLA dedicado",
+            "3": "API e integrações",
+            "4": "White label disponível",
+            "5": "Onboarding assistido"
+          }
+        }
+      }
     },
     "testimonials": {
       "title": "O que nossos clientes dizem",
