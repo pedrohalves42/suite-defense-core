@@ -12,6 +12,7 @@ import { hotfixStrictModeGlobals, hotfixBaselineGlobals, hotfixInitProtectedSet,
 
 // Crypto fallbacks (ECDSA → RSA)
 import {
+  hotfixEcdsaKeygenPreCheck,
   hotfixLegacyEcdsaFallback, hotfixExportPkcs8RsaFallback, hotfixCngCleanup,
   hotfixRsa2048Fallback, hotfixRsaSignFallback, hotfixRsaAlgoReport,
   hotfixRsaNet4x, hotfixRngNet4x, hotfixNullEcdsaGuard,
@@ -64,7 +65,8 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
   hotfixInitProtectedSet(ctx);
   hotfixRsaGlobalsInit(ctx);
 
-  // 2. Crypto fallbacks
+  // 2. Crypto fallbacks (ECDSA → RSA)
+  hotfixEcdsaKeygenPreCheck(ctx);  // Must run FIRST: prevents ECDSA attempt on .NET 4.x
   hotfixLegacyEcdsaFallback(ctx);
   hotfixExportPkcs8RsaFallback(ctx);
   hotfixCngCleanup(ctx);
