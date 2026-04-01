@@ -44,14 +44,32 @@ try {
     Write-Host "[$(Get-Date -Format 'o')] [WARN] Mutex creation failed: $($_.Exception.Message). Continuing without single-instance guard." -ForegroundColor Yellow
 }
 
-# Load modules
+# ============================================
+# MODULE LOADING
+# Order matters: foundational modules first, then domain modules
+# ============================================
 $modulePath = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "modules"
+
+# --- Foundation layer (no dependencies on other modules) ---
 . "$modulePath\config.ps1"
 . "$modulePath\utils.ps1"
 . "$modulePath\crypto.ps1"
 . "$modulePath\hmac.ps1"
+
+# --- Infrastructure layer (depends on foundation) ---
 . "$modulePath\telemetry.ps1"
 . "$modulePath\security.ps1"
+. "$modulePath\network.ps1"
+. "$modulePath\state.ps1"
+. "$modulePath\evidence.ps1"
+. "$modulePath\notification.ps1"
+
+# --- Domain layer (depends on infrastructure) ---
+. "$modulePath\collection.ps1"
+. "$modulePath\remediation.ps1"
+. "$modulePath\heartbeat.ps1"
+
+# --- Orchestration layer (depends on all above) ---
 . "$modulePath\job-runner.ps1"
 . "$modulePath\self-heal.ps1"
 . "$modulePath\update.ps1"
