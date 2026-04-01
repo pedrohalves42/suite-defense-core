@@ -7,6 +7,34 @@ import { logger } from '../_shared/logger.ts';
 import { SCIM_SCHEMAS, scimHeaders, scimError, serviceProviderConfig, resourceTypes, schemas } from './constants.ts';
 import * as userHandlers from './user-handlers.ts';
 import * as groupHandlers from './group-handlers.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const ScimUserSchema = z.object({
+  schemas: z.array(z.string().max(256)).max(10).optional(),
+  userName: z.string().min(1).max(255).optional(),
+  emails: z.array(z.object({ value: z.string().email().max(255), type: z.string().max(64).optional(), primary: z.boolean().optional() })).max(10).optional(),
+  name: z.object({ givenName: z.string().max(255).optional(), familyName: z.string().max(255).optional() }).optional(),
+  active: z.boolean().optional(),
+  groups: z.array(z.object({ display: z.string().max(255).optional(), value: z.string().max(255).optional() })).max(50).optional(),
+  externalId: z.string().max(255).optional(),
+  displayName: z.string().max(500).optional(),
+}).passthrough();
+
+const ScimGroupSchema = z.object({
+  schemas: z.array(z.string().max(256)).max(10).optional(),
+  displayName: z.string().min(1).max(255).optional(),
+  externalId: z.string().max(255).optional(),
+  members: z.array(z.object({ value: z.string().max(255), display: z.string().max(255).optional() })).max(1000).optional(),
+  Operations: z.array(z.object({ op: z.string().max(32), path: z.string().max(255).optional(), value: z.unknown().optional() })).max(100).optional(),
+}).passthrough();
+
+async function parseAndValidateScimBody(req: Request, schema: z.ZodType): Promise<{ data: Record<string, unknown> } | Response> {
+  let body: unknown;
+  try { body = await req.json(); } catch { return scimError(400, 'Invalid JSON body'); }
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) return scimError(400, `Invalid SCIM payload: ${parsed.error.issues.map(i => i.message).join(', ')}`);
+  return { data: parsed.data as Record<string, unknown> };
+}
 
 function getSupabase(): SupabaseClient {
   const url = Deno.env.get('SUPABASE_URL');
@@ -57,7 +85,11 @@ Deno.serve(async (req: Request) => {
     if (usersMatch) {
       const userId = usersMatch[1];
       if (!userId) {
-        if (method === 'POST') return await userHandlers.createUser(supabase, tenant.id, await req.json());
+        if (method === 'POST') {
+          const result = await parseAndValidateScimBody(req, ScimUserSchema);
+          if (result instanceof Response) return result;
+          return await userHandlers.createUser(supabase, tenant.id, result.data);
+        }
         if (method === 'GET') {
           const filter = url.searchParams.get('filter');
           if (filter?.startsWith('userName eq ')) {
@@ -73,8 +105,16 @@ Deno.serve(async (req: Request) => {
         }
       } else {
         if (method === 'GET') return userHandlers.getUser(supabase, tenant.id, userId);
-        if (method === 'PUT') return userHandlers.updateUser(supabase, tenant.id, userId, await req.json());
-        if (method === 'PATCH') return userHandlers.patchUser(supabase, tenant.id, userId, await req.json());
+        if (method === 'PUT') {
+          const result = await parseAndValidateScimBody(req, ScimUserSchema);
+          if (result instanceof Response) return result;
+          return userHandlers.updateUser(supabase, tenant.id, userId, result.data);
+        }
+        if (method === 'PATCH') {
+          const result = await parseAndValidateScimBody(req, ScimUserSchema);
+          if (result instanceof Response) return result;
+          return userHandlers.patchUser(supabase, tenant.id, userId, result.data);
+        }
         if (method === 'DELETE') return userHandlers.deleteUser(supabase, tenant.id, userId);
       }
     }
@@ -84,12 +124,24 @@ Deno.serve(async (req: Request) => {
     if (groupsMatch) {
       const groupId = groupsMatch[1];
       if (!groupId) {
-        if (method === 'POST') return await groupHandlers.createGroup(supabase, tenant.id, await req.json());
+        if (method === 'POST') {
+          const result = await parseAndValidateScimBody(req, ScimGroupSchema);
+          if (result instanceof Response) return result;
+          return await groupHandlers.createGroup(supabase, tenant.id, result.data);
+        }
         if (method === 'GET') return groupHandlers.listGroups(supabase, tenant.id, url.searchParams);
       } else {
         if (method === 'GET') return groupHandlers.getGroup(supabase, tenant.id, groupId);
-        if (method === 'PUT') return groupHandlers.updateGroup(supabase, tenant.id, groupId, await req.json());
-        if (method === 'PATCH') return groupHandlers.patchGroup(supabase, tenant.id, groupId, await req.json());
+        if (method === 'PUT') {
+          const result = await parseAndValidateScimBody(req, ScimGroupSchema);
+          if (result instanceof Response) return result;
+          return groupHandlers.updateGroup(supabase, tenant.id, groupId, result.data);
+        }
+        if (method === 'PATCH') {
+          const result = await parseAndValidateScimBody(req, ScimGroupSchema);
+          if (result instanceof Response) return result;
+          return groupHandlers.patchGroup(supabase, tenant.id, groupId, result.data);
+        }
         if (method === 'DELETE') return groupHandlers.deleteGroup(supabase, tenant.id, groupId);
       }
     }

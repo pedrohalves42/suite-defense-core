@@ -13,6 +13,13 @@ import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import type { PlaybookAction, ExecuteRequest, ActionResult, ActionContext } from './types.ts';
 import { executeAction } from './action-dispatcher.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const PlaybookActionSchema = z.object({
+  execution_id: z.string().uuid(),
+  action_index: z.number().int().min(0).max(100).optional(),
+  notes: z.string().max(2000).optional(),
+});
 
 const DESTRUCTIVE_ACTIONS = [
   'isolate_agent', 'isolate',
@@ -29,14 +36,14 @@ serveTenant(async (req, ctx) => {
   const { supabase, tenantId, userId, requestId, body } = ctx;
   const startTime = Date.now();
 
-  const { execution_id, action_index, notes } = body as ExecuteRequest;
-
-  if (!execution_id) {
-    return new Response(JSON.stringify({ error: 'execution_id is required' }), {
+  const parsed = PlaybookActionSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), {
       status: 400,
       headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   }
+  const { execution_id, action_index, notes } = parsed.data;
 
   logger.info(`[execute-playbook-action] Executing ${execution_id}, action_index: ${action_index}`);
 

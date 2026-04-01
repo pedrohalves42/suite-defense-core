@@ -6,12 +6,19 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 import {
   generateKeyPair, signWithPrivateKey, signWithEd25519,
   verifyWithPublicKey, getPublicKeyFingerprint, calculateSha256,
 } from './crypto-ops.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+
+const SignSchema = z.object({ sha256: z.string().regex(/^[a-f0-9]{64}$/i), private_key: z.string().min(1).max(10000) });
+const VerifySchema = z.object({ sha256: z.string().regex(/^[a-f0-9]{64}$/i), signature_base64: z.string().min(1).max(2048), public_key: z.string().min(1).max(10000) });
+const SignExistingSchema = z.object({ release_ids: z.array(z.string().uuid()).max(100).optional(), private_key: z.string().min(1).max(10000).optional() });
+const SignDocumentSchema = z.object({ document_name: z.string().min(1).max(500), document_content: z.string().max(5_000_000).optional(), document_hash: z.string().regex(/^[a-f0-9]{64}$/i).optional(), invariants_version: z.string().max(32).optional(), audit_level: z.string().max(32).optional() });
+const SignAndRegisterSchema = z.object({ platform: z.enum(['windows', 'linux', 'macos']), version: z.string().min(1).max(32), script_content: z.string().min(1).max(5_000_000), private_key: z.string().min(1).max(10000), release_notes: z.string().max(5000).optional(), channel: z.string().max(32).default('stable') });
 
 serveTenant(async (req, ctx) => {
   const { supabase, userId } = ctx;
@@ -44,22 +51,26 @@ serveTenant(async (req, ctx) => {
     }
 
     case 'sign': {
-      const body = ctx.body as Record<string, string>;
-      if (!body.sha256 || !body.private_key) return respond({ error: 'Missing required fields: sha256, private_key' }, 400);
+      const signParsed = SignSchema.safeParse(ctx.body);
+      if (!signParsed.success) return respond({ error: 'Invalid payload', issues: signParsed.error.flatten().fieldErrors }, 400);
+      const body = signParsed.data;
       const signature = await signWithPrivateKey(body.sha256, body.private_key);
       return respond({ success: true, signature_base64: signature, sha256: body.sha256, algorithm: 'ECDSA-P256-SHA256', signed_at: new Date().toISOString(), signed_by: userEmail });
     }
 
     case 'verify': {
-      const body = ctx.body as Record<string, string>;
-      if (!body.sha256 || !body.signature_base64 || !body.public_key) return respond({ error: 'Missing required fields' }, 400);
+      const verifyParsed = VerifySchema.safeParse(ctx.body);
+      if (!verifyParsed.success) return respond({ error: 'Invalid payload', issues: verifyParsed.error.flatten().fieldErrors }, 400);
+      const body = verifyParsed.data;
       const valid = await verifyWithPublicKey(body.sha256, body.signature_base64, body.public_key);
       const fingerprint = await getPublicKeyFingerprint(body.public_key);
       return respond({ valid, fingerprint, algorithm: 'ECDSA-P256-SHA256', verified_at: new Date().toISOString() });
     }
 
     case 'sign-existing': {
-      const body = ctx.body as Record<string, unknown>;
+      const seParsed = SignExistingSchema.safeParse(ctx.body);
+      if (!seParsed.success) return respond({ error: 'Invalid payload', issues: seParsed.error.flatten().fieldErrors }, 400);
+      const body = seParsed.data;
       const { release_ids } = body;
       const privateKey = Deno.env.get('ECDSA_PRIVATE_KEY') || (body.private_key as string);
       if (!privateKey) return respond({ error: 'Missing ECDSA private key' }, 400);
@@ -87,13 +98,14 @@ serveTenant(async (req, ctx) => {
     }
 
     case 'sign-document': {
-      const body = ctx.body as Record<string, unknown>;
+      const sdParsed = SignDocumentSchema.safeParse(ctx.body);
+      if (!sdParsed.success) return respond({ error: 'Invalid payload', issues: sdParsed.error.flatten().fieldErrors }, 400);
+      const body = sdParsed.data;
       const { document_name, document_content, document_hash: providedHash, invariants_version, audit_level } = body;
-      if (!document_name) return respond({ error: 'Missing required field: document_name' }, 400);
+
       if (!providedHash && !document_content) return respond({ error: 'Missing document_hash OR document_content' }, 400);
 
       const privateKey = Deno.env.get('ECDSA_PRIVATE_KEY');
-      if (!privateKey) return respond({ error: 'Missing ECDSA private key' }, 400);
 
       let document_hash: string;
       let hashSource: 'provided' | 'calculated';
@@ -119,12 +131,12 @@ serveTenant(async (req, ctx) => {
     }
 
     case 'sign-and-register': {
-      const body = ctx.body as Record<string, unknown>;
-      const { platform, version, script_content, private_key, release_notes, channel = 'stable' } = body;
-      if (!platform || !version || !script_content || !private_key) return respond({ error: 'Missing required fields' }, 400);
+      const sarParsed = SignAndRegisterSchema.safeParse(ctx.body);
+      if (!sarParsed.success) return respond({ error: 'Invalid payload', issues: sarParsed.error.flatten().fieldErrors }, 400);
+      const { platform, version, script_content, private_key, release_notes, channel } = sarParsed.data;
 
-      const sha256 = await calculateSha256(script_content as string);
-      const signature = await signWithPrivateKey(sha256, private_key as string);
+      const sha256 = await calculateSha256(script_content);
+      const signature = await signWithPrivateKey(sha256, private_key);
       await supabase.from('agent_releases').update({ is_active: false }).eq('platform', platform).eq('channel', channel);
       await supabase.from('agent_versions').update({ is_latest: false }).eq('platform', platform);
 
@@ -135,12 +147,12 @@ serveTenant(async (req, ctx) => {
       if (releaseError) throw releaseError;
 
       const { error: versionError } = await supabase.from('agent_versions').upsert({
-        platform, version, is_latest: true, sha256, size_bytes: (script_content as string).length,
+        platform, version, is_latest: true, sha256, size_bytes: script_content.length,
         download_url: `${SUPABASE_URL}/functions/v1/serve-agent-update`, release_notes: release_notes || `Signed release ${version}`
       }, { onConflict: 'platform,version' });
       if (versionError) throw versionError;
 
-      return respond({ success: true, platform, version, sha256, signature_base64: signature, signed_at: new Date().toISOString(), signed_by: userEmail, size_bytes: (script_content as string).length });
+      return respond({ success: true, platform, version, sha256, signature_base64: signature, signed_at: new Date().toISOString(), signed_by: userEmail, size_bytes: script_content.length });
     }
 
     case 'sign-existing-ed25519': {

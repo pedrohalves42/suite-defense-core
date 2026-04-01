@@ -4,6 +4,14 @@
  */
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const UploadReleaseSchema = z.object({
+  platform: z.enum(['windows', 'linux', 'macos']),
+  version: z.string().min(1).max(32),
+  content: z.string().min(1).max(5_000_000),
+  release_notes: z.string().max(5000).optional(),
+});
 
 function base64ToArrayBuffer(base64: string): ArrayBuffer {
   const binary = atob(base64);
@@ -21,14 +29,15 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 
 serveInternal(async (_req, ctx) => {
   const { supabase, requestId, body } = ctx;
-  const { platform, version, content, release_notes } = body as Record<string, string>;
 
-  if (!platform || !version || !content) {
+  const parsed = UploadReleaseSchema.safeParse(body);
+  if (!parsed.success) {
     return new Response(
-      JSON.stringify({ error: 'Missing required fields: platform, version, content' }),
+      JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
+  const { platform, version, content, release_notes } = parsed.data;
 
   logger.info(`[upload-release-content][${requestId}] Uploading ${platform}/${version} (${content.length} chars)`);
 

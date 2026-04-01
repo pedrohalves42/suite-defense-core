@@ -6,33 +6,60 @@ import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
  */
 
 import { serveTenant } from '../_shared/serve-tenant.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 const VERSION_TOLERANCE = 2;
 
+const FleetComplianceSchema = z.object({
+  action: z.literal('fleet-compliance').default('fleet-compliance'),
+  tenant_id: z.string().uuid().optional(),
+});
+
+const EnforceUpdateSchema = z.object({
+  action: z.literal('enforce-update'),
+  tenant_id: z.string().uuid().optional(),
+  dry_run: z.boolean().default(true),
+});
+
+const SetMinVersionSchema = z.object({
+  action: z.literal('set-min-version'),
+  tenant_id: z.string().uuid(),
+  min_version: z.string().min(1).max(32),
+  reason: z.string().max(500).optional(),
+});
+
+const AgentVersionSchema = z.discriminatedUnion('action', [
+  FleetComplianceSchema,
+  EnforceUpdateSchema,
+  SetMinVersionSchema,
+]);
+
 serveTenant(async (_req, ctx) => {
   const { supabase, body, requestId } = ctx;
-  const action = body.action ?? 'fleet-compliance';
 
-  if (action === 'fleet-compliance') {
-    return await getFleetCompliance(supabase, body.tenant_id);
+  const parsed = AgentVersionSchema.safeParse({ action: body.action ?? 'fleet-compliance', ...body });
+  if (!parsed.success) {
+    return new Response(
+      JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+  const data = parsed.data;
+
+  if (data.action === 'fleet-compliance') {
+    return await getFleetCompliance(supabase, data.tenant_id);
   }
 
-  if (action === 'enforce-update') {
-    return await enforceUpdate(supabase, body.tenant_id, body.dry_run ?? true);
+  if (data.action === 'enforce-update') {
+    return await enforceUpdate(supabase, data.tenant_id, data.dry_run);
   }
 
-  if (action === 'set-min-version') {
-    if (!body.tenant_id || !body.min_version) {
-      return new Response(
-        JSON.stringify({ error: 'tenant_id and min_version required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-    return await setMinVersion(supabase, body.tenant_id, body.min_version, body.reason);
+  if (data.action === 'set-min-version') {
+    return await setMinVersion(supabase, data.tenant_id, data.min_version, data.reason);
   }
 
   return new Response(
-    JSON.stringify({ error: `Unknown action: ${action}` }),
+    JSON.stringify({ error: 'Unknown action' }),
     { status: 400, headers: { 'Content-Type': 'application/json' } }
   );
 }, {

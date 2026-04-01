@@ -7,6 +7,7 @@ import { serveTenant } from '../_shared/serve-tenant.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { signPayload } from '../_shared/crypto-utils.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const ED25519_PRIVATE_KEY = Deno.env.get('ED25519_PRIVATE_KEY');
@@ -57,8 +58,12 @@ serveTenant(async (req, ctx) => {
     }
   }
 
-  let body: Record<string, unknown> = {};
-  try { body = ctx.body as Record<string, unknown>; } catch { /* empty body ok */ }
+  const PromoteSchema = z.object({
+    scripts: z.record(z.enum(['windows', 'linux', 'macos']), z.string().max(5_000_000)).optional(),
+  }).passthrough();
+  const parsed = PromoteSchema.safeParse(ctx.body ?? {});
+  const body: Record<string, unknown> = parsed.success ? parsed.data : {};
+  const results: Record<string, unknown> = {};
   const results: Record<string, unknown> = {};
 
   const platforms = [

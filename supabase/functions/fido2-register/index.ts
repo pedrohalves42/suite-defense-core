@@ -1,5 +1,6 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 /**
  * FIDO2/WebAuthn Registration Edge Function
@@ -8,6 +9,33 @@ import { logger } from '../_shared/logger.ts';
 
 const RP_ID = Deno.env.get('FIDO2_RP_ID') || 'cybershield-audit.lovable.app';
 const RP_NAME = 'CyberShield Security Platform';
+
+const Fido2BeginSchema = z.object({
+  action: z.literal('begin').default('begin'),
+  deviceName: z.string().min(1).max(255),
+});
+
+const Fido2CompleteSchema = z.object({
+  action: z.literal('complete'),
+  registrationResponse: z.object({
+    id: z.string().min(1).max(2048),
+    response: z.object({
+      clientDataJSON: z.string().min(1),
+      transports: z.array(z.string().max(32)).max(10).optional(),
+    }).passthrough(),
+  }).passthrough(),
+  expectedChallenge: z.string().min(1).max(512),
+});
+
+const Fido2KeysListSchema = z.object({
+  action: z.literal('keys'),
+  credentialId: z.undefined().optional(),
+});
+
+const Fido2RevokeSchema = z.object({
+  action: z.literal('keys'),
+  credentialId: z.string().min(1).max(2048),
+});
 
 function generateChallenge(): string {
   const bytes = new Uint8Array(32);
@@ -28,6 +56,10 @@ serveTenant(async (req, ctx) => {
 
   // ??? LIST KEYS ???
   if (action === 'keys' && !body.credentialId) {
+    const listParsed = Fido2KeysListSchema.safeParse(body);
+    if (!listParsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid payload', issues: listParsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
     const { data: credentials, error } = await supabase
       .from('fido2_credentials')
       .select('credential_id, device_name, created_at, last_used_at, aaguid, backed_up')
@@ -41,26 +73,28 @@ serveTenant(async (req, ctx) => {
 
   // ??? REVOKE KEY ???
   if (action === 'keys' && body.credentialId) {
+    const revokeParsed = Fido2RevokeSchema.safeParse(body);
+    if (!revokeParsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid payload', issues: revokeParsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
     const { error } = await supabase
       .from('fido2_credentials')
       .update({ is_revoked: true, revoked_at: new Date().toISOString() })
       .eq('user_id', userId)
-      .eq('credential_id', body.credentialId);
+      .eq('credential_id', revokeParsed.data.credentialId);
 
     if (error) throw error;
-    logger.info(`[fido2-register][${requestId}] Credential revoked: ${body.credentialId} by user ${userId}`);
+    logger.info(`[fido2-register][${requestId}] Credential revoked: ${revokeParsed.data.credentialId} by user ${userId}`);
     return { success: true };
   }
 
   // ??? BEGIN REGISTRATION ???
   if (action === 'begin') {
-    const { deviceName } = body;
-    if (!deviceName) {
-      return new Response(
-        JSON.stringify({ error: 'deviceName required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+    const beginParsed = Fido2BeginSchema.safeParse(body);
+    if (!beginParsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid payload', issues: beginParsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+    const { deviceName } = beginParsed.data;
 
     const challenge = generateChallenge();
 
@@ -102,13 +136,11 @@ serveTenant(async (req, ctx) => {
 
   // ??? COMPLETE REGISTRATION ???
   if (action === 'complete') {
-    const { registrationResponse, expectedChallenge } = body;
-    if (!registrationResponse || !expectedChallenge) {
-      return new Response(
-        JSON.stringify({ error: 'registrationResponse and expectedChallenge required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+    const completeParsed = Fido2CompleteSchema.safeParse(body);
+    if (!completeParsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid payload', issues: completeParsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+    const { registrationResponse, expectedChallenge } = completeParsed.data;
 
     const challengeKey = `fido2:register:${userId}:${expectedChallenge}`;
     const { data: storedData } = await supabase

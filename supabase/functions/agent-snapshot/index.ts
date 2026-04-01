@@ -5,25 +5,25 @@
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const AgentSnapshotSchema = z.object({
+  agent_id: z.string().uuid('Invalid agent_id format'),
+});
 
 serveTenant(async (_req, ctx) => {
   const { supabase, requestId, body } = ctx;
-  const { agent_id } = body as { agent_id?: string };
 
-  if (!agent_id) {
+  const parsed = AgentSnapshotSchema.safeParse(body);
+  if (!parsed.success) {
     return new Response(
-      JSON.stringify({ error: 'agent_id is required', correlation_id: requestId }),
+      JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors, correlation_id: requestId }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
+  const { agent_id } = parsed.data;
 
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(agent_id)) {
-    return new Response(
-      JSON.stringify({ error: 'Invalid agent_id format', correlation_id: requestId }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
+  // Validation handled by Zod above
 
   const { data: snapshot, error: rpcError } = await supabase
     .rpc('get_agent_snapshot', { p_agent_id: agent_id });
