@@ -3,10 +3,25 @@
  */
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const BuildCallbackSchema = z.object({
+  build_id: z.string().uuid(),
+  exe_binary_base64: z.string().max(200_000_000).optional(),
+  sha256: z.string().max(128).optional(),
+  size_bytes: z.number().int().min(0).optional(),
+  github_run_id: z.string().max(100).optional(),
+  error: z.string().max(5000).optional(),
+});
 
 serveInternal(async (_req, ctx) => {
   const { supabase, requestId, body } = ctx;
-  const { build_id, exe_binary_base64, sha256, size_bytes, github_run_id, error } = body as Record<string, unknown>;
+
+  const parsed = BuildCallbackSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const { build_id, exe_binary_base64, sha256, size_bytes, github_run_id, error } = parsed.data;
 
   logger.info(`[${requestId}] Build callback received`, { build_id, has_error: !!error });
 
