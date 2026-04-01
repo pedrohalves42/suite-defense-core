@@ -45,7 +45,7 @@ export class JobMapper {
       delivered_at: entity.deliveredAt?.toISOString() ?? null,
       started_at: entity.startedAt?.toISOString() ?? null,
       completed_at: entity.completedAt?.toISOString() ?? null,
-      output: entity.result as Record<string, unknown> | null,
+      output: entity.result as unknown as Json,
       error_message: entity.error,
     };
   }
