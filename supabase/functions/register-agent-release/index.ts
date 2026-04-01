@@ -7,9 +7,21 @@ import { serveTenant } from '../_shared/serve-tenant.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { signPayload } from '../_shared/crypto-utils.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const ED25519_PRIVATE_KEY = Deno.env.get('ED25519_PRIVATE_KEY');
+
+const RegisterReleaseSchema = z.object({
+  platform: z.enum(['windows', 'linux', 'macos']),
+  version: z.string().min(1).max(32),
+  script_content: z.string().min(10000).max(5_000_000),
+  release_notes: z.string().max(5000).optional(),
+  channel: z.string().max(32).default('stable'),
+  manual_sha256: z.string().regex(/^[a-f0-9]{64}$/i).optional(),
+  signature_base64: z.string().max(2048).optional(),
+  signed_by: z.string().max(100).optional(),
+});
 
 function normalizeVersion(version: string | null | undefined): string {
   return (version ?? '').trim().toLowerCase().replace(/^v/, '');
@@ -33,27 +45,16 @@ serveTenant(async (req, ctx) => {
   const origin = req.headers.get('origin');
   const requestId = crypto.randomUUID();
 
-  // Verify super_admin
   const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', userId!);
   if (!roles?.some(r => r.role === 'super_admin')) {
     return new Response(JSON.stringify({ error: 'Requires super_admin role' }), { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
   }
 
-  const payload = ctx.body as Record<string, unknown>;
-  const { platform, version, script_content, release_notes, channel = 'stable', manual_sha256, signature_base64, signed_by } = payload;
-
-  if (!platform || !version || !script_content) {
-    return new Response(JSON.stringify({ error: 'Missing required fields: platform, version, script_content' }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
+  const parsed = RegisterReleaseSchema.safeParse(ctx.body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
   }
-
-  const scriptStr = script_content as string;
-
-  // Supply chain validation
-  const MIN_SCRIPT_SIZE = 10000;
-  if (scriptStr.length < MIN_SCRIPT_SIZE) {
-    logger.error('[register-agent-release] SUPPLY_CHAIN_VIOLATION: Script too small', { requestId, platform, version, size: scriptStr.length });
-    return new Response(JSON.stringify({ error: 'SUPPLY_CHAIN_VIOLATION', message: `Script content too small (${scriptStr.length} bytes).`, size: scriptStr.length, minRequired: MIN_SCRIPT_SIZE }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
-  }
+  const { platform, version, script_content: scriptStr, release_notes, channel, manual_sha256, signature_base64, signed_by } = parsed.data;
 
   // Platform validation
   const scriptTrimmed = scriptStr.trim();
