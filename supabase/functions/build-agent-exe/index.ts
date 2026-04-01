@@ -99,7 +99,7 @@ serveTenant(async (req, ctx) => {
 
       const { data: fileData, error: storageError } = await supabase.storage
         .from('agent-installers')
-        .download('scripts/cybershield-agent-windows-v3.ps1');
+        .download('scripts/cybershield-agent-windows-v5.ps1');
 
       if (storageError || !fileData) {
         return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Agent script not found in storage', 503, requestId);
@@ -123,7 +123,7 @@ serveTenant(async (req, ctx) => {
       const { WINDOWS_INSTALLER_TEMPLATE: BASE_TEMPLATE } = await import('../_shared/installer-template.ts');
 
       // Build the full installer template with embedded agent script
-      const FULL_TEMPLATE = `# CyberShield Agent - Windows Installation Script v3.0.0-APEX
+      const FULL_TEMPLATE = `# CyberShield Agent - Windows Installation Script v5.0.15
 # Auto-generated: {{TIMESTAMP}}
 # APEX BUILD - Universal, Robust, Production-Ready
 
@@ -134,7 +134,7 @@ $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 Write-Host "==================================" -ForegroundColor Cyan
-Write-Host "CyberShield Agent Installer v3.0.0-APEX" -ForegroundColor Cyan
+Write-Host "CyberShield Agent Installer v5.0.15" -ForegroundColor Cyan
 Write-Host "==================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -250,7 +250,7 @@ try {
           build_started_at: new Date().toISOString(),
           created_by: userId,
           script_hash: agentScriptHash,
-          ps1_version: 'v3.0.0',
+          ps1_version: 'v5.0.15',
         })
         .select()
         .single();
@@ -287,7 +287,7 @@ try {
       const workflowPayload = {
         ps1_content_base64: ps1Base64,
         output_name: `CyberShield-Agent-${agent_name}-${Date.now()}.exe`,
-        version: '3.0.0',
+        version: '5.0.15',
         build_id: buildRecord.id,
         callback_url: `${SUPABASE_URL}/functions/v1/build-callback`,
         callback_token: SUPABASE_SERVICE_ROLE_KEY,

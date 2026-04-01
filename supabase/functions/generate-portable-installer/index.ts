@@ -62,7 +62,7 @@ serveTenant(async (_req, ctx) => {
   // Fetch agent script from storage
   const { data: fileData, error: storageErr } = await supabase.storage
     .from('agent-installers')
-    .download('scripts/cybershield-agent-windows-v3.ps1');
+    .download('scripts/cybershield-agent-windows-v5.ps1');
 
   if (storageErr || !fileData) {
     logger.error(`[generate-portable-installer][${requestId}] Storage error:`, storageErr);
@@ -141,7 +141,7 @@ serveTenant(async (_req, ctx) => {
     file_path: fileName,
     download_url: signedData?.signedUrl || null,
     download_expires_at: new Date(Date.now() + 3600000).toISOString(),
-    ps1_version: 'v3.0.0-portable',
+    ps1_version: 'v5.0.15-portable',
     build_duration_seconds: 0,
   });
 
@@ -168,7 +168,7 @@ function buildInstallerPs1(params: {
 }): string {
   const { agentToken, hmacSecret, serverUrl, agentName, agentScriptContent } = params;
 
-  return `# CyberShield Agent - Windows Installation Script v3.0.0-Portable
+  return `# CyberShield Agent - Windows Installation Script v5.0.15-Portable
 # Auto-generated: ${new Date().toISOString()}
 # Portable Build - No GitHub Actions required
 
@@ -179,7 +179,7 @@ $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 Write-Host "==================================" -ForegroundColor Cyan
-Write-Host "CyberShield Agent Installer v3.0.0" -ForegroundColor Cyan
+Write-Host "CyberShield Agent Installer v5.0.15" -ForegroundColor Cyan
 Write-Host "Portable Build" -ForegroundColor Cyan
 Write-Host "==================================" -ForegroundColor Cyan
 Write-Host ""
@@ -308,7 +308,7 @@ chcp 65001 >nul 2>&1
 title CyberShield Agent Installer - ${agentName}
 
 :: ============================================
-:: CyberShield Portable Installer v3.0.0
+:: CyberShield Portable Installer v5.0.15
 :: Agent: ${agentName}
 :: Generated: ${new Date().toISOString()}
 :: ============================================

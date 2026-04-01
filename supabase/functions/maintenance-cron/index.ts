@@ -6,7 +6,7 @@
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { recordMetric } from '../_shared/apm.ts';
 import { logger } from '../_shared/logger.ts';
-import { createEmptyResult, runMaintenanceRpc, cleanupStuckJobs, autoCleanupJobs, runRemainingPhases, computeTotalOps } from './phase-handlers.ts';
+import { createEmptyResult, runMaintenanceRpc, cleanupStuckJobs, autoCleanupJobs, runRemainingPhases, cleanupLegacyScripts, computeTotalOps } from './phase-handlers.ts';
 
 serveInternal(async (_req, ctx) => {
   const { supabase, requestId } = ctx;
@@ -19,6 +19,7 @@ serveInternal(async (_req, ctx) => {
     await cleanupStuckJobs(supabase, now, result);
     await autoCleanupJobs(supabase, now, result);
     await runRemainingPhases(supabase, now, result);
+    await cleanupLegacyScripts(supabase, result);
 
     result.duration_ms = Date.now() - startTime;
     result.total_operations = computeTotalOps(result);
