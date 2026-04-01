@@ -26,12 +26,15 @@ serveInternal(async (_req, ctx) => {
   logger.info(`[${requestId}] Build callback received`, { build_id, has_error: !!error });
 
   if (error) {
-    await supabase.from('agent_builds').update({ build_status: 'failed', error_message: error as string, github_run_id: github_run_id as string, build_completed_at: new Date().toISOString() }).eq('id', build_id);
+    await supabase.from('agent_builds').update({ build_status: 'failed', error_message: error, github_run_id: github_run_id || null, build_completed_at: new Date().toISOString() }).eq('id', build_id);
     logger.error(`[${requestId}] Build failed`, { build_id, error });
     return { success: false };
   }
 
-  const exeBuffer = Uint8Array.from(atob(exe_binary_base64 as string), c => c.charCodeAt(0));
+  if (!exe_binary_base64) {
+    return new Response(JSON.stringify({ error: 'exe_binary_base64 required when no error' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const exeBuffer = Uint8Array.from(atob(exe_binary_base64), c => c.charCodeAt(0));
   const { data: buildData } = await supabase.from('agent_builds').select('tenant_id, build_started_at, agents!inner(agent_name)').eq('id', build_id).single();
 
   if (!buildData) {
