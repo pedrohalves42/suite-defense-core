@@ -66,12 +66,13 @@ export async function buildNormalResponse(
     })
   }
 
-  // CRITICAL FIX: Only send script_sha256 when accompanied by a valid Ed25519 signature.
-  // Sending an unsigned hash causes the agent to overwrite its local cache with a
-  // server-computed hash (which may differ due to hotfix/normalization), triggering
-  // TOCTOU false positives and crash-restart loops (Exit 9004) every 5 minutes.
-  const hasValidSignature = currentScriptHashSignedAt !== null
-  const safeScriptSha256 = hasValidSignature ? currentScriptSha256 : null
+  // CRITICAL FIX: Never send script_sha256 until Ed25519 signing is fully implemented.
+  // Sending an unsigned or incorrectly-normalized hash causes the agent to overwrite
+  // its local cache, triggering TOCTOU false positives and crash-restart loops (Exit 9004).
+  // The guard below is intentionally hardcoded to false — enable only when real
+  // Ed25519 signatures are generated and stored in agent_releases.script_hash_signature.
+  const hasValidSignature = false
+  const safeScriptSha256 = null
 
   return new Response(
     JSON.stringify({
