@@ -1,5 +1,7 @@
 import { servePublic } from '../_shared/serve-tenant.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
+const DocumentNameSchema = z.string().min(1).max(255).regex(/^[a-zA-Z0-9_.\-]+$/);
 /**
  * Verify Document - Public Endpoint (No Auth Required)
  * Returns signature metadata for external verification.
