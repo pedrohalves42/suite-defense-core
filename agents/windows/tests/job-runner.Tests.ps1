@@ -45,8 +45,8 @@ Describe "Invoke-AgentJob Dispatcher" {
 
     It "Returns system info for collect_info" {
         $result = Invoke-AgentJob -JobId "test-2" -JobType "collect_info" -Timeout 10
-        $result.success | Should -BeTrue
-        $result.output | Should -Not -BeNullOrEmpty
+        $result.hostname | Should -Not -BeNullOrEmpty
+        $result.agent_version | Should -Be "6.0.0"
     }
 
     It "Rejects unknown job type" {
