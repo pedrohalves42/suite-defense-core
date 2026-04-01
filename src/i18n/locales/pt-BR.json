@@ -280,7 +280,7 @@
       }
     },
     "assessment": {
-      "title": "O que você recebe no assessment gratuito",
+      "title": "O que você recebe no diagnóstico gratuito",
       "text": "Você não recebe uma conversa genérica. Recebe uma leitura inicial do seu cenário atual, com foco no que mais importa: risco, operação e conformidade.",
       "items": [
         "Visão inicial dos endpoints monitorados",
@@ -289,7 +289,7 @@
         "Prioridades de correção",
         "Próximos passos recomendados"
       ],
-      "cta": "Solicitar assessment gratuito"
+      "cta": "Solicitar diagnóstico gratuito"
     },
     "benefits": {
       "title": "Por que unificar sua operação de segurança faz diferença",
