@@ -20,9 +20,9 @@ export async function fetchForensicData(agentId: string): Promise<ForensicData> 
     .limit(5);
 
   const latestSnapshot = processRows?.[0];
-  const processes: ProcessEntry[] = ((latestSnapshot?.processes as Record<string, unknown>[]) || []).map((p: Record<string, unknown>) => ({
-    pid: p.pid, name: p.name, cpu_percent: p.cpu_percent,
-    memory_mb: p.memory_mb, user: p.user, command_line: p.command_line,
+  const processes: ProcessEntry[] = ((latestSnapshot?.processes as Record<string, unknown>[]) || []).map((p) => ({
+    pid: Number(p.pid), name: String(p.name), cpu_percent: Number(p.cpu_percent),
+    memory_mb: Number(p.memory_mb), user: String(p.user), command_line: p.command_line ? String(p.command_line) : undefined,
   }));
 
   const suspiciousProcesses: string[][] = (processRows || [])
