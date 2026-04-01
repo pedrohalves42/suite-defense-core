@@ -5,6 +5,7 @@
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 interface I18nStrings {
   subject7: (days: number) => string;
