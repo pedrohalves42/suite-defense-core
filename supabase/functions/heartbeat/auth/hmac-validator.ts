@@ -69,11 +69,18 @@ export async function validateHeartbeatHmac(
           ),
         }
       }
-      // Legacy agent: accept with warning
-      logger.warn('HMAC verification failed - accepting legacy agent (token-only)', {
+      // v7.0 HARDENED: All agents blocked on HMAC failure (no legacy fallback)
+      logger.error('SECURITY: HMAC verification FAILED for legacy agent - BLOCKED (no fallback)', {
         agentName, agentVersion, errorCode: hmacResult.errorCode, ip,
       })
-      return { ok: true, rawBody: hmacResult.rawBody || '' }
+      return {
+        ok: false,
+        rawBody: '',
+        errorResponse: new Response(
+          JSON.stringify({ error: 'HMAC verification failed', code: 'HMAC_INVALID' }),
+          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
+        ),
+      }
     }
 
     return { ok: true, rawBody: hmacResult.rawBody || '' }
