@@ -426,7 +426,7 @@
     "contactForm": {
       "title": "Fale com um especialista",
       "text": "Preencha os dados abaixo e nossa equipe entra em contato para entender seu cenário.",
-      "button": "Receber meu assessment",
+      "button": "Receber meu diagnóstico",
       "legal": "Ao enviar este formulário, você autoriza o contato da equipe para retorno sobre sua solicitação.",
       "fields": {
         "name": "Nome",
