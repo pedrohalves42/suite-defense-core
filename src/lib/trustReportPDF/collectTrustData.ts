@@ -44,7 +44,7 @@ export async function collectTrustData(tenantId: string, startDate: Date, endDat
 
   const bySeverityRules: Record<string, number> = {};
   const byTactic: Record<string, number> = {};
-  rules.forEach((r: Record<string, unknown>) => {
+  rules.forEach((r: any) => {
     bySeverityRules[r.severity || 'unknown'] = (bySeverityRules[r.severity || 'unknown'] || 0) + 1;
     const tactic = r.mitre_tactic || 'unknown';
     byTactic[tactic] = (byTactic[tactic] || 0) + 1;
@@ -52,7 +52,7 @@ export async function collectTrustData(tenantId: string, startDate: Date, endDat
 
   const bySeverityDet: Record<string, number> = {};
   const ruleCount: Record<string, number> = {};
-  detections.forEach((d: Record<string, unknown>) => {
+  detections.forEach((d: any) => {
     bySeverityDet[d.severity || 'info'] = (bySeverityDet[d.severity || 'info'] || 0) + 1;
     ruleCount[d.detection_name || 'unknown'] = (ruleCount[d.detection_name || 'unknown'] || 0) + 1;
   });
@@ -69,7 +69,7 @@ export async function collectTrustData(tenantId: string, startDate: Date, endDat
     if (a.status === 'resolved') alertsBySev.resolved++;
   });
 
-  const sources = [...new Set(threatInd.map((t: Record<string, unknown>) => t.source).filter(Boolean))];
+  const sources = [...new Set(threatInd.map((t: any) => t.source).filter(Boolean))];
   const lastSync = feedSync.length > 0 ? String((feedSync as Array<Record<string, unknown>>)[0].sync_completed_at) : null;
 
   const categories: { name: string; score: number }[] = [];
@@ -90,7 +90,7 @@ export async function collectTrustData(tenantId: string, startDate: Date, endDat
       offline: agents.filter(a => a.status !== 'online').length,
       isolated: agents.filter(a => a.is_isolated).length,
     },
-    detectionRules: { total: rules.length, enabled: rules.filter((r: Record<string, unknown>) => r.is_enabled).length, bySeverity: bySeverityRules, byTactic },
+    detectionRules: { total: rules.length, enabled: rules.filter((r: any) => r.is_enabled).length, bySeverity: bySeverityRules, byTactic },
     detections: { total: detections.length, bySeverity: bySeverityDet, topRules },
     alerts: { total: alerts.length, ...alertsBySev },
     threatIntel: { totalIndicators: threatInd.length, matches: threatMatches.length, lastSync, sources },
