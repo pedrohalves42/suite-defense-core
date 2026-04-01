@@ -4,6 +4,15 @@
  */
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const BodySchema = z.object({
+  action: z.enum(['record', 'dashboard']).default('dashboard'),
+  tenantId: z.string().optional(),
+  endpoint: z.string().optional(),
+  statusCode: z.number().int().optional(),
+  latencyMs: z.number().optional(),
+}).passthrough();
 
 const SLI_TARGETS = {
   availability: { target: 99.9, warning: 99.5 },
@@ -14,28 +23,30 @@ const SLI_TARGETS = {
 
 serveInternal(async (_req, ctx) => {
   const { supabase, requestId, body } = ctx;
-  const parsedBody = body as Record<string, unknown> || {};
-  const action = (parsedBody.action as string) || 'dashboard';
+  const parsed = BodySchema.safeParse(body || {});
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const { action, tenantId, endpoint, statusCode, latencyMs } = parsed.data;
 
   // ═══ RECORD METRIC ═══
   if (action === 'record') {
-    const { tenantId, endpoint, statusCode, latencyMs } = parsedBody;
     if (!endpoint || statusCode === undefined) return new Response(JSON.stringify({ error: 'endpoint and statusCode required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
 
-    const tid = (tenantId as string) || 'global';
+    const tid = tenantId || 'global';
     const now = new Date();
     const hourStart = new Date(now);
     hourStart.setMinutes(0, 0, 0);
     const hourStr = hourStart.toISOString();
-    const isSuccess = (statusCode as number) >= 200 && (statusCode as number) < 400;
-    const isError = (statusCode as number) >= 500;
+    const isSuccess = statusCode >= 200 && statusCode < 400;
+    const isError = statusCode >= 500;
 
     const { data: existing } = await supabase.from('sli_metrics_hourly').select('id, total_requests, success_requests, error_requests, total_latency_ms, max_latency_ms, min_latency_ms').eq('tenant_id', tid).eq('endpoint', endpoint).eq('hour', hourStr).maybeSingle();
 
     if (existing) {
-      await supabase.from('sli_metrics_hourly').update({ total_requests: existing.total_requests + 1, success_requests: existing.success_requests + (isSuccess ? 1 : 0), error_requests: existing.error_requests + (isError ? 1 : 0), total_latency_ms: existing.total_latency_ms + ((latencyMs as number) || 0), max_latency_ms: Math.max(existing.max_latency_ms, (latencyMs as number) || 0), min_latency_ms: Math.min(existing.min_latency_ms || 999999, (latencyMs as number) || 0), updated_at: now.toISOString() }).eq('id', existing.id);
+      await supabase.from('sli_metrics_hourly').update({ total_requests: existing.total_requests + 1, success_requests: existing.success_requests + (isSuccess ? 1 : 0), error_requests: existing.error_requests + (isError ? 1 : 0), total_latency_ms: existing.total_latency_ms + (latencyMs || 0), max_latency_ms: Math.max(existing.max_latency_ms, latencyMs || 0), min_latency_ms: Math.min(existing.min_latency_ms || 999999, latencyMs || 0), updated_at: now.toISOString() }).eq('id', existing.id);
     } else {
-      await supabase.from('sli_metrics_hourly').insert({ tenant_id: tid, endpoint, hour: hourStr, total_requests: 1, success_requests: isSuccess ? 1 : 0, error_requests: isError ? 1 : 0, total_latency_ms: (latencyMs as number) || 0, max_latency_ms: (latencyMs as number) || 0, min_latency_ms: (latencyMs as number) || 0 });
+      await supabase.from('sli_metrics_hourly').insert({ tenant_id: tid, endpoint, hour: hourStr, total_requests: 1, success_requests: isSuccess ? 1 : 0, error_requests: isError ? 1 : 0, total_latency_ms: latencyMs || 0, max_latency_ms: latencyMs || 0, min_latency_ms: latencyMs || 0 });
     }
 
     if (isError) {

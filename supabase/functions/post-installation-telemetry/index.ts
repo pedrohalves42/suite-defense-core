@@ -6,10 +6,27 @@
  */
 import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const BodySchema = z.object({
+  success: z.boolean().default(true),
+  errors: z.unknown().optional(),
+  task_created: z.boolean().optional(),
+  task_running: z.boolean().optional(),
+  first_heartbeat_received: z.boolean().optional(),
+  scheduled_task_configured: z.boolean().optional(),
+  install_path: z.string().optional(),
+  install_duration_seconds: z.number().optional(),
+  os_info: z.record(z.unknown()).optional(),
+}).passthrough();
 
 serveAgent(async (_req, ctx) => {
   const { agentId, agentName, tenantId, agentData, supabase, requestId, body } = ctx;
-  const b = body as Record<string, unknown>;
+  const parsed = BodySchema.safeParse(body || {});
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const b = parsed.data;
 
   logger.info(`[${requestId}] Telemetry data received:`, {
     agent_name: agentName,

@@ -5,6 +5,7 @@
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 interface I18nStrings {
   subject7: (days: number) => string;
@@ -98,13 +99,25 @@ function formatDate(dateStr: string, lang: string): string {
   return new Date(dateStr).toLocaleDateString(locale);
 }
 
+const TrialBodySchema = z.object({
+  tenant_id: z.string().uuid(),
+  tenant_name: z.string().min(1),
+  owner_user_id: z.string().uuid(),
+  trial_end: z.string().min(1),
+  days_remaining: z.number().int(),
+});
+
 serveInternal(async (_req, ctx) => {
   const { supabase, requestId, body } = ctx;
-  const { tenant_id, tenant_name, owner_user_id, trial_end, days_remaining } = body as Record<string, unknown>;
+  const parsed = TrialBodySchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const { tenant_id, tenant_name, owner_user_id, trial_end, days_remaining } = parsed.data;
 
   logger.info(`[SEND-TRIAL-REMINDER][${requestId}] Sending ${days_remaining}-day reminder for tenant: ${tenant_id}`);
 
-  const { data: userData } = await supabase.auth.admin.getUserById(owner_user_id as string);
+  const { data: userData } = await supabase.auth.admin.getUserById(owner_user_id);
   if (!userData.user?.email) throw new Error("Owner email not found");
 
   const { data: tenantData } = await supabase.from('tenants').select('settings').eq('id', tenant_id).maybeSingle();
@@ -112,8 +125,8 @@ serveInternal(async (_req, ctx) => {
   const t = getStrings(lang);
 
   const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-  const trialEndDate = formatDate(trial_end as string, lang);
-  const subject = days_remaining === 7 ? t.subject7(days_remaining as number) : t.subject1;
+  const trialEndDate = formatDate(trial_end, lang);
+  const subject = days_remaining === 7 ? t.subject7(days_remaining) : t.subject1;
   const featuresHtml = t.features.map((f: string) => `<li>[OK]  ${f}</li>`).join('\n                ');
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.6;color:#333}.container{max-width:600px;margin:0 auto;padding:20px}.header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:30px;border-radius:8px 8px 0 0;text-align:center}.content{background:#ffffff;padding:30px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px}.cta-button{display:inline-block;background:#667eea;color:white;padding:14px 28px;text-decoration:none;border-radius:6px;font-weight:600;margin:20px 0}.warning{background:#fef3c7;border-left:4px solid #f59e0b;padding:16px;margin:20px 0;border-radius:4px}.footer{text-align:center;color:#6b7280;font-size:14px;margin-top:30px;padding-top:20px;border-top:1px solid #e5e7eb}</style></head><body><div class="container"><div class="header"><h1 style="margin:0">?? CyberShield</h1><p style="margin:10px 0 0 0;opacity:0.9">${t.headerSubtitle}</p></div><div class="content"><h2>${t.greeting}, ${tenant_name}!</h2>${days_remaining === 7 ? `<p>${t.trialEnding7(days_remaining as number, trialEndDate)}</p><p>${t.enjoying}</p>` : `<div class="warning"><strong>${t.warningLabel}</strong> ${t.trialEnding1(trialEndDate)}</div><p>${t.choosePlan}</p>`}<p><strong>${t.featuresTitle}</strong></p><ul>${featuresHtml}</ul><p><strong>${t.dontLose}</strong></p><div style="text-align:center;margin:30px 0"><a href="${Deno.env.get("SUPABASE_URL")}/admin/plan-upgrade" class="cta-button">${days_remaining === 7 ? t.cta7 : t.cta1}</a></div><p style="color:#6b7280;font-size:14px">${t.afterTrial}</p></div><div class="footer"><p>${t.footer1}</p><p>${t.footer2}</p></div></div></body></html>`;

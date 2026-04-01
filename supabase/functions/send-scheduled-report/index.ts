@@ -6,6 +6,11 @@ import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { fetchReportData } from './report-data-fetcher.ts';
 import { generateReportHtml, calculateNextSend } from './html-generator.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const BodySchema = z.object({
+  report_id: z.string().uuid().optional(),
+}).passthrough();
 
 interface ScheduledReport {
   id: string;
@@ -24,7 +29,11 @@ interface ScheduledReport {
 
 serveInternal(async (_req, ctx) => {
   const { supabase, body } = ctx;
-  const { report_id: manualReportId } = body as Record<string, unknown>;
+  const parsed = BodySchema.safeParse(body || {});
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const { report_id: manualReportId } = parsed.data;
 
   const resendApiKey = Deno.env.get('RESEND_API_KEY');
   if (!resendApiKey) {

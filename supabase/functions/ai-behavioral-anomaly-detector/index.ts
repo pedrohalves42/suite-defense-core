@@ -6,6 +6,11 @@ import { serveInternal } from '../_shared/serve-tenant.ts';
 import { callAIJson } from '../_shared/ai-provider-helper.ts';
 import { logger } from '../_shared/logger.ts';
 import { detectStatisticalAnomalies, groupMetricsByAgent } from './anomaly-detector.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const BodySchema = z.object({
+  tenant_id: z.string().uuid().optional(),
+}).passthrough();
 
 interface AnomalyResult {
   agent_id: string;
@@ -27,7 +32,11 @@ serveInternal(async (_req, ctx) => {
     return new Response(JSON.stringify({ success: false, error: 'SYSTEM_HALTED' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const tenantId = (body as Record<string, unknown>)?.tenant_id as string | undefined;
+  const parsed = BodySchema.safeParse(body || {});
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const tenantId = parsed.data.tenant_id;
 
   let tenantsQuery = supabase.from('tenants').select('id, name');
   if (tenantId) tenantsQuery = tenantsQuery.eq('id', tenantId);

@@ -5,9 +5,20 @@
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 const NVD_API_BASE = 'https://services.nvd.nist.gov/rest/json/cves/2.0';
 const FETCH_TIMEOUT_MS = 30000;
+
+const BodySchema = z.object({
+  keyword: z.string().max(200).optional(),
+  cpeMatchString: z.string().max(500).optional(),
+  cveId: z.string().regex(/^CVE-\d{4}-\d+$/).optional(),
+  lastModStartDate: z.string().datetime().optional(),
+  resultsPerPage: z.number().int().min(1).max(2000).default(50),
+  startIndex: z.number().int().min(0).default(0),
+  forceRefresh: z.boolean().default(false),
+}).passthrough();
 
 interface NVDResponse {
   resultsPerPage: number;
@@ -18,7 +29,11 @@ interface NVDResponse {
 
 serveInternal(async (_req, ctx) => {
   const { supabase, requestId, body } = ctx;
-  const { keyword, cpeMatchString, cveId, lastModStartDate, resultsPerPage = 50, startIndex = 0, forceRefresh = false } = body as Record<string, unknown>;
+  const parsed = BodySchema.safeParse(body || {});
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const { keyword, cpeMatchString, cveId, lastModStartDate, resultsPerPage, startIndex, forceRefresh } = parsed.data;
 
   logger.info(`[${requestId}] [FETCH-NVD] Starting NVD CVE fetch`);
 
@@ -38,11 +53,11 @@ serveInternal(async (_req, ctx) => {
 
   // Build NVD API URL
   const params = new URLSearchParams();
-  if (cveId) params.append('cveId', cveId as string);
-  else if (cpeMatchString) params.append('cpeName', cpeMatchString as string);
-  else if (keyword) { params.append('keywordSearch', keyword as string); params.append('keywordExactMatch', 'false'); }
-  if (lastModStartDate) { params.append('lastModStartDate', lastModStartDate as string); params.append('lastModEndDate', new Date().toISOString()); }
-  params.append('resultsPerPage', String(Math.min(resultsPerPage as number, 2000)));
+  if (cveId) params.append('cveId', cveId);
+  else if (cpeMatchString) params.append('cpeName', cpeMatchString);
+  else if (keyword) { params.append('keywordSearch', keyword); params.append('keywordExactMatch', 'false'); }
+  if (lastModStartDate) { params.append('lastModStartDate', lastModStartDate); params.append('lastModEndDate', new Date().toISOString()); }
+  params.append('resultsPerPage', String(Math.min(resultsPerPage, 2000)));
   params.append('startIndex', String(startIndex));
 
   const nvdUrl = `${NVD_API_BASE}?${params.toString()}`;
