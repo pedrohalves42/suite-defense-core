@@ -1077,65 +1077,68 @@
     },
     "starter": {
       "name": "Starter Compliance",
-      "description": "Compliance básico para PMEs em crescimento",
+      "description": "Monitoramento e compliance básico para PMEs que precisam de visibilidade e controle.",
       "price": "R$ 499",
-      "priceNote": "/mês • 10 computadores",
-      "priceExtra": "+R$ 39 por computador adicional",
-      "maxDevices": "Até 50 computadores"
+      "priceNote": "/mês",
+      "priceExtra": "Base: 10 dispositivos • +R$ 39/adicional",
+      "maxDevices": "Até 50 dispositivos"
     },
     "business": {
       "name": "Business",
-      "description": "Para empresas que não podem parar nem errar",
+      "description": "Operação completa com scans ilimitados, analytics avançado e automação.",
       "price": "R$ 899",
-      "priceNote": "/mês • 20 computadores",
-      "priceExtra": "+R$ 24 por computador adicional",
-      "maxDevices": "Até 200 computadores"
+      "priceNote": "/mês",
+      "priceExtra": "Base: 20 dispositivos • +R$ 24/adicional",
+      "maxDevices": "Até 200 dispositivos"
     },
     "enterprise": {
-      "name": "Enterprise",
-      "description": "Para empresas +200 dispositivos ou MSPs",
-      "price": "A partir de R$ 2.000"
+      "name": "Enterprise / MSP",
+      "description": "Para operações com +200 dispositivos, multi-tenant, SLA dedicado e API.",
+      "price": "A partir de R$ 2.000",
+      "priceNote": "/mês",
+      "priceExtra": "Para empresas +200 dispositivos ou MSPs",
+      "maxDevices": "Dispositivos ilimitados"
     },
     "features": {
       "free": [
-        "Até 3 computadores",
+        "Até 3 dispositivos",
         "Visibilidade básica de riscos",
         "Inventário de software",
         "Status do antivírus"
       ],
       "starter": [
-        "5 computadores inclusos",
-        "+R$ 19/computador adicional",
-        "Verificações automáticas de segurança",
-        "Alertas por email",
-        "Relatórios de risco mensais",
-        "Suporte por email",
-        "14 dias de trial grátis"
+        "10 dispositivos inclusos",
+        "RMM + EDR integrado",
+        "Compliance básico com evidências",
+        "Alertas e notificações",
+        "Dashboard de visibilidade",
+        "Relatórios de conformidade",
+        "Suporte em português"
       ],
       "business": [
-        "25 computadores inclusos",
-        "+R$ 17/computador adicional",
+        "20 dispositivos inclusos",
         "Tudo do Starter, mais:",
-        "Verificações em tempo real",
-        "Relatórios de risco para gestão",
-        "Bloqueio de sites perigosos",
+        "Scans de vulnerabilidade ilimitados",
+        "Analytics avançado",
+        "Automação e remediação",
+        "Relatórios executivos",
         "Suporte prioritário",
         "API para integrações"
       ],
       "enterprise": [
-        "Computadores ilimitados",
+        "Dispositivos ilimitados",
         "Tudo do Business, mais:",
-        "Suporte 24/7",
-        "SLA personalizado",
-        "Integração customizada",
-        "Gerente de conta dedicado",
-        "Relatórios de compliance"
+        "Multi-tenant completo",
+        "SLA dedicado",
+        "White label disponível",
+        "Onboarding assistido",
+        "Gerente de conta dedicado"
       ]
     },
     "cta": {
       "free": "Começar Grátis",
-      "starter": "Começar diagnóstico gratuito",
-      "business": "Começar diagnóstico gratuito",
+      "starter": "Solicitar assessment",
+      "business": "Solicitar assessment",
       "enterprise": "Falar com Especialista"
     },
     "investmentExamples": "Exemplos de Investimento",
