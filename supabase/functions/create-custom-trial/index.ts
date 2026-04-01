@@ -40,7 +40,7 @@ serveTenant(async (_req, ctx) => {
   const tempPassword = crypto.randomUUID().replace(/-/g, '').substring(0, 16) + 'Aa1!';
 
   const { data: newUser, error: createUserError } = await supabase.auth.admin.createUser({
-    email: email as string, password: tempPassword, email_confirm: true,
+    email, password: tempPassword, email_confirm: true,
     user_metadata: { full_name: contact_name || company_name, company_name, custom_trial: true, trial_days },
   });
 
