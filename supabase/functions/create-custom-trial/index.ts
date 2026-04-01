@@ -33,9 +33,7 @@ serveTenant(async (_req, ctx) => {
   const { data: existingUsers } = await supabase.auth.admin.listUsers();
   const emailExists = existingUsers?.users?.some(u => u.email === email);
   if (emailExists) {
-    return new Response(JSON.stringify({ error: 'Email already registered' }), {
-      status: 409, headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({ error: 'Email already registered' }), { status: 409, headers: { 'Content-Type': 'application/json' } });
   }
 
   // Generate temporary password
