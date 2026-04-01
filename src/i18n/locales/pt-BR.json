@@ -177,452 +177,408 @@
     "encryption": "Criptografia"
   },
   "landing": {
-    "unifiedPlatform": {
-      "title": "Pare de pagar por 3 ferramentas que não se conversam",
-      "subtitle": "RMM + EDR + Compliance em uma única plataforma — sem integrações, sem duplicidade, sem surpresas na fatura",
-      "before": "❌ ANTES: 3 ferramentas separadas",
-      "after": "✅ AGORA: CyberShield tudo-em-um",
-      "oldTools": {
-        "0": "RMM — Gestão remota de endpoints",
-        "1": "Antivírus/EDR — Detecção de ameaças",
-        "2": "Compliance — Relatórios e evidências"
-      },
-      "oldCosts": {
-        "0": "~R$30/mês por PC",
-        "1": "~R$25/mês por PC",
-        "2": "~R$20/mês por PC"
-      },
-      "totalLabel": "Custo por endpoint/mês",
-      "totalOld": "~R$75/mês",
-      "painPoints": {
-        "0": "3 consoles diferentes para gerenciar",
-        "1": "Dados isolados sem correlação",
-        "2": "Integrações quebram a cada atualização"
-      },
-      "productName": "CyberShield",
-      "productTagline": "RMM + EDR + MDR unificado",
-      "fromLabel": "A partir de",
-      "price": "R$499/mês (10 endpoints inclusos)",
-      "advantages": {
-        "0": "Um painel único para tudo",
-        "1": "Dados correlacionados automaticamente",
-        "2": "Zero integrações para manter",
-        "3": "Economia de até 35% vs ferramentas separadas"
-      },
-      "capabilities": {
-        "0": {
-          "title": "Gestão Remota (RMM)",
-          "description": "Inventário de software, métricas de hardware, execução remota de tarefas, auto-update silencioso e rollback automático em todos os endpoints."
-        },
-        "1": {
-          "title": "Detecção de Ameaças (EDR)",
-          "description": "51 regras MITRE ATT&CK monitorando processos, registro e rede em tempo real. Cadeia de evidências SHA-256 imutável para cada detecção."
-        },
-        "2": {
-          "title": "Resposta Gerenciada (MDR)",
-          "description": "Quarentena automática, remediação com Blast Radius controlado, filtro DNS corporativo e governança de automação com Circuit Breaker."
-        }
-      }
-    },
     "hero": {
-      "badge": "🇧🇷 RMM + EDR + Compliance — Plataforma Unificada",
-      "title1": "Chega de pagar 3 ferramentas para proteger sua empresa",
-      "title2": "— gestão, detecção e compliance em um único agente.",
-      "description": "PMEs brasileiras gastam em média R$75/mês por endpoint com ferramentas fragmentadas que não se integram. ",
-      "descriptionBold": "CyberShield unifica tudo a partir de R$499/mês — com avaliação gratuita em 48h.",
-      "ctaButton": "Solicitar avaliação gratuita",
-      "ctaSecondary": "Falar com um especialista",
-      "reassurance": "Sem compromisso • Sem cartão de crédito • Resultado em até 48h • Atendimento em português",
+      "badge": "Proteção + Automação + Compliance",
+      "title1": "Descubra em 48h onde sua empresa está exposta",
+      "title2": "— e como corrigir com uma única plataforma",
+      "description": "O CyberShield centraliza monitoramento de endpoints, detecção de ameaças, automação de resposta e evidências de compliance ",
+      "descriptionBold": "em uma só operação.",
+      "ctaButton": "Solicitar assessment gratuito",
+      "ctaSecondary": "Agendar demo rápida",
+      "reassurance": "Receba uma visão inicial do seu cenário de risco, operação e conformidade, sem compromisso.",
       "stats": {
         "0": {
-          "value": "3-em-1",
-          "label": "RMM + EDR + MDR unificado"
+          "value": "Endpoints",
+          "label": "Visibilidade real dos seus dispositivos"
         },
         "1": {
-          "value": "até 35%",
-          "label": "Economia vs ferramentas separadas"
+          "value": "Resposta",
+          "label": "Ação mais rápida a incidentes"
         },
         "2": {
-          "value": "100%",
-          "label": "Operação nacional"
+          "value": "Compliance",
+          "label": "Evidências auditáveis integradas"
         }
       },
       "benefits": {
-        "0": "Um painel único — sem alternar entre ferramentas",
-        "1": "Conformidade LGPD automatizada com evidências",
-        "2": "Suporte técnico em português",
-        "3": "Faturamento em reais com nota fiscal"
-      }
-    },
-    "targetAudience": {
-      "title": "Projetado para operações que exigem continuidade",
-      "subtitle": "Para organizações que precisam de visibilidade, governança e evidências de segurança",
-      "segments": {
-        "0": {
-          "title": "PMEs",
-          "description": "10 a 200 estações"
-        },
-        "1": {
-          "title": "Serviços Profissionais",
-          "description": "Escritórios e consultorias"
-        },
-        "2": {
-          "title": "Saúde",
-          "description": "Dados sensíveis e LGPD"
-        },
-        "3": {
-          "title": "Sem TI Dedicado",
-          "description": "Gestão simplificada"
-        },
-        "4": {
-          "title": "MSPs",
-          "description": "Multi-tenant gerenciado"
-        }
+        "0": "Visibilidade real dos seus dispositivos",
+        "1": "Resposta mais rápida a incidentes",
+        "2": "Menos operação manual",
+        "3": "Mais controle e rastreabilidade"
       }
     },
     "painPoints": {
-      "badge": "Avalie a maturidade da sua segurança",
+      "badge": "O cenário que você conhece",
+      "title": "O problema não é só ter risco. É não enxergar, não agir rápido e não conseguir provar nada depois.",
+      "text": "Em muitas empresas, a operação de segurança depende de ferramentas separadas, processos manuais e pouca visibilidade dos endpoints. Quando surge um incidente, o time corre para responder. Quando chega uma auditoria, faltam evidências.",
       "questions": {
-        "0": "Quem é o responsável formal em caso de vazamento de dados?",
-        "1": "Sua empresa possui evidências documentadas de medidas de segurança?",
-        "2": "Você tem visibilidade sobre quais estações estão vulneráveis agora?",
-        "3": "Qual o impacto financeiro de uma paralisação operacional?"
+        "0": "Ferramentas desconectadas",
+        "1": "Baixa visibilidade",
+        "2": "Resposta lenta",
+        "3": "Compliance difícil de sustentar"
+      },
+      "questionsDesc": {
+        "0": "Monitoramento em um lugar, resposta em outro, relatórios em outro.",
+        "1": "Máquinas offline, falhas silenciosas, agentes desatualizados e pouca clareza do que está acontecendo.",
+        "2": "Sem padronização, cada incidente exige esforço manual e tomada de decisão sob pressão.",
+        "3": "Ter política no papel não basta. É preciso mostrar evidência confiável do que foi executado."
       },
       "conclusion": "Sem visibilidade, não há governança. Sem governança, não há proteção.",
       "stats": {
         "0": {
-          "emoji": "💸",
-          "title": "R$ 50 a 200 mil",
-          "description": "Custo médio de um incidente cibernético para PMEs brasileiras"
+          "emoji": "🔌",
+          "title": "Ferramentas desconectadas",
+          "description": "Monitoramento em um lugar, resposta em outro, relatórios em outro."
         },
         "1": {
+          "emoji": "👁️",
+          "title": "Baixa visibilidade",
+          "description": "Máquinas offline, falhas silenciosas, agentes desatualizados."
+        },
+        "2": {
           "emoji": "⏱️",
-          "title": "7 a 27 dias",
-          "description": "Tempo médio de recuperação operacional após ataque"
+          "title": "Resposta lenta",
+          "description": "Cada incidente exige esforço manual e decisão sob pressão."
         },
-        "2": {
+        "3": {
           "emoji": "📋",
-          "title": "Multa de até 2%",
-          "description": "Do faturamento anual por descumprimento da LGPD"
-        },
-        "3": {
-          "emoji": "📊",
-          "title": "60% encerram",
-          "description": "Das PMEs brasileiras atacadas não sobrevivem 12 meses"
+          "title": "Compliance difícil",
+          "description": "Ter política no papel não basta. É preciso evidência confiável."
         }
       },
-      "cta": "Solicitar avaliação de riscos gratuita"
+      "cta": "Solicitar assessment gratuito"
     },
-    "socialProof": {
-      "stats": {
-        "0": {
-          "value": "51",
-          "label": "Regras MITRE ATT&CK ativas"
-        },
-        "1": {
-          "value": "SHA-256",
-          "label": "Cadeia de evidências criptográfica"
-        },
-        "2": {
-          "value": "99,9%",
-          "label": "Disponibilidade da plataforma"
-        },
-        "3": {
-          "value": "🇧🇷",
-          "label": "Operação 100% nacional"
-        }
-      }
-    },
-    "diagnostic": {
-      "title": "O que a avaliação inicial revela",
-      "subtitle": "Sem compromisso, sem necessidade de cartão de crédito",
-      "items": {
-        "0": {
-          "title": "Superfície de Ataque",
-          "description": "Mapeamento de estações expostas"
-        },
-        "1": {
-          "title": "Software Desatualizado",
-          "description": "Aplicações com patches pendentes"
-        },
-        "2": {
-          "title": "Vulnerabilidades Críticas",
-          "description": "Riscos que demandam ação imediata"
-        },
-        "3": {
-          "title": "Score de Risco",
-          "description": "Classificação do nível de exposição"
-        },
-        "4": {
-          "title": "Laudo Técnico",
-          "description": "Relatório PDF com recomendações"
-        }
-      }
-    },
-    "benefits": {
-      "title": "O que o agente CyberShield faz nas suas estações",
-      "subtitle": "Coleta contínua de telemetria com impacto zero na performance — cada dado gera evidência auditável",
-      "cards": {
-        "0": {
-          "title": "Inventário de Software",
-          "description": "Catálogo automático de todos os programas instalados, versões e patches pendentes em cada estação."
-        },
-        "1": {
-          "title": "Monitoramento de Processos",
-          "description": "Detecção de processos suspeitos via 51 regras MITRE ATT&CK com cadeia de evidências SHA-256."
-        },
-        "2": {
-          "title": "Saúde do Endpoint",
-          "description": "Status de antivírus, espaço em disco, certificados expirados e métricas de performance em tempo real."
-        },
-        "3": {
-          "title": "Filtro DNS Corporativo",
-          "description": "Bloqueio centralizado de sites maliciosos e monitoramento de atividade web por estação."
-        }
-      }
-    },
-    "technology": {
-      "badge": "Tecnologia de Nível Empresarial",
-      "title": "Atualização Segura Sem Downtime",
-      "subtitle": "Mantenha todos os seus computadores protegidos e atualizados automaticamente, sem interrupções",
-      "features": {
-        "0": {
-          "title": "Zero Interrupção",
-          "description": "Updates em background, ativados no próximo boot natural"
-        },
-        "1": {
-          "title": "Validação SHA256",
-          "description": "Integridade verificada criptograficamente antes de aplicar"
-        },
-        "2": {
-          "title": "Rollback Automático",
-          "description": "Se algo der errado, versão anterior é preservada"
-        },
-        "3": {
-          "title": "Escala Empresarial",
-          "description": "Funciona com 3 ou 3.000 computadores simultaneamente"
-        }
-      },
-      "comparison": {
-        "0": "Update sem restart forçado",
-        "1": "Validação criptográfica",
-        "2": "Rollback automático",
-        "3": "Anti-corrupção de dados"
-      }
-    },
-    "useCases": {
-      "title": "Casos de Uso Específicos",
-      "subtitle": "Soluções para diferentes setores e necessidades empresariais",
-      "cases": {
-        "0": {
-          "title": "TI Corporativa",
-          "description": "Monitoramento e resposta para redes empresariais complexas."
-        },
-        "1": {
-          "title": "Pequenas e Médias Empresas",
-          "description": "Soluções acessíveis para proteger seus ativos digitais."
-        },
-        "2": {
-          "title": "Compliance e Segurança",
-          "description": "Atenda requisitos regulatórios com relatórios detalhados."
-        }
-      }
+    "valueProp": {
+      "title": "Segurança operacional que sua equipe consegue executar — e sua empresa consegue provar",
+      "text": "O CyberShield foi desenvolvido para transformar segurança de endpoint em uma operação prática, centralizada e auditável. Em vez de depender de várias ferramentas e controles soltos, sua empresa passa a monitorar, detectar, responder e registrar evidências em uma única plataforma.",
+      "tagline": "Protege. Automatiza. Registra. Comprova."
     },
     "howItWorks": {
-      "title": "Implementação em 3 Etapas",
-      "subtitle": "Operacional em minutos, sem complexidade técnica",
+      "title": "Como o CyberShield entra na sua operação",
+      "subtitle": "Quatro etapas para transformar sua segurança",
       "steps": {
         "0": {
           "number": "1",
-          "title": "Deploy do agente",
-          "description": "Instalação silenciosa nas estações — sem impacto na produtividade dos colaboradores."
+          "title": "Conecta seus endpoints",
+          "description": "Agentes instalados nos dispositivos coletam dados operacionais e de segurança para dar visibilidade contínua do ambiente."
         },
         "1": {
           "number": "2",
-          "title": "Análise automatizada",
-          "description": "Identificação de vulnerabilidades, software desatualizado e comportamentos anômalos."
+          "title": "Detecta riscos e desvios",
+          "description": "O sistema identifica anomalias, vulnerabilidades, alterações críticas, eventos suspeitos e situações que exigem ação."
         },
         "2": {
           "number": "3",
-          "title": "Laudo com recomendações",
-          "description": "Relatório priorizado com ações corretivas ou monitoramento contínuo pela plataforma."
+          "title": "Automatiza respostas",
+          "description": "Quarentena, bloqueios, jobs remotos e outras ações podem ser executadas com governança e rastreabilidade."
+        },
+        "3": {
+          "number": "4",
+          "title": "Gera evidência do que foi feito",
+          "description": "Cada ação relevante é registrada com histórico, contexto e integridade verificável, facilitando auditorias e relatórios."
+        }
+      }
+    },
+    "assessment": {
+      "title": "O que você recebe no assessment gratuito",
+      "text": "Você não recebe uma conversa genérica. Recebe uma leitura inicial do seu cenário atual, com foco no que mais importa: risco, operação e conformidade.",
+      "items": [
+        "Visão inicial dos endpoints monitorados",
+        "Principais gaps operacionais e de segurança",
+        "Leitura de postura de compliance",
+        "Prioridades de correção",
+        "Próximos passos recomendados"
+      ],
+      "cta": "Solicitar assessment gratuito"
+    },
+    "benefits": {
+      "title": "Por que unificar sua operação de segurança faz diferença",
+      "subtitle": "Ganhos reais para sua operação",
+      "cards": {
+        "0": {
+          "title": "Menos complexidade operacional",
+          "description": "Reduza a dependência de ferramentas desconectadas e concentre a operação em um único ambiente."
+        },
+        "1": {
+          "title": "Mais velocidade na resposta",
+          "description": "Ganhe agilidade para agir com mais consistência diante de falhas, desvios e incidentes."
+        },
+        "2": {
+          "title": "Mais clareza para gestão",
+          "description": "Visualize a saúde dos endpoints, o status da operação e os principais riscos sem depender de planilhas."
+        },
+        "3": {
+          "title": "Mais confiança em auditoria",
+          "description": "Tenha histórico, contexto e evidência para sustentar decisões e demonstrar execução."
         }
       }
     },
     "features": {
-      "title": "Recursos Completos para Sua Empresa",
-      "subtitle": "Monitoramento avançado com interface simples",
+      "title": "Tudo o que sua operação precisa, sem virar uma pilha de ferramentas",
+      "subtitle": "Funcionalidades integradas em uma única plataforma",
       "items": {
         "0": {
-          "title": "Detecção de Ameaças (EDR)",
-          "description": "51 regras MITRE ATT&CK monitorando processos, registro e rede em tempo real com cadeia de evidências criptográfica."
+          "title": "Gestão de endpoints",
+          "description": "Inventário, status, telemetria, agrupamento e acompanhamento contínuo dos dispositivos."
         },
         "1": {
-          "title": "Inventário e Vulnerabilidades",
-          "description": "Catálogo completo de software instalado com detecção automática de versões desatualizadas e patches pendentes."
+          "title": "EDR integrado",
+          "description": "Monitoramento de processos, arquivos, rede e comportamento para identificar ameaças com mais rapidez."
         },
         "2": {
-          "title": "Integridade de Arquivos",
-          "description": "Verificação SHA-256 de arquivos críticos do sistema com alertas de modificações não autorizadas."
+          "title": "Automação e remediação",
+          "description": "Ações automatizadas para reduzir esforço manual e padronizar resposta operacional."
         },
         "3": {
-          "title": "Filtro DNS e Atividade Web",
-          "description": "Bloqueio centralizado de domínios maliciosos e visibilidade sobre navegação corporativa."
-        }
-      },
-      "dashboard": {
-        "stats": {
-          "0": {
-            "label": "Dispositivos Ativos",
-            "value": "248"
-          },
-          "1": {
-            "label": "Ameaças Bloqueadas Hoje",
-            "value": "17"
-          },
-          "2": {
-            "label": "Scans Realizados",
-            "value": "1.2k"
-          }
+          "title": "Compliance e auditoria",
+          "description": "Relatórios, score, rastreabilidade e evidências para apoiar governança e conformidade."
         },
-        "status": {
-          "label": "Status Geral",
-          "value": "✓ Protegido"
+        "4": {
+          "title": "Operação multi-tenant",
+          "description": "Estrutura preparada para ambientes com múltiplas organizações ou operações separadas."
+        },
+        "5": {
+          "title": "Histórico confiável de ações",
+          "description": "Saiba o que aconteceu, quando aconteceu, onde aconteceu e qual foi o resultado."
         }
       }
     },
-    "pricing": {
-      "badge": "Teste gratuito por 14 dias",
-      "title": "Uma plataforma, um preço — RMM + EDR + Compliance incluídos",
-      "subtitle": "Pare de pagar separado por inventário, antivírus e relatórios. CyberShield entrega tudo com um único agente leve.",
-      "plans": {
-        "starter": {
-          "name": "Starter Compliance",
-          "description": "Compliance básico para PMEs em crescimento",
-          "cta": "Começar diagnóstico gratuito",
-          "features": {
-            "0": "Monitoramento em tempo real",
-            "1": "Inventário de software completo",
-            "2": "Status de antivírus",
-            "3": "Detecção de vulnerabilidades",
-            "4": "Dashboard centralizado",
-            "5": "Suporte por email"
-          }
-        },
-        "business": {
-          "name": "Business",
-          "description": "Para empresas que não podem parar nem errar",
-          "cta": "Começar diagnóstico gratuito",
-          "badge": "RECOMENDADO",
-          "features": {
-            "0": "Tudo do Starter, mais:",
-            "1": "Scans avançados ilimitados",
-            "2": "Relatórios customizados",
-            "3": "Analytics avançado de riscos",
-            "4": "Evidências e histórico estendido",
-            "5": "Suporte prioritário"
-          }
-        },
-        "enterprise": {
-          "name": "Enterprise / MSP",
-          "priceLabel": "A partir de",
-          "description": "Para empresas +200 dispositivos ou MSPs",
-          "cta": "Falar com especialista",
-          "features": {
-            "0": "Tudo do Business, mais:",
-            "1": "Suporte dedicado 24/7",
-            "2": "SLA formal garantido",
-            "3": "Onboarding dedicado",
-            "4": "Multi-tenant para MSPs",
-            "5": "Descontos por volume (até 35%)"
-          }
-        }
-      },
-      "perMonth": "/mês",
-      "baseDevices": "dispositivos incluídos",
-      "extraDevice": "por dispositivo extra"
-    },
-    "testimonials": {
-      "title": "Resultados comprovados em operações reais",
-      "subtitle": "Como organizações brasileiras reduziram riscos nos primeiros 7 dias",
-      "items": {
+    "targetAudience": {
+      "title": "Quem mais se beneficia do CyberShield",
+      "subtitle": "Segmentos que ganham com a unificação",
+      "segments": {
         "0": {
-          "quote": "Na primeira avaliação, identificamos 12 vulnerabilidades críticas que nosso antivírus corporativo não detectava — duas em estações do setor financeiro. Com o monitoramento contínuo, recebemos alertas antes que riscos se tornem incidentes.",
-          "name": "Roberto Costa",
-          "role": "Diretor de TI • Indústria Metalúrgica (SP)",
-          "devices": "65 endpoints • Plano Business",
-          "metric": "12 vulnerabilidades críticas identificadas em 48h"
+          "title": "PMEs",
+          "description": "Para empresas que precisam elevar o nível de proteção e controle sem montar uma estrutura complexa demais."
         },
         "1": {
-          "quote": "As estações que executam nosso ERP nunca haviam sido auditadas. O CyberShield identificou portas RDP expostas à internet. Corrigimos em 20 minutos pelo painel, eliminando um vetor de ataque de alto risco.",
-          "name": "Ana Carolina Souza",
-          "role": "Gerente de TI • Rede de Farmácias (MG) — 14 unidades",
-          "devices": "120 endpoints • Plano Enterprise",
-          "metric": "3 vetores de ataque eliminados em 20min"
+          "title": "MSPs e provedores de TI",
+          "description": "Para operações que precisam gerenciar mais de um ambiente com separação, escala e governança."
         },
         "2": {
-          "quote": "Precisávamos demonstrar conformidade com a LGPD para uma rodada de investimento. Em 48h, o CyberShield gerou um laudo completo com score de 97%. O relatório foi determinante para fechar a captação.",
-          "name": "Marcos Ferreira Lima",
-          "role": "CTO • Fintech (RJ) — Série Seed",
-          "devices": "28 endpoints • Plano Starter",
-          "metric": "Laudo LGPD gerado em 48h"
+          "title": "Clínicas e operações com dados sensíveis",
+          "description": "Para ambientes que exigem mais visibilidade, rastreabilidade e comprovação de execução."
+        },
+        "3": {
+          "title": "Empresas com auditoria ou compliance",
+          "description": "Para times que precisam mostrar mais do que intenção: precisam mostrar evidência."
         }
+      }
+    },
+    "trustProof": {
+      "title": "Não basta dizer que protege. É preciso provar.",
+      "text": "Um dos diferenciais do CyberShield é transformar segurança em evidência operacional. A plataforma foi pensada para registrar ações, preservar rastreabilidade e organizar informações úteis para auditoria, governança e tomada de decisão.",
+      "blocks": {
+        "0": {
+          "title": "Evidência com integridade verificável",
+          "description": "Registros que sustentam a confiança no histórico das ações executadas."
+        },
+        "1": {
+          "title": "Rastreabilidade operacional",
+          "description": "Mais clareza sobre quem executou, quando executou, em qual endpoint e com qual resultado."
+        },
+        "2": {
+          "title": "Relatórios executivos",
+          "description": "Informação organizada para times técnicos, gestão e processos de auditoria."
+        },
+        "3": {
+          "title": "Governança prática",
+          "description": "Mais padrão, menos improviso e menos dependência de controles paralelos."
+        }
+      }
+    },
+    "comparison": {
+      "title": "O que muda quando a operação deixa de ser fragmentada",
+      "text": "Quando segurança, resposta e compliance ficam espalhados, a operação perde velocidade e consistência. Quando tudo passa a funcionar de forma integrada, o time ganha controle e a empresa ganha confiança.",
+      "before": {
+        "label": "Antes",
+        "items": [
+          "Ferramentas separadas",
+          "Mais retrabalho",
+          "Baixa visibilidade",
+          "Resposta manual",
+          "Evidência frágil"
+        ]
+      },
+      "after": {
+        "label": "Com CyberShield",
+        "items": [
+          "Operação centralizada",
+          "Mais padrão de execução",
+          "Visão contínua dos endpoints",
+          "Resposta mais rápida",
+          "Histórico e rastreabilidade sólidos"
+        ]
+      }
+    },
+    "offer": {
+      "title": "Receba uma leitura inicial do seu cenário atual",
+      "text": "Solicite um assessment gratuito e entenda onde estão os principais riscos, quais correções devem ser priorizadas e como simplificar sua operação de segurança e compliance.",
+      "items": [
+        "Análise inicial do ambiente",
+        "Leitura de gaps",
+        "Prioridades recomendadas",
+        "Próximos passos sugeridos"
+      ],
+      "cta": "Solicitar assessment gratuito",
+      "microcopy": "Ideal para empresas que querem validar o cenário atual antes de avançar para piloto, demo ou implantação."
+    },
+    "contactForm": {
+      "title": "Fale com um especialista",
+      "text": "Preencha os dados abaixo e nossa equipe entra em contato para entender seu cenário.",
+      "button": "Receber meu assessment",
+      "legal": "Ao enviar este formulário, você autoriza o contato da equipe para retorno sobre sua solicitação.",
+      "fields": {
+        "name": "Nome",
+        "company": "Empresa",
+        "email": "E-mail corporativo",
+        "whatsapp": "WhatsApp",
+        "devices": "Quantidade de dispositivos",
+        "profile": "Seu perfil",
+        "profileOptions": [
+          "PME",
+          "MSP / Provedor de TI",
+          "Outro"
+        ],
+        "challenge": "Principal desafio hoje"
       }
     },
     "faq": {
-      "title": "Perguntas Frequentes",
-      "subtitle": "Tire suas dúvidas antes de começar",
+      "title": "Perguntas frequentes",
+      "subtitle": "Tire suas dúvidas",
       "items": {
         "0": {
-          "question": "Preciso instalar em todos os computadores?",
-          "answer": "Não. O diagnóstico inicial funciona com poucos dispositivos para mapear riscos reais."
+          "question": "O CyberShield é só para empresa grande?",
+          "answer": "Não. A proposta do produto é tornar a operação de segurança e compliance mais viável para empresas que precisam de controle sem carregar uma estrutura excessivamente complexa."
         },
         "1": {
-          "question": "Funciona sem equipe de TI?",
-          "answer": "Sim. O laudo já vem com prioridades claras e ações recomendadas."
+          "question": "Também atende MSPs?",
+          "answer": "Sim. A arquitetura multi-tenant favorece operações que gerenciam múltiplos ambientes."
         },
         "2": {
-          "question": "Em quais sistemas operacionais funciona?",
-          "answer": "Atualmente o agente CyberShield é compatível com Windows (10, 11 e Server). Suporte para macOS está no roadmap."
+          "question": "O que acontece depois do assessment?",
+          "answer": "Você recebe uma leitura inicial do cenário e os próximos passos recomendados, com base no que foi identificado."
         },
         "3": {
-          "question": "E se eu não gostar? Posso cancelar?",
-          "answer": "Claro! Teste gratuitamente por 14 dias, sem compromisso."
+          "question": "O produto ajuda com compliance?",
+          "answer": "Sim. Um dos pilares do CyberShield é apoiar evidência, rastreabilidade e relatórios ligados à operação e conformidade."
         },
         "4": {
-          "question": "Meus dados ficam seguros com vocês?",
-          "answer": "Sim. Dados criptografados e acesso controlado."
+          "question": "O sistema permite ações automatizadas?",
+          "answer": "Sim. O produto contempla automação e remediação para apoiar a operação de resposta."
         },
         "5": {
-          "question": "Vocês são empresa brasileira?",
-          "answer": "Sim! Empresa 100% brasileira, com CNPJ e nota fiscal."
-        },
-        "6": {
-          "question": "Como funciona o período de teste?",
-          "answer": "14 dias com acesso completo. Não pedimos cartão de crédito para começar."
-        },
-        "7": {
-          "question": "Vocês emitem nota fiscal?",
-          "answer": "Sim, emitimos nota fiscal para todas as assinaturas."
-        },
-        "8": {
-          "question": "Ajuda com LGPD?",
-          "answer": "Sim! Nossos relatórios ajudam a demonstrar conformidade com a LGPD."
+          "question": "Preciso decidir tudo agora?",
+          "answer": "Não. O objetivo do assessment é justamente dar uma visão inicial para uma decisão mais segura."
         }
       }
     },
-    "calculator": {
-      "title": "Qual Plano é Ideal Para Você?",
-      "label": "Quantos dispositivos sua empresa possui?"
-    },
     "ctaFinal": {
-      "title": "Cada dia usando 3 ferramentas separadas é dinheiro desperdiçado e risco acumulado",
-      "cta": "Unificar minha segurança agora",
-      "ctaSecondary": "Agendar reunião com especialista (15 min)",
-      "subtitle": "Sem compromisso • RMM + EDR + Compliance em um só lugar • Resultado em até 48h"
+      "title": "Descubra onde sua operação está vulnerável e o que fazer primeiro",
+      "subtitle": "Solicite um assessment gratuito e veja como centralizar segurança, resposta e compliance em uma única plataforma.",
+      "cta": "Solicitar assessment gratuito",
+      "ctaSecondary": "Agendar demo rápida"
     },
     "contact": {
-      "title": "Fale Conosco"
+      "title": "Fale com um especialista"
+    },
+    "unifiedPlatform": {
+      "title": "Pare de pagar por complexidade",
+      "subtitle": "Centralize monitoramento, detecção e compliance em uma única plataforma",
+      "before": "Antes",
+      "after": "Com CyberShield",
+      "oldTools": [
+        "Ferramenta de monitoramento",
+        "Antivírus separado",
+        "Controles manuais de compliance"
+      ],
+      "oldCosts": [
+        "R$30/endpoint",
+        "R$25/endpoint",
+        "R$20/endpoint"
+      ],
+      "totalLabel": "Total por endpoint",
+      "totalOld": "R$75/mês",
+      "painPoints": [
+        "Ferramentas não se integram",
+        "Relatórios duplicados",
+        "Gestão fragmentada"
+      ],
+      "productName": "CyberShield",
+      "productTagline": "RMM + EDR + Compliance unificado",
+      "fromLabel": "A partir de",
+      "price": "R$499/mês",
+      "advantages": [
+        "Tudo integrado em um painel",
+        "Evidências de compliance automáticas",
+        "Suporte em português",
+        "Faturamento em reais"
+      ],
+      "capabilities": {
+        "0": {
+          "title": "Gestão de Endpoints",
+          "description": "Inventário, telemetria e agrupamento contínuo"
+        },
+        "1": {
+          "title": "EDR Integrado",
+          "description": "Detecção de ameaças com resposta automatizada"
+        },
+        "2": {
+          "title": "Compliance & Auditoria",
+          "description": "Evidências verificáveis e relatórios executivos"
+        }
+      }
+    },
+    "socialProof": {
+      "stats": {
+        "0": {
+          "value": "98%",
+          "label": "Taxa de satisfação"
+        },
+        "1": {
+          "value": "<2h",
+          "label": "Tempo médio de resposta"
+        },
+        "2": {
+          "value": "0",
+          "label": "Incidentes em clientes ativos"
+        }
+      }
+    },
+    "diagnostic": {
+      "title": "Mini-diagnóstico gratuito",
+      "subtitle": "Responda 4 perguntas e descubra seu nível de risco",
+      "items": []
+    },
+    "technology": {
+      "badge": "Tecnologia",
+      "title": "Tecnologia de ponta",
+      "subtitle": "Infraestrutura robusta",
+      "features": [],
+      "comparison": {}
+    },
+    "useCases": {
+      "title": "Casos de uso",
+      "subtitle": "Veja como funciona na prática",
+      "cases": []
+    },
+    "pricing": {
+      "badge": "Planos",
+      "title": "Planos que cabem na sua operação",
+      "subtitle": "Escolha o plano ideal para o tamanho do seu ambiente",
+      "plans": {},
+      "perMonth": "/mês",
+      "baseDevices": "dispositivos inclusos",
+      "extraDevice": "por dispositivo extra"
+    },
+    "testimonials": {
+      "title": "O que nossos clientes dizem",
+      "subtitle": "Resultados reais de empresas brasileiras",
+      "items": {}
+    },
+    "calculator": {
+      "title": "Calcule sua economia",
+      "label": "Dispositivos"
     }
   },
   "adminPages": {
