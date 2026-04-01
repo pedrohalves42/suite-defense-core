@@ -46,9 +46,7 @@ serveTenant(async (_req, ctx) => {
 
   if (createUserError || !newUser.user) {
     logger.error('[create-custom-trial] Failed to create user:', createUserError);
-    return new Response(JSON.stringify({ error: 'Failed to create user', details: createUserError?.message }), {
-      status: 500, headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({ error: 'Failed to create user', details: createUserError?.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 
   await new Promise(resolve => setTimeout(resolve, 2000));
