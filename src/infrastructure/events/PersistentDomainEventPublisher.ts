@@ -11,9 +11,9 @@ import { logger } from '@/lib/logger';
 export class PersistentDomainEventPublisher implements DomainEventDispatcher {
   async dispatch(event: DomainEvent): Promise<void> {
     try {
-      const { error } = await supabase.functions.invoke('sync-router', {
+      const { error } = await supabase.functions.invoke('ops-gateway', {
         body: {
-          action: 'log-domain-event',
+          action: 'sync:log-domain-event',
           payload: {
             aggregate_id: event.aggregateId,
             aggregate_type: this.inferAggregateType(event.eventType),
