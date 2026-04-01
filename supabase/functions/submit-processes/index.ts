@@ -43,6 +43,8 @@ Deno.serve(async (req) => {
     return secureErrorResponse('Method not allowed', 405);
   }
 
+  const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
+
   try {
     const agentToken = req.headers.get('x-agent-token');
 
@@ -201,7 +203,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    logger.error('Error in submit-processes:', error);
+    logger.error('Error in submit-processes:', { error, traceId });
     return secureErrorResponse(
       error instanceof Error ? error.message : 'Unknown error',
       500

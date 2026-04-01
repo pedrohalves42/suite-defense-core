@@ -30,6 +30,7 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'));
   const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+  const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
 
   try {
     // 1. Authenticate via token
@@ -101,6 +102,6 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ success: true, key_id: result.key_id, version: result.version, valid_from: result.valid_from, registered_at: new Date().toISOString(), algorithm }), { status: 201, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
   } catch (error) {
     logger.error('[register-agent-key] Unexpected error:', error);
-    return handleException(error, crypto.randomUUID(), 'register-agent-key');
+    return handleException(error, traceId, 'register-agent-key');
   }
 });

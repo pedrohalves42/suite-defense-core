@@ -166,7 +166,7 @@ const FORWARDED_HEADERS = [
 ];
 
 function forwardHeaders(req: Request, requestId: string): Record<string, string> {
-  const h: Record<string, string> = { 'Content-Type': 'application/json', 'X-Request-ID': requestId };
+  const h: Record<string, string> = { 'Content-Type': 'application/json', 'X-Request-ID': requestId, 'X-Trace-ID': requestId };
   for (const name of FORWARDED_HEADERS) {
     const v = req.headers.get(name);
     if (v) h[name] = v;
@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: buildCorsHeaders(origin) });
   if (req.method !== 'POST') return jsonRes({ error: 'Method not allowed' }, 405, origin);
 
-  const requestId = crypto.randomUUID();
+  const requestId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
   const startedAt = Date.now();
 
   try {

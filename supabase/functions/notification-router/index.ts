@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     );
   }
 
-  const requestId = crypto.randomUUID();
+  const requestId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
 
   // Auth: internal or JWT
   const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
@@ -115,6 +115,7 @@ Deno.serve(async (req) => {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'X-Request-ID': requestId,
+        'X-Trace-ID': requestId,
       };
 
       // Forward auth headers

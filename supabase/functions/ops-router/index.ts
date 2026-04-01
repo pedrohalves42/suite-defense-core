@@ -58,6 +58,7 @@ function forwardHeaders(req: Request, requestId: string): Record<string, string>
   const h: Record<string, string> = {
     'Content-Type': 'application/json',
     'X-Request-ID': requestId,
+    'X-Trace-ID': requestId,
   };
   for (const name of ['Authorization', 'apikey', 'X-Internal-Secret', 'X-Agent-Token', 'X-HMAC-Signature', 'X-Timestamp', 'X-Nonce', 'x-cron-source']) {
     const v = req.headers.get(name);
@@ -74,7 +75,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: buildCorsHeaders(origin) });
   if (req.method !== 'POST') return jsonRes({ error: 'Method not allowed' }, 405, origin);
 
-  const requestId = crypto.randomUUID();
+  const requestId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
   const startedAt = Date.now();
 
   const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });

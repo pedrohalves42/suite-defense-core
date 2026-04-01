@@ -27,16 +27,18 @@ Deno.serve(async (request) => {
     return new Response("No signature", { status: 400 });
   }
 
+  const traceId = request.headers.get('X-Trace-ID') || request.headers.get('X-Request-ID') || crypto.randomUUID();
+
   try {
     const body = await request.text();
     const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
     if (!webhookSecret) {
-      logger.error("[STRIPE-WEBHOOK] No webhook secret configured");
+      logger.error("[STRIPE-WEBHOOK] No webhook secret configured", { traceId });
       return new Response("Webhook secret not configured", { status: 500 });
     }
 
     const event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret, undefined, cryptoProvider);
-    logger.info(`[STRIPE-WEBHOOK] Event received: ${event.type}`);
+    logger.info(`[STRIPE-WEBHOOK] Event received: ${event.type}`, { traceId });
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
 
@@ -64,6 +66,6 @@ Deno.serve(async (request) => {
     return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" }, status: 200 });
   } catch (err) {
     logger.error("[STRIPE-WEBHOOK] Error:", err);
-    return new Response(JSON.stringify({ error: `Webhook error: ${err instanceof Error ? err.message : 'Unknown'}` }), { status: 400 });
+    return new Response(JSON.stringify({ error: `Webhook error: ${err instanceof Error ? err.message : 'Unknown'}`, traceId }), { status: 400 });
   }
 });
