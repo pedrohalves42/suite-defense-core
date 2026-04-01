@@ -1,6 +1,15 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const ComplianceReportSchema = z.object({
+  tenant_id: z.string().uuid().optional(),
+  template: z.enum(['LGPD', 'ISO_27001', 'SOC2_LITE']).optional(),
+  template_type: z.enum(['LGPD', 'ISO_27001', 'SOC2_LITE']).optional(),
+  period_start: z.string().max(30).optional(),
+  period_end: z.string().max(30).optional(),
+}).refine(d => d.template || d.template_type, { message: 'template or template_type is required' });
 
 // Real SHA256 using Web Crypto API
 async function generateSHA256(data: string): Promise<string> {
