@@ -59,8 +59,9 @@ serveTenant(async (req, ctx) => {
     }
 
     case 'verify': {
-      const body = ctx.body as Record<string, string>;
-      if (!body.sha256 || !body.signature_base64 || !body.public_key) return respond({ error: 'Missing required fields' }, 400);
+      const verifyParsed = VerifySchema.safeParse(ctx.body);
+      if (!verifyParsed.success) return respond({ error: 'Invalid payload', issues: verifyParsed.error.flatten().fieldErrors }, 400);
+      const body = verifyParsed.data;
       const valid = await verifyWithPublicKey(body.sha256, body.signature_base64, body.public_key);
       const fingerprint = await getPublicKeyFingerprint(body.public_key);
       return respond({ valid, fingerprint, algorithm: 'ECDSA-P256-SHA256', verified_at: new Date().toISOString() });
