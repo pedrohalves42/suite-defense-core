@@ -29,7 +29,11 @@ interface NVDResponse {
 
 serveInternal(async (_req, ctx) => {
   const { supabase, requestId, body } = ctx;
-  const { keyword, cpeMatchString, cveId, lastModStartDate, resultsPerPage = 50, startIndex = 0, forceRefresh = false } = body as Record<string, unknown>;
+  const parsed = BodySchema.safeParse(body || {});
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const { keyword, cpeMatchString, cveId, lastModStartDate, resultsPerPage, startIndex, forceRefresh } = parsed.data;
 
   logger.info(`[${requestId}] [FETCH-NVD] Starting NVD CVE fetch`);
 
