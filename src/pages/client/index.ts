@@ -1,4 +1,4 @@
-export { ClientDashboard } from './ClientDashboard';
+export { ClientDashboard } from './ClientDashboard/index';
 export { ClientComputers } from './ClientComputers';
 export { ClientSecurityStatus } from './ClientSecurityStatus';
 export { ClientReports } from './ClientReports';
