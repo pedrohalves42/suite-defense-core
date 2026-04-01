@@ -98,10 +98,10 @@ serveTenant(async (req, ctx) => {
     }
 
     case 'sign-document': {
-      const body = ctx.body as Record<string, unknown>;
+      const sdParsed = SignDocumentSchema.safeParse(ctx.body);
+      if (!sdParsed.success) return respond({ error: 'Invalid payload', issues: sdParsed.error.flatten().fieldErrors }, 400);
+      const body = sdParsed.data;
       const { document_name, document_content, document_hash: providedHash, invariants_version, audit_level } = body;
-      if (!document_name) return respond({ error: 'Missing required field: document_name' }, 400);
-      if (!providedHash && !document_content) return respond({ error: 'Missing document_hash OR document_content' }, 400);
 
       const privateKey = Deno.env.get('ECDSA_PRIVATE_KEY');
       if (!privateKey) return respond({ error: 'Missing ECDSA private key' }, 400);
