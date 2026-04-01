@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    HMAC computation and verification — HEX output (aligned with Unix agents)
+    HMAC computation and verification -- HEX output (aligned with Unix agents)
 #>
 
 function Compute-HMAC {

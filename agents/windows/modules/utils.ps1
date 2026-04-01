@@ -10,7 +10,7 @@ function New-TraceId {
     <#
     .SYNOPSIS
         Generates a unique trace ID (UUID v4) for end-to-end request tracing.
-        Propagated via X-Trace-ID header to correlate agent → backend → database.
+        Propagated via X-Trace-ID header to correlate agent -> backend -> database.
     #>
     return [guid]::NewGuid().ToString()
 }
