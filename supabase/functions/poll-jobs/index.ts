@@ -20,6 +20,8 @@ Deno.serve(async (req) => {
   const methodError = validateHttpMethod(req, ['POST', 'GET']);
   if (methodError) return methodError;
 
+  const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
+
   try {
     const supabase = createClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'));
 
@@ -31,10 +33,10 @@ Deno.serve(async (req) => {
     // Rate limiting
     const rateLimitResult = await checkRateLimit(supabase, agent.agentName, 'poll-jobs', { maxRequests: 6, windowMinutes: 1, blockMinutes: 5 });
     if (!rateLimitResult.allowed) {
-      return new Response(JSON.stringify({ error: 'Rate limit excedido', resetAt: rateLimitResult.resetAt }), { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: 'Rate limit excedido', resetAt: rateLimitResult.resetAt, traceId }), { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json', 'X-Trace-ID': traceId } });
     }
 
-    logger.debug('Agent polling', { agentName: agent.agentName });
+    logger.debug('Agent polling', { agentName: agent.agentName, traceId });
 
     // Offline guard (>2h)
     const offlineGuard = await checkOfflineGuard(supabase, agent, origin);
@@ -45,10 +47,10 @@ Deno.serve(async (req) => {
     if (backlogGuard) return backlogGuard;
 
     // Claim and deliver jobs
-    logger.info('Fetching jobs for agent', { agentName: agent.agentName, agentId: agent.agentId });
+    logger.info('Fetching jobs for agent', { agentName: agent.agentName, agentId: agent.agentId, traceId });
     return await claimAndBuildResponse(supabase, agent, origin);
 
   } catch (error) {
-    return handleException(error, crypto.randomUUID(), 'poll-jobs');
+    return handleException(error, traceId, 'poll-jobs');
   }
 });

@@ -20,7 +20,7 @@ import { handleReEnrollment, createNewAgent } from './agent-handler.ts';
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
-  const requestId = crypto.randomUUID();
+  const requestId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
   const startTime = Date.now();
 
   if (req.method === 'OPTIONS') return handleCorsPreflightRequest();
