@@ -2,8 +2,13 @@ import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-type Operation = 'upgrade' | 'add_devices' | 'downgrade' | 'cancel';
+const ManageSubSchema = z.object({
+  operation: z.enum(['upgrade', 'add_devices', 'downgrade', 'cancel']),
+  target_plan: z.string().min(1).max(100).optional(),
+  extra_devices: z.number().int().min(0).max(1000).default(0),
+});
 
 interface PlanConfig {
   basePriceId: string;
@@ -18,20 +23,13 @@ async function getPlanConfig(supabase: SupabaseClient, planName: string): Promis
     .select("plan_type, stripe_price_id, base_devices")
     .eq("logical_plan", planName);
   
-  if (error || !mappings || mappings.length === 0) {
-    return null;
-  }
+  if (error || !mappings || mappings.length === 0) return null;
   
   const base = mappings.find((m: Record<string, unknown>) => m.plan_type === 'base');
   const addon = mappings.find((m: Record<string, unknown>) => m.plan_type === 'addon');
-  
   if (!base || !addon) return null;
   
-  return {
-    basePriceId: base.stripe_price_id,
-    addonPriceId: addon.stripe_price_id,
-    baseDevices: base.base_devices,
-  };
+  return { basePriceId: base.stripe_price_id, addonPriceId: addon.stripe_price_id, baseDevices: base.base_devices };
 }
 
 // V4: Get all addon price IDs from database
@@ -40,7 +38,6 @@ async function getAllAddonPriceIds(supabase: Record<string, unknown>): Promise<s
     .from("stripe_plan_mapping")
     .select("stripe_price_id")
     .eq("plan_type", "addon");
-  
   return data?.map((m: Record<string, unknown>) => m.stripe_price_id) || [];
 }
 
@@ -57,9 +54,13 @@ serveTenant(async (req, ctx) => {
 
   logStep("User authenticated", { userId, tenantId });
 
-  const operation: Operation = body.operation;
-  const targetPlan: string = body.target_plan;
-  const extraDevices: number = body.extra_devices || 0;
+  const parsed = ManageSubSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const operation = parsed.data.operation;
+  const targetPlan = parsed.data.target_plan || '';
+  const extraDevices = parsed.data.extra_devices;
 
   logStep("Operation requested", { operation, targetPlan, extraDevices });
 

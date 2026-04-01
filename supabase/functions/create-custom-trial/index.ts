@@ -83,7 +83,7 @@ serveTenant(async (_req, ctx) => {
 
   logger.info(`[create-custom-trial] Created ${trial_days}-day trial for ${company_name} (${email}).`);
 
-  await supabase.auth.admin.generateLink({ type: 'recovery', email: email as string });
+  await supabase.auth.admin.generateLink({ type: 'recovery', email });
 
   return {
     success: true, tenant_id: tenantId, user_id: newUser.user.id, email, company_name,

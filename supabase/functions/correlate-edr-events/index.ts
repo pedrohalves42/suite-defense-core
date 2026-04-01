@@ -5,11 +5,17 @@
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const EdrCorrelationSchema = z.object({
+  lookback_minutes: z.number().int().min(1).max(1440).default(60),
+});
 
 serveInternal(async (_req, ctx) => {
   const { supabase, requestId, body } = ctx;
-  const lookbackMinutes = (body as Record<string, unknown>)?.lookback_minutes || 60;
-  const since = new Date(Date.now() - (lookbackMinutes as number) * 60 * 1000).toISOString();
+  const parsed = EdrCorrelationSchema.safeParse(body ?? {});
+  const lookbackMinutes = parsed.success ? parsed.data.lookback_minutes : 60;
+  const since = new Date(Date.now() - lookbackMinutes * 60 * 1000).toISOString();
 
   const { data: rules } = await supabase.from('correlation_rules').select('*').eq('is_enabled', true);
   if (!rules?.length) return { message: 'No active correlation rules' };

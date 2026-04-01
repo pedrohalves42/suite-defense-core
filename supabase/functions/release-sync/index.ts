@@ -5,25 +5,28 @@
  */
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-type SyncAction = 'sync_content' | 'sync_from_repo' | 'sync_all' | 'validate';
+const ReleaseSyncSchema = z.object({
+  action: z.enum(['sync_content', 'sync_from_repo', 'sync_all', 'validate']).default('sync_all'),
+  platform: z.enum(['windows', 'linux', 'macos']).optional(),
+  version: z.string().max(32).optional(),
+});
 
 interface SyncResult {
-  action: string;
-  success: boolean;
-  releases_processed: number;
-  releases_updated: number;
-  errors: string[];
-  duration_ms: number;
+  action: string; success: boolean; releases_processed: number;
+  releases_updated: number; errors: string[]; duration_ms: number;
 }
 
 serveInternal(async (_req, ctx) => {
   const { supabase, requestId, body } = ctx;
   const startedAt = Date.now();
 
-  const action: SyncAction = (body as Record<string, unknown>)?.action as SyncAction || 'sync_all';
-  const platform = (body as Record<string, unknown>)?.platform as string | undefined;
-  const version = (body as Record<string, unknown>)?.version as string | undefined;
+  const parsed = ReleaseSyncSchema.safeParse(body ?? {});
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const { action, platform, version } = parsed.data;
 
   logger.info(`[release-sync][${requestId}] action=${action} platform=${platform || 'all'} version=${version || 'latest'}`);
 

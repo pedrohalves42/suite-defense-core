@@ -1,6 +1,12 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const CheckoutSchema = z.object({
+  planName: z.enum(['starter_compliance', 'business']),
+  extraDevices: z.number().int().min(0).max(500).default(0),
+});
 
 const logStep = (step: string, details?: Record<string, unknown>) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
@@ -38,14 +44,15 @@ serveTenant(async (req, ctx) => {
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
   if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
 
-  // Get user email for Stripe customer
   const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId);
   if (!authUser?.email) throw new Error("User email not found");
   logStep("User email found", { email: authUser.email });
 
-  const { planName, extraDevices = 0 } = body || {};
-  if (!planName) throw new Error("planName is required");
-  if (!['starter_compliance', 'business'].includes(planName)) throw new Error("Invalid planName");
+  const parsed = CheckoutSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const { planName, extraDevices } = parsed.data;
 
   const planConfig = STRIPE_PLANS[planName as keyof typeof STRIPE_PLANS];
   logStep("Request parameters", { planName, extraDevices, planConfig });

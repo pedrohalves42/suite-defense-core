@@ -8,11 +8,17 @@
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { evaluateForTenant } from './tenant-evaluator.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const AutomationRuleSchema = z.object({
+  tenant_id: z.string().uuid().optional(),
+});
 
 serveInternal(async (req, ctx) => {
   const { supabase, requestId, body } = ctx;
 
-  const { tenant_id } = body as { tenant_id?: string };
+  const parsed = AutomationRuleSchema.safeParse(body ?? {});
+  const { tenant_id } = parsed.success ? parsed.data : {};
 
   // Auto-discover tenants if none specified (cron mode)
   if (!tenant_id) {

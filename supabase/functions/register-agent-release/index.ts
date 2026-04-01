@@ -93,8 +93,8 @@ serveTenant(async (req, ctx) => {
   await supabase.from('agent_releases').update({ is_active: false }).eq('platform', platform).eq('channel', channel);
 
   // Auto-sign
-  let finalSignature = signature_base64 as string | undefined;
-  let finalSignedBy = (signed_by as string) || 'manual';
+  let finalSignature = signature_base64;
+  let finalSignedBy = signed_by || 'manual';
   if (!finalSignature && ED25519_PRIVATE_KEY) {
     try {
       finalSignature = await signPayload(`release:${platform}:${version}:${sha256}`, ED25519_PRIVATE_KEY);

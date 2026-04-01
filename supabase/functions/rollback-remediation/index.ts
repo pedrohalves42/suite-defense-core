@@ -4,11 +4,15 @@
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { createAuditLog } from '../_shared/audit.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const RollbackRemSchema = z.object({
+  action_id: z.string().uuid(),
+});
 
 serveTenant(async (req, ctx) => {
   const { supabase, userId, requestId, body } = ctx;
 
-  // Verify admin role
   const { data: userRoles } = await supabase
     .from('user_roles').select('tenant_id, role').eq('user_id', userId!);
 
@@ -17,8 +21,11 @@ serveTenant(async (req, ctx) => {
     return new Response(JSON.stringify({ error: 'Admin role required for rollback' }), { status: 403 });
   }
 
-  const { action_id } = body as { action_id?: string };
-  if (!action_id) return new Response(JSON.stringify({ error: 'action_id required' }), { status: 400 });
+  const parsed = RollbackRemSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const { action_id } = parsed.data;
 
   const userTenantIds = adminRoles.map(r => r.tenant_id);
 

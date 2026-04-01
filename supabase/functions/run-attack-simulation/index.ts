@@ -4,18 +4,21 @@
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const AttackSimSchema = z.object({
+  simulation_type: z.enum(['eicar_test', 'firewall_test', 'canary_file_test', 'usb_policy_test', 'dns_filter_test', 'port_scan_test']),
+});
 
 serveTenant(async (_req, ctx) => {
   const origin = _req.headers.get("origin");
   const { tenantId, supabase, body } = ctx;
-  const { simulation_type } = body;
 
-  if (!simulation_type) {
-    return new Response(
-      JSON.stringify({ error: 'simulation_type required' }),
-      { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-    );
+  const parsed = AttackSimSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
   }
+  const { simulation_type } = parsed.data;
 
   // Get online agents
   const { data: agents } = await supabase

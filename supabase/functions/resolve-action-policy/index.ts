@@ -4,20 +4,17 @@
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-interface PolicyRequest {
-  tenant_id: string;
-  insight_type: string;
-}
+const ActionPolicySchema = z.object({
+  tenant_id: z.string().uuid().optional(),
+  insight_type: z.string().min(1).max(100),
+});
 
 interface PolicyResponse {
   source: 'tenant_policy' | 'default_mapping' | 'tenant_fallback';
   execution_mode: 'auto' | 'approval' | 'disabled';
-  policy_details?: {
-    tenant_policy_id?: string;
-    default_mapping_mode?: string;
-    tenant_global_mode?: string;
-  };
+  policy_details?: Record<string, unknown>;
 }
 
 const DEFAULT_MAPPINGS: Record<string, 'auto' | 'approval'> = {
@@ -32,13 +29,14 @@ const DEFAULT_MAPPINGS: Record<string, 'auto' | 'approval'> = {
   data_exfiltration_suspected: 'approval', unauthorized_software: 'approval',
 };
 
-serveTenant<PolicyRequest>(async (_req, ctx) => {
+serveTenant(async (_req, ctx) => {
   const { supabase, tenantId, requestId, body } = ctx;
-  const { insight_type } = body;
 
-  if (!insight_type) {
-    return new Response(JSON.stringify({ error: 'Missing required fields', required: ['insight_type'] }), { status: 400 });
+  const parsed = ActionPolicySchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
+  const { insight_type } = parsed.data;
 
   logger.info(`[${requestId}] Resolving policy for tenant=${tenantId}, insight_type=${insight_type}`);
 

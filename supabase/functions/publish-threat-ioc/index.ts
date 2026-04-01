@@ -4,34 +4,32 @@
  */
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-interface ThreatIoC {
-  type: 'file_hash_sha256' | 'file_hash_md5' | 'domain' | 'ip_address' | 'url';
-  value: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  tags: string[];
-  context: string;
-  source_agent_id?: string;
-  source_tenant_id?: string;
-  metadata?: Record<string, unknown>;
-}
-
-interface PublishRequest {
-  iocs: ThreatIoC[];
-  detection_type: string;
-  source_agent_name?: string;
-}
+const ThreatIocSchema = z.object({
+  iocs: z.array(z.object({
+    type: z.enum(['file_hash_sha256', 'file_hash_md5', 'domain', 'ip_address', 'url']),
+    value: z.string().min(3).max(2048),
+    severity: z.enum(['low', 'medium', 'high', 'critical']),
+    tags: z.array(z.string().max(100)).max(20).default([]),
+    context: z.string().max(2000).default(''),
+    source_agent_id: z.string().uuid().optional(),
+    source_tenant_id: z.string().uuid().optional(),
+    metadata: z.record(z.unknown()).optional(),
+  })).min(1).max(100),
+  detection_type: z.string().min(1).max(100),
+  source_agent_name: z.string().max(255).optional(),
+});
 
 serveInternal(async (_req, ctx) => {
   const { supabase, requestId, body } = ctx;
 
-  const publishBody = body as PublishRequest;
-
-  if (!publishBody?.iocs || !Array.isArray(publishBody.iocs) || publishBody.iocs.length === 0) {
-    return new Response(JSON.stringify({ error: 'No IoCs provided' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  const parsed = ThreatIocSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
-
-  const iocs = publishBody.iocs.slice(0, 100);
+  const publishBody = parsed.data;
+  const iocs = publishBody.iocs;
   logger.info(`[${requestId}] [publish-threat-ioc] Publishing ${iocs.length} IoCs from ${publishBody.detection_type}`);
 
   let reputationUpserted = 0;
