@@ -1,320 +1,125 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
-import { verifyHmacSignature } from "../_shared/hmac.ts";
-import { hashToken } from "../_shared/token-hash.ts";
-import { z } from "https://esm.sh/zod@3.23.8";
+/**
+ * post-installation-telemetry - Records post-install telemetry from agents
+ * 
+ * MIGRATED to serveAgent middleware with hmacVerify: true
+ * Auth: X-Agent-Token + HMAC signature (automated by middleware)
+ */
+import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
-import { buildCorsHeaders } from '../_shared/cors.ts';
 
-// CORS handled dynamically via buildCorsHeaders(origin)
+serveAgent(async (_req, ctx) => {
+  const { agentId, agentName, tenantId, agentData, supabase, requestId, body } = ctx;
+  const b = body as Record<string, unknown>;
 
-const AgentTokenSchema = z.string().regex(/^[A-Za-z0-9]{64}$/, "Invalid agent token format");
+  logger.info(`[${requestId}] Telemetry data received:`, {
+    agent_name: agentName,
+    success: b.success,
+    task_created: b.task_created,
+    task_running: b.task_running,
+    verified: true,
+  });
 
-Deno.serve(async (req) => {
-  const origin = req.headers.get("origin");
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: buildCorsHeaders(origin) });
+  // Build telemetry record
+  const telemetryData = {
+    agent_id: agentId,
+    tenant_id: tenantId,
+    agent_name: agentName,
+    event_type: 'post_installation',
+    platform: 'windows',
+    success: b.success ?? true,
+    error_message: b.errors ? JSON.stringify(b.errors) : null,
+    network_connectivity: (b.network_tests as Record<string, unknown>)?.health_check_passed ?? null,
+    dns_resolution: (b.network_tests as Record<string, unknown>)?.dns_test ?? null,
+    api_connectivity: (b.network_tests as Record<string, unknown>)?.api_test ?? null,
+    os_info: {
+      type: agentData.os_type,
+      version: b.os_version || agentData.os_version,
+      hostname: agentData.hostname,
+      powershell_version: b.powershell_version || null,
+    },
+    installation_method: 'windows_ps1',
+    firewall_status: b.firewall_status || 'unknown',
+    proxy_detected: b.proxy_detected || false,
+    metadata: {
+      task_created: b.task_created,
+      task_running: b.task_running,
+      script_exists: b.script_exists,
+      script_size_bytes: b.script_size_bytes,
+      verified: true,
+      request_id: requestId,
+    },
+    timestamp: b.installation_time || new Date().toISOString(),
+  };
+
+  // Insert telemetry (with idempotency check)
+  const { error: insertError } = await supabase
+    .from('installation_analytics')
+    .insert(telemetryData);
+
+  if (insertError) {
+    // Handle duplicate key violations gracefully (idempotent)
+    if (insertError.code === '23505') {
+      logger.info(`[${requestId}] Duplicate telemetry detected (idempotent), returning success`);
+      return {
+        status: 'already_recorded',
+        verified: true,
+        request_id: requestId,
+        message: 'Telemetry already recorded (idempotent)',
+      };
+    }
+    logger.error(`[${requestId}] Database insert error:`, insertError);
+    throw insertError;
   }
 
-  const requestId = crypto.randomUUID();
-  logger.info(`[${requestId}] POST installation telemetry request started`);
+  logger.info(`[${requestId}] [OK] Telemetry inserted successfully`, {
+    agent_id: agentId,
+    agent_name: agentName,
+    tenant_id: tenantId,
+    verified: true,
+  });
 
-  try {
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
-    );
+  // Track expected first_heartbeat after installation
+  const metadata = b.metadata as Record<string, unknown> | undefined;
+  if (b.success && metadata?.installation_complete) {
+    await supabase.from('installation_analytics').insert({
+      tenant_id: tenantId,
+      agent_id: agentId,
+      agent_name: agentName,
+      event_type: 'awaiting_first_heartbeat',
+      platform: 'windows',
+      success: true,
+      metadata: {
+        installation_timestamp: new Date().toISOString(),
+        expected_heartbeat_within_seconds: 120,
+      },
+    });
+  }
 
-    // Parse body FIRST (before validating auth)
-    let body: Record<string, unknown>;
-    try {
-      body = await req.json();
-      logger.info(`[${requestId}] Body parsed successfully`);
-    } catch (parseError) {
-      logger.error(`[${requestId}] Body parse failed:`, parseError);
-      return new Response(
-        JSON.stringify({ 
-          error: "Invalid JSON body", 
-          request_id: requestId 
-        }),
-        { status: 400, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
-      );
-    }
-
-    // HARDENED: X-Agent-Token is REQUIRED ? no fallback mode
-    const agentTokenHeader = req.headers.get("X-Agent-Token");
-    if (!agentTokenHeader) {
-      logger.warn(`[${requestId}] REJECTED: Missing X-Agent-Token header`);
-      return new Response(
-        JSON.stringify({ 
-          error: "Authentication required", 
-          error_code: "MISSING_TOKEN",
-          request_id: requestId 
-        }),
-        { status: 401, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
-      );
-    }
-
-    // Validate token format
-    const tokenValidation = AgentTokenSchema.safeParse(agentTokenHeader);
-    if (!tokenValidation.success) {
-      logger.warn(`[${requestId}] REJECTED: Invalid token format`);
-      return new Response(
-        JSON.stringify({ 
-          error: "Invalid token format",
-          error_code: "INVALID_TOKEN_FORMAT",
-          request_id: requestId 
-        }),
-        { status: 401, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
-      );
-    }
-
-    // Fetch agent token details using hash
-    const tokenHash = await hashToken(agentTokenHeader);
-    const { data: agentToken, error: tokenError } = await supabaseClient
-      .from("agent_tokens")
-      .select("agent_id, is_active, expires_at, agents!inner(id, agent_name, tenant_id, hmac_secret)")
-      .eq("token_hash", tokenHash)
+  // Handle failed installations — notify admins
+  if (!b.success) {
+    logger.info(`[${requestId}] Installation failed, checking for admin notification`, { errors: b.errors });
+    const { data: adminRole } = await supabase
+      .from('user_roles')
+      .select('user_id, profiles!inner(email)')
+      .eq('tenant_id', tenantId)
+      .eq('role', 'admin')
+      .limit(1)
       .maybeSingle();
 
-    if (tokenError || !agentToken) {
-      logger.warn(`[${requestId}] REJECTED: Token not found, prefix: ${agentTokenHeader.substring(0, 8)}`);
-      return new Response(
-        JSON.stringify({ 
-          error: "Invalid or unknown token",
-          error_code: "TOKEN_NOT_FOUND",
-          request_id: requestId 
-        }),
-        { status: 401, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
-      );
+    if (adminRole) {
+      const profiles = adminRole.profiles as Record<string, unknown>;
+      logger.info(`[${requestId}] Admin found for notification`, { adminEmail: profiles?.email });
     }
-
-    if (!agentToken.is_active) {
-      logger.warn(`[${requestId}] REJECTED: Token inactive`);
-      return new Response(
-        JSON.stringify({ 
-          error: "Token is inactive",
-          error_code: "TOKEN_INACTIVE",
-          request_id: requestId 
-        }),
-        { status: 403, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
-      );
-    }
-
-    if (agentToken.expires_at && new Date(agentToken.expires_at) < new Date()) {
-      logger.warn(`[${requestId}] REJECTED: Token expired at ${agentToken.expires_at}`);
-      return new Response(
-        JSON.stringify({ 
-          error: "Token has expired",
-          error_code: "TOKEN_EXPIRED",
-          request_id: requestId 
-        }),
-        { status: 403, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
-      );
-    }
-
-    const agent = agentToken.agents as Record<string, unknown>;
-    
-    // Verify HMAC signature ? REQUIRED for data integrity
-    const hmacResult = await verifyHmacSignature(
-      supabaseClient,
-      req,
-      agent.agent_name,
-      agent.hmac_secret
-    );
-
-    const isVerified = hmacResult.valid;
-    
-    if (!isVerified) {
-      logger.warn(`[${requestId}] REJECTED: HMAC verification failed:`, {
-        errorCode: hmacResult.errorCode,
-        errorMessage: hmacResult.errorMessage,
-        agentName: agent.agent_name
-      });
-      // HARDENED: Reject unverified telemetry instead of persisting it
-      return new Response(
-        JSON.stringify({ 
-          error: "HMAC signature verification failed",
-          error_code: "HMAC_INVALID",
-          request_id: requestId 
-        }),
-        { status: 401, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
-      );
-    }
-    
-    logger.info(`[${requestId}] HMAC verified successfully for agent: ${agent.agent_name}`);
-
-    // Parse telemetry data from body
-    const {
-      success,
-      os_version,
-      installation_time,
-      network_tests,
-      firewall_status,
-      proxy_detected,
-      errors,
-      task_created,
-      task_running,
-      script_exists,
-      script_size_bytes,
-      powershell_version,
-      metadata
-    } = body;
-    
-    logger.info(`[${requestId}] Telemetry data received:`, { 
-      agent_name: agent.agent_name, 
-      success, 
-      task_created, 
-      task_running,
-      verified: true
-    });
-
-    // Build telemetry record ? always verified at this point
-    const telemetryData = {
-      agent_id: agent.id,
-      tenant_id: agent.tenant_id,
-      agent_name: agent.agent_name,
-      event_type: "post_installation",
-      platform: "windows",
-      success: success ?? true,
-      error_message: errors ? JSON.stringify(errors) : null,
-      network_connectivity: network_tests?.health_check_passed ?? null,
-      dns_resolution: network_tests?.dns_test ?? null,
-      api_connectivity: network_tests?.api_test ?? null,
-      os_info: {
-        type: agent.os_type,
-        version: os_version || agent.os_version,
-        hostname: agent.hostname,
-        powershell_version: powershell_version || null
-      },
-      installation_method: "windows_ps1",
-      firewall_status: firewall_status || "unknown",
-      proxy_detected: proxy_detected || false,
-      metadata: {
-        task_created: task_created,
-        task_running: task_running,
-        script_exists: script_exists,
-        script_size_bytes: script_size_bytes,
-        verified: true,
-        request_id: requestId
-      },
-      timestamp: installation_time || new Date().toISOString(),
-    };
-
-    // Insert telemetry (with idempotency check)
-    const { error: insertError } = await supabaseClient
-      .from("installation_analytics")
-      .insert(telemetryData);
-
-    if (!insertError) {
-      logger.info(`[${requestId}] [OK]  Telemetry inserted successfully`, {
-        agent_id: agent.id,
-        agent_name: agent.agent_name,
-        event_type: 'post_installation',
-        tenant_id: agent.tenant_id,
-        verified: true
-      });
-    }
-
-    if (insertError) {
-      // Handle duplicate key violations gracefully (idempotent operation)
-      if (insertError.code === "23505") {
-        logger.info(`[${requestId}] Duplicate telemetry detected (idempotent), returning success`);
-        return new Response(
-          JSON.stringify({ 
-            status: "already_recorded", 
-            verified: true,
-            request_id: requestId,
-            message: "Telemetry already recorded (idempotent)"
-          }),
-          { status: 200, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } }
-        );
-      }
-      
-      logger.error(`[${requestId}] Database insert error:`, insertError);
-      throw insertError;
-    }
-
-    logger.info(`[${requestId}] Telemetry recorded successfully`, {
-      agent_id: agent.id,
-      agent_name: agent.agent_name,
-      verified: true,
-      success: success
-    });
-
-    // Track expected first_heartbeat after installation
-    if (success && metadata?.installation_complete) {
-      await supabaseClient
-        .from('installation_analytics')
-        .insert({
-          tenant_id: agent.tenant_id,
-          agent_id: agent.id,
-          agent_name: agent.agent_name,
-          event_type: 'awaiting_first_heartbeat',
-          platform: 'windows',
-          success: true,
-          metadata: {
-            installation_timestamp: new Date().toISOString(),
-            expected_heartbeat_within_seconds: 120
-          }
-        });
-    }
-
-    // Handle failed installations by notifying admins (optional)
-    if (!success) {
-      logger.info(`[${requestId}] Installation failed, checking for admin notification`, {
-        errors,
-      });
-
-      const { data: adminRole } = await supabaseClient
-        .from("user_roles")
-        .select(`
-          user_id,
-          profiles!inner (
-            email
-          )
-        `)
-        .eq("tenant_id", agent.tenant_id)
-        .eq("role", "admin")
-        .limit(1)
-        .maybeSingle();
-
-      if (adminRole) {
-        const profiles = adminRole.profiles as Record<string, unknown>;
-        logger.info(`[${requestId}] Admin found for notification`, {
-          adminEmail: profiles?.email,
-        });
-      }
-    }
-
-    return new Response(
-      JSON.stringify({
-        status: "success",
-        verified: true,
-        request_id: requestId,
-        message: "Telemetry recorded successfully",
-        agent_id: agent.id,
-      }),
-      {
-        headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" },
-        status: 200,
-      }
-    );
-  } catch (error: Record<string, unknown>) {
-    logger.error(`[${requestId}] Unhandled error:`, { 
-      message: error.message, 
-      stack: error.stack 
-    });
-    return new Response(
-      JSON.stringify({ 
-        error: "Internal server error", 
-        request_id: requestId,
-        message: error.message 
-      }),
-      {
-        headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" },
-        status: 500,
-      }
-    );
   }
+
+  return {
+    status: 'success',
+    verified: true,
+    request_id: requestId,
+    message: 'Telemetry recorded successfully',
+    agent_id: agentId,
+  };
+}, {
+  hmacVerify: true,
+  extraAgentFields: ['os_type', 'os_version', 'hostname'],
 });
