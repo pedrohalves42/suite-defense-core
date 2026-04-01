@@ -5,10 +5,10 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   test: {
-    pool: 'threads',
+    pool: 'forks',
     poolOptions: {
-      threads: {
-        singleThread: true
+      forks: {
+        singleFork: true
       }
     },
     globals: true,
