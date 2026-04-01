@@ -135,8 +135,8 @@ serveTenant(async (req, ctx) => {
       if (!sarParsed.success) return respond({ error: 'Invalid payload', issues: sarParsed.error.flatten().fieldErrors }, 400);
       const { platform, version, script_content, private_key, release_notes, channel } = sarParsed.data;
 
-      const sha256 = await calculateSha256(script_content as string);
-      const signature = await signWithPrivateKey(sha256, private_key as string);
+      const sha256 = await calculateSha256(script_content);
+      const signature = await signWithPrivateKey(sha256, private_key);
       await supabase.from('agent_releases').update({ is_active: false }).eq('platform', platform).eq('channel', channel);
       await supabase.from('agent_versions').update({ is_latest: false }).eq('platform', platform);
 
@@ -147,12 +147,12 @@ serveTenant(async (req, ctx) => {
       if (releaseError) throw releaseError;
 
       const { error: versionError } = await supabase.from('agent_versions').upsert({
-        platform, version, is_latest: true, sha256, size_bytes: (script_content as string).length,
+        platform, version, is_latest: true, sha256, size_bytes: script_content.length,
         download_url: `${SUPABASE_URL}/functions/v1/serve-agent-update`, release_notes: release_notes || `Signed release ${version}`
       }, { onConflict: 'platform,version' });
       if (versionError) throw versionError;
 
-      return respond({ success: true, platform, version, sha256, signature_base64: signature, signed_at: new Date().toISOString(), signed_by: userEmail, size_bytes: (script_content as string).length });
+      return respond({ success: true, platform, version, sha256, signature_base64: signature, signed_at: new Date().toISOString(), signed_by: userEmail, size_bytes: script_content.length });
     }
 
     case 'sign-existing-ed25519': {
