@@ -5,9 +5,20 @@
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 const NVD_API_BASE = 'https://services.nvd.nist.gov/rest/json/cves/2.0';
 const FETCH_TIMEOUT_MS = 30000;
+
+const BodySchema = z.object({
+  keyword: z.string().max(200).optional(),
+  cpeMatchString: z.string().max(500).optional(),
+  cveId: z.string().regex(/^CVE-\d{4}-\d+$/).optional(),
+  lastModStartDate: z.string().datetime().optional(),
+  resultsPerPage: z.number().int().min(1).max(2000).default(50),
+  startIndex: z.number().int().min(0).default(0),
+  forceRefresh: z.boolean().default(false),
+}).passthrough();
 
 interface NVDResponse {
   resultsPerPage: number;
