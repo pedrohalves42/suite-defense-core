@@ -4,6 +4,11 @@ import { useTenant } from '@/hooks/useTenant';
 
 export interface GovernanceStats {
   tenant_id: string;
+  total_reports: number;
+  approved: number;
+  pending: number;
+  last_report_at: string | null;
+  // Computed fields for backward compatibility
   active_tasks: number;
   unassigned_tasks: number;
   sla_breached_active: number;
