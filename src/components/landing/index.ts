@@ -9,6 +9,7 @@ export { TargetAudienceSection } from './TargetAudienceSection';
 export { TrustProofSection } from './TrustProofSection';
 export { ComparisonSection } from './ComparisonSection';
 export { ProductPreviewSection } from './ProductPreviewSection';
+export { PricingSection } from './PricingSection';
 export { OfferFormSection } from './OfferFormSection';
 export { FAQSection } from './FAQSection';
 export { CTASection } from './CTASection';

@@ -183,7 +183,7 @@
       "title2": "— e como corrigir com uma única plataforma",
       "description": "O CyberShield centraliza monitoramento de endpoints, detecção de ameaças, automação de resposta e evidências de compliance ",
       "descriptionBold": "em uma só operação.",
-      "ctaButton": "Solicitar assessment gratuito",
+      "ctaButton": "Solicitar diagnóstico gratuito",
       "ctaSecondary": "Agendar demo rápida",
       "reassurance": "Receba uma visão inicial do seu cenário de risco, operação e conformidade, sem compromisso.",
       "stats": {
@@ -246,7 +246,7 @@
           "description": "Ter política no papel não basta. É preciso evidência confiável."
         }
       },
-      "cta": "Solicitar assessment gratuito"
+      "cta": "Solicitar diagnóstico gratuito"
     },
     "valueProp": {
       "title": "Segurança operacional que sua equipe consegue executar — e sua empresa consegue provar",
@@ -280,7 +280,7 @@
       }
     },
     "assessment": {
-      "title": "O que você recebe no assessment gratuito",
+      "title": "O que você recebe no diagnóstico gratuito",
       "text": "Você não recebe uma conversa genérica. Recebe uma leitura inicial do seu cenário atual, com foco no que mais importa: risco, operação e conformidade.",
       "items": [
         "Visão inicial dos endpoints monitorados",
@@ -289,7 +289,7 @@
         "Prioridades de correção",
         "Próximos passos recomendados"
       ],
-      "cta": "Solicitar assessment gratuito"
+      "cta": "Solicitar diagnóstico gratuito"
     },
     "benefits": {
       "title": "Por que unificar sua operação de segurança faz diferença",
@@ -413,20 +413,20 @@
     },
     "offer": {
       "title": "Receba uma leitura inicial do seu cenário atual",
-      "text": "Solicite um assessment gratuito e entenda onde estão os principais riscos, quais correções devem ser priorizadas e como simplificar sua operação de segurança e compliance.",
+      "text": "Solicite um diagnóstico gratuito e entenda onde estão os principais riscos, quais correções devem ser priorizadas e como simplificar sua operação de segurança e compliance.",
       "items": [
         "Análise inicial do ambiente",
         "Leitura de gaps",
         "Prioridades recomendadas",
         "Próximos passos sugeridos"
       ],
-      "cta": "Solicitar assessment gratuito",
+      "cta": "Solicitar diagnóstico gratuito",
       "microcopy": "Ideal para empresas que querem validar o cenário atual antes de avançar para piloto, demo ou implantação."
     },
     "contactForm": {
       "title": "Fale com um especialista",
       "text": "Preencha os dados abaixo e nossa equipe entra em contato para entender seu cenário.",
-      "button": "Receber meu assessment",
+      "button": "Receber meu diagnóstico",
       "legal": "Ao enviar este formulário, você autoriza o contato da equipe para retorno sobre sua solicitação.",
       "fields": {
         "name": "Nome",
@@ -456,7 +456,7 @@
           "answer": "Sim. A arquitetura multi-tenant favorece operações que gerenciam múltiplos ambientes."
         },
         "2": {
-          "question": "O que acontece depois do assessment?",
+          "question": "O que acontece depois do diagnóstico?",
           "answer": "Você recebe uma leitura inicial do cenário e os próximos passos recomendados, com base no que foi identificado."
         },
         "3": {
@@ -469,14 +469,14 @@
         },
         "5": {
           "question": "Preciso decidir tudo agora?",
-          "answer": "Não. O objetivo do assessment é justamente dar uma visão inicial para uma decisão mais segura."
+          "answer": "Não. O objetivo do diagnóstico é justamente dar uma visão inicial para uma decisão mais segura."
         }
       }
     },
     "ctaFinal": {
       "title": "Descubra onde sua operação está vulnerável e o que fazer primeiro",
-      "subtitle": "Solicite um assessment gratuito e veja como centralizar segurança, resposta e compliance em uma única plataforma.",
-      "cta": "Solicitar assessment gratuito",
+      "subtitle": "Solicite um diagnóstico gratuito e veja como centralizar segurança, resposta e compliance em uma única plataforma.",
+      "cta": "Solicitar diagnóstico gratuito",
       "ctaSecondary": "Agendar demo rápida"
     },
     "contact": {
@@ -572,44 +572,54 @@
       "plans": {
         "starter": {
           "name": "Starter Compliance",
-          "description": "Monitoramento e compliance básico para PMEs que precisam de visibilidade e controle dos endpoints.",
-          "cta": "Solicitar assessment",
-          "features": {
-            "0": "RMM + EDR integrado",
-            "1": "Compliance básico com evidências",
-            "2": "Alertas e notificações",
-            "3": "Dashboard de visibilidade",
-            "4": "Relatórios de conformidade",
-            "5": "Suporte em português"
-          }
+          "badge": "",
+          "description": "Para empresas que precisam de proteção essencial e conformidade básica.",
+          "price": "499",
+          "baseInfo": "Base: 10 dispositivos • +R$ 39/adicional",
+          "maxInfo": "Até 50 dispositivos",
+          "features": [
+            "Gestão de endpoints",
+            "Monitoramento contínuo",
+            "Relatórios de compliance",
+            "Automação básica",
+            "Suporte em português",
+            "Evidências auditáveis"
+          ],
+          "cta": "Começar agora"
         },
         "business": {
-          "badge": "Mais popular",
           "name": "Business",
-          "description": "Operação completa com scans ilimitados, analytics avançado e automação para equipes que precisam escalar.",
-          "cta": "Solicitar assessment",
-          "features": {
-            "0": "Tudo do Starter +",
-            "1": "Scans de vulnerabilidade ilimitados",
-            "2": "Analytics avançado",
-            "3": "Automação e remediação",
-            "4": "Relatórios executivos",
-            "5": "Suporte prioritário"
-          }
+          "badge": "Mais popular",
+          "description": "Para operações que exigem EDR completo, automação avançada e multi-tenant.",
+          "price": "899",
+          "baseInfo": "Base: 20 dispositivos • +R$ 24/adicional",
+          "maxInfo": "Até 200 dispositivos",
+          "features": [
+            "Tudo do Starter +",
+            "EDR integrado completo",
+            "Automação avançada",
+            "Operação multi-tenant",
+            "Histórico confiável de ações",
+            "Governança e rastreabilidade"
+          ],
+          "cta": "Começar agora"
         },
         "enterprise": {
-          "name": "Enterprise / MSP",
-          "priceLabel": "A partir de",
-          "description": "Para operações com +200 dispositivos, multi-tenant, SLA dedicado, API e white label.",
-          "cta": "Falar com especialista",
-          "features": {
-            "0": "Tudo do Business +",
-            "1": "Multi-tenant completo",
-            "2": "SLA dedicado",
-            "3": "API e integrações",
-            "4": "White label disponível",
-            "5": "Onboarding assistido"
-          }
+          "name": "Enterprise",
+          "badge": "",
+          "description": "Para MSPs e grandes operações que precisam de escala e personalização.",
+          "price": "Sob consulta",
+          "baseInfo": "Para empresas +200 dispositivos ou MSPs",
+          "maxInfo": "Dispositivos ilimitados",
+          "features": [
+            "Tudo do Business +",
+            "Dispositivos ilimitados",
+            "SLA dedicado",
+            "Onboarding personalizado",
+            "API e integrações customizadas",
+            "Desconto progressivo MSP"
+          ],
+          "cta": "Falar com especialista"
         }
       }
     },
@@ -1077,68 +1087,65 @@
     },
     "starter": {
       "name": "Starter Compliance",
-      "description": "Monitoramento e compliance básico para PMEs que precisam de visibilidade e controle.",
+      "description": "Compliance básico para PMEs em crescimento",
       "price": "R$ 499",
-      "priceNote": "/mês",
-      "priceExtra": "Base: 10 dispositivos • +R$ 39/adicional",
-      "maxDevices": "Até 50 dispositivos"
+      "priceNote": "/mês • 10 computadores",
+      "priceExtra": "+R$ 39 por computador adicional",
+      "maxDevices": "Até 50 computadores"
     },
     "business": {
       "name": "Business",
-      "description": "Operação completa com scans ilimitados, analytics avançado e automação.",
+      "description": "Para empresas que não podem parar nem errar",
       "price": "R$ 899",
-      "priceNote": "/mês",
-      "priceExtra": "Base: 20 dispositivos • +R$ 24/adicional",
-      "maxDevices": "Até 200 dispositivos"
+      "priceNote": "/mês • 20 computadores",
+      "priceExtra": "+R$ 24 por computador adicional",
+      "maxDevices": "Até 200 computadores"
     },
     "enterprise": {
-      "name": "Enterprise / MSP",
-      "description": "Para operações com +200 dispositivos, multi-tenant, SLA dedicado e API.",
-      "price": "A partir de R$ 2.000",
-      "priceNote": "/mês",
-      "priceExtra": "Para empresas +200 dispositivos ou MSPs",
-      "maxDevices": "Dispositivos ilimitados"
+      "name": "Enterprise",
+      "description": "Para empresas +200 dispositivos ou MSPs",
+      "price": "A partir de R$ 2.000"
     },
     "features": {
       "free": [
-        "Até 3 dispositivos",
+        "Até 3 computadores",
         "Visibilidade básica de riscos",
         "Inventário de software",
         "Status do antivírus"
       ],
       "starter": [
-        "10 dispositivos inclusos",
-        "RMM + EDR integrado",
-        "Compliance básico com evidências",
-        "Alertas e notificações",
-        "Dashboard de visibilidade",
-        "Relatórios de conformidade",
-        "Suporte em português"
+        "5 computadores inclusos",
+        "+R$ 19/computador adicional",
+        "Verificações automáticas de segurança",
+        "Alertas por email",
+        "Relatórios de risco mensais",
+        "Suporte por email",
+        "14 dias de trial grátis"
       ],
       "business": [
-        "20 dispositivos inclusos",
+        "25 computadores inclusos",
+        "+R$ 17/computador adicional",
         "Tudo do Starter, mais:",
-        "Scans de vulnerabilidade ilimitados",
-        "Analytics avançado",
-        "Automação e remediação",
-        "Relatórios executivos",
+        "Verificações em tempo real",
+        "Relatórios de risco para gestão",
+        "Bloqueio de sites perigosos",
         "Suporte prioritário",
         "API para integrações"
       ],
       "enterprise": [
-        "Dispositivos ilimitados",
+        "Computadores ilimitados",
         "Tudo do Business, mais:",
-        "Multi-tenant completo",
-        "SLA dedicado",
-        "White label disponível",
-        "Onboarding assistido",
-        "Gerente de conta dedicado"
+        "Suporte 24/7",
+        "SLA personalizado",
+        "Integração customizada",
+        "Gerente de conta dedicado",
+        "Relatórios de compliance"
       ]
     },
     "cta": {
       "free": "Começar Grátis",
-      "starter": "Solicitar assessment",
-      "business": "Solicitar assessment",
+      "starter": "Começar diagnóstico gratuito",
+      "business": "Começar diagnóstico gratuito",
       "enterprise": "Falar com Especialista"
     },
     "investmentExamples": "Exemplos de Investimento",
