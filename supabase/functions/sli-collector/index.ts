@@ -4,6 +4,15 @@
  */
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const BodySchema = z.object({
+  action: z.enum(['record', 'dashboard']).default('dashboard'),
+  tenantId: z.string().optional(),
+  endpoint: z.string().optional(),
+  statusCode: z.number().int().optional(),
+  latencyMs: z.number().optional(),
+}).passthrough();
 
 const SLI_TARGETS = {
   availability: { target: 99.9, warning: 99.5 },

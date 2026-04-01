@@ -98,9 +98,21 @@ function formatDate(dateStr: string, lang: string): string {
   return new Date(dateStr).toLocaleDateString(locale);
 }
 
+const TrialBodySchema = z.object({
+  tenant_id: z.string().uuid(),
+  tenant_name: z.string().min(1),
+  owner_user_id: z.string().uuid(),
+  trial_end: z.string().min(1),
+  days_remaining: z.number().int(),
+});
+
 serveInternal(async (_req, ctx) => {
   const { supabase, requestId, body } = ctx;
-  const { tenant_id, tenant_name, owner_user_id, trial_end, days_remaining } = body as Record<string, unknown>;
+  const parsed = TrialBodySchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const { tenant_id, tenant_name, owner_user_id, trial_end, days_remaining } = parsed.data;
 
   logger.info(`[SEND-TRIAL-REMINDER][${requestId}] Sending ${days_remaining}-day reminder for tenant: ${tenant_id}`);
 

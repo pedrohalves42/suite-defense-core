@@ -6,6 +6,7 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 import {
   type TaskResult,
   cleanStaleUpdates,
@@ -31,6 +32,10 @@ const ALL_TASKS: TaskName[] = [
   'stuck_builds', 'stuck_jobs', 'offline_agents_jobs', 'security_cleanup',
 ];
 
+const BodySchema = z.object({
+  tasks: z.array(z.enum(['stale_updates', 'stale_reports', 'stale_playbooks', 'stuck_builds', 'stuck_jobs', 'offline_agents_jobs', 'security_cleanup'])).optional(),
+}).passthrough();
+
 const TASK_MAP: Record<TaskName, (sb: SupabaseClient) => Promise<TaskResult>> = {
   stale_updates: cleanStaleUpdates,
   stale_reports: cleanStaleReports,
@@ -45,10 +50,14 @@ serveInternal(async (_req, ctx) => {
   const { supabase, requestId, body } = ctx;
   const startedAt = Date.now();
 
+  const parsed = BodySchema.safeParse(body || {});
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
   let tasks: TaskName[] = ALL_TASKS;
-  const parsedBody = body as Record<string, unknown> | null;
-  if (parsedBody?.tasks && Array.isArray(parsedBody.tasks) && parsedBody.tasks.length > 0) {
-    tasks = (parsedBody.tasks as string[]).filter((t) => ALL_TASKS.includes(t as TaskName)) as TaskName[];
+  if (parsed.data.tasks && parsed.data.tasks.length > 0) {
+    tasks = parsed.data.tasks;
   }
 
   logger.info(`[system-maintenance][${requestId}] Running ${tasks.length} tasks: ${tasks.join(', ')}`);

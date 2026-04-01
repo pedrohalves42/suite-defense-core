@@ -6,13 +6,22 @@
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { fetchMalwareBazaarRecent, fetchURLhaus, fetchFeodoTracker, type RawIndicator } from './feed-fetchers.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const BodySchema = z.object({
+  tenant_id: z.string().uuid().optional(),
+}).passthrough();
 
 serveInternal(async (_req, ctx) => {
   const { supabase, requestId, body } = ctx;
 
+  const parsed = BodySchema.safeParse(body || {});
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
   let tenantIds: string[] = [];
-  const parsedBody = body as Record<string, unknown> | null;
-  if (parsedBody?.tenant_id) tenantIds = [parsedBody.tenant_id as string];
+  if (parsed.data.tenant_id) tenantIds = [parsed.data.tenant_id];
 
   if (tenantIds.length === 0) {
     const { data: tenants } = await supabase.from('tenants').select('id').limit(50);

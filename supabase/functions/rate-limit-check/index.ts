@@ -4,6 +4,13 @@
  */
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const BodySchema = z.object({
+  identifier: z.string().min(1).max(500),
+  endpoint: z.string().min(1).max(200),
+  tenant_id: z.string().uuid(),
+});
 
 interface RateLimitConfig {
   maxRequests: number;
@@ -19,14 +26,14 @@ const ENDPOINT_LIMITS: Record<string, RateLimitConfig> = {
 
 serveInternal(async (_req, ctx) => {
   const { supabase, body } = ctx;
-  const { identifier, endpoint, tenant_id } = body as Record<string, string>;
-
-  if (!identifier || !endpoint || !tenant_id) {
+  const parsed = BodySchema.safeParse(body);
+  if (!parsed.success) {
     return new Response(
-      JSON.stringify({ error: "Missing required fields: identifier, endpoint, tenant_id" }),
+      JSON.stringify({ error: "Invalid input", issues: parsed.error.flatten().fieldErrors }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
+  const { identifier, endpoint, tenant_id } = parsed.data;
 
   const category = Object.keys(ENDPOINT_LIMITS).find((k) => endpoint.startsWith(k)) || "default";
   const config = ENDPOINT_LIMITS[category];
