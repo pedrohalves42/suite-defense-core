@@ -90,13 +90,11 @@ serveTenant(async (req, ctx) => {
 
   // ??? BEGIN REGISTRATION ???
   if (action === 'begin') {
-    const { deviceName } = body;
-    if (!deviceName) {
-      return new Response(
-        JSON.stringify({ error: 'deviceName required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+    const beginParsed = Fido2BeginSchema.safeParse(body);
+    if (!beginParsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid payload', issues: beginParsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+    const { deviceName } = beginParsed.data;
 
     const challenge = generateChallenge();
 
