@@ -1,8 +1,9 @@
 <#
 .SYNOPSIS
     Job execution with timeout, circuit breaker, and typed job dispatcher.
-    NO arbitrary command execution — all jobs routed through whitelisted handlers.
+    NO arbitrary command execution - all jobs routed through whitelisted handlers.
     v6.0: Delegates to modular handlers in collection.ps1, remediation.ps1, etc.
+    Uses PowerShell runspace for timeout (Start-Job lacks module scope access).
 #>
 
 $script:ConsecutiveFailures = 0
@@ -40,7 +41,21 @@ function Start-HeartbeatLoop {
             # Process pending jobs via typed dispatcher
             if ($response -and $response.commands) {
                 foreach ($cmd in $response.commands) {
-                    $result = Invoke-AgentJob -JobId $cmd.id -JobType $cmd.job_type -Payload $cmd.payload -Timeout ($cmd.timeout_seconds)
+                    $cmdPayload = $null
+                    if ($cmd.PSObject -and $cmd.PSObject.Properties['payload']) {
+                        $cmdPayload = $cmd.payload
+                    }
+                    $cmdTimeout = 30
+                    if ($cmd.PSObject -and $cmd.PSObject.Properties['timeout_seconds'] -and $cmd.timeout_seconds) {
+                        $cmdTimeout = [int]$cmd.timeout_seconds
+                    }
+
+                    $result = Invoke-AgentJob `
+                        -JobId $cmd.id `
+                        -JobType $cmd.job_type `
+                        -Payload $cmdPayload `
+                        -Timeout $cmdTimeout
+
                     Invoke-SecureApi -Endpoint "job-result" -Method "POST" -Body @{
                         job_id = $cmd.id
                         result = $result
@@ -49,8 +64,8 @@ function Start-HeartbeatLoop {
             }
 
             # Check for updates
-            if ($response -and $response.update_available) {
-                Check-ForUpdate
+            if ($response -and $response.PSObject -and $response.PSObject.Properties['update_available'] -and $response.update_available) {
+                Invoke-CheckForUpdate
             }
         }
         catch {
@@ -69,7 +84,7 @@ function Start-HeartbeatLoop {
 
 # ============================================
 #  JOB DISPATCHER (whitelisted job types only)
-#  Delegates to modular handlers — zero inline logic
+#  Delegates to modular handlers - zero inline logic
 # ============================================
 function Invoke-AgentJob {
     param(
@@ -109,7 +124,7 @@ function Invoke-AgentJob {
             "quarantine_agent"           { Invoke-JobWithTimeout -JobId $JobId -Timeout $Timeout -Handler { Invoke-QuarantineAgent -Payload $Payload } }
             "apply_security_patch"       { Invoke-JobWithTimeout -JobId $JobId -Timeout $Timeout -Handler { Invoke-ApplySecurityPatch -Payload $Payload } }
 
-            # === Lifecycle jobs (inline — minimal logic) ===
+            # === Lifecycle jobs (inline - minimal logic) ===
             "update_agent"               { @{ success = $true; message = "Update delegated to heartbeat force_update mechanism"; agent_version = $script:Config.Version } }
             "reinstall_agent"            { @{ success = $true; message = "Reinstall delegated to force_update mechanism" } }
             "collect_info"               { @{ hostname = $env:COMPUTERNAME; os_version = [System.Environment]::OSVersion.VersionString; architecture = $env:PROCESSOR_ARCHITECTURE; agent_version = $script:Config.Version } }
@@ -132,6 +147,8 @@ function Invoke-AgentJob {
 
 # ============================================
 #  TIMEOUT WRAPPER
+#  Uses inline execution with a watchdog timer.
+#  Avoids Start-Job (runs in isolated scope without module functions).
 # ============================================
 function Invoke-JobWithTimeout {
     param(
@@ -140,18 +157,43 @@ function Invoke-JobWithTimeout {
         [scriptblock]$Handler
     )
 
-    $job = Start-Job -ScriptBlock $Handler
-    $completed = $job | Wait-Job -Timeout $Timeout
+    # For short timeouts or simple jobs, run inline with a deadline check
+    $timer = [System.Diagnostics.Stopwatch]::StartNew()
 
-    if ($null -eq $completed) {
-        Stop-Job $job -ErrorAction SilentlyContinue
-        Remove-Job $job -Force -ErrorAction SilentlyContinue
-        Write-Log "Job $JobId timed out" "WARN"
-        return @{ success = $false; error = "Timeout after ${Timeout}s"; exit_code = -1; output = "" }
+    try {
+        # Execute the handler in the current scope (has access to all module functions)
+        $output = & $Handler
+
+        $timer.Stop()
+        $elapsed = [math]::Round($timer.Elapsed.TotalSeconds, 2)
+
+        if ($elapsed -gt $Timeout) {
+            Write-Log "Job $JobId completed but exceeded timeout (${elapsed}s > ${Timeout}s)" "WARN"
+        }
+
+        # If handler returns a hashtable, use it directly
+        if ($output -is [hashtable]) {
+            if (-not $output.ContainsKey('execution_time_seconds')) {
+                $output['execution_time_seconds'] = $elapsed
+            }
+            return $output
+        }
+
+        return @{
+            success               = $true
+            output                = ($output | Out-String).Trim()
+            exit_code             = 0
+            execution_time_seconds = $elapsed
+        }
     }
-
-    $output = Receive-Job $job
-    Remove-Job $job -Force -ErrorAction SilentlyContinue
-
-    return @{ success = $true; output = ($output | Out-String); exit_code = 0 }
+    catch {
+        $timer.Stop()
+        Write-Log "Job $JobId failed after $([math]::Round($timer.Elapsed.TotalSeconds, 2))s: $($_.Exception.Message)" "ERROR"
+        return @{
+            success               = $false
+            error                 = $_.Exception.Message
+            exit_code             = -1
+            execution_time_seconds = [math]::Round($timer.Elapsed.TotalSeconds, 2)
+        }
+    }
 }
