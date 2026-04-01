@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatsGrid } from '@/components/ui/stats-grid';
@@ -13,7 +13,28 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, XCircle, ChevronLeft, ChevronRight, TrendingUp, Key, Users, Clock, Trash, Loader2 } from 'lucide-react';
 import { formatBrazilDateTime } from '@/lib/date-utils';
-import { useEnrollmentKeys, CountdownTimer } from './useEnrollmentKeys';
+import { useEnrollmentKeys } from './useEnrollmentKeys';
+
+const CountdownTimer = memo(({ expiresAt }: { expiresAt: string }) => {
+  const [timeRemaining, setTimeRemaining] = useState('');
+  const [colorClass, setColorClass] = useState('text-green-600');
+  useEffect(() => {
+    const updateTimer = () => {
+      const diff = new Date(expiresAt).getTime() - Date.now();
+      if (diff <= 0) { setTimeRemaining('Expirado'); setColorClass('text-muted-foreground'); return; }
+      const hours = Math.floor(diff / 3600000);
+      const minutes = Math.floor((diff % 3600000) / 60000);
+      if (hours > 12) { setTimeRemaining(`${hours}h ${minutes}m`); setColorClass('text-green-600'); }
+      else if (hours >= 1) { setTimeRemaining(`${hours}h ${minutes}m`); setColorClass('text-yellow-600'); }
+      else if (minutes > 0) { setTimeRemaining(`${minutes}m`); setColorClass('text-red-600'); }
+      else { setTimeRemaining('< 1m'); setColorClass('text-red-600'); }
+    };
+    updateTimer();
+    const interval = setInterval(updateTimer, 60000);
+    return () => clearInterval(interval);
+  }, [expiresAt]);
+  return <span className={`font-medium ${colorClass}`}>{timeRemaining}</span>;
+});
 
 export default function EnrollmentKeys() {
   const h = useEnrollmentKeys();
