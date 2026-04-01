@@ -55,9 +55,7 @@ serveTenant(async (_req, ctx) => {
     .from('user_roles').select('tenant_id').eq('user_id', newUser.user.id).single();
 
   if (roleQueryError || !userRole?.tenant_id) {
-    return new Response(JSON.stringify({ error: 'Failed to get tenant' }), {
-      status: 500, headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({ error: 'Failed to get tenant' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 
   const tenantId = userRole.tenant_id;
