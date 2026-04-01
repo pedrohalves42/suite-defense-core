@@ -5,27 +5,30 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mock the global supabase client ──────────────────────────────
-const mockChain: any = {
-  select: vi.fn().mockReturnThis(),
-  insert: vi.fn().mockReturnThis(),
-  upsert: vi.fn().mockReturnThis(),
-  delete: vi.fn().mockReturnThis(),
-  eq: vi.fn().mockReturnThis(),
-  neq: vi.fn().mockReturnThis(),
-  in: vi.fn().mockReturnThis(),
-  not: vi.fn().mockReturnThis(),
-  lt: vi.fn().mockReturnThis(),
-  lte: vi.fn().mockReturnThis(),
-  gte: vi.fn().mockReturnThis(),
-  order: vi.fn().mockReturnThis(),
-  limit: vi.fn().mockReturnThis(),
-  maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-};
-
-// Make terminal calls resolve by default
-for (const method of ['select', 'eq', 'neq', 'in', 'not', 'lt', 'lte', 'gte', 'order', 'limit']) {
-  mockChain[method].mockReturnValue(mockChain);
+// Proxy-based mock: every method returns `this`, terminal methods are overrideable
+function createChainProxy(overrides: Record<string, any> = {}): any {
+  const handler: ProxyHandler<any> = {
+    get(_target, prop) {
+      if (prop === 'then') return undefined; // prevent auto-await
+      if (prop in overrides) return overrides[prop];
+      // Default: return a function that returns the proxy (chainable)
+      return (..._args: any[]) => proxy;
+    },
+  };
+  const proxy = new Proxy({}, handler);
+  return proxy;
 }
+
+let terminalResolve: { data: any; error: any } = { data: null, error: null };
+let insertResolve: { error: any } = { error: null };
+let upsertResolve: { error: any } = { error: null };
+
+const mockChain = createChainProxy({
+  maybeSingle: () => Promise.resolve(terminalResolve),
+  // For queries that end without maybeSingle (list queries), the last chainable
+  // call is awaited. We use a special then to make the proxy thenable:
+  then: undefined as any,
+});
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: { from: vi.fn(() => mockChain) },
