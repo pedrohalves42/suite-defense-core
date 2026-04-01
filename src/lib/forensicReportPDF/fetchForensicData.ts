@@ -20,14 +20,14 @@ export async function fetchForensicData(agentId: string): Promise<ForensicData> 
     .limit(5);
 
   const latestSnapshot = processRows?.[0];
-  const processes: ProcessEntry[] = ((latestSnapshot?.processes as unknown[]) || []).map((p: any) => ({
+  const processes: ProcessEntry[] = ((latestSnapshot?.processes as unknown[]) || []).map((p: Record<string, unknown>) => ({
     pid: p.pid, name: p.name, cpu_percent: p.cpu_percent,
     memory_mb: p.memory_mb, user: p.user, command_line: p.command_line,
   }));
 
   const suspiciousProcesses: string[][] = (processRows || [])
-    .filter((r: any) => r.suspicious_processes && (r.suspicious_processes as string[]).length > 0)
-    .map((r: any) => [
+    .filter((r: Record<string, unknown>) => r.suspicious_processes && (r.suspicious_processes as string[]).length > 0)
+    .map((r: Record<string, unknown>) => [
       new Date(r.collected_at).toLocaleString('pt-BR'),
       ...(r.suspicious_processes as string[]),
     ]);
@@ -40,7 +40,7 @@ export async function fetchForensicData(agentId: string): Promise<ForensicData> 
     .order('received_at', { ascending: false })
     .limit(500);
 
-  const networkEvents: NetworkEvent[] = ((netRaw || []) as unknown[]).map((r: any) => ({
+  const networkEvents: NetworkEvent[] = ((netRaw || []) as unknown[]).map((r: Record<string, unknown>) => ({
     remote_address: r.payload?.remote_address || '',
     remote_port: Number(r.payload?.remote_port) || 0,
     process_name: r.payload?.process_name || '',
@@ -72,7 +72,7 @@ export async function fetchForensicData(agentId: string): Promise<ForensicData> 
     .order('received_at', { ascending: false })
     .limit(50);
 
-  const fileEvents: FileEvent[] = ((fileRaw || []) as unknown[]).map((r: any) => ({
+  const fileEvents: FileEvent[] = ((fileRaw || []) as unknown[]).map((r: Record<string, unknown>) => ({
     file_path: r.payload?.file_path || '',
     event_type: r.payload?.event_type || '',
     process_name: r.payload?.process_name || undefined,
