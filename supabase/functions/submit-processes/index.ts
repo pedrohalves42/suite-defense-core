@@ -43,6 +43,8 @@ Deno.serve(async (req) => {
     return secureErrorResponse('Method not allowed', 405);
   }
 
+  const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
+
   try {
     const agentToken = req.headers.get('x-agent-token');
 

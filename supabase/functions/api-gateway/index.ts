@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: buildCorsHeaders(origin) });
   if (req.method !== 'POST') return jsonRes({ error: 'Method not allowed' }, 405, origin);
 
-  const requestId = crypto.randomUUID();
+  const requestId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
   const startedAt = Date.now();
 
   try {
