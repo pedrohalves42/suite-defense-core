@@ -9,6 +9,7 @@ import { servePublic } from '../_shared/serve-tenant.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 import {
   handleCleanupTelemetry,
   handleCleanupStaleReports,
