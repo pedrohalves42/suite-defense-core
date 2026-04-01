@@ -1,5 +1,121 @@
 import type { HotfixContext } from './types.ts';
 
+/**
+ * HOTFIX KEYGEN-PRECHECK: Inject canExportPkcs8 pre-check before ECDSA keygen.
+ * 
+ * On .NET Framework 4.x (PS 5.1), ExportPkcs8PrivateKey() does not exist on ECDsaCng,
+ * causing Initialize-AgentKeys to fail on first boot and putting the agent in DEGRADED mode.
+ * 
+ * This hotfix detects the OLD pattern (Initialize-AgentKeys without canExportPkcs8) and
+ * injects the pre-check that skips directly to RSA if ExportPkcs8 is unavailable.
+ * 
+ * Also handles v4 scripts with New-SigningKeyPair that call ExportPkcs8PrivateKey() directly.
+ */
+export function hotfixEcdsaKeygenPreCheck(ctx: HotfixContext): void {
+  // Skip if already has the pre-check (idempotent)
+  if (ctx.content.includes('canExportPkcs8') || ctx.content.includes('HOTFIX-KEYGEN-PRECHECK')) {
+    return;
+  }
+
+  let changed = false;
+
+  // Pattern 1: v5 old scripts with Initialize-AgentKeys that have ECDSA keygen WITHOUT pre-check
+  // Match: "Generating new ECDSA P-256 keypair" inside Initialize-AgentKeys
+  if (ctx.content.includes('function Initialize-AgentKeys') && ctx.content.includes('ExportPkcs8PrivateKey')) {
+    const v5Pattern = /(function Initialize-AgentKeys\s*\{[\s\S]*?)(Write-Log "\[KEYS\] Generating new ECDSA P-256 keypair)/;
+    const v5Match = ctx.content.match(v5Pattern);
+    if (v5Match) {
+      const preCheck = `# HOTFIX-KEYGEN-PRECHECK: Test ExportPkcs8PrivateKey before attempting ECDSA
+        $canExportPkcs8 = $false
+        try {
+            $testEcdsa = [System.Security.Cryptography.ECDsaCng]::new(256)
+            try { $null = $testEcdsa.ExportPkcs8PrivateKey(); $canExportPkcs8 = $true }
+            catch { $canExportPkcs8 = $false }
+            finally { try { $testEcdsa.Dispose() } catch {} }
+        } catch { $canExportPkcs8 = $false }
+
+        if (-not $canExportPkcs8) {
+            Write-Log "[KEYS] .NET Framework detected (ExportPkcs8PrivateKey not available) - using RSACryptoServiceProvider directly" "INFO"
+            # HOTFIX-KEYGEN-PRECHECK: Generate RSA-2048 keys directly
+            try {
+                $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider(2048)
+                $privateKeyBase64 = [Convert]::ToBase64String($rsa.ExportCspBlob($true))
+                $publicKeyBase64 = [Convert]::ToBase64String($rsa.ExportCspBlob($false))
+                $publicKeyBytes = $rsa.ExportCspBlob($false)
+                $Global:AgentRsaKey = $rsa
+                $Global:AgentSigningAlgorithm = "RSA-2048-SHA256"
+                Write-Log "[KEYS] RSA-2048 keypair generated (HOTFIX-KEYGEN-PRECHECK)" "SUCCESS"
+                # Save keys and return success
+                $sha256 = [System.Security.Cryptography.SHA256]::Create()
+                $fingerprintBytes = $sha256.ComputeHash($publicKeyBytes)
+                $Global:AgentFingerprint = ($fingerprintBytes | ForEach-Object { $_.ToString("x2") }) -join ""
+                $Global:AgentPrivateKey = $privateKeyBase64
+                $Global:AgentPublicKey = $publicKeyBase64
+                $keyDir = "C:\\CyberShield\\keys"
+                if (-not (Test-Path $keyDir)) { New-Item -ItemType Directory -Path $keyDir -Force | Out-Null }
+                @{
+                    algorithm = $Global:AgentSigningAlgorithm
+                    private_key = $privateKeyBase64
+                    public_key = $publicKeyBase64
+                    fingerprint = $Global:AgentFingerprint
+                    generated_at = (Get-Date).ToUniversalTime().ToString("o")
+                } | ConvertTo-Json | Out-File "$keyDir\\agent_keys.json" -Encoding UTF8 -Force
+                return $true
+            } catch {
+                Write-Log "[KEYS] RSA-2048 fallback failed: $($_.Exception.Message)" "ERROR"
+                return $false
+            }
+        }
+
+        `;
+      ctx.content = ctx.content.replace(v5Pattern, `$1${preCheck}$2`);
+      changed = true;
+    }
+  }
+
+  // Pattern 2: v4 scripts with New-SigningKeyPair that call ExportPkcs8PrivateKey() directly
+  if (ctx.content.includes('function New-SigningKeyPair') && ctx.content.includes('ExportPkcs8PrivateKey') && !ctx.content.includes('function Initialize-AgentKeys')) {
+    const v4Pattern = /(function New-SigningKeyPair[\s\S]*?try\s*\{[\s\S]*?)(Write-Log "\[SIGNING\] Generating new ECDSA P-256 keypair)/;
+    const v4Match = ctx.content.match(v4Pattern);
+    if (v4Match) {
+      const preCheckV4 = `# HOTFIX-KEYGEN-PRECHECK: Test ExportPkcs8PrivateKey before attempting ECDSA
+        $canExportPkcs8 = $false
+        try {
+            $testEcdsa = [System.Security.Cryptography.ECDsaCng]::new(256)
+            try { $null = $testEcdsa.ExportPkcs8PrivateKey(); $canExportPkcs8 = $true }
+            catch { $canExportPkcs8 = $false }
+            finally { try { $testEcdsa.Dispose() } catch {} }
+        } catch { $canExportPkcs8 = $false }
+
+        if (-not $canExportPkcs8) {
+            Write-Log "[SIGNING] .NET Framework detected - generating RSA-2048 instead of ECDSA" "WARN"
+            $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider(2048)
+            $publicKeyBase64 = [Convert]::ToBase64String($rsa.ExportCspBlob($false))
+            $privateKeyBase64 = [Convert]::ToBase64String($rsa.ExportCspBlob($true))
+            $sha256 = [System.Security.Cryptography.SHA256]::Create()
+            $fingerprintBytes = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($publicKeyBase64))
+            $fingerprint = [BitConverter]::ToString($fingerprintBytes).Replace("-", "").ToLower()
+            Write-Log "[SIGNING] Generated RSA-2048 keypair with fingerprint: $($fingerprint.Substring(0, 16))..." "SUCCESS"
+            return @{
+                PublicKey = $publicKeyBase64
+                PrivateKey = $privateKeyBase64
+                Fingerprint = $fingerprint
+                Algorithm = "RSA-2048-SHA256"
+                GeneratedAt = (Get-Date).ToUniversalTime().ToString("o")
+            }
+        }
+
+        `;
+      ctx.content = ctx.content.replace(v4Pattern, `$1${preCheckV4}$2`);
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    ctx.reasons.push('ecdsa_keygen_precheck');
+  }
+}
+
 /** HOTFIX 2: Legacy ECDSA fallback (CNG container creation unstable) */
 export function hotfixLegacyEcdsaFallback(ctx: HotfixContext): void {
   if (!ctx.content.includes('ECDsaCng]::new(256)') && ctx.content.includes('if ($attempt -eq $maxKeyAttempts)')) {

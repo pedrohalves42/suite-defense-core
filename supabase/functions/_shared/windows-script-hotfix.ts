@@ -12,6 +12,7 @@ import { hotfixStrictModeGlobals, hotfixBaselineGlobals, hotfixInitProtectedSet,
 
 // Crypto fallbacks (ECDSA → RSA)
 import {
+  hotfixEcdsaKeygenPreCheck,
   hotfixLegacyEcdsaFallback, hotfixExportPkcs8RsaFallback, hotfixCngCleanup,
   hotfixRsa2048Fallback, hotfixRsaSignFallback, hotfixRsaAlgoReport,
   hotfixRsaNet4x, hotfixRngNet4x, hotfixNullEcdsaGuard,
