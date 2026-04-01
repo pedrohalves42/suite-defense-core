@@ -46,7 +46,7 @@ serveInternal(async (_req, ctx) => {
     'scheduled_reports': 'scheduled-report-generator',
     'executive_report': 'generate-executive-report',
     'detect_blocked_attempts': 'detect-blocked-attempts',
-    'ai_insight_generator': 'ai-get-insights',
+    'ai_insight_generator': 'ai-router',
     'scan_vulnerabilities': 'scan-vulnerabilities',
     'monitor_thresholds': 'monitor-thresholds',
     'cron_sentinel': 'cron-sentinel',
