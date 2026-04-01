@@ -85,7 +85,11 @@ Deno.serve(async (req: Request) => {
     if (usersMatch) {
       const userId = usersMatch[1];
       if (!userId) {
-        if (method === 'POST') return await userHandlers.createUser(supabase, tenant.id, await req.json());
+        if (method === 'POST') {
+          const result = await parseAndValidateScimBody(req, ScimUserSchema);
+          if (result instanceof Response) return result;
+          return await userHandlers.createUser(supabase, tenant.id, result.data);
+        }
         if (method === 'GET') {
           const filter = url.searchParams.get('filter');
           if (filter?.startsWith('userName eq ')) {
@@ -101,8 +105,16 @@ Deno.serve(async (req: Request) => {
         }
       } else {
         if (method === 'GET') return userHandlers.getUser(supabase, tenant.id, userId);
-        if (method === 'PUT') return userHandlers.updateUser(supabase, tenant.id, userId, await req.json());
-        if (method === 'PATCH') return userHandlers.patchUser(supabase, tenant.id, userId, await req.json());
+        if (method === 'PUT') {
+          const result = await parseAndValidateScimBody(req, ScimUserSchema);
+          if (result instanceof Response) return result;
+          return userHandlers.updateUser(supabase, tenant.id, userId, result.data);
+        }
+        if (method === 'PATCH') {
+          const result = await parseAndValidateScimBody(req, ScimUserSchema);
+          if (result instanceof Response) return result;
+          return userHandlers.patchUser(supabase, tenant.id, userId, result.data);
+        }
         if (method === 'DELETE') return userHandlers.deleteUser(supabase, tenant.id, userId);
       }
     }
@@ -112,12 +124,24 @@ Deno.serve(async (req: Request) => {
     if (groupsMatch) {
       const groupId = groupsMatch[1];
       if (!groupId) {
-        if (method === 'POST') return await groupHandlers.createGroup(supabase, tenant.id, await req.json());
+        if (method === 'POST') {
+          const result = await parseAndValidateScimBody(req, ScimGroupSchema);
+          if (result instanceof Response) return result;
+          return await groupHandlers.createGroup(supabase, tenant.id, result.data);
+        }
         if (method === 'GET') return groupHandlers.listGroups(supabase, tenant.id, url.searchParams);
       } else {
         if (method === 'GET') return groupHandlers.getGroup(supabase, tenant.id, groupId);
-        if (method === 'PUT') return groupHandlers.updateGroup(supabase, tenant.id, groupId, await req.json());
-        if (method === 'PATCH') return groupHandlers.patchGroup(supabase, tenant.id, groupId, await req.json());
+        if (method === 'PUT') {
+          const result = await parseAndValidateScimBody(req, ScimGroupSchema);
+          if (result instanceof Response) return result;
+          return groupHandlers.updateGroup(supabase, tenant.id, groupId, result.data);
+        }
+        if (method === 'PATCH') {
+          const result = await parseAndValidateScimBody(req, ScimGroupSchema);
+          if (result instanceof Response) return result;
+          return groupHandlers.patchGroup(supabase, tenant.id, groupId, result.data);
+        }
         if (method === 'DELETE') return groupHandlers.deleteGroup(supabase, tenant.id, groupId);
       }
     }
