@@ -4,32 +4,30 @@
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const CustomTrialSchema = z.object({
+  email: z.string().email().max(255),
+  company_name: z.string().min(1).max(255),
+  contact_name: z.string().max(255).optional(),
+  trial_days: z.number().int().min(1).max(365).default(45),
+  notes: z.string().max(2000).optional(),
+});
 
 serveTenant(async (_req, ctx) => {
   const { supabase, userId, body } = ctx;
 
-  // Additional super_admin check (serveTenant validates admin/super_admin by default)
   const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', userId!);
   const isSuperAdmin = roles?.some(r => r.role === 'super_admin');
   if (!isSuperAdmin) {
-    return new Response(JSON.stringify({ error: 'Super admin access required' }), {
-      status: 403, headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({ error: 'Super admin access required' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const { email, company_name, contact_name, trial_days = 45, notes } = body as Record<string, unknown>;
-
-  if (!email || !company_name) {
-    return new Response(JSON.stringify({ error: 'Email and company_name are required' }), {
-      status: 400, headers: { 'Content-Type': 'application/json' },
-    });
+  const parsed = CustomTrialSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
-
-  if (typeof trial_days === 'number' && (trial_days < 1 || trial_days > 365)) {
-    return new Response(JSON.stringify({ error: 'Trial days must be between 1 and 365' }), {
-      status: 400, headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  const { email, company_name, contact_name, trial_days, notes } = parsed.data;
 
   // Check if email already exists
   const { data: existingUsers } = await supabase.auth.admin.listUsers();
