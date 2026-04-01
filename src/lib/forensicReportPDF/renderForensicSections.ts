@@ -21,8 +21,8 @@ function getVerdictColor(v: ForensicData['verdict']): [number, number, number] {
 }
 
 interface Ctx {
-  doc: any;
-  autoTable: any;
+  doc: jsPDF;
+  autoTable: (options: Record<string, unknown>) => void;
   y: number;
   pageWidth: number;
 }
