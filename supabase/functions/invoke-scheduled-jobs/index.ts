@@ -65,7 +65,7 @@ serveInternal(async (_req, ctx) => {
     'Scheduled Report Generator': 'scheduled-report-generator',
     'Executive Report': 'generate-executive-report',
     'Detect Blocked Attempts': 'detect-blocked-attempts',
-    'AI Insight Generator': 'ai-get-insights',
+    'AI Insight Generator': 'ai-router',
   };
 
   for (const job of scheduledJobs || []) {
