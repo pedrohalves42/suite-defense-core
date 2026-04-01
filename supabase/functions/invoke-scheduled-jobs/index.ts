@@ -90,10 +90,18 @@ serveInternal(async (_req, ctx) => {
       logger.info(`[${requestId}] Invoking function: ${functionName} for job: ${job.name}`);
 
       const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+      const basePayload = { scheduled_job_id: job.id, tenant_id: job.tenant_id, triggered_by: 'scheduled' };
+
+      // Route ai-router calls with proper action envelope
+      const isAiRouter = functionName === 'ai-router';
+      const aiActionMap: Record<string, string> = { 'ai_insight_generator': 'get-insights', 'AI Insight Generator': 'get-insights' };
+      const invokeBody = isAiRouter
+        ? { action: aiActionMap[job.job_type] || aiActionMap[job.name] || 'get-insights', payload: basePayload }
+        : basePayload;
 
       const { error: invokeError } = await supabase.functions.invoke(functionName, {
         headers: { 'X-Internal-Secret': INTERNAL_SECRET || '' },
-        body: { scheduled_job_id: job.id, tenant_id: job.tenant_id, triggered_by: 'scheduled' }
+        body: invokeBody,
       });
 
       if (invokeError) {
