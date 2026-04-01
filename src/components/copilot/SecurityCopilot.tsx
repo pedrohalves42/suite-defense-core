@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 type Message = { role: 'user' | 'assistant'; content: string };
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-security-copilot`;
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-router`;
 
 const SUGGESTIONS = [
   'Qual é o status geral de segurança?',
@@ -148,7 +148,7 @@ export const SecurityCopilot = () => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ messages: allMessages }),
+      body: JSON.stringify({ action: 'security-copilot', payload: { messages: allMessages } }),
     });
 
     if (!resp.ok || !resp.body) {

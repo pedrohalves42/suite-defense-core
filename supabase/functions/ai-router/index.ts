@@ -21,6 +21,7 @@ import { handleCorrelateAlerts } from './handlers/correlate-alerts.ts';
 import { handleExecuteSolution } from './handlers/execute-solution.ts';
 import { handleSecurityCopilot } from './handlers/security-copilot.ts';
 import { handleGetInsights } from './handlers/get-insights.ts';
+import { handleProviderStatus } from './handlers/provider-status.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 /** Extended timeout for this function's external calls */
@@ -31,15 +32,16 @@ const RouterSchema = z.object({
   payload: z.record(z.unknown()).optional().default({}),
 });
 
-// ??? Direct handler map (no HTTP proxy) ??????????????????????????????????????
+// ── Direct handler map (no HTTP proxy) ──────────────────────────────────────
 const DIRECT_HANDLERS: Record<string, AIHandler> = {
   'correlate-alerts': handleCorrelateAlerts,
   'execute-solution': handleExecuteSolution,
   'security-copilot': handleSecurityCopilot,
   'get-insights': handleGetInsights as AIHandler,
+  'provider-status': handleProviderStatus as AIHandler,
 };
 
-// ??? Proxy targets (complex functions that remain standalone) ????????????????
+// ── Proxy targets (complex functions that remain standalone) ─────────────────
 const PROXY_TARGETS: Record<string, string> = {
   'analyze-agent': 'ai-analyze-agent',
   'behavioral-anomaly-detector': 'ai-behavioral-anomaly-detector',
@@ -52,7 +54,6 @@ const PROXY_TARGETS: Record<string, string> = {
   'predict-agent-failure': 'ai-predict-agent-failure',
   'system-analyzer': 'ai-system-analyzer',
   'full-audit': 'ai-full-audit',
-  'provider-status': 'ai-provider-status',
 };
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;

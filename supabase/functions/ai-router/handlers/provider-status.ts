@@ -1,5 +1,10 @@
-import { servePublic } from '../_shared/serve-tenant.ts';
-import { getProviderStatus, getActiveProviders, resetProviderCircuit, getProviderScores, type AIProviderName } from '../_shared/ai-multi-provider.ts';
+/**
+ * Handler: provider-status
+ * Inlined from ai-provider-status for direct dispatch.
+ */
+import { TenantContext } from '../../_shared/serve-tenant.ts';
+import { getProviderStatus, getActiveProviders, resetProviderCircuit, getProviderScores, type AIProviderName } from '../../_shared/ai-multi-provider.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 function getDisplayName(provider: AIProviderName): string {
   const names: Record<AIProviderName, string> = {
@@ -13,37 +18,35 @@ function getDisplayName(provider: AIProviderName): string {
   return names[provider] || provider;
 }
 
-servePublic(async (req, _ctx) => {
+const PostSchema = z.object({
+  action: z.enum(['reset_circuit']),
+  provider: z.string().min(1).max(100),
+});
+
+export async function handleProviderStatus(
+  _req: Request,
+  _ctx: TenantContext,
+  payload: Record<string, unknown>,
+): Promise<Response | Record<string, unknown>> {
   const providerStatus = getProviderStatus();
   const activeProviders = getActiveProviders();
 
-  if (req.method === 'POST') {
-    const body = await req.json();
-    const { z } = await import('https://esm.sh/zod@3.23.8');
-    const PostSchema = z.object({
-      action: z.enum(['reset_circuit']),
-      provider: z.string().min(1).max(100),
-    });
-    const parsed = PostSchema.safeParse(body);
+  // Handle reset_circuit action
+  if (payload.action === 'reset_circuit') {
+    const parsed = PostSchema.safeParse(payload);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return new Response(
+        JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
     }
-    const { provider, action } = parsed.data;
-
-    if (action === 'reset_circuit') {
-      resetProviderCircuit(provider as AIProviderName);
-      return {
-        success: true,
-        message: `Circuit reset for ${provider}`,
-        providerStatus: getProviderStatus(),
-      };
-    }
+    resetProviderCircuit(parsed.data.provider as AIProviderName);
+    return { success: true, message: `Circuit reset for ${parsed.data.provider}`, providerStatus: getProviderStatus() };
   }
 
   const enabledProviders = Object.entries(providerStatus).filter(([_, s]) => s.enabled);
   const healthyProviders = enabledProviders.filter(([_, s]) => !s.circuitOpen);
   const unhealthyProviders = enabledProviders.filter(([_, s]) => s.circuitOpen);
-
   const healthScore = enabledProviders.length > 0
     ? Math.round((healthyProviders.length / enabledProviders.length) * 100)
     : 0;
@@ -66,4 +69,4 @@ servePublic(async (req, _ctx) => {
     })),
     scores: getProviderScores(),
   };
-}, { methods: ['GET', 'POST'] });
+}

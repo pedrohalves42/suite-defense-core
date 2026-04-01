@@ -124,14 +124,14 @@ export function useRunRedTeam() {
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-red-team-assessment`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-router`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.session.access_token}`,
           },
-          body: JSON.stringify({ ana_summary: anaSummary }),
+          body: JSON.stringify({ action: 'red-team-assessment', payload: { ana_summary: anaSummary } }),
         }
       );
 

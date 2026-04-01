@@ -110,8 +110,8 @@ serveInternal(async (_req, ctx) => {
 
       for (const insight of insertedInsights) {
         try {
-          await supabase.functions.invoke('ai-insight-dispatcher', {
-            body: { insight: { ...insight, auto_action_mode: insight.severity === 'critical' ? 'auto_with_approval' : 'suggest', recommended_actions: [] }, source: 'ai-system-analyzer' },
+          await supabase.functions.invoke('ai-router', {
+            body: { action: 'insight-dispatcher', payload: { insight: { ...insight, auto_action_mode: insight.severity === 'critical' ? 'auto_with_approval' : 'suggest', recommended_actions: [] }, source: 'ai-system-analyzer' } },
           });
         } catch (dispatchErr) { logger.warn('[ai-system-analyzer] Insight dispatch error:', dispatchErr); }
       }

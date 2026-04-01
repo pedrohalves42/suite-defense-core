@@ -243,8 +243,8 @@ async function handleInsightExecute(serviceClient: SupabaseClient, userClient: S
   if (createError) return jsonResponse({ error: createError.message }, 500);
 
   try {
-    const { data: execResult, error: execError } = await userClient.functions.invoke('ai-action-executor', {
-      body: { action_id: createdAction.id },
+    const { data: execResult, error: execError } = await userClient.functions.invoke('ai-router', {
+      body: { action: 'action-executor', payload: { action_id: createdAction.id } },
     });
 
     if (execError) {
