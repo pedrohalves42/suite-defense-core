@@ -41,6 +41,8 @@ Deno.serve(async (req) => {
     requireEnv('SUPABASE_SERVICE_ROLE_KEY')
   )
 
+  const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
+
   try {
     // ?? 1. Auth via X-Agent-Token ??
     const agentToken = req.headers.get('X-Agent-Token')
