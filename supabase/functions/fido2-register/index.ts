@@ -1,5 +1,6 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 /**
  * FIDO2/WebAuthn Registration Edge Function
@@ -8,6 +9,33 @@ import { logger } from '../_shared/logger.ts';
 
 const RP_ID = Deno.env.get('FIDO2_RP_ID') || 'cybershield-audit.lovable.app';
 const RP_NAME = 'CyberShield Security Platform';
+
+const Fido2BeginSchema = z.object({
+  action: z.literal('begin').default('begin'),
+  deviceName: z.string().min(1).max(255),
+});
+
+const Fido2CompleteSchema = z.object({
+  action: z.literal('complete'),
+  registrationResponse: z.object({
+    id: z.string().min(1).max(2048),
+    response: z.object({
+      clientDataJSON: z.string().min(1),
+      transports: z.array(z.string().max(32)).max(10).optional(),
+    }).passthrough(),
+  }).passthrough(),
+  expectedChallenge: z.string().min(1).max(512),
+});
+
+const Fido2KeysListSchema = z.object({
+  action: z.literal('keys'),
+  credentialId: z.undefined().optional(),
+});
+
+const Fido2RevokeSchema = z.object({
+  action: z.literal('keys'),
+  credentialId: z.string().min(1).max(2048),
+});
 
 function generateChallenge(): string {
   const bytes = new Uint8Array(32);
