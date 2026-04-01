@@ -4792,6 +4792,75 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_system_metrics_2026_05: {
+        Row: {
+          agent_id: string
+          collected_at: string
+          cpu_cores: number | null
+          cpu_name: string | null
+          cpu_usage_percent: number | null
+          created_at: string
+          disk_free_gb: number | null
+          disk_total_gb: number | null
+          disk_usage_percent: number | null
+          disk_used_gb: number | null
+          id: string
+          last_boot_time: string | null
+          memory_free_gb: number | null
+          memory_total_gb: number | null
+          memory_usage_percent: number | null
+          memory_used_gb: number | null
+          network_bytes_received: number | null
+          network_bytes_sent: number | null
+          tenant_id: string
+          uptime_seconds: number | null
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id: string
+          uptime_seconds?: number | null
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id?: string
+          uptime_seconds?: number | null
+        }
+        Relationships: []
+      }
       agent_system_metrics_partitioned: {
         Row: {
           agent_id: string
