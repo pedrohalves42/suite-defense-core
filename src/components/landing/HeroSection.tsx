@@ -108,35 +108,27 @@ export function HeroSection() {
             transition={{ duration: 0.6, delay: 0.3 }}
           >
             <div className="relative">
-              {/* Floating stats cards */}
-              <div className="space-y-4">
-                {hero.stats.map((stat, index) => (
+              <img 
+                src={heroBanner} 
+                alt="CyberShield - Segurança Operacional" 
+                className="w-full rounded-2xl shadow-2xl shadow-cta-positive/20 border border-white/10"
+              />
+              <div className="absolute -bottom-6 -left-6 right-12 space-y-3">
+                {hero.stats.slice(0, 2).map((stat, index) => (
                   <motion.div
                     key={index}
-                    className="p-5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm"
-                    initial={{ opacity: 0, x: 20 }}
+                    className="p-4 rounded-xl bg-background/80 border border-white/10 backdrop-blur-md shadow-lg"
+                    initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.5 + index * 0.15 }}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-white/60">{stat.label}</span>
-                      <span className="text-2xl font-bold text-cta-positive">{stat.value}</span>
+                      <span className="text-sm text-muted-foreground">{stat.label}</span>
+                      <span className="text-xl font-bold text-cta-positive">{stat.value}</span>
                     </div>
                   </motion.div>
                 ))}
               </div>
-
-              {/* Security shield visual — green = active protection */}
-              <motion.div 
-                className="absolute -top-8 -right-8 w-32 h-32 flex items-center justify-center"
-                animate={{ rotate: [0, 5, -5, 0] }}
-                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <div className="relative">
-                  <Shield className="w-20 h-20 text-cta-positive/20" />
-                  <Zap className="w-8 h-8 text-cta-positive absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                </div>
-              </motion.div>
             </div>
           </motion.div>
         </div>
