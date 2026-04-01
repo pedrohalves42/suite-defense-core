@@ -58,7 +58,7 @@ export interface AgentProps {
   lastSeen: string | null;
   version: string | null;
   hmacSecret: string;
-  lightModeConfig?: Record<string, unknown>;
+  lightModeConfig?: LightModeConfigProps;
 }
 
 /**

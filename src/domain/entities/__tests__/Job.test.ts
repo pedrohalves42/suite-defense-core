@@ -206,7 +206,7 @@ describe('Job Entity', () => {
 
       expect(job.status).toBe(JobStatus.RUNNING);
       expect(job.retryCount).toBe(1);
-      expect(job.payload.foo).toBe('bar');
+      expect((job.payload as Record<string, unknown>).foo).toBe('bar');
     });
   });
 });
