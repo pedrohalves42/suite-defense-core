@@ -250,7 +250,7 @@ try {
           build_started_at: new Date().toISOString(),
           created_by: userId,
           script_hash: agentScriptHash,
-          ps1_version: 'v3.0.0',
+          ps1_version: 'v5.0.15',
         })
         .select()
         .single();
