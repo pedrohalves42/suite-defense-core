@@ -21,8 +21,10 @@ function getVerdictColor(v: ForensicData['verdict']): [number, number, number] {
 }
 
 interface Ctx {
-  doc: jsPDF;
-  autoTable: (options: Record<string, unknown>) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  doc: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  autoTable: (...args: any[]) => void;
   y: number;
   pageWidth: number;
 }
