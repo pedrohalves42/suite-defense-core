@@ -1,0 +1,313 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Activity, AlertCircle, Server, CheckCircle, Wifi, WifiOff, Shield, ShieldAlert, Archive } from "lucide-react";
+import { getOsDisplayName } from "@/lib/os-utils";
+import { ErrorState } from "@/components/ErrorState";
+import { motion } from 'framer-motion';
+import { Skeleton } from '@/components/ui/skeleton';
+import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
+import { OfflineAgentActions } from '@/components/admin/OfflineAgentActions';
+import { AgentAuthFailureAlert } from '@/components/admin/AgentAuthFailureAlert';
+import { TooltipProvider as TooltipProviderWrapper } from '@/components/ui/tooltip';
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { HealthTrendChart } from '@/components/admin/HealthTrendChart';
+import { AgentDetailsDrawer } from '@/components/agent/AgentDetailsDrawer';
+import { AgentCard } from '@/components/agent/AgentCard';
+import { useAgentsSystemMetrics } from '@/hooks/useAgentSystemMetrics';
+import { useAgentsDiskMetrics } from '@/hooks/useAgentsDiskMetrics';
+import { Link } from 'react-router-dom';
+import { SimpleAgentList } from '@/components/dashboard/SimpleAgentList';
+import { useSimpleModeContext } from '@/hooks/useSimpleMode';
+import { BatchActionBar } from '@/components/fleet/BatchActionBar';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useAgentHealthMonitor } from './useAgentHealthMonitor';
+
+type StatusFilter = 'all' | 'problems' | 'protected' | 'offline';
+
+export default function AgentHealthMonitor() {
+  const {
+    tenant, tenantLoading, isLoading, isError, errorData, refetch,
+    agentsHealth, filteredAgents, agentIds,
+    counts, totalAgents, healthPercentage,
+    statusFilter, setStatusFilter,
+    selectedAgent, setSelectedAgent,
+    selectedBatch, setSelectedBatch,
+    recentHeartbeats,
+  } = useAgentHealthMonitor();
+
+  const { isSimple } = useSimpleModeContext();
+  const { data: systemMetrics = {} } = useAgentsSystemMetrics(agentIds);
+  const { data: diskMetrics = {} } = useAgentsDiskMetrics(agentIds);
+
+  if (isLoading || tenantLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-9 w-80" />
+        <div className="grid gap-4 md:grid-cols-4">
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32" />)}
+        </div>
+        <Skeleton className="h-64" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return <div><ErrorState error={errorData!} onRetry={refetch} title="Erro ao carregar" /></div>;
+  }
+
+  // Simple Mode
+  if (isSimple) {
+    return (
+      <div className="space-y-6">
+        <div className="page-header-enterprise">
+          <h1>Meus Computadores</h1>
+          <p>Veja quais estão protegidos</p>
+        </div>
+        <SimpleAgentList
+          agents={agentsHealth.map(a => ({
+            id: a.id || '', agent_name: a.agent_name || 'Computador',
+            health_status: a.health_status as 'healthy' | 'warning' | 'critical' | 'offline' | 'never_connected',
+          }))}
+          isLoading={isLoading}
+          onAgentClick={(agent) => tenant?.id && setSelectedAgent({ id: agent.id, name: agent.agent_name, tenantId: tenant.id })}
+        />
+        <AgentDetailsDrawer agentId={selectedAgent?.id || null} agentName={selectedAgent?.name}
+          tenantId={selectedAgent?.tenantId} open={!!selectedAgent} onClose={() => setSelectedAgent(null)} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20">
+            <Server className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Status dos Computadores
+            </h2>
+            <p className="text-sm text-muted-foreground">Veja se todos os seus computadores estão funcionando bem</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/admin/archived-agents"><Archive className="h-4 w-4 mr-2" />Arquivados</Link>
+          </Button>
+          <Button variant="outline" onClick={() => refetch()}>
+            <Activity className="h-4 w-4 mr-2" />Atualizar
+          </Button>
+        </div>
+      </div>
+
+      {/* Contextual Messages */}
+      {healthPercentage >= 80 && counts.critical === 0 && totalAgents > 0 && (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="bg-green-500/10 border-green-500/20">
+            <CardContent className="py-4 flex items-center gap-3">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              <span className="text-green-700 dark:text-green-400 font-medium">
+                🎉 Tudo certo! {counts.healthy} de {totalAgents} computadores estão protegidos.
+              </span>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {counts.critical > 0 && (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="bg-yellow-500/10 border-yellow-500/20">
+            <CardContent className="py-4 flex items-center gap-3">
+              <AlertCircle className="h-5 w-5 text-yellow-500" />
+              <span className="text-yellow-700 dark:text-yellow-400 font-medium">
+                ⚠️ {counts.critical} computador{counts.critical > 1 ? 'es precisam' : ' precisa'} de atenção
+              </span>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* KPIs */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
+          <Card className="border-l-4 border-green-500 hover:shadow-lg transition-all">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-muted-foreground">Protegidos</span>
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              </div>
+              <div className="text-2xl font-bold text-green-600">{counts.healthy}</div>
+              <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
+                <div className="h-full bg-green-500 transition-all" style={{ width: `${healthPercentage}%` }} />
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">{healthPercentage}% do total</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <Card className="border-l-4 border-yellow-500 hover:shadow-lg transition-all">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-muted-foreground">Precisam de Atenção</span>
+                <AlertCircle className="h-5 w-5 text-yellow-500" />
+              </div>
+              <div className="text-2xl font-bold text-yellow-600">{counts.critical}</div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {counts.critical > 0 ? 'Verifique esses computadores' : '✓ Nenhum problema'}
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <Card className="border-l-4 border-gray-400 hover:shadow-lg transition-all">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-muted-foreground">Desligados</span>
+                <WifiOff className="h-5 w-5 text-gray-500" />
+              </div>
+              <div className="text-2xl font-bold text-gray-600">{counts.offline}</div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {counts.offline > 0 ? 'Computadores offline' : '✓ Todos conectados'}
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      {/* Health Trend Chart */}
+      <HealthTrendChart />
+
+      {/* Recent Connections */}
+      {recentHeartbeats.length > 0 && (
+        <Card className="bg-muted/30">
+          <CardContent className="py-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Activity className="h-4 w-4" />
+              <span>Conexões recentes:</span>
+              {recentHeartbeats.slice(0, 3).map((name, idx) => (
+                <Badge key={`${name}-${idx}`} variant="secondary" className="px-2 py-0.5 text-xs">{name}</Badge>
+              ))}
+              {recentHeartbeats.length > 3 && <span className="text-xs">+{recentHeartbeats.length - 3} mais</span>}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Agent List */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Server className="h-5 w-5" />Computadores
+            </CardTitle>
+            <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)} className="w-full sm:w-auto">
+              <TabsList className="grid grid-cols-4 w-full sm:w-auto">
+                <TabsTrigger value="all" className="text-xs sm:text-sm">
+                  Todos<Badge variant="secondary" className="ml-1.5 px-1.5 py-0 text-[10px]">{totalAgents}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="problems" className="text-xs sm:text-sm">
+                  <ShieldAlert className="h-3 w-3 mr-1 hidden sm:inline" />Problemas
+                  {counts.withProblems > 0 && <Badge variant="destructive" className="ml-1.5 px-1.5 py-0 text-[10px]">{counts.withProblems}</Badge>}
+                </TabsTrigger>
+                <TabsTrigger value="protected" className="text-xs sm:text-sm">
+                  <Shield className="h-3 w-3 mr-1 hidden sm:inline" />Protegidos
+                  {counts.protected > 0 && <Badge className="ml-1.5 px-1.5 py-0 text-[10px] bg-orange-500">{counts.protected}</Badge>}
+                </TabsTrigger>
+                <TabsTrigger value="offline" className="text-xs sm:text-sm">
+                  <WifiOff className="h-3 w-3 mr-1 hidden sm:inline" />Offline
+                  {(counts.offline + counts.never_connected) > 0 && <Badge variant="secondary" className="ml-1.5 px-1.5 py-0 text-[10px]">{counts.offline + counts.never_connected}</Badge>}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {filteredAgents.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Server className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              {statusFilter === 'all' ? (
+                <><p>Nenhum computador cadastrado ainda</p><p className="text-sm">Instale o agente em seus computadores para começar</p></>
+              ) : statusFilter === 'problems' ? (
+                <><CheckCircle className="h-12 w-12 mx-auto mb-3 text-green-500 opacity-70" /><p className="text-green-600">Nenhum computador com problemas</p><p className="text-sm">Todos estão funcionando normalmente</p></>
+              ) : statusFilter === 'protected' ? (
+                <><Shield className="h-12 w-12 mx-auto mb-3 text-orange-500 opacity-70" /><p>Nenhum computador em modo protegido</p><p className="text-sm">Isso é bom! Significa que não houve erros graves</p></>
+              ) : (
+                <><Wifi className="h-12 w-12 mx-auto mb-3 text-green-500 opacity-70" /><p className="text-green-600">Todos os computadores estão online</p></>
+              )}
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {filteredAgents.map((agent, idx) => {
+                const isOnline = agent.health_status === 'healthy' || agent.health_status === 'warning' || agent.health_status === 'critical';
+                const hasSpecialStatus = agent.is_throttled || agent.is_isolated || agent.is_in_safe_mode;
+                const agentMetrics = agent.id ? systemMetrics[agent.id] : undefined;
+                const agentDisks = agent.id ? diskMetrics[agent.id] : undefined;
+                const isSelected = agent.id ? selectedBatch.has(agent.id) : false;
+                const healthStatus: 'healthy' | 'warning' | 'critical' | undefined =
+                  agent.health_status === 'critical' ? 'critical' :
+                  agent.health_status === 'warning' || hasSpecialStatus ? 'warning' :
+                  agent.health_status === 'healthy' ? 'healthy' : undefined;
+
+                return (
+                  <div key={agent.agent_name + idx} className="space-y-2 relative">
+                    {agent.id && (
+                      <div className="absolute top-2 right-2 z-10">
+                        <Checkbox checked={isSelected} onCheckedChange={(checked) => {
+                          setSelectedBatch(prev => {
+                            const next = new Set(prev);
+                            if (checked) next.add(agent.id!); else next.delete(agent.id!);
+                            return next;
+                          });
+                        }} className="h-4 w-4" />
+                      </div>
+                    )}
+                    <AgentCard id={agent.id || ''} name={agent.agent_name} hostname={agent.hostname}
+                      osVersion={getOsDisplayName(agent.os_type, agent.os_version || null)}
+                      agentVersion={agent.agent_version} isOnline={isOnline} healthStatus={healthStatus}
+                      lastHeartbeat={agent.last_heartbeat} uptimeSeconds={agentMetrics?.uptime_seconds ?? undefined}
+                      cpuPercent={agentMetrics?.cpu_usage_percent} memoryPercent={agentMetrics?.memory_usage_percent}
+                      diskPercent={agentMetrics?.disk_usage_percent} disks={agentDisks}
+                      isThrottled={agent.is_throttled} isIsolated={agent.is_isolated} isInSafeMode={agent.is_in_safe_mode}
+                      onClick={() => agent.id && tenant?.id && setSelectedAgent({
+                        id: agent.id, name: agent.agent_name, tenantId: tenant.id,
+                        isThrottled: agent.is_throttled, isIsolated: agent.is_isolated, isInSafeMode: agent.is_in_safe_mode
+                      })}
+                    />
+                    {agent.health_status === 'never_connected' && agent.id && (
+                      <TooltipProviderWrapper><AgentAuthFailureAlert agentId={agent.id} agentName={agent.agent_name} /></TooltipProviderWrapper>
+                    )}
+                    {hasSpecialStatus && agent.id && (
+                      <div className="px-4 pb-3">
+                        <AgentQuickActions agentId={agent.id} agentName={agent.agent_name}
+                          isThrottled={agent.is_throttled} isIsolated={agent.is_isolated} isInSafeMode={agent.is_in_safe_mode} />
+                      </div>
+                    )}
+                    {!isOnline && !hasSpecialStatus && agent.id && tenant?.id && (
+                      <div className="px-4 pb-3">
+                        <OfflineAgentActions agentId={agent.id} agentName={agent.agent_name}
+                          tenantId={tenant.id} secondsOffline={agent.seconds_since_heartbeat || 0} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <BatchActionBar selectedIds={Array.from(selectedBatch)}
+        selectedNames={filteredAgents.filter(a => a.id && selectedBatch.has(a.id)).map(a => a.agent_name)}
+        onClearSelection={() => setSelectedBatch(new Set())} />
+
+      <AgentDetailsDrawer agentId={selectedAgent?.id || null} agentName={selectedAgent?.name}
+        tenantId={selectedAgent?.tenantId} open={!!selectedAgent} onClose={() => setSelectedAgent(null)}
+        isThrottled={selectedAgent?.isThrottled} isIsolated={selectedAgent?.isIsolated} isInSafeMode={selectedAgent?.isInSafeMode} />
+    </div>
+  );
+}
