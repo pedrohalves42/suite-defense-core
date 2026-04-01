@@ -7,6 +7,34 @@ import { logger } from '../_shared/logger.ts';
 import { SCIM_SCHEMAS, scimHeaders, scimError, serviceProviderConfig, resourceTypes, schemas } from './constants.ts';
 import * as userHandlers from './user-handlers.ts';
 import * as groupHandlers from './group-handlers.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const ScimUserSchema = z.object({
+  schemas: z.array(z.string().max(256)).max(10).optional(),
+  userName: z.string().min(1).max(255).optional(),
+  emails: z.array(z.object({ value: z.string().email().max(255), type: z.string().max(64).optional(), primary: z.boolean().optional() })).max(10).optional(),
+  name: z.object({ givenName: z.string().max(255).optional(), familyName: z.string().max(255).optional() }).optional(),
+  active: z.boolean().optional(),
+  groups: z.array(z.object({ display: z.string().max(255).optional(), value: z.string().max(255).optional() })).max(50).optional(),
+  externalId: z.string().max(255).optional(),
+  displayName: z.string().max(500).optional(),
+}).passthrough();
+
+const ScimGroupSchema = z.object({
+  schemas: z.array(z.string().max(256)).max(10).optional(),
+  displayName: z.string().min(1).max(255).optional(),
+  externalId: z.string().max(255).optional(),
+  members: z.array(z.object({ value: z.string().max(255), display: z.string().max(255).optional() })).max(1000).optional(),
+  Operations: z.array(z.object({ op: z.string().max(32), path: z.string().max(255).optional(), value: z.unknown().optional() })).max(100).optional(),
+}).passthrough();
+
+async function parseAndValidateScimBody(req: Request, schema: z.ZodType): Promise<{ data: Record<string, unknown> } | Response> {
+  let body: unknown;
+  try { body = await req.json(); } catch { return scimError(400, 'Invalid JSON body'); }
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) return scimError(400, `Invalid SCIM payload: ${parsed.error.issues.map(i => i.message).join(', ')}`);
+  return { data: parsed.data as Record<string, unknown> };
+}
 
 function getSupabase(): SupabaseClient {
   const url = Deno.env.get('SUPABASE_URL');
