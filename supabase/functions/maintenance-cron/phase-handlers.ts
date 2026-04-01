@@ -236,10 +236,55 @@ export async function runRemainingPhases(supabase: SupabaseClient, now: string, 
   } catch (e) { logger.warn('[maintenance] Phase 10 error:', e); }
 }
 
+/** Phase 11: Cleanup legacy v3/v4 scripts from storage bucket */
+export async function cleanupLegacyScripts(supabase: SupabaseClient, result: ConsolidatedResult): Promise<void> {
+  try {
+    // Check if any active agent still runs v3.x or v4.x
+    const { count: legacyCount, error: countErr } = await supabase
+      .from('agents')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .or('agent_version.like.3.%,agent_version.like.4.%,agent_version.like.v3.%,agent_version.like.v4.%');
+
+    if (countErr) {
+      logger.warn('[maintenance] Phase 11: failed to check legacy agents', countErr.message);
+      result.legacy_cleanup.skipped_reason = `query_error: ${countErr.message}`;
+      return;
+    }
+
+    if ((legacyCount ?? 0) > 0) {
+      result.legacy_cleanup.skipped_reason = `${legacyCount} active agents still on v3/v4`;
+      logger.info(`[maintenance] Phase 11: skipped — ${legacyCount} legacy agents still active`);
+      return;
+    }
+
+    // No legacy agents — remove old files from storage
+    const legacyFiles = [
+      'scripts/cybershield-agent-windows-v3.ps1',
+      'scripts/cybershield-agent-linux-v3.sh',
+      'scripts/cybershield-agent-macos-v3.sh',
+      'scripts/cybershield-agent-windows-v4.ps1',
+      'scripts/cybershield-agent-linux-v4.sh',
+      'scripts/cybershield-agent-macos-v4.sh',
+    ];
+
+    let removed = 0;
+    for (const filePath of legacyFiles) {
+      const { error: rmErr } = await supabase.storage.from('agent-installers').remove([filePath]);
+      if (!rmErr) removed++;
+      // Ignore errors (file may not exist)
+    }
+
+    result.legacy_cleanup.files_removed = removed;
+    logger.info(`[maintenance] Phase 11: removed ${removed} legacy script files`);
+  } catch (e) { logger.warn('[maintenance] Phase 11 error:', e); }
+}
+
 /** Compute total_operations */
 export function computeTotalOps(result: ConsolidatedResult): number {
   return result.stuck_jobs.failed + result.stuck_jobs.recreated + result.stuck_jobs.expired + result.stuck_jobs.zombies +
     result.auto_cleanup.queued_cancelled + result.auto_cleanup.delivered_failed +
     result.offline_agents.cleaned + result.stale_playbooks.cleaned +
-    result.stale_reports.cleaned + result.stale_updates.cleaned + result.stuck_builds.cleaned;
+    result.stale_reports.cleaned + result.stale_updates.cleaned + result.stuck_builds.cleaned +
+    result.legacy_cleanup.files_removed;
 }

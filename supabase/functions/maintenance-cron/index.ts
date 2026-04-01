@@ -19,6 +19,7 @@ serveInternal(async (_req, ctx) => {
     await cleanupStuckJobs(supabase, now, result);
     await autoCleanupJobs(supabase, now, result);
     await runRemainingPhases(supabase, now, result);
+    await cleanupLegacyScripts(supabase, result);
 
     result.duration_ms = Date.now() - startTime;
     result.total_operations = computeTotalOps(result);
