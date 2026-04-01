@@ -38,6 +38,7 @@ export function createEmptyResult(): ConsolidatedResult {
     stale_updates: { cleaned: 0 },
     stuck_builds: { cleaned: 0 },
     telemetry: { cleanup_done: false, tenants_summarized: 0 },
+    legacy_cleanup: { files_removed: 0, skipped_reason: null },
     total_operations: 0,
     duration_ms: 0,
   };
