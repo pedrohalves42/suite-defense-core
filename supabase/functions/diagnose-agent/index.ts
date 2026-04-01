@@ -1,17 +1,23 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const DiagnoseAgentSchema = z.object({
+  agent_name: z.string().min(1).max(255),
+});
 
 serveTenant(async (req, ctx) => {
   const { supabase, tenantId, userId, requestId, body } = ctx;
 
-  const agentName = body.agent_name;
-
-  if (!agentName) {
+  const parsed = DiagnoseAgentSchema.safeParse(body);
+  if (!parsed.success) {
     return new Response(
-      JSON.stringify({ error: 'Missing agent_name in request body' }),
+      JSON.stringify({ error: 'Validation failed', issues: parsed.error.flatten().fieldErrors }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
+
+  const { agent_name: agentName } = parsed.data;
 
   logger.info('[diagnose-agent] Starting diagnosis', { 
     requestId, 
@@ -20,7 +26,6 @@ serveTenant(async (req, ctx) => {
     tenantId 
   });
 
-  // Chamar funcao de diagnostico
   const { data: diagnosis, error: diagnosisError } = await supabase.rpc('diagnose_agent', {
     p_agent_name: agentName
   });

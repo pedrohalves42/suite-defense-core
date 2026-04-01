@@ -1,32 +1,39 @@
 /**
  * Scan Vulnerabilities - Orchestrator
  * Auth: serveTenant (JWT + tenant isolation)
- * 
- * Core scan logic in scanner.ts, helpers in vuln-helpers.ts
  */
-
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { scanAgentVulnerabilities } from './scanner.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const ScanVulnSchema = z.object({
+  agent_id: z.string().uuid().optional(),
+  mode: z.enum(['batch_all_agents', 'single']).optional(),
+});
 
 serveTenant(async (req, ctx) => {
   const origin = req.headers.get("origin");
   const { supabase, tenantId, requestId, body } = ctx;
-  const { agent_id, mode } = body;
+
+  const parsed = ScanVulnSchema.safeParse(body ?? {});
+  if (!parsed.success) {
+    return new Response(
+      JSON.stringify({ error: 'Validation failed', issues: parsed.error.flatten().fieldErrors }),
+      { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const { agent_id, mode } = parsed.data;
 
   try {
-    // BATCH MODE
     if (mode === 'batch_all_agents') {
       logger.info(`[${requestId}] [SCAN-VULNS] Starting BATCH scan for tenant ${tenantId}`);
 
       const { data: agents, error: agentsError } = await supabase
-        .from('agents')
-        .select('id, tenant_id, agent_name')
-        .eq('status', 'active')
-        .eq('tenant_id', tenantId)
-        .limit(100);
-
+        .from('agents').select('id, tenant_id, agent_name')
+        .eq('status', 'active').eq('tenant_id', tenantId).limit(100);
       if (agentsError) throw agentsError;
 
       if (!agents || agents.length === 0) {
@@ -54,7 +61,6 @@ serveTenant(async (req, ctx) => {
         }
       }
 
-      // Trigger playbooks for critical vulnerabilities
       if (totalVulns > 0) {
         for (const agentResult of results.filter(r => r.vulns_found > 0).slice(0, 5)) {
           try {
@@ -74,19 +80,16 @@ serveTenant(async (req, ctx) => {
       );
     }
 
-    // SINGLE AGENT SCAN
     if (!agent_id) {
       return new Response(
-        JSON.stringify({ error: 'agent_id required' }),
+        JSON.stringify({ error: 'agent_id required for single scan' }),
         { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       );
     }
 
     logger.info(`[${requestId}] [SCAN-VULNS] Starting scan for agent ${agent_id}`);
-
     const scanResult = await scanAgentVulnerabilities(supabase, agent_id, tenantId!, requestId, { mode: 'single' });
 
-    // Store findings
     if (scanResult.vulnerabilities.length > 0) {
       await supabase.from('vuln_findings').delete().eq('agent_id', agent_id);
       const { error: insertError } = await supabase.from('vuln_findings').insert(scanResult.vulnerabilities);

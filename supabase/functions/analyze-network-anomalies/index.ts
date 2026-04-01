@@ -8,16 +8,22 @@ import { sanitizeForAI, sanitizeObjectForAI, anonymizeAgentName } from "../_shar
 import { callAISimple } from "../_shared/ai-provider-helper.ts";
 import { AIEvidence, buildEvidence, calculateConfidence, generateReasoningSummary, extractDataSources } from "../_shared/ai-evidence-types.ts";
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-interface AnalysisRequest {
-  agentName?: string;
-  timeRangeHours?: number;
-}
+const AnalysisRequestSchema = z.object({
+  agentName: z.string().max(255).optional(),
+  timeRangeHours: z.number().int().min(1).max(168).optional().default(24),
+}).optional().default({});
 
 serveInternal(async (_req, ctx) => {
   const { supabase, requestId, body } = ctx;
-  const { agentName, timeRangeHours = 24 } = body as AnalysisRequest;
 
+  const parsed = AnalysisRequestSchema.safeParse(body ?? {});
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Validation failed', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  const { agentName, timeRangeHours } = parsed.data ?? { timeRangeHours: 24 };
   const startTime = new Date(Date.now() - timeRangeHours * 60 * 60 * 1000).toISOString();
 
   let agentsQuery = supabase
@@ -139,7 +145,6 @@ Seja especifico e tecnico, focando em seguranca cibernetica.`;
   const analysis = aiResult.content;
   logger.info(`[analyze-network-anomalies] Analysis completed via ${aiResult.provider} in ${aiResult.latencyMs}ms`);
 
-  // Build evidence
   const evidenceArray: AIEvidence[] = [];
   
   if (agents && agents.length > 0) {

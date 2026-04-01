@@ -1,23 +1,24 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-interface EvidenceRequest {
-  tenant_id?: string;
-  periodStart: string;
-  periodEnd: string;
-  bundleType: 'incident' | 'compliance' | 'audit' | 'custom';
-  includeOptions?: {
-    securityEvents?: boolean;
-    jobs?: boolean;
-    signatures?: boolean;
-    hashChain?: boolean;
-    riskDecisions?: boolean;
-    playbookExecutions?: boolean;
-    auditLogs?: boolean;
-  };
-  agentId?: string;
-}
+const EvidenceBundleSchema = z.object({
+  periodStart: z.string().min(1).max(30),
+  periodEnd: z.string().min(1).max(30),
+  bundleType: z.enum(['incident', 'compliance', 'audit', 'custom']),
+  includeOptions: z.object({
+    securityEvents: z.boolean().optional(),
+    jobs: z.boolean().optional(),
+    signatures: z.boolean().optional(),
+    hashChain: z.boolean().optional(),
+    riskDecisions: z.boolean().optional(),
+    playbookExecutions: z.boolean().optional(),
+    auditLogs: z.boolean().optional(),
+  }).optional(),
+  agentId: z.string().uuid().optional(),
+  tenant_id: z.string().uuid().optional(),
+});
 
 function generateAuditId(): string {
   const timestamp = Date.now().toString(36);
@@ -33,30 +34,26 @@ async function hashData(data: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-serveTenant<EvidenceRequest>(async (_req, ctx) => {
+serveTenant(async (_req, ctx) => {
   const origin = _req.headers.get("origin");
   const { supabase, tenantId, userId, requestId, body } = ctx;
-  const { periodStart, periodEnd, bundleType, includeOptions, agentId } = body;
 
-  if (!periodStart || !periodEnd) {
+  const parsed = EvidenceBundleSchema.safeParse(body);
+  if (!parsed.success) {
     return new Response(
-      JSON.stringify({ success: false, error: 'periodStart and periodEnd are required' }),
+      JSON.stringify({ error: 'Validation failed', issues: parsed.error.flatten().fieldErrors }),
       { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
 
+  const { periodStart, periodEnd, bundleType, includeOptions, agentId } = parsed.data;
+
   const options = {
-    securityEvents: true,
-    jobs: true,
-    signatures: true,
-    hashChain: true,
-    riskDecisions: true,
-    playbookExecutions: true,
-    auditLogs: true,
+    securityEvents: true, jobs: true, signatures: true, hashChain: true,
+    riskDecisions: true, playbookExecutions: true, auditLogs: true,
     ...includeOptions,
   };
 
-  // Get user email for metadata
   let userEmail = 'system';
   if (userId) {
     const { data: { user } } = await supabase.auth.admin.getUserById(userId);
@@ -65,13 +62,8 @@ serveTenant<EvidenceRequest>(async (_req, ctx) => {
 
   const bundle: Record<string, unknown> = {
     metadata: {
-      generatedAt: new Date().toISOString(),
-      generatedBy: userEmail,
-      tenantId,
-      periodStart,
-      periodEnd,
-      bundleType,
-      agentFilter: agentId || null,
+      generatedAt: new Date().toISOString(), generatedBy: userEmail, tenantId,
+      periodStart, periodEnd, bundleType, agentFilter: agentId || null,
     },
     evidence: {},
   };
@@ -79,13 +71,7 @@ serveTenant<EvidenceRequest>(async (_req, ctx) => {
   let totalRecords = 0;
 
   if (options.securityEvents) {
-    let query = supabase
-      .from('security_events')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .gte('created_at', periodStart)
-      .lte('created_at', periodEnd)
-      .order('created_at', { ascending: true });
+    let query = supabase.from('security_events').select('*').eq('tenant_id', tenantId).gte('created_at', periodStart).lte('created_at', periodEnd).order('created_at', { ascending: true });
     if (agentId) query = query.eq('agent_id', agentId);
     const { data: events } = await query;
     bundle.evidence = { ...(bundle.evidence as object), securityEvents: events || [] };
@@ -93,13 +79,7 @@ serveTenant<EvidenceRequest>(async (_req, ctx) => {
   }
 
   if (options.jobs) {
-    let query = supabase
-      .from('jobs')
-      .select('id, agent_id, agent_name, type, status, created_at, completed_at, result, payload_hash, result_hash, result_signature')
-      .eq('tenant_id', tenantId)
-      .gte('created_at', periodStart)
-      .lte('created_at', periodEnd)
-      .order('created_at', { ascending: true });
+    let query = supabase.from('jobs').select('id, agent_id, agent_name, type, status, created_at, completed_at, result, payload_hash, result_hash, result_signature').eq('tenant_id', tenantId).gte('created_at', periodStart).lte('created_at', periodEnd).order('created_at', { ascending: true });
     if (agentId) query = query.eq('agent_id', agentId);
     const { data: jobs } = await query;
     bundle.evidence = { ...(bundle.evidence as object), jobs: jobs || [] };
@@ -107,14 +87,7 @@ serveTenant<EvidenceRequest>(async (_req, ctx) => {
   }
 
   if (options.signatures) {
-    let query = supabase
-      .from('job_executions')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .gte('started_at', periodStart)
-      .lte('started_at', periodEnd)
-      .not('result_signature', 'is', null)
-      .order('started_at', { ascending: true });
+    let query = supabase.from('job_executions').select('*').eq('tenant_id', tenantId).gte('started_at', periodStart).lte('started_at', periodEnd).not('result_signature', 'is', null).order('started_at', { ascending: true });
     if (agentId) query = query.eq('agent_id', agentId);
     const { data: executions } = await query;
     bundle.evidence = { ...(bundle.evidence as object), signedExecutions: executions || [] };
@@ -122,35 +95,19 @@ serveTenant<EvidenceRequest>(async (_req, ctx) => {
   }
 
   if (options.hashChain && agentId) {
-    const { data: chain } = await supabase
-      .from('agent_execution_chain')
-      .select('*')
-      .eq('agent_id', agentId)
-      .single();
+    const { data: chain } = await supabase.from('agent_execution_chain').select('*').eq('agent_id', agentId).single();
     bundle.evidence = { ...(bundle.evidence as object), hashChain: chain || null };
     if (chain) totalRecords += 1;
   }
 
   if (options.riskDecisions) {
-    const { data: decisions } = await supabase
-      .from('risk_decision_log')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .gte('created_at', periodStart)
-      .lte('created_at', periodEnd)
-      .order('created_at', { ascending: true });
+    const { data: decisions } = await supabase.from('risk_decision_log').select('*').eq('tenant_id', tenantId).gte('created_at', periodStart).lte('created_at', periodEnd).order('created_at', { ascending: true });
     bundle.evidence = { ...(bundle.evidence as object), riskDecisions: decisions || [] };
     totalRecords += decisions?.length || 0;
   }
 
   if (options.playbookExecutions) {
-    let query = supabase
-      .from('playbook_executions')
-      .select('*, playbooks(name)')
-      .eq('tenant_id', tenantId)
-      .gte('triggered_at', periodStart)
-      .lte('triggered_at', periodEnd)
-      .order('triggered_at', { ascending: true });
+    let query = supabase.from('playbook_executions').select('*, playbooks(name)').eq('tenant_id', tenantId).gte('triggered_at', periodStart).lte('triggered_at', periodEnd).order('triggered_at', { ascending: true });
     if (agentId) query = query.eq('agent_id', agentId);
     const { data: executions } = await query;
     bundle.evidence = { ...(bundle.evidence as object), playbookExecutions: executions || [] };
@@ -158,13 +115,7 @@ serveTenant<EvidenceRequest>(async (_req, ctx) => {
   }
 
   if (options.auditLogs) {
-    const { data: logs } = await supabase
-      .from('audit_logs')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .gte('created_at', periodStart)
-      .lte('created_at', periodEnd)
-      .order('created_at', { ascending: true });
+    const { data: logs } = await supabase.from('audit_logs').select('*').eq('tenant_id', tenantId).gte('created_at', periodStart).lte('created_at', periodEnd).order('created_at', { ascending: true });
     bundle.evidence = { ...(bundle.evidence as object), auditLogs: logs || [] };
     totalRecords += logs?.length || 0;
   }
@@ -179,15 +130,9 @@ serveTenant<EvidenceRequest>(async (_req, ctx) => {
   const { data: bundleRecord, error: insertError } = await supabase
     .from('evidence_bundles')
     .insert({
-      tenant_id: tenantId,
-      audit_id: auditId,
-      bundle_type: bundleType,
-      period_start: periodStart,
-      period_end: periodEnd,
-      manifest_hash: manifestHash,
-      included_evidence: options,
-      file_count: totalRecords,
-      total_size_bytes: bundleSize,
+      tenant_id: tenantId, audit_id: auditId, bundle_type: bundleType,
+      period_start: periodStart, period_end: periodEnd, manifest_hash: manifestHash,
+      included_evidence: options, file_count: totalRecords, total_size_bytes: bundleSize,
       verification_url: `${SUPABASE_URL}/functions/v1/verify-document?audit_id=${auditId}`,
       created_by: userId,
     })
@@ -205,12 +150,8 @@ serveTenant<EvidenceRequest>(async (_req, ctx) => {
   const finalBundle = {
     ...bundle,
     manifest: {
-      auditId,
-      manifestHash,
-      verificationUrl: bundleRecord.verification_url,
-      recordCount: totalRecords,
-      sizeBytes: bundleSize,
-      generatedAt: new Date().toISOString(),
+      auditId, manifestHash, verificationUrl: bundleRecord.verification_url,
+      recordCount: totalRecords, sizeBytes: bundleSize, generatedAt: new Date().toISOString(),
     },
     readme: {
       title: 'CyberShield Evidence Bundle',
@@ -225,12 +166,7 @@ serveTenant<EvidenceRequest>(async (_req, ctx) => {
   };
 
   return {
-    success: true,
-    auditId,
-    manifestHash,
-    verificationUrl: bundleRecord.verification_url,
-    recordCount: totalRecords,
-    sizeBytes: bundleSize,
-    bundle: finalBundle,
+    success: true, auditId, manifestHash, verificationUrl: bundleRecord.verification_url,
+    recordCount: totalRecords, sizeBytes: bundleSize, bundle: finalBundle,
   };
 });
