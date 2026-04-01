@@ -253,14 +253,14 @@ export function useSecurityMonitoring() {
         policy_violation: 'enforce_policy',
       };
       const jobType = jobTypeMap[event.alertType || ''] || 'security_remediation';
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic job insert
-      const { error } = await (supabase as Record<string, any>).from('jobs').insert({
+      const jobData = await prepareJobForInsert({
         tenant_id: tenant.id,
         agent_name: event.agentName,
         type: jobType,
-        status: 'pending',
+        status: 'pending' as const,
         payload: { alert_type: event.alertType, source: 'security_monitoring' },
       });
+      const { error } = await supabase.from('jobs').insert(jobData);
       if (error) throw error;
       toast.success(`Remediação enviada para ${event.agentName}`);
     } catch (err: unknown) {
