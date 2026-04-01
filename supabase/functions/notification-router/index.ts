@@ -115,6 +115,7 @@ Deno.serve(async (req) => {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'X-Request-ID': requestId,
+        'X-Trace-ID': requestId,
       };
 
       // Forward auth headers
