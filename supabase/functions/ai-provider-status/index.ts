@@ -19,9 +19,18 @@ servePublic(async (req, _ctx) => {
 
   if (req.method === 'POST') {
     const body = await req.json();
-    const { provider, action } = body;
+    const { z } = await import('https://esm.sh/zod@3.23.8');
+    const PostSchema = z.object({
+      action: z.enum(['reset_circuit']),
+      provider: z.string().min(1).max(100),
+    });
+    const parsed = PostSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    const { provider, action } = parsed.data;
 
-    if (action === 'reset_circuit' && provider) {
+    if (action === 'reset_circuit') {
       resetProviderCircuit(provider as AIProviderName);
       return {
         success: true,

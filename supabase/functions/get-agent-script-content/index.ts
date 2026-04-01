@@ -6,6 +6,12 @@
 
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const BodySchema = z.object({
+  action: z.enum(['list-all']).optional(),
+  platform: z.enum(['windows', 'linux', 'macos']).optional(),
+}).passthrough();
 
 const MIN_SCRIPT_SIZE: Record<string, number> = {
   windows: 40000,
@@ -35,7 +41,14 @@ serveTenant(async (_req, ctx) => {
     );
   }
 
-  const action = body?.action as string | undefined;
+  const parsedBody = BodySchema.safeParse(body);
+  if (!parsedBody.success) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Invalid input', issues: parsedBody.error.flatten().fieldErrors, requestId }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+  const action = parsedBody.data.action;
 
   // ===== ACTION: list-all =====
   if (action === 'list-all') {

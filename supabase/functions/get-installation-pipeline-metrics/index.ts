@@ -3,6 +3,11 @@
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const ParamsSchema = z.object({
+  hours_back: z.coerce.number().int().min(1).max(720).optional(),
+}).passthrough();
 
 serveTenant(async (req, ctx) => {
   const { supabase, tenantId, requestId, body } = ctx;
@@ -10,12 +15,11 @@ serveTenant(async (req, ctx) => {
   logger.info(`[${requestId}] Get installation pipeline metrics request started`);
 
   // Parse hours_back from body or URL
-  let hoursBack: number | null = null;
-  
-  const bodyData = body as Record<string, unknown>;
-  if (bodyData.hours_back !== undefined && bodyData.hours_back !== null) {
-    hoursBack = parseInt(String(bodyData.hours_back));
+  const parsed = ParamsSchema.safeParse(body ?? {});
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
+  let hoursBack: number | null = parsed.data.hours_back ?? null;
   
   if (hoursBack === null) {
     const url = new URL(req.url);

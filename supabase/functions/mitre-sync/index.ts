@@ -9,14 +9,24 @@ import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 const MITRE_ENTERPRISE_URL =
   'https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json';
 
 serveInternal(async (_req, ctx) => {
   const { supabase, body: rawBody, requestId } = ctx;
-  const body = (rawBody as Record<string, unknown>) || {};
-  const action = (body.action as string) || 'rules';
+  const MitreSchema = z.object({
+    action: z.enum(['sync', 'rules', 'version', 'stale']).default('rules'),
+  }).passthrough();
+  const parsed = MitreSchema.safeParse(rawBody ?? {});
+  if (!parsed.success) {
+    return new Response(
+      JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+  const action = parsed.data.action;
 
   // ── SYNC ──
   if (action === 'sync') {
