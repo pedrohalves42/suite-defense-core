@@ -49,7 +49,7 @@ export async function fetchForensicData(agentId: string): Promise<ForensicData> 
       direction: String(p.direction || ''),
       is_suspicious: p.is_suspicious === true || p.is_suspicious === 'true',
     };
-  }));
+  });
 
   const procMap = new Map<string, { count: number; ips: Set<string> }>();
   for (const ne of networkEvents) {
