@@ -3,149 +3,113 @@
 | Campo | Valor |
 |-------|-------|
 | **Codigo** | CONS-001 |
-| **Versao** | 1.0 |
-| **Status** | Em Avaliacao |
-| **Data** | 2026-03-31 |
-| **Prioridade** | Baixa (nao bloqueia auditoria) |
+| **Versao** | 2.0 |
+| **Status** | Em Execucao |
+| **Data** | 2026-04-01 |
+| **Prioridade** | Media |
 
 ---
 
-## 1. Estado Atual
+## 1. Estado Atual (pos-Fase 5)
 
-### 1.1 Roteadores Existentes
+### 1.1 Arquitetura de Gateways
 
-| Roteador | Funcao | Metodo |
-|----------|--------|--------|
-| `ops-router` | Meta-roteador: cleanup + notify + automation | Proxy HTTP interno |
-| `cleanup-router` | Limpeza de dados | Handlers inlinados |
-| `notification-router` | Notificacoes multi-canal | Handlers inlinados |
-| `evaluate-automation-rules` | Avaliacao de regras SOAR | Funcao independente |
-| `collect-router` | Coleta de dados do agente | Handlers inlinados |
-| `submit-router` | Submissao de telemetria | Handlers inlinados |
-| `report-router` | Geracao de relatorios | Handlers inlinados |
-| `ai-router` | Roteamento de modelos AI | Handlers inlinados |
+| Gateway | Namespaces | Funcao |
+|---------|-----------|--------|
+| `api-gateway` | admin, billing, security, build, agent | Plataforma/Admin (~101 actions) |
+| `ops-gateway` | check, sync, playbook, report, cleanup, notify | Operacoes/Monitoring (~84 actions) |
+| `ops-router` | Meta-router que delega para os 2 gateways | Backward compat |
 
-### 1.2 Proxies Legacy (Backward Compatibility)
+### 1.2 Roteadores Deprecados (proxies finos para gateways)
 
-| Proxy | Destino | Middleware |
-|-------|---------|-----------|
-| `cleanup-stuck-jobs` | cleanup-router | serveInternal |
-| `auto-cleanup-jobs` | cleanup-router | serveInternal |
-| `cleanup-jobs` | cleanup-router | serveTenant |
-| `notification-dispatcher` | notification-router | Proxy |
+| Roteador | Gateway Destino | Status |
+|----------|----------------|--------|
+| `admin-router` | api-gateway (admin:*) | DEPRECATED |
+| `billing-router` | api-gateway (billing:*) | DEPRECATED |
+| `security-router` | api-gateway (security:*) | DEPRECATED |
+| `build-router` | api-gateway (build:*) | DEPRECATED |
+| `agent-mgmt-router` | api-gateway (agent:*) | DEPRECATED |
+| `check-router` | ops-gateway (check:*) | DEPRECATED |
+| `sync-router` | ops-gateway (sync:*) | DEPRECATED |
+| `playbook-router` | ops-gateway (playbook:*) | DEPRECATED |
+| `report-router` | ops-gateway (report:*) | DEPRECATED |
 
-### 1.3 Arquitetura do ops-router
+### 1.3 Roteadores Mantidos (middleware diferente)
 
-```
-ops-router
-  ├── cleanup:* → HTTP proxy → cleanup-router
-  ├── notify:*  → HTTP proxy → notification-router
-  └── automation:* → HTTP proxy → evaluate-automation-rules
-```
+| Roteador | Middleware | Motivo |
+|----------|-----------|--------|
+| `cleanup-router` | Deno.serve raw | Handlers complexos com modulos locais |
+| `notification-router` | Deno.serve raw | 6 handlers diretos com modulos locais |
+| `ai-router` | serveTenant | Middleware diferente dos gateways |
+| `submit-router` | serveAgent | Middleware agent-facing |
+| `collect-router` | serveAgent | Middleware agent-facing |
 
-**Restricao tecnica**: Deno nao permite import entre funcoes irmas (sibling functions), forçando o modelo de proxy HTTP.
-
----
-
-## 2. Analise de Consolidacao
-
-### 2.1 O que JA esta consolidado
-
-- **cleanup-router**: Centraliza todas as operacoes de limpeza
-- **notification-router**: Centraliza email, Telegram, WhatsApp, webhooks
-- **ops-router**: Unifica cleanup + notify + automation via namespace
-- **collect-router**: Centraliza coleta de certificados e USB
-- **submit-router**: Centraliza submissao de telemetria
-- **ai-router**: Centraliza roteamento de modelos AI
-
-### 2.2 O que PODE ser consolidado
-
-| Candidato | Destino | Risco | Beneficio |
-|-----------|---------|-------|-----------|
-| Proxies legacy (cleanup-stuck-jobs, auto-cleanup-jobs, cleanup-jobs) | Remover, usar ops-router direto | Baixo (se callers atualizados) | -3 funcoes, -3 cold starts |
-| notification-dispatcher | Remover, usar ops-router direto | Baixo | -1 funcao |
-
-### 2.3 O que NAO deve ser consolidado
+### 1.4 Funcoes Eliminadas
 
 | Funcao | Motivo |
 |--------|--------|
-| `heartbeat` | Hot path, precisa de cold start minimo |
-| `poll-jobs` | Hot path, latencia critica |
-| `enroll-agent` | Seguranca, isolamento de trust boundary |
-| `stripe-webhook` | Requer verificacao de assinatura especifica |
-| `saml-sso` | Complexidade de raw body / XML |
-| `scim-provisioning` | Protocolo padrao, complexidade propria |
-| `soar-engine` | Complexidade de estado e rollback |
+| `security-cleanup-cron` | Proxy puro para cleanup-router, logica inlinada no api-gateway |
 
 ---
 
-## 3. Plano de Execucao
+## 2. Handlers Inlinados nos Gateways
 
-### Fase 1 — Limpeza de Proxies (Semana 1, Risco: Baixo)
+### api-gateway/handlers/billing.ts
+- `handleCohortAnalysis` (ex billing-router)
+- `handleResetDailyQuotas` (ex billing-router)
+- `handleCheckTenantQuotas` (ex billing-router)
+- `handleCheckTrialExpiration` (ex billing-router)
+- `handleSecurityCleanup` (ex security-router)
 
-**Objetivo**: Remover proxies redundantes cujos callers ja podem usar ops-router.
+### ops-gateway/handlers/check.ts
+- `handleCheckTaskSlaBreach` (ex check-router)
+- `handleEvaluateJobSlo` (ex check-router)
+- `handleCheckInstallationHealth` (ex check-router)
+- `handleCheckProductionHealth` (ex check-router)
+- `handleDetectBlockedAttempts` (ex check-router)
 
-1. **Auditar callers** de cada proxy legacy:
-   ```bash
-   grep -r "cleanup-stuck-jobs\|auto-cleanup-jobs\|cleanup-jobs\|notification-dispatcher" \
-     supabase/functions/ src/ .github/ --include="*.ts" --include="*.yml"
-   ```
+### ops-gateway/handlers/sync.ts
+- `handleResetDailyQuotas` (ex sync-router)
+- `handleLogDomainEvent` (ex sync-router)
+- `handleHmacCleanupScheduled` (ex sync-router)
+- `handleProcessTenantSuspensions` (ex sync-router)
+- `handleScheduledComplianceRefresh` (ex sync-router)
+- `handleFlushEventBuffer` (ex sync-router)
 
-2. **Atualizar callers** para usar `ops-router` com namespace:
-   - `cleanup-stuck-jobs` → `ops-router` com `{ action: "cleanup:stuck-jobs" }`
-   - `auto-cleanup-jobs` → `ops-router` com `{ action: "cleanup:auto-cleanup-jobs" }`
-   - `cleanup-jobs` → `ops-router` com `{ action: "cleanup:jobs" }`
-   - `notification-dispatcher` → `ops-router` com `{ action: "notify:dispatch" }`
-
-3. **Manter proxies como aliases** por 30 dias (deprecation period)
-
-4. **Remover proxies** apos 30 dias sem chamadas
-
-### Fase 2 — Avaliacao de Novos Namespaces (Semana 2-3, Risco: Medio)
-
-Avaliar se vale adicionar ao ops-router:
-
-| Namespace Potencial | Funcoes | Decisao |
-|--------------------|---------|---------|
-| `report:*` | report-router handlers | Avaliar volume de chamadas |
-| `collect:*` | collect-router handlers | Baixo volume, manter separado |
-| `submit:*` | submit-router handlers | Hot path, manter separado |
-
-### Fase 3 — Documentacao e Deprecation (Semana 4)
-
-1. Atualizar docs/api/API_DOCUMENTATION.md com endpoints consolidados
-2. Atualizar docs/EDGE_FUNCTIONS.md com mapa de roteadores
-3. Marcar funcoes deprecated no codigo
-4. Adicionar metricas de uso por roteador
+### ops-gateway/handlers/playbook.ts
+- `handleAutoTriageInsights` (ex playbook-router)
 
 ---
 
-## 4. Metricas de Sucesso
+## 3. Proxima Fase: Remocao dos Roteadores Deprecados
 
-| Metrica | Antes | Meta |
-|---------|-------|------|
-| Total de Edge Functions | 248 | 244 (-4 proxies) |
-| Cold starts redundantes | ~12/hora | ~0/hora |
-| Funcoes com `Deno.serve` bruto | 47 | 43 |
-| Documentacao de endpoints | Parcial | Completa |
+Apos 30 dias sem chamadas diretas aos roteadores deprecados:
+
+1. Migrar callers frontend para usar gateways diretamente
+2. Migrar cron jobs para usar gateways
+3. Remover os 9 roteadores deprecados (-9 funcoes)
+
+### Callers a Atualizar
+
+| Caller | Roteador Atual | Gateway Novo |
+|--------|---------------|--------------|
+| `useComplianceReport.ts` | report-router | ops-gateway (report:*) |
+| `AutomationRulesPanel.tsx` | ops-router | ops-router (sem mudanca) |
+| `useJobCleanup.ts` | cleanup-router | cleanup-router (mantido) |
+| `useRiskDelta.ts` | report-router | ops-gateway (report:*) |
+| `PersistentDomainEventPublisher.ts` | sync-router | ops-gateway (sync:*) |
+| `CohortAnalysis.tsx` | billing-router | api-gateway (billing:*) |
 
 ---
 
-## 5. Riscos
+## 4. Metricas
 
-| Risco | Probabilidade | Impacto | Mitigacao |
-|-------|---------------|---------|-----------|
-| Caller nao atualizado | Media | Jobs falhando | Manter proxy por 30 dias |
-| Latencia adicional do proxy HTTP | Baixa | +50ms por hop | Hot paths nao passam por ops-router |
-| Cold start do ops-router | Baixa | +200ms primeiro request | Pre-warm via health check |
-
----
-
-## 6. Decisao
-
-**Recomendacao**: Executar Fase 1 (limpeza de proxies). Fases 2-3 sao opcionais e nao bloqueiam SOC 2.
-
-A consolidacao adicional alem do ops-router traz ganho marginal versus risco de quebra. O sistema ja esta logicamente consolidado via roteadores de dominio.
+| Metrica | Antes (Fase 4) | Depois (Fase 5) | Meta (pos-remocao) |
+|---------|----------------|-----------------|-------------------|
+| Total Edge Functions | 232 | 233 (+2 gateways, -1 proxy) | 224 (-9 deprecated) |
+| Roteadores ativos | 15 | 2 gateways + 5 mantidos | 2 gateways + 5 mantidos |
+| Handlers inlinados | 17 | 17 (migrados para gateways) | 17 |
+| Hops HTTP (via ops-router) | 3 | 2 | 2 |
 
 ---
 
@@ -154,3 +118,4 @@ A consolidacao adicional alem do ops-router traz ganho marginal versus risco de 
 | Versao | Data | Autor | Alteracoes |
 |--------|------|-------|------------|
 | 1.0 | 2026-03-31 | CyberShield Engineering | Versao inicial |
+| 2.0 | 2026-04-01 | CyberShield Engineering | Fase 5: 2 super-gateways, 9 routers deprecated, security-cleanup-cron removido |
