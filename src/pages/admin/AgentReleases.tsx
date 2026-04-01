@@ -111,10 +111,10 @@ export default function AgentReleases() {
 
   const handleValidateSHA256 = async (platform: string, releaseId: string, dbSha256: string) => {
     const scriptFileName = platform === 'windows' 
-      ? 'cybershield-agent-windows-v4.ps1'
+      ? 'cybershield-agent-windows-v5.ps1'
       : platform === 'linux'
-        ? 'cybershield-agent-linux-v4.sh'
-        : 'cybershield-agent-macos-v4.sh';
+        ? 'cybershield-agent-linux-v5.sh'
+        : 'cybershield-agent-macos-v5.sh';
     
     try {
       setValidatingHash(releaseId);

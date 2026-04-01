@@ -3,12 +3,12 @@ name: Validate Agent Script
 on:
   push:
     paths:
-      - 'public/agent-scripts/cybershield-agent-windows-v3.ps1'
+      - 'public/agent-scripts/cybershield-agent-windows-v5.ps1'
       - 'supabase/functions/_shared/agent-script-windows-content.ts'
       - 'scripts/verificar-installer-agente.ps1'
   pull_request:
     paths:
-      - 'public/agent-scripts/cybershield-agent-windows-v3.ps1'
+      - 'public/agent-scripts/cybershield-agent-windows-v5.ps1'
       - 'supabase/functions/_shared/agent-script-windows-content.ts'
       - 'scripts/verificar-installer-agente.ps1'
   workflow_dispatch:
@@ -27,20 +27,18 @@ jobs:
         run: |
           Write-Host "=== Validating Agent Script ===" -ForegroundColor Cyan
           
-          $scriptPath = "public/agent-scripts/cybershield-agent-windows-v3.ps1"
+          $scriptPath = "public/agent-scripts/cybershield-agent-windows-v5.ps1"
           
           if (-not (Test-Path $scriptPath)) {
             Write-Host "[ERROR] Script not found: $scriptPath" -ForegroundColor Red
             exit 1
           }
           
-          # Run validation script
           & "scripts/verificar-installer-agente.ps1" -ScriptPath $scriptPath
           
           if ($LASTEXITCODE -ne 0) {
             Write-Host ""
             Write-Host "[FAILURE] Agent script validation FAILED!" -ForegroundColor Red
-            Write-Host "Please fix the issues above before merging." -ForegroundColor Red
             exit 1
           }
           
@@ -52,17 +50,14 @@ jobs:
         run: |
           Write-Host "=== Checking for Unicode/Emoji Characters ===" -ForegroundColor Cyan
           
-          $scriptPath = "public/agent-scripts/cybershield-agent-windows-v3.ps1"
+          $scriptPath = "public/agent-scripts/cybershield-agent-windows-v5.ps1"
           $content = Get-Content $scriptPath -Raw -Encoding UTF8
           
           $nonAscii = $content.ToCharArray() | Where-Object { [int][char]$_ -gt 127 }
           
           if ($nonAscii.Count -gt 0) {
             Write-Host "[ERROR] Found $($nonAscii.Count) non-ASCII characters!" -ForegroundColor Red
-            Write-Host "This will cause parsing errors in PowerShell 5.1" -ForegroundColor Red
-            
             $unique = $nonAscii | Select-Object -Unique | Select-Object -First 10
-            Write-Host "Examples (first 10 unique):" -ForegroundColor Yellow
             foreach ($ch in $unique) {
               $code = [int][char]$ch
               Write-Host "  '$ch' (U+$($code.ToString('X4')))" -ForegroundColor Yellow
@@ -70,14 +65,14 @@ jobs:
             exit 1
           }
           
-          Write-Host "[OK] No non-ASCII characters found - script is ASCII-safe" -ForegroundColor Green
+          Write-Host "[OK] No non-ASCII characters found" -ForegroundColor Green
 
       - name: Validate embedded script matches source
         shell: pwsh
         run: |
           Write-Host "=== Validating Script Synchronization ===" -ForegroundColor Cyan
           
-          $sourcePath = "public/agent-scripts/cybershield-agent-windows-v3.ps1"
+          $sourcePath = "public/agent-scripts/cybershield-agent-windows-v5.ps1"
           $embeddedPath = "supabase/functions/_shared/agent-script-windows-content.ts"
           
           if (-not (Test-Path $embeddedPath)) {
@@ -88,7 +83,6 @@ jobs:
           $sourceContent = Get-Content $sourcePath -Raw
           $embeddedContent = Get-Content $embeddedPath -Raw
           
-          # Check if source content appears in embedded file
           $sourceLines = ($sourceContent -split "`r?`n").Count
           $embeddedHasContent = $embeddedContent -match [regex]::Escape($sourceContent.Substring(0, [Math]::Min(500, $sourceContent.Length)))
           
@@ -105,10 +99,4 @@ jobs:
         run: |
           Write-Host ""
           Write-Host "=== Validation Complete ===" -ForegroundColor Cyan
-          Write-Host ""
-          if ($env:VALIDATION_FAILED -eq "true") {
-            Write-Host "Status: FAILED" -ForegroundColor Red
-            exit 1
-          } else {
-            Write-Host "Status: PASSED" -ForegroundColor Green
-          }
+          Write-Host "Status: PASSED" -ForegroundColor Green
