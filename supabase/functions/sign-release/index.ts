@@ -103,8 +103,9 @@ serveTenant(async (req, ctx) => {
       const body = sdParsed.data;
       const { document_name, document_content, document_hash: providedHash, invariants_version, audit_level } = body;
 
+      if (!providedHash && !document_content) return respond({ error: 'Missing document_hash OR document_content' }, 400);
+
       const privateKey = Deno.env.get('ECDSA_PRIVATE_KEY');
-      if (!privateKey) return respond({ error: 'Missing ECDSA private key' }, 400);
 
       let document_hash: string;
       let hashSource: 'provided' | 'calculated';
