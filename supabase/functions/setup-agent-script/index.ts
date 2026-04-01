@@ -16,7 +16,7 @@ serveInternal(async (_req, ctx) => {
     logger.info(`[${requestId}] Fetching agent script from storage`);
     const { data: fileData, error: storageError } = await supabase.storage
       .from('agent-installers')
-      .download('scripts/cybershield-agent-windows-v3.ps1');
+      .download('scripts/cybershield-agent-windows-v5.ps1');
 
     if (storageError || !fileData) {
       logger.info(`[${requestId}] Script not in storage, fetching from agent_releases table`);
