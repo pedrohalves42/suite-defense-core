@@ -20,7 +20,7 @@ export async function fetchForensicData(agentId: string): Promise<ForensicData> 
     .limit(5);
 
   const latestSnapshot = processRows?.[0];
-  const processes: ProcessEntry[] = ((latestSnapshot?.processes as unknown[]) || []).map((p: any) => ({
+  const processes: ProcessEntry[] = ((latestSnapshot?.processes as Record<string, unknown>[]) || []).map((p: Record<string, unknown>) => ({
     pid: p.pid, name: p.name, cpu_percent: p.cpu_percent,
     memory_mb: p.memory_mb, user: p.user, command_line: p.command_line,
   }));
