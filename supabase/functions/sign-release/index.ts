@@ -131,9 +131,9 @@ serveTenant(async (req, ctx) => {
     }
 
     case 'sign-and-register': {
-      const body = ctx.body as Record<string, unknown>;
-      const { platform, version, script_content, private_key, release_notes, channel = 'stable' } = body;
-      if (!platform || !version || !script_content || !private_key) return respond({ error: 'Missing required fields' }, 400);
+      const sarParsed = SignAndRegisterSchema.safeParse(ctx.body);
+      if (!sarParsed.success) return respond({ error: 'Invalid payload', issues: sarParsed.error.flatten().fieldErrors }, 400);
+      const { platform, version, script_content, private_key, release_notes, channel } = sarParsed.data;
 
       const sha256 = await calculateSha256(script_content as string);
       const signature = await signWithPrivateKey(sha256, private_key as string);
