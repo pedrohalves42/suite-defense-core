@@ -5,8 +5,14 @@ import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { checkQuotaAvailable } from '../_shared/quota.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 const FETCH_TIMEOUT_MS = 30000;
+
+const ScanVirusSchema = z.object({
+  filePath: z.string().min(1).max(1024),
+  fileHash: z.string().min(32).max(128).regex(/^[a-fA-F0-9]+$/),
+});
 
 interface ScanResult {
   isMalicious: boolean;
@@ -43,17 +49,18 @@ async function scanWithVirusTotal(fileHash: string, apiKey: string): Promise<Sca
 
 serveAgent(async (_req, ctx) => {
   const { supabase, agentName, tenantId, body, requestId } = ctx;
-  const { filePath, fileHash } = body as { filePath?: string; fileHash?: string };
+
+  const parsed = ScanVirusSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const { filePath, fileHash } = parsed.data;
 
   const hybridAnalysisApiKey = Deno.env.get('HYBRID_ANALYSIS_API_KEY');
   const virusTotalApiKey = Deno.env.get('VIRUSTOTAL_API_KEY');
 
   if (!hybridAnalysisApiKey && !virusTotalApiKey) {
     return new Response(JSON.stringify({ error: 'Nenhum servico de scan configurado' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
-  }
-
-  if (!filePath || !fileHash) {
-    return new Response(JSON.stringify({ error: 'filePath e fileHash sao obrigatorios' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
   // Quota checks

@@ -3,35 +3,26 @@
  */
 import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const RollbackEventSchema = z.object({
+  from_version: z.string().min(1).max(50),
+  to_version: z.string().min(1).max(50),
+  reason: z.enum(['health_check_failed', 'crash_detected', 'state_machine_invalid', 'heartbeat_failed', 'manual_rollback']),
+  safe_mode_triggered: z.boolean().default(false),
+  hostname: z.string().max(255).optional(),
+  details: z.record(z.unknown()).default({}),
+});
 
 serveAgent(async (_req, ctx) => {
   const { supabase, agentId, agentName, tenantId, requestId, body, agentData } = ctx;
   const startTime = Date.now();
 
-  const {
-    from_version,
-    to_version,
-    reason,
-    safe_mode_triggered = false,
-    hostname,
-    details = {},
-  } = body as Record<string, unknown>;
-
-  // Validate required fields
-  if (!from_version || !to_version || !reason) {
-    return new Response(
-      JSON.stringify({ error: 'Missing required fields: from_version, to_version, reason' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
+  const parsed = RollbackEventSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
-
-  const validReasons = ['health_check_failed', 'crash_detected', 'state_machine_invalid', 'heartbeat_failed', 'manual_rollback'];
-  if (!validReasons.includes(reason as string)) {
-    return new Response(
-      JSON.stringify({ error: `Invalid reason. Must be one of: ${validReasons.join(', ')}` }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
+  const { from_version, to_version, reason, safe_mode_triggered, hostname, details } = parsed.data;
 
   // Check recent rollback count
   const { data: recentRollback } = await supabase

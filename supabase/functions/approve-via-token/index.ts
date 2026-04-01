@@ -6,6 +6,11 @@
 import { servePublic } from '../_shared/serve-tenant.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const ApprovalTokenSchema = z.object({
+  token: z.string().min(10).max(512),
+});
 
 interface ApprovalResult {
   success: boolean;
@@ -41,10 +46,12 @@ servePublic(async (req, ctx) => {
 
   if (req.method === 'GET') {
     const url = new URL(req.url);
-    token = url.searchParams.get('token');
+    const rawToken = url.searchParams.get('token');
+    const parseResult = ApprovalTokenSchema.safeParse({ token: rawToken });
+    token = parseResult.success ? parseResult.data.token : null;
   } else if (req.method === 'POST') {
-    const body = ctx.body as Record<string, unknown>;
-    token = (body?.token as string) || null;
+    const parseResult = ApprovalTokenSchema.safeParse(ctx.body);
+    token = parseResult.success ? parseResult.data.token : null;
   }
 
   if (!token) {

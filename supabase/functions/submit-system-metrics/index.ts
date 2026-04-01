@@ -7,29 +7,46 @@ import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 import { selectPrimaryDisk, insertDiskMetrics, DiskInfo } from './disk-processor.ts';
 import { generateAlerts, autoResolveAlerts } from './alert-engine.ts';
 import { evaluateLightMode } from './light-mode-evaluator.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-interface SystemMetrics {
-  cpu_usage_percent?: number;
-  cpu_name?: string;
-  cpu_cores?: number;
-  memory_total_gb?: number;
-  memory_used_gb?: number;
-  memory_free_gb?: number;
-  memory_usage_percent?: number;
-  disk_total_gb?: number;
-  disk_used_gb?: number;
-  disk_free_gb?: number;
-  disk_usage_percent?: number;
-  disks?: DiskInfo[];
-  network_bytes_sent?: number;
-  network_bytes_received?: number;
-  uptime_seconds?: number;
-  last_boot_time?: string;
-}
+const DiskInfoSchema = z.object({
+  drive_letter: z.string().max(10).optional(),
+  drive_label: z.string().max(255).optional(),
+  drive_type: z.string().max(50).optional(),
+  total_gb: z.number().min(0).optional(),
+  used_gb: z.number().min(0).optional(),
+  free_gb: z.number().min(0).optional(),
+  usage_percent: z.number().min(0).max(100).optional(),
+  is_system_drive: z.boolean().optional(),
+}).passthrough();
+
+const SystemMetricsSchema = z.object({
+  cpu_usage_percent: z.number().min(0).max(100).optional(),
+  cpu_name: z.string().max(255).optional(),
+  cpu_cores: z.number().int().min(1).max(1024).optional(),
+  memory_total_gb: z.number().min(0).optional(),
+  memory_used_gb: z.number().min(0).optional(),
+  memory_free_gb: z.number().min(0).optional(),
+  memory_usage_percent: z.number().min(0).max(100).optional(),
+  disk_total_gb: z.number().min(0).optional(),
+  disk_used_gb: z.number().min(0).optional(),
+  disk_free_gb: z.number().min(0).optional(),
+  disk_usage_percent: z.number().min(0).max(100).optional(),
+  disks: z.array(DiskInfoSchema).max(50).optional(),
+  network_bytes_sent: z.number().min(0).optional(),
+  network_bytes_received: z.number().min(0).optional(),
+  uptime_seconds: z.number().min(0).optional(),
+  last_boot_time: z.string().max(50).optional(),
+});
 
 serveAgent(async (_req, ctx) => {
   const { supabase, agentId, agentName, tenantId, body } = ctx;
-  const metrics = body as SystemMetrics;
+
+  const parsed = SystemMetricsSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const metrics = parsed.data as typeof parsed.data & { disks?: DiskInfo[] };
 
   logger.info('Received metrics', { agent: agentName, cpu: metrics.cpu_usage_percent, memory: metrics.memory_usage_percent, disks_count: metrics.disks?.length || 0 });
 

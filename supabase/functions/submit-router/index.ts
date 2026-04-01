@@ -16,6 +16,7 @@
 
 import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 // Direct handlers
 import { handleBackupStatus } from './handlers/backup-status.ts';
@@ -25,6 +26,10 @@ import { handleNetworkInfo } from './handlers/network-info.ts';
 import { handleProcessLineage } from './handlers/process-lineage.ts';
 import { handleRansomwareIndicator } from './handlers/ransomware-indicator.ts';
 import { handleAgentEvidence } from './handlers/agent-evidence.ts';
+
+const SubmitRouterSchema = z.object({
+  type: z.string().min(1).max(50),
+}).passthrough();
 
 type SubmitHandler = (
   supabase: import('https://esm.sh/@supabase/supabase-js@2.74.0').SupabaseClient,
@@ -54,15 +59,16 @@ const HANDLERS: Record<string, SubmitHandler> = {
 
 serveAgent(async (_req, ctx) => {
   const { supabase, agentId, agentName, tenantId, requestId, body } = ctx;
-  const payload = body as Record<string, unknown>;
-  const type = (payload.type as string) || '';
 
-  if (!type) {
+  const parsed = SubmitRouterSchema.safeParse(body);
+  if (!parsed.success) {
     return new Response(
-      JSON.stringify({ error: 'Missing "type" field', available: Object.keys(HANDLERS).filter(k => k.includes('-')) }),
+      JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors, available: Object.keys(HANDLERS).filter(k => k.includes('-')) }),
       { status: 400, headers: { 'Content-Type': 'application/json' } },
     );
   }
+  const payload = parsed.data as Record<string, unknown>;
+  const type = parsed.data.type;
 
   const handler = HANDLERS[type];
   if (!handler) {

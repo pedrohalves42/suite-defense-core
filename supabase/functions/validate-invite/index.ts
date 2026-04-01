@@ -7,6 +7,11 @@
 
 import { servePublic } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const ValidateInviteSchema = z.object({
+  token: z.string().min(10).max(512),
+});
 
 interface SafeInviteData {
   email: string;
@@ -18,14 +23,14 @@ interface SafeInviteData {
 }
 
 servePublic(async (_req, { supabase, requestId, body }) => {
-  const { token } = body;
-
-  if (!token || typeof token !== 'string' || token.length < 10) {
+  const parsed = ValidateInviteSchema.safeParse(body);
+  if (!parsed.success) {
     return new Response(
-      JSON.stringify({ error: 'Token invalido' }),
+      JSON.stringify({ error: 'Token invalido', issues: parsed.error.flatten().fieldErrors }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
+  const { token } = parsed.data;
 
   const { data: invite, error: inviteError } = await supabase
     .from('invites')

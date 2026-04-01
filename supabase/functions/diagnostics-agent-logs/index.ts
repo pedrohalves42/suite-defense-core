@@ -8,10 +8,23 @@
 
 import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const DiagnosticLogsSchema = z.object({
+  logs: z.union([z.string().max(50000), z.array(z.string().max(5000)).max(500)]),
+  log_type: z.string().min(1).max(100).optional(),
+  severity: z.enum(['info', 'warning', 'error', 'critical']).optional(),
+  timestamp: z.string().max(50).optional(),
+});
 
 serveAgent(async (_req, ctx) => {
   const { supabase, agentId, agentName, tenantId, requestId, body } = ctx;
-  const { logs, log_type, severity, timestamp } = body;
+
+  const parsed = DiagnosticLogsSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const { logs, log_type, severity, timestamp } = parsed.data;
 
   // Save logs to installation_analytics for tracking
   const { error: insertError } = await supabase
