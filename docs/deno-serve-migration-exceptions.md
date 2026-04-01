@@ -51,7 +51,7 @@
 | track-installation-event | Triple auth: agent+HMAC, JWT, anonymous |
 | validate-hmac-signature | Core HMAC validation utility |
 
-## Justified Exceptions — Special Purpose (5 functions)
+## Justified Exceptions — Special Purpose (6 functions)
 > These have unique requirements incompatible with standard middleware.
 
 | Function | Reason |
@@ -63,3 +63,12 @@
 | serve-installer | Public static file serving |
 | get-reinstall-by-name | Public agent reinstall endpoint |
 | post-installation-telemetry | Agent telemetry with flexible auth |
+
+## CI Governance Gates (Automated)
+> These scripts run in CI to prevent regressions.
+
+| Gate | File | What it checks |
+|---|---|---|
+| Middleware compliance | `ci/validate-middleware.sh` | Blocks new raw `Deno.serve()` not in exception list |
+| Zod coverage | `ci/validate-zod-coverage.sh` | Blocks functions accepting body without `safeParse` |
+| Quality gate | `scripts/ci_quality_gate.py --check-zod` | Blocks >400 lines, console.*, missing Zod on mutations |
