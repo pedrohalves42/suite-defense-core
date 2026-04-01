@@ -6,12 +6,19 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 import {
   generateKeyPair, signWithPrivateKey, signWithEd25519,
   verifyWithPublicKey, getPublicKeyFingerprint, calculateSha256,
 } from './crypto-ops.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+
+const SignSchema = z.object({ sha256: z.string().regex(/^[a-f0-9]{64}$/i), private_key: z.string().min(1).max(10000) });
+const VerifySchema = z.object({ sha256: z.string().regex(/^[a-f0-9]{64}$/i), signature_base64: z.string().min(1).max(2048), public_key: z.string().min(1).max(10000) });
+const SignExistingSchema = z.object({ release_ids: z.array(z.string().uuid()).max(100).optional(), private_key: z.string().min(1).max(10000).optional() });
+const SignDocumentSchema = z.object({ document_name: z.string().min(1).max(500), document_content: z.string().max(5_000_000).optional(), document_hash: z.string().regex(/^[a-f0-9]{64}$/i).optional(), invariants_version: z.string().max(32).optional(), audit_level: z.string().max(32).optional() });
+const SignAndRegisterSchema = z.object({ platform: z.enum(['windows', 'linux', 'macos']), version: z.string().min(1).max(32), script_content: z.string().min(1).max(5_000_000), private_key: z.string().min(1).max(10000), release_notes: z.string().max(5000).optional(), channel: z.string().max(32).default('stable') });
 
 serveTenant(async (req, ctx) => {
   const { supabase, userId } = ctx;
