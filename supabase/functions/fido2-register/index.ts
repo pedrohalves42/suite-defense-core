@@ -136,13 +136,11 @@ serveTenant(async (req, ctx) => {
 
   // ??? COMPLETE REGISTRATION ???
   if (action === 'complete') {
-    const { registrationResponse, expectedChallenge } = body;
-    if (!registrationResponse || !expectedChallenge) {
-      return new Response(
-        JSON.stringify({ error: 'registrationResponse and expectedChallenge required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+    const completeParsed = Fido2CompleteSchema.safeParse(body);
+    if (!completeParsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid payload', issues: completeParsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+    const { registrationResponse, expectedChallenge } = completeParsed.data;
 
     const challengeKey = `fido2:register:${userId}:${expectedChallenge}`;
     const { data: storedData } = await supabase

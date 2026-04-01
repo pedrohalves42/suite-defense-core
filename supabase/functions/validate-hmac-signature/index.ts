@@ -63,21 +63,20 @@ Deno.serve(async (req) => {
     
     const body = await req.json();
     
-    let validatedData;
-    try {
-      validatedData = ValidateHmacSchema.parse(body);
-    } catch (validationError: Record<string, unknown>) {
+    const parsed = ValidateHmacSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         valid: false,
         error: "Invalid payload",
         error_code: "INVALID_PAYLOAD",
-        details: validationError.message,
+        issues: parsed.error.flatten().fieldErrors,
         request_id: requestId
       }), { 
         status: 400, 
         headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
       });
     }
+    const validatedData = parsed.data;
     
     const { hmac_secret, test_payload } = validatedData;
     

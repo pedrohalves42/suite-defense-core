@@ -6,6 +6,11 @@
 
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { createAuditLog } from '../_shared/audit.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const AcceptInviteSchema = z.object({
+  token: z.string().min(1).max(512),
+});
 
 serveTenant(async (_req, ctx) => {
   const { supabase, userId, requestId, body } = ctx;
@@ -17,14 +22,14 @@ serveTenant(async (_req, ctx) => {
     );
   }
 
-  const { token: inviteToken } = body;
-
-  if (!inviteToken) {
+  const parsed = AcceptInviteSchema.safeParse(body);
+  if (!parsed.success) {
     return new Response(
-      JSON.stringify({ error: 'Token invalido' }),
+      JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
+  const inviteToken = parsed.data.token;
 
   // Get invite
   const { data: invite, error: inviteError } = await supabase

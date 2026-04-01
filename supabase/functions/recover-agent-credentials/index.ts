@@ -9,19 +9,23 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { hashToken } from '../_shared/token-hash.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const RecoverCredsSchema = z.object({
+  agent_name: z.string().trim().min(1).max(100),
+});
 
 serveTenant(async (_req, ctx) => {
   const { supabase, tenantId, userId, requestId, body: rawBody, isInternal } = ctx;
-  const body = rawBody as Record<string, unknown>;
 
-  // Validate input
-  const agentName = typeof body?.agent_name === 'string' ? body.agent_name.trim() : '';
-  if (!agentName || agentName.length > 100) {
+  const parsed = RecoverCredsSchema.safeParse(rawBody);
+  if (!parsed.success) {
     return new Response(
-      JSON.stringify({ error: 'Invalid agent_name' }),
+      JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }),
       { status: 400, headers: { 'Content-Type': 'application/json' } },
     );
   }
+  const agentName = parsed.data.agent_name;
 
   // Check role — middleware already validated JWT + tenant access
   // But we still need admin/operator/super_admin check

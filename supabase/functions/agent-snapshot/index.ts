@@ -23,20 +23,7 @@ serveTenant(async (_req, ctx) => {
   }
   const { agent_id } = parsed.data;
 
-  if (!agent_id) {
-    return new Response(
-      JSON.stringify({ error: 'agent_id is required', correlation_id: requestId }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(agent_id)) {
-    return new Response(
-      JSON.stringify({ error: 'Invalid agent_id format', correlation_id: requestId }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
+  // Validation handled by Zod above
 
   const { data: snapshot, error: rpcError } = await supabase
     .rpc('get_agent_snapshot', { p_agent_id: agent_id });
