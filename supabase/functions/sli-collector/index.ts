@@ -44,9 +44,9 @@ serveInternal(async (_req, ctx) => {
     const { data: existing } = await supabase.from('sli_metrics_hourly').select('id, total_requests, success_requests, error_requests, total_latency_ms, max_latency_ms, min_latency_ms').eq('tenant_id', tid).eq('endpoint', endpoint).eq('hour', hourStr).maybeSingle();
 
     if (existing) {
-      await supabase.from('sli_metrics_hourly').update({ total_requests: existing.total_requests + 1, success_requests: existing.success_requests + (isSuccess ? 1 : 0), error_requests: existing.error_requests + (isError ? 1 : 0), total_latency_ms: existing.total_latency_ms + ((latencyMs as number) || 0), max_latency_ms: Math.max(existing.max_latency_ms, (latencyMs as number) || 0), min_latency_ms: Math.min(existing.min_latency_ms || 999999, (latencyMs as number) || 0), updated_at: now.toISOString() }).eq('id', existing.id);
+      await supabase.from('sli_metrics_hourly').update({ total_requests: existing.total_requests + 1, success_requests: existing.success_requests + (isSuccess ? 1 : 0), error_requests: existing.error_requests + (isError ? 1 : 0), total_latency_ms: existing.total_latency_ms + (latencyMs || 0), max_latency_ms: Math.max(existing.max_latency_ms, latencyMs || 0), min_latency_ms: Math.min(existing.min_latency_ms || 999999, latencyMs || 0), updated_at: now.toISOString() }).eq('id', existing.id);
     } else {
-      await supabase.from('sli_metrics_hourly').insert({ tenant_id: tid, endpoint, hour: hourStr, total_requests: 1, success_requests: isSuccess ? 1 : 0, error_requests: isError ? 1 : 0, total_latency_ms: (latencyMs as number) || 0, max_latency_ms: (latencyMs as number) || 0, min_latency_ms: (latencyMs as number) || 0 });
+      await supabase.from('sli_metrics_hourly').insert({ tenant_id: tid, endpoint, hour: hourStr, total_requests: 1, success_requests: isSuccess ? 1 : 0, error_requests: isError ? 1 : 0, total_latency_ms: latencyMs || 0, max_latency_ms: latencyMs || 0, min_latency_ms: latencyMs || 0 });
     }
 
     if (isError) {
