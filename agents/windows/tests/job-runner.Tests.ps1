@@ -3,7 +3,8 @@ BeforeAll {
     function Get-SystemTelemetry { return @{ agent_id = "test" } }
     function Get-SecurityEvents { param([int]$Hours) return @() }
     function Invoke-SecureApi { param([string]$Endpoint, [string]$Method, [hashtable]$Body) return $null }
-    function Check-ForUpdate { }
+    function Invoke-CheckForUpdate { }
+    function Set-AgentState { param([string]$NewState, [string]$Reason) return $true }
 
     $script:Config = @{
         AgentId           = "test-agent-id"
