@@ -1,17 +1,23 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const ParamsSchema = z.object({
+  hours_back: z.coerce.number().int().min(1).max(720).default(24),
+}).passthrough();
 
 serveTenant(async (req, ctx) => {
   const { supabase, requestId, body } = ctx;
 
   // Get hours_back from body (POST) or query params (GET)
-  let hoursBack = 24;
-  if (body?.hours_back) {
-    hoursBack = parseInt(body.hours_back);
-  } else {
-    const url = new URL(req.url);
-    hoursBack = parseInt(url.searchParams.get('hours_back') || '24');
+  const rawInput = body?.hours_back
+    ? { hours_back: body.hours_back }
+    : { hours_back: new URL(req.url).searchParams.get('hours_back') || '24' };
+  const parsed = ParamsSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
+  const hoursBack = parsed.data.hours_back;
 
   const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000).toISOString();
   logger.info(`[get-rate-limit-stats][${requestId}] Fetching stats for last ${hoursBack} hours`);

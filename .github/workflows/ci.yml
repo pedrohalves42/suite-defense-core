@@ -183,3 +183,19 @@ jobs:
 
       - name: Run npm audit
         run: npm audit --audit-level=high || true
+
+  # Edge Function Governance Gates
+  edge-function-gates:
+    name: Edge Function Governance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Zod coverage
+        run: bash ci/validate-zod-coverage.sh
+
+      - name: Validate middleware usage
+        run: bash ci/validate-middleware.sh
+
+      - name: Run CI quality gate
+        run: python3 scripts/ci_quality_gate.py --check-zod --root supabase/functions
