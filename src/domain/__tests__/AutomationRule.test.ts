@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { AutomationRule } from '@/domain/entities/AutomationRule';
 import { TenantId } from '@/domain/value-objects/TenantId';
 
-const tenantId = TenantId.create('tenant-1').value;
+const tenantId = TenantId.create('00000000-0000-0000-0000-000000000001').value;
 
 describe('AutomationRule', () => {
   const validArgs = () => ({

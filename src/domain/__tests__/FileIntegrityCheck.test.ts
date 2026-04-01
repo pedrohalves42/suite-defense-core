@@ -3,8 +3,8 @@ import { FileIntegrityCheck, IntegrityStatus, ScanType, FileIntegritySeverity } 
 import { AgentId } from '@/domain/value-objects/AgentId';
 import { TenantId } from '@/domain/value-objects/TenantId';
 
-const agentId = AgentId.create('agent-1').value;
-const tenantId = TenantId.create('tenant-1').value;
+const agentId = AgentId.create('00000000-0000-0000-0000-000000000002').value;
+const tenantId = TenantId.create('00000000-0000-0000-0000-000000000001').value;
 
 describe('FileIntegrityCheck', () => {
   describe('create()', () => {
