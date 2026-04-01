@@ -5,10 +5,23 @@
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const AgentSnapshotSchema = z.object({
+  agent_id: z.string().uuid('Invalid agent_id format'),
+});
 
 serveTenant(async (_req, ctx) => {
   const { supabase, requestId, body } = ctx;
-  const { agent_id } = body as { agent_id?: string };
+
+  const parsed = AgentSnapshotSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(
+      JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors, correlation_id: requestId }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+  const { agent_id } = parsed.data;
 
   if (!agent_id) {
     return new Response(
