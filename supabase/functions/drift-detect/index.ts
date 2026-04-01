@@ -11,27 +11,23 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const DriftDetectSchema = z.object({
+  type: z.enum(['scheduled_scan', 'tenant_scan']).optional(),
+  tenantId: z.string().uuid().optional(),
+});
 
 const THRESHOLDS = { low: 5, medium: 10, high: 15 };
 
 interface ComplianceMetrics {
-  tenantId: string;
-  rlsCoverage: number;
-  mfaEnforcement: boolean;
-  auditTrailIntegrity: boolean;
-  dataRetentionDays: number;
-  encryptionAtRest: boolean;
-  encryptionInTransit: boolean;
-  backupFrequencyHours: number;
-  backupTestDays: number;
+  tenantId: string; rlsCoverage: number; mfaEnforcement: boolean;
+  auditTrailIntegrity: boolean; dataRetentionDays: number;
+  encryptionAtRest: boolean; encryptionInTransit: boolean;
+  backupFrequencyHours: number; backupTestDays: number;
 }
 
-interface Deviation {
-  metric: string;
-  expected: unknown;
-  actual: unknown;
-  points: number;
-}
+interface Deviation { metric: string; expected: unknown; actual: unknown; points: number; }
 
 serveInternal(async (req, ctx) => {
   const { supabase } = ctx;
@@ -42,41 +38,25 @@ serveInternal(async (req, ctx) => {
     const tenantId = url.searchParams.get('tenantId');
 
     if (tenantId) {
-      const { data } = await supabase
-        .from('drift_events')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .order('detected_at', { ascending: false })
-        .limit(100);
+      const { data } = await supabase.from('drift_events').select('*').eq('tenant_id', tenantId).order('detected_at', { ascending: false }).limit(100);
       return { data: data || [] };
     }
 
-    const { data } = await supabase
-      .from('drift_events')
-      .select('*')
-      .is('resolved_at', null)
-      .order('detected_at', { ascending: false })
-      .limit(100);
+    const { data } = await supabase.from('drift_events').select('*').is('resolved_at', null).order('detected_at', { ascending: false }).limit(100);
     return { data: data || [] };
   }
 
   // POST: scan
-  const body = ctx.body as Record<string, unknown>;
-  const type = body?.type as string;
-  const tenantId = body?.tenantId as string;
+  const parsed = DriftDetectSchema.safeParse(ctx.body ?? {});
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const { type, tenantId } = parsed.data;
 
   if (type === 'scheduled_scan') {
-    const { data: tenants } = await supabase
-      .from('tenants')
-      .select('id')
-      .eq('status', 'active');
-
+    const { data: tenants } = await supabase.from('tenants').select('id').eq('status', 'active');
     let scanned = 0;
-    for (const t of tenants || []) {
-      await scanTenant(supabase, t.id);
-      scanned++;
-    }
-
+    for (const t of tenants || []) { await scanTenant(supabase, t.id); scanned++; }
     logger.info(`[drift-detect] Scheduled scan completed: ${scanned} tenants`);
     return { scanned };
   }
@@ -86,10 +66,7 @@ serveInternal(async (req, ctx) => {
     return { scanned: true, tenantId };
   }
 
-  return new Response(
-    JSON.stringify({ error: 'Invalid type' }),
-    { status: 400, headers: { 'Content-Type': 'application/json' } },
-  );
+  return new Response(JSON.stringify({ error: 'Invalid type' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
 });
 
 async function scanTenant(supabase: SupabaseClient, tenantId: string) {

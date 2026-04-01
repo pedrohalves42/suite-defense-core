@@ -3,28 +3,32 @@
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const JobFailureSchema = z.object({
+  hours_back: z.number().int().min(1).max(720).default(24),
+  threshold: z.number().int().min(1).max(100).default(50),
+});
 
 interface FailurePattern {
-  agent_id: string;
-  agent_name: string;
-  job_type: string;
-  failure_count: number;
-  total_count: number;
-  failure_rate: number;
-  common_errors: string[];
-  last_failure: string;
+  agent_id: string; agent_name: string; job_type: string;
+  failure_count: number; total_count: number; failure_rate: number;
+  common_errors: string[]; last_failure: string;
 }
 
 interface TenantAnalysis {
-  tenant_id: string;
-  patterns: FailurePattern[];
-  overall_failure_rate: number;
-  recommendations: string[];
+  tenant_id: string; patterns: FailurePattern[];
+  overall_failure_rate: number; recommendations: string[];
 }
 
 serveTenant(async (_req, ctx) => {
   const { supabase, tenantId, body } = ctx;
-  const { hours_back = 24, threshold = 50 } = body as Record<string, number>;
+
+  const parsed = JobFailureSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const { hours_back, threshold } = parsed.data;
 
   logger.info(`Analyzing job failure patterns for tenant ${tenantId}, last ${hours_back}h`);
 

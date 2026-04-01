@@ -4,22 +4,24 @@
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-type DlqAction = 'resolve' | 'delete' | 'resolve_batch';
+const DlqActionSchema = z.object({
+  action: z.enum(['resolve', 'delete', 'resolve_batch']),
+  dlqItemId: z.string().uuid().optional(),
+  dlqItemIds: z.array(z.string().uuid()).max(500).optional(),
+  resolutionNotes: z.string().max(5000).optional(),
+  resolutionSource: z.enum(['human', 'system', 'auto_cleanup']).default('human'),
+});
 
-interface DlqActionRequest {
-  action: DlqAction;
-  dlqItemId?: string;
-  dlqItemIds?: string[];
-  resolutionNotes?: string;
-  resolutionSource?: 'human' | 'system' | 'auto_cleanup';
-}
-
-serveTenant<DlqActionRequest>(async (_req, ctx) => {
+serveTenant(async (_req, ctx) => {
   const { supabase, userId, body } = ctx;
-  const { action, dlqItemId, dlqItemIds, resolutionNotes, resolutionSource = 'human' } = body;
 
-  if (!action) return new Response(JSON.stringify({ error: 'Missing action parameter' }), { status: 400 });
+  const parsed = DlqActionSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const { action, dlqItemId, dlqItemIds, resolutionNotes, resolutionSource } = parsed.data;
 
   logger.info(`[dlq-action] User ${userId} performing ${action}`);
 

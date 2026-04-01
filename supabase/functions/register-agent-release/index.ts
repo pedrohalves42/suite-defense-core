@@ -7,9 +7,21 @@ import { serveTenant } from '../_shared/serve-tenant.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { signPayload } from '../_shared/crypto-utils.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const ED25519_PRIVATE_KEY = Deno.env.get('ED25519_PRIVATE_KEY');
+
+const RegisterReleaseSchema = z.object({
+  platform: z.enum(['windows', 'linux', 'macos']),
+  version: z.string().min(1).max(32),
+  script_content: z.string().min(10000).max(5_000_000),
+  release_notes: z.string().max(5000).optional(),
+  channel: z.string().max(32).default('stable'),
+  manual_sha256: z.string().regex(/^[a-f0-9]{64}$/i).optional(),
+  signature_base64: z.string().max(2048).optional(),
+  signed_by: z.string().max(100).optional(),
+});
 
 function normalizeVersion(version: string | null | undefined): string {
   return (version ?? '').trim().toLowerCase().replace(/^v/, '');
@@ -33,28 +45,18 @@ serveTenant(async (req, ctx) => {
   const origin = req.headers.get('origin');
   const requestId = crypto.randomUUID();
 
-  // Verify super_admin
   const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', userId!);
   if (!roles?.some(r => r.role === 'super_admin')) {
     return new Response(JSON.stringify({ error: 'Requires super_admin role' }), { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
   }
 
-  const payload = ctx.body as Record<string, unknown>;
-  const { platform, version, script_content, release_notes, channel = 'stable', manual_sha256, signature_base64, signed_by } = payload;
-
-  if (!platform || !version || !script_content) {
-    return new Response(JSON.stringify({ error: 'Missing required fields: platform, version, script_content' }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
+  const parsed = RegisterReleaseSchema.safeParse(ctx.body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
   }
+  const { platform, version, script_content: scriptStr, release_notes, channel, manual_sha256, signature_base64, signed_by } = parsed.data;
 
-  const scriptStr = script_content as string;
-
-  // Supply chain validation
-  const MIN_SCRIPT_SIZE = 10000;
-  if (scriptStr.length < MIN_SCRIPT_SIZE) {
-    logger.error('[register-agent-release] SUPPLY_CHAIN_VIOLATION: Script too small', { requestId, platform, version, size: scriptStr.length });
-    return new Response(JSON.stringify({ error: 'SUPPLY_CHAIN_VIOLATION', message: `Script content too small (${scriptStr.length} bytes).`, size: scriptStr.length, minRequired: MIN_SCRIPT_SIZE }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
-  }
-
+  // Platform validation
   // Platform validation
   const scriptTrimmed = scriptStr.trim();
   const isWindowsScript = scriptTrimmed.startsWith('<#') || scriptTrimmed.startsWith('param(');
@@ -72,14 +74,14 @@ serveTenant(async (req, ctx) => {
   if (!embeddedVersion) {
     return new Response(JSON.stringify({ error: 'Embedded version not found in script content' }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
   }
-  if (normalizeVersion(embeddedVersion) !== normalizeVersion(version as string)) {
+  if (normalizeVersion(embeddedVersion) !== normalizeVersion(version)) {
     return new Response(JSON.stringify({ error: 'Embedded script version mismatch', declared_version: version, embedded_version: embeddedVersion }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
   }
 
   // SHA256
   let sha256: string;
   if (manual_sha256) {
-    sha256 = manual_sha256 as string;
+    sha256 = manual_sha256;
   } else {
     const data = new TextEncoder().encode(scriptStr);
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -91,8 +93,8 @@ serveTenant(async (req, ctx) => {
   await supabase.from('agent_releases').update({ is_active: false }).eq('platform', platform).eq('channel', channel);
 
   // Auto-sign
-  let finalSignature = signature_base64 as string | undefined;
-  let finalSignedBy = (signed_by as string) || 'manual';
+  let finalSignature = signature_base64;
+  let finalSignedBy = signed_by || 'manual';
   if (!finalSignature && ED25519_PRIVATE_KEY) {
     try {
       finalSignature = await signPayload(`release:${platform}:${version}:${sha256}`, ED25519_PRIVATE_KEY);

@@ -4,55 +4,49 @@
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const CustomTrialSchema = z.object({
+  email: z.string().email().max(255),
+  company_name: z.string().min(1).max(255),
+  contact_name: z.string().max(255).optional(),
+  trial_days: z.number().int().min(1).max(365).default(45),
+  notes: z.string().max(2000).optional(),
+});
 
 serveTenant(async (_req, ctx) => {
   const { supabase, userId, body } = ctx;
 
-  // Additional super_admin check (serveTenant validates admin/super_admin by default)
   const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', userId!);
   const isSuperAdmin = roles?.some(r => r.role === 'super_admin');
   if (!isSuperAdmin) {
-    return new Response(JSON.stringify({ error: 'Super admin access required' }), {
-      status: 403, headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({ error: 'Super admin access required' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const { email, company_name, contact_name, trial_days = 45, notes } = body as Record<string, unknown>;
-
-  if (!email || !company_name) {
-    return new Response(JSON.stringify({ error: 'Email and company_name are required' }), {
-      status: 400, headers: { 'Content-Type': 'application/json' },
-    });
+  const parsed = CustomTrialSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
-
-  if (typeof trial_days === 'number' && (trial_days < 1 || trial_days > 365)) {
-    return new Response(JSON.stringify({ error: 'Trial days must be between 1 and 365' }), {
-      status: 400, headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  const { email, company_name, contact_name, trial_days, notes } = parsed.data;
 
   // Check if email already exists
   const { data: existingUsers } = await supabase.auth.admin.listUsers();
   const emailExists = existingUsers?.users?.some(u => u.email === email);
   if (emailExists) {
-    return new Response(JSON.stringify({ error: 'Email already registered' }), {
-      status: 409, headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({ error: 'Email already registered' }), { status: 409, headers: { 'Content-Type': 'application/json' } });
   }
 
   // Generate temporary password
   const tempPassword = crypto.randomUUID().replace(/-/g, '').substring(0, 16) + 'Aa1!';
 
   const { data: newUser, error: createUserError } = await supabase.auth.admin.createUser({
-    email: email as string, password: tempPassword, email_confirm: true,
+    email, password: tempPassword, email_confirm: true,
     user_metadata: { full_name: contact_name || company_name, company_name, custom_trial: true, trial_days },
   });
 
   if (createUserError || !newUser.user) {
     logger.error('[create-custom-trial] Failed to create user:', createUserError);
-    return new Response(JSON.stringify({ error: 'Failed to create user', details: createUserError?.message }), {
-      status: 500, headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({ error: 'Failed to create user', details: createUserError?.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 
   await new Promise(resolve => setTimeout(resolve, 2000));
@@ -61,14 +55,12 @@ serveTenant(async (_req, ctx) => {
     .from('user_roles').select('tenant_id').eq('user_id', newUser.user.id).single();
 
   if (roleQueryError || !userRole?.tenant_id) {
-    return new Response(JSON.stringify({ error: 'Failed to get tenant' }), {
-      status: 500, headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({ error: 'Failed to get tenant' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 
   const tenantId = userRole.tenant_id;
   const trialEnd = new Date();
-  trialEnd.setDate(trialEnd.getDate() + (trial_days as number));
+  trialEnd.setDate(trialEnd.getDate() + trial_days);
 
   await supabase.from('tenants').update({ name: company_name }).eq('id', tenantId);
 
@@ -91,7 +83,7 @@ serveTenant(async (_req, ctx) => {
 
   logger.info(`[create-custom-trial] Created ${trial_days}-day trial for ${company_name} (${email}).`);
 
-  await supabase.auth.admin.generateLink({ type: 'recovery', email: email as string });
+  await supabase.auth.admin.generateLink({ type: 'recovery', email });
 
   return {
     success: true, tenant_id: tenantId, user_id: newUser.user.id, email, company_name,

@@ -6,21 +6,29 @@ import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 import type { TriggerEvent, PlaybookAction, RiskAnalysis, TenantSettings } from './types.ts';
 import { evaluateConditions } from './condition-engine.ts';
 import { handleSemiAutomaticApproval } from './approval-handler.ts';
+
+const PlaybookTriggerSchema = z.object({
+  tenant_id: z.string().uuid(),
+  trigger_type: z.string().min(1).max(100),
+  agent_id: z.string().uuid().optional().nullable(),
+  context: z.record(z.unknown()).default({}),
+});
 
 serveInternal(async (req, ctx) => {
   const { supabase, requestId, body } = ctx;
   const startTime = Date.now();
   const origin = req.headers.get('origin');
 
-  const { tenant_id, trigger_type, agent_id, context = {} } = body as TriggerEvent;
-
-  if (!tenant_id || !trigger_type) {
-    return new Response(JSON.stringify({ error: 'tenant_id and trigger_type are required' }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
+  const parsed = PlaybookTriggerSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
   }
+  const { tenant_id, trigger_type, agent_id, context } = parsed.data;
 
   logger.info(`[evaluate-playbook-triggers] Evaluating ${trigger_type} for tenant ${tenant_id}`);
 

@@ -4,8 +4,13 @@
  */
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 const BATCH_SIZE = 500;
+
+const EdrDetectionSchema = z.object({
+  lookback_minutes: z.number().int().min(1).max(1440).default(15),
+});
 
 interface DetectionRule {
   id: string; tenant_id: string | null; rule_name: string; severity: string;
@@ -45,8 +50,9 @@ function evaluateRule(event: Record<string, unknown>, rule: DetectionRule): bool
 
 serveInternal(async (_req, ctx) => {
   const { supabase, requestId, body } = ctx;
-  const lookbackMinutes = (body as Record<string, unknown>)?.lookback_minutes || 15;
-  const since = new Date(Date.now() - (lookbackMinutes as number) * 60 * 1000).toISOString();
+  const parsed = EdrDetectionSchema.safeParse(body ?? {});
+  const lookbackMinutes = parsed.success ? parsed.data.lookback_minutes : 15;
+  const since = new Date(Date.now() - lookbackMinutes * 60 * 1000).toISOString();
 
   const { data: rules, error: rulesErr } = await supabase.from('detection_rules').select('*').eq('is_enabled', true);
   if (rulesErr || !rules?.length) return { message: 'No active rules', error: rulesErr?.message };

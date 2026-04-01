@@ -7,19 +7,23 @@
 
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+
+const PortableInstallerSchema = z.object({
+  agent_name: z.string().min(1).max(100),
+  enrollment_key: z.string().min(1).max(256),
+});
 
 serveTenant(async (_req, ctx) => {
   const { supabase, tenantId, userId, requestId, body } = ctx;
 
-  const { agent_name, enrollment_key } = body;
-  if (!agent_name || !enrollment_key) {
-    return new Response(
-      JSON.stringify({ error: 'Missing agent_name or enrollment_key' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
+  const parsed = PortableInstallerSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
+  const { agent_name, enrollment_key } = parsed.data;
 
   logger.info(`[generate-portable-installer][${requestId}] Generating for ${agent_name}`);
 
