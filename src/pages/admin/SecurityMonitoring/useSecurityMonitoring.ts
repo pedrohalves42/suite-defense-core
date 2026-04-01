@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import { prepareJobForInsert } from '@/lib/job-utils';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
