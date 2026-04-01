@@ -130,7 +130,15 @@ export async function authenticateAndValidateAgent(
           ),
         };
       }
-      logger.warn('HMAC verification failed - accepting legacy agent poll-jobs', { agent: agent.agent_name, errorCode: hmacResult.errorCode });
+      // v7.0 HARDENED: All agents blocked on HMAC failure (no legacy fallback)
+      logger.error('SECURITY: HMAC verification FAILED for legacy agent poll-jobs - BLOCKED', { agent: agent.agent_name, agentVersion: agentVersionStr, errorCode: hmacResult.errorCode });
+      return {
+        success: false,
+        response: new Response(
+          JSON.stringify({ error: 'HMAC verification failed', code: 'HMAC_INVALID' }),
+          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
+        ),
+      };
     }
   } else {
     if (isModernAgent) {
