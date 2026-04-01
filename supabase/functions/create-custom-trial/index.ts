@@ -60,7 +60,7 @@ serveTenant(async (_req, ctx) => {
 
   const tenantId = userRole.tenant_id;
   const trialEnd = new Date();
-  trialEnd.setDate(trialEnd.getDate() + (trial_days as number));
+  trialEnd.setDate(trialEnd.getDate() + trial_days);
 
   await supabase.from('tenants').update({ name: company_name }).eq('id', tenantId);
 
