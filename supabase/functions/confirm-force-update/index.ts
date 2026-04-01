@@ -6,6 +6,12 @@
 import { serveAgent } from '../_shared/serve-tenant.ts';
 import { normalizeVersion } from '../_shared/hexagonal/update-decision-service.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const ConfirmForceUpdateSchema = z.object({
+  new_version: z.string().min(1).max(50),
+  old_version: z.string().max(50).optional(),
+});
 
 serveAgent(async (req, ctx) => {
   const { supabase, agentId, agentName, tenantId, hmacSecret, requestId, body, agentData } = ctx;
