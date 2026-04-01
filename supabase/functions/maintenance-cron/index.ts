@@ -6,7 +6,7 @@
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { recordMetric } from '../_shared/apm.ts';
 import { logger } from '../_shared/logger.ts';
-import { createEmptyResult, runMaintenanceRpc, cleanupStuckJobs, autoCleanupJobs, runRemainingPhases, computeTotalOps } from './phase-handlers.ts';
+import { createEmptyResult, runMaintenanceRpc, cleanupStuckJobs, autoCleanupJobs, runRemainingPhases, cleanupLegacyScripts, computeTotalOps } from './phase-handlers.ts';
 
 serveInternal(async (_req, ctx) => {
   const { supabase, requestId } = ctx;
