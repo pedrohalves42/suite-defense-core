@@ -1,6 +1,6 @@
 import { Job, JobType, JobStatus, JobPriority } from '@/domain/entities/Job';
 import { JobExecution, type JobExecutionProps } from '@/domain/entities/JobExecution';
-import type { Database } from '@/integrations/supabase/types';
+import type { Database, Json } from '@/integrations/supabase/types';
 
 type JobInsert = Database['public']['Tables']['jobs']['Insert'];
 type JobExecutionInsert = Database['public']['Tables']['job_executions']['Insert'];
