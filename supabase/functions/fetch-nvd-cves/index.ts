@@ -53,11 +53,11 @@ serveInternal(async (_req, ctx) => {
 
   // Build NVD API URL
   const params = new URLSearchParams();
-  if (cveId) params.append('cveId', cveId as string);
-  else if (cpeMatchString) params.append('cpeName', cpeMatchString as string);
-  else if (keyword) { params.append('keywordSearch', keyword as string); params.append('keywordExactMatch', 'false'); }
-  if (lastModStartDate) { params.append('lastModStartDate', lastModStartDate as string); params.append('lastModEndDate', new Date().toISOString()); }
-  params.append('resultsPerPage', String(Math.min(resultsPerPage as number, 2000)));
+  if (cveId) params.append('cveId', cveId);
+  else if (cpeMatchString) params.append('cpeName', cpeMatchString);
+  else if (keyword) { params.append('keywordSearch', keyword); params.append('keywordExactMatch', 'false'); }
+  if (lastModStartDate) { params.append('lastModStartDate', lastModStartDate); params.append('lastModEndDate', new Date().toISOString()); }
+  params.append('resultsPerPage', String(Math.min(resultsPerPage, 2000)));
   params.append('startIndex', String(startIndex));
 
   const nvdUrl = `${NVD_API_BASE}?${params.toString()}`;
