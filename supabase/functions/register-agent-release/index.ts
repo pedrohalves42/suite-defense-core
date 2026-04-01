@@ -57,6 +57,7 @@ serveTenant(async (req, ctx) => {
   const { platform, version, script_content: scriptStr, release_notes, channel, manual_sha256, signature_base64, signed_by } = parsed.data;
 
   // Platform validation
+  // Platform validation
   const scriptTrimmed = scriptStr.trim();
   const isWindowsScript = scriptTrimmed.startsWith('<#') || scriptTrimmed.startsWith('param(');
   const isUnixScript = scriptTrimmed.startsWith('#!/');
