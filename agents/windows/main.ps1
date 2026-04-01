@@ -141,11 +141,12 @@ function Main {
         $Global:ServerUrl = $script:Config.ApiEndpoint
         Write-Log "Configuration loaded" "INFO"
 
-        # 2. Initialize cryptography (ECDSA/RSA)
-        $cryptoOk = Initialize-Crypto
-        if (-not $cryptoOk) {
-            Write-Log "Crypto initialization failed - using fallback" "WARN"
+        # 2. Validate HMAC secret (fail-closed: agent cannot operate without it)
+        if (-not $Global:HmacSecret) {
+            Write-Log "SECURITY: HmacSecret not configured - agent cannot authenticate. Aborting." "ERROR"
+            throw "HmacSecret is required for agent operation. Configure via secrets file or enrollment."
         }
+        Write-Log "HMAC secret validated" "INFO"
 
         # 3. Load persisted state
         Import-PersistedState

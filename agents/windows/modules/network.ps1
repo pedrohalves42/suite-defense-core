@@ -43,25 +43,29 @@ function Invoke-SecureRequest {
                 "X-Agent-Name"  = $Global:AgentName
             }
             
-            if ($Global:HmacSecret) {
-                $bodyJson = if ($Body) { if ($Body -is [string]) { $Body } else { $Body | ConvertTo-Json -Compress -Depth 10 } } else { "" }
-                $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds().ToString()
-                $nonce = [Guid]::NewGuid().ToString("N")
-                $signaturePayload = "$timestamp.$nonce.$bodyJson"
-                
-                $hmac = if ($Global:CachedHmacKey) { $Global:CachedHmacKey } else {
-                    $h = New-Object System.Security.Cryptography.HMACSHA256
-                    $h.Key = [System.Text.Encoding]::UTF8.GetBytes($Global:HmacSecret)
-                    $Global:CachedHmacKey = $h
-                    $h
-                }
-                $signatureBytes = $hmac.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($signaturePayload))
-                $signature = [BitConverter]::ToString($signatureBytes).Replace("-", "").ToLower()
-                
-                $headers["X-HMAC-Signature"] = $signature
-                $headers["X-HMAC-Timestamp"] = $timestamp
-                $headers["X-HMAC-Nonce"]     = $nonce
+            # FAIL-CLOSED: HMAC is mandatory for all requests
+            if (-not $Global:HmacSecret) {
+                Write-Log "[NETWORK] SECURITY: HmacSecret missing - blocking request (fail-closed)" "ERROR"
+                return @{ Success = $false; Error = "HmacSecret required for authenticated requests"; StatusCode = 0 }
             }
+
+            $bodyJson = if ($Body) { if ($Body -is [string]) { $Body } else { $Body | ConvertTo-Json -Compress -Depth 10 } } else { "" }
+            $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds().ToString()
+            $nonce = [Guid]::NewGuid().ToString("N")
+            $signaturePayload = "$timestamp.$nonce.$bodyJson"
+            
+            $hmac = if ($Global:CachedHmacKey) { $Global:CachedHmacKey } else {
+                $h = New-Object System.Security.Cryptography.HMACSHA256
+                $h.Key = [System.Text.Encoding]::UTF8.GetBytes($Global:HmacSecret)
+                $Global:CachedHmacKey = $h
+                $h
+            }
+            $signatureBytes = $hmac.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($signaturePayload))
+            $signature = [BitConverter]::ToString($signatureBytes).Replace("-", "").ToLower()
+            
+            $headers["X-HMAC-Signature"] = $signature
+            $headers["X-HMAC-Timestamp"] = $timestamp
+            $headers["X-HMAC-Nonce"]     = $nonce
             
             $params = @{
                 Uri             = $url

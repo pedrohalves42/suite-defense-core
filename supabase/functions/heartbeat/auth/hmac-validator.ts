@@ -101,15 +101,16 @@ export async function validateHeartbeatHmac(
     }
   }
 
-  // Legacy agent without HMAC headers — read body manually
-  let rawBody = ''
-  try {
-    rawBody = await req.clone().text()
-  } catch (err) { logger.warn('[hmac-validator] Failed to read legacy body', err); rawBody = '' }
-
-  logger.warn('Heartbeat accepted without HMAC (legacy agent)', {
+  // v7.0 HARDENED: All agents require HMAC — no legacy fallback
+  logger.error('SECURITY: Agent sent heartbeat WITHOUT HMAC headers - BLOCKED (no legacy fallback)', {
     agentName, agentVersion, ip,
   })
-
-  return { ok: true, rawBody }
+  return {
+    ok: false,
+    rawBody: '',
+    errorResponse: new Response(
+      JSON.stringify({ error: 'HMAC headers required', code: 'HMAC_MISSING' }),
+      { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
+    ),
+  }
 }

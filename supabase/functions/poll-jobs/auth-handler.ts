@@ -151,7 +151,15 @@ export async function authenticateAndValidateAgent(
         ),
       };
     }
-    logger.warn('Poll-jobs accepted without HMAC (legacy agent)', { agent: agent.agent_name, agentVersion: agentVersionStr });
+    // v7.0 HARDENED: All agents require HMAC — no legacy fallback
+    logger.error('SECURITY: Agent poll-jobs WITHOUT HMAC headers - BLOCKED (no legacy fallback)', { agent: agent.agent_name, agentVersion: agentVersionStr });
+    return {
+      success: false,
+      response: new Response(
+        JSON.stringify({ error: 'HMAC headers required', code: 'HMAC_MISSING' }),
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
+      ),
+    };
   }
 
   return {
