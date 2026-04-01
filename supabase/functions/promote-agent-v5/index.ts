@@ -58,8 +58,12 @@ serveTenant(async (req, ctx) => {
     }
   }
 
-  let body: Record<string, unknown> = {};
-  try { body = ctx.body as Record<string, unknown>; } catch { /* empty body ok */ }
+  const PromoteSchema = z.object({
+    scripts: z.record(z.enum(['windows', 'linux', 'macos']), z.string().max(5_000_000)).optional(),
+  }).passthrough();
+  const parsed = PromoteSchema.safeParse(ctx.body ?? {});
+  const body: Record<string, unknown> = parsed.success ? parsed.data : {};
+  const results: Record<string, unknown> = {};
   const results: Record<string, unknown> = {};
 
   const platforms = [
