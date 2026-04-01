@@ -75,12 +75,15 @@ export async function fetchForensicData(agentId: string): Promise<ForensicData> 
     .order('received_at', { ascending: false })
     .limit(50);
 
-  const fileEvents: FileEvent[] = ((fileRaw || []) as unknown[]).map((r: any) => ({
-    file_path: r.payload?.file_path || '',
-    event_type: r.payload?.event_type || '',
-    process_name: r.payload?.process_name || undefined,
-    is_suspicious: r.payload?.is_suspicious === true || r.payload?.is_suspicious === 'true',
-  }));
+  const fileEvents: FileEvent[] = (fileRaw || []).map((r) => {
+    const p = (r.payload ?? {}) as Record<string, unknown>;
+    return {
+      file_path: String(p.file_path || ''),
+      event_type: String(p.event_type || ''),
+      process_name: p.process_name ? String(p.process_name) : undefined,
+      is_suspicious: p.is_suspicious === true || p.is_suspicious === 'true',
+    };
+  });
 
   const { data: alertsRaw } = await supabase
     .from('system_alerts')

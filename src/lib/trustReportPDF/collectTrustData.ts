@@ -93,7 +93,7 @@ export async function collectTrustData(tenantId: string, startDate: Date, endDat
       offline: agents.filter(a => a.status !== 'online').length,
       isolated: agents.filter(a => a.is_isolated).length,
     },
-    detectionRules: { total: rules.length, enabled: rules.filter((r: any) => r.is_enabled).length, bySeverity: bySeverityRules, byTactic },
+    detectionRules: { total: rules.length, enabled: rules.filter((r) => r.is_enabled).length, bySeverity: bySeverityRules, byTactic },
     detections: { total: detections.length, bySeverity: bySeverityDet, topRules },
     alerts: { total: alerts.length, ...alertsBySev },
     threatIntel: { totalIndicators: threatInd.length, matches: threatMatches.length, lastSync, sources },
