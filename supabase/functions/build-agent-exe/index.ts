@@ -123,7 +123,7 @@ serveTenant(async (req, ctx) => {
       const { WINDOWS_INSTALLER_TEMPLATE: BASE_TEMPLATE } = await import('../_shared/installer-template.ts');
 
       // Build the full installer template with embedded agent script
-      const FULL_TEMPLATE = `# CyberShield Agent - Windows Installation Script v3.0.0-APEX
+      const FULL_TEMPLATE = `# CyberShield Agent - Windows Installation Script v5.0.15
 # Auto-generated: {{TIMESTAMP}}
 # APEX BUILD - Universal, Robust, Production-Ready
 
