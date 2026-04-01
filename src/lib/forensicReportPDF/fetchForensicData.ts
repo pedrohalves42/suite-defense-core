@@ -26,9 +26,9 @@ export async function fetchForensicData(agentId: string): Promise<ForensicData> 
   }));
 
   const suspiciousProcesses: string[][] = (processRows || [])
-    .filter((r: any) => r.suspicious_processes && (r.suspicious_processes as string[]).length > 0)
-    .map((r: any) => [
-      new Date(r.collected_at).toLocaleString('pt-BR'),
+    .filter((r) => r.suspicious_processes && (r.suspicious_processes as string[]).length > 0)
+    .map((r) => [
+      new Date(String(r.collected_at)).toLocaleString('pt-BR'),
       ...(r.suspicious_processes as string[]),
     ]);
 
