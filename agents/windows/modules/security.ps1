@@ -1,6 +1,7 @@
 <#
 .SYNOPSIS
     Security detection (EDR events, anomaly detection)
+    Note: Antivirus collection is handled by collection.ps1 (Invoke-CollectAntivirusStatus)
 #>
 
 function Get-SecurityEvents {
@@ -69,24 +70,5 @@ function Get-FirewallStatus {
     catch {
         Write-Log "Failed to get firewall status: $($_.Exception.Message)" "WARN"
         return @{}
-    }
-}
-
-function Get-AntivirusStatus {
-    try {
-        $av = Get-CimInstance -Namespace "root/SecurityCenter2" -ClassName AntiVirusProduct -ErrorAction SilentlyContinue
-        if ($av) {
-            return @($av | ForEach-Object {
-                @{
-                    name    = $_.displayName
-                    state   = $_.productState
-                    enabled = ($_.productState -band 0x1000) -ne 0
-                }
-            })
-        }
-        return @()
-    }
-    catch {
-        return @()
     }
 }
