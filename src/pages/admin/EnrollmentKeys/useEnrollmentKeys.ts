@@ -157,27 +157,4 @@ export function useEnrollmentKeys() {
   };
 }
 
-export const CountdownTimer = memo(({ expiresAt }: { expiresAt: string }) => {
-  const [timeRemaining, setTimeRemaining] = useState('');
-  const [colorClass, setColorClass] = useState('text-green-600');
-
-  useEffect(() => {
-    const updateTimer = () => {
-      const now = new Date();
-      const expiry = new Date(expiresAt);
-      const diff = expiry.getTime() - now.getTime();
-      if (diff <= 0) { setTimeRemaining('Expirado'); setColorClass('text-muted-foreground'); return; }
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      if (hours > 12) { setTimeRemaining(`${hours}h ${minutes}m`); setColorClass('text-green-600'); }
-      else if (hours >= 1) { setTimeRemaining(`${hours}h ${minutes}m`); setColorClass('text-yellow-600'); }
-      else if (minutes > 0) { setTimeRemaining(`${minutes}m`); setColorClass('text-red-600'); }
-      else { setTimeRemaining('< 1m'); setColorClass('text-red-600'); }
-    };
-    updateTimer();
-    const interval = setInterval(updateTimer, 60000);
-    return () => clearInterval(interval);
-  }, [expiresAt]);
-
-  return <span className={`font-medium ${colorClass}`}>{timeRemaining}</span>;
-});
+export { ITEMS_PER_PAGE };
