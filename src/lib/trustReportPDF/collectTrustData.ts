@@ -72,7 +72,7 @@ export async function collectTrustData(tenantId: string, startDate: Date, endDat
     if (a.status === 'resolved') alertsBySev.resolved++;
   });
 
-  const sources = [...new Set(threatInd.map((t: any) => t.source).filter(Boolean))];
+  const sources = [...new Set(threatInd.map((t) => String(t.source)).filter(Boolean))];
   const lastSync = feedSync.length > 0 ? String((feedSync as Array<Record<string, unknown>>)[0].sync_completed_at) : null;
 
   const categories: { name: string; score: number }[] = [];
