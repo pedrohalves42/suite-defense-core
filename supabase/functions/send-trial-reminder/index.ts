@@ -117,7 +117,7 @@ serveInternal(async (_req, ctx) => {
 
   logger.info(`[SEND-TRIAL-REMINDER][${requestId}] Sending ${days_remaining}-day reminder for tenant: ${tenant_id}`);
 
-  const { data: userData } = await supabase.auth.admin.getUserById(owner_user_id as string);
+  const { data: userData } = await supabase.auth.admin.getUserById(owner_user_id);
   if (!userData.user?.email) throw new Error("Owner email not found");
 
   const { data: tenantData } = await supabase.from('tenants').select('settings').eq('id', tenant_id).maybeSingle();
