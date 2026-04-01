@@ -1,4 +1,5 @@
 import type { DomainEvent } from '../shared/DomainEvent';
+import type { JobPayload } from '../entities/Job';
 
 export class JobCreatedEvent implements DomainEvent {
   readonly eventType = 'job.created';
@@ -7,7 +8,7 @@ export class JobCreatedEvent implements DomainEvent {
     public readonly aggregateId: string,
     public readonly agentId: string,
     public readonly jobType: string,
-    public readonly payload: any,
+    public readonly payload: JobPayload,
   ) {}
 }
 

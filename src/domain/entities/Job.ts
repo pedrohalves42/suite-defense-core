@@ -37,12 +37,67 @@ export enum JobPriority {
   CRITICAL = 3,
 }
 
+// ─── Payload Types ──────────────────────────────────────
+export interface HealthCheckPayload {
+  readonly type?: 'health_check';
+  readonly targets?: string[];
+  readonly timeout_seconds?: number;
+}
+
+export interface RunScriptPayload {
+  readonly type?: 'run_script';
+  readonly script_content?: string;
+  readonly script_type?: string;
+  readonly timeout_seconds?: number;
+  readonly args?: string[];
+}
+
+export interface UpdateAgentPayload {
+  readonly type?: 'update_agent';
+  readonly target_version?: string;
+  readonly download_url?: string;
+  readonly sha256?: string;
+  readonly force?: boolean;
+}
+
+export interface CollectMetricsPayload {
+  readonly type?: 'collect_system_metrics' | 'collect_process_snapshot' | 'collect_network_info';
+  readonly include_processes?: boolean;
+  readonly include_network?: boolean;
+  readonly include_certificates?: boolean;
+}
+
+export interface SecurityScanPayload {
+  readonly type?: 'security_scan';
+  readonly scan_type?: string;
+  readonly targets?: string[];
+}
+
+export interface RemediatePayload {
+  readonly type?: 'remediate';
+  readonly action?: string;
+  readonly parameters?: Record<string, unknown>;
+}
+
+/** Discriminated union for all job payloads. Use Record<string, unknown> as fallback for legacy payloads. */
+export type JobPayload =
+  | HealthCheckPayload
+  | RunScriptPayload
+  | UpdateAgentPayload
+  | CollectMetricsPayload
+  | SecurityScanPayload
+  | RemediatePayload
+  | Record<string, unknown>;
+
+/** Job result is a structured record or null when not yet completed. */
+export type JobResult = Record<string, unknown> | null;
+
 // ─── Create Props ───────────────────────────────────────
 export interface CreateJobProps {
   agentId: AgentId;
   tenantId: TenantId;
   type: JobType;
-  payload?: any;
+  payload?: JobPayload;
   priority?: number;
   timeoutSeconds?: number;
   maxRetries?: number;
@@ -57,14 +112,14 @@ export class Job extends Entity<JobId> {
   private _agentId: AgentId;
   private _tenantId: TenantId;
   private _type: JobType;
-  private _payload: any;
+  private _payload: JobPayload;
   private _priority: number;
   private _timeoutSeconds: number;
   private _status: JobStatus;
   private _deliveredAt: Date | null;
   private _startedAt: Date | null;
   private _completedAt: Date | null;
-  private _result: any;
+  private _result: JobResult;
   private _error: string | null;
   private _retryCount: number;
   private _maxRetries: number;
@@ -74,7 +129,7 @@ export class Job extends Entity<JobId> {
     agentId: AgentId,
     tenantId: TenantId,
     type: JobType,
-    payload: any,
+    payload: JobPayload,
     priority: number,
     timeoutSeconds: number,
     status: JobStatus,
@@ -126,7 +181,7 @@ export class Job extends Entity<JobId> {
     agentId: string;
     tenantId: string;
     type: string;
-    payload: any;
+    payload: JobPayload;
     priority: number;
     timeoutSeconds: number;
     status: string;
@@ -135,7 +190,7 @@ export class Job extends Entity<JobId> {
     deliveredAt: string | null;
     startedAt: string | null;
     completedAt: string | null;
-    result: any;
+    result: JobResult;
     error: string | null;
   }): Job {
     const job = new Job(
@@ -265,13 +320,13 @@ export class Job extends Entity<JobId> {
   get tenantId(): TenantId { return this._tenantId; }
   get type(): JobType { return this._type; }
   get status(): JobStatus { return this._status; }
-  get payload(): any { return this._payload; }
+  get payload(): JobPayload { return this._payload; }
   get priority(): number { return this._priority; }
   get timeoutSeconds(): number { return this._timeoutSeconds; }
   get deliveredAt(): Date | null { return this._deliveredAt; }
   get startedAt(): Date | null { return this._startedAt; }
   get completedAt(): Date | null { return this._completedAt; }
-  get result(): any { return this._result; }
+  get result(): JobResult { return this._result; }
   get error(): string | null { return this._error; }
   get retryCount(): number { return this._retryCount; }
   get maxRetries(): number { return this._maxRetries; }
