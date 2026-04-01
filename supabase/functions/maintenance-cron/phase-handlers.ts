@@ -22,6 +22,7 @@ export interface ConsolidatedResult {
   stale_updates: { cleaned: number };
   stuck_builds: { cleaned: number };
   telemetry: { cleanup_done: boolean; tenants_summarized: number };
+  legacy_cleanup: { files_removed: number; skipped_reason: string | null };
   total_operations: number;
   duration_ms: number;
 }
