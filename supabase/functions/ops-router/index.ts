@@ -1,20 +1,19 @@
 /**
- * ops-router — Unified Operations Router
- * 
- * Consolidates cleanup-router, notification-router, and evaluate-automation-rules
- * into a single entry point. Routes to existing handlers via internal HTTP dispatch
- * (each sub-router remains deployable independently for backward compatibility).
- * 
- * Namespaced actions:
- *   cleanup:telemetry, cleanup:stuck-jobs, cleanup:jobs, ...
- *   notify:email, notify:telegram, notify:dispatch, ...
- *   automation:evaluate
- * 
- * Also accepts legacy un-namespaced actions for backward compatibility.
- * 
+ * ops-router — Unified Operations Meta-Router (Phase 5)
+ *
+ * Now routes to 2 gateways instead of 11 individual routers:
+ *   - api-gateway: admin, billing, security, build, agent namespaces
+ *   - ops-gateway: check, sync, playbook, report, cleanup, notify namespaces
+ *
+ * Kept routers (different middleware, not consolidated):
+ *   - ai-router (serveTenant middleware)
+ *   - submit-router (serveAgent middleware)
+ *   - collect-router (serveAgent middleware)
+ *   - cleanup-router (complex handler modules)
+ *   - notification-router (complex handler modules)
+ *
  * Auth: assertInternalCaller with allowAuthenticatedUsers
  */
-
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
@@ -22,28 +21,31 @@ import { z } from 'https://esm.sh/zod@3.23.8';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
 const FETCH_TIMEOUT_MS = 45000;
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 
 const RouterSchema = z.object({
   action: z.string().min(1).max(80),
   payload: z.record(z.unknown()).optional().default({}),
 });
 
-// Map namespace to target function and body transform
-const NAMESPACE_TARGETS: Record<string, string> = {
-  'cleanup': 'cleanup-router',
-  'notify': 'notification-router',
+// Map namespace → gateway
+const NAMESPACE_TO_GATEWAY: Record<string, string> = {
+  // api-gateway handles platform/admin actions
+  'admin': 'api-gateway',
+  'billing': 'api-gateway',
+  'security': 'api-gateway',
+  'build': 'api-gateway',
+  'agent': 'api-gateway',
+  // ops-gateway handles operations/monitoring
+  'check': 'ops-gateway',
+  'sync': 'ops-gateway',
+  'playbook': 'ops-gateway',
+  'report': 'ops-gateway',
+  'cleanup': 'ops-gateway',
+  'notify': 'ops-gateway',
+  // Direct dispatch (different middleware, not consolidated)
   'automation': 'evaluate-automation-rules',
-  'admin': 'admin-router',
-  'billing': 'billing-router',
-  'security': 'security-router',
-  'agent': 'agent-mgmt-router',
-  'check': 'check-router',
-  'sync': 'sync-router',
-  'build': 'build-router',
-  'playbook': 'playbook-router',
 };
-
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 
 function jsonRes(data: unknown, status: number, origin: string | null) {
   return new Response(JSON.stringify(data), {
@@ -61,31 +63,10 @@ function forwardHeaders(req: Request, requestId: string): Record<string, string>
     const v = req.headers.get(name);
     if (v) h[name] = v;
   }
-  // Always include service_role if no auth present (internal dispatch)
   if (!h['Authorization']) {
     h['Authorization'] = `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`;
   }
   return h;
-}
-
-function buildBody(namespace: string, subAction: string, payload: Record<string, unknown>): string {
-  if (namespace === 'cleanup') {
-    // cleanup-router expects { action: 'telemetry', ...extraFields }
-    return JSON.stringify({ action: subAction, ...payload });
-  }
-  if (namespace === 'notify') {
-    // notification-router expects { action: 'email', payload: {...} }
-    return JSON.stringify({ action: subAction, payload });
-  }
-  if (namespace === 'automation') {
-    // evaluate-automation-rules expects flat body { tenant_id: ... }
-    return JSON.stringify(payload);
-  }
-  // All new domain routers expect { action: '...', payload: {...} }
-  if (['admin', 'billing', 'security', 'agent', 'check', 'sync', 'build', 'playbook'].includes(namespace)) {
-    return JSON.stringify({ action: subAction, payload });
-  }
-  return JSON.stringify(payload);
 }
 
 Deno.serve(async (req) => {
@@ -96,7 +77,6 @@ Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
   const startedAt = Date.now();
 
-  // Auth: internal or JWT
   const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
   if (authError) return authError;
 
@@ -114,33 +94,40 @@ Deno.serve(async (req) => {
     const namespace = colonIdx > 0 ? rawAction.substring(0, colonIdx) : null;
     const subAction = colonIdx > 0 ? rawAction.substring(colonIdx + 1) : rawAction;
 
-    if (!namespace || !NAMESPACE_TARGETS[namespace]) {
+    if (!namespace || !NAMESPACE_TO_GATEWAY[namespace]) {
       return jsonRes({
         error: `Unknown or missing namespace in action: "${rawAction}". Use format "namespace:action".`,
-        available_namespaces: Object.keys(NAMESPACE_TARGETS),
-        examples: ['cleanup:telemetry', 'notify:email', 'automation:evaluate'],
+        available_namespaces: Object.keys(NAMESPACE_TO_GATEWAY),
+        examples: ['cleanup:telemetry', 'notify:email', 'admin:create-user', 'check:check-stuck-jobs'],
       }, 400, origin);
     }
 
-    const targetFunction = NAMESPACE_TARGETS[namespace];
-    const targetUrl = `${SUPABASE_URL}/functions/v1/${targetFunction}`;
-
-    logger.info(`[${requestId}] ops-router: ${rawAction} -> ${targetFunction} (sub=${subAction})`);
-
+    const targetFunction = NAMESPACE_TO_GATEWAY[namespace];
     const headers = forwardHeaders(req, requestId);
-    const reqBody = buildBody(namespace, subAction, payload);
 
-    const response = await fetchWithTimeout(targetUrl, {
+    // For evaluate-automation-rules (direct dispatch, not a gateway)
+    if (targetFunction === 'evaluate-automation-rules') {
+      const url = `${SUPABASE_URL}/functions/v1/${targetFunction}`;
+      logger.info(`[${requestId}] ops-router: ${rawAction} → ${targetFunction} (direct)`);
+      const response = await fetchWithTimeout(url, { timeoutMs: FETCH_TIMEOUT_MS, method: 'POST', headers, body: JSON.stringify(payload) });
+      const responseBody = await response.text();
+      logger.info(`[${requestId}] ops-router: ${rawAction} done in ${Date.now() - startedAt}ms`);
+      return new Response(responseBody, { status: response.status, headers: { ...buildCorsHeaders(origin), 'Content-Type': response.headers.get('Content-Type') || 'application/json' } });
+    }
+
+    // Route to gateway — forward the full namespaced action
+    const url = `${SUPABASE_URL}/functions/v1/${targetFunction}`;
+    logger.info(`[${requestId}] ops-router: ${rawAction} → ${targetFunction}`);
+
+    const response = await fetchWithTimeout(url, {
       timeoutMs: FETCH_TIMEOUT_MS,
       method: 'POST',
       headers,
-      body: reqBody,
+      body: JSON.stringify({ action: rawAction, payload }),
     });
 
     const responseBody = await response.text();
-    const durationMs = Date.now() - startedAt;
-
-    logger.info(`[${requestId}] ops-router: ${rawAction} done in ${durationMs}ms (status=${response.status})`);
+    logger.info(`[${requestId}] ops-router: ${rawAction} done in ${Date.now() - startedAt}ms (status=${response.status})`);
 
     return new Response(responseBody, {
       status: response.status,
