@@ -3,24 +3,12 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { buildCorsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit } from "../_shared/rate-limit.ts";
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-const ValidateHmacSchema = {
-  parse: (data: Record<string, unknown>) => {
-    if (!data.hmac_secret || typeof data.hmac_secret !== 'string') {
-      throw new Error('hmac_secret is required and must be a string');
-    }
-    
-    const hexRegex = /^[0-9a-f]{64}$/i;
-    if (!hexRegex.test(data.hmac_secret)) {
-      throw new Error('hmac_secret must be 64-character hexadecimal string');
-    }
-    
-    return {
-      hmac_secret: data.hmac_secret,
-      test_payload: data.test_payload || 'test_message'
-    };
-  }
-};
+const ValidateHmacSchema = z.object({
+  hmac_secret: z.string().regex(/^[0-9a-f]{64}$/i, 'Must be 64-character hexadecimal string'),
+  test_payload: z.string().max(1024).default('test_message'),
+});
 
 function hexToBytes(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2);
