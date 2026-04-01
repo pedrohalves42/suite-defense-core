@@ -66,6 +66,6 @@ Deno.serve(async (request) => {
     return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" }, status: 200 });
   } catch (err) {
     logger.error("[STRIPE-WEBHOOK] Error:", err);
-    return new Response(JSON.stringify({ error: `Webhook error: ${err instanceof Error ? err.message : 'Unknown'}` }), { status: 400 });
+    return new Response(JSON.stringify({ error: `Webhook error: ${err instanceof Error ? err.message : 'Unknown'}`, traceId }), { status: 400 });
   }
 });

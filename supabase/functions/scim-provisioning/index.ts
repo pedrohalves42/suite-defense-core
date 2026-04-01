@@ -60,6 +60,8 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { headers: scimHeaders, status: 204 });
   }
 
+  const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
+
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
