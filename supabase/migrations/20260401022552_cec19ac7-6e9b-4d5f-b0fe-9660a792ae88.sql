@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.validate_governance_coverage(uuid) TO authenticated;
