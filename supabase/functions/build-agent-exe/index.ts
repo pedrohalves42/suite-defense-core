@@ -287,7 +287,7 @@ try {
       const workflowPayload = {
         ps1_content_base64: ps1Base64,
         output_name: `CyberShield-Agent-${agent_name}-${Date.now()}.exe`,
-        version: '3.0.0',
+        version: '5.0.15',
         build_id: buildRecord.id,
         callback_url: `${SUPABASE_URL}/functions/v1/build-callback`,
         callback_token: SUPABASE_SERVICE_ROLE_KEY,

@@ -308,7 +308,7 @@ chcp 65001 >nul 2>&1
 title CyberShield Agent Installer - ${agentName}
 
 :: ============================================
-:: CyberShield Portable Installer v3.0.0
+:: CyberShield Portable Installer v5.0.15
 :: Agent: ${agentName}
 :: Generated: ${new Date().toISOString()}
 :: ============================================
