@@ -39,10 +39,9 @@ export function useAIInsightsData() {
     queryKey: ['ai-insights'],
     queryFn: async () => {
       const params = new URLSearchParams({ page: '1', limit: '50' });
-      const { data, error } = await supabase.functions.invoke(
-        `ai-get-insights?${params.toString()}`,
-        { method: 'GET' }
-      );
+      const { data, error } = await supabase.functions.invoke('ai-router', {
+        body: { action: 'get-insights', payload: { page: '1', limit: '50' } }
+      });
       if (error) throw error;
       return data as { insights: AIInsight[]; statistics: Statistics };
     },
