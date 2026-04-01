@@ -74,7 +74,7 @@ serveTenant(async (req, ctx) => {
   if (!embeddedVersion) {
     return new Response(JSON.stringify({ error: 'Embedded version not found in script content' }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
   }
-  if (normalizeVersion(embeddedVersion) !== normalizeVersion(version as string)) {
+  if (normalizeVersion(embeddedVersion) !== normalizeVersion(version)) {
     return new Response(JSON.stringify({ error: 'Embedded script version mismatch', declared_version: version, embedded_version: embeddedVersion }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
   }
 
