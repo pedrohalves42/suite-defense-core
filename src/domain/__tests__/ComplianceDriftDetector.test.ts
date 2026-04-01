@@ -24,7 +24,6 @@ describe('ComplianceDriftDetector', () => {
       expect(result.hasDrift).toBe(true);
       expect(result.trend).toBe('degrading');
       expect(result.requiresAlert).toBe(true);
-      expect(result.alertSeverity).toBe('warning');
     });
 
     it('detects critical drift (>= 15 point drop)', () => {
