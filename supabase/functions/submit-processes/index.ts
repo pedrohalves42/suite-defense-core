@@ -203,7 +203,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    logger.error('Error in submit-processes:', error);
+    logger.error('Error in submit-processes:', { error, traceId });
     return secureErrorResponse(
       error instanceof Error ? error.message : 'Unknown error',
       500
