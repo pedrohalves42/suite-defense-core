@@ -37,7 +37,7 @@ describe('job-utils', () => {
     });
 
     it('handles job without payload', async () => {
-      const job = { type: 'check' };
+      const job = { payload: undefined };
       const result = await prepareJobForInsert(job);
       expect(result.payload_hash).toBeTruthy();
     });
