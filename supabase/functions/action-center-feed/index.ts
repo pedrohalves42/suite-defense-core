@@ -39,7 +39,16 @@ serveTenant(async (req, ctx) => {
   }
 
   if (req.method === 'POST') {
-    const body = ctx.body as Record<string, unknown>;
+    const { z } = await import('https://esm.sh/zod@3.23.8');
+    const ActionSchema = z.object({
+      action: z.string().min(1).max(200),
+      payload: z.record(z.unknown()).optional(),
+    }).passthrough();
+    const parsed = ActionSchema.safeParse(ctx.body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    const body = parsed.data as Record<string, unknown>;
 
     // Create user-context client for function invocations
     const authHeader = req.headers.get('Authorization') || '';

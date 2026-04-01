@@ -41,7 +41,14 @@ serveTenant(async (_req, ctx) => {
     );
   }
 
-  const action = body?.action as string | undefined;
+  const parsedBody = BodySchema.safeParse(body);
+  if (!parsedBody.success) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Invalid input', issues: parsedBody.error.flatten().fieldErrors, requestId }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+  const action = parsedBody.data.action;
 
   // ===== ACTION: list-all =====
   if (action === 'list-all') {

@@ -36,15 +36,18 @@ servePublic(async (req, ctx) => {
   const { supabase, requestId, body: rawBody } = ctx;
   const origin = req.headers.get('origin');
   const startedAt = Date.now();
-  const body = rawBody as Record<string, unknown>;
-  const action = body.action as string;
-
-  if (!action) {
+  const CleanupSchema = z.object({
+    action: z.string().min(1).max(100),
+  }).passthrough();
+  const parsed = CleanupSchema.safeParse(rawBody);
+  if (!parsed.success) {
     return new Response(
-      JSON.stringify({ error: 'Missing required field: action', requestId }),
+      JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors, requestId }),
       { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
     );
   }
+  const body = rawBody as Record<string, unknown>;
+  const action = parsed.data.action;
 
   logger.info(`[${requestId}] [cleanup-router] Action: ${action}`);
 
