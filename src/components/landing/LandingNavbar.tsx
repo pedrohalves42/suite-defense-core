@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import cybershieldLogo from "@/assets/logo-cybshield-new.png";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { LogIn } from "lucide-react";
 
 /**
- * Minimal landing page navbar — no menu, just trust + CTA
- * Per wireframe: logo left, "Suporte em português" + demo button right
+ * Minimal landing page navbar — logo left, trust + login + CTA right
  */
 export function LandingNavbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -33,14 +34,29 @@ export function LandingNavbar() {
           )}>CyberShield</span>
         </div>
 
-        {/* Right: trust signal + CTA */}
-        <div className="flex items-center gap-4">
+        {/* Right: trust signal + login + CTA */}
+        <div className="flex items-center gap-3">
           <span className={cn(
             "hidden sm:inline text-sm transition-colors",
             scrolled ? "text-muted-foreground" : "text-white/60"
           )}>
             Suporte em português
           </span>
+          <Link to="/login">
+            <Button 
+              size="sm" 
+              variant="ghost"
+              className={cn(
+                "text-sm gap-1.5 transition-colors",
+                scrolled 
+                  ? "text-foreground hover:bg-muted" 
+                  : "text-white/80 hover:bg-white/10 hover:text-white"
+              )}
+            >
+              <LogIn className="h-4 w-4" />
+              Entrar
+            </Button>
+          </Link>
           <Button 
             size="sm" 
             variant="outline"
