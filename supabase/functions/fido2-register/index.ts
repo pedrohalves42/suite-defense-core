@@ -56,6 +56,10 @@ serveTenant(async (req, ctx) => {
 
   // ??? LIST KEYS ???
   if (action === 'keys' && !body.credentialId) {
+    const listParsed = Fido2KeysListSchema.safeParse(body);
+    if (!listParsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid payload', issues: listParsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
     const { data: credentials, error } = await supabase
       .from('fido2_credentials')
       .select('credential_id, device_name, created_at, last_used_at, aaguid, backed_up')
