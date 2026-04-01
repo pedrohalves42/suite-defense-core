@@ -65,7 +65,8 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
   hotfixInitProtectedSet(ctx);
   hotfixRsaGlobalsInit(ctx);
 
-  // 2. Crypto fallbacks
+  // 2. Crypto fallbacks (ECDSA → RSA)
+  hotfixEcdsaKeygenPreCheck(ctx);  // Must run FIRST: prevents ECDSA attempt on .NET 4.x
   hotfixLegacyEcdsaFallback(ctx);
   hotfixExportPkcs8RsaFallback(ctx);
   hotfixCngCleanup(ctx);
