@@ -109,8 +109,8 @@ export default function TestComplianceGenerator() {
     for (let i = 0; i < REPORT_TEMPLATES.length; i++) {
       const reportConfig = REPORT_TEMPLATES[i];
       try {
-        const result = await callEdgeFunction("report-router", {
-          action: 'compliance',
+        const result = await callEdgeFunction("ops-gateway", {
+          action: 'report:compliance',
           payload: {
             tenant_id: tenant.id,
             template_type: reportConfig.template,

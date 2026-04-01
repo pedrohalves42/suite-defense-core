@@ -85,9 +85,9 @@ export function useGenerateExecutiveReport() {
 
   return useMutation({
     mutationFn: async (date?: string) => {
-      const { data, error } = await supabase.functions.invoke('report-router', {
+      const { data, error } = await supabase.functions.invoke('ops-gateway', {
         body: {
-          action: 'executive',
+          action: 'report:executive',
           payload: {
             tenantId: tenant?.id,
             date: date || new Date().toISOString().split('T')[0],

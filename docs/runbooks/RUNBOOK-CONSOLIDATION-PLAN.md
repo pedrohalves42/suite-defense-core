@@ -81,35 +81,51 @@
 
 ---
 
-## 3. Proxima Fase: Remocao dos Roteadores Deprecados
+## 3. Migração de Callers (Concluída - Fase 6)
 
-Apos 30 dias sem chamadas diretas aos roteadores deprecados:
+Todos os callers do frontend foram migrados para usar os gateways diretamente:
 
-1. Migrar callers frontend para usar gateways diretamente
-2. Migrar cron jobs para usar gateways
-3. Remover os 9 roteadores deprecados (-9 funcoes)
+| Caller | Roteador Antigo | Gateway Novo | Status |
+|--------|----------------|--------------|--------|
+| `Reports/index.tsx` | report-router (security) | ops-gateway (report:security) | ✅ MIGRADO |
+| `TestComplianceGenerator.tsx` | report-router (compliance) | ops-gateway (report:compliance) | ✅ MIGRADO |
+| `useComplianceReport.ts` | report-router (compliance) | ops-gateway (report:compliance) | ✅ MIGRADO |
+| `useRiskDelta.ts` | report-router (executive) | ops-gateway (report:executive) | ✅ MIGRADO |
+| `CohortAnalysis.tsx` | billing-router (cohort-analysis) | api-gateway (billing:cohort-analysis) | ✅ MIGRADO |
+| `logger.ts` | sync-router (log-domain-event) | ops-gateway (sync:log-domain-event) | ✅ MIGRADO |
+| `PersistentDomainEventPublisher.ts` | sync-router (log-domain-event) | ops-gateway (sync:log-domain-event) | ✅ MIGRADO |
+| `Invites.tsx` | ops-router (notify:invite) | ops-gateway (notify:invite) | ✅ MIGRADO |
 
-### Callers a Atualizar
+### Callers mantidos no ops-router (notify:* — backward compat via meta-router)
 
-| Caller | Roteador Atual | Gateway Novo |
-|--------|---------------|--------------|
-| `useComplianceReport.ts` | report-router | ops-gateway (report:*) |
-| `AutomationRulesPanel.tsx` | ops-router | ops-router (sem mudanca) |
-| `useJobCleanup.ts` | cleanup-router | cleanup-router (mantido) |
-| `useRiskDelta.ts` | report-router | ops-gateway (report:*) |
-| `PersistentDomainEventPublisher.ts` | sync-router | ops-gateway (sync:*) |
-| `CohortAnalysis.tsx` | billing-router | api-gateway (billing:*) |
+| Caller | Action | Nota |
+|--------|--------|------|
+| `Signup.tsx` | notify:welcome | ops-router → ops-gateway (funcional) |
+| `AutomationRulesPanel.tsx` | automation:evaluate | ops-router → ops-gateway (funcional) |
+| `AlertsTab.tsx` | notify:dispatch | ops-router → ops-gateway (funcional) |
+| `useNotificationSettings.ts` | notify:dispatch / notify:scheduled-report | ops-router → ops-gateway (funcional) |
+| `TenantInvites.tsx` | notify:invite | ops-router → ops-gateway (funcional) |
 
 ---
 
-## 4. Metricas
+## 4. Proxima Fase: Remocao dos Roteadores Deprecados
 
-| Metrica | Antes (Fase 4) | Depois (Fase 5) | Meta (pos-remocao) |
-|---------|----------------|-----------------|-------------------|
-| Total Edge Functions | 232 | 233 (+2 gateways, -1 proxy) | 224 (-9 deprecated) |
-| Roteadores ativos | 15 | 2 gateways + 5 mantidos | 2 gateways + 5 mantidos |
-| Handlers inlinados | 17 | 17 (migrados para gateways) | 17 |
-| Hops HTTP (via ops-router) | 3 | 2 | 2 |
+Os 9 roteadores deprecados agora podem ser removidos, pois todos os callers diretos foram migrados:
+
+1. ~~Migrar callers frontend para usar gateways diretamente~~ ✅
+2. Migrar cron jobs para usar gateways (verificar pg_cron)
+3. Remover os 9 roteadores deprecados (-9 funcoes)
+
+---
+
+## 5. Metricas
+
+| Metrica | Antes (Fase 4) | Depois (Fase 5) | Pos-Migracao (Fase 6) | Meta (pos-remocao) |
+|---------|----------------|-----------------|----------------------|-------------------|
+| Total Edge Functions | 232 | 233 | 233 | 224 (-9 deprecated) |
+| Roteadores ativos | 15 | 2 gw + 5 mantidos | 2 gw + 5 mantidos | 2 gw + 5 mantidos |
+| Callers diretos a routers deprecated | 7 | 7 | 0 | 0 |
+| Hops HTTP (via ops-router) | 3 | 2 | 2 | 2 |
 
 ---
 
@@ -119,3 +135,4 @@ Apos 30 dias sem chamadas diretas aos roteadores deprecados:
 |--------|------|-------|------------|
 | 1.0 | 2026-03-31 | CyberShield Engineering | Versao inicial |
 | 2.0 | 2026-04-01 | CyberShield Engineering | Fase 5: 2 super-gateways, 9 routers deprecated, security-cleanup-cron removido |
+| 3.0 | 2026-04-01 | CyberShield Engineering | Fase 6: Migracao de todos os callers frontend para gateways diretos |
