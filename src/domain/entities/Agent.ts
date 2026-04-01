@@ -6,7 +6,7 @@ import { AgentId } from '../value-objects/AgentId';
 import { TenantId } from '../value-objects/TenantId';
 import { AgentVersion } from '../value-objects/AgentVersion';
 import { HmacSecret } from '../value-objects/HmacSecret';
-import { LightModeConfig } from './LightModeConfig';
+import { LightModeConfig, type LightModeConfigProps } from './LightModeConfig';
 import { AgentStateChangedEvent } from '../events/AgentEvents';
 
 // ─── Agent Lifecycle States ─────────────────────────────
@@ -58,7 +58,7 @@ export interface AgentProps {
   lastSeen: string | null;
   version: string | null;
   hmacSecret: string;
-  lightModeConfig?: any;
+  lightModeConfig?: LightModeConfigProps;
 }
 
 /**

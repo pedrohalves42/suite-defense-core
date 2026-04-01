@@ -1,6 +1,6 @@
 import { Job, JobType, JobStatus, JobPriority } from '@/domain/entities/Job';
 import { JobExecution, type JobExecutionProps } from '@/domain/entities/JobExecution';
-import type { Database } from '@/integrations/supabase/types';
+import type { Database, Json } from '@/integrations/supabase/types';
 
 type JobInsert = Database['public']['Tables']['jobs']['Insert'];
 type JobExecutionInsert = Database['public']['Tables']['job_executions']['Insert'];
@@ -39,13 +39,13 @@ export class JobMapper {
       type: entity.type,
       status: entity.status,
       priority: entity.priority,
-      payload: entity.payload,
+      payload: entity.payload as unknown as Json,
       payload_hash: '',
       retry_count: entity.retryCount,
       delivered_at: entity.deliveredAt?.toISOString() ?? null,
       started_at: entity.startedAt?.toISOString() ?? null,
       completed_at: entity.completedAt?.toISOString() ?? null,
-      output: entity.result,
+      output: entity.result as unknown as Json,
       error_message: entity.error,
     };
   }

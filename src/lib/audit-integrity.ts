@@ -8,13 +8,13 @@ export interface AuditLogWithIntegrity {
   action: string;
   resource_type: string;
   resource_id: string | null;
-  details: any | null;
+  details: Record<string, unknown> | null;
   success: boolean;
   ip_address: string | null;
   user_agent: string | null;
   request_id: string | null;
-  state_before: any | null;
-  state_after: any | null;
+  state_before: Record<string, unknown> | null;
+  state_after: Record<string, unknown> | null;
   integrity_hash: string | null;
   previous_log_hash: string | null;
 }
@@ -152,8 +152,8 @@ ${result.chain_valid
  * Compute a diff between state_before and state_after
  */
 export function computeStateDiff(
-  before: any | null,
-  after: any | null
+  before: Record<string, unknown> | null,
+  after: Record<string, unknown> | null
 ): { key: string; before: unknown; after: unknown; changed: boolean }[] {
   const diff: { key: string; before: unknown; after: unknown; changed: boolean }[] = [];
   

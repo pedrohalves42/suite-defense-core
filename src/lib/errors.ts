@@ -4,17 +4,30 @@
  * Each error carries a code, HTTP status, and optional context for observability.
  */
 
+/** Structured context attached to errors for observability and debugging. */
+export type ErrorContext = Record<string, unknown>;
+
+/** Serialized error shape returned by toJSON(). */
+export interface SerializedError {
+  name: string;
+  code: string;
+  message: string;
+  status: number;
+  timestamp: string;
+  context?: ErrorContext;
+}
+
 export class CyberShieldError extends Error {
   public readonly code: string;
   public readonly status: number;
-  public readonly context?: any;
+  public readonly context?: ErrorContext;
   public readonly timestamp: string;
 
   constructor(
     message: string,
     code: string = 'CYBERSHIELD_ERROR',
     status: number = 500,
-    context?: any
+    context?: ErrorContext
   ) {
     super(message);
     this.name = 'CyberShieldError';
@@ -24,7 +37,7 @@ export class CyberShieldError extends Error {
     this.timestamp = new Date().toISOString();
   }
 
-  toJSON(): any {
+  toJSON(): SerializedError {
     return {
       name: this.name,
       code: this.code,
@@ -37,7 +50,7 @@ export class CyberShieldError extends Error {
 }
 
 export class ValidationError extends CyberShieldError {
-  constructor(message: string, context?: any) {
+  constructor(message: string, context?: ErrorContext) {
     super(message, 'VALIDATION_ERROR', 400, context);
     this.name = 'ValidationError';
   }
@@ -70,7 +83,7 @@ export class NotFoundError extends CyberShieldError {
 }
 
 export class ConflictError extends CyberShieldError {
-  constructor(message: string, context?: any) {
+  constructor(message: string, context?: ErrorContext) {
     super(message, 'CONFLICT', 409, context);
     this.name = 'ConflictError';
   }

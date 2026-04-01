@@ -7,8 +7,10 @@ import { COLORS as C } from './types';
 import { addLogoToPDF } from '@/lib/pdfLogoHelper';
 
 interface RenderCtx {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   doc: any;
-  autoTable: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  autoTable: (...args: any[]) => void;
   y: number;
   W: number;
   H: number;

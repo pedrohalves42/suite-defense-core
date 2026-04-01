@@ -21,8 +21,10 @@ function getVerdictColor(v: ForensicData['verdict']): [number, number, number] {
 }
 
 interface Ctx {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   doc: any;
-  autoTable: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  autoTable: (...args: any[]) => void;
   y: number;
   pageWidth: number;
 }
@@ -148,7 +150,7 @@ export function renderNetworkSummary(ctx: Ctx, data: ForensicData) {
     }),
     theme: 'striped', styles: { fontSize: 7, cellPadding: 1.5 },
     headStyles: { fillColor: BLUE, textColor: 255 }, margin: { left: 14, right: 14 },
-    didParseCell: (hookData: any) => {
+    didParseCell: (hookData: { column: { index: number }; section: string; cell: { raw: unknown; styles: { textColor: number[] | number } } }) => {
       if (hookData.column.index === 3 && hookData.section === 'body') {
         const val = hookData.cell.raw;
         if (val === 'Atenção') hookData.cell.styles.textColor = [220, 20, 60];
@@ -233,7 +235,7 @@ export function renderAlerts(ctx: Ctx, data: ForensicData) {
     ]),
     theme: 'striped', styles: { fontSize: 7, cellPadding: 1.5 },
     headStyles: { fillColor: RED, textColor: 255 }, margin: { left: 14, right: 14 },
-    didParseCell: (hookData: any) => {
+    didParseCell: (hookData: { column: { index: number }; section: string; cell: { raw: unknown; styles: { textColor: number[] | number } } }) => {
       if (hookData.column.index === 1 && hookData.section === 'body') {
         const val = String(hookData.cell.raw);
         if (val === 'CRITICAL') hookData.cell.styles.textColor = [220, 20, 60];
