@@ -81,7 +81,7 @@ serveTenant(async (req, ctx) => {
   // SHA256
   let sha256: string;
   if (manual_sha256) {
-    sha256 = manual_sha256 as string;
+    sha256 = manual_sha256;
   } else {
     const data = new TextEncoder().encode(scriptStr);
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
