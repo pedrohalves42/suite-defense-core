@@ -52,7 +52,7 @@ export function useDiagnosticsCenter() {
       if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('v_problematic_agents')
-        .select('id, agent_name, hostname, os_type, status, agent_version, last_heartbeat, enrolled_at, issue_type, issue_details')
+        .select('id, agent_name, display_name, hostname, status, agent_state, agent_version, last_heartbeat, enrolled_at, problem_type, problem_since')
         .order('enrolled_at', { ascending: false });
       if (error) throw error;
       return (data || []) as unknown as ProblematicAgent[];
