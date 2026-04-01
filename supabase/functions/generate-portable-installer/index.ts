@@ -168,7 +168,7 @@ function buildInstallerPs1(params: {
 }): string {
   const { agentToken, hmacSecret, serverUrl, agentName, agentScriptContent } = params;
 
-  return `# CyberShield Agent - Windows Installation Script v3.0.0-Portable
+  return `# CyberShield Agent - Windows Installation Script v5.0.15-Portable
 # Auto-generated: ${new Date().toISOString()}
 # Portable Build - No GitHub Actions required
 
