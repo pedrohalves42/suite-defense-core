@@ -6,6 +6,11 @@
 import { servePublic } from '../_shared/serve-tenant.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const ApprovalTokenSchema = z.object({
+  token: z.string().min(10).max(512),
+});
 
 interface ApprovalResult {
   success: boolean;
