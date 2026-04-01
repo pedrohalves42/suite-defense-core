@@ -20,15 +20,15 @@ export async function fetchForensicData(agentId: string): Promise<ForensicData> 
     .limit(5);
 
   const latestSnapshot = processRows?.[0];
-  const processes: ProcessEntry[] = ((latestSnapshot?.processes as unknown[]) || []).map((p: any) => ({
-    pid: p.pid, name: p.name, cpu_percent: p.cpu_percent,
-    memory_mb: p.memory_mb, user: p.user, command_line: p.command_line,
+  const processes: ProcessEntry[] = ((latestSnapshot?.processes as Record<string, unknown>[]) || []).map((p) => ({
+    pid: Number(p.pid), name: String(p.name), cpu_percent: Number(p.cpu_percent),
+    memory_mb: Number(p.memory_mb), user: String(p.user), command_line: p.command_line ? String(p.command_line) : undefined,
   }));
 
   const suspiciousProcesses: string[][] = (processRows || [])
-    .filter((r: any) => r.suspicious_processes && (r.suspicious_processes as string[]).length > 0)
-    .map((r: any) => [
-      new Date(r.collected_at).toLocaleString('pt-BR'),
+    .filter((r) => r.suspicious_processes && (r.suspicious_processes as string[]).length > 0)
+    .map((r) => [
+      new Date(String(r.collected_at)).toLocaleString('pt-BR'),
       ...(r.suspicious_processes as string[]),
     ]);
 
@@ -40,13 +40,16 @@ export async function fetchForensicData(agentId: string): Promise<ForensicData> 
     .order('received_at', { ascending: false })
     .limit(500);
 
-  const networkEvents: NetworkEvent[] = ((netRaw || []) as unknown[]).map((r: any) => ({
-    remote_address: r.payload?.remote_address || '',
-    remote_port: Number(r.payload?.remote_port) || 0,
-    process_name: r.payload?.process_name || '',
-    direction: r.payload?.direction || '',
-    is_suspicious: r.payload?.is_suspicious === true || r.payload?.is_suspicious === 'true',
-  }));
+  const networkEvents: NetworkEvent[] = (netRaw || []).map((r) => {
+    const p = (r.payload ?? {}) as Record<string, unknown>;
+    return {
+      remote_address: String(p.remote_address || ''),
+      remote_port: Number(p.remote_port) || 0,
+      process_name: String(p.process_name || ''),
+      direction: String(p.direction || ''),
+      is_suspicious: p.is_suspicious === true || p.is_suspicious === 'true',
+    };
+  });
 
   const procMap = new Map<string, { count: number; ips: Set<string> }>();
   for (const ne of networkEvents) {
@@ -72,12 +75,15 @@ export async function fetchForensicData(agentId: string): Promise<ForensicData> 
     .order('received_at', { ascending: false })
     .limit(50);
 
-  const fileEvents: FileEvent[] = ((fileRaw || []) as unknown[]).map((r: any) => ({
-    file_path: r.payload?.file_path || '',
-    event_type: r.payload?.event_type || '',
-    process_name: r.payload?.process_name || undefined,
-    is_suspicious: r.payload?.is_suspicious === true || r.payload?.is_suspicious === 'true',
-  }));
+  const fileEvents: FileEvent[] = (fileRaw || []).map((r) => {
+    const p = (r.payload ?? {}) as Record<string, unknown>;
+    return {
+      file_path: String(p.file_path || ''),
+      event_type: String(p.event_type || ''),
+      process_name: p.process_name ? String(p.process_name) : undefined,
+      is_suspicious: p.is_suspicious === true || p.is_suspicious === 'true',
+    };
+  });
 
   const { data: alertsRaw } = await supabase
     .from('system_alerts')

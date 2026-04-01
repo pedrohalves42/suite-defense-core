@@ -44,17 +44,20 @@ export async function collectTrustData(tenantId: string, startDate: Date, endDat
 
   const bySeverityRules: Record<string, number> = {};
   const byTactic: Record<string, number> = {};
-  rules.forEach((r: any) => {
-    bySeverityRules[r.severity || 'unknown'] = (bySeverityRules[r.severity || 'unknown'] || 0) + 1;
-    const tactic = r.mitre_tactic || 'unknown';
+  rules.forEach((r) => {
+    const sev = String(r.severity || 'unknown');
+    bySeverityRules[sev] = (bySeverityRules[sev] || 0) + 1;
+    const tactic = String(r.mitre_tactic || 'unknown');
     byTactic[tactic] = (byTactic[tactic] || 0) + 1;
   });
 
   const bySeverityDet: Record<string, number> = {};
   const ruleCount: Record<string, number> = {};
-  detections.forEach((d: any) => {
-    bySeverityDet[d.severity || 'info'] = (bySeverityDet[d.severity || 'info'] || 0) + 1;
-    ruleCount[d.detection_name || 'unknown'] = (ruleCount[d.detection_name || 'unknown'] || 0) + 1;
+  detections.forEach((d) => {
+    const sev = String(d.severity || 'info');
+    bySeverityDet[sev] = (bySeverityDet[sev] || 0) + 1;
+    const name = String(d.detection_name || 'unknown');
+    ruleCount[name] = (ruleCount[name] || 0) + 1;
   });
   const topRules = Object.entries(ruleCount)
     .sort((a, b) => b[1] - a[1]).slice(0, 10)
@@ -69,7 +72,7 @@ export async function collectTrustData(tenantId: string, startDate: Date, endDat
     if (a.status === 'resolved') alertsBySev.resolved++;
   });
 
-  const sources = [...new Set(threatInd.map((t: any) => t.source).filter(Boolean))];
+  const sources = [...new Set(threatInd.map((t) => String(t.source)).filter(Boolean))];
   const lastSync = feedSync.length > 0 ? String((feedSync as Array<Record<string, unknown>>)[0].sync_completed_at) : null;
 
   const categories: { name: string; score: number }[] = [];
@@ -90,7 +93,7 @@ export async function collectTrustData(tenantId: string, startDate: Date, endDat
       offline: agents.filter(a => a.status !== 'online').length,
       isolated: agents.filter(a => a.is_isolated).length,
     },
-    detectionRules: { total: rules.length, enabled: rules.filter((r: any) => r.is_enabled).length, bySeverity: bySeverityRules, byTactic },
+    detectionRules: { total: rules.length, enabled: rules.filter((r) => r.is_enabled).length, bySeverity: bySeverityRules, byTactic },
     detections: { total: detections.length, bySeverity: bySeverityDet, topRules },
     alerts: { total: alerts.length, ...alertsBySev },
     threatIntel: { totalIndicators: threatInd.length, matches: threatMatches.length, lastSync, sources },
