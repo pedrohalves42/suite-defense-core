@@ -51,8 +51,9 @@ serveTenant(async (req, ctx) => {
     }
 
     case 'sign': {
-      const body = ctx.body as Record<string, string>;
-      if (!body.sha256 || !body.private_key) return respond({ error: 'Missing required fields: sha256, private_key' }, 400);
+      const signParsed = SignSchema.safeParse(ctx.body);
+      if (!signParsed.success) return respond({ error: 'Invalid payload', issues: signParsed.error.flatten().fieldErrors }, 400);
+      const body = signParsed.data;
       const signature = await signWithPrivateKey(body.sha256, body.private_key);
       return respond({ success: true, signature_base64: signature, sha256: body.sha256, algorithm: 'ECDSA-P256-SHA256', signed_at: new Date().toISOString(), signed_by: userEmail });
     }
