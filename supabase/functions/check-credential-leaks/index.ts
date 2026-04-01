@@ -1,11 +1,24 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const CredentialLeaksSchema = z.object({
+  password_hashes: z.array(z.string().min(1).max(128)).max(50).optional(),
+}).optional().default({});
 
 serveTenant(async (req, ctx) => {
   const { supabase, tenantId, requestId, body } = ctx;
 
-  const password_hashes = body?.password_hashes;
+  const parsed = CredentialLeaksSchema.safeParse(body ?? {});
+  if (!parsed.success) {
+    return new Response(
+      JSON.stringify({ error: 'Validation failed', issues: parsed.error.flatten().fieldErrors }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const password_hashes = parsed.data?.password_hashes;
 
   const results = {
     leaks_found: 0,
@@ -56,10 +69,9 @@ serveTenant(async (req, ctx) => {
         if (resp.ok) {
           const allBreaches = await resp.json();
           const domainBreaches = allBreaches.filter((b: Record<string, unknown>) =>
-            b.Domain?.toLowerCase().includes(monitor.email_domain.toLowerCase()) ||
-            b.Name?.toLowerCase().includes(monitor.email_domain.split('.')[0].toLowerCase())
+            (b.Domain as string)?.toLowerCase().includes(monitor.email_domain.toLowerCase()) ||
+            (b.Name as string)?.toLowerCase().includes(monitor.email_domain.split('.')[0].toLowerCase())
           );
-          // Batch upsert all breach records instead of N+1
           const breachRows = domainBreaches.slice(0, 10).map((breach: Record<string, unknown>) => ({
             tenant_id: tenantId,
             email: `*@${monitor.email_domain}`,

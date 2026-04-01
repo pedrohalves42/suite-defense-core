@@ -1,6 +1,12 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const ClassifyShadowItSchema = z.object({
+  software_names: z.array(z.string().min(1).max(255)).min(1).max(500),
+  agent_id: z.string().uuid().optional(),
+});
 
 const SHADOW_IT_RULES: Record<string, { category: string; risk: string; score: number }> = {
   'dropbox': { category: 'cloud_storage', risk: 'review', score: 60 }, 'google drive': { category: 'cloud_storage', risk: 'review', score: 40 }, 'onedrive': { category: 'cloud_storage', risk: 'approved', score: 20 }, 'mega': { category: 'cloud_storage', risk: 'blocked', score: 80 }, 'wetransfer': { category: 'cloud_storage', risk: 'review', score: 65 }, 'icloud': { category: 'cloud_storage', risk: 'review', score: 45 },
@@ -37,12 +43,16 @@ async function classifyWithAI(list: string[]) {
 
 serveTenant(async (req, ctx) => {
   const { supabase, tenantId, requestId, body } = ctx;
-  const { software_names, agent_id } = body;
-  if (!Array.isArray(software_names) || !software_names.length) {
-    return new Response(JSON.stringify({ error: 'software_names array required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+
+  const parsed = ClassifyShadowItSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Validation failed', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
+
+  const { software_names, agent_id } = parsed.data;
   logger.info(`[classify-shadow-it][${requestId}] Classifying ${software_names.length} items`);
-  const results: Record<string, any> = {}; const unknown: string[] = [];
+
+  const results: Record<string, Record<string, unknown>> = {}; const unknown: string[] = [];
   for (const name of software_names) { const l = classifyLocally(name); if (l) results[name] = { ...l, source: 'local_rules' }; else unknown.push(name); }
   if (unknown.length) {
     try { const ai = await classifyWithAI(unknown); for (const [n, c] of Object.entries(ai)) results[n] = { ...(c as Record<string, unknown>), source: 'ai' }; } catch (err) { logger.warn('[classify-shadow-it] AI classification failed, using fallback', err); }

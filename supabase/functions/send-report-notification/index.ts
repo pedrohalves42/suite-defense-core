@@ -4,19 +4,25 @@
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-interface NotificationPayload {
-  report_id?: string;
-  tenant_id?: string;
-  force?: boolean;
-}
+const NotificationSchema = z.object({
+  report_id: z.string().uuid().optional(),
+  tenant_id: z.string().uuid().optional(),
+  force: z.boolean().optional(),
+}).optional().default({});
 
 serveInternal(async (_req, ctx) => {
   const { supabase, body } = ctx;
-  const payload = body as NotificationPayload;
+
+  const parsed = NotificationSchema.safeParse(body ?? {});
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Validation failed', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  const payload = parsed.data ?? {};
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 
-  // Get pending notifications from queue
   let query = supabase
     .from("notification_queue")
     .select(`*, generated_reports!notification_queue_report_id_fkey (id, title, commercial_summary, commercial_priority, risk_score, risk_level, agent_name, report_type)`)

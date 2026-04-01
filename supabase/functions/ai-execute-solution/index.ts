@@ -1,21 +1,31 @@
 /**
- * ai-execute-solution ? Migrated to serveTenant() (V-1098)
+ * ai-execute-solution → Migrated to serveTenant() (V-1098)
  * Previously had NO caller authentication.
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-interface ExecuteSolutionRequest {
-  action_id: string;
-  solution_type: string;
-  parameters?: Record<string, any>;
-}
+const ExecuteSolutionSchema = z.object({
+  action_id: z.string().uuid('action_id must be a valid UUID'),
+  solution_type: z.enum(['cleanup_stuck_jobs', 'acknowledge_alerts', 'create_security_jobs', 'restart_agent_collection', 'cleanup_old_data']),
+  parameters: z.record(z.unknown()).optional().default({}),
+});
 
 serveTenant(async (_req, ctx) => {
   const origin = _req.headers.get("origin");
   const { tenantId, supabase, body } = ctx;
-  const { action_id, solution_type, parameters = {} } = body as ExecuteSolutionRequest;
+
+  const parsed = ExecuteSolutionSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(
+      JSON.stringify({ error: 'Validation failed', issues: parsed.error.flatten().fieldErrors }),
+      { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const { action_id, solution_type, parameters } = parsed.data;
 
   logger.info(`[AI-EXECUTE-SOLUTION] Executing ${solution_type} for action ${action_id}`);
 
@@ -24,7 +34,7 @@ serveTenant(async (_req, ctx) => {
     .from('ai_actions')
     .select('*, ai_insights(*)')
     .eq('id', action_id)
-    .eq('tenant_id', tenantId) // V-1098: Enforce tenant isolation
+    .eq('tenant_id', tenantId)
     .single();
 
   if (actionError || !action) {
@@ -74,8 +84,8 @@ serveTenant(async (_req, ctx) => {
       break;
     }
     case 'restart_agent_collection': {
-      const agent_id = parameters.agent_id;
-      if (!agent_id) throw new Error('agent_id required');
+      const agent_id = parameters.agent_id as string | undefined;
+      if (!agent_id) throw new Error('agent_id required in parameters');
 
       const onlineThreshold2 = new Date(Date.now() - 10 * 60 * 1000).toISOString();
       const { data: agent } = await supabase
@@ -98,15 +108,13 @@ serveTenant(async (_req, ctx) => {
       break;
     }
     case 'cleanup_old_data': {
-      const days = parameters.days || 7;
+      const days = (parameters.days as number) || 7;
       const { data: deletedJobs } = await supabase.from('jobs').delete()
         .eq('tenant_id', tenantId).in('status', ['failed', 'stuck'])
         .lt('created_at', new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()).select('id');
       result = { deleted_jobs: deletedJobs?.length || 0, days_threshold: days };
       break;
     }
-    default:
-      throw new Error(`Unknown solution type: ${solution_type}`);
   }
 
   // Update action status

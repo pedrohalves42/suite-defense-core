@@ -5,14 +5,25 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger, loggerWithContext } from '../_shared/logger.ts';
 import { executeActionByType } from './handlers.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const ActionExecutorSchema = z.object({
+  action_id: z.string().uuid('action_id must be a valid UUID'),
+});
 
 serveTenant(async (req, ctx) => {
   const { supabase, tenantId, userId, requestId, body } = ctx;
   const log = loggerWithContext(requestId.slice(0, 8));
 
-  const { action_id } = body as { action_id?: string };
-  if (!action_id) throw new Error('action_id is required');
+  const parsed = ActionExecutorSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(
+      JSON.stringify({ error: 'Validation failed', issues: parsed.error.flatten().fieldErrors }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
 
+  const { action_id } = parsed.data;
   log.info('Processing action', { action_id, user_id: userId });
 
   // Fetch action

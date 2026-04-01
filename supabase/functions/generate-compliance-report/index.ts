@@ -1,6 +1,15 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const ComplianceReportSchema = z.object({
+  tenant_id: z.string().uuid().optional(),
+  template: z.enum(['LGPD', 'ISO_27001', 'SOC2_LITE']).optional(),
+  template_type: z.enum(['LGPD', 'ISO_27001', 'SOC2_LITE']).optional(),
+  period_start: z.string().max(30).optional(),
+  period_end: z.string().max(30).optional(),
+}).refine(d => d.template || d.template_type, { message: 'template or template_type is required' });
 
 // Real SHA256 using Web Crypto API
 async function generateSHA256(data: string): Promise<string> {
@@ -65,13 +74,18 @@ interface ComplianceReportBody {
   period_end?: string;
 }
 
-serveTenant<ComplianceReportBody>(async (_req, ctx) => {
+serveTenant(async (_req, ctx) => {
   const origin = _req.headers.get("origin");
   const { supabase, tenantId, requestId, body } = ctx;
 
+  const parsed = ComplianceReportSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Validation failed', issues: parsed.error.flatten().fieldErrors }),
+      { status: 400, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } });
+  }
+
   logger.info(`[generate-compliance-report][${requestId}] Starting for tenant: ${tenantId}`);
 
-  // Fetch tenant name
   const { data: tenantRow } = await supabase
     .from("tenants")
     .select("name")
@@ -79,14 +93,9 @@ serveTenant<ComplianceReportBody>(async (_req, ctx) => {
     .maybeSingle();
   const tenantName = tenantRow?.name || "Empresa";
 
-  const template = (body.template ?? body.template_type) as string;
-  const periodStart = body.period_start ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const periodEnd = body.period_end ?? new Date().toISOString();
-
-  if (!["LGPD", "ISO_27001", "SOC2_LITE"].includes(template)) {
-    return new Response(JSON.stringify({ error: "Invalid template" }),
-      { status: 400, headers: { ...buildCorsHeaders(origin), "Content-Type": "application/json" } });
-  }
+  const template = (parsed.data.template ?? parsed.data.template_type) as string;
+  const periodStart = parsed.data.period_start ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const periodEnd = parsed.data.period_end ?? new Date().toISOString();
 
   // ===== DATA COLLECTION =====
   logger.info(`[generate-compliance-report][${requestId}] Collecting data...`);

@@ -5,7 +5,12 @@
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { callAIJson } from '../_shared/ai-provider-helper.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 import { buildAgentTrends, filterRiskyAgents } from './trend-analyzer.ts';
+
+const PredictSchema = z.object({
+  tenant_id: z.string().uuid().optional(),
+}).optional().default({});
 
 interface PredictionResult {
   agent_id: string; agent_name: string; failure_probability: number;
@@ -16,10 +21,15 @@ interface PredictionResult {
 serveInternal(async (_req, ctx) => {
   const { supabase, requestId, body } = ctx;
 
+  const parsed = PredictSchema.safeParse(body ?? {});
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Validation failed', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
   const { data: systemMode } = await supabase.rpc('get_system_mode_safe');
   if (systemMode === 'halt_jobs') return new Response(JSON.stringify({ success: false, error: 'SYSTEM_HALTED' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
 
-  const tenantId = (body as Record<string, unknown>)?.tenant_id as string | undefined;
+  const tenantId = parsed.data?.tenant_id;
   let tenantsQuery = supabase.from('tenants').select('id, name');
   if (tenantId) tenantsQuery = tenantsQuery.eq('id', tenantId);
   const { data: tenants } = await tenantsQuery;

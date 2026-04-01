@@ -2,11 +2,18 @@ import { serveTenant } from '../_shared/serve-tenant.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
-/** Extended timeout for this function's external calls */
 const FETCH_TIMEOUT_MS = 60000;
 
-const SYSTEM_PROMPT = `You are CyberShield Security Copilot ? an expert cybersecurity analyst assistant embedded in the CyberShield platform.
+const CopilotSchema = z.object({
+  messages: z.array(z.object({
+    role: z.enum(['user', 'assistant', 'system']),
+    content: z.string().min(1).max(10000),
+  })).min(1).max(50),
+});
+
+const SYSTEM_PROMPT = `You are CyberShield Security Copilot — an expert cybersecurity analyst assistant embedded in the CyberShield platform.
 
 Your role:
 - Analyze security alerts, vulnerabilities, and agent health data
@@ -22,7 +29,7 @@ Guidelines:
 - Reference specific agents, vulnerabilities, or alerts when applicable
 - Use markdown formatting for clarity (headers, lists, bold)
 - If you don't have enough data to answer, say so clearly
-- Never fabricate data or metrics ? only use what's provided`;
+- Never fabricate data or metrics — only use what's provided`;
 
 async function getTenantContext(supabase: ReturnType<typeof createClient>, tenantId: string) {
   const [agents, alerts, vulns, insights] = await Promise.all([
@@ -47,10 +54,10 @@ async function getTenantContext(supabase: ReturnType<typeof createClient>, tenan
 ${(agents.data || []).slice(0, 10).map(a => `- ${a.hostname}: ${a.status} | OS: ${a.os_type} | v${a.agent_version} | Health: ${a.health_score ?? 'N/A'}`).join('\n')}
 
 ### Alertas Abertos (${(alerts.data || []).length} total, ${criticalAlerts} criticos)
-${(alerts.data || []).slice(0, 10).map(a => `- [${a.severity?.toUpperCase()}] ${a.title} (${a.alert_type}) ? ${a.status}`).join('\n') || 'Nenhum alerta aberto'}
+${(alerts.data || []).slice(0, 10).map(a => `- [${a.severity?.toUpperCase()}] ${a.title} (${a.alert_type}) — ${a.status}`).join('\n') || 'Nenhum alerta aberto'}
 
 ### Vulnerabilidades Abertas (${(vulns.data || []).length})
-${(vulns.data || []).slice(0, 10).map(v => `- [${v.severity?.toUpperCase()}] ${v.cve_id || 'N/A'}: ${v.title} ? ${v.affected_software || 'N/A'}`).join('\n') || 'Nenhuma vulnerabilidade aberta'}
+${(vulns.data || []).slice(0, 10).map(v => `- [${v.severity?.toUpperCase()}] ${v.cve_id || 'N/A'}: ${v.title} — ${v.affected_software || 'N/A'}`).join('\n') || 'Nenhuma vulnerabilidade aberta'}
 
 ### Insights de IA Recentes
 ${(insights.data || []).slice(0, 5).map(i => `- [${i.severity}] ${i.title}: ${i.description?.substring(0, 100)}`).join('\n') || 'Nenhum insight recente'}
@@ -67,13 +74,14 @@ serveTenant(async (req, ctx) => {
     });
   }
 
-  const { messages } = body || {};
-  if (!messages || !Array.isArray(messages)) {
-    return new Response(JSON.stringify({ error: 'messages array required' }), {
+  const parsed = CopilotSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Validation failed', issues: parsed.error.flatten().fieldErrors }), {
       status: 400, headers: { 'Content-Type': 'application/json' },
     });
   }
 
+  const { messages } = parsed.data;
   const tenantContext = await getTenantContext(supabase, tenantId);
 
   const response = await fetchWithTimeout('https://ai.gateway.lovable.dev/v1/chat/completions', { timeoutMs: FETCH_TIMEOUT_MS,
@@ -110,7 +118,6 @@ serveTenant(async (req, ctx) => {
     });
   }
 
-  // Return streaming response directly
   return new Response(response.body, {
     headers: { 'Content-Type': 'text/event-stream' },
   });

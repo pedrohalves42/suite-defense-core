@@ -4,6 +4,16 @@
  */
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const ReportPayloadSchema = z.object({
+  tenant_id: z.string().uuid(),
+  agent_id: z.string().uuid().optional(),
+  agent_name: z.string().max(255).optional(),
+  job_id: z.string().uuid().optional(),
+  job_type: z.string().max(100).optional(),
+  triggered_by: z.enum(['job_completion', 'scheduled', 'manual']),
+});
 
 interface ReportGenerationPayload {
   tenant_id: string;
@@ -55,14 +65,15 @@ function generateCommercialSummary(stats: Record<string, unknown>, riskLevel: st
 
 serveInternal(async (_req, ctx) => {
   const { supabase, body } = ctx;
-  const payload = body as ReportGenerationPayload;
 
-  logger.info('[auto-generate-report] Starting:', payload);
-
-  const { tenant_id, agent_id, agent_name, job_id, job_type, triggered_by } = payload;
-  if (!tenant_id) {
-    return new Response(JSON.stringify({ error: 'tenant_id is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  const parsed = ReportPayloadSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Validation failed', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
+
+  const { tenant_id, agent_id, agent_name, job_id, job_type, triggered_by } = parsed.data;
+
+  logger.info('[auto-generate-report] Starting:', parsed.data);
 
   const { data: tenantData } = await supabase.from('tenants').select('name').eq('id', tenant_id).single();
   const tenantName = tenantData?.name;
