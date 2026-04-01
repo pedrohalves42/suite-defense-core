@@ -1,10 +1,11 @@
 <#
 .SYNOPSIS
     Watchdog, TOCTOU self-healing and auto-recovery
-    v6.0-fix: Uses BOM-safe hashing aligned with v5 agent
+    v6.0: BOM-safe hashing, UpdateInProgress guard, fault counting with exponential backoff
 #>
 
 $script:FaultCount = 0
+$script:MaxFaultsBeforeRecovery = 3
 
 function Get-BOMSafeFileHash {
     <#
@@ -22,9 +23,15 @@ function Get-BOMSafeFileHash {
             $rawBytes = $rawBytes[3..($rawBytes.Length - 1)]
         }
         $sha256 = [System.Security.Cryptography.SHA256]::Create()
-        $hashBytes = $sha256.ComputeHash($rawBytes)
-        return [BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
-    } catch {
+        try {
+            $hashBytes = $sha256.ComputeHash($rawBytes)
+            return [BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
+        }
+        finally {
+            $sha256.Dispose()
+        }
+    }
+    catch {
         throw "Get-BOMSafeFileHash failed for ${FilePath}: $($_.Exception.Message)"
     }
 }
@@ -34,19 +41,34 @@ function Start-Watchdog {
 
     while ($true) {
         try {
-            # Check script integrity
+            # Skip integrity check during legitimate updates (TOCTOU guard)
+            if ($Global:UpdateInProgress) {
+                Write-Log "Update in progress - skipping integrity check" "DEBUG"
+                Start-Sleep -Seconds $script:Config.WatchdogInterval
+                continue
+            }
+
             $integrityOk = Test-ScriptIntegrity -ScriptPath $script:Config.ScriptPath
             if (-not $integrityOk) {
                 Write-Log "Integrity violation detected - initiating recovery" "ERROR"
                 $script:FaultCount++
 
-                if ($script:FaultCount -ge 3) {
-                    Write-Log "Multiple integrity failures - attempting full recovery" "ERROR"
-                    Invoke-AgentRecovery
-                    $script:FaultCount = 0
+                if ($script:FaultCount -ge $script:MaxFaultsBeforeRecovery) {
+                    Write-Log "Multiple integrity failures ($($script:FaultCount)) - attempting full recovery" "ERROR"
+                    $recovered = Invoke-AgentRecovery
+                    if ($recovered) {
+                        $script:FaultCount = 0
+                    }
+                    else {
+                        Write-Log "Recovery failed - entering safe mode" "ERROR"
+                        Set-AgentState -NewState "SAFE_MODE" -Reason "Recovery failed after $($script:FaultCount) integrity violations"
+                    }
                 }
             }
             else {
+                if ($script:FaultCount -gt 0) {
+                    Write-Log "Integrity restored after $($script:FaultCount) fault(s)" "INFO"
+                }
                 $script:FaultCount = 0
             }
 
@@ -73,7 +95,11 @@ function Test-ScriptIntegrity {
         return $false
     }
 
-    # v6.0-fix: BOM-safe hash (aligned with v5 Get-BOMSafeFileHash)
+    # TOCTOU guard: skip during legitimate update operations
+    if ($Global:UpdateInProgress) {
+        return $true
+    }
+
     $actualHash = Get-BOMSafeFileHash -FilePath $ScriptPath
 
     $cachePath = "$script:DataDir\expected_script_hash.json"
@@ -114,18 +140,24 @@ function Invoke-AgentRecovery {
     # Try backup first
     if (Test-Path $script:Config.BackupPath) {
         Write-Log "Restoring from backup" "INFO"
-        Copy-Item $script:Config.BackupPath $script:Config.ScriptPath -Force
+        try {
+            $Global:UpdateInProgress = $true
+            Copy-Item $script:Config.BackupPath $script:Config.ScriptPath -Force
 
-        if (Test-ScriptIntegrity -ScriptPath $script:Config.ScriptPath) {
-            Write-Log "Backup restoration successful" "INFO"
-            return $true
+            if (Test-ScriptIntegrity -ScriptPath $script:Config.ScriptPath) {
+                Write-Log "Backup restoration successful" "INFO"
+                return $true
+            }
+        }
+        finally {
+            $Global:UpdateInProgress = $false
         }
     }
 
-    # Download fresh copy from server
+    # Download fresh copy from server (download-verify-execute pattern)
     Write-Log "Downloading fresh agent script" "INFO"
     try {
-        $tempFile = "$script:TempDir\recovery_agent.ps1"
+        $tempFile = "$script:TempDir\recovery_agent_$(Get-Random).ps1"
         $response = Invoke-SecureApi -Endpoint "serve-agent-update" -Method "GET"
 
         if ($response -and $response.script_content) {
@@ -136,18 +168,41 @@ function Invoke-AgentRecovery {
                 $downloadHash = Get-BOMSafeFileHash -FilePath $tempFile
                 if ($downloadHash -ne $response.script_hash) {
                     Write-Log "Downloaded script hash mismatch - recovery aborted" "ERROR"
+                    Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
                     return $false
                 }
             }
 
-            Copy-Item $script:Config.ScriptPath $script:Config.BackupPath -Force -ErrorAction SilentlyContinue
-            Move-Item $tempFile $script:Config.ScriptPath -Force
-            Write-Log "Recovery download successful" "INFO"
-            return $true
+            # ASCII safety check
+            $content = Get-Content $tempFile -Raw -Encoding UTF8
+            $nonAscii = $content.ToCharArray() | Where-Object { [int][char]$_ -gt 127 }
+            if ($nonAscii.Count -gt 0) {
+                Write-Log "Downloaded script contains $($nonAscii.Count) non-ASCII chars - recovery aborted" "ERROR"
+                Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+                return $false
+            }
+
+            try {
+                $Global:UpdateInProgress = $true
+                Copy-Item $script:Config.ScriptPath $script:Config.BackupPath -Force -ErrorAction SilentlyContinue
+                Move-Item $tempFile $script:Config.ScriptPath -Force
+
+                # Update hash cache
+                $newHash = Get-BOMSafeFileHash -FilePath $script:Config.ScriptPath
+                @{ hash = $newHash; updated = (Get-Date -Format "o") } | ConvertTo-Json | Out-File "$script:DataDir\expected_script_hash.json" -Encoding UTF8 -Force
+                $Global:BootScriptHash = $newHash
+
+                Write-Log "Recovery download successful" "INFO"
+                return $true
+            }
+            finally {
+                $Global:UpdateInProgress = $false
+            }
         }
     }
     catch {
         Write-Log "Recovery download failed: $($_.Exception.Message)" "ERROR"
+        Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
     }
 
     return $false

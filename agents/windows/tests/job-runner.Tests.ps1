@@ -3,7 +3,8 @@ BeforeAll {
     function Get-SystemTelemetry { return @{ agent_id = "test" } }
     function Get-SecurityEvents { param([int]$Hours) return @() }
     function Invoke-SecureApi { param([string]$Endpoint, [string]$Method, [hashtable]$Body) return $null }
-    function Check-ForUpdate { }
+    function Invoke-CheckForUpdate { }
+    function Set-AgentState { param([string]$NewState, [string]$Reason) return $true }
 
     $script:Config = @{
         AgentId           = "test-agent-id"
@@ -44,8 +45,8 @@ Describe "Invoke-AgentJob Dispatcher" {
 
     It "Returns system info for collect_info" {
         $result = Invoke-AgentJob -JobId "test-2" -JobType "collect_info" -Timeout 10
-        $result.success | Should -BeTrue
-        $result.output | Should -Not -BeNullOrEmpty
+        $result.hostname | Should -Not -BeNullOrEmpty
+        $result.agent_version | Should -Be "6.0.0"
     }
 
     It "Rejects unknown job type" {
