@@ -39,7 +39,7 @@ export class JobMapper {
       type: entity.type,
       status: entity.status,
       priority: entity.priority,
-      payload: entity.payload as Record<string, unknown>,
+      payload: entity.payload as unknown as Json,
       payload_hash: '',
       retry_count: entity.retryCount,
       delivered_at: entity.deliveredAt?.toISOString() ?? null,
