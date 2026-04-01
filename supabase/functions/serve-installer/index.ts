@@ -1,19 +1,16 @@
-import { requireEnv } from '../_shared/env.ts';
 /**
- * serve-installer Edge Function (Modularized)
- *
- * Generates and serves custom agent installer scripts with embedded credentials.
- * Security: Validates enrollment keys, enforces rate limits, and ensures HMAC secrets.
- * Platforms: Windows (PowerShell), Linux (Bash), macOS (Bash)
+ * serve-installer - Generates custom agent installer scripts
+ * 
+ * MIGRATED to servePublic middleware
+ * Auth: Enrollment key (public with rate limit)
  */
-
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { logger } from '../_shared/logger.ts';
+import { servePublic } from '../_shared/serve-tenant.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
+import { requireEnv } from '../_shared/env.ts';
+import { logger } from '../_shared/logger.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
 import { INSTALLER_VERSION, LAST_UPDATED, getVersionInfo } from '../_shared/installer-version.ts';
-
 import { validateNoPlaceholders, validateInstallerScript } from './validation.ts';
 import { resolveAgent } from './agent-resolver.ts';
 import { buildInstallerScript } from './script-builder.ts';
@@ -21,36 +18,19 @@ import { persistInstallerHash, trackDownloadEvent } from './telemetry.ts';
 
 const SUPABASE_URL = requireEnv('SUPABASE_URL');
 
-Deno.serve(async (req) => {
-  const origin = req.headers.get("origin");
-  const requestId = crypto.randomUUID();
+servePublic(async (req, ctx) => {
+  const { supabase: supabaseClient, requestId } = ctx;
+  const origin = req.headers.get('origin');
   const startTime = Date.now();
 
   logger.info('[serve-installer] Function started', { timestamp: new Date().toISOString(), requestId, method: req.method });
 
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: buildCorsHeaders(origin) });
-  }
-
   // Health check
   if (req.method === 'GET' && new URL(req.url).pathname === '/serve-installer') {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const healthy = !!(supabaseUrl && supabaseServiceKey);
+    const healthy = true; // env already validated by requireEnv
     return new Response(
-      JSON.stringify({ status: healthy ? 'healthy' : 'unhealthy', timestamp: new Date().toISOString(), service: 'serve-installer', checks: { env_vars: healthy, supabase_url: !!supabaseUrl, service_role_key: !!supabaseServiceKey } }),
-      { status: healthy ? 200 : 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-    );
-  }
-
-  // Validate environment
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!supabaseUrl || !supabaseServiceKey) {
-    logger.error('[serve-installer] CRITICAL: Missing environment variables', { requestId, hasUrl: !!supabaseUrl, hasKey: !!supabaseServiceKey });
-    return new Response(
-      JSON.stringify({ error: 'Server configuration error', details: 'Missing required environment variables', timestamp: new Date().toISOString(), requestId }),
-      { status: 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
+      JSON.stringify({ status: 'healthy', timestamp: new Date().toISOString(), service: 'serve-installer', checks: { env_vars: healthy } }),
+      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
     );
   }
 
@@ -63,14 +43,12 @@ Deno.serve(async (req) => {
 
       // Rate limiting
       const clientIp = req.headers.get('cf-connecting-ip') || req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-      const supabaseClient = createClient(SUPABASE_URL, requireEnv('SUPABASE_SERVICE_ROLE_KEY'));
-
       const rateLimitResult = await checkRateLimit(supabaseClient, clientIp, 'serve-installer', { maxRequests: 10, windowMinutes: 60, blockMinutes: 30 });
       if (!rateLimitResult.allowed) {
         logger.warn(`[${requestId}] Rate limit exceeded for IP: ${clientIp}`, { resetAt: rateLimitResult.resetAt });
         return new Response(
           JSON.stringify({ error: 'Too many requests', message: 'Rate limit exceeded. Please try again later.', retryAfter: rateLimitResult.resetAt?.toISOString() }),
-          { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json', 'Retry-After': rateLimitResult.resetAt ? Math.ceil((rateLimitResult.resetAt.getTime() - Date.now()) / 1000).toString() : '1800' } }
+          { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json', 'Retry-After': rateLimitResult.resetAt ? Math.ceil((rateLimitResult.resetAt.getTime() - Date.now()) / 1000).toString() : '1800' } },
         );
       }
 
@@ -94,8 +72,7 @@ Deno.serve(async (req) => {
         .select('agent_id, is_active, expires_at, tenant_id')
         .eq('key_hash', enrollmentKeyHash)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(1).maybeSingle();
 
       if (enrollmentError || !enrollmentData) {
         return new Response('Invalid or expired enrollment key', { status: 404, headers: buildCorsHeaders(origin) });
@@ -152,7 +129,6 @@ Deno.serve(async (req) => {
       // Validate installer
       const validationError = validateInstallerScript(templateContent, platform, agentData.agent_name, requestId, origin);
       if (validationError) return validationError;
-
       validateNoPlaceholders(templateContent, platform, requestId);
 
       // Persist hash & track
@@ -192,7 +168,7 @@ Deno.serve(async (req) => {
     logger.error(`[${requestId}] Failed after ${duration}ms:`, error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error', requestId }),
-      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
     );
   }
 });
