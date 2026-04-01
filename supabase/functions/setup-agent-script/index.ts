@@ -48,7 +48,7 @@ serveInternal(async (_req, ctx) => {
       const scriptBlob = new Blob([release.script_content], { type: 'text/plain' });
       const { error: uploadError } = await supabase.storage
         .from('agent-installers')
-        .upload('scripts/cybershield-agent-windows-v3.ps1', scriptBlob, { upsert: true, contentType: 'text/plain' });
+        .upload('scripts/cybershield-agent-windows-v5.ps1', scriptBlob, { upsert: true, contentType: 'text/plain' });
 
       if (uploadError) {
         return new Response(

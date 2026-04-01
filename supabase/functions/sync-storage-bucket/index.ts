@@ -60,10 +60,10 @@ serveTenant(async (_req, ctx) => {
 
   // Determine storage path
   const scriptFileName = platform === 'windows'
-    ? 'cybershield-agent-windows-v3.ps1'
+    ? 'cybershield-agent-windows-v5.ps1'
     : platform === 'linux'
-      ? 'cybershield-agent-linux-v3.sh'
-      : 'cybershield-agent-macos-v3.sh';
+      ? 'cybershield-agent-linux-v5.sh'
+      : 'cybershield-agent-macos-v5.sh';
 
   const filePath = `scripts/${scriptFileName}`;
 

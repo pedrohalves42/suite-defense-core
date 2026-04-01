@@ -62,7 +62,7 @@ serveTenant(async (_req, ctx) => {
   // Fetch agent script from storage
   const { data: fileData, error: storageErr } = await supabase.storage
     .from('agent-installers')
-    .download('scripts/cybershield-agent-windows-v3.ps1');
+    .download('scripts/cybershield-agent-windows-v5.ps1');
 
   if (storageErr || !fileData) {
     logger.error(`[generate-portable-installer][${requestId}] Storage error:`, storageErr);

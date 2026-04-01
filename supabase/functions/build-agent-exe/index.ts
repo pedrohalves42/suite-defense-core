@@ -99,7 +99,7 @@ serveTenant(async (req, ctx) => {
 
       const { data: fileData, error: storageError } = await supabase.storage
         .from('agent-installers')
-        .download('scripts/cybershield-agent-windows-v3.ps1');
+        .download('scripts/cybershield-agent-windows-v5.ps1');
 
       if (storageError || !fileData) {
         return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Agent script not found in storage', 503, requestId);
