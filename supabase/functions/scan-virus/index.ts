@@ -5,8 +5,14 @@ import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { checkQuotaAvailable } from '../_shared/quota.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 const FETCH_TIMEOUT_MS = 30000;
+
+const ScanVirusSchema = z.object({
+  filePath: z.string().min(1).max(1024),
+  fileHash: z.string().min(32).max(128).regex(/^[a-fA-F0-9]+$/),
+});
 
 interface ScanResult {
   isMalicious: boolean;
