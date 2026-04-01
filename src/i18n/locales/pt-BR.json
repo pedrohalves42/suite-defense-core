@@ -566,10 +566,62 @@
       "badge": "Planos",
       "title": "Planos que cabem na sua operação",
       "subtitle": "Escolha o plano ideal para o tamanho do seu ambiente",
-      "plans": {},
       "perMonth": "/mês",
       "baseDevices": "dispositivos inclusos",
-      "extraDevice": "por dispositivo extra"
+      "extraDevice": "por dispositivo extra",
+      "plans": {
+        "starter": {
+          "name": "Starter Compliance",
+          "badge": "",
+          "description": "Para empresas que precisam de proteção essencial e conformidade básica.",
+          "price": "499",
+          "baseInfo": "Base: 10 dispositivos • +R$ 39/adicional",
+          "maxInfo": "Até 50 dispositivos",
+          "features": [
+            "Gestão de endpoints",
+            "Monitoramento contínuo",
+            "Relatórios de compliance",
+            "Automação básica",
+            "Suporte em português",
+            "Evidências auditáveis"
+          ],
+          "cta": "Começar agora"
+        },
+        "business": {
+          "name": "Business",
+          "badge": "Mais popular",
+          "description": "Para operações que exigem EDR completo, automação avançada e multi-tenant.",
+          "price": "899",
+          "baseInfo": "Base: 20 dispositivos • +R$ 24/adicional",
+          "maxInfo": "Até 200 dispositivos",
+          "features": [
+            "Tudo do Starter +",
+            "EDR integrado completo",
+            "Automação avançada",
+            "Operação multi-tenant",
+            "Histórico confiável de ações",
+            "Governança e rastreabilidade"
+          ],
+          "cta": "Começar agora"
+        },
+        "enterprise": {
+          "name": "Enterprise",
+          "badge": "",
+          "description": "Para MSPs e grandes operações que precisam de escala e personalização.",
+          "price": "Sob consulta",
+          "baseInfo": "Para empresas +200 dispositivos ou MSPs",
+          "maxInfo": "Dispositivos ilimitados",
+          "features": [
+            "Tudo do Business +",
+            "Dispositivos ilimitados",
+            "SLA dedicado",
+            "Onboarding personalizado",
+            "API e integrações customizadas",
+            "Desconto progressivo MSP"
+          ],
+          "cta": "Falar com especialista"
+        }
+      }
     },
     "testimonials": {
       "title": "O que nossos clientes dizem",
