@@ -179,7 +179,7 @@ $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 Write-Host "==================================" -ForegroundColor Cyan
-Write-Host "CyberShield Agent Installer v3.0.0" -ForegroundColor Cyan
+Write-Host "CyberShield Agent Installer v5.0.15" -ForegroundColor Cyan
 Write-Host "Portable Build" -ForegroundColor Cyan
 Write-Host "==================================" -ForegroundColor Cyan
 Write-Host ""
