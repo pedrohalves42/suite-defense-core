@@ -66,8 +66,8 @@ export default function Reports() {
     const payload: Record<string, string> = { format };
     if (selectedAgent !== 'all') payload.agent_id = selectedAgent;
     const { data, error } = await supabase.functions.invoke(
-      'report-router',
-      { body: { action: 'security', payload } }
+      'ops-gateway',
+      { body: { action: 'report:security', payload } }
     );
     if (error) throw new Error(`Erro ao buscar dados: ${error.message}`);
     if (!data) throw new Error('Nenhum dado retornado do servidor');

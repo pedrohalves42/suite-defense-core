@@ -47,8 +47,8 @@ export class PersistentDomainEventPublisher implements DomainEventDispatcher {
         tenant_id: this.extractTenantId(event),
       }));
 
-      const { error } = await supabase.functions.invoke('sync-router', {
-        body: { action: 'log-domain-event', payload: rows },
+      const { error } = await supabase.functions.invoke('ops-gateway', {
+        body: { action: 'sync:log-domain-event', payload: rows },
       });
 
       if (error) {

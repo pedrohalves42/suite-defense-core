@@ -41,7 +41,7 @@ export default function Invites() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ops-router`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ops-gateway`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,

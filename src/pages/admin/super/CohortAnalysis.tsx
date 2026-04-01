@@ -31,8 +31,8 @@ export default function CohortAnalysis() {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) throw new Error("Not authenticated");
 
-      const response = await supabase.functions.invoke("billing-router", {
-        body: { action: "cohort-analysis", payload: {} },
+      const response = await supabase.functions.invoke("api-gateway", {
+        body: { action: "billing:cohort-analysis", payload: {} },
       });
 
       if (response.error) throw response.error;
