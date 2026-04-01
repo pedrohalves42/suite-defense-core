@@ -68,7 +68,9 @@ serveTenant(async (req, ctx) => {
     }
 
     case 'sign-existing': {
-      const body = ctx.body as Record<string, unknown>;
+      const seParsed = SignExistingSchema.safeParse(ctx.body);
+      if (!seParsed.success) return respond({ error: 'Invalid payload', issues: seParsed.error.flatten().fieldErrors }, 400);
+      const body = seParsed.data;
       const { release_ids } = body;
       const privateKey = Deno.env.get('ECDSA_PRIVATE_KEY') || (body.private_key as string);
       if (!privateKey) return respond({ error: 'Missing ECDSA private key' }, 400);
