@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ComplianceScoreCalculator, ComplianceCategory } from '../../services/ComplianceScoreCalculator';
+import { ComplianceScoreCalculator, ComplianceCategory } from '@/domain/services/ComplianceScoreCalculator';
 
 describe('ComplianceScoreCalculator', () => {
   const calculator = new ComplianceScoreCalculator();

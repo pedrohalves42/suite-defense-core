@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { BehavioralBaseline, BaselineType, AnomalySeverity } from '../../entities/BehavioralBaseline';
-import { AgentId } from '../../value-objects/AgentId';
-import { TenantId } from '../../value-objects/TenantId';
+import { BehavioralBaseline, BaselineType, AnomalySeverity } from '@/domain/entities/BehavioralBaseline';
+import { AgentId } from '@/domain/value-objects/AgentId';
+import { TenantId } from '@/domain/value-objects/TenantId';
 
 const agentId = AgentId.create('agent-1').value;
 const tenantId = TenantId.create('tenant-1').value;

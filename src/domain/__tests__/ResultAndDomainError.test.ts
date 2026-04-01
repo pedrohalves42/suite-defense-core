@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { Result } from '../../shared/Result';
-import { DomainError, InvalidArgumentError, BusinessRuleViolationError } from '../../shared/DomainError';
+import { Result } from '@/domain/shared/Result';
+import { DomainError, InvalidArgumentError, BusinessRuleViolationError } from '@/domain/shared/DomainError';
 
 describe('Result', () => {
   describe('success()', () => {

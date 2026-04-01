@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { AutomationRule } from '../../entities/AutomationRule';
-import { TenantId } from '../../value-objects/TenantId';
+import { AutomationRule } from '@/domain/entities/AutomationRule';
+import { TenantId } from '@/domain/value-objects/TenantId';
 
 const tenantId = TenantId.create('tenant-1').value;
 

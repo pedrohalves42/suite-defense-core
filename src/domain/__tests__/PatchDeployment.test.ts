@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { PatchDeployment, PatchDeploymentStatus, DeploymentType, DeploymentPriority, ValidationStatus } from '../../entities/PatchDeployment';
-import { AgentId } from '../../value-objects/AgentId';
-import { TenantId } from '../../value-objects/TenantId';
+import { PatchDeployment, PatchDeploymentStatus, DeploymentType, DeploymentPriority, ValidationStatus } from '@/domain/entities/PatchDeployment';
+import { AgentId } from '@/domain/value-objects/AgentId';
+import { TenantId } from '@/domain/value-objects/TenantId';
 
 const agentId = AgentId.create('agent-1').value;
 const tenantId = TenantId.create('tenant-1').value;

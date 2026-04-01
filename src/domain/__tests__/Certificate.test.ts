@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { Certificate, CertStore } from '../../entities/Certificate';
-import { AgentId } from '../../value-objects/AgentId';
-import { TenantId } from '../../value-objects/TenantId';
+import { Certificate, CertStore } from '@/domain/entities/Certificate';
+import { AgentId } from '@/domain/value-objects/AgentId';
+import { TenantId } from '@/domain/value-objects/TenantId';
 
 const agentId = AgentId.create('agent-1').value;
 const tenantId = TenantId.create('tenant-1').value;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ComplianceDriftDetector } from '../../services/ComplianceDriftDetector';
+import { ComplianceDriftDetector } from '@/domain/services/ComplianceDriftDetector';
 
 describe('ComplianceDriftDetector', () => {
   const detector = new ComplianceDriftDetector();

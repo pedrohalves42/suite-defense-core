@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { CpuMetrics, MemoryMetrics, DiskMetrics, HardwareMetrics } from '../../entities/HardwareMetrics';
-import { AgentId } from '../../value-objects/AgentId';
-import { TenantId } from '../../value-objects/TenantId';
+import { CpuMetrics, MemoryMetrics, DiskMetrics, HardwareMetrics } from '@/domain/entities/HardwareMetrics';
+import { AgentId } from '@/domain/value-objects/AgentId';
+import { TenantId } from '@/domain/value-objects/TenantId';
 
 const agentId = AgentId.create('agent-1').value;
 const tenantId = TenantId.create('tenant-1').value;

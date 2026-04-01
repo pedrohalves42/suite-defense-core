@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { FileIntegrityCheck, IntegrityStatus, ScanType, FileIntegritySeverity } from '../../entities/FileIntegrityCheck';
-import { AgentId } from '../../value-objects/AgentId';
-import { TenantId } from '../../value-objects/TenantId';
+import { FileIntegrityCheck, IntegrityStatus, ScanType, FileIntegritySeverity } from '@/domain/entities/FileIntegrityCheck';
+import { AgentId } from '@/domain/value-objects/AgentId';
+import { TenantId } from '@/domain/value-objects/TenantId';
 
 const agentId = AgentId.create('agent-1').value;
 const tenantId = TenantId.create('tenant-1').value;
