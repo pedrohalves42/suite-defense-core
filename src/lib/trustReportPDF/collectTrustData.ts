@@ -44,17 +44,20 @@ export async function collectTrustData(tenantId: string, startDate: Date, endDat
 
   const bySeverityRules: Record<string, number> = {};
   const byTactic: Record<string, number> = {};
-  rules.forEach((r: any) => {
-    bySeverityRules[r.severity || 'unknown'] = (bySeverityRules[r.severity || 'unknown'] || 0) + 1;
-    const tactic = r.mitre_tactic || 'unknown';
+  rules.forEach((r) => {
+    const sev = String(r.severity || 'unknown');
+    bySeverityRules[sev] = (bySeverityRules[sev] || 0) + 1;
+    const tactic = String(r.mitre_tactic || 'unknown');
     byTactic[tactic] = (byTactic[tactic] || 0) + 1;
   });
 
   const bySeverityDet: Record<string, number> = {};
   const ruleCount: Record<string, number> = {};
-  detections.forEach((d: any) => {
-    bySeverityDet[d.severity || 'info'] = (bySeverityDet[d.severity || 'info'] || 0) + 1;
-    ruleCount[d.detection_name || 'unknown'] = (ruleCount[d.detection_name || 'unknown'] || 0) + 1;
+  detections.forEach((d) => {
+    const sev = String(d.severity || 'info');
+    bySeverityDet[sev] = (bySeverityDet[sev] || 0) + 1;
+    const name = String(d.detection_name || 'unknown');
+    ruleCount[name] = (ruleCount[name] || 0) + 1;
   });
   const topRules = Object.entries(ruleCount)
     .sort((a, b) => b[1] - a[1]).slice(0, 10)
