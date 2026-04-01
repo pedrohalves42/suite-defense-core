@@ -58,7 +58,7 @@ serveInternal(async (_req, ctx) => {
   if (!downloadUrlData) return new Response(JSON.stringify({ success: false, error: 'URL generation failed' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
 
   const duration = Math.floor((Date.now() - new Date(buildData.build_started_at).getTime()) / 1000);
-  await supabase.from('agent_builds').update({ build_status: 'completed', build_completed_at: new Date().toISOString(), build_duration_seconds: duration, file_path: storagePath, file_size_bytes: size_bytes as number, sha256_hash: sha256 as string, download_url: downloadUrlData.signedUrl, download_expires_at: new Date(Date.now() + 86400000).toISOString(), github_run_id: github_run_id as string }).eq('id', build_id);
+  await supabase.from('agent_builds').update({ build_status: 'completed', build_completed_at: new Date().toISOString(), build_duration_seconds: duration, file_path: storagePath, file_size_bytes: size_bytes || 0, sha256_hash: sha256 || null, download_url: downloadUrlData.signedUrl, download_expires_at: new Date(Date.now() + 86400000).toISOString(), github_run_id: github_run_id || null }).eq('id', build_id);
 
   logger.info(`[${requestId}] Build completed`, { build_id, duration_seconds: duration });
   return { success: true };
