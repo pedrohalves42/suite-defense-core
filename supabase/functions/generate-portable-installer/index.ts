@@ -141,7 +141,7 @@ serveTenant(async (_req, ctx) => {
     file_path: fileName,
     download_url: signedData?.signedUrl || null,
     download_expires_at: new Date(Date.now() + 3600000).toISOString(),
-    ps1_version: 'v3.0.0-portable',
+    ps1_version: 'v5.0.15-portable',
     build_duration_seconds: 0,
   });
 
