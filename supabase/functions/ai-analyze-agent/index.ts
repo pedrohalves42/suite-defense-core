@@ -1,5 +1,5 @@
 /**
- * ai-analyze-agent ? Migrated to serveTenant() (V-1097)
+ * ai-analyze-agent → Migrated to serveTenant() (V-1097)
  * Previously had NO authentication at all.
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
@@ -8,6 +8,27 @@ import { sanitizeForAI } from '../_shared/ai-sanitizer.ts';
 import { callAIJson } from '../_shared/ai-provider-helper.ts';
 import { AIEvidence, buildEvidence, calculateConfidence, generateReasoningSummary, extractDataSources } from '../_shared/ai-evidence-types.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+const AnalyzeAgentSchema = z.object({
+  agent: z.object({
+    id: z.string().min(1),
+    agent_name: z.string().min(1).max(255),
+    os_type: z.string().max(100),
+    hostname: z.string().max(255),
+  }),
+  context: z.object({
+    metrics: z.object({
+      cpu_usage_percent: z.number().nullable(),
+      memory_usage_percent: z.number().nullable(),
+      disk_usage_percent: z.number().nullable(),
+      uptime_seconds: z.number().nullable(),
+    }).nullable(),
+    software: z.array(z.object({ name: z.string(), version: z.string(), publisher: z.string() })).max(500),
+    vulnerabilities: z.array(z.object({ severity: z.string(), title: z.string() })).max(500),
+    recentJobs: z.array(z.object({ type: z.string(), status: z.string(), created_at: z.string() })).max(100),
+  }),
+});
 
 interface AgentContext {
   metrics: {
