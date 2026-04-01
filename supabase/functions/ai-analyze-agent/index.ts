@@ -70,14 +70,16 @@ interface AIAnalysis {
 serveTenant(async (_req, ctx) => {
   const origin = _req.headers.get("origin");
   const { body } = ctx;
-  const { agent, context }: { agent: Agent; context: AgentContext } = body;
 
-  if (!agent || !context) {
+  const parsed = AnalyzeAgentSchema.safeParse(body);
+  if (!parsed.success) {
     return new Response(
-      JSON.stringify({ error: 'Agent and context are required' }),
+      JSON.stringify({ error: 'Validation failed', issues: parsed.error.flatten().fieldErrors }),
       { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
     );
   }
+
+  const { agent, context } = parsed.data;
 
   // Build evidence from context data
   const evidence: AIEvidence[] = [];
