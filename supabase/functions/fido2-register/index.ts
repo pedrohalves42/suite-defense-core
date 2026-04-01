@@ -73,14 +73,18 @@ serveTenant(async (req, ctx) => {
 
   // ??? REVOKE KEY ???
   if (action === 'keys' && body.credentialId) {
+    const revokeParsed = Fido2RevokeSchema.safeParse(body);
+    if (!revokeParsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid payload', issues: revokeParsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
     const { error } = await supabase
       .from('fido2_credentials')
       .update({ is_revoked: true, revoked_at: new Date().toISOString() })
       .eq('user_id', userId)
-      .eq('credential_id', body.credentialId);
+      .eq('credential_id', revokeParsed.data.credentialId);
 
     if (error) throw error;
-    logger.info(`[fido2-register][${requestId}] Credential revoked: ${body.credentialId} by user ${userId}`);
+    logger.info(`[fido2-register][${requestId}] Credential revoked: ${revokeParsed.data.credentialId} by user ${userId}`);
     return { success: true };
   }
 
