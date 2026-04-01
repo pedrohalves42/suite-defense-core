@@ -58,6 +58,7 @@ function forwardHeaders(req: Request, requestId: string): Record<string, string>
   const h: Record<string, string> = {
     'Content-Type': 'application/json',
     'X-Request-ID': requestId,
+    'X-Trace-ID': requestId,
   };
   for (const name of ['Authorization', 'apikey', 'X-Internal-Secret', 'X-Agent-Token', 'X-HMAC-Signature', 'X-Timestamp', 'X-Nonce', 'x-cron-source']) {
     const v = req.headers.get(name);

@@ -147,7 +147,7 @@ const FORWARDED_HEADERS = [
 ];
 
 function forwardHeaders(req: Request, requestId: string): Record<string, string> {
-  const h: Record<string, string> = { 'Content-Type': 'application/json', 'X-Request-ID': requestId };
+  const h: Record<string, string> = { 'Content-Type': 'application/json', 'X-Request-ID': requestId, 'X-Trace-ID': requestId };
   for (const name of FORWARDED_HEADERS) {
     const v = req.headers.get(name);
     if (v) h[name] = v;
