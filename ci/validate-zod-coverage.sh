@@ -27,6 +27,12 @@ EXEMPT=(
   "stripe-webhook" "saml-sso" "scim-provisioning"
   "track-installation-event" "validate-hmac-signature"
   "post-installation-telemetry" "get-rate-limit-stats"
+  # serveInternal (cron/service_role only) — body is trusted
+  "ai-behavioral-anomaly-detector" "fetch-nvd-cves"
+  "populate-security-graph" "rate-limit-check"
+  "send-scheduled-report" "send-trial-reminder" "sli-collector"
+  "soar-engine" "sync-cve-database" "sync-threat-feeds"
+  "system-maintenance"
 )
 
 is_exempt() {
