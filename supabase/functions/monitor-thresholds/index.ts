@@ -62,11 +62,11 @@ serveInternal(async (_req, ctx) => {
       if (alert.failed >= s.alert_threshold_failed_jobs) issues.push(`${alert.failed} jobs falhados`);
       if (alert.offline >= s.alert_threshold_offline_agents) issues.push(`${alert.offline} agentes offline`);
 
-      const { error: alertError } = await supabase.functions.invoke('notification-dispatcher', {
+      const { error: alertError } = await supabase.functions.invoke('ops-gateway', {
         headers: { 'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '' },
-        body: { channel: 'email', type: 'system', severity: 'high',
+        body: { action: 'notify:email', payload: { channel: 'email', type: 'system', severity: 'high',
           message: `Alertas de threshold excedidos para ${alert.tenant_name}`,
-          metadata: { timeframe: 'Ultimas 24 horas', issues }, tenant_id: alert.tenant_id },
+          metadata: { timeframe: 'Ultimas 24 horas', issues }, tenant_id: alert.tenant_id } },
       });
       alertResults.push({ tenant_id: alert.tenant_id, success: !alertError });
     } catch (error) {

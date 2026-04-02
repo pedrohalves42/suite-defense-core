@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 import { useTenant } from './useTenant';
@@ -143,18 +144,7 @@ export function useJobCleanup() {
     mutationFn: async (cleanupFilters: CleanupFilters): Promise<CleanupResult> => {
       logger.info('[useJobCleanup] Starting cleanup', { filters: cleanupFilters });
 
-      const { data, error } = await supabase.functions.invoke('cleanup-router', {
-        body: { action: 'jobs', ...cleanupFilters }
-      });
-
-      if (error) {
-        logger.error('[useJobCleanup] Cleanup failed', { error: error.message });
-        throw new Error(error.message || 'Falha ao executar limpeza');
-      }
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
+      const data = await callGateway<CleanupResult>('cleanup', 'jobs', cleanupFilters as unknown as Record<string, unknown>);
 
       logger.info('[useJobCleanup] Cleanup completed', { 
         deletedCount: data?.deleted_count,
@@ -162,7 +152,7 @@ export function useJobCleanup() {
         requestId: data?.requestId 
       });
 
-      return data as CleanupResult;
+      return data;
     },
     onSuccess: (data) => {
       if (data.deleted_count > 0) {

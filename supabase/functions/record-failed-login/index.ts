@@ -60,11 +60,12 @@ servePublic(async (req, ctx) => {
 
     if (blockData.block_level >= 2) {
       try {
-        await supabase.functions.invoke('notification-dispatcher', {
+        await supabase.functions.invoke('ops-gateway', {
           headers: { 'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '' },
           body: {
-            ipAddress, email, attemptCount: blockData.attempt_count,
-            blockedUntil: blockData.blocked_until, userAgent, blockLevel: blockData.block_level,
+            action: 'notify:security',
+            payload: { ipAddress, email, attemptCount: blockData.attempt_count,
+              blockedUntil: blockData.blocked_until, userAgent, blockLevel: blockData.block_level },
           },
         });
       } catch (alertError) {

@@ -253,9 +253,9 @@ serveTenant(async (req, ctx) => {
   // Dispatch browser notification
   try {
     const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
-    await supabase.functions.invoke('notification-router', {
+    await supabase.functions.invoke('ops-gateway', {
       body: {
-        action: 'dispatch',
+        action: 'notify:webhook',
         payload: {
           tenant_id: resolvedTenantId,
           type: 'remediation_executed',

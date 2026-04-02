@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { callGateway } from "@/lib/gateway";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -31,10 +32,8 @@ export default function BuildHealthDashboard() {
 
   const cleanupMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('cleanup-router', {
-        body: { action: 'stuck-builds' }
-      });
-      if (error) throw error;
+      const data = await callGateway('cleanup', 'stuck-builds');
+      return data;
       return data;
     },
     onSuccess: (data) => {

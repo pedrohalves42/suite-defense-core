@@ -74,9 +74,9 @@ export async function handleCheckTenantQuotas(supabase: SB, requestId: string, _
   const alertResults = [];
   for (const alert of alerts) {
     try {
-      const { error: alertError } = await supabase.functions.invoke('notification-dispatcher', {
+      const { error: alertError } = await supabase.functions.invoke('ops-gateway', {
         headers: { 'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '' },
-        body: { channel: 'email', type: 'system', severity: alert.usage_percentage >= 100 ? 'critical' : 'warning', message: `Limite de quota proximo: ${alert.feature_key}`, metadata: { feature: alert.feature_key, usage: `${alert.quota_used} de ${alert.quota_limit}`, percentage: `${alert.usage_percentage}%`, tenant: alert.tenant_name }, tenant_id: alert.tenant_id },
+        body: { action: 'notify:email', payload: { channel: 'email', type: 'system', severity: alert.usage_percentage >= 100 ? 'critical' : 'warning', message: `Limite de quota proximo: ${alert.feature_key}`, metadata: { feature: alert.feature_key, usage: `${alert.quota_used} de ${alert.quota_limit}`, percentage: `${alert.usage_percentage}%`, tenant: alert.tenant_name }, tenant_id: alert.tenant_id } },
       });
       alertResults.push({ tenant_id: alert.tenant_id, feature_key: alert.feature_key, success: !alertError });
     } catch (error) {

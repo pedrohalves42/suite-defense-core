@@ -1,6 +1,7 @@
 import { useState, useEffect, memo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuditLog } from '@/hooks/useAuditLog';
@@ -130,11 +131,7 @@ export function useEnrollmentKeys() {
   const runManualCleanup = async () => {
     setIsCleaningUp(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const { data, error } = await supabase.functions.invoke('cleanup-expired-enrollment-keys', {
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-      });
-      if (error) throw error;
+      const data = await callGateway<{ deleted_count: number }>('cleanup', 'expired-enrollment-keys');
       toast({ title: 'Limpeza concluida!', description: `${data.deleted_count} chaves expiradas foram removidas.` });
       queryClient.invalidateQueries({ queryKey: ['enrollment-keys'] });
       queryClient.invalidateQueries({ queryKey: ['enrollment-keys-stats'] });

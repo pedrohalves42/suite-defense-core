@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
@@ -94,10 +95,7 @@ export function useSystemOperations() {
 
   const cleanupMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('cleanup-router', {
-        body: { action: 'stuck-jobs', tenant_id: tenant?.id }
-      });
-      if (error) throw error;
+      const data = await callGateway('cleanup', 'stuck-jobs', { tenant_id: tenant?.id });
       return data;
     },
     onMutate: () => { toast.loading('Limpando jobs travados...', { id: 'cleanup-stuck' }); },
