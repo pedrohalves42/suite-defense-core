@@ -345,9 +345,10 @@ Deno.test("flip contract — must require step-up auth header", () => {
 
 Deno.test("flip contract — step-up header must be exactly 'true'", () => {
   const headers = new Headers({ 'X-Step-Up-Verified': 'TRUE' });
-  assertEquals(headers.get('X-Step-Up-Verified'), 'TRUE');
+  const value = headers.get('X-Step-Up-Verified') as string;
+  assertEquals(value, 'TRUE');
   // Our implementation checks for 'true' (lowercase) — this documents the behavior
-  assert('TRUE' !== 'true', "Case-sensitive step-up check");
+  assert(value !== 'true', "Case-sensitive step-up check");
 });
 
 Deno.test("revert contract — token rotation is mandatory", () => {
