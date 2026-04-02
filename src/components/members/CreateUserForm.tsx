@@ -77,16 +77,9 @@ export function CreateUserForm({ open, onOpenChange }: CreateUserFormProps) {
         throw new Error('Nenhum tenant selecionado');
       }
       
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const { data: result, error } = await supabase.functions.invoke('admin-create-user', {
-        body: { 
-          ...data,
-          tenant_id: tenant.id,  // Enviar tenant atual explicitamente
-        },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
+      const result = await callGateway('admin', 'create-user', {
+        ...data,
+        tenant_id: tenant.id,
       });
 
       if (error) {

@@ -91,18 +91,7 @@ export default function Members() {
   // CORRECAO: Tipagem melhorada com AppRole e headers explicitos
   const updateRole = useMutation({
     mutationFn: async ({ userId, newRole }: { userId: string; newRole: AppRole }) => {
-      // CORRECAO: Adicionar headers de autenticacao explicitamente
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const { data, error } = await supabase.functions.invoke('update-user-role', {
-        body: { userId, roles: [newRole] },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-      });
-
-      if (error) throw error;
-      return data;
+      return await callGateway('admin', 'update-user-role', { userId, roles: [newRole] });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenant-members', tenant?.id] });

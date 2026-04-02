@@ -41,8 +41,7 @@ export default function AgentReleases() {
   const { data: releases = [], isLoading, error, refetch } = useQuery<AdminRelease[]>({
     queryKey: ['admin-agent-releases'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('get-admin-releases');
-      if (error) throw error;
+      const data = await callGateway<{ releases: AdminRelease[] }>('admin', 'get-admin-releases');
       return data?.releases || [];
     },
     enabled: isSuperAdmin,

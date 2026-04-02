@@ -213,9 +213,8 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
     
     try {
       // 1. Call edge function to update app_metadata
-      const { error } = await supabase.functions.invoke('set-active-tenant', {
-        body: { tenant_id: tenant.id }
-      });
+      const result = await callGateway('admin', 'set-active-tenant', { tenant_id: tenant.id });
+      const error = result && typeof result === 'object' && 'error' in result ? result : null;
 
       if (error) {
         logger.error('[setActiveTenant] Edge function error', error);

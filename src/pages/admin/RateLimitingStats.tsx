@@ -47,11 +47,9 @@ export default function RateLimitingStats() {
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['rate-limit-stats', hoursBack],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('get-rate-limit-stats', {
-        body: { hours_back: parseInt(hoursBack) },
+      const data = await callGateway<{ success?: boolean; data?: RateLimitStats } | RateLimitStats>('admin', 'rate-limit-stats', {
+        hours_back: parseInt(hoursBack),
       });
-      
-      if (error) throw error;
       
       // A Edge Function retorna { success: true, data: {...} }
       const response = data as { success?: boolean; data?: RateLimitStats } | RateLimitStats;
