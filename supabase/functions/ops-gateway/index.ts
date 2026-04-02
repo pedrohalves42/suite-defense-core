@@ -55,6 +55,12 @@ import {
   handleSyncThreatFeeds,
 } from './handlers/sync-infra.ts';
 
+// Inlined handlers — honeypot cron (Phase 4)
+import { handleCheckHoneypotAlerts, handleHoneypotDispatchAi } from './handlers/check-honeypot.ts';
+
+// Inlined handlers — sync cron (Phase 4)
+import { handleProcessAgentUpdates, handleSeedCollectionJobs } from './handlers/sync-cron.ts';
+
 // Inlined handlers — cleanup (Phase 3A)
 import {
   handleCleanupTelemetry, handleCleanupStaleReports, handleCleanupStaleUpdates,
