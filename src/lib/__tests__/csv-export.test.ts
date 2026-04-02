@@ -4,7 +4,6 @@ import { exportToCSV } from '../csv-export';
 describe('csv-export', () => {
   let appendChildSpy: ReturnType<typeof vi.spyOn>;
   let removeChildSpy: ReturnType<typeof vi.spyOn>;
-  let clickSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((node) => {
