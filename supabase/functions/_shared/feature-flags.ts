@@ -1,91 +1,38 @@
 /**
- * Feature Flags ? lightweight feature gating for Edge Functions.
- * Supports per-tenant flags with percentage-based rollout.
+ * Feature Flags — lightweight feature gating for Edge Functions.
+ * Supports per-tenant flags.
+ * 
+ * Table schema: feature_flags(id, tenant_id NOT NULL, key, enabled, created_at, updated_at)
  */
 
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { logger } from './logger.ts';
-
-interface FeatureFlag {
-  enabled: boolean;
-  rollout_pct: number;
-  tenant_id: string | null;
-  metadata: Record<string, unknown> | null;
-}
 
 /**
- * Check if a feature flag is enabled.
- * 
- * @param supabase - Service-role client
- * @param flagName - Flag name (e.g. 'ecdsa_v2', 'new_dashboard')
- * @param tenantId - Optional tenant for tenant-specific flags
- * @param entityId - Optional entity (agent/user) for percentage rollout (deterministic hash)
+ * Check if a feature flag is enabled for a tenant.
+ * Returns true if flag exists and is enabled.
+ * Returns true if flag doesn't exist (fail-open for feature flags — allows features by default).
+ * For kill switches, create the flag as enabled=true and set enabled=false to disable.
  */
 export async function isFeatureEnabled(
   supabase: SupabaseClient,
-  flagName: string,
+  flagKey: string,
   tenantId?: string,
-  entityId?: string,
 ): Promise<boolean> {
   try {
-    // Look for tenant-specific flag first, then global
-    let query = supabase
+    if (!tenantId) return true; // No tenant context = allow
+
+    const { data, error } = await supabase
       .from('feature_flags')
-      .select('enabled, rollout_pct, tenant_id, metadata')
-      .eq('name', flagName);
+      .select('enabled')
+      .eq('key', flagKey)
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
 
-    if (tenantId) {
-      // Get both global (tenant_id IS NULL) and tenant-specific
-      query = query.or(`tenant_id.is.null,tenant_id.eq.${tenantId}`);
-    } else {
-      query = query.is('tenant_id', null);
-    }
+    if (error) return true; // Fail-open: if we can't check, allow
+    if (!data) return true; // Flag not set for this tenant = allow by default
 
-    const { data, error } = await query;
-
-    if (error || !data || data.length === 0) return false;
-
-    // Prefer tenant-specific flag over global
-    const flag: FeatureFlag = (
-      data.find((f: FeatureFlag) => f.tenant_id === tenantId) ||
-      data.find((f: FeatureFlag) => f.tenant_id === null) ||
-      data[0]
-    ) as FeatureFlag;
-
-    if (!flag.enabled) return false;
-    if (flag.rollout_pct >= 100) return true;
-    if (flag.rollout_pct <= 0) return false;
-
-    // Deterministic rollout based on entityId
-    if (!entityId) return false;
-
-    const hash = await crypto.subtle.digest(
-      'SHA-256',
-      new TextEncoder().encode(`${flagName}:${entityId}`),
-    );
-    const bucket = new Uint8Array(hash)[0] % 100;
-    return bucket < flag.rollout_pct;
-  } catch (err) {
-    logger.warn(`[FeatureFlags] Error checking '${flagName}':`, String(err));
-    return false; // Fail closed
+    return data.enabled;
+  } catch {
+    return true; // Fail-open
   }
-}
-
-/**
- * Get flag metadata (arbitrary JSON config attached to a flag).
- */
-export async function getFlagMetadata<T = Record<string, unknown>>(
-  supabase: SupabaseClient,
-  flagName: string,
-  tenantId?: string,
-): Promise<T | null> {
-  const { data } = await supabase
-    .from('feature_flags')
-    .select('metadata')
-    .eq('name', flagName)
-    .or(tenantId ? `tenant_id.is.null,tenant_id.eq.${tenantId}` : 'tenant_id.is.null')
-    .limit(1)
-    .maybeSingle();
-
-  return (data?.metadata as T) ?? null;
 }

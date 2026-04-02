@@ -2,15 +2,18 @@
  * activate-agent-honeypot — Flip a real agent into honeypot mode.
  * 
  * Via serveTenant (admin only).
+ * - Checks kill switch (HONEYPOT_ENABLED feature flag)
  * - Validates 24h cooldown (no flip/revert within 24h)
  * - Updates honeypot_mode to 'flipped'
  * - Sets activation metadata + state change timestamp
  * - Does NOT revoke the token (agent continues authenticating normally)
  * - Records in audit_logs
- * - Reason is mandatory
+ * - Reason is mandatory (min 5 chars)
+ * - Step-up auth enforced via X-Step-Up-Verified header
  */
 
 import { serveTenant } from '../_shared/serve-tenant.ts';
+import { isFeatureEnabled } from '../_shared/feature-flags.ts';
 
 /** 24 hour cooldown between state changes */
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -19,7 +22,24 @@ serveTenant(async (_req, ctx) => {
   const { supabase, tenantId, userId, requestId } = ctx;
   const body = ctx.body as { agent_id?: string; reason?: string };
 
-  // Validate required fields
+  // === KILL SWITCH ===
+  const honeypotEnabled = await isFeatureEnabled(supabase, 'HONEYPOT_ENABLED', tenantId);
+  if (!honeypotEnabled) {
+    return new Response(
+      JSON.stringify({ error: 'Honeypot feature is currently disabled' }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  // === STEP-UP AUTH ===
+  const stepUpVerified = _req.headers.get('X-Step-Up-Verified');
+  if (stepUpVerified !== 'true') {
+    return new Response(
+      JSON.stringify({ error: 'Step-up authentication required for honeypot activation', code: 'STEP_UP_REQUIRED' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
   if (!body.agent_id) {
     return new Response(
       JSON.stringify({ error: 'agent_id is required' }),

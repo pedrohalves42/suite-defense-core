@@ -7,6 +7,7 @@
  * 
  * Contract:
  * - Receives request AFTER authentication
+ * - Checks kill switch (HONEYPOT_ENABLED feature flag)
  * - Registers interaction in honeypot_interactions (1 insert)
  * - Responds plausibly (mimics real backend)
  * - NEVER touches jobs, job_queue, job_results, automation_rules, or any operational table
@@ -18,6 +19,7 @@ import { classifyPayload } from './classify.ts';
 import { buildHoneypotResponse, type ResponseProfileType } from './response-profiles.ts';
 import { buildCorsHeaders } from '../cors.ts';
 import { securityHeaders } from '../security-headers.ts';
+import { isFeatureEnabled } from '../feature-flags.ts';
 
 export interface HoneypotAgentContext {
   agentId: string;
@@ -31,7 +33,7 @@ export interface HoneypotAgentContext {
 
 /**
  * Handle a request from a flipped agent.
- * Records interaction (1 insert) and returns a plausible response.
+ * Checks kill switch, records interaction (1 insert) and returns a plausible response.
  */
 export async function handleHoneypotAgentRequest(
   req: Request,
@@ -43,6 +45,16 @@ export async function handleHoneypotAgentRequest(
   const url = new URL(req.url);
   const path = url.pathname;
   const method = req.method;
+
+  // === KILL SWITCH ===
+  const honeypotEnabled = await isFeatureEnabled(supabase, 'HONEYPOT_ENABLED', ctx.tenantId);
+  if (!honeypotEnabled) {
+    // If honeypot is disabled, return neutral response without recording
+    return new Response(JSON.stringify({ status: 'ok' }), {
+      status: 200,
+      headers: { ...cors, ...securityHeaders, 'Content-Type': 'application/json', 'X-Request-ID': ctx.requestId },
+    });
+  }
 
   // 1. Sanitize (allowlist headers, truncate body, hash IP)
   const bodySnippet = truncateBody(ctx.body);

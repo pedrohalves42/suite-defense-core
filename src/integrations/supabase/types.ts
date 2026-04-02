@@ -21901,6 +21901,54 @@ export type Database = {
         }
         Relationships: []
       }
+      honeypot_hourly_stats: {
+        Row: {
+          benign_count: number
+          created_at: string
+          flipped_count: number
+          hour_start: string
+          id: string
+          interaction_count: number
+          malicious_count: number
+          native_count: number
+          recon_count: number
+          suspicious_count: number
+          tenant_id: string
+          top_paths: Json | null
+          unique_ip_hashes: number
+        }
+        Insert: {
+          benign_count?: number
+          created_at?: string
+          flipped_count?: number
+          hour_start: string
+          id?: string
+          interaction_count?: number
+          malicious_count?: number
+          native_count?: number
+          recon_count?: number
+          suspicious_count?: number
+          tenant_id: string
+          top_paths?: Json | null
+          unique_ip_hashes?: number
+        }
+        Update: {
+          benign_count?: number
+          created_at?: string
+          flipped_count?: number
+          hour_start?: string
+          id?: string
+          interaction_count?: number
+          malicious_count?: number
+          native_count?: number
+          recon_count?: number
+          suspicious_count?: number
+          tenant_id?: string
+          top_paths?: Json | null
+          unique_ip_hashes?: number
+        }
+        Relationships: []
+      }
       honeypot_interactions: {
         Row: {
           agent_id: string | null
@@ -48268,6 +48316,7 @@ export type Database = {
           rows_inserted: number
         }[]
       }
+      aggregate_honeypot_hourly: { Args: never; Returns: number }
       alert_long_offline_agents: { Args: never; Returns: Json }
       apply_agent_isolation: {
         Args: { p_agent_id: string; p_reason?: string }
@@ -48598,6 +48647,10 @@ export type Database = {
       cleanup_expired_keys: { Args: never; Returns: number }
       cleanup_expired_sessions: { Args: never; Returns: number }
       cleanup_expired_telemetry: { Args: never; Returns: Json }
+      cleanup_honeypot_old_data: {
+        Args: { p_retention_days?: number }
+        Returns: Json
+      }
       cleanup_honeypot_rate_data: {
         Args: { p_older_than_minutes?: number }
         Returns: number
@@ -49212,6 +49265,10 @@ export type Database = {
       get_governance_snapshot:
         | { Args: never; Returns: Json }
         | { Args: { p_tenant_id?: string }; Returns: Json }
+      get_honeypot_stats: {
+        Args: { p_hours?: number; p_tenant_id?: string }
+        Returns: Json
+      }
       get_installation_health_status: {
         Args: { p_tenant_id: string }
         Returns: {
