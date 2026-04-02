@@ -39,7 +39,6 @@ serveInternal(async (_req, { supabase, requestId, body }) => {
     const { data: tenants } = await supabase
       .from('tenants')
       .select('id')
-      .eq('status', 'active')
       .limit(100);
     tenantIds = (tenants || []).map((t: { id: string }) => t.id);
   }
