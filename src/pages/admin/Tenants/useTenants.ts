@@ -34,7 +34,7 @@ export function useTenants() {
     queryKey: ['all-tenants'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('tenants')
+        .from('tenants_safe')
         .select('id, name, slug, owner_user_id, created_at, updated_at')
         .order('created_at', { ascending: false });
       if (error) throw error;

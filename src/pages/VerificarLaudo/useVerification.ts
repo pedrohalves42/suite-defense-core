@@ -52,7 +52,7 @@ export function useVerification() {
             setVerificationResult(funcData as VerificationResponse);
           } else {
             const { data: tenantData } = await supabase
-              .from('tenants')
+              .from('tenants_safe')
               .select('name')
               .eq('id', reportData.tenant_id)
               .maybeSingle();

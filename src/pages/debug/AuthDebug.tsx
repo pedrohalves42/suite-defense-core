@@ -60,7 +60,7 @@ export default function AuthDebug() {
   const testTenantAccess = async () => {
     await testEndpoint('Tenant', async () => {
       const { data, error } = await supabase
-        .from('tenants')
+        .from('tenants_safe')
         .select('id, name, slug')
         .limit(1)
         .maybeSingle();

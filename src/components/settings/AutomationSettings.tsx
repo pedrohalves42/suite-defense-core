@@ -71,7 +71,7 @@ export function AutomationSettings() {
       if (!tenant?.id) return 'suggest';
       
       const { data, error } = await supabase
-        .from('tenants')
+        .from('tenants_safe')
         .select('auto_action_mode')
         .eq('id', tenant.id)
         .single();

@@ -82,7 +82,7 @@ export const useTenantMFAPolicy = (): TenantMFAStatus => {
 
         // Check if break glass is enabled for tenant
         const { data: tenantData } = await supabase
-          .from('tenants')
+          .from('tenants_safe')
           .select('break_glass_enabled')
           .eq('id', currentTenant.id)
           .maybeSingle();
