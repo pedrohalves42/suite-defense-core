@@ -17,7 +17,17 @@ import {
   handleCohortAnalysis, handleResetDailyQuotas,
   handleCheckTenantQuotas, handleCheckTrialExpiration,
   handleSecurityCleanup,
+  handleCreateTrialSubscription, handleCreateCustomTrial,
+  handleUnitEconomics, handleRevenueProjections,
+  handleSalesPipeline, handleSubscriptionAnalytics,
+  handleSendTrialReminder,
 } from './handlers/billing.ts';
+import {
+  handleListInvoices, handleCustomerPortal,
+  handleCheckSubscription, handleCreateCheckout,
+  handleManageSubscription, handleCreateStripeProducts,
+  handleCreateStripeProductsExtended, handleStripeHealthCheck,
+} from './handlers/billing-stripe.ts';
 import {
   handleGetAdminReleases, handleUpdateUserStatus,
   handleUpdateMemberRole, handleRemoveMember,
