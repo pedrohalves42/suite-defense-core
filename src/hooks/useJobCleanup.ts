@@ -144,15 +144,10 @@ export function useJobCleanup() {
     mutationFn: async (cleanupFilters: CleanupFilters): Promise<CleanupResult> => {
       logger.info('[useJobCleanup] Starting cleanup', { filters: cleanupFilters });
 
-      const data = await callGateway('cleanup', 'jobs', cleanupFilters);
-
-      if (error) {
-        logger.error('[useJobCleanup] Cleanup failed', { error: error.message });
-        throw new Error(error.message || 'Falha ao executar limpeza');
-      }
+      const data = await callGateway<CleanupResult>('cleanup', 'jobs', cleanupFilters as unknown as Record<string, unknown>);
 
       if (data?.error) {
-        throw new Error(data.error);
+        throw new Error(data.error as string);
       }
 
       logger.info('[useJobCleanup] Cleanup completed', { 
@@ -161,7 +156,7 @@ export function useJobCleanup() {
         requestId: data?.requestId 
       });
 
-      return data as CleanupResult;
+      return data;
     },
     onSuccess: (data) => {
       if (data.deleted_count > 0) {

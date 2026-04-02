@@ -131,8 +131,7 @@ export function useEnrollmentKeys() {
   const runManualCleanup = async () => {
     setIsCleaningUp(true);
     try {
-      const data = await callGateway('cleanup', 'expired-enrollment-keys');
-      if (error) throw error;
+      const data = await callGateway<{ deleted_count: number }>('cleanup', 'expired-enrollment-keys');
       toast({ title: 'Limpeza concluida!', description: `${data.deleted_count} chaves expiradas foram removidas.` });
       queryClient.invalidateQueries({ queryKey: ['enrollment-keys'] });
       queryClient.invalidateQueries({ queryKey: ['enrollment-keys-stats'] });
