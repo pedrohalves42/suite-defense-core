@@ -35,7 +35,7 @@ export function AlertsTab({ settings, setSettings, canWrite, tenantId, onSave, i
         toast({ title: 'Webhook não configurado', description: 'Configure uma URL de webhook primeiro.', variant: 'destructive' });
         return;
       }
-      const { error } = await supabase.functions.invoke('ops-router', {
+      const { error } = await supabase.functions.invoke('ops-gateway', {
         body: { action: 'notify:dispatch', payload: { event: 'webhook_test', severity: 'info', tenantId, details: { test: true, timestamp: new Date().toISOString() } } }
       });
       if (error) throw error;

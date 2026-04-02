@@ -106,7 +106,7 @@ export default function Signup() {
 
     if (!error && data.user) {
       try {
-        await supabase.functions.invoke('ops-router', {
+        await supabase.functions.invoke('ops-gateway', {
           body: {
             action: 'notify:welcome',
             payload: {
