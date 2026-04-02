@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,16 +31,9 @@ export default function Members() {
     queryKey: ['tenant-members', tenant?.id],
     queryFn: async () => {
       // CORRECAO: Adicionar headers de autenticacao explicitamente
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const { data, error } = await supabase.functions.invoke('list-users', {
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-          'X-Tenant-Id': tenant?.id || '',
-        },
+      const data = await callGateway<{ users: any[] }>('admin', 'list-users', {
+        tenant_id: tenant?.id,
       });
-      
-      if (error) throw error;
       // Map edge function response to Member type (profiles wrapper)
       return (data.users || []).map((u: any) => ({
         ...u,
@@ -74,16 +68,7 @@ export default function Members() {
   // Edge Function valida: nao remover ultimo admin, nao remover a si mesmo, audit log
   const removeMember = useMutation({
     mutationFn: async (memberId: string) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const { data, error } = await supabase.functions.invoke('remove-member', {
-        body: { member_id: memberId },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-      });
-
-      if (error) throw error;
+      const data = await callGateway<{ success: boolean; message?: string }>('admin', 'remove-member', { member_id: memberId });
       if (!data?.success) throw new Error(data?.message || 'Erro ao remover membro');
       return data;
     },
@@ -107,18 +92,7 @@ export default function Members() {
   // CORRECAO: Tipagem melhorada com AppRole e headers explicitos
   const updateRole = useMutation({
     mutationFn: async ({ userId, newRole }: { userId: string; newRole: AppRole }) => {
-      // CORRECAO: Adicionar headers de autenticacao explicitamente
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const { data, error } = await supabase.functions.invoke('update-user-role', {
-        body: { userId, roles: [newRole] },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-      });
-
-      if (error) throw error;
-      return data;
+      return await callGateway('admin', 'update-user-role', { userId, roles: [newRole] });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenant-members', tenant?.id] });

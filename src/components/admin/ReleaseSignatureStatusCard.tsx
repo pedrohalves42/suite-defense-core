@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { ShieldCheck, AlertCircle, Fingerprint } from 'lucide-react';
@@ -26,9 +26,8 @@ export function ReleaseSignatureStatusCard() {
     enabled: !!user && isSuperAdmin,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('get-admin-releases');
-      if (error) throw error;
-      return ((data?.releases || []) as ReleaseSignatureInfo[]).filter(r => r.is_active);
+      const data = await callGateway<{ releases: ReleaseSignatureInfo[] }>('admin', 'get-admin-releases');
+      return (data?.releases || []).filter(r => r.is_active);
     },
   });
 

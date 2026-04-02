@@ -1,47 +1,28 @@
-## Fase 2: Converter Proxy → Inline Handlers (Admin + Billing + Check)
+## Fase 2: Converter Proxy → Inline Handlers (Admin + Billing + Check) ✅ COMPLETO
 
 ### Escopo: 43 funções standalone → handlers inline nos gateways
 
 A conversão elimina o **double cold start** (gateway→função) transformando proxies HTTP em chamadas diretas via `supabase-js`.
 
-### Estratégia: Prioridade por tamanho (menor primeiro)
+### Resultado Final
 
-**Batch 2A — Admin namespace (13 funções → api-gateway/handlers/admin.ts)**
-| Função | Linhas | Complexidade |
-|---|---|---|
-| api-tenant-features | 50L | Baixa |
-| get-admin-releases | 53L | Baixa |
-| api-tenant-info | 64L | Baixa |
-| api-tenant-stats | 66L | Baixa |
-| update-user-status | 102L | Média |
-| update-member-role | 109L | Média |
-| get-rate-limit-stats | 131L | Média |
-| list-all-users-admin | 132L | Média |
-| remove-member | 136L | Média |
-| list-users | 143L | Média |
-| set-active-tenant | 158L | Média |
-| update-user-role | 159L | Média |
-| admin-create-user | 199L | Alta |
+**Batch 2A — Admin namespace (13 funções) ✅ COMPLETO**
+| Status | Detalhe |
+|---|---|
+| 10 funções inlined | get-admin-releases, update-user-status, update-member-role, remove-member, list-users, list-all-users-admin, set-active-tenant, update-user-role, admin-create-user, get-rate-limit-stats |
+| 3 funções proxy (API-key) | api-tenant-features, api-tenant-info, api-tenant-stats (auth por API key, mantidas como proxy) |
+| 10 standalone deletadas | Diretórios removidos + undeploy |
+| 9 frontend callers migrados | `supabase.functions.invoke()` → `callGateway('admin', ...)` |
 
-**Batch 2B — Billing namespace (15 funções → api-gateway/handlers/billing.ts + billing-stripe.ts) ✅ COMPLETO**
-*Todas 15 funções inlined. Stripe handlers usam dynamic import para evitar carregar SDK em requests não-billing.*
+**Batch 2B — Billing namespace (15 funções) ✅ COMPLETO**
+*Todas 15 funções inlined. Stripe handlers usam dynamic import.*
 
-**Batch 2C — Check namespace (20 funções → ops-gateway/handlers/check.ts + check-monitors.ts + check-analytics.ts) ✅ COMPLETO**
-*Todas 20 funções inlined em 3 arquivos handler:*
-| Arquivo | Handlers | Notas |
-|---|---|---|
-| check.ts | 12 handlers | Original 5 + 7 novos (pipeline-metrics, cron-sentinel, stuck-jobs, build-watchdog, behavioral-baselines, compliance-benchmarks, pending-agents) |
-| check-monitors.ts | 5 handlers | monitor-thresholds, health-monitor, watchdog-non-execution, check-action-effectiveness, analyze-job-failure-patterns |
-| check-analytics.ts | 3 handlers | sli-collector (bug fix: parsedBody→parsed.data), analyze-confidence-gap-trend, analyze-network-anomalies (lazy AI imports) |
+**Batch 2C — Check namespace (20 funções) ✅ COMPLETO**
+*Todas 20 funções inlined em 3 arquivos handler.*
 
-*Frontend migrado:*
-- `useAgentLifecycle.tsx` → `callGateway('check', 'get-installation-pipeline-metrics')`
-- `useScheduledJobsHealth.ts` → `callGateway('check', 'health-monitor')`
-
-### Resultado alcançado (Fase 2B + 2C):
-- **35 funções inlined** (billing 15 + check 20)
-- **Zero cold starts adicionais** para billing/check
+### Métricas:
+- **45 funções inlined** (admin 10 + billing 15 + check 20)
+- **10 standalone admin deletadas**
+- **3 API-key proxy mantidas** (isolamento de auth)
+- **Zero cold starts adicionais** para admin/billing/check
 - **1 bug corrigido** (sli-collector parsedBody undefined)
-- **Latência p95** reduz ~50% nestes namespaces
-
-### Próximo: Batch 2A (Admin, 13 funções)

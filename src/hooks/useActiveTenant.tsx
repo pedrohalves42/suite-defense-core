@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 import { type AppRole } from '@/types/roles';
@@ -47,9 +48,8 @@ async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), SYNC_TIMEOUT_MS);
 
-    const { error } = await supabase.functions.invoke('set-active-tenant', {
-      body: { tenant_id: tenantId }
-    });
+    const result = await callGateway('admin', 'set-active-tenant', { tenant_id: tenantId });
+    const error = result && typeof result === 'object' && 'error' in result ? result : null;
 
     clearTimeout(timeoutId);
 
@@ -214,9 +214,8 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
     
     try {
       // 1. Call edge function to update app_metadata
-      const { error } = await supabase.functions.invoke('set-active-tenant', {
-        body: { tenant_id: tenant.id }
-      });
+      const result = await callGateway('admin', 'set-active-tenant', { tenant_id: tenant.id });
+      const error = result && typeof result === 'object' && 'error' in result ? result : null;
 
       if (error) {
         logger.error('[setActiveTenant] Edge function error', error);

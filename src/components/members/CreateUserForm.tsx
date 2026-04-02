@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { useTenant } from '@/hooks/useTenant';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -77,29 +78,11 @@ export function CreateUserForm({ open, onOpenChange }: CreateUserFormProps) {
         throw new Error('Nenhum tenant selecionado');
       }
       
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const { data: result, error } = await supabase.functions.invoke('admin-create-user', {
-        body: { 
-          ...data,
-          tenant_id: tenant.id,  // Enviar tenant atual explicitamente
-        },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
+      const result = await callGateway<{ success: boolean; error?: string; user?: { id: string; username: string; full_name: string; role: string } }>('admin', 'create-user', {
+        ...data,
+        tenant_id: tenant.id,
       });
 
-      if (error) {
-        // Extract actual error message from edge function response
-        let msg = error.message;
-        try {
-          if ('context' in error && typeof ((error as Record<string, unknown>).context as Record<string, unknown>)?.json === 'function') {
-            const body = await ((error as Record<string, unknown>).context as { json: () => Promise<Record<string, unknown>> }).json();
-            msg = (body?.error as string) || ((body?.error as Record<string, unknown>)?.message as string) || msg;
-          }
-        } catch {}
-        throw new Error(msg);
-      }
       if (!result?.success) throw new Error(result?.error || 'Erro ao criar usuário');
       return result;
     },

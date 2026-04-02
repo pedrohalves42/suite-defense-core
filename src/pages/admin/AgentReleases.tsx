@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from "@/components/ErrorState";
 import { supabase } from "@/integrations/supabase/client";
+import { callGateway } from '@/lib/gateway';
 import { toast } from "sonner";
 import { useState } from "react";
 import { RegisterLatestRelease } from "@/components/admin/RegisterLatestRelease";
@@ -41,8 +42,7 @@ export default function AgentReleases() {
   const { data: releases = [], isLoading, error, refetch } = useQuery<AdminRelease[]>({
     queryKey: ['admin-agent-releases'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('get-admin-releases');
-      if (error) throw error;
+      const data = await callGateway<{ releases: AdminRelease[] }>('admin', 'get-admin-releases');
       return data?.releases || [];
     },
     enabled: isSuperAdmin,
