@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { exportToCSV } from '@/lib/csv-export';
