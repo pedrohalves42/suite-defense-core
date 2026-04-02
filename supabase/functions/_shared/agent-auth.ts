@@ -108,6 +108,6 @@ export async function authenticateAgent(
       tenant_id: tenant_id as string,
       hmac_secret: hmac_secret as string | null,
     },
-    agentData: extraData,
+    agentData: { honeypot_mode, ...extraData },
   };
 }
