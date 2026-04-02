@@ -7,10 +7,9 @@ describe('csv-export', () => {
   let clickSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    clickSpy = vi.fn();
     appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((node) => {
       if (node instanceof HTMLAnchorElement) {
-        node.click = clickSpy;
+        node.click = vi.fn();
       }
       return node;
     });
