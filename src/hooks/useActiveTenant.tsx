@@ -47,9 +47,8 @@ async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), SYNC_TIMEOUT_MS);
 
-    const { error } = await supabase.functions.invoke('set-active-tenant', {
-      body: { tenant_id: tenantId }
-    });
+    const result = await callGateway('admin', 'set-active-tenant', { tenant_id: tenantId });
+    const error = result && typeof result === 'object' && 'error' in result ? result : null;
 
     clearTimeout(timeoutId);
 
