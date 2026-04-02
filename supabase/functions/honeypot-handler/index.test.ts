@@ -129,7 +129,7 @@ Deno.test("classify — empty body is unknown", () => {
 });
 
 Deno.test("classify — benign payload", () => {
-  const { classification } = classifyPayload('{"hostname":"WKS01","cpu_usage":45}');
+  const { classification } = classifyPayload('{"agent_name":"WKS01","cpu_usage":45}');
   assertEquals(classification, 'benign');
 });
 
