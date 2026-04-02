@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { PatchOrchestrator, type PatchInfo, type DeploymentConfig } from '@/domain/services/PatchOrchestrator';
 import { AgentId } from '@/domain/value-objects/AgentId';
 import { TenantId } from '@/domain/value-objects/TenantId';
-import { DeploymentType, DeploymentPriority } from '@/domain/entities/PatchDeployment';
+import { DeploymentType } from '@/domain/entities/PatchDeployment';
 
 describe('PatchOrchestrator', () => {
   const orchestrator = new PatchOrchestrator();
