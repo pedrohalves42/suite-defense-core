@@ -42,6 +42,22 @@ import {
 } from './handlers/sync.ts';
 import { handleAutoTriageInsights } from './handlers/playbook.ts';
 
+// Inlined handlers — cleanup (Phase 3A)
+import {
+  handleCleanupTelemetry, handleCleanupStaleReports, handleCleanupStaleUpdates,
+  handleCleanupStalePlaybooks, handleCleanupOfflineAgentsJobs, handleCleanupStuckBuilds,
+  handleCleanupStuckJobs, handleAutoCleanupJobs, handleSecurityCleanup,
+  handleCleanupJobs, handleCleanupExpiredEnrollmentKeys, handleCleanupOrphanedData,
+  handleCleanupStaleHoneypots,
+} from './handlers/cleanup.ts';
+
+// Inlined handlers — notify (Phase 3A)
+import {
+  handleNotifyEmail, handleNotifyTelegram, handleNotifyWhatsApp,
+  handleNotifyWebhook, handleNotifyWelcome, handleNotifySecurity,
+  handleGetTelegramChatId,
+} from './handlers/notify.ts';
+
 const FETCH_TIMEOUT_MS = 45000;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
