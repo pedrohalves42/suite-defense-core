@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 import { type AppRole } from '@/types/roles';

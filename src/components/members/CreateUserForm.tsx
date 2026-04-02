@@ -83,17 +83,6 @@ export function CreateUserForm({ open, onOpenChange }: CreateUserFormProps) {
         tenant_id: tenant.id,
       });
 
-      if (error) {
-        // Extract actual error message from edge function response
-        let msg = error.message;
-        try {
-          if ('context' in error && typeof ((error as Record<string, unknown>).context as Record<string, unknown>)?.json === 'function') {
-            const body = await ((error as Record<string, unknown>).context as { json: () => Promise<Record<string, unknown>> }).json();
-            msg = (body?.error as string) || ((body?.error as Record<string, unknown>)?.message as string) || msg;
-          }
-        } catch {}
-        throw new Error(msg);
-      }
       if (!result?.success) throw new Error(result?.error || 'Erro ao criar usuário');
       return result;
     },

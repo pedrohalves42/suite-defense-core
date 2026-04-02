@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from "@/components/ErrorState";
 import { supabase } from "@/integrations/supabase/client";
+import { callGateway } from '@/lib/gateway';
 import { toast } from "sonner";
 import { useState } from "react";
 import { RegisterLatestRelease } from "@/components/admin/RegisterLatestRelease";
