@@ -43,22 +43,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 // ── Proxy map: actions still dispatched via HTTP ────────────────────────
 const ACTION_TO_FUNCTION: Record<string, string> = {
-  // billing proxy targets (complex Stripe integrations)
-  'billing:create-checkout': 'create-checkout',
-  'billing:create-stripe-products': 'create-stripe-products',
-  'billing:create-stripe-products-extended': 'create-stripe-products-extended',
-  'billing:create-trial-subscription': 'create-trial-subscription',
-  'billing:create-custom-trial': 'create-custom-trial',
-  'billing:manage-subscription': 'manage-subscription',
-  'billing:check-subscription': 'check-subscription',
-  'billing:customer-portal': 'customer-portal',
-  'billing:list-invoices': 'list-invoices',
-  'billing:stripe-health-check': 'stripe-health-check',
-  'billing:subscription-analytics': 'subscription-analytics',
-  'billing:unit-economics': 'unit-economics',
-  'billing:revenue-projections': 'revenue-projections',
-  'billing:sales-pipeline': 'sales-pipeline',
-  'billing:send-trial-reminder': 'send-trial-reminder',
+  // billing proxy targets — all migrated to INLINED_HANDLERS in Phase 2B
   // security proxy targets (from security-router)
   'security:auto-block-threats': 'auto-block-threats',
   'security:auto-quarantine': 'auto-quarantine',
