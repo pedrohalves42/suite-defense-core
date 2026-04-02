@@ -1,45 +1,62 @@
 
-# Eliminação de Riscos Críticos Remanescentes
+# Plano: Pool Multi-Tenant + Habilitação de Flipping Manual
 
-## INÍCIO — Validação do Estado Atual
+## Estado Atual Validado ✅
+- **Feature flags**: `HONEYPOT_ENABLED=true`, `HONEYPOT_NATIVE_ENABLED=true`, `HONEYPOT_FLIPPED_ENABLED=false`, `HONEYPOT_AI_ENABLED=false`
+- **Pool existente**: 2 agentes nativos no tenant `Atlaviamit` (75fd8eae)
+- **Tenants disponíveis**: 16 tenants no sistema
+- **Infraestrutura**: Edge functions (`honeypot-handler`, `activate-agent-honeypot`, `revert-agent-honeypot`, `create-honeypot-pool`) deployadas e funcionais
+- **Controles**: Kill switch, cooldown 24h, step-up auth, rate limit bucket, IP hashing — todos operacionais
 
-### 1. Auditoria de Correções Ativas (sem regressão)
-- Executar scan de segurança para confirmar que storage policies, circuit breaker, fallback crypto, RLS em partições e CORS estão ativos
-- Consultar linter do banco para detectar tabelas/partições sem RLS
-- Verificar que `buildCorsHeaders` está sendo usado em todas as edge functions (sem wildcards)
+## Fase 1: Criar Pools em Todos os Tenants (5 min)
 
-### 2. Agentes Legados v3/v4
-- Consulta SQL em `agents` para identificar agentes com versão < v5.0.15
-- Verificar bucket `agent-installers` para scripts legados remanescentes
-- Confirmar que `enroll-agent` rejeita agentes sem HMAC quando `enforce_hmac_enrollment` está habilitado
+### 1.1 Invocar `create-honeypot-pool` sem `tenant_id`
+- Cria 2 agentes nativos por tenant que ainda não tem
+- Valida: `hmac_secret = NULL`, sem entradas em `agent_tokens`, `honeypot_mode = 'native'`
+- **Custo**: 0 custo operacional adicional (agentes nativos não executam nada)
 
-### 3. Auditoria de Deno.serve sem Middleware
-- Executar `ci/validate-middleware.sh` para listar funções usando raw `Deno.serve()` fora da lista de exceções
-- Executar `scripts/inventory_deno_serve.py` para classificar funções migráveis
-- Migrar funções classificadas como "migratable" para `serveTenant`/`serveAgent`/`servePublic`/`serveInternal`
+### 1.2 Verificação pós-criação
+- Query: confirmar contagem de agentes nativos por tenant
+- Validar que nenhum token foi criado para agentes nativos
+- Confirmar `honeypot_interactions` continua registrando com tenant correto
 
-## MEIO — Hardening e Automação
+## Fase 2: Habilitar `HONEYPOT_FLIPPED_ENABLED` (2 min)
 
-### 4. Testes de Integração contra Ataques
-- Criar testes Deno para simular: replay HMAC (nonce reutilizado), CORS bypass (origin não autorizada), injeção de payload malformado
-- Validar que circuit breaker bloqueia em modo fail-closed
-- Testar blast radius (>10% da frota bloqueado)
+### 2.1 Ativar flag global
+```sql
+UPDATE feature_flags SET enabled = true WHERE key = 'HONEYPOT_FLIPPED_ENABLED'
+```
 
-### 5. CI/CD Security Gates Automatizados
-- Garantir que `ci/validate-middleware.sh` roda no pipeline e bloqueia PRs com `Deno.serve` não autorizado
-- Garantir que `ci/validate-zod-coverage.sh` roda e bloqueia funções sem validação Zod
-- Adicionar step de `supabase--linter` no workflow de segurança para detectar RLS ausente
+### 2.2 Validar gate no `serve-agent.ts`
+- O gate já verifica `HONEYPOT_ENABLED` (global kill switch)
+- O `activate-agent-honeypot` já verifica `HONEYPOT_ENABLED` antes de flipar
+- Adicionar verificação de `HONEYPOT_FLIPPED_ENABLED` no `activate-agent-honeypot` para granularidade
 
-### 6. Expansão da Validação Zod (31 → 184 funções)
-- Verificar cobertura atual com `ci/validate-zod-coverage.sh`
-- Identificar funções que aceitam body JSON mas não têm `safeParse`/`z.object`
-- Adicionar schemas Zod nas funções descobertas
+## Fase 3: Validação End-to-End (5 min)
 
-## FIM — Critérios de Aceitação (Zero Tolerance)
+### 3.1 Teste do honeypot-handler (native)
+- POST para `/honeypot-handler/heartbeat` — deve retornar 200 com resposta fake
+- Confirmar 1 write em `honeypot_interactions`
 
-### 7. Validação Final
-- ✅ Zero funções sem validação de entrada (Zod gate passa 100%)
-- ✅ Zero agentes em versões < v5.0.15 (consulta SQL retorna 0 registros)
-- ✅ Todas as funções raw (exceto webhooks/streaming aprovados) migradas para middlewares
-- ✅ CI bloqueia qualquer nova função sem validação e detecta regressões de segurança
-- ✅ Scan de segurança sem findings críticos
+### 3.2 Teste do flipping (via curl)
+- Invocar `activate-agent-honeypot` com agent real + step-up header
+- Confirmar `honeypot_mode = 'flipped'` no banco
+- Confirmar audit_log registrado
+
+### 3.3 Teste do revert
+- Invocar `revert-agent-honeypot`
+- Confirmar token rotacionado
+- Confirmar `honeypot_mode = 'none'`
+
+## Fase 4: Hardening do `activate-agent-honeypot` (3 min)
+
+### 4.1 Adicionar check de `HONEYPOT_FLIPPED_ENABLED`
+- Antes de flipar, verificar que `HONEYPOT_FLIPPED_ENABLED = true`
+- Sem esta flag, flip é rejeitado com 503
+- **Motivo**: Permite desabilitar flipping sem desabilitar o honeypot nativo
+
+## Custos e Performance
+- **Native**: 1 insert por request, 0 queries adicionais no hot path
+- **Flipped**: 1 insert por request, 0 `agents.update`
+- **Rate limit**: O(1) via bucket upsert
+- **Pool**: 2 agentes × 16 tenants = 32 linhas em `agents` (custo zero)
