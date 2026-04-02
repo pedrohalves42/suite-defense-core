@@ -24,13 +24,7 @@ export function useAgentTest() {
 
   const cleanupMutation = useMutation({
     mutationFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('No active session');
-      const response = await supabase.functions.invoke('system-maintenance', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (response.error) throw response.error;
-      return response.data;
+      return await callGateway('sync', 'system-maintenance');
     },
     onSuccess: (data) => {
       toast({

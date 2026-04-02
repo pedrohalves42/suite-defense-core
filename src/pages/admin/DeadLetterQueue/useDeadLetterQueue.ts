@@ -130,9 +130,8 @@ export function useDeadLetterQueue() {
 
   const triggerAutoRetry = useCallback(async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('process-dlq-retries', { body: {} });
-      if (error) throw error;
-      toast.success(`Processamento automático: ${data?.results?.retried ?? 0} jobs reenviados`);
+      const data = await callGateway<Record<string, unknown>>('sync', 'process-dlq-retries');
+      toast.success(`Processamento automático: ${(data?.results as Record<string, unknown>)?.retried ?? 0} jobs reenviados`);
       queryClient.invalidateQueries({ queryKey: ['dlq-entries'] });
     } catch {
       toast.error('Falha ao processar retries automáticos');

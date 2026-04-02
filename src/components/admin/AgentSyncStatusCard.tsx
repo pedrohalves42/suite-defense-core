@@ -18,9 +18,7 @@ export function AgentSyncStatusCard() {
   const handleSyncNow = async () => {
     setIsSyncing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('sync-blocked-websites');
-      
-      if (error) throw error;
+      const data = await callGateway('sync', 'sync-blocked-websites');
       
       toast.success(`Sincronização agendada para ${data?.jobs_created ?? data?.jobsCreated ?? 0} computadores online`);
       

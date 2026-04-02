@@ -236,12 +236,7 @@ export function useDNSFilter() {
   // Sync blocked websites to all online agents
   const syncBlockedWebsites = useMutation({
     mutationFn: async (agentIds?: string[]) => {
-      const { data, error } = await supabase.functions.invoke('sync-blocked-websites', {
-        body: agentIds ? { agent_ids: agentIds } : {},
-      });
-
-      if (error) throw error;
-      return data;
+      return await callGateway('sync', 'sync-blocked-websites', agentIds ? { agent_ids: agentIds } : {});
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['dns-filter-status'] });

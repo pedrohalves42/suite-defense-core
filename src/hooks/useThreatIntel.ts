@@ -99,11 +99,7 @@ export function useSyncThreatFeeds() {
 
   return useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('sync-threat-feeds', {
-        body: { tenant_id: tenant!.id }
-      });
-      if (error) throw error;
-      return data;
+      return await callGateway('sync', 'sync-threat-feeds', { tenant_id: tenant!.id });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['threat-intel-stats'] });
