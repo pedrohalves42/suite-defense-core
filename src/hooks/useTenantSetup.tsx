@@ -44,7 +44,7 @@ export const useTenantSetup = () => {
       if (!activeTenant?.id) return false;
 
       const { data, error } = await supabase
-        .from('tenants')
+        .from('tenants_safe')
         .select('setup_completed')
         .eq('id', activeTenant.id)
         .maybeSingle();
