@@ -89,14 +89,14 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
       const agent = authResult.agent;
 
       // === HONEYPOT GATE ===
-      // If agent is flipped to honeypot mode, divert to fake handler
-      // Token is NOT revoked — agent authenticates normally but gets fake responses
-      const honeypotMode = (authResult.agentData as Record<string, unknown>).honeypot_mode as string | undefined;
+      // If agent is flipped to honeypot mode, divert to fake handler.
+      // Token is NOT revoked — agent authenticates normally but gets fake responses.
+      // honeypot_mode is always present in agentData (fetched as base field in agent-auth.ts).
+      const honeypotMode: string | undefined = authResult.agentData.honeypot_mode as string | undefined;
       if (honeypotMode === 'flipped') {
         const { handleHoneypotAgentRequest } = await import('./honeypot/agent-handler.ts');
         const sourceIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-        
-        // Read body for the honeypot handler
+
         let hpBody: unknown = {};
         if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
           try { hpBody = await req.clone().json(); } catch { hpBody = {}; }
@@ -108,7 +108,6 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
           tenantId: agent.tenant_id,
           requestId,
           body: hpBody,
-          rawBody: undefined,
           sourceIp,
         }, supabase);
       }
