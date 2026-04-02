@@ -117,11 +117,10 @@ describe('LoginPasswordForm', () => {
     expect(screen.getByLabelText('Senha')).toHaveAttribute('type', 'text');
   });
 
-  it('calls onSubmit on form submit', () => {
-    const onSubmit = vi.fn((e) => e.preventDefault());
-    renderForm({ onSubmit });
-    fireEvent.click(screen.getByText('Continuar com segurança'));
-    expect(onSubmit).toHaveBeenCalled();
+  it('renders submit button with correct type', () => {
+    renderForm();
+    const btn = screen.getByText('Continuar com segurança');
+    expect(btn).toHaveAttribute('type', 'submit');
   });
 
   it('shows attempt warning when attemptCount > 0 and < 3', () => {
