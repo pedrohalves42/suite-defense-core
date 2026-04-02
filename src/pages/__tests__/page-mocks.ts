@@ -4,6 +4,33 @@
  */
 import { vi } from 'vitest';
 
+// Mock useActiveTenant
+vi.mock('@/hooks/useActiveTenant', () => ({
+  useActiveTenant: () => ({
+    tenant: { id: 'test-tenant-id', name: 'Test Tenant' },
+    tenants: [{ id: 'test-tenant-id', name: 'Test Tenant' }],
+    activeTenantId: 'test-tenant-id',
+    loading: false,
+    isFetched: true,
+    setActiveTenantId: vi.fn(),
+  }),
+  ActiveTenantProvider: ({ children }: any) => children,
+}));
+
+// Mock useAuth
+vi.mock('@/hooks/useAuth', () => ({
+  useAuth: () => ({
+    user: { id: 'test-user', email: 'test@test.com', user_metadata: {} },
+    loading: false,
+    session: { access_token: 'test-token' },
+  }),
+}));
+
+// Mock useRequiredTenant
+vi.mock('@/hooks/useRequiredTenant', () => ({
+  useRequiredTenant: () => ({ id: 'test-tenant-id', name: 'Test Tenant' }),
+}));
+
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
