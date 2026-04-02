@@ -49588,6 +49588,7 @@ export type Database = {
       is_operator_or_viewer: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       is_table_migrated: { Args: { p_table_name: string }; Returns: boolean }
+      is_tenant_admin: { Args: never; Returns: boolean }
       log_scheduled_job_run: {
         Args: {
           p_duration_ms?: number
