@@ -34,21 +34,10 @@ export function SyncStorageBucket() {
         { platform, force: false }
       );
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          platform,
-          success: false,
-          synced: false,
-          error: data.error || 'Erro desconhecido'
-        };
-      }
-
       return {
         platform,
         success: true,
-        synced: data.synced,
+        synced: data.synced ?? false,
         message: data.message,
         version: data.version
       };
