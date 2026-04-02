@@ -11,7 +11,6 @@ describe('website-categories', () => {
     it('categorizes video sites', () => {
       expect(getCategoryForDomain('youtube.com').key).toBe('video');
     });
-    });
 
     it('categorizes Brazilian banks', () => {
       expect(getCategoryForDomain('itau.com.br').key).toBe('banking');
