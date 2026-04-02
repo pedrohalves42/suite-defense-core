@@ -26,10 +26,21 @@ vi.mock('@/hooks/useAuth', () => ({
   }),
 }));
 
-// Mock useRequiredTenant
-vi.mock('@/hooks/useRequiredTenant', () => ({
-  useRequiredTenant: () => ({ id: 'test-tenant-id', name: 'Test Tenant' }),
+// Mock SimpleModeProvider context
+vi.mock('@/components/layout/SimpleModeProvider', () => ({
+  SimpleModeProvider: ({ children }: any) => children,
+  useSimpleModeContext: () => ({
+    isSimpleMode: false,
+    setIsSimpleMode: vi.fn(),
+    toggleSimpleMode: vi.fn(),
+  }),
 }));
+
+// Mock useSuperAdmin (uses supabase.rpc)
+vi.mock('@/hooks/useSuperAdmin', () => ({
+  useSuperAdmin: () => ({ isSuperAdmin: false, loading: false }),
+}));
+
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
