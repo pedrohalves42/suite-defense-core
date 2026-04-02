@@ -58,7 +58,7 @@ export default function TenantSuspensionManager() {
     queryKey: ['tenants-suspension'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('tenants_safe')
+        .from('tenants')
         .select('id, name, slug, suspension_status, last_activity_at, suspended_at, suspension_reason, deletion_scheduled_at, created_at')
         .order('last_activity_at', { ascending: true });
       if (error) throw error;
