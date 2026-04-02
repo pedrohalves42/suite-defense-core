@@ -80,9 +80,9 @@ export async function processSafeModeRule(supabase: SupabaseClient, rule: RuleRe
     });
 
     try {
-      await supabase.functions.invoke('notification-router', {
+      await supabase.functions.invoke('ops-gateway', {
         body: {
-          action: 'dispatch',
+          action: 'notify:security',
           payload: {
             tenant_id: agent.tenant_id,
             notification_type: 'safe_mode_auto',

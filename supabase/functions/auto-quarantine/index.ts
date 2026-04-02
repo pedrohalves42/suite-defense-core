@@ -79,13 +79,16 @@ serveInternal(async (req, ctx) => {
     request: req, success: true
   });
 
-  await supabase.functions.invoke('notification-dispatcher', {
+  await supabase.functions.invoke('ops-gateway', {
     headers: { 'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '' },
     body: {
-      event: 'virus_detected', severity: 'critical', tenantId: tenant_id,
-      agentName: agent_name,
-      details: { file_path, file_hash, positives, total_scans, quarantine_id: quarantined.id, virus_scan_id,
-        message: `Arquivo malicioso em quarentena: ${file_path} (${positives}/${total_scans} deteccoes)` }
+      action: 'notify:security',
+      payload: {
+        event: 'virus_detected', severity: 'critical', tenantId: tenant_id,
+        agentName: agent_name,
+        details: { file_path, file_hash, positives, total_scans, quarantine_id: quarantined.id, virus_scan_id,
+          message: `Arquivo malicioso em quarentena: ${file_path} (${positives}/${total_scans} deteccoes)` }
+      }
     }
   });
 
