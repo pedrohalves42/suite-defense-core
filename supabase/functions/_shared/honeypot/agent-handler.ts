@@ -1,21 +1,21 @@
 /**
  * Honeypot agent handler — handles requests from "flipped" agents.
  * 
- * This handler is invoked by the serveAgent gate when an authenticated
- * agent has honeypot_mode = 'flipped'. The agent's token is NOT revoked;
- * it authenticates normally but gets diverted here instead of real handlers.
+ * Invoked by the serveAgent gate when an authenticated agent has
+ * honeypot_mode = 'flipped'. The agent's token is NOT revoked;
+ * it authenticates normally but gets diverted here.
  * 
  * Contract:
  * - Receives request AFTER authentication
- * - Registers interaction in honeypot_interactions
+ * - Registers interaction in honeypot_interactions (1 insert)
  * - Responds plausibly (mimics real backend)
- * - NEVER touches jobs, job_queue, or operational tables
+ * - NEVER touches jobs, job_queue, job_results, automation_rules, or any operational table
  */
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { truncateBody, filterHeaders } from './sanitize.ts';
+import { truncateBody, filterHeaders, extractSourceIp, hashIp, extractIpPrefix } from './sanitize.ts';
 import { classifyPayload } from './classify.ts';
-import { buildHoneypotResponse } from './response-profiles.ts';
+import { buildHoneypotResponse, type ResponseProfileType } from './response-profiles.ts';
 import { buildCorsHeaders } from '../cors.ts';
 import { securityHeaders } from '../security-headers.ts';
 
@@ -31,7 +31,7 @@ export interface HoneypotAgentContext {
 
 /**
  * Handle a request from a flipped agent.
- * Records interaction and returns a plausible response.
+ * Records interaction (1 insert) and returns a plausible response.
  */
 export async function handleHoneypotAgentRequest(
   req: Request,
@@ -39,17 +39,24 @@ export async function handleHoneypotAgentRequest(
   supabase: SupabaseClient,
 ): Promise<Response> {
   const origin = req.headers.get('origin');
-  const corsHeaders = buildCorsHeaders(origin);
+  const cors = buildCorsHeaders(origin);
   const url = new URL(req.url);
   const path = url.pathname;
   const method = req.method;
 
-  // 1. Sanitize and classify
+  // 1. Sanitize (allowlist headers, truncate body, hash IP)
   const bodySnippet = truncateBody(ctx.body);
   const headersFiltered = filterHeaders(req.headers);
   const { classification } = classifyPayload(bodySnippet, path, method);
+  const sourceIpHash = await hashIp(ctx.sourceIp);
+  const sourceIpPrefix = extractIpPrefix(ctx.sourceIp);
 
-  // 2. Record interaction (fire-and-forget to minimize latency)
+  // 2. Build response BEFORE insert (minimize latency)
+  const profile: ResponseProfileType = 'default';
+  const response = buildHoneypotResponse(path, method, profile);
+
+  // 3. Single insert (fire-and-forget) — 1 write per request
+  const now = new Date().toISOString();
   supabase
     .from('honeypot_interactions')
     .insert({
@@ -58,36 +65,32 @@ export async function handleHoneypotAgentRequest(
       mode: 'flipped',
       method,
       path,
+      status_code: response.status,
       body_snippet: bodySnippet,
       headers_filtered: headersFiltered,
-      source_ip: ctx.sourceIp,
+      source_ip_hash: sourceIpHash,
+      source_ip_prefix: sourceIpPrefix,
       classification,
       trace_id: ctx.requestId,
+      response_profile: profile,
     })
     .then(({ error }) => {
-      if (error) {
-        console.error(`[honeypot-agent] Failed to record interaction: ${error.message}`);
-      }
+      if (error) console.error(`[honeypot-agent] Insert error: ${error.message}`);
     });
 
-  // 3. Update last interaction timestamp (fire-and-forget)
+  // 4. Update last interaction timestamp (fire-and-forget, lightweight)
   supabase
     .from('agents')
-    .update({ last_honeypot_interaction_at: new Date().toISOString() })
+    .update({ last_honeypot_interaction_at: now })
     .eq('id', ctx.agentId)
     .then(({ error }) => {
-      if (error) {
-        console.error(`[honeypot-agent] Failed to update last_interaction: ${error.message}`);
-      }
+      if (error) console.error(`[honeypot-agent] Timestamp update error: ${error.message}`);
     });
-
-  // 4. Build plausible response
-  const response = buildHoneypotResponse(path, method);
 
   return new Response(JSON.stringify(response.body), {
     status: response.status,
     headers: {
-      ...corsHeaders,
+      ...cors,
       ...securityHeaders,
       'Content-Type': 'application/json',
       'X-Request-ID': ctx.requestId,

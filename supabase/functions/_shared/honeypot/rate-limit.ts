@@ -1,25 +1,31 @@
 /**
- * Honeypot rate limit wrapper.
- * Uses the check_honeypot_rate_limit RPC for atomic rate limiting.
- * Fail-closed: if the RPC fails, deny the request.
+ * Honeypot rate limit — bucket-based atomic upsert.
+ * 
+ * Uses check_honeypot_rate_limit_v2 RPC:
+ * - No count(*) scan on historical data
+ * - Atomic upsert into minute-buckets
+ * - Separate blocks table for fast block check
+ * - Fail-closed: if RPC fails, deny the request
  */
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { hashIp } from './sanitize.ts';
 
 export interface HoneypotRateLimitConfig {
   maxRequests: number;
-  windowMinutes: number;
-  blockMinutes: number;
+  bucketSeconds: number;
+  blockSeconds: number;
 }
 
 const DEFAULT_CONFIG: HoneypotRateLimitConfig = {
   maxRequests: 5,
-  windowMinutes: 1,
-  blockMinutes: 15,
+  bucketSeconds: 60,
+  blockSeconds: 900, // 15 minutes
 };
 
 /**
  * Check if a request is allowed by the honeypot rate limiter.
+ * Identifier is hashed before storage (privacy-safe).
  * Returns true if allowed, false if rate limited.
  * Fail-closed: returns false on errors.
  */
@@ -31,21 +37,24 @@ export async function checkHoneypotRateLimit(
   const cfg = { ...DEFAULT_CONFIG, ...config };
 
   try {
-    const { data, error } = await supabase.rpc('check_honeypot_rate_limit', {
-      p_identifier: identifier,
+    // Hash identifier for storage
+    const identifierHash = await hashIp(identifier);
+
+    const { data, error } = await supabase.rpc('check_honeypot_rate_limit_v2', {
+      p_identifier_hash: identifierHash,
       p_max_requests: cfg.maxRequests,
-      p_window_minutes: cfg.windowMinutes,
-      p_block_minutes: cfg.blockMinutes,
+      p_bucket_seconds: cfg.bucketSeconds,
+      p_block_seconds: cfg.blockSeconds,
     });
 
     if (error) {
       console.error('[honeypot-rate-limit] RPC error (fail-closed):', error.message);
-      return false; // Fail-closed
+      return false;
     }
 
     return data === true;
   } catch (err) {
     console.error('[honeypot-rate-limit] Exception (fail-closed):', err);
-    return false; // Fail-closed
+    return false;
   }
 }

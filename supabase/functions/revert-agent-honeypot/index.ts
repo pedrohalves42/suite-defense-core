@@ -2,14 +2,19 @@
  * revert-agent-honeypot — Revert a flipped agent back to normal mode.
  * 
  * Via serveTenant (admin only).
+ * - Validates 24h cooldown
  * - Reverts honeypot_mode to 'none'
- * - Invalidates current token (is_active = false)
- * - Generates a new token (rotation on recovery)
+ * - Invalidates ALL current tokens (is_active = false)
+ * - Generates a new token (mandatory rotation on recovery)
  * - Records in audit_logs
+ * - Reason is mandatory
  */
 
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { hashToken } from '../_shared/token-hash.ts';
+
+/** 24 hour cooldown between state changes */
+const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 serveTenant(async (_req, ctx) => {
   const { supabase, tenantId, userId, requestId } = ctx;
@@ -22,13 +27,20 @@ serveTenant(async (_req, ctx) => {
     );
   }
 
+  if (!body.reason || body.reason.trim().length < 5) {
+    return new Response(
+      JSON.stringify({ error: 'reason is required (min 5 characters)' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
   const agentId = body.agent_id;
-  const reason = body.reason || 'Manual revert';
+  const reason = body.reason.trim();
 
   // 1. Verify agent is in honeypot mode
   const { data: agent, error: agentError } = await supabase
     .from('agents')
-    .select('id, honeypot_mode, agent_name')
+    .select('id, honeypot_mode, agent_name, last_honeypot_state_change_at')
     .eq('id', agentId)
     .eq('tenant_id', tenantId)
     .maybeSingle();
@@ -47,7 +59,23 @@ serveTenant(async (_req, ctx) => {
     );
   }
 
-  // 2. Revert honeypot mode
+  // 2. Check 24h cooldown
+  if (agent.last_honeypot_state_change_at) {
+    const lastChange = new Date(agent.last_honeypot_state_change_at).getTime();
+    const elapsed = Date.now() - lastChange;
+    if (elapsed < COOLDOWN_MS) {
+      const remainingMin = Math.ceil((COOLDOWN_MS - elapsed) / 60000);
+      return new Response(
+        JSON.stringify({
+          error: `Cooldown active. ${remainingMin} minutes remaining before next state change.`,
+        }),
+        { status: 429, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+  }
+
+  // 3. Revert honeypot mode
+  const now = new Date().toISOString();
   const { error: updateError } = await supabase
     .from('agents')
     .update({
@@ -55,6 +83,7 @@ serveTenant(async (_req, ctx) => {
       honeypot_activated_at: null,
       honeypot_activated_by: null,
       honeypot_reason: null,
+      last_honeypot_state_change_at: now,
     })
     .eq('id', agentId);
 
@@ -66,7 +95,7 @@ serveTenant(async (_req, ctx) => {
     );
   }
 
-  // 3. Invalidate ALL current tokens for this agent
+  // 4. Invalidate ALL current tokens (mandatory rotation)
   const { error: tokenError } = await supabase
     .from('agent_tokens')
     .update({ is_active: false })
@@ -77,7 +106,7 @@ serveTenant(async (_req, ctx) => {
     console.error(`[revert-honeypot] Token invalidation error: ${tokenError.message}`);
   }
 
-  // 4. Generate new token
+  // 5. Generate new token
   const newToken = crypto.randomUUID() + '-' + crypto.randomUUID();
   const tokenHash = await hashToken(newToken);
   const tokenPrefix = newToken.substring(0, 8);
@@ -90,25 +119,25 @@ serveTenant(async (_req, ctx) => {
       token_prefix: tokenPrefix,
       is_active: true,
       tenant_id: tenantId,
-      expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year
+      expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     });
 
   if (insertError) {
-    console.error(`[revert-honeypot] New token creation error: ${insertError.message}`);
+    console.error(`[revert-honeypot] New token error: ${insertError.message}`);
     return new Response(
       JSON.stringify({ error: 'Agent reverted but new token creation failed. Manual intervention required.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } },
     );
   }
 
-  // 5. Audit log
+  // 6. Audit log (immutable trail)
   await supabase.from('audit_logs').insert({
     tenant_id: tenantId,
     user_id: userId,
     action: 'honeypot_reverted',
     resource_type: 'agent',
     resource_id: agentId,
-    details: { reason, agent_name: agent.agent_name, token_rotated: true },
+    details: { reason, agent_name: agent.agent_name, token_rotated: true, previous_mode: agent.honeypot_mode },
     ip_address: _req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown',
   });
 
@@ -116,7 +145,7 @@ serveTenant(async (_req, ctx) => {
     success: true,
     agent_id: agentId,
     honeypot_mode: 'none',
-    new_token: newToken, // Return ONCE for the admin to configure on the agent
+    new_token: newToken,
     message: 'Agent reverted to normal mode. Token rotated. Provide the new token to the agent.',
   };
 });
