@@ -24,7 +24,7 @@ export function useAgentTest() {
 
   const cleanupMutation = useMutation({
     mutationFn: async () => {
-      return await callGateway('sync', 'system-maintenance');
+      return await callGateway<{ results: { agents: number; agent_tokens: number; installation_analytics: number } }>('sync', 'system-maintenance');
     },
     onSuccess: (data) => {
       toast({
