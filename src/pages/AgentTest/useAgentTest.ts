@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { useTenant } from '@/hooks/useTenant';
 import { useToast } from '@/hooks/use-toast';
 
@@ -23,13 +24,7 @@ export function useAgentTest() {
 
   const cleanupMutation = useMutation({
     mutationFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('No active session');
-      const response = await supabase.functions.invoke('system-maintenance', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (response.error) throw response.error;
-      return response.data;
+      return await callGateway<{ results: { agents: number; agent_tokens: number; installation_analytics: number } }>('sync', 'system-maintenance');
     },
     onSuccess: (data) => {
       toast({

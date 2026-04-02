@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { CheckCircle2, Clock, WifiOff, HelpCircle, RefreshCw, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
-import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 
@@ -18,9 +18,7 @@ export function AgentSyncStatusCard() {
   const handleSyncNow = async () => {
     setIsSyncing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('sync-blocked-websites');
-      
-      if (error) throw error;
+      const data = await callGateway('sync', 'sync-blocked-websites');
       
       toast.success(`Sincronização agendada para ${data?.jobs_created ?? data?.jobsCreated ?? 0} computadores online`);
       

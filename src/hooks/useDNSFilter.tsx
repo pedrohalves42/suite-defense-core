@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { toast } from 'sonner';
 import { useTenant } from './useTenant';
 import { logger } from '@/lib/logger';
@@ -235,12 +236,7 @@ export function useDNSFilter() {
   // Sync blocked websites to all online agents
   const syncBlockedWebsites = useMutation({
     mutationFn: async (agentIds?: string[]) => {
-      const { data, error } = await supabase.functions.invoke('sync-blocked-websites', {
-        body: agentIds ? { agent_ids: agentIds } : {},
-      });
-
-      if (error) throw error;
-      return data;
+      return await callGateway<{ message?: string; jobs_created?: number }>('sync', 'sync-blocked-websites', agentIds ? { agent_ids: agentIds } : {});
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['dns-filter-status'] });

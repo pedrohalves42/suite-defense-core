@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { exportToCSV } from '@/lib/csv-export';
@@ -167,7 +168,7 @@ export default function WebActivity() {
   const confirmBlock = async () => { await blockWebsite.mutateAsync({ domain_pattern: domainToBlock, reason: blockReason || undefined, group_id: selectedGroupId }); setBlockDialogOpen(false); };
 
   const syncBlockedWebsitesMutation = useMutation({
-    mutationFn: async () => { const { data, error } = await supabase.functions.invoke('sync-blocked-websites', { body: {} }); if (error) throw error; return data; },
+    mutationFn: async () => { return await callGateway('sync', 'sync-blocked-websites'); },
     onSuccess: (data: any) => { toast.success((data?.message as string) || 'Sincronização agendada com sucesso'); },
     onError: (error: Error) => { toast.error(`Erro ao sincronizar: ${error.message}`); },
   });

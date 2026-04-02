@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { useToast } from '@/hooks/use-toast';
 import { useActiveTenant } from './useActiveTenant';
 import { logger } from '@/lib/logger';
@@ -25,18 +26,11 @@ interface BlockWebsiteParams {
 
 // Helper to sync blocked websites with agents
 async function syncWithAgents(): Promise<{ jobsCreated: number; agentNames: string[] }> {
-  const { data, error } = await supabase.functions.invoke('sync-blocked-websites', {
-    method: 'POST',
-  });
-  
-  if (error) {
-    logger.error('Failed to sync blocked websites:', error);
-    throw error;
-  }
+  const data = await callGateway<Record<string, unknown>>('sync', 'sync-blocked-websites');
   
   return {
-    jobsCreated: data?.jobs_created || 0,
-    agentNames: data?.agent_names || [],
+    jobsCreated: (data?.jobs_created as number) || 0,
+    agentNames: (data?.agent_names as string[]) || [],
   };
 }
 
