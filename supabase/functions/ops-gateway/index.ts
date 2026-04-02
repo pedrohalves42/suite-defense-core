@@ -141,6 +141,28 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'sync:flush-event-buffer': handleFlushEventBuffer,
   // ── playbook inlined ──
   'playbook:auto-triage-insights': handleAutoTriageInsights,
+  // ── cleanup inlined (Phase 3A) ──
+  'cleanup:telemetry': handleCleanupTelemetry,
+  'cleanup:stale-reports': handleCleanupStaleReports,
+  'cleanup:stale-updates': handleCleanupStaleUpdates,
+  'cleanup:stale-playbooks': handleCleanupStalePlaybooks,
+  'cleanup:offline-agents-jobs': handleCleanupOfflineAgentsJobs,
+  'cleanup:stuck-builds': handleCleanupStuckBuilds,
+  'cleanup:stuck-jobs': handleCleanupStuckJobs,
+  'cleanup:auto-cleanup-jobs': handleAutoCleanupJobs,
+  'cleanup:security': handleSecurityCleanup,
+  'cleanup:jobs': handleCleanupJobs,
+  'cleanup:expired-enrollment-keys': handleCleanupExpiredEnrollmentKeys,
+  'cleanup:orphaned-data': handleCleanupOrphanedData,
+  'cleanup:stale-honeypots': handleCleanupStaleHoneypots,
+  // ── notify inlined (Phase 3A) ──
+  'notify:email': handleNotifyEmail,
+  'notify:telegram': handleNotifyTelegram,
+  'notify:whatsapp': handleNotifyWhatsApp,
+  'notify:webhook': handleNotifyWebhook,
+  'notify:welcome': handleNotifyWelcome,
+  'notify:security': handleNotifySecurity,
+  'notify:get-telegram-chat-id': handleGetTelegramChatId,
 };
 
 const ALL_VALID_ACTIONS = new Set([
