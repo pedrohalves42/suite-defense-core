@@ -131,10 +131,7 @@ export function useEnrollmentKeys() {
   const runManualCleanup = async () => {
     setIsCleaningUp(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const { data, error } = await supabase.functions.invoke('cleanup-expired-enrollment-keys', {
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-      });
+      const data = await callGateway('cleanup', 'expired-enrollment-keys');
       if (error) throw error;
       toast({ title: 'Limpeza concluida!', description: `${data.deleted_count} chaves expiradas foram removidas.` });
       queryClient.invalidateQueries({ queryKey: ['enrollment-keys'] });
