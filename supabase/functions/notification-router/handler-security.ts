@@ -161,7 +161,11 @@ async function sendSecurityWebhook(
       tenantId: payload.tenantId, timestamp, nonce,
     });
 
-    const webhookSecret = Deno.env.get('WEBHOOK_SIGNING_SECRET') || 'default-signing-secret';
+    const webhookSecret = Deno.env.get('WEBHOOK_SIGNING_SECRET');
+    if (!webhookSecret) {
+      logger.error(`[${requestId}] WEBHOOK_SIGNING_SECRET not configured — refusing to sign with default`);
+      return { channel: 'webhook', success: false, error: 'Webhook signing secret not configured' };
+    }
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey('raw', encoder.encode(webhookSecret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
     const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(`${timestamp}.${body}`));
