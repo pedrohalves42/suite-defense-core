@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { HardDrive, RefreshCw, CheckCircle, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { callGateway } from "@/lib/gateway";
 
 interface SyncResult {
   platform: string;
@@ -28,39 +28,16 @@ export function SyncStorageBucket() {
 
   const syncPlatform = async (platform: string): Promise<SyncResult> => {
     try {
-      const session = (await supabase.auth.getSession()).data.session;
-      if (!session?.access_token) {
-        throw new Error('Sessão expirada');
-      }
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-storage-bucket`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-          },
-          body: JSON.stringify({ platform, force: false })
-        }
+      const data = await callGateway<{ synced?: boolean; message?: string; version?: string; error?: string }>(
+        'sync',
+        'sync-storage-bucket',
+        { platform, force: false }
       );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          platform,
-          success: false,
-          synced: false,
-          error: data.error || 'Erro desconhecido'
-        };
-      }
 
       return {
         platform,
         success: true,
-        synced: data.synced,
+        synced: data.synced ?? false,
         message: data.message,
         version: data.version
       };
