@@ -81,7 +81,7 @@ async function fetchAuditLogs(tenantId: string): Promise<DashboardAuditLog[]> {
 }
 
 async function fetchTenantNames(): Promise<Record<string, string>> {
-  const { data, error } = await supabase.from('tenants').select('id, name');
+  const { data, error } = await supabase.from('tenants_safe').select('id, name');
   if (error) return {};
   const map: Record<string, string> = {};
   (data || []).forEach(t => { map[t.id] = t.name; });

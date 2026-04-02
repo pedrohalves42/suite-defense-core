@@ -80,7 +80,7 @@ export default function SuperAdminMetrics() {
     queryKey: ['super-admin-tenant-stats'],
     queryFn: async () => {
       const { data: tenants, error: tenantsError } = await supabase
-        .from('tenants')
+        .from('tenants_safe')
         .select('id');
       
       if (tenantsError) throw tenantsError;

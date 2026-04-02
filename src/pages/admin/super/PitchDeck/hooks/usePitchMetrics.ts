@@ -6,7 +6,7 @@ export function usePitchMetrics() {
     queryKey: ['pitch-metrics'],
     queryFn: async () => {
       const [tenants, agents, jobs, subscriptions] = await Promise.all([
-        supabase.from('tenants').select('id, created_at'),
+        supabase.from('tenants_safe').select('id, created_at'),
         supabase.from('agents_safe').select('id, status'),
         supabase.from('jobs').select('id, status'),
         supabase.from('tenant_subscriptions').select('id, status, device_quantity, plan_id, subscription_plans(price)'),

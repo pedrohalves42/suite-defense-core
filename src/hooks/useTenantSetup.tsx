@@ -44,7 +44,7 @@ export const useTenantSetup = () => {
       if (!activeTenant?.id) return false;
 
       const { data, error } = await supabase
-        .from('tenants')
+        .from('tenants_safe')
         .select('setup_completed')
         .eq('id', activeTenant.id)
         .maybeSingle();
@@ -68,7 +68,7 @@ export const useTenantSetup = () => {
 
       // Get tenant data
       const { data: tenant, error: tenantError } = await supabase
-        .from('tenants')
+        .from('tenants_safe')
         .select('id, name, slug, company_name, cnpj, contact_email, phone, address, city, state, zip_code, industry_segment, created_at')
         .eq('id', activeTenant.id)
         .maybeSingle();
