@@ -67,16 +67,7 @@ export default function Members() {
   // Edge Function valida: nao remover ultimo admin, nao remover a si mesmo, audit log
   const removeMember = useMutation({
     mutationFn: async (memberId: string) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const { data, error } = await supabase.functions.invoke('remove-member', {
-        body: { member_id: memberId },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-      });
-
-      if (error) throw error;
+      const data = await callGateway<{ success: boolean; message?: string }>('admin', 'remove-member', { member_id: memberId });
       if (!data?.success) throw new Error(data?.message || 'Erro ao remover membro');
       return data;
     },
