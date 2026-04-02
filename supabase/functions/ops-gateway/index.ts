@@ -170,8 +170,6 @@ const ALL_VALID_ACTIONS = new Set([
   ...Object.keys(INLINED_HANDLERS),
 ]);
 
-// Namespaces that proxy to existing routers
-const ROUTER_PROXY_NAMESPACES = new Set(Object.keys(NAMESPACE_ROUTER_PROXY));
 
 const RouterSchema = z.object({
   action: z.string().min(1).max(80),
