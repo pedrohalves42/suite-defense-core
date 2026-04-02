@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { HardDrive, RefreshCw, CheckCircle, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { callGateway } from "@/lib/gateway";
 
 interface SyncResult {
   platform: string;
