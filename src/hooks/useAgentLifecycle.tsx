@@ -106,12 +106,9 @@ export function usePipelineMetrics(tenantId: string | undefined, hoursBack: numb
       }
 
       const { callGateway } = await import('@/lib/gateway');
-      const data = await callGateway('check', 'get-installation-pipeline-metrics', body);
-      return data;
+      const data = await callGateway<{ success: boolean; metrics: PipelineMetrics; error?: string }>('check', 'get-installation-pipeline-metrics', body);
 
-      if (error) throw new Error(`Erro ao buscar métricas: ${error.message}`);
       if (!data?.success) throw new Error(data?.error || 'Erro desconhecido');
-      
       return data.metrics;
     },
     enabled: !loading && !!tenantId,  // V-503b: Guard para sincronização
