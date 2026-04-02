@@ -200,7 +200,7 @@ export function useNotificationSettings() {
   const handleTestNotification = useCallback(async (channel: NotificationChannel) => {
     try {
       toast.info('Enviando notificação de teste...');
-      const { error } = await supabase.functions.invoke('ops-router', {
+      const { error } = await supabase.functions.invoke('ops-gateway', {
         body: {
           action: 'notify:dispatch',
           payload: {
@@ -295,7 +295,7 @@ export function useNotificationSettings() {
     setSendingReport(report.id);
     try {
       toast.info('Enviando relatório...');
-      const { error } = await supabase.functions.invoke('ops-router', {
+      const { error } = await supabase.functions.invoke('ops-gateway', {
         body: { action: 'notify:scheduled-report', payload: { report_id: report.id, tenant_id: tenantId } }
       });
       if (error) throw error;

@@ -19,23 +19,30 @@
 | sign-release | serveTenant (skipTenantValidation) | Super admin crypto ops |
 | soar-engine | serveInternal | Automated security response |
 
-## Justified Exceptions — Routers (12 functions)
+## Justified Exceptions — Routers (6 functions)
 > Routers consolidate multiple sub-functions via namespace dispatch. Migrating would break the router architecture pattern.
 
 | Function | Reason |
 |---|---|
-| admin-router | Domain router — dispatches admin namespace actions |
-| agent-mgmt-router | Domain router — agent management actions |
 | billing-router | Domain router — billing/subscription actions |
-| build-router | Domain router — agent build pipeline |
 | check-router | Domain router — health/status checks |
 | cleanup-router | Domain router — data cleanup/retention |
 | notification-router | Domain router — notification dispatch |
-| ops-router | Domain router — operations/maintenance |
-| playbook-router | Domain router — playbook CRUD |
-| report-router | Domain router — report generation |
 | security-router | Domain router — security operations |
 | sync-router | Domain router — data sync operations |
+
+### Removed Proxy Routers (Phase 1 consolidation — 2026-04-02)
+> These were thin proxies to api-gateway/ops-gateway and have been removed.
+> All their actions are served directly by the gateways.
+
+| Function | Replaced By |
+|---|---|
+| ~~admin-router~~ | api-gateway `admin:*` |
+| ~~agent-mgmt-router~~ | api-gateway `agent:*` |
+| ~~build-router~~ | api-gateway `build:*` |
+| ~~ops-router~~ | api-gateway / ops-gateway (meta-router) |
+| ~~playbook-router~~ | ops-gateway `playbook:*` |
+| ~~report-router~~ | ops-gateway `report:*` |
 
 ## Justified Exceptions — Agent-Facing / HMAC (8 functions)
 > These require raw body access for HMAC signature verification or have triple auth flows (agent token + JWT + anonymous).
