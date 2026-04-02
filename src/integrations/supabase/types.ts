@@ -7157,7 +7157,7 @@ export type Database = {
           force_update_override_safe_mode_expires_at: string | null
           force_update_reason: string | null
           force_update_version: string | null
-          hmac_secret: string
+          hmac_secret: string | null
           honeypot_activated_at: string | null
           honeypot_activated_by: string | null
           honeypot_mode: string
@@ -7220,7 +7220,7 @@ export type Database = {
           force_update_override_safe_mode_expires_at?: string | null
           force_update_reason?: string | null
           force_update_version?: string | null
-          hmac_secret: string
+          hmac_secret?: string | null
           honeypot_activated_at?: string | null
           honeypot_activated_by?: string | null
           honeypot_mode?: string
@@ -7283,7 +7283,7 @@ export type Database = {
           force_update_override_safe_mode_expires_at?: string | null
           force_update_reason?: string | null
           force_update_version?: string | null
-          hmac_secret?: string
+          hmac_secret?: string | null
           honeypot_activated_at?: string | null
           honeypot_activated_by?: string | null
           honeypot_mode?: string
@@ -20703,7 +20703,7 @@ export type Database = {
           enabled: boolean
           id: string
           key: string
-          tenant_id: string
+          tenant_id: string | null
           updated_at: string
         }
         Insert: {
@@ -20711,7 +20711,7 @@ export type Database = {
           enabled?: boolean
           id?: string
           key: string
-          tenant_id: string
+          tenant_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -20719,7 +20719,7 @@ export type Database = {
           enabled?: boolean
           id?: string
           key?: string
-          tenant_id?: string
+          tenant_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -48317,6 +48317,7 @@ export type Database = {
         }[]
       }
       aggregate_honeypot_hourly: { Args: never; Returns: number }
+      aggregate_honeypot_hourly_stats: { Args: never; Returns: undefined }
       alert_long_offline_agents: { Args: never; Returns: Json }
       apply_agent_isolation: {
         Args: { p_agent_id: string; p_reason?: string }
@@ -49536,6 +49537,14 @@ export type Database = {
       hash_agent_token: { Args: { p_token: string }; Returns: string }
       hash_enrollment_key: { Args: { p_key: string }; Returns: string }
       hash_enrollment_key_secure: { Args: { p_key: string }; Returns: string }
+      honeypot_alert_dedup_key: {
+        Args: {
+          p_alert_type: string
+          p_created_at: string
+          p_tenant_id: string
+        }
+        Returns: string
+      }
       increment_ai_cache_hit: { Args: { cache_id: string }; Returns: undefined }
       increment_tenant_quota: {
         Args: { p_tenant_id: string }
@@ -49560,6 +49569,10 @@ export type Database = {
       }
       is_current_super_admin: { Args: never; Returns: boolean }
       is_emergency_mode: { Args: never; Returns: boolean }
+      is_feature_enabled: {
+        Args: { p_flag_key: string; p_tenant_id?: string }
+        Returns: boolean
+      }
       is_operator_or_viewer: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       is_table_migrated: { Args: { p_table_name: string }; Returns: boolean }
