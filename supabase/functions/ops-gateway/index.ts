@@ -42,6 +42,19 @@ import {
 } from './handlers/sync.ts';
 import { handleAutoTriageInsights } from './handlers/playbook.ts';
 
+// Inlined handlers — sync jobs (Phase 3B)
+import {
+  handleProcessFailedJobs, handleProcessScheduledJobs, handleInvokeScheduledJobs,
+  handleDlqAction, handleProcessDlqRetries,
+} from './handlers/sync-jobs.ts';
+
+// Inlined handlers — sync infra (Phase 3B)
+import {
+  handleSyncBlockedWebsites, handleMaintenanceCron, handleSystemMaintenance,
+  handleReleaseSync, handleSyncStorageBucket, handleSyncStripeSubscriptions,
+  handleSyncThreatFeeds,
+} from './handlers/sync-infra.ts';
+
 // Inlined handlers — cleanup (Phase 3A)
 import {
   handleCleanupTelemetry, handleCleanupStaleReports, handleCleanupStaleUpdates,
@@ -64,19 +77,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 // ── Flat proxy map: "namespace:action" → target function ────────────────
 const ACTION_TO_FUNCTION: Record<string, string> = {
-  // sync proxy targets
-  'sync:sync-blocked-websites': 'sync-blocked-websites',
-  'sync:sync-storage-bucket': 'sync-storage-bucket',
-  'sync:process-dlq-retries': 'process-dlq-retries',
-  'sync:process-failed-jobs': 'process-failed-jobs',
-  'sync:process-scheduled-jobs': 'process-scheduled-jobs',
-  'sync:invoke-scheduled-jobs': 'invoke-scheduled-jobs',
-  'sync:dlq-action': 'dlq-action',
-  'sync:system-maintenance': 'system-maintenance',
-  'sync:maintenance-cron': 'maintenance-cron',
-  'sync:release-sync': 'release-sync',
-  'sync:sync-stripe-subscriptions': 'sync-stripe-subscriptions',
-  'sync:sync-threat-feeds': 'sync-threat-feeds',
+  // sync proxy targets — all inlined in Phase 3B
   // playbook proxy targets
   'playbook:execute-playbook': 'execute-playbook',
   'playbook:execute-playbook-action': 'execute-playbook-action',
@@ -141,6 +142,19 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'sync:flush-event-buffer': handleFlushEventBuffer,
   // ── playbook inlined ──
   'playbook:auto-triage-insights': handleAutoTriageInsights,
+  // ── sync inlined (Phase 3B) ──
+  'sync:sync-blocked-websites': handleSyncBlockedWebsites,
+  'sync:process-failed-jobs': handleProcessFailedJobs,
+  'sync:process-scheduled-jobs': handleProcessScheduledJobs,
+  'sync:invoke-scheduled-jobs': handleInvokeScheduledJobs,
+  'sync:maintenance-cron': handleMaintenanceCron,
+  'sync:system-maintenance': handleSystemMaintenance,
+  'sync:dlq-action': handleDlqAction,
+  'sync:process-dlq-retries': handleProcessDlqRetries,
+  'sync:release-sync': handleReleaseSync,
+  'sync:sync-storage-bucket': handleSyncStorageBucket,
+  'sync:sync-stripe-subscriptions': handleSyncStripeSubscriptions,
+  'sync:sync-threat-feeds': handleSyncThreatFeeds,
   // ── cleanup inlined (Phase 3A) ──
   'cleanup:telemetry': handleCleanupTelemetry,
   'cleanup:stale-reports': handleCleanupStaleReports,
