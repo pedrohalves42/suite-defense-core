@@ -90,6 +90,8 @@ vi.mock('recharts', () => ({
   PolarRadiusAxis: () => null,
   RadialBar: () => null,
   RadialBarChart: () => null,
+  FunnelChart: () => null,
+  Funnel: () => null,
   Treemap: () => null,
 }));
 
