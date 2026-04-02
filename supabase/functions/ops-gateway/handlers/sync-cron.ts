@@ -1,10 +1,54 @@
 /**
- * seed-collection-jobs - Creates recurring collection jobs for active agents
- * Migrated to serveInternal middleware
+ * Cron job handlers — inlined from process-agent-updates + seed-collection-jobs
+ * Phase 4: Cron job migration to gateways
  */
-import { serveInternal } from '../_shared/serve-tenant.ts';
-import { logger } from '../_shared/logger.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from '../../_shared/logger.ts';
+import {
+  SupabaseVersionQueryAdapter,
+  SupabaseUpdateJobAdapter,
+  SupabaseObservabilityAdapter,
+  PersistingEventDispatcherAdapter,
+  ProcessAgentUpdatesUseCase,
+} from '../../_shared/hexagonal/index.ts';
 
+type SB = ReturnType<typeof createClient>;
+
+// ═══ sync:process-agent-updates ═══
+export async function handleProcessAgentUpdates(supabase: SB, requestId: string, _payload: Record<string, unknown>) {
+  logger.info(`[process-agent-updates][${requestId}] Cron job started`);
+
+  const useCase = new ProcessAgentUpdatesUseCase(
+    new SupabaseVersionQueryAdapter(supabase),
+    new SupabaseUpdateJobAdapter(supabase),
+    new SupabaseObservabilityAdapter(supabase),
+    new PersistingEventDispatcherAdapter(supabase),
+  );
+
+  const result = await useCase.execute(requestId);
+
+  if (result.platforms.length === 0) {
+    return { message: 'No latest versions registered' };
+  }
+
+  try {
+    await supabase.rpc('update_cron_health', {
+      p_cron_name: 'process-agent-updates',
+      p_success: true,
+      p_details: { total_jobs_created: result.totalJobsCreated, platforms_processed: result.platforms.length },
+    });
+  } catch (_) { /* best effort */ }
+
+  return {
+    success: result.success,
+    total_jobs_created: result.totalJobsCreated,
+    platforms: result.platforms.map((p) => ({
+      platform: p.platform, outdated_count: p.outdatedCount, jobs_created: p.jobsCreated,
+    })),
+  };
+}
+
+// ═══ sync:seed-collection-jobs ═══
 interface CollectionJobTemplate {
   type: string;
   priority: number;
@@ -24,8 +68,7 @@ const COLLECTION_TEMPLATES: CollectionJobTemplate[] = [
   { type: 'collect_process_lineage', priority: 4, ttl_hours: 2, payload: { source: 'auto-seed' } },
 ];
 
-serveInternal(async (_req, ctx) => {
-  const { supabase, requestId } = ctx;
+export async function handleSeedCollectionJobs(supabase: SB, requestId: string, _payload: Record<string, unknown>) {
   const startedAt = Date.now();
 
   logger.info(`[${requestId}] [seed-collection-jobs] Starting`);
@@ -87,4 +130,4 @@ serveInternal(async (_req, ctx) => {
   } catch (e) { logger.warn('[seed-collection-jobs] Failed to log job run:', e); }
 
   return result;
-});
+}

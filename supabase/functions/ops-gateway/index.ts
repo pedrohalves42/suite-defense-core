@@ -55,6 +55,12 @@ import {
   handleSyncThreatFeeds,
 } from './handlers/sync-infra.ts';
 
+// Inlined handlers — honeypot cron (Phase 4)
+import { handleCheckHoneypotAlerts, handleHoneypotDispatchAi } from './handlers/check-honeypot.ts';
+
+// Inlined handlers — sync cron (Phase 4)
+import { handleProcessAgentUpdates, handleSeedCollectionJobs } from './handlers/sync-cron.ts';
+
 // Inlined handlers — cleanup (Phase 3A)
 import {
   handleCleanupTelemetry, handleCleanupStaleReports, handleCleanupStaleUpdates,
@@ -177,6 +183,12 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'notify:welcome': handleNotifyWelcome,
   'notify:security': handleNotifySecurity,
   'notify:get-telegram-chat-id': handleGetTelegramChatId,
+  // ── honeypot cron inlined (Phase 4) ──
+  'check:honeypot-alerts': handleCheckHoneypotAlerts,
+  'check:honeypot-dispatch-ai': handleHoneypotDispatchAi,
+  // ── sync cron inlined (Phase 4) ──
+  'sync:process-agent-updates': handleProcessAgentUpdates,
+  'sync:seed-collection-jobs': handleSeedCollectionJobs,
 };
 
 const ALL_VALID_ACTIONS = new Set([

@@ -1,26 +1,20 @@
 /**
- * check-honeypot-alerts — Cron function to detect attack patterns.
- * 
- * Via serveInternal (cron, every 5 min).
- * 
- * Features:
- * - Same IP hash hitting 3+ distinct honeypots → alert
- * - Payloads classified as malicious → alert
- * - Volume anomaly (>20 interactions in window) → alert
- * - DEDUPLICATION: uses honeypot_alert_dedup_key() to avoid duplicate alerts in same 10-min window
- * - SUPPRESSION: max 10 alerts per cron run to prevent alert storms
+ * Honeypot cron handlers — inlined from check-honeypot-alerts + dispatch-honeypot-ai
+ * Phase 4: Cron job migration to gateways
  */
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from '../../_shared/logger.ts';
 
-import { serveInternal } from '../_shared/serve-internal.ts';
+type SB = ReturnType<typeof createClient>;
 
 const MAX_ALERTS_PER_RUN = 10;
 
-serveInternal(async (_req, { supabase, requestId }) => {
+// ═══ check:honeypot-alerts ═══
+export async function handleCheckHoneypotAlerts(supabase: SB, requestId: string, _payload: Record<string, unknown>) {
   const windowMinutes = 10;
   const windowStart = new Date(Date.now() - windowMinutes * 60 * 1000).toISOString();
   const alertsCreated: string[] = [];
 
-  // Fetch recent interactions
   const { data: recent } = await supabase
     .from('honeypot_interactions')
     .select('source_ip_hash, source_ip_prefix, agent_id, tenant_id, classification')
@@ -31,7 +25,6 @@ serveInternal(async (_req, { supabase, requestId }) => {
     return { success: true, request_id: requestId, alerts_created: 0, alerts: [] };
   }
 
-  // Group by source_ip_hash
   const ipMap = new Map<string, { agents: Set<string>; tenantId: string; count: number; prefix: string }>();
 
   for (const row of recent) {
@@ -49,10 +42,6 @@ serveInternal(async (_req, { supabase, requestId }) => {
     entry.count++;
   }
 
-  /**
-   * Insert alert with deduplication.
-   * Uses honeypot_alert_dedup_key to check if a similar alert already exists in this window.
-   */
   async function insertAlertDeduped(alert: {
     alert_type: string;
     severity: string;
@@ -63,8 +52,6 @@ serveInternal(async (_req, { supabase, requestId }) => {
   }): Promise<boolean> {
     if (alertsCreated.length >= MAX_ALERTS_PER_RUN) return false;
 
-    // Check dedup: same alert_type + tenant in same 10-min window?
-    const dedupKey = `${alert.alert_type}:${alert.tenant_id}`;
     const { data: existing } = await supabase
       .from('system_alerts')
       .select('id')
@@ -74,10 +61,7 @@ serveInternal(async (_req, { supabase, requestId }) => {
       .limit(1)
       .maybeSingle();
 
-    if (existing) {
-      // Already alerted in this window — skip
-      return false;
-    }
+    if (existing) return false;
 
     const { error } = await supabase.from('system_alerts').insert({
       ...alert,
@@ -85,7 +69,7 @@ serveInternal(async (_req, { supabase, requestId }) => {
     });
 
     if (error) {
-      console.error(`[check-honeypot-alerts] Insert error: ${error.message}`);
+      logger.error(`[check-honeypot-alerts] Insert error: ${error.message}`);
       return false;
     }
 
@@ -101,16 +85,11 @@ serveInternal(async (_req, { supabase, requestId }) => {
         severity: 'high',
         title: `Multi-honeypot attack detected (${data.prefix})`,
         message: `IP prefix ${data.prefix} interacted with ${data.agents.size} distinct honeypot agents in ${windowMinutes} minutes.`,
-        details: {
-          source_ip_prefix: data.prefix,
-          agent_count: data.agents.size,
-          agents: [...data.agents].slice(0, 10),
-        },
+        details: { source_ip_prefix: data.prefix, agent_count: data.agents.size, agents: [...data.agents].slice(0, 10) },
         tenant_id: data.tenantId,
       });
     }
 
-    // 2. Volume anomaly: >20 interactions per IP in the window
     if (data.count > 20) {
       await insertAlertDeduped({
         alert_type: 'honeypot_volume_anomaly',
@@ -123,7 +102,7 @@ serveInternal(async (_req, { supabase, requestId }) => {
     }
   }
 
-  // 3. Malicious payloads — group by tenant
+  // 3. Malicious payloads
   const malicious = recent.filter(r => r.classification === 'malicious');
   if (malicious.length > 0) {
     const tenantAlerts = new Map<string, number>();
@@ -152,4 +131,70 @@ serveInternal(async (_req, { supabase, requestId }) => {
     alerts: alertsCreated,
     suppressed: alertsCreated.length >= MAX_ALERTS_PER_RUN,
   };
-});
+}
+
+// ═══ check:honeypot-dispatch-ai ═══
+const BATCH_SIZE = 20;
+const MAX_PER_TENANT_PER_DAY = 100;
+
+export async function handleHoneypotDispatchAi(supabase: SB, requestId: string, _payload: Record<string, unknown>) {
+  const { data: pending, error: fetchError } = await supabase
+    .from('honeypot_interactions')
+    .select('id, tenant_id, mode, method, path, body_snippet, classification, source_ip_prefix, created_at')
+    .eq('ai_analyzed', false)
+    .in('classification', ['suspicious', 'malicious'])
+    .order('created_at', { ascending: true })
+    .limit(BATCH_SIZE);
+
+  if (fetchError) {
+    logger.error(`[dispatch-honeypot-ai] Fetch error: ${fetchError.message}`);
+    return { success: false, error: fetchError.message };
+  }
+
+  if (!pending || pending.length === 0) {
+    return { success: true, request_id: requestId, processed: 0 };
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tenantBudgets = new Map<string, number>();
+
+  for (const item of pending) {
+    if (!tenantBudgets.has(item.tenant_id)) {
+      const { count } = await supabase
+        .from('honeypot_interactions')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', item.tenant_id)
+        .eq('ai_analyzed', true)
+        .gte('created_at', today.toISOString());
+      tenantBudgets.set(item.tenant_id, count || 0);
+    }
+  }
+
+  const eligibleIds = pending
+    .filter(p => (tenantBudgets.get(p.tenant_id) || 0) < MAX_PER_TENANT_PER_DAY)
+    .map(p => p.id);
+
+  if (eligibleIds.length === 0) {
+    await supabase
+      .from('honeypot_interactions')
+      .update({ ai_analyzed: true })
+      .in('id', pending.map(p => p.id));
+    return { success: true, request_id: requestId, processed: 0, budget_exceeded: true };
+  }
+
+  await supabase
+    .from('honeypot_interactions')
+    .update({ ai_analyzed: true })
+    .in('id', eligibleIds);
+
+  const processed = eligibleIds.length;
+  logger.info(`[dispatch-honeypot-ai][${requestId}] Marked ${processed} interactions as analyzed`);
+
+  return {
+    success: true,
+    request_id: requestId,
+    processed,
+    skipped_budget: pending.length - processed,
+  };
+}
