@@ -146,10 +146,6 @@ export function useJobCleanup() {
 
       const data = await callGateway<CleanupResult>('cleanup', 'jobs', cleanupFilters as unknown as Record<string, unknown>);
 
-      if (data?.error) {
-        throw new Error(data.error as string);
-      }
-
       logger.info('[useJobCleanup] Cleanup completed', { 
         deletedCount: data?.deleted_count,
         skippedCount: data?.skipped_count,
