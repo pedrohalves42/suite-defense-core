@@ -1439,6 +1439,8 @@ export type Database = {
           event_type: string
           evidence_hash: string
           id: string
+          integrity_hash: string | null
+          previous_log_hash: string | null
           severity: string | null
           state_after: string | null
           state_before: string | null
@@ -1454,6 +1456,8 @@ export type Database = {
           event_type: string
           evidence_hash: string
           id?: string
+          integrity_hash?: string | null
+          previous_log_hash?: string | null
           severity?: string | null
           state_after?: string | null
           state_before?: string | null
@@ -1469,6 +1473,8 @@ export type Database = {
           event_type?: string
           evidence_hash?: string
           id?: string
+          integrity_hash?: string | null
+          previous_log_hash?: string | null
           severity?: string | null
           state_after?: string | null
           state_before?: string | null
@@ -32978,7 +32984,9 @@ export type Database = {
           details: Json | null
           endpoint: string
           id: string
+          integrity_hash: string | null
           ip_address: string
+          previous_log_hash: string | null
           request_id: string | null
           severity: string
           tenant_id: string
@@ -32993,7 +33001,9 @@ export type Database = {
           details?: Json | null
           endpoint: string
           id?: string
+          integrity_hash?: string | null
           ip_address: string
+          previous_log_hash?: string | null
           request_id?: string | null
           severity: string
           tenant_id: string
@@ -33008,7 +33018,9 @@ export type Database = {
           details?: Json | null
           endpoint?: string
           id?: string
+          integrity_hash?: string | null
           ip_address?: string
+          previous_log_hash?: string | null
           request_id?: string | null
           severity?: string
           tenant_id?: string
@@ -49780,6 +49792,7 @@ export type Database = {
           passed: boolean
         }[]
       }
+      run_integrity_sentinel: { Args: never; Returns: Json }
       run_maintenance_v2: {
         Args: { p_archive_limit?: number; p_expire_limit?: number }
         Returns: Json
@@ -49962,6 +49975,32 @@ export type Database = {
           document_name: string
           is_valid: boolean
           signed_at: string
+        }[]
+      }
+      verify_evidence_log_chain: {
+        Args: {
+          p_end_date?: string
+          p_start_date?: string
+          p_tenant_id: string
+        }
+        Returns: {
+          broken_at: string
+          broken_id: string
+          chain_valid: boolean
+          total_records: number
+        }[]
+      }
+      verify_security_log_chain: {
+        Args: {
+          p_end_date?: string
+          p_start_date?: string
+          p_tenant_id: string
+        }
+        Returns: {
+          broken_at: string
+          broken_id: string
+          chain_valid: boolean
+          total_records: number
         }[]
       }
     }
