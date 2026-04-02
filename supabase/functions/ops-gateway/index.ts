@@ -106,11 +106,7 @@ const ACTION_TO_FUNCTION: Record<string, string> = {
   'report:list': 'list-reports',
 };
 
-// For cleanup and notification namespaces, we proxy to existing routers
-const NAMESPACE_ROUTER_PROXY: Record<string, string> = {
-  'cleanup': 'cleanup-router',
-  'notify': 'notification-router',
-};
+// cleanup and notify are now fully inlined (Phase 3A) — no more router proxy
 
 type InlinedHandler = (supabase: ReturnType<typeof createClient>, requestId: string, payload: Record<string, unknown>) => Promise<unknown>;
 
