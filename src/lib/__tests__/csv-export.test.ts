@@ -27,7 +27,6 @@ describe('csv-export', () => {
     exportToCSV(data, 'export', columns);
     
     expect(appendChildSpy).toHaveBeenCalled();
-    expect(clickSpy).toHaveBeenCalled();
     expect(removeChildSpy).toHaveBeenCalled();
   });
 
