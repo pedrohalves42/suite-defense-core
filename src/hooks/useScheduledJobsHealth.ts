@@ -107,9 +107,8 @@ export function useScheduledJobsHealth() {
   // Trigger health monitor manually
   const triggerMonitor = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('health-monitor');
-      if (error) throw error;
-      return data;
+      const { callGateway } = await import('@/lib/gateway');
+      return await callGateway('check', 'health-monitor');
     },
     onSuccess: (data) => {
       toast.success(`Monitor executado: ${data.jobs_checked} jobs verificados, ${data.alerts_created} alertas criados`);

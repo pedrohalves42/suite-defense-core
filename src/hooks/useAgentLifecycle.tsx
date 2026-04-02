@@ -2,6 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AgentLifecycleState, DashboardAgentCard, LifecycleStage } from '@/types/agent-lifecycle';
 
+interface PipelineMetricsData {
+  total_generated: number; total_downloaded: number; total_command_copied: number;
+  total_installed: number; total_active: number; total_stuck: number;
+  success_rate_pct: number; avg_install_time_seconds: number;
+  conversion_rate_generated_to_installed_pct: number; conversion_rate_copied_to_installed_pct: number;
+}
 
 export function useAgentLifecycle(tenantId: string | undefined, loading?: boolean) {
   return useQuery<DashboardAgentCard[]>({
@@ -105,13 +111,10 @@ export function usePipelineMetrics(tenantId: string | undefined, hoursBack: numb
         body.hours_back = hoursBack;
       }
 
-      const { data, error } = await supabase.functions.invoke('get-installation-pipeline-metrics', {
-        body
-      });
+      const { callGateway } = await import('@/lib/gateway');
+      const data = await callGateway<{ success: boolean; metrics: PipelineMetricsData; error?: string }>('check', 'get-installation-pipeline-metrics', body);
 
-      if (error) throw new Error(`Erro ao buscar métricas: ${error.message}`);
       if (!data?.success) throw new Error(data?.error || 'Erro desconhecido');
-      
       return data.metrics;
     },
     enabled: !loading && !!tenantId,  // V-503b: Guard para sincronização
