@@ -2,6 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AgentLifecycleState, DashboardAgentCard, LifecycleStage } from '@/types/agent-lifecycle';
 
+interface PipelineMetricsData {
+  total_generated: number; total_downloaded: number; total_command_copied: number;
+  total_installed: number; total_active: number; total_stuck: number;
+  success_rate_pct: number; avg_install_time_seconds: number;
+  conversion_rate_generated_to_installed_pct: number; conversion_rate_copied_to_installed_pct: number;
+}
 
 export function useAgentLifecycle(tenantId: string | undefined, loading?: boolean) {
   return useQuery<DashboardAgentCard[]>({
