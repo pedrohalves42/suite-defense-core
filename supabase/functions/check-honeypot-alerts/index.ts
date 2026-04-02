@@ -2,13 +2,18 @@
  * check-honeypot-alerts — Cron function to detect attack patterns.
  * 
  * Via serveInternal (cron, every 5 min).
- * Queries honeypot_interactions in a window and generates system_alerts for:
- * - Same IP hash hitting 3+ distinct honeypots
- * - Payloads classified as malicious
- * - Volume anomaly (>20 interactions/hour per IP hash)
+ * 
+ * Features:
+ * - Same IP hash hitting 3+ distinct honeypots → alert
+ * - Payloads classified as malicious → alert
+ * - Volume anomaly (>20 interactions in window) → alert
+ * - DEDUPLICATION: uses honeypot_alert_dedup_key() to avoid duplicate alerts in same 10-min window
+ * - SUPPRESSION: max 10 alerts per cron run to prevent alert storms
  */
 
 import { serveInternal } from '../_shared/serve-internal.ts';
+
+const MAX_ALERTS_PER_RUN = 10;
 
 serveInternal(async (_req, { supabase, requestId }) => {
   const windowMinutes = 10;
@@ -44,11 +49,54 @@ serveInternal(async (_req, { supabase, requestId }) => {
     entry.count++;
   }
 
+  /**
+   * Insert alert with deduplication.
+   * Uses honeypot_alert_dedup_key to check if a similar alert already exists in this window.
+   */
+  async function insertAlertDeduped(alert: {
+    alert_type: string;
+    severity: string;
+    title: string;
+    message: string;
+    details: Record<string, unknown>;
+    tenant_id: string;
+  }): Promise<boolean> {
+    if (alertsCreated.length >= MAX_ALERTS_PER_RUN) return false;
+
+    // Check dedup: same alert_type + tenant in same 10-min window?
+    const dedupKey = `${alert.alert_type}:${alert.tenant_id}`;
+    const { data: existing } = await supabase
+      .from('system_alerts')
+      .select('id')
+      .eq('alert_type', alert.alert_type)
+      .eq('tenant_id', alert.tenant_id)
+      .gte('created_at', windowStart)
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      // Already alerted in this window — skip
+      return false;
+    }
+
+    const { error } = await supabase.from('system_alerts').insert({
+      ...alert,
+      status: 'active',
+    });
+
+    if (error) {
+      console.error(`[check-honeypot-alerts] Insert error: ${error.message}`);
+      return false;
+    }
+
+    alertsCreated.push(`${alert.alert_type}:${alert.tenant_id}`);
+    return true;
+  }
+
   // 1. Multi-honeypot attack: same IP in 3+ distinct agents
-  for (const [ipHash, data] of ipMap.entries()) {
+  for (const [_ipHash, data] of ipMap.entries()) {
     if (data.agents.size >= 3) {
-      await supabase.from('system_alerts').insert({
-        tenant_id: data.tenantId,
+      await insertAlertDeduped({
         alert_type: 'honeypot_multi_target',
         severity: 'high',
         title: `Multi-honeypot attack detected (${data.prefix})`,
@@ -58,27 +106,24 @@ serveInternal(async (_req, { supabase, requestId }) => {
           agent_count: data.agents.size,
           agents: [...data.agents].slice(0, 10),
         },
-        status: 'active',
+        tenant_id: data.tenantId,
       });
-      alertsCreated.push(`multi-target:${data.prefix}`);
     }
 
-    // 3. Volume anomaly: >20 interactions per IP in the window
+    // 2. Volume anomaly: >20 interactions per IP in the window
     if (data.count > 20) {
-      await supabase.from('system_alerts').insert({
-        tenant_id: data.tenantId,
+      await insertAlertDeduped({
         alert_type: 'honeypot_volume_anomaly',
         severity: 'medium',
         title: `High volume from ${data.prefix}`,
         message: `${data.count} honeypot interactions from IP prefix ${data.prefix} in ${windowMinutes} minutes.`,
         details: { source_ip_prefix: data.prefix, interaction_count: data.count },
-        status: 'active',
+        tenant_id: data.tenantId,
       });
-      alertsCreated.push(`volume:${data.prefix}`);
     }
   }
 
-  // 2. Malicious payloads — group by tenant
+  // 3. Malicious payloads — group by tenant
   const malicious = recent.filter(r => r.classification === 'malicious');
   if (malicious.length > 0) {
     const tenantAlerts = new Map<string, number>();
@@ -88,16 +133,14 @@ serveInternal(async (_req, { supabase, requestId }) => {
     }
 
     for (const [tenantId, count] of tenantAlerts.entries()) {
-      await supabase.from('system_alerts').insert({
-        tenant_id: tenantId,
+      await insertAlertDeduped({
         alert_type: 'honeypot_malicious_payload',
         severity: 'critical',
         title: `${count} malicious honeypot interactions detected`,
         message: `Detected malicious payloads targeting honeypot agents.`,
         details: { interaction_count: count },
-        status: 'active',
+        tenant_id: tenantId,
       });
-      alertsCreated.push(`malicious:${tenantId}`);
     }
   }
 
@@ -107,5 +150,6 @@ serveInternal(async (_req, { supabase, requestId }) => {
     window_minutes: windowMinutes,
     alerts_created: alertsCreated.length,
     alerts: alertsCreated,
+    suppressed: alertsCreated.length >= MAX_ALERTS_PER_RUN,
   };
 });

@@ -1,17 +1,25 @@
 /**
  * Feature Flags — lightweight feature gating for Edge Functions.
- * Supports per-tenant flags.
  * 
- * Table schema: feature_flags(id, tenant_id NOT NULL, key, enabled, created_at, updated_at)
+ * Supports:
+ * - Global flags (tenant_id IS NULL) — override everything
+ * - Per-tenant flags
+ * - Kill switch pattern: global disabled = denied for ALL tenants
+ * 
+ * For kill switches (like HONEYPOT_ENABLED):
+ * - Create a global flag with enabled=true to enable
+ * - Set enabled=false to disable globally (no deploy needed)
+ * - Per-tenant overrides only apply if global is enabled or absent
  */
 
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
 /**
- * Check if a feature flag is enabled for a tenant.
- * Returns true if flag exists and is enabled.
- * Returns true if flag doesn't exist (fail-open for feature flags — allows features by default).
- * For kill switches, create the flag as enabled=true and set enabled=false to disable.
+ * Check if a feature flag is enabled.
+ * 
+ * Priority: global disabled (deny) > tenant flag > global enabled > default (true)
+ * 
+ * Kill switch: to disable globally without deploy, set a global flag (tenant_id=NULL) to enabled=false.
  */
 export async function isFeatureEnabled(
   supabase: SupabaseClient,
@@ -19,20 +27,22 @@ export async function isFeatureEnabled(
   tenantId?: string,
 ): Promise<boolean> {
   try {
-    if (!tenantId) return true; // No tenant context = allow
+    // Use the DB function which handles global + tenant priority
+    const { data, error } = await supabase.rpc('is_feature_enabled', {
+      p_flag_key: flagKey,
+      p_tenant_id: tenantId || null,
+    });
 
-    const { data, error } = await supabase
-      .from('feature_flags')
-      .select('enabled')
-      .eq('key', flagKey)
-      .eq('tenant_id', tenantId)
-      .maybeSingle();
+    if (error) {
+      // Fail-open for feature flags, fail-closed for kill switches
+      // Since we can't distinguish here, fail-open (existing behavior)
+      console.error(`[feature-flags] RPC error for ${flagKey}:`, error.message);
+      return true;
+    }
 
-    if (error) return true; // Fail-open: if we can't check, allow
-    if (!data) return true; // Flag not set for this tenant = allow by default
-
-    return data.enabled;
-  } catch {
+    return data === true;
+  } catch (err) {
+    console.error(`[feature-flags] Exception for ${flagKey}:`, err);
     return true; // Fail-open
   }
 }
