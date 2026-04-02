@@ -60,7 +60,7 @@ describe('ProtectedRoute', () => {
     mockUseAuth.mockReturnValue({ user: null, loading: true });
     mockUseActiveTenant.mockReturnValue({ tenants: [], loading: true, isFetched: false });
     renderProtected();
-    expect(screen.getByRole('generic', { hidden: false })).toBeInTheDocument();
+    expect(document.querySelector('.animate-spin')).toBeInTheDocument();
     expect(screen.queryByTestId('content')).not.toBeInTheDocument();
   });
 

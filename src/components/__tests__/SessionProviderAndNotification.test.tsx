@@ -20,12 +20,12 @@ describe('SessionProvider', () => {
     expect(screen.getByTestId('child')).toBeInTheDocument();
   });
 
-  it('initializes session hooks', () => {
-    const { useSessionTimeout } = require('@/hooks/useSessionTimeout');
-    const { useSessionManager } = require('@/hooks/useSessionManager');
+  it('initializes session hooks on render', async () => {
+    const useSessionTimeout = await import('@/hooks/useSessionTimeout');
+    const useSessionManager = await import('@/hooks/useSessionManager');
     render(<SessionProvider><div /></SessionProvider>);
-    expect(useSessionTimeout).toHaveBeenCalled();
-    expect(useSessionManager).toHaveBeenCalled();
+    expect(useSessionTimeout.useSessionTimeout).toHaveBeenCalled();
+    expect(useSessionManager.useSessionManager).toHaveBeenCalled();
   });
 });
 
