@@ -2,7 +2,9 @@
  * revert-agent-honeypot — Revert a flipped agent back to normal mode.
  * 
  * Via serveTenant (admin only).
+ * - Checks kill switch (HONEYPOT_ENABLED feature flag)
  * - Validates 24h cooldown
+ * - Step-up auth enforced via X-Step-Up-Verified header
  * - Reverts honeypot_mode to 'none'
  * - Invalidates ALL current tokens (is_active = false)
  * - Generates a new token (mandatory rotation on recovery)
@@ -12,6 +14,7 @@
 
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { hashToken } from '../_shared/token-hash.ts';
+import { isFeatureEnabled } from '../_shared/feature-flags.ts';
 
 /** 24 hour cooldown between state changes */
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -19,6 +22,24 @@ const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 serveTenant(async (_req, ctx) => {
   const { supabase, tenantId, userId, requestId } = ctx;
   const body = ctx.body as { agent_id?: string; reason?: string };
+
+  // === KILL SWITCH ===
+  const honeypotEnabled = await isFeatureEnabled(supabase, 'HONEYPOT_ENABLED', tenantId);
+  if (!honeypotEnabled) {
+    return new Response(
+      JSON.stringify({ error: 'Honeypot feature is currently disabled' }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  // === STEP-UP AUTH ===
+  const stepUpVerified = _req.headers.get('X-Step-Up-Verified');
+  if (stepUpVerified !== 'true') {
+    return new Response(
+      JSON.stringify({ error: 'Step-up authentication required for honeypot reversion', code: 'STEP_UP_REQUIRED' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
 
   if (!body.agent_id) {
     return new Response(

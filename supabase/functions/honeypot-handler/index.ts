@@ -8,6 +8,7 @@
  * - IP hashing
  * - Bucket-based rate limit
  * - No stack traces leaked
+ * - Kill switch via feature flag HONEYPOT_ENABLED
  * 
  * Supported routes:
  * - POST /heartbeat
@@ -18,12 +19,23 @@
 
 import { serveHoneypot } from '../_shared/serve-honeypot.ts';
 import { buildHoneypotResponse } from '../_shared/honeypot/response-profiles.ts';
+import { isFeatureEnabled } from '../_shared/feature-flags.ts';
 
 const SUPPORTED_ROUTES = new Set(['/heartbeat', '/poll-jobs', '/submit-job-result']);
 
 serveHoneypot(async (_req, ctx) => {
   const { supabase, requestId, bodySnippet, headersFiltered, sourceIpHash, sourceIpPrefix,
     classification, method, path, responseProfile } = ctx;
+
+  // === KILL SWITCH ===
+  const honeypotEnabled = await isFeatureEnabled(supabase, 'HONEYPOT_ENABLED');
+  if (!honeypotEnabled) {
+    // Return neutral response; stop recording
+    return new Response(
+      JSON.stringify({ status: 'ok' }),
+      { status: 200, headers: { 'Content-Type': 'application/json', 'X-Request-ID': requestId } },
+    );
+  }
 
   // Normalize route
   const segments = path.split('/').filter(Boolean);
