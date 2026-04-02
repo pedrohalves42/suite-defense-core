@@ -120,7 +120,7 @@ describe('LoginPasswordForm', () => {
   it('calls onSubmit on form submit', () => {
     const onSubmit = vi.fn((e) => e.preventDefault());
     renderForm({ onSubmit });
-    fireEvent.submit(screen.getByRole('form') || screen.getByText('Continuar com segurança').closest('form')!);
+    fireEvent.click(screen.getByText('Continuar com segurança'));
     expect(onSubmit).toHaveBeenCalled();
   });
 

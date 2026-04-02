@@ -38,11 +38,12 @@ beforeEach(() => {
 });
 
 describe('AgentSelector', () => {
-  it('shows skeleton while loading', () => {
+  it('shows skeleton while tenant is loading', () => {
     mockUseActiveTenant.mockReturnValue({ activeTenant: { id: 't1' }, loading: true });
-    render(<AgentSelector value="" onValueChange={vi.fn()} />, { wrapper: createWrapper() });
-    // When loading=true, query is disabled, showing skeleton
-    expect(document.querySelector('.animate-pulse')).toBeInTheDocument();
+    const { container } = render(<AgentSelector value="" onValueChange={vi.fn()} />, { wrapper: createWrapper() });
+    // Skeleton has animate-pulse class
+    const skeleton = container.querySelector('[class*="animate-pulse"]');
+    expect(skeleton).not.toBeNull();
   });
 
   it('shows empty message when no agents', async () => {
