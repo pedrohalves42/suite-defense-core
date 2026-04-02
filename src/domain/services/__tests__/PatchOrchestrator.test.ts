@@ -26,9 +26,11 @@ describe('PatchOrchestrator', () => {
   });
 
   const mkAgentIds = (count: number) =>
-    Array.from({ length: count }, (_, i) => AgentId.create(`agent-${i}`));
+    Array.from({ length: count }, () => AgentId.generate());
 
-  const tenantId = TenantId.create('tenant-1');
+  const tenantId = TenantId.create('00000000-0000-0000-0000-000000000001');
+  // TenantId.create returns Result, unwrap it
+  const tenantIdValue = (tenantId as any).value ?? tenantId;
 
   it('returns no_compatible_agents when empty target list', () => {
     const result = orchestrator.orchestrate(mkPatch(), [], tenantId, mkConfig());
