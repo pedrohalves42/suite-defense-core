@@ -42,6 +42,22 @@ import {
 } from './handlers/sync.ts';
 import { handleAutoTriageInsights } from './handlers/playbook.ts';
 
+// Inlined handlers — cleanup (Phase 3A)
+import {
+  handleCleanupTelemetry, handleCleanupStaleReports, handleCleanupStaleUpdates,
+  handleCleanupStalePlaybooks, handleCleanupOfflineAgentsJobs, handleCleanupStuckBuilds,
+  handleCleanupStuckJobs, handleAutoCleanupJobs, handleSecurityCleanup,
+  handleCleanupJobs, handleCleanupExpiredEnrollmentKeys, handleCleanupOrphanedData,
+  handleCleanupStaleHoneypots,
+} from './handlers/cleanup.ts';
+
+// Inlined handlers — notify (Phase 3A)
+import {
+  handleNotifyEmail, handleNotifyTelegram, handleNotifyWhatsApp,
+  handleNotifyWebhook, handleNotifyWelcome, handleNotifySecurity,
+  handleGetTelegramChatId,
+} from './handlers/notify.ts';
+
 const FETCH_TIMEOUT_MS = 45000;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -90,11 +106,7 @@ const ACTION_TO_FUNCTION: Record<string, string> = {
   'report:list': 'list-reports',
 };
 
-// For cleanup and notification namespaces, we proxy to existing routers
-const NAMESPACE_ROUTER_PROXY: Record<string, string> = {
-  'cleanup': 'cleanup-router',
-  'notify': 'notification-router',
-};
+// cleanup and notify are now fully inlined (Phase 3A) — no more router proxy
 
 type InlinedHandler = (supabase: ReturnType<typeof createClient>, requestId: string, payload: Record<string, unknown>) => Promise<unknown>;
 
@@ -129,6 +141,28 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'sync:flush-event-buffer': handleFlushEventBuffer,
   // ── playbook inlined ──
   'playbook:auto-triage-insights': handleAutoTriageInsights,
+  // ── cleanup inlined (Phase 3A) ──
+  'cleanup:telemetry': handleCleanupTelemetry,
+  'cleanup:stale-reports': handleCleanupStaleReports,
+  'cleanup:stale-updates': handleCleanupStaleUpdates,
+  'cleanup:stale-playbooks': handleCleanupStalePlaybooks,
+  'cleanup:offline-agents-jobs': handleCleanupOfflineAgentsJobs,
+  'cleanup:stuck-builds': handleCleanupStuckBuilds,
+  'cleanup:stuck-jobs': handleCleanupStuckJobs,
+  'cleanup:auto-cleanup-jobs': handleAutoCleanupJobs,
+  'cleanup:security': handleSecurityCleanup,
+  'cleanup:jobs': handleCleanupJobs,
+  'cleanup:expired-enrollment-keys': handleCleanupExpiredEnrollmentKeys,
+  'cleanup:orphaned-data': handleCleanupOrphanedData,
+  'cleanup:stale-honeypots': handleCleanupStaleHoneypots,
+  // ── notify inlined (Phase 3A) ──
+  'notify:email': handleNotifyEmail,
+  'notify:telegram': handleNotifyTelegram,
+  'notify:whatsapp': handleNotifyWhatsApp,
+  'notify:webhook': handleNotifyWebhook,
+  'notify:welcome': handleNotifyWelcome,
+  'notify:security': handleNotifySecurity,
+  'notify:get-telegram-chat-id': handleGetTelegramChatId,
 };
 
 const ALL_VALID_ACTIONS = new Set([
@@ -136,8 +170,6 @@ const ALL_VALID_ACTIONS = new Set([
   ...Object.keys(INLINED_HANDLERS),
 ]);
 
-// Namespaces that proxy to existing routers
-const ROUTER_PROXY_NAMESPACES = new Set(Object.keys(NAMESPACE_ROUTER_PROXY));
 
 const RouterSchema = z.object({
   action: z.string().min(1).max(80),
@@ -189,36 +221,12 @@ Deno.serve(async (req) => {
     // Parse namespace
     const colonIdx = action.indexOf(':');
     const namespace = colonIdx > 0 ? action.substring(0, colonIdx) : null;
-    const subAction = colonIdx > 0 ? action.substring(colonIdx + 1) : action;
 
     if (!namespace) {
       return jsonRes({
         error: `Missing namespace in action: "${action}". Use format "namespace:action".`,
         available_namespaces: ['check', 'sync', 'playbook', 'report', 'cleanup', 'notify'],
       }, 400, origin);
-    }
-
-    // Route cleanup/notify to existing routers
-    if (ROUTER_PROXY_NAMESPACES.has(namespace)) {
-      const targetRouter = NAMESPACE_ROUTER_PROXY[namespace];
-      const url = `${SUPABASE_URL}/functions/v1/${targetRouter}`;
-      const routerBody = namespace === 'cleanup'
-        ? JSON.stringify({ action: subAction, ...payload })
-        : JSON.stringify({ action: subAction, payload });
-
-      logger.info(`[ops-gateway] Router proxy: ${action} → ${targetRouter}`, { requestId });
-      const response = await fetchWithTimeout(url, {
-        method: 'POST',
-        headers: forwardHeaders(req, requestId),
-        body: routerBody,
-        timeoutMs: FETCH_TIMEOUT_MS,
-      });
-      const responseData = await response.text();
-      logger.info(`[ops-gateway] ${action} done in ${Date.now() - startedAt}ms (status: ${response.status})`);
-      return new Response(responseData, {
-        status: response.status,
-        headers: { ...buildCorsHeaders(origin), 'Content-Type': response.headers.get('Content-Type') || 'application/json' },
-      });
     }
 
     // Try inlined handler
