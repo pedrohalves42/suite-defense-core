@@ -1,51 +1,43 @@
 /**
- * honeypot-handler — Public endpoint for native honeypot agents.
+ * honeypot-handler — Public endpoint for native honeypot interactions.
  * 
- * Accepts requests at /honeypot-handler/* without strict authentication.
- * Simulates a real agent backend to attract and observe attackers.
+ * Uses serveHoneypot middleware (NOT servePublic) with:
+ * - 8 KB body cap
+ * - 1 KB snippet storage
+ * - Header allowlist
+ * - IP hashing
+ * - Bucket-based rate limit
+ * - No stack traces leaked
  * 
- * Flow:
- * 1. Rate limit by source IP
- * 2. Parse and sanitize body
- * 3. Classify payload
- * 4. Record interaction
- * 5. Respond plausibly
+ * Supported routes:
+ * - POST /heartbeat
+ * - POST /poll-jobs
+ * - POST /submit-job-result
+ * - Everything else: 404 minimal JSON
  */
 
-import { servePublic } from '../_shared/serve-public.ts';
-import { truncateBody, filterHeaders, extractSourceIp } from '../_shared/honeypot/sanitize.ts';
-import { classifyPayload } from '../_shared/honeypot/classify.ts';
+import { serveHoneypot } from '../_shared/serve-honeypot.ts';
 import { buildHoneypotResponse } from '../_shared/honeypot/response-profiles.ts';
-import { checkHoneypotRateLimit } from '../_shared/honeypot/rate-limit.ts';
 
-servePublic(async (req, { supabase, requestId, body }) => {
-  const sourceIp = extractSourceIp(req);
-  const url = new URL(req.url);
-  const path = url.pathname;
-  const method = req.method;
+const SUPPORTED_ROUTES = new Set(['/heartbeat', '/poll-jobs', '/submit-job-result']);
 
-  // 1. Rate limit by IP (5 req/min, block 15 min)
-  const allowed = await checkHoneypotRateLimit(supabase, `ip:${sourceIp}`, {
-    maxRequests: 5,
-    windowMinutes: 1,
-    blockMinutes: 15,
-  });
+serveHoneypot(async (_req, ctx) => {
+  const { supabase, requestId, bodySnippet, headersFiltered, sourceIpHash, sourceIpPrefix,
+    classification, method, path, responseProfile } = ctx;
 
-  if (!allowed) {
+  // Normalize route
+  const segments = path.split('/').filter(Boolean);
+  const route = segments.length > 0 ? '/' + segments[segments.length - 1] : '/';
+
+  // Reject unsupported routes with minimal 404
+  if (method !== 'POST' || !SUPPORTED_ROUTES.has(route)) {
     return new Response(
-      JSON.stringify({ error: 'Too many requests' }),
-      { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': '900' } },
+      JSON.stringify({ error: 'Not found' }),
+      { status: 404, headers: { 'Content-Type': 'application/json', 'X-Request-ID': requestId } },
     );
   }
 
-  // 2. Sanitize
-  const bodySnippet = truncateBody(body);
-  const headersFiltered = filterHeaders(req.headers);
-
-  // 3. Classify
-  const { classification } = classifyPayload(bodySnippet, path, method);
-
-  // 4. Find a native honeypot agent to attribute this to (pick any active one)
+  // Find a native honeypot agent to attribute this interaction to
   const { data: honeypotAgent } = await supabase
     .from('agents')
     .select('id, tenant_id')
@@ -53,45 +45,42 @@ servePublic(async (req, { supabase, requestId, body }) => {
     .limit(1)
     .maybeSingle();
 
-  if (!honeypotAgent) {
-    // No native honeypots configured — respond but don't record
-    const response = buildHoneypotResponse(path, method);
-    return new Response(JSON.stringify(response.body), {
-      status: response.status,
-      headers: { 'Content-Type': 'application/json', 'X-Request-ID': requestId },
-    });
+  // Build response before insert (latency)
+  const response = buildHoneypotResponse(route, method, responseProfile);
+
+  // Record interaction if we have a native honeypot (1 insert, fire-and-forget)
+  if (honeypotAgent) {
+    supabase
+      .from('honeypot_interactions')
+      .insert({
+        tenant_id: honeypotAgent.tenant_id,
+        agent_id: honeypotAgent.id,
+        mode: 'native',
+        method,
+        path: route,
+        status_code: response.status,
+        body_snippet: bodySnippet,
+        headers_filtered: headersFiltered,
+        source_ip_hash: sourceIpHash,
+        source_ip_prefix: sourceIpPrefix,
+        classification,
+        trace_id: requestId,
+        response_profile: responseProfile,
+      })
+      .then(({ error }) => {
+        if (error) console.error(`[honeypot-handler] Insert error: ${error.message}`);
+      });
+
+    // Update last interaction (fire-and-forget)
+    supabase
+      .from('agents')
+      .update({ last_honeypot_interaction_at: new Date().toISOString() })
+      .eq('id', honeypotAgent.id)
+      .then(({ error }) => {
+        if (error) console.error(`[honeypot-handler] Timestamp error: ${error.message}`);
+      });
   }
 
-  // 5. Record interaction (fire-and-forget)
-  supabase
-    .from('honeypot_interactions')
-    .insert({
-      tenant_id: honeypotAgent.tenant_id,
-      agent_id: honeypotAgent.id,
-      mode: 'native',
-      method,
-      path,
-      body_snippet: bodySnippet,
-      headers_filtered: headersFiltered,
-      source_ip: sourceIp,
-      classification,
-      trace_id: requestId,
-    })
-    .then(({ error }) => {
-      if (error) console.error(`[honeypot-handler] Insert error: ${error.message}`);
-    });
-
-  // 6. Update last interaction timestamp
-  supabase
-    .from('agents')
-    .update({ last_honeypot_interaction_at: new Date().toISOString() })
-    .eq('id', honeypotAgent.id)
-    .then(({ error }) => {
-      if (error) console.error(`[honeypot-handler] Update error: ${error.message}`);
-    });
-
-  // 7. Respond plausibly
-  const response = buildHoneypotResponse(path, method);
   return new Response(JSON.stringify(response.body), {
     status: response.status,
     headers: { 'Content-Type': 'application/json', 'X-Request-ID': requestId },

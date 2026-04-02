@@ -2,18 +2,24 @@
  * activate-agent-honeypot — Flip a real agent into honeypot mode.
  * 
  * Via serveTenant (admin only).
+ * - Validates 24h cooldown (no flip/revert within 24h)
  * - Updates honeypot_mode to 'flipped'
- * - Sets activation metadata
+ * - Sets activation metadata + state change timestamp
  * - Does NOT revoke the token (agent continues authenticating normally)
  * - Records in audit_logs
+ * - Reason is mandatory
  */
 
 import { serveTenant } from '../_shared/serve-tenant.ts';
+
+/** 24 hour cooldown between state changes */
+const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 serveTenant(async (_req, ctx) => {
   const { supabase, tenantId, userId, requestId } = ctx;
   const body = ctx.body as { agent_id?: string; reason?: string };
 
+  // Validate required fields
   if (!body.agent_id) {
     return new Response(
       JSON.stringify({ error: 'agent_id is required' }),
@@ -21,13 +27,20 @@ serveTenant(async (_req, ctx) => {
     );
   }
 
-  const agentId = body.agent_id;
-  const reason = body.reason || 'Manual activation';
+  if (!body.reason || body.reason.trim().length < 5) {
+    return new Response(
+      JSON.stringify({ error: 'reason is required (min 5 characters)' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
 
-  // 1. Verify agent belongs to tenant and is not already a honeypot
+  const agentId = body.agent_id;
+  const reason = body.reason.trim();
+
+  // 1. Verify agent belongs to tenant
   const { data: agent, error: agentError } = await supabase
     .from('agents')
-    .select('id, honeypot_mode, agent_name')
+    .select('id, honeypot_mode, agent_name, last_honeypot_state_change_at')
     .eq('id', agentId)
     .eq('tenant_id', tenantId)
     .maybeSingle();
@@ -46,14 +59,31 @@ serveTenant(async (_req, ctx) => {
     );
   }
 
-  // 2. Flip to honeypot mode — token is NOT revoked
+  // 2. Check 24h cooldown
+  if (agent.last_honeypot_state_change_at) {
+    const lastChange = new Date(agent.last_honeypot_state_change_at).getTime();
+    const elapsed = Date.now() - lastChange;
+    if (elapsed < COOLDOWN_MS) {
+      const remainingMin = Math.ceil((COOLDOWN_MS - elapsed) / 60000);
+      return new Response(
+        JSON.stringify({
+          error: `Cooldown active. ${remainingMin} minutes remaining before next state change.`,
+        }),
+        { status: 429, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+  }
+
+  // 3. Flip to honeypot mode — token is NOT revoked
+  const now = new Date().toISOString();
   const { error: updateError } = await supabase
     .from('agents')
     .update({
       honeypot_mode: 'flipped',
-      honeypot_activated_at: new Date().toISOString(),
+      honeypot_activated_at: now,
       honeypot_activated_by: userId,
       honeypot_reason: reason,
+      last_honeypot_state_change_at: now,
     })
     .eq('id', agentId);
 
@@ -65,7 +95,7 @@ serveTenant(async (_req, ctx) => {
     );
   }
 
-  // 3. Audit log
+  // 4. Audit log (immutable trail)
   await supabase.from('audit_logs').insert({
     tenant_id: tenantId,
     user_id: userId,

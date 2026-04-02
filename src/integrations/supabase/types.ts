@@ -7172,6 +7172,7 @@ export type Database = {
           last_forced_update_applied: string | null
           last_heartbeat: string | null
           last_honeypot_interaction_at: string | null
+          last_honeypot_state_change_at: string | null
           offline_detected_at: string | null
           offline_reason: string | null
           os_type: string | null
@@ -7234,6 +7235,7 @@ export type Database = {
           last_forced_update_applied?: string | null
           last_heartbeat?: string | null
           last_honeypot_interaction_at?: string | null
+          last_honeypot_state_change_at?: string | null
           offline_detected_at?: string | null
           offline_reason?: string | null
           os_type?: string | null
@@ -7296,6 +7298,7 @@ export type Database = {
           last_forced_update_applied?: string | null
           last_heartbeat?: string | null
           last_honeypot_interaction_at?: string | null
+          last_honeypot_state_change_at?: string | null
           offline_detected_at?: string | null
           offline_reason?: string | null
           os_type?: string | null
@@ -21877,6 +21880,27 @@ export type Database = {
         }
         Relationships: []
       }
+      honeypot_blocks: {
+        Row: {
+          blocked_until: string
+          created_at: string
+          identifier_hash: string
+          reason: string | null
+        }
+        Insert: {
+          blocked_until: string
+          created_at?: string
+          identifier_hash: string
+          reason?: string | null
+        }
+        Update: {
+          blocked_until?: string
+          created_at?: string
+          identifier_hash?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
       honeypot_interactions: {
         Row: {
           agent_id: string | null
@@ -21889,7 +21913,10 @@ export type Database = {
           method: string | null
           mode: string
           path: string | null
-          source_ip: string | null
+          response_profile: string | null
+          source_ip_hash: string | null
+          source_ip_prefix: string | null
+          status_code: number | null
           tenant_id: string
           trace_id: string | null
         }
@@ -21904,7 +21931,10 @@ export type Database = {
           method?: string | null
           mode?: string
           path?: string | null
-          source_ip?: string | null
+          response_profile?: string | null
+          source_ip_hash?: string | null
+          source_ip_prefix?: string | null
+          status_code?: number | null
           tenant_id: string
           trace_id?: string | null
         }
@@ -21919,7 +21949,10 @@ export type Database = {
           method?: string | null
           mode?: string
           path?: string | null
-          source_ip?: string | null
+          response_profile?: string | null
+          source_ip_hash?: string | null
+          source_ip_prefix?: string | null
+          status_code?: number | null
           tenant_id?: string
           trace_id?: string | null
         }
@@ -22052,30 +22085,21 @@ export type Database = {
           },
         ]
       }
-      honeypot_rate_limits: {
+      honeypot_rate_buckets: {
         Row: {
-          blocked_until: string | null
-          created_at: string
-          id: string
-          identifier: string
+          bucket_start: string
+          identifier_hash: string
           request_count: number
-          window_start: string
         }
         Insert: {
-          blocked_until?: string | null
-          created_at?: string
-          id?: string
-          identifier: string
+          bucket_start: string
+          identifier_hash: string
           request_count?: number
-          window_start?: string
         }
         Update: {
-          blocked_until?: string | null
-          created_at?: string
-          id?: string
-          identifier?: string
+          bucket_start?: string
+          identifier_hash?: string
           request_count?: number
-          window_start?: string
         }
         Relationships: []
       }
@@ -48449,12 +48473,12 @@ export type Database = {
         }
         Returns: Json
       }
-      check_honeypot_rate_limit: {
+      check_honeypot_rate_limit_v2: {
         Args: {
-          p_block_minutes?: number
-          p_identifier: string
+          p_block_seconds?: number
+          p_bucket_seconds?: number
+          p_identifier_hash: string
           p_max_requests?: number
-          p_window_minutes?: number
         }
         Returns: boolean
       }
@@ -48574,7 +48598,7 @@ export type Database = {
       cleanup_expired_keys: { Args: never; Returns: number }
       cleanup_expired_sessions: { Args: never; Returns: number }
       cleanup_expired_telemetry: { Args: never; Returns: Json }
-      cleanup_honeypot_rate_limits: {
+      cleanup_honeypot_rate_data: {
         Args: { p_older_than_minutes?: number }
         Returns: number
       }
