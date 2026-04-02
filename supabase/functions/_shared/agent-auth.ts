@@ -58,7 +58,7 @@ export async function authenticateAgent(
   const tokenHash = await hashToken(agentToken);
   
   // Build select fields: base fields + any extra requested
-  const baseFields = 'id, agent_name, tenant_id, hmac_secret';
+  const baseFields = 'id, agent_name, tenant_id, hmac_secret, honeypot_mode';
   const extraFields = options?.extraAgentFields?.length 
     ? ', ' + options.extraAgentFields.join(', ')
     : '';
