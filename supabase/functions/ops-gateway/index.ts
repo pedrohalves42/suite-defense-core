@@ -42,6 +42,19 @@ import {
 } from './handlers/sync.ts';
 import { handleAutoTriageInsights } from './handlers/playbook.ts';
 
+// Inlined handlers — sync jobs (Phase 3B)
+import {
+  handleProcessFailedJobs, handleProcessScheduledJobs, handleInvokeScheduledJobs,
+  handleDlqAction, handleProcessDlqRetries,
+} from './handlers/sync-jobs.ts';
+
+// Inlined handlers — sync infra (Phase 3B)
+import {
+  handleSyncBlockedWebsites, handleMaintenanceCron, handleSystemMaintenance,
+  handleReleaseSync, handleSyncStorageBucket, handleSyncStripeSubscriptions,
+  handleSyncThreatFeeds,
+} from './handlers/sync-infra.ts';
+
 // Inlined handlers — cleanup (Phase 3A)
 import {
   handleCleanupTelemetry, handleCleanupStaleReports, handleCleanupStaleUpdates,
