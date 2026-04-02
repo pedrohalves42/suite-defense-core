@@ -30,10 +30,23 @@ vi.mock('@/hooks/useAuth', () => ({
 vi.mock('@/components/layout/SimpleModeProvider', () => ({
   SimpleModeProvider: ({ children }: any) => children,
   useSimpleModeContext: () => ({
+    isSimple: false,
     isSimpleMode: false,
     setIsSimpleMode: vi.fn(),
     toggleSimpleMode: vi.fn(),
+    toggleMode: vi.fn(),
   }),
+}));
+
+// Mock useSimpleMode (actual hook location)
+vi.mock('@/hooks/useSimpleMode', () => ({
+  useSimpleModeContext: () => ({
+    isSimple: false,
+    isSimpleMode: false,
+    setIsSimpleMode: vi.fn(),
+    toggleMode: vi.fn(),
+  }),
+  SimpleModeContext: { Provider: ({ children }: any) => children },
 }));
 
 // Mock useSuperAdmin (uses supabase.rpc)
