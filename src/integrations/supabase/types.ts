@@ -18277,6 +18277,204 @@ export type Database = {
         }
         Relationships: []
       }
+      endpoint_event_buffer_partitioned_2026_07: {
+        Row: {
+          agent_id: string
+          batch_id: string | null
+          event_category: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          received_at: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          batch_id?: string | null
+          event_category: string
+          id?: string
+          payload: Json
+          processed_at?: string | null
+          received_at?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          batch_id?: string | null
+          event_category?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          received_at?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      endpoint_event_buffer_partitioned_2026_08: {
+        Row: {
+          agent_id: string
+          batch_id: string | null
+          event_category: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          received_at: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          batch_id?: string | null
+          event_category: string
+          id?: string
+          payload: Json
+          processed_at?: string | null
+          received_at?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          batch_id?: string | null
+          event_category?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          received_at?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      endpoint_event_buffer_partitioned_2026_09: {
+        Row: {
+          agent_id: string
+          batch_id: string | null
+          event_category: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          received_at: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          batch_id?: string | null
+          event_category: string
+          id?: string
+          payload: Json
+          processed_at?: string | null
+          received_at?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          batch_id?: string | null
+          event_category?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          received_at?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      endpoint_event_buffer_partitioned_2026_10: {
+        Row: {
+          agent_id: string
+          batch_id: string | null
+          event_category: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          received_at: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          batch_id?: string | null
+          event_category: string
+          id?: string
+          payload: Json
+          processed_at?: string | null
+          received_at?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          batch_id?: string | null
+          event_category?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          received_at?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      endpoint_event_buffer_partitioned_2026_11: {
+        Row: {
+          agent_id: string
+          batch_id: string | null
+          event_category: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          received_at: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          batch_id?: string | null
+          event_category: string
+          id?: string
+          payload: Json
+          processed_at?: string | null
+          received_at?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          batch_id?: string | null
+          event_category?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          received_at?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      endpoint_event_buffer_partitioned_2026_12: {
+        Row: {
+          agent_id: string
+          batch_id: string | null
+          event_category: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          received_at: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          batch_id?: string | null
+          event_category: string
+          id?: string
+          payload: Json
+          processed_at?: string | null
+          received_at?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          batch_id?: string | null
+          event_category?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          received_at?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
       endpoint_file_events: {
         Row: {
           agent_id: string
@@ -19038,6 +19236,456 @@ export type Database = {
         }
         Relationships: []
       }
+      endpoint_network_events_partitioned_2026_07: {
+        Row: {
+          agent_id: string
+          bytes_received: number | null
+          bytes_sent: number | null
+          created_at: string
+          detection_tags: string[] | null
+          direction: string | null
+          dns_query_type: string | null
+          dns_response: string | null
+          domain: string | null
+          event_time: string
+          event_type: string
+          geo_country: string | null
+          id: string
+          is_suspicious: boolean | null
+          local_address: string | null
+          local_port: number | null
+          process_name: string | null
+          process_pid: number | null
+          protocol: string | null
+          remote_address: string | null
+          remote_port: number | null
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          bytes_received?: number | null
+          bytes_sent?: number | null
+          created_at?: string
+          detection_tags?: string[] | null
+          direction?: string | null
+          dns_query_type?: string | null
+          dns_response?: string | null
+          domain?: string | null
+          event_time?: string
+          event_type?: string
+          geo_country?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          local_address?: string | null
+          local_port?: number | null
+          process_name?: string | null
+          process_pid?: number | null
+          protocol?: string | null
+          remote_address?: string | null
+          remote_port?: number | null
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          bytes_received?: number | null
+          bytes_sent?: number | null
+          created_at?: string
+          detection_tags?: string[] | null
+          direction?: string | null
+          dns_query_type?: string | null
+          dns_response?: string | null
+          domain?: string | null
+          event_time?: string
+          event_type?: string
+          geo_country?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          local_address?: string | null
+          local_port?: number | null
+          process_name?: string | null
+          process_pid?: number | null
+          protocol?: string | null
+          remote_address?: string | null
+          remote_port?: number | null
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      endpoint_network_events_partitioned_2026_08: {
+        Row: {
+          agent_id: string
+          bytes_received: number | null
+          bytes_sent: number | null
+          created_at: string
+          detection_tags: string[] | null
+          direction: string | null
+          dns_query_type: string | null
+          dns_response: string | null
+          domain: string | null
+          event_time: string
+          event_type: string
+          geo_country: string | null
+          id: string
+          is_suspicious: boolean | null
+          local_address: string | null
+          local_port: number | null
+          process_name: string | null
+          process_pid: number | null
+          protocol: string | null
+          remote_address: string | null
+          remote_port: number | null
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          bytes_received?: number | null
+          bytes_sent?: number | null
+          created_at?: string
+          detection_tags?: string[] | null
+          direction?: string | null
+          dns_query_type?: string | null
+          dns_response?: string | null
+          domain?: string | null
+          event_time?: string
+          event_type?: string
+          geo_country?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          local_address?: string | null
+          local_port?: number | null
+          process_name?: string | null
+          process_pid?: number | null
+          protocol?: string | null
+          remote_address?: string | null
+          remote_port?: number | null
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          bytes_received?: number | null
+          bytes_sent?: number | null
+          created_at?: string
+          detection_tags?: string[] | null
+          direction?: string | null
+          dns_query_type?: string | null
+          dns_response?: string | null
+          domain?: string | null
+          event_time?: string
+          event_type?: string
+          geo_country?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          local_address?: string | null
+          local_port?: number | null
+          process_name?: string | null
+          process_pid?: number | null
+          protocol?: string | null
+          remote_address?: string | null
+          remote_port?: number | null
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      endpoint_network_events_partitioned_2026_09: {
+        Row: {
+          agent_id: string
+          bytes_received: number | null
+          bytes_sent: number | null
+          created_at: string
+          detection_tags: string[] | null
+          direction: string | null
+          dns_query_type: string | null
+          dns_response: string | null
+          domain: string | null
+          event_time: string
+          event_type: string
+          geo_country: string | null
+          id: string
+          is_suspicious: boolean | null
+          local_address: string | null
+          local_port: number | null
+          process_name: string | null
+          process_pid: number | null
+          protocol: string | null
+          remote_address: string | null
+          remote_port: number | null
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          bytes_received?: number | null
+          bytes_sent?: number | null
+          created_at?: string
+          detection_tags?: string[] | null
+          direction?: string | null
+          dns_query_type?: string | null
+          dns_response?: string | null
+          domain?: string | null
+          event_time?: string
+          event_type?: string
+          geo_country?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          local_address?: string | null
+          local_port?: number | null
+          process_name?: string | null
+          process_pid?: number | null
+          protocol?: string | null
+          remote_address?: string | null
+          remote_port?: number | null
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          bytes_received?: number | null
+          bytes_sent?: number | null
+          created_at?: string
+          detection_tags?: string[] | null
+          direction?: string | null
+          dns_query_type?: string | null
+          dns_response?: string | null
+          domain?: string | null
+          event_time?: string
+          event_type?: string
+          geo_country?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          local_address?: string | null
+          local_port?: number | null
+          process_name?: string | null
+          process_pid?: number | null
+          protocol?: string | null
+          remote_address?: string | null
+          remote_port?: number | null
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      endpoint_network_events_partitioned_2026_10: {
+        Row: {
+          agent_id: string
+          bytes_received: number | null
+          bytes_sent: number | null
+          created_at: string
+          detection_tags: string[] | null
+          direction: string | null
+          dns_query_type: string | null
+          dns_response: string | null
+          domain: string | null
+          event_time: string
+          event_type: string
+          geo_country: string | null
+          id: string
+          is_suspicious: boolean | null
+          local_address: string | null
+          local_port: number | null
+          process_name: string | null
+          process_pid: number | null
+          protocol: string | null
+          remote_address: string | null
+          remote_port: number | null
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          bytes_received?: number | null
+          bytes_sent?: number | null
+          created_at?: string
+          detection_tags?: string[] | null
+          direction?: string | null
+          dns_query_type?: string | null
+          dns_response?: string | null
+          domain?: string | null
+          event_time?: string
+          event_type?: string
+          geo_country?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          local_address?: string | null
+          local_port?: number | null
+          process_name?: string | null
+          process_pid?: number | null
+          protocol?: string | null
+          remote_address?: string | null
+          remote_port?: number | null
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          bytes_received?: number | null
+          bytes_sent?: number | null
+          created_at?: string
+          detection_tags?: string[] | null
+          direction?: string | null
+          dns_query_type?: string | null
+          dns_response?: string | null
+          domain?: string | null
+          event_time?: string
+          event_type?: string
+          geo_country?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          local_address?: string | null
+          local_port?: number | null
+          process_name?: string | null
+          process_pid?: number | null
+          protocol?: string | null
+          remote_address?: string | null
+          remote_port?: number | null
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      endpoint_network_events_partitioned_2026_11: {
+        Row: {
+          agent_id: string
+          bytes_received: number | null
+          bytes_sent: number | null
+          created_at: string
+          detection_tags: string[] | null
+          direction: string | null
+          dns_query_type: string | null
+          dns_response: string | null
+          domain: string | null
+          event_time: string
+          event_type: string
+          geo_country: string | null
+          id: string
+          is_suspicious: boolean | null
+          local_address: string | null
+          local_port: number | null
+          process_name: string | null
+          process_pid: number | null
+          protocol: string | null
+          remote_address: string | null
+          remote_port: number | null
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          bytes_received?: number | null
+          bytes_sent?: number | null
+          created_at?: string
+          detection_tags?: string[] | null
+          direction?: string | null
+          dns_query_type?: string | null
+          dns_response?: string | null
+          domain?: string | null
+          event_time?: string
+          event_type?: string
+          geo_country?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          local_address?: string | null
+          local_port?: number | null
+          process_name?: string | null
+          process_pid?: number | null
+          protocol?: string | null
+          remote_address?: string | null
+          remote_port?: number | null
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          bytes_received?: number | null
+          bytes_sent?: number | null
+          created_at?: string
+          detection_tags?: string[] | null
+          direction?: string | null
+          dns_query_type?: string | null
+          dns_response?: string | null
+          domain?: string | null
+          event_time?: string
+          event_type?: string
+          geo_country?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          local_address?: string | null
+          local_port?: number | null
+          process_name?: string | null
+          process_pid?: number | null
+          protocol?: string | null
+          remote_address?: string | null
+          remote_port?: number | null
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      endpoint_network_events_partitioned_2026_12: {
+        Row: {
+          agent_id: string
+          bytes_received: number | null
+          bytes_sent: number | null
+          created_at: string
+          detection_tags: string[] | null
+          direction: string | null
+          dns_query_type: string | null
+          dns_response: string | null
+          domain: string | null
+          event_time: string
+          event_type: string
+          geo_country: string | null
+          id: string
+          is_suspicious: boolean | null
+          local_address: string | null
+          local_port: number | null
+          process_name: string | null
+          process_pid: number | null
+          protocol: string | null
+          remote_address: string | null
+          remote_port: number | null
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          bytes_received?: number | null
+          bytes_sent?: number | null
+          created_at?: string
+          detection_tags?: string[] | null
+          direction?: string | null
+          dns_query_type?: string | null
+          dns_response?: string | null
+          domain?: string | null
+          event_time?: string
+          event_type?: string
+          geo_country?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          local_address?: string | null
+          local_port?: number | null
+          process_name?: string | null
+          process_pid?: number | null
+          protocol?: string | null
+          remote_address?: string | null
+          remote_port?: number | null
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          bytes_received?: number | null
+          bytes_sent?: number | null
+          created_at?: string
+          detection_tags?: string[] | null
+          direction?: string | null
+          dns_query_type?: string | null
+          dns_response?: string | null
+          domain?: string | null
+          event_time?: string
+          event_type?: string
+          geo_country?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          local_address?: string | null
+          local_port?: number | null
+          process_name?: string | null
+          process_pid?: number | null
+          protocol?: string | null
+          remote_address?: string | null
+          remote_port?: number | null
+          tenant_id?: string
+        }
+        Relationships: []
+      }
       endpoint_process_events: {
         Row: {
           agent_id: string
@@ -19496,6 +20144,402 @@ export type Database = {
         Relationships: []
       }
       endpoint_process_events_partitioned_2026_06: {
+        Row: {
+          agent_id: string
+          command_line: string | null
+          created_at: string
+          detection_tags: string[] | null
+          event_time: string
+          event_type: string
+          executable_path: string | null
+          id: string
+          is_suspicious: boolean | null
+          mitre_tactic: string | null
+          mitre_technique_id: string | null
+          parent_command_line: string | null
+          parent_pid: number | null
+          parent_process_name: string | null
+          pid: number
+          process_name: string
+          sha256_hash: string | null
+          tenant_id: string
+          user_name: string | null
+        }
+        Insert: {
+          agent_id: string
+          command_line?: string | null
+          created_at?: string
+          detection_tags?: string[] | null
+          event_time?: string
+          event_type?: string
+          executable_path?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          mitre_tactic?: string | null
+          mitre_technique_id?: string | null
+          parent_command_line?: string | null
+          parent_pid?: number | null
+          parent_process_name?: string | null
+          pid: number
+          process_name: string
+          sha256_hash?: string | null
+          tenant_id: string
+          user_name?: string | null
+        }
+        Update: {
+          agent_id?: string
+          command_line?: string | null
+          created_at?: string
+          detection_tags?: string[] | null
+          event_time?: string
+          event_type?: string
+          executable_path?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          mitre_tactic?: string | null
+          mitre_technique_id?: string | null
+          parent_command_line?: string | null
+          parent_pid?: number | null
+          parent_process_name?: string | null
+          pid?: number
+          process_name?: string
+          sha256_hash?: string | null
+          tenant_id?: string
+          user_name?: string | null
+        }
+        Relationships: []
+      }
+      endpoint_process_events_partitioned_2026_07: {
+        Row: {
+          agent_id: string
+          command_line: string | null
+          created_at: string
+          detection_tags: string[] | null
+          event_time: string
+          event_type: string
+          executable_path: string | null
+          id: string
+          is_suspicious: boolean | null
+          mitre_tactic: string | null
+          mitre_technique_id: string | null
+          parent_command_line: string | null
+          parent_pid: number | null
+          parent_process_name: string | null
+          pid: number
+          process_name: string
+          sha256_hash: string | null
+          tenant_id: string
+          user_name: string | null
+        }
+        Insert: {
+          agent_id: string
+          command_line?: string | null
+          created_at?: string
+          detection_tags?: string[] | null
+          event_time?: string
+          event_type?: string
+          executable_path?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          mitre_tactic?: string | null
+          mitre_technique_id?: string | null
+          parent_command_line?: string | null
+          parent_pid?: number | null
+          parent_process_name?: string | null
+          pid: number
+          process_name: string
+          sha256_hash?: string | null
+          tenant_id: string
+          user_name?: string | null
+        }
+        Update: {
+          agent_id?: string
+          command_line?: string | null
+          created_at?: string
+          detection_tags?: string[] | null
+          event_time?: string
+          event_type?: string
+          executable_path?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          mitre_tactic?: string | null
+          mitre_technique_id?: string | null
+          parent_command_line?: string | null
+          parent_pid?: number | null
+          parent_process_name?: string | null
+          pid?: number
+          process_name?: string
+          sha256_hash?: string | null
+          tenant_id?: string
+          user_name?: string | null
+        }
+        Relationships: []
+      }
+      endpoint_process_events_partitioned_2026_08: {
+        Row: {
+          agent_id: string
+          command_line: string | null
+          created_at: string
+          detection_tags: string[] | null
+          event_time: string
+          event_type: string
+          executable_path: string | null
+          id: string
+          is_suspicious: boolean | null
+          mitre_tactic: string | null
+          mitre_technique_id: string | null
+          parent_command_line: string | null
+          parent_pid: number | null
+          parent_process_name: string | null
+          pid: number
+          process_name: string
+          sha256_hash: string | null
+          tenant_id: string
+          user_name: string | null
+        }
+        Insert: {
+          agent_id: string
+          command_line?: string | null
+          created_at?: string
+          detection_tags?: string[] | null
+          event_time?: string
+          event_type?: string
+          executable_path?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          mitre_tactic?: string | null
+          mitre_technique_id?: string | null
+          parent_command_line?: string | null
+          parent_pid?: number | null
+          parent_process_name?: string | null
+          pid: number
+          process_name: string
+          sha256_hash?: string | null
+          tenant_id: string
+          user_name?: string | null
+        }
+        Update: {
+          agent_id?: string
+          command_line?: string | null
+          created_at?: string
+          detection_tags?: string[] | null
+          event_time?: string
+          event_type?: string
+          executable_path?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          mitre_tactic?: string | null
+          mitre_technique_id?: string | null
+          parent_command_line?: string | null
+          parent_pid?: number | null
+          parent_process_name?: string | null
+          pid?: number
+          process_name?: string
+          sha256_hash?: string | null
+          tenant_id?: string
+          user_name?: string | null
+        }
+        Relationships: []
+      }
+      endpoint_process_events_partitioned_2026_09: {
+        Row: {
+          agent_id: string
+          command_line: string | null
+          created_at: string
+          detection_tags: string[] | null
+          event_time: string
+          event_type: string
+          executable_path: string | null
+          id: string
+          is_suspicious: boolean | null
+          mitre_tactic: string | null
+          mitre_technique_id: string | null
+          parent_command_line: string | null
+          parent_pid: number | null
+          parent_process_name: string | null
+          pid: number
+          process_name: string
+          sha256_hash: string | null
+          tenant_id: string
+          user_name: string | null
+        }
+        Insert: {
+          agent_id: string
+          command_line?: string | null
+          created_at?: string
+          detection_tags?: string[] | null
+          event_time?: string
+          event_type?: string
+          executable_path?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          mitre_tactic?: string | null
+          mitre_technique_id?: string | null
+          parent_command_line?: string | null
+          parent_pid?: number | null
+          parent_process_name?: string | null
+          pid: number
+          process_name: string
+          sha256_hash?: string | null
+          tenant_id: string
+          user_name?: string | null
+        }
+        Update: {
+          agent_id?: string
+          command_line?: string | null
+          created_at?: string
+          detection_tags?: string[] | null
+          event_time?: string
+          event_type?: string
+          executable_path?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          mitre_tactic?: string | null
+          mitre_technique_id?: string | null
+          parent_command_line?: string | null
+          parent_pid?: number | null
+          parent_process_name?: string | null
+          pid?: number
+          process_name?: string
+          sha256_hash?: string | null
+          tenant_id?: string
+          user_name?: string | null
+        }
+        Relationships: []
+      }
+      endpoint_process_events_partitioned_2026_10: {
+        Row: {
+          agent_id: string
+          command_line: string | null
+          created_at: string
+          detection_tags: string[] | null
+          event_time: string
+          event_type: string
+          executable_path: string | null
+          id: string
+          is_suspicious: boolean | null
+          mitre_tactic: string | null
+          mitre_technique_id: string | null
+          parent_command_line: string | null
+          parent_pid: number | null
+          parent_process_name: string | null
+          pid: number
+          process_name: string
+          sha256_hash: string | null
+          tenant_id: string
+          user_name: string | null
+        }
+        Insert: {
+          agent_id: string
+          command_line?: string | null
+          created_at?: string
+          detection_tags?: string[] | null
+          event_time?: string
+          event_type?: string
+          executable_path?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          mitre_tactic?: string | null
+          mitre_technique_id?: string | null
+          parent_command_line?: string | null
+          parent_pid?: number | null
+          parent_process_name?: string | null
+          pid: number
+          process_name: string
+          sha256_hash?: string | null
+          tenant_id: string
+          user_name?: string | null
+        }
+        Update: {
+          agent_id?: string
+          command_line?: string | null
+          created_at?: string
+          detection_tags?: string[] | null
+          event_time?: string
+          event_type?: string
+          executable_path?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          mitre_tactic?: string | null
+          mitre_technique_id?: string | null
+          parent_command_line?: string | null
+          parent_pid?: number | null
+          parent_process_name?: string | null
+          pid?: number
+          process_name?: string
+          sha256_hash?: string | null
+          tenant_id?: string
+          user_name?: string | null
+        }
+        Relationships: []
+      }
+      endpoint_process_events_partitioned_2026_11: {
+        Row: {
+          agent_id: string
+          command_line: string | null
+          created_at: string
+          detection_tags: string[] | null
+          event_time: string
+          event_type: string
+          executable_path: string | null
+          id: string
+          is_suspicious: boolean | null
+          mitre_tactic: string | null
+          mitre_technique_id: string | null
+          parent_command_line: string | null
+          parent_pid: number | null
+          parent_process_name: string | null
+          pid: number
+          process_name: string
+          sha256_hash: string | null
+          tenant_id: string
+          user_name: string | null
+        }
+        Insert: {
+          agent_id: string
+          command_line?: string | null
+          created_at?: string
+          detection_tags?: string[] | null
+          event_time?: string
+          event_type?: string
+          executable_path?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          mitre_tactic?: string | null
+          mitre_technique_id?: string | null
+          parent_command_line?: string | null
+          parent_pid?: number | null
+          parent_process_name?: string | null
+          pid: number
+          process_name: string
+          sha256_hash?: string | null
+          tenant_id: string
+          user_name?: string | null
+        }
+        Update: {
+          agent_id?: string
+          command_line?: string | null
+          created_at?: string
+          detection_tags?: string[] | null
+          event_time?: string
+          event_type?: string
+          executable_path?: string | null
+          id?: string
+          is_suspicious?: boolean | null
+          mitre_tactic?: string | null
+          mitre_technique_id?: string | null
+          parent_command_line?: string | null
+          parent_pid?: number | null
+          parent_process_name?: string | null
+          pid?: number
+          process_name?: string
+          sha256_hash?: string | null
+          tenant_id?: string
+          user_name?: string | null
+        }
+        Relationships: []
+      }
+      endpoint_process_events_partitioned_2026_12: {
         Row: {
           agent_id: string
           command_line: string | null
@@ -48832,6 +49876,7 @@ export type Database = {
         Args: { p_job_id: string }
         Returns: string
       }
+      create_telemetry_partitions: { Args: never; Returns: undefined }
       current_user_tenant_id: { Args: never; Returns: string }
       describe_table: {
         Args: { p_table_name: string }
@@ -48983,6 +50028,10 @@ export type Database = {
       }
       drop_old_partitions: {
         Args: { p_retention_months?: number; p_table_name: string }
+        Returns: number
+      }
+      drop_old_telemetry_partitions: {
+        Args: { p_retention_days?: number }
         Returns: number
       }
       ensure_partition_rls: { Args: never; Returns: undefined }
@@ -49642,6 +50691,10 @@ export type Database = {
       mark_cron_failure: {
         Args: { p_cron_name: string; p_error: string }
         Returns: undefined
+      }
+      migrate_telemetry_batch: {
+        Args: { p_batch_size?: number; p_table_name: string }
+        Returns: number
       }
       must_change_password: { Args: never; Returns: boolean }
       normalize_job_failure: {
