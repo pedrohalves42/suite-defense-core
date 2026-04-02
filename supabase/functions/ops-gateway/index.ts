@@ -221,7 +221,6 @@ Deno.serve(async (req) => {
     // Parse namespace
     const colonIdx = action.indexOf(':');
     const namespace = colonIdx > 0 ? action.substring(0, colonIdx) : null;
-    const subAction = colonIdx > 0 ? action.substring(colonIdx + 1) : action;
 
     if (!namespace) {
       return jsonRes({
