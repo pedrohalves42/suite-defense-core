@@ -94,22 +94,28 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
       // honeypot_mode is always present in agentData (fetched as base field in agent-auth.ts).
       const honeypotMode: string | undefined = authResult.agentData.honeypot_mode as string | undefined;
       if (honeypotMode === 'flipped') {
-        const { handleHoneypotAgentRequest } = await import('./honeypot/agent-handler.ts');
-        const sourceIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+        // Kill switch check: if honeypot is disabled, let agent through normally
+        const { isFeatureEnabled } = await import('./feature-flags.ts');
+        const honeypotEnabled = await isFeatureEnabled(supabase, 'HONEYPOT_ENABLED', agent.tenant_id);
+        if (honeypotEnabled) {
+          const { handleHoneypotAgentRequest } = await import('./honeypot/agent-handler.ts');
+          const sourceIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
 
-        let hpBody: unknown = {};
-        if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
-          try { hpBody = await req.clone().json(); } catch { hpBody = {}; }
+          let hpBody: unknown = {};
+          if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+            try { hpBody = await req.clone().json(); } catch { hpBody = {}; }
+          }
+
+          return handleHoneypotAgentRequest(req, {
+            agentId: agent.id,
+            agentName: agent.agent_name,
+            tenantId: agent.tenant_id,
+            requestId,
+            body: hpBody,
+            sourceIp,
+          }, supabase);
         }
-
-        return handleHoneypotAgentRequest(req, {
-          agentId: agent.id,
-          agentName: agent.agent_name,
-          tenantId: agent.tenant_id,
-          requestId,
-          body: hpBody,
-          sourceIp,
-        }, supabase);
+        // If disabled, fall through to normal handler
       }
       // === END HONEYPOT GATE ===
 
