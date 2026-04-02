@@ -106,7 +106,7 @@ export function usePipelineMetrics(tenantId: string | undefined, hoursBack: numb
       }
 
       const { callGateway } = await import('@/lib/gateway');
-      const data = await callGateway<{ success: boolean; metrics: PipelineMetrics; error?: string }>('check', 'get-installation-pipeline-metrics', body);
+      const data = await callGateway<{ success: boolean; metrics: Record<string, unknown>; error?: string }>('check', 'get-installation-pipeline-metrics', body);
 
       if (!data?.success) throw new Error(data?.error || 'Erro desconhecido');
       return data.metrics;
