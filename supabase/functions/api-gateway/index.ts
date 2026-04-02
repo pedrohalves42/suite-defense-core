@@ -1,7 +1,7 @@
 /**
  * api-gateway — Unified Platform API Gateway (Phase 5)
  *
- * Consolidates: admin-router, billing-router, security-router, build-router, agent-mgmt-router
+ * Consolidates: admin, billing, security, build, agent namespaces
  *
  * Action format: "namespace:action" e.g. "admin:create-user", "billing:create-checkout"
  *
@@ -18,28 +18,22 @@ import {
   handleCheckTenantQuotas, handleCheckTrialExpiration,
   handleSecurityCleanup,
 } from './handlers/billing.ts';
+import {
+  handleGetAdminReleases, handleUpdateUserStatus,
+  handleUpdateMemberRole, handleRemoveMember,
+  handleListUsers, handleListAllUsersAdmin,
+  handleSetActiveTenant, handleUpdateUserRole,
+  handleAdminCreateUser, handleGetRateLimitStats,
+  type HandlerContext,
+} from './handlers/admin.ts';
 
 const FETCH_TIMEOUT_MS = 30000;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-// ── Flat action map: "namespace:action" → target function name ──────────
+// ── Proxy map: actions still dispatched via HTTP ────────────────────────
 const ACTION_TO_FUNCTION: Record<string, string> = {
-  // admin (from admin-router)
-  'admin:create-user': 'admin-create-user',
-  'admin:list-all-users': 'list-all-users-admin',
-  'admin:list-users': 'list-users',
-  'admin:update-user-role': 'update-user-role',
-  'admin:update-user-status': 'update-user-status',
-  'admin:update-member-role': 'update-member-role',
-  'admin:remove-member': 'remove-member',
-  'admin:set-active-tenant': 'set-active-tenant',
-  'admin:get-admin-releases': 'get-admin-releases',
-  'admin:tenant-features': 'api-tenant-features',
-  'admin:tenant-info': 'api-tenant-info',
-  'admin:tenant-stats': 'api-tenant-stats',
-  'admin:rate-limit-stats': 'get-rate-limit-stats',
-  // billing proxy targets (from billing-router)
+  // billing proxy targets (complex Stripe integrations)
   'billing:create-checkout': 'create-checkout',
   'billing:create-stripe-products': 'create-stripe-products',
   'billing:create-stripe-products-extended': 'create-stripe-products-extended',
@@ -130,22 +124,41 @@ const ACTION_TO_FUNCTION: Record<string, string> = {
   'agent:get-reinstall-script': 'get-reinstall-script',
 };
 
-// Inlined handlers (no HTTP hop needed)
-type InlinedHandler = (supabase: ReturnType<typeof createClient>, requestId: string, payload: Record<string, unknown>) => Promise<unknown>;
+// ── Inlined handlers (no HTTP hop) ──────────────────────────────────────
+type InlinedHandler = (supabase: ReturnType<typeof createClient>, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext) => Promise<unknown>;
 
 const INLINED_HANDLERS: Record<string, InlinedHandler> = {
-  // billing inlined
+  // billing inlined (Phase 1)
   'billing:cohort-analysis': handleCohortAnalysis,
   'billing:reset-daily-quotas': handleResetDailyQuotas,
   'billing:check-tenant-quotas': handleCheckTenantQuotas,
   'billing:check-trial-expiration': handleCheckTrialExpiration,
   // security inlined
   'security:security-cleanup': handleSecurityCleanup,
+  // admin inlined (Phase 2)
+  'admin:get-admin-releases': handleGetAdminReleases,
+  'admin:update-user-status': handleUpdateUserStatus,
+  'admin:update-member-role': handleUpdateMemberRole,
+  'admin:remove-member': handleRemoveMember,
+  'admin:list-users': handleListUsers,
+  'admin:list-all-users': handleListAllUsersAdmin,
+  'admin:set-active-tenant': handleSetActiveTenant,
+  'admin:update-user-role': handleUpdateUserRole,
+  'admin:create-user': handleAdminCreateUser,
+  'admin:rate-limit-stats': handleGetRateLimitStats,
+};
+
+// API-key authenticated endpoints (still proxy — they have own auth flow)
+const API_KEY_PROXY: Record<string, string> = {
+  'admin:tenant-features': 'api-tenant-features',
+  'admin:tenant-info': 'api-tenant-info',
+  'admin:tenant-stats': 'api-tenant-stats',
 };
 
 const ALL_VALID_ACTIONS = new Set([
   ...Object.keys(ACTION_TO_FUNCTION),
   ...Object.keys(INLINED_HANDLERS),
+  ...Object.keys(API_KEY_PROXY),
 ]);
 
 const RouterSchema = z.object({
@@ -172,6 +185,24 @@ function forwardHeaders(req: Request, requestId: string): Record<string, string>
     if (v) h[name] = v;
   }
   return h;
+}
+
+/** Decode JWT payload to extract userId and tenantId (best-effort, no verification — auth already validated) */
+function decodeJwtContext(req: Request): { userId?: string; tenantId?: string } {
+  try {
+    const auth = req.headers.get('Authorization');
+    if (!auth?.startsWith('Bearer ')) return {};
+    const token = auth.slice(7);
+    const payloadPart = token.split('.')[1];
+    if (!payloadPart) return {};
+    const decoded = JSON.parse(atob(payloadPart.replace(/-/g, '+').replace(/_/g, '/')));
+    return {
+      userId: decoded.sub,
+      tenantId: decoded.app_metadata?.active_tenant_id,
+    };
+  } catch {
+    return {};
+  }
 }
 
 Deno.serve(async (req) => {
@@ -204,10 +235,33 @@ Deno.serve(async (req) => {
     const inlinedHandler = INLINED_HANDLERS[action];
     if (inlinedHandler) {
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const jwtCtx = decodeJwtContext(req);
+      const handlerCtx: HandlerContext = { req, userId: jwtCtx.userId, tenantId: jwtCtx.tenantId };
+      
       logger.info(`[api-gateway] Inline: ${action}`, { requestId });
-      const result = await inlinedHandler(supabase, requestId, payload);
-      logger.info(`[api-gateway] ${action} done in ${Date.now() - startedAt}ms`);
+      const result = await inlinedHandler(supabase, requestId, payload, handlerCtx);
+      const elapsed = Date.now() - startedAt;
+      logger.info(`[api-gateway] ${action} done in ${elapsed}ms`);
+
+      // Support __status for custom HTTP status codes from handlers
+      const resultObj = result as Record<string, unknown>;
+      const status = typeof resultObj?.__status === 'number' ? resultObj.__status : 200;
+      if (resultObj?.__status) {
+        const { __status, ...rest } = resultObj;
+        return jsonRes(rest, status, origin);
+      }
       return jsonRes(result, 200, origin);
+    }
+
+    // API-key proxy
+    const apiKeyTarget = API_KEY_PROXY[action];
+    if (apiKeyTarget) {
+      const url = `${SUPABASE_URL}/functions/v1/${apiKeyTarget}`;
+      logger.info(`[api-gateway] API-key proxy: ${action} → ${apiKeyTarget}`, { requestId });
+      const response = await fetchWithTimeout(url, { method: 'POST', headers: forwardHeaders(req, requestId), body: JSON.stringify(payload), timeoutMs: FETCH_TIMEOUT_MS });
+      const responseData = await response.text();
+      logger.info(`[api-gateway] ${action} done in ${Date.now() - startedAt}ms (status: ${response.status})`);
+      return new Response(responseData, { status: response.status, headers: { ...buildCorsHeaders(origin), 'Content-Type': response.headers.get('Content-Type') || 'application/json' } });
     }
 
     // Proxy to target function
