@@ -128,9 +128,26 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'billing:reset-daily-quotas': handleResetDailyQuotas,
   'billing:check-tenant-quotas': handleCheckTenantQuotas,
   'billing:check-trial-expiration': handleCheckTrialExpiration,
+  // billing inlined - Phase 2B (DB-only)
+  'billing:create-trial-subscription': handleCreateTrialSubscription,
+  'billing:create-custom-trial': handleCreateCustomTrial,
+  'billing:unit-economics': handleUnitEconomics,
+  'billing:revenue-projections': handleRevenueProjections,
+  'billing:sales-pipeline': handleSalesPipeline,
+  'billing:subscription-analytics': handleSubscriptionAnalytics,
+  'billing:send-trial-reminder': handleSendTrialReminder,
+  // billing inlined - Phase 2B (Stripe, dynamic import)
+  'billing:list-invoices': handleListInvoices,
+  'billing:customer-portal': handleCustomerPortal,
+  'billing:check-subscription': handleCheckSubscription,
+  'billing:create-checkout': handleCreateCheckout,
+  'billing:manage-subscription': handleManageSubscription,
+  'billing:create-stripe-products': handleCreateStripeProducts,
+  'billing:create-stripe-products-extended': handleCreateStripeProductsExtended,
+  'billing:stripe-health-check': handleStripeHealthCheck,
   // security inlined
   'security:security-cleanup': handleSecurityCleanup,
-  // admin inlined (Phase 2)
+  // admin inlined (Phase 2A)
   'admin:get-admin-releases': handleGetAdminReleases,
   'admin:update-user-status': handleUpdateUserStatus,
   'admin:update-member-role': handleUpdateMemberRole,
