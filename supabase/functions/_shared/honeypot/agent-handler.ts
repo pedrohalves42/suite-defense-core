@@ -8,13 +8,14 @@
  * Contract:
  * - Receives request AFTER authentication
  * - Checks kill switch (HONEYPOT_ENABLED feature flag)
- * - Registers interaction in honeypot_interactions (1 insert)
+ * - Registers interaction in honeypot_interactions (EXACTLY 1 insert, no agents.update)
  * - Responds plausibly (mimics real backend)
  * - NEVER touches jobs, job_queue, job_results, automation_rules, or any operational table
+ * - last_honeypot_interaction_at is derived by cron aggregation, NOT updated in hot path
  */
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { truncateBody, filterHeaders, extractSourceIp, hashIp, extractIpPrefix } from './sanitize.ts';
+import { truncateBody, filterHeaders, hashIp, extractIpPrefix } from './sanitize.ts';
 import { classifyPayload } from './classify.ts';
 import { buildHoneypotResponse, type ResponseProfileType } from './response-profiles.ts';
 import { buildCorsHeaders } from '../cors.ts';
@@ -34,6 +35,7 @@ export interface HoneypotAgentContext {
 /**
  * Handle a request from a flipped agent.
  * Checks kill switch, records interaction (1 insert) and returns a plausible response.
+ * ZERO writes to agents table in the hot path.
  */
 export async function handleHoneypotAgentRequest(
   req: Request,
@@ -49,7 +51,6 @@ export async function handleHoneypotAgentRequest(
   // === KILL SWITCH ===
   const honeypotEnabled = await isFeatureEnabled(supabase, 'HONEYPOT_ENABLED', ctx.tenantId);
   if (!honeypotEnabled) {
-    // If honeypot is disabled, return neutral response without recording
     return new Response(JSON.stringify({ status: 'ok' }), {
       status: 200,
       headers: { ...cors, ...securityHeaders, 'Content-Type': 'application/json', 'X-Request-ID': ctx.requestId },
@@ -67,8 +68,7 @@ export async function handleHoneypotAgentRequest(
   const profile: ResponseProfileType = 'default';
   const response = buildHoneypotResponse(path, method, profile);
 
-  // 3. Single insert (fire-and-forget) — 1 write per request
-  const now = new Date().toISOString();
+  // 3. EXACTLY 1 insert (fire-and-forget) — NO agents.update in hot path
   supabase
     .from('honeypot_interactions')
     .insert({
@@ -88,15 +88,6 @@ export async function handleHoneypotAgentRequest(
     })
     .then(({ error }) => {
       if (error) console.error(`[honeypot-agent] Insert error: ${error.message}`);
-    });
-
-  // 4. Update last interaction timestamp (fire-and-forget, lightweight)
-  supabase
-    .from('agents')
-    .update({ last_honeypot_interaction_at: now })
-    .eq('id', ctx.agentId)
-    .then(({ error }) => {
-      if (error) console.error(`[honeypot-agent] Timestamp update error: ${error.message}`);
     });
 
   return new Response(JSON.stringify(response.body), {

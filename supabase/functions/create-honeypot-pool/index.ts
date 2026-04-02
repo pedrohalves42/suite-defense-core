@@ -7,6 +7,7 @@
  * - Fixed pool size per tenant (default: 2)
  * - NO token/HMAC for native honeypots (they don't need to authenticate)
  * - NO agent_tokens entries for native honeypots
+ * - hmac_secret is NULL (not empty string)
  * - Recycles only when below target pool size
  * - Never creates infinitely
  */
@@ -66,6 +67,7 @@ serveInternal(async (_req, { supabase, requestId, body }) => {
         '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
 
       // Create agent WITHOUT token or HMAC secret (native doesn't authenticate)
+      // hmac_secret is NULL — not empty string
       const { error: agentError } = await supabase
         .from('agents')
         .insert({
@@ -77,7 +79,7 @@ serveInternal(async (_req, { supabase, requestId, body }) => {
           honeypot_mode: 'native',
           honeypot_activated_at: new Date().toISOString(),
           honeypot_reason: 'Pool-seeded native honeypot',
-          hmac_secret: '', // Empty — native doesn't need secrets
+          // hmac_secret intentionally omitted — NULL, not empty string
           last_honeypot_state_change_at: new Date().toISOString(),
         });
 
