@@ -17,7 +17,17 @@ import {
   handleCohortAnalysis, handleResetDailyQuotas,
   handleCheckTenantQuotas, handleCheckTrialExpiration,
   handleSecurityCleanup,
+  handleCreateTrialSubscription, handleCreateCustomTrial,
+  handleUnitEconomics, handleRevenueProjections,
+  handleSalesPipeline, handleSubscriptionAnalytics,
+  handleSendTrialReminder,
 } from './handlers/billing.ts';
+import {
+  handleListInvoices, handleCustomerPortal,
+  handleCheckSubscription, handleCreateCheckout,
+  handleManageSubscription, handleCreateStripeProducts,
+  handleCreateStripeProductsExtended, handleStripeHealthCheck,
+} from './handlers/billing-stripe.ts';
 import {
   handleGetAdminReleases, handleUpdateUserStatus,
   handleUpdateMemberRole, handleRemoveMember,
@@ -33,22 +43,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 // ── Proxy map: actions still dispatched via HTTP ────────────────────────
 const ACTION_TO_FUNCTION: Record<string, string> = {
-  // billing proxy targets (complex Stripe integrations)
-  'billing:create-checkout': 'create-checkout',
-  'billing:create-stripe-products': 'create-stripe-products',
-  'billing:create-stripe-products-extended': 'create-stripe-products-extended',
-  'billing:create-trial-subscription': 'create-trial-subscription',
-  'billing:create-custom-trial': 'create-custom-trial',
-  'billing:manage-subscription': 'manage-subscription',
-  'billing:check-subscription': 'check-subscription',
-  'billing:customer-portal': 'customer-portal',
-  'billing:list-invoices': 'list-invoices',
-  'billing:stripe-health-check': 'stripe-health-check',
-  'billing:subscription-analytics': 'subscription-analytics',
-  'billing:unit-economics': 'unit-economics',
-  'billing:revenue-projections': 'revenue-projections',
-  'billing:sales-pipeline': 'sales-pipeline',
-  'billing:send-trial-reminder': 'send-trial-reminder',
+  // billing proxy targets — all migrated to INLINED_HANDLERS in Phase 2B
   // security proxy targets (from security-router)
   'security:auto-block-threats': 'auto-block-threats',
   'security:auto-quarantine': 'auto-quarantine',
@@ -133,9 +128,26 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'billing:reset-daily-quotas': handleResetDailyQuotas,
   'billing:check-tenant-quotas': handleCheckTenantQuotas,
   'billing:check-trial-expiration': handleCheckTrialExpiration,
+  // billing inlined - Phase 2B (DB-only)
+  'billing:create-trial-subscription': handleCreateTrialSubscription,
+  'billing:create-custom-trial': handleCreateCustomTrial,
+  'billing:unit-economics': handleUnitEconomics,
+  'billing:revenue-projections': handleRevenueProjections,
+  'billing:sales-pipeline': handleSalesPipeline,
+  'billing:subscription-analytics': handleSubscriptionAnalytics,
+  'billing:send-trial-reminder': handleSendTrialReminder,
+  // billing inlined - Phase 2B (Stripe, dynamic import)
+  'billing:list-invoices': handleListInvoices,
+  'billing:customer-portal': handleCustomerPortal,
+  'billing:check-subscription': handleCheckSubscription,
+  'billing:create-checkout': handleCreateCheckout,
+  'billing:manage-subscription': handleManageSubscription,
+  'billing:create-stripe-products': handleCreateStripeProducts,
+  'billing:create-stripe-products-extended': handleCreateStripeProductsExtended,
+  'billing:stripe-health-check': handleStripeHealthCheck,
   // security inlined
   'security:security-cleanup': handleSecurityCleanup,
-  // admin inlined (Phase 2)
+  // admin inlined (Phase 2A)
   'admin:get-admin-releases': handleGetAdminReleases,
   'admin:update-user-status': handleUpdateUserStatus,
   'admin:update-member-role': handleUpdateMemberRole,

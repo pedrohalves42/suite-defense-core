@@ -23,25 +23,25 @@ A conversão elimina o **double cold start** (gateway→função) transformando 
 | update-user-role | 159L | Média |
 | admin-create-user | 199L | Alta |
 
-**Batch 2B — Billing namespace (15 funções → api-gateway/handlers/billing.ts)**
-*5 já inlined. Restam 10 + send-trial-reminder:*
-| Função | Linhas |
+**Batch 2B — Billing namespace (15 funções → api-gateway/handlers/billing.ts + billing-stripe.ts) ✅ COMPLETO**
+*Todas 15 funções inlined. Stripe handlers usam dynamic import para evitar carregar SDK em requests não-billing.*
+| Função | Status |
 |---|---|
-| create-stripe-products | 53L |
-| list-invoices | 61L |
-| customer-portal | 64L |
-| create-trial-subscription | 66L |
-| create-stripe-products-extended | 83L |
-| stripe-health-check | 92L |
-| create-custom-trial | 93L |
-| unit-economics | 111L |
-| create-checkout | 119L |
-| revenue-projections | 136L |
-| send-trial-reminder | 145L |
-| check-subscription | 157L |
-| sales-pipeline | 169L |
-| subscription-analytics | 196L |
-| manage-subscription | 328L |
+| create-stripe-products | ✅ Inlined (billing-stripe.ts) |
+| list-invoices | ✅ Inlined (billing-stripe.ts) |
+| customer-portal | ✅ Inlined (billing-stripe.ts) |
+| create-trial-subscription | ✅ Inlined (billing.ts) |
+| create-stripe-products-extended | ✅ Inlined (billing-stripe.ts) |
+| stripe-health-check | ✅ Inlined (billing-stripe.ts) |
+| create-custom-trial | ✅ Inlined (billing.ts) |
+| unit-economics | ✅ Inlined (billing.ts) |
+| create-checkout | ✅ Inlined (billing-stripe.ts) |
+| revenue-projections | ✅ Inlined (billing.ts) |
+| send-trial-reminder | ✅ Inlined (billing.ts) |
+| check-subscription | ✅ Inlined (billing-stripe.ts) |
+| sales-pipeline | ✅ Inlined (billing.ts) |
+| subscription-analytics | ✅ Inlined (billing.ts) |
+| manage-subscription | ✅ Inlined (billing-stripe.ts) |
 
 **Batch 2C — Check namespace (15 funções → ops-gateway/handlers/check.ts)**
 *5 já inlined. Restam 10:*
