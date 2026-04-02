@@ -77,19 +77,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 // ── Flat proxy map: "namespace:action" → target function ────────────────
 const ACTION_TO_FUNCTION: Record<string, string> = {
-  // sync proxy targets
-  'sync:sync-blocked-websites': 'sync-blocked-websites',
-  'sync:sync-storage-bucket': 'sync-storage-bucket',
-  'sync:process-dlq-retries': 'process-dlq-retries',
-  'sync:process-failed-jobs': 'process-failed-jobs',
-  'sync:process-scheduled-jobs': 'process-scheduled-jobs',
-  'sync:invoke-scheduled-jobs': 'invoke-scheduled-jobs',
-  'sync:dlq-action': 'dlq-action',
-  'sync:system-maintenance': 'system-maintenance',
-  'sync:maintenance-cron': 'maintenance-cron',
-  'sync:release-sync': 'release-sync',
-  'sync:sync-stripe-subscriptions': 'sync-stripe-subscriptions',
-  'sync:sync-threat-feeds': 'sync-threat-feeds',
+  // sync proxy targets — all inlined in Phase 3B
   // playbook proxy targets
   'playbook:execute-playbook': 'execute-playbook',
   'playbook:execute-playbook-action': 'execute-playbook-action',
