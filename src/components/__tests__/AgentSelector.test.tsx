@@ -38,12 +38,12 @@ beforeEach(() => {
 });
 
 describe('AgentSelector', () => {
-  it('renders loading state while tenant is loading', () => {
+  it('does not render select when tenant is loading', () => {
     mockUseActiveTenant.mockReturnValue({ activeTenant: { id: 't1' }, loading: true });
-    const { container } = render(<AgentSelector value="" onValueChange={vi.fn()} />, { wrapper: createWrapper() });
-    // Skeleton component renders with specific height
-    const el = container.querySelector('[class*="h-10"]');
-    expect(el).toBeTruthy();
+    render(<AgentSelector value="" onValueChange={vi.fn()} />, { wrapper: createWrapper() });
+    // Should not render the select trigger or any agent content
+    expect(screen.queryByText(/Selecione um computador/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nenhum computador/)).not.toBeInTheDocument();
   });
 
   it('shows empty message when no agents', async () => {
