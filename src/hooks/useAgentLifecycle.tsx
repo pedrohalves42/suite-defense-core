@@ -105,9 +105,9 @@ export function usePipelineMetrics(tenantId: string | undefined, hoursBack: numb
         body.hours_back = hoursBack;
       }
 
-      const { data, error } = await supabase.functions.invoke('get-installation-pipeline-metrics', {
-        body
-      });
+      const { callGateway } = await import('@/lib/gateway');
+      const data = await callGateway('check', 'get-installation-pipeline-metrics', body);
+      return data;
 
       if (error) throw new Error(`Erro ao buscar métricas: ${error.message}`);
       if (!data?.success) throw new Error(data?.error || 'Erro desconhecido');
