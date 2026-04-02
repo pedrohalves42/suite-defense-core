@@ -106,6 +106,12 @@ vi.mock('recharts', () => ({
   FunnelChart: () => null,
   Funnel: () => null,
   Treemap: () => null,
+  LabelList: () => null,
+  ReferenceArea: () => null,
+  ReferenceLine: () => null,
+  Scatter: () => null,
+  ScatterChart: () => null,
+  Brush: () => null,
 }));
 
 // Mock sonner
