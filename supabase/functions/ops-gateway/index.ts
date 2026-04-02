@@ -142,6 +142,19 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'sync:flush-event-buffer': handleFlushEventBuffer,
   // ── playbook inlined ──
   'playbook:auto-triage-insights': handleAutoTriageInsights,
+  // ── sync inlined (Phase 3B) ──
+  'sync:sync-blocked-websites': handleSyncBlockedWebsites,
+  'sync:process-failed-jobs': handleProcessFailedJobs,
+  'sync:process-scheduled-jobs': handleProcessScheduledJobs,
+  'sync:invoke-scheduled-jobs': handleInvokeScheduledJobs,
+  'sync:maintenance-cron': handleMaintenanceCron,
+  'sync:system-maintenance': handleSystemMaintenance,
+  'sync:dlq-action': handleDlqAction,
+  'sync:process-dlq-retries': handleProcessDlqRetries,
+  'sync:release-sync': handleReleaseSync,
+  'sync:sync-storage-bucket': handleSyncStorageBucket,
+  'sync:sync-stripe-subscriptions': handleSyncStripeSubscriptions,
+  'sync:sync-threat-feeds': handleSyncThreatFeeds,
   // ── cleanup inlined (Phase 3A) ──
   'cleanup:telemetry': handleCleanupTelemetry,
   'cleanup:stale-reports': handleCleanupStaleReports,
