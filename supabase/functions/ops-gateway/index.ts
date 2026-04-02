@@ -1,12 +1,9 @@
 /**
- * ops-gateway — Unified Operations Gateway (Phase 5)
+ * ops-gateway — Unified Operations Gateway (Phase 5 + Phase 2C)
  *
  * Consolidates: check-router, sync-router, playbook-router, report-router, cleanup-router, notification-router
  *
  * Action format: "namespace:action" e.g. "check:check-stuck-jobs", "sync:process-failed-jobs"
- *
- * For cleanup and notification namespaces, proxies to cleanup-router and notification-router
- * respectively (they have complex internal handler logic with module dependencies).
  *
  * Auth: assertInternalCaller with allowAuthenticatedUsers
  */
@@ -17,12 +14,27 @@ import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 
-// Inlined handlers
+// Inlined handlers — check
 import {
   handleCheckTaskSlaBreach, handleEvaluateJobSlo,
   handleCheckInstallationHealth, handleCheckProductionHealth,
   handleDetectBlockedAttempts,
+  handleGetInstallationPipelineMetrics, handleCronSentinel,
+  handleCheckStuckJobs, handleBuildWatchdog,
+  handleCalculateBehavioralBaselines, handleComputeComplianceBenchmarks,
+  handleCheckPendingAgents,
 } from './handlers/check.ts';
+import {
+  handleMonitorThresholds, handleHealthMonitor,
+  handleWatchdogNonExecution, handleCheckActionEffectiveness,
+  handleAnalyzeJobFailurePatterns,
+} from './handlers/check-monitors.ts';
+import {
+  handleSliCollector, handleAnalyzeConfidenceGapTrend,
+  handleAnalyzeNetworkAnomalies,
+} from './handlers/check-analytics.ts';
+
+// Inlined handlers — sync
 import {
   handleResetDailyQuotas, handleLogDomainEvent,
   handleHmacCleanupScheduled, handleProcessTenantSuspensions,
@@ -36,22 +48,6 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 // ── Flat proxy map: "namespace:action" → target function ────────────────
 const ACTION_TO_FUNCTION: Record<string, string> = {
-  // check proxy targets
-  'check:check-action-effectiveness': 'check-action-effectiveness',
-  'check:check-stuck-jobs': 'check-stuck-jobs',
-  'check:sli-collector': 'sli-collector',
-  'check:get-installation-pipeline-metrics': 'get-installation-pipeline-metrics',
-  'check:analyze-confidence-gap-trend': 'analyze-confidence-gap-trend',
-  'check:analyze-job-failure-patterns': 'analyze-job-failure-patterns',
-  'check:analyze-network-anomalies': 'analyze-network-anomalies',
-  'check:health-monitor': 'health-monitor',
-  'check:monitor-thresholds': 'monitor-thresholds',
-  'check:build-watchdog': 'build-watchdog',
-  'check:calculate-behavioral-baselines': 'calculate-behavioral-baselines',
-  'check:compute-compliance-benchmarks': 'compute-compliance-benchmarks',
-  'check:cron-sentinel': 'cron-sentinel',
-  'check:check-pending-agents': 'check-pending-agents',
-  'check:watchdog-non-execution': 'watchdog-non-execution',
   // sync proxy targets
   'sync:sync-blocked-websites': 'sync-blocked-websites',
   'sync:sync-storage-bucket': 'sync-storage-bucket',
@@ -95,7 +91,6 @@ const ACTION_TO_FUNCTION: Record<string, string> = {
 };
 
 // For cleanup and notification namespaces, we proxy to existing routers
-// (they have complex handler logic with sibling module imports)
 const NAMESPACE_ROUTER_PROXY: Record<string, string> = {
   'cleanup': 'cleanup-router',
   'notify': 'notification-router',
@@ -104,20 +99,35 @@ const NAMESPACE_ROUTER_PROXY: Record<string, string> = {
 type InlinedHandler = (supabase: ReturnType<typeof createClient>, requestId: string, payload: Record<string, unknown>) => Promise<unknown>;
 
 const INLINED_HANDLERS: Record<string, InlinedHandler> = {
-  // check inlined
+  // ── check inlined (Phase 2C complete: 20 handlers) ──
   'check:check-task-sla-breach': handleCheckTaskSlaBreach,
   'check:evaluate-job-slo': handleEvaluateJobSlo,
   'check:check-installation-health': handleCheckInstallationHealth,
   'check:check-production-health': handleCheckProductionHealth,
   'check:detect-stuck-installations': handleDetectBlockedAttempts,
-  // sync inlined
+  'check:get-installation-pipeline-metrics': handleGetInstallationPipelineMetrics,
+  'check:cron-sentinel': handleCronSentinel,
+  'check:check-stuck-jobs': handleCheckStuckJobs,
+  'check:build-watchdog': handleBuildWatchdog,
+  'check:calculate-behavioral-baselines': handleCalculateBehavioralBaselines,
+  'check:compute-compliance-benchmarks': handleComputeComplianceBenchmarks,
+  'check:check-pending-agents': handleCheckPendingAgents,
+  'check:monitor-thresholds': handleMonitorThresholds,
+  'check:health-monitor': handleHealthMonitor,
+  'check:watchdog-non-execution': handleWatchdogNonExecution,
+  'check:check-action-effectiveness': handleCheckActionEffectiveness,
+  'check:analyze-job-failure-patterns': handleAnalyzeJobFailurePatterns,
+  'check:sli-collector': handleSliCollector,
+  'check:analyze-confidence-gap-trend': handleAnalyzeConfidenceGapTrend,
+  'check:analyze-network-anomalies': handleAnalyzeNetworkAnomalies,
+  // ── sync inlined ──
   'sync:reset-daily-quotas': handleResetDailyQuotas,
   'sync:log-domain-event': handleLogDomainEvent,
   'sync:hmac-cleanup-scheduled': handleHmacCleanupScheduled,
   'sync:process-tenant-suspensions': handleProcessTenantSuspensions,
   'sync:scheduled-compliance-refresh': handleScheduledComplianceRefresh,
   'sync:flush-event-buffer': handleFlushEventBuffer,
-  // playbook inlined
+  // ── playbook inlined ──
   'playbook:auto-triage-insights': handleAutoTriageInsights,
 };
 
@@ -188,7 +198,7 @@ Deno.serve(async (req) => {
       }, 400, origin);
     }
 
-    // Route cleanup/notify to existing routers (they have complex handler modules)
+    // Route cleanup/notify to existing routers
     if (ROUTER_PROXY_NAMESPACES.has(namespace)) {
       const targetRouter = NAMESPACE_ROUTER_PROXY[namespace];
       const url = `${SUPABASE_URL}/functions/v1/${targetRouter}`;
