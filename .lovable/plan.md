@@ -1,110 +1,81 @@
-## Fase 3: Inlining dos Namespaces Restantes (Proxy → Inline)
 
-### Inventário Total
-| Gateway | Namespace | Proxy | Frontend Callers | Complexidade |
-|---|---|---|---|---|
-| api-gateway | security | 29 funções | ~8 callers | Alta (EDR, SIEM, CVE, AI) |
-| api-gateway | build | 15 funções | ~7 callers | Alta (GitHub Actions, crypto, scripts) |
-| api-gateway | agent | 26 funções | ~12 callers | **Bloqueada** (HMAC, raw body) |
-| ops-gateway | sync (restante) | 12 funções | ~6 callers | Média |
-| ops-gateway | playbook | 16 funções | ~4 callers | Alta (SOAR, automação) |
-| ops-gateway | report | 8 funções | ~2 callers | Alta (AI reports, PDFs) |
-| ops-gateway | cleanup | 3+router | ~4 callers | Baixa |
-| ops-gateway | notify | 4+router | ~1 caller | Baixa |
+## Batch 3B — Sync Restante (12 funções → inline no ops-gateway)
 
-**Total: ~113 funções proxy restantes, ~44 frontend callers**
+### Contexto
+- 12 funções standalone proxy no `ACTION_TO_FUNCTION` (linhas 67-79 do ops-gateway)
+- 7 frontend callers usando `supabase.functions.invoke()` direto
+- 6 handlers sync já inlined (reset-daily-quotas, log-domain-event, etc.)
+- Total: ~1370 linhas de lógica a extrair
 
----
-
-### ⚠️ Exclusões da Fase 3 (NÃO inline)
-
-**Agent namespace (26 funções)** — Mantidas como proxy:
-- 8 funções usam HMAC/raw body (heartbeat, poll-jobs, submit-*, register-agent-key, enroll-agent, validate-hmac-signature)
-- Restantes dependem de auth flows especiais (agent token, triple auth)
-- Risco de regressão alto, benefício baixo (agentes chamam direto, não passam pelo frontend gateway)
-
-**Funções com middleware especial** (já listadas em `deno-serve-migration-exceptions.md`):
-- `auto-generate-enrollment`, `evaluate-automation-rules`, `evaluate-playbook-triggers`, `oncall-integration`, `soar-engine`, `send-report-notification` — usam `serveTenant`/`serveInternal`
-
----
-
-### Estratégia: 5 Batches por prioridade de impacto no frontend
-
-#### Batch 3A — Cleanup + Notify (7 funções, ~400L) ⚡ Quick Win
-Inline os routers diretamente no ops-gateway, eliminando o double-hop `ops-gateway → cleanup-router → target`.
-
-| Função | Linhas | Destino |
+### Middleware Atual
+| Função | Middleware | Linhas |
 |---|---|---|
-| cleanup-expired-enrollment-keys | 55L | ops-gateway/handlers/cleanup.ts |
-| cleanup-orphaned-data | 77L | ops-gateway/handlers/cleanup.ts |
-| cleanup-stale-honeypots | 68L | ops-gateway/handlers/cleanup.ts |
-| notification-dispatcher | 147L | ops-gateway/handlers/notify.ts |
-| send-report-notification | 127L | ops-gateway/handlers/notify.ts |
-| send-scheduled-report | 103L | ops-gateway/handlers/notify.ts |
-| get-telegram-chat-id | 46L | ops-gateway/handlers/notify.ts |
+| sync-blocked-websites | serveTenant | 100L |
+| process-failed-jobs | serveInternal | 94L |
+| process-scheduled-jobs | serveInternal | 112L |
+| invoke-scheduled-jobs | serveInternal | 192L |
+| maintenance-cron | serveInternal | 41L |
+| system-maintenance | serveInternal | 94L |
+| dlq-action | serveTenant | 106L |
+| process-dlq-retries | serveInternal | 257L |
+| release-sync | serveInternal | 78L |
+| sync-storage-bucket | serveTenant | 141L |
+| sync-stripe-subscriptions | serveInternal | 68L |
+| sync-threat-feeds | serveInternal | 87L |
 
-**Frontend:** 4 callers (cleanup-router invoke → callGateway)
-**Resultado:** Deletar cleanup-router + notification-router + 7 standalone
+**Auth note:** ops-gateway já valida auth via `assertInternalCaller(allowAuthenticatedUsers)`. Para funções `serveTenant`, o tenant_id vem do payload. Para `serveInternal`, a validação de `INTERNAL_FUNCTION_SECRET` já é feita pelo gateway.
 
-#### Batch 3B — Sync restante (12 funções, ~1400L)
-| Função | Linhas | Notas |
+### Plano de Execução (3 steps)
+
+#### Step 1: Criar handlers inlined (2 arquivos novos)
+Dividir em 2 arquivos para manter cada um < 400L:
+
+**`handlers/sync-jobs.ts`** (~550L) — funções de jobs e DLQ:
+- `handleProcessFailedJobs` (de process-failed-jobs)
+- `handleProcessScheduledJobs` (de process-scheduled-jobs)
+- `handleInvokeScheduledJobs` (de invoke-scheduled-jobs)
+- `handleDlqAction` (de dlq-action)
+- `handleProcessDlqRetries` (de process-dlq-retries)
+
+**`handlers/sync-infra.ts`** (~550L) — funções de infra e sync:
+- `handleSyncBlockedWebsites` (de sync-blocked-websites)
+- `handleMaintenanceCron` (de maintenance-cron)
+- `handleSystemMaintenance` (de system-maintenance)
+- `handleReleaseSync` (de release-sync)
+- `handleSyncStorageBucket` (de sync-storage-bucket)
+- `handleSyncStripeSubscriptions` (de sync-stripe-subscriptions)
+- `handleSyncThreatFeeds` (de sync-threat-feeds)
+
+#### Step 2: Atualizar ops-gateway/index.ts
+- Importar novos handlers
+- Registrar 12 novas entradas no `INLINED_HANDLERS`
+- Remover as 12 entradas do `ACTION_TO_FUNCTION` (proxy map)
+
+#### Step 3: Migrar frontend callers (7 arquivos)
+| Arquivo | Chamada atual | Nova chamada |
 |---|---|---|
-| sync-blocked-websites | 100L | 4 frontend callers |
-| process-failed-jobs | 94L | Cron |
-| process-scheduled-jobs | 112L | Cron |
-| invoke-scheduled-jobs | 192L | Cron |
-| maintenance-cron | 41L | Cron |
-| system-maintenance | 94L | 1 frontend caller |
-| dlq-action | 106L | 1 caller |
-| process-dlq-retries | 257L | 1 caller |
-| release-sync | 78L | Cron |
-| sync-storage-bucket | 141L | Cron |
-| sync-stripe-subscriptions | 68L | Cron |
-| sync-threat-feeds | 87L | 1 caller |
+| `src/components/admin/AgentSyncStatusCard.tsx:21` | `invoke('sync-blocked-websites')` | `callGateway('sync', 'sync-blocked-websites')` |
+| `src/hooks/useBlockedWebsites.tsx:28` | `invoke('sync-blocked-websites', {...})` | `callGateway('sync', 'sync-blocked-websites', {...})` |
+| `src/hooks/useDNSFilter.tsx:238` | `invoke('sync-blocked-websites', {...})` | `callGateway('sync', 'sync-blocked-websites', {...})` |
+| `src/hooks/useThreatIntel.ts:101` | `invoke('sync-threat-feeds', {...})` | `callGateway('sync', 'sync-threat-feeds', {...})` |
+| `src/pages/AgentTest/useAgentTest.ts:28` | `invoke('system-maintenance', {...})` | `callGateway('sync', 'system-maintenance', {...})` |
+| `src/pages/admin/DeadLetterQueue/useDeadLetterQueue.ts:132` | `invoke('process-dlq-retries', {...})` | `callGateway('sync', 'process-dlq-retries')` |
+| `src/pages/admin/WebActivity/index.tsx:170` | `invoke('sync-blocked-websites', {...})` | `callGateway('sync', 'sync-blocked-websites')` |
 
-**Frontend:** ~6 callers
+#### Step 4: Verificar referências internas em edge functions
+Checar se outros edge functions chamam estas funções diretamente.
 
-#### Batch 3C — Security (29 funções, ~3800L)
-Dividir em 3 handler files:
-- `security-core.ts` (~12 handlers): failed-logins, blocked-attempts, quarantine, auto-block, patches, cleanup
-- `security-intel.ts` (~10 handlers): CVE, MITRE, SIEM, EDR, threat intel, IOC
-- `security-analysis.ts` (~7 handlers): security-monitor, advisor, graph, integrity, shadow-it, RLS tests
+#### Step 5: Deletar 12 diretórios standalone + deploy
+- Deletar `supabase/functions/{12 dirs}`
+- `supabase--delete_edge_functions` para remover do Supabase
+- Deploy ops-gateway atualizado
 
-**Frontend:** ~8 callers
-**Nota:** `security-advisor` (331L) e `threat-intelligence-lookup` (418L) são grandes — usar lazy imports
+#### Step 6: Verificação final
+- `npx tsc --noEmit` — zero errors
+- `grep` para referências órfãs
+- Deploy e teste via curl
 
-#### Batch 3D — Build (15 funções, ~2600L)
-Dividir em 2 handler files:
-- `build-core.ts`: enrollment keys, callbacks, validation, release registration
-- `build-heavy.ts`: build-agent-exe (340L), generate-deploy-package (250L), generate-portable-installer (355L), serve-installer (174L), get-diagnostic-script (347L) — lazy imports
-
-**Frontend:** ~7 callers
-**Nota:** Funções com `serveTenant(skipTenantValidation)` (`register-agent-release`, `sign-release`, `get-diagnostic-script`, `serve-installer`) mantêm auth no handler
-
-#### Batch 3E — Playbook + Report (24 funções, ~4500L)
-Dividir em 3 handler files:
-- `playbook-core.ts` (~10 handlers): execute, triggers, automation-rules, remediation
-- `playbook-risk.ts` (~6 handlers): SOAR, attack-sim, risk-score, software-risk, ITSM
-- `report.ts` (~8 handlers): todos os generate-*-report, list-reports, scheduled
-
-**Frontend:** ~6 callers
-**Nota:** Report generators são AI-heavy — usar lazy imports para AI SDK
-
----
-
-### Migração Frontend (em cada batch)
-Substituir `supabase.functions.invoke('nome')` → `callGateway('namespace', 'action', payload)`
-
-### Resultado Esperado (Fase 3 completa)
-- **~87 funções inlined** (excluindo agent namespace)
-- **~87 standalone deletadas**
-- **Total de edge functions:** de 215 → ~128
-- **Cold starts eliminados:** ~87 funções × ~4.3s = ~374s de latência total removida
-- **Custo:** Menos funções deployadas = menos memória reservada
-
-### Ordem de Execução Recomendada
-1. **3A (cleanup+notify)** — mais simples, valida o padrão
-2. **3B (sync)** — impacto direto em cron jobs
-3. **3C (security)** — maior volume, requer testes
-4. **3D (build)** — funções pesadas, lazy imports
-5. **3E (playbook+report)** — mais complexas, AI-dependent
+### Resultado esperado
+- −12 edge functions (−12 cold starts × ~4.3s = ~51.6s de latência removida)
+- 7 frontend callers migrados para `callGateway`
+- `ACTION_TO_FUNCTION` sync section: vazia (todas inlined)
