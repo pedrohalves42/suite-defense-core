@@ -230,29 +230,6 @@ Deno.serve(async (req) => {
       }, 400, origin);
     }
 
-    // Route cleanup/notify to existing routers
-    if (ROUTER_PROXY_NAMESPACES.has(namespace)) {
-      const targetRouter = NAMESPACE_ROUTER_PROXY[namespace];
-      const url = `${SUPABASE_URL}/functions/v1/${targetRouter}`;
-      const routerBody = namespace === 'cleanup'
-        ? JSON.stringify({ action: subAction, ...payload })
-        : JSON.stringify({ action: subAction, payload });
-
-      logger.info(`[ops-gateway] Router proxy: ${action} → ${targetRouter}`, { requestId });
-      const response = await fetchWithTimeout(url, {
-        method: 'POST',
-        headers: forwardHeaders(req, requestId),
-        body: routerBody,
-        timeoutMs: FETCH_TIMEOUT_MS,
-      });
-      const responseData = await response.text();
-      logger.info(`[ops-gateway] ${action} done in ${Date.now() - startedAt}ms (status: ${response.status})`);
-      return new Response(responseData, {
-        status: response.status,
-        headers: { ...buildCorsHeaders(origin), 'Content-Type': response.headers.get('Content-Type') || 'application/json' },
-      });
-    }
-
     // Try inlined handler
     const inlinedHandler = INLINED_HANDLERS[action];
     if (inlinedHandler) {
