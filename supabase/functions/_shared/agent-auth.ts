@@ -97,8 +97,8 @@ export async function authenticateAgent(
 
   const agent = Array.isArray(token.agents) ? token.agents[0] : token.agents;
 
-  // Extract extra fields into agentData (everything beyond the base 4)
-  const { id, agent_name, tenant_id, hmac_secret, ...extraData } = agent as Record<string, unknown>;
+  // Extract extra fields into agentData (everything beyond the base 5, including honeypot_mode)
+  const { id, agent_name, tenant_id, hmac_secret, honeypot_mode, ...extraData } = agent as Record<string, unknown>;
 
   return {
     success: true,
