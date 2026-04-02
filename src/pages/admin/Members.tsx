@@ -30,16 +30,9 @@ export default function Members() {
     queryKey: ['tenant-members', tenant?.id],
     queryFn: async () => {
       // CORRECAO: Adicionar headers de autenticacao explicitamente
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const { data, error } = await supabase.functions.invoke('list-users', {
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-          'X-Tenant-Id': tenant?.id || '',
-        },
+      const data = await callGateway<{ users: any[] }>('admin', 'list-users', {
+        tenant_id: tenant?.id,
       });
-      
-      if (error) throw error;
       // Map edge function response to Member type (profiles wrapper)
       return (data.users || []).map((u: any) => ({
         ...u,
