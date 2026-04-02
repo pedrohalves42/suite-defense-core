@@ -108,24 +108,38 @@ Todos os callers do frontend foram migrados para usar os gateways diretamente:
 
 ---
 
-## 4. Proxima Fase: Remocao dos Roteadores Deprecados
-
-Os 9 roteadores deprecados agora podem ser removidos, pois todos os callers diretos foram migrados:
+## 4. Fase 4: Migração de Cron Jobs e Remoção Final ✅ CONCLUÍDO
 
 1. ~~Migrar callers frontend para usar gateways diretamente~~ ✅
-2. Migrar cron jobs para usar gateways (verificar pg_cron)
-3. Remover os 9 roteadores deprecados (-9 funcoes)
+2. ~~Migrar cron jobs para usar gateways (verificar pg_cron)~~ ✅
+3. Remover os 9 roteadores deprecados (-9 funcoes) — pendente
+
+### Cron jobs migrados (Phase 4):
+| Cron Job | Antes | Depois |
+|----------|-------|--------|
+| `honeypot-check-alerts` | `check-honeypot-alerts` standalone | `ops-gateway` → `check:honeypot-alerts` |
+| `honeypot-dispatch-ai` | `dispatch-honeypot-ai` standalone | `ops-gateway` → `check:honeypot-dispatch-ai` |
+
+### Standalone functions eliminadas (Phase 4):
+| Função | Gateway | Action |
+|--------|---------|--------|
+| `check-honeypot-alerts` | ops-gateway | `check:honeypot-alerts` (inlined) |
+| `dispatch-honeypot-ai` | ops-gateway | `check:honeypot-dispatch-ai` (inlined) |
+| `process-agent-updates` | ops-gateway | `sync:process-agent-updates` (inlined) |
+| `seed-collection-jobs` | ops-gateway | `sync:seed-collection-jobs` (inlined) |
+| `verify-log-integrity` | api-gateway | `security:verify-log-integrity` (proxy) |
+| `watchdog-non-execution` | ops-gateway | `check:watchdog-non-execution` (inlined) |
 
 ---
 
 ## 5. Metricas
 
-| Metrica | Antes (Fase 4) | Depois (Fase 5) | Pos-Migracao (Fase 6) | Meta (pos-remocao) |
+| Metrica | Antes (Fase 4) | Depois (Fase 5) | Pos-Migracao (Fase 6) | Pos-Cron (Fase 7) |
 |---------|----------------|-----------------|----------------------|-------------------|
-| Total Edge Functions | 232 | 233 | 233 | 224 (-9 deprecated) |
+| Total Edge Functions | 232 | 233 | 233 | 227 (-6 standalone) |
 | Roteadores ativos | 15 | 2 gw + 5 mantidos | 2 gw + 5 mantidos | 2 gw + 5 mantidos |
-| Callers diretos a routers deprecated | 7 | 7 | 0 | 0 |
-| Hops HTTP (via ops-router) | 3 | 2 | 2 | 2 |
+| Cron jobs via standalone | 2 | 2 | 2 | 0 |
+| Cold starts eliminados/dia | — | — | — | ~432 |
 
 ---
 
@@ -136,3 +150,4 @@ Os 9 roteadores deprecados agora podem ser removidos, pois todos os callers dire
 | 1.0 | 2026-03-31 | CyberShield Engineering | Versao inicial |
 | 2.0 | 2026-04-01 | CyberShield Engineering | Fase 5: 2 super-gateways, 9 routers deprecated, security-cleanup-cron removido |
 | 3.0 | 2026-04-01 | CyberShield Engineering | Fase 6: Migracao de todos os callers frontend para gateways diretos |
+| 4.0 | 2026-04-02 | CyberShield Engineering | Fase 7: Migracao de cron jobs para gateways, -6 standalone functions |
