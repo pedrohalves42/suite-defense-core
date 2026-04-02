@@ -1,80 +1,68 @@
-## Fase 2: Converter Proxy → Inline Handlers (Admin + Billing + Check)
 
-### Escopo: 43 funções standalone → handlers inline nos gateways
+## Fase 2C — Inline Check Namespace (15 funções → ops-gateway/handlers/check.ts)
 
-A conversão elimina o **double cold start** (gateway→função) transformando proxies HTTP em chamadas diretas via `supabase-js`.
+### Estado Atual
+- **5 já inlined** em `check.ts`: `check-task-sla-breach`, `evaluate-job-slo`, `check-installation-health`, `check-production-health`, `detect-stuck-installations`
+- **15 restantes** no proxy map `ACTION_TO_FUNCTION` que fazem double cold-start (gateway→função)
 
-### Estratégia: Prioridade por tamanho (menor primeiro)
+### Estratégia: 3 Sub-batches por complexidade e dependências
 
-**Batch 2A — Admin namespace (13 funções → api-gateway/handlers/admin.ts)**
-| Função | Linhas | Complexidade |
+**Sub-batch 2C-1 — Simples (só DB, sem deps externas) — 7 funções**
+
+| Função | Linhas | Notas |
 |---|---|---|
-| api-tenant-features | 50L | Baixa |
-| get-admin-releases | 53L | Baixa |
-| api-tenant-info | 64L | Baixa |
-| api-tenant-stats | 66L | Baixa |
-| update-user-status | 102L | Média |
-| update-member-role | 109L | Média |
-| get-rate-limit-stats | 131L | Média |
-| list-all-users-admin | 132L | Média |
-| remove-member | 136L | Média |
-| list-users | 143L | Média |
-| set-active-tenant | 158L | Média |
-| update-user-role | 159L | Média |
-| admin-create-user | 199L | Alta |
+| `get-installation-pipeline-metrics` | 62L | ⚠ Usa `serveTenant` (precisa `tenantId` do payload) |
+| `cron-sentinel` | 62L | Puro DB + task creation |
+| `check-stuck-jobs` | 103L | Adaptive zombie thresholds |
+| `build-watchdog` | 91L | ⚠ Usa `BUILD_GH_TOKEN` + GitHub API |
+| `calculate-behavioral-baselines` | 85L | Stats em agent_processes |
+| `compute-compliance-benchmarks` | 82L | Score calculation |
+| `check-pending-agents` | 86L | ⚠ Usa Resend SDK (lazy import) |
 
-**Batch 2B — Billing namespace (15 funções → api-gateway/handlers/billing.ts + billing-stripe.ts) ✅ COMPLETO**
-*Todas 15 funções inlined. Stripe handlers usam dynamic import para evitar carregar SDK em requests não-billing.*
-| Função | Status |
-|---|---|
-| create-stripe-products | ✅ Inlined (billing-stripe.ts) |
-| list-invoices | ✅ Inlined (billing-stripe.ts) |
-| customer-portal | ✅ Inlined (billing-stripe.ts) |
-| create-trial-subscription | ✅ Inlined (billing.ts) |
-| create-stripe-products-extended | ✅ Inlined (billing-stripe.ts) |
-| stripe-health-check | ✅ Inlined (billing-stripe.ts) |
-| create-custom-trial | ✅ Inlined (billing.ts) |
-| unit-economics | ✅ Inlined (billing.ts) |
-| create-checkout | ✅ Inlined (billing-stripe.ts) |
-| revenue-projections | ✅ Inlined (billing.ts) |
-| send-trial-reminder | ✅ Inlined (billing.ts) |
-| check-subscription | ✅ Inlined (billing-stripe.ts) |
-| sales-pipeline | ✅ Inlined (billing.ts) |
-| subscription-analytics | ✅ Inlined (billing.ts) |
-| manage-subscription | ✅ Inlined (billing-stripe.ts) |
+**Sub-batch 2C-2 — Médios (lógica complexa, sem AI) — 5 funções**
 
-**Batch 2C — Check namespace (15 funções → ops-gateway/handlers/check.ts)**
-*5 já inlined. Restam 10:*
-| Função | Linhas |
-|---|---|
-| get-installation-pipeline-metrics | 62L |
-| cron-sentinel | 62L |
-| monitor-thresholds | 84L |
-| calculate-behavioral-baselines | 85L |
-| check-pending-agents | 86L |
-| build-watchdog | 91L |
-| check-stuck-jobs | 103L |
-| sli-collector | 114L |
-| check-action-effectiveness | 145L |
-| analyze-confidence-gap-trend | 150L |
-| analyze-network-anomalies | 176L |
-| analyze-job-failure-patterns | 182L |
+| Função | Linhas | Notas |
+|---|---|---|
+| `monitor-thresholds` | 84L | Chama `notification-dispatcher` |
+| `health-monitor` | 128L | Promise.allSettled, 7 checks paralelos |
+| `watchdog-non-execution` | 106L | ⚠ Importa `business-hours.ts` |
+| `check-action-effectiveness` | 145L | 6 verification strategies |
+| `analyze-job-failure-patterns` | 182L | ⚠ Usa `serveTenant` (precisa tenantId) |
 
-### Processo para cada batch:
-1. Ler cada função standalone
-2. Extrair a lógica core (remover middleware wrapper, CORS, etc.)
-3. Criar handler inline no arquivo handlers/ do gateway
-4. Mover ação de `ACTION_TO_FUNCTION` para `INLINED_HANDLERS`
-5. Manter função original por 14 dias como fallback
-6. Após validação, deletar função standalone
+**Sub-batch 2C-3 — Pesados (AI/complexo) — 3 funções**
 
-### Migração do frontend (paralelo):
-~30 chamadas diretas `invoke('nome-função')` que já têm mapeamento no gateway serão migradas para usar `callGateway()`.
+| Função | Linhas | Notas |
+|---|---|---|
+| `sli-collector` | 114L | ⚠ Bug existente: `parsedBody` undefined nas actions `sli`/`slo`/`dashboard` (linhas 61,87,108) — corrigir para `parsed.data` |
+| `analyze-confidence-gap-trend` | 150L | Per-tenant loop |
+| `analyze-network-anomalies` | 176L | ⚠ Usa AI provider (lazy import) |
 
-### ⚠️ Restrição de tamanho
-Este é um trabalho de **alta granularidade** com 43 funções. Proponho executar **um batch por vez** para evitar erros. Começar pelo Batch 2A (admin, 13 funções menores)?
+### Processo para cada sub-batch
 
-### Resultado esperado:
-- **43 funções removidas** (226 → 183)
-- **Zero cold starts adicionais** para admin/billing/check
-- **Latência p95** reduz ~50% nestes namespaces
+1. **Extrair lógica core** — Remover wrappers `serveInternal`/`serveTenant`, adaptar para signature `(supabase, requestId, payload) => Promise<unknown>`
+2. **Lazy imports** — Resend, AI-provider, fetchWithTimeout: importar dinamicamente dentro do handler
+3. **Fix bugs** — `sli-collector`: corrigir referências `parsedBody` → `parsed.data` 
+4. **Adicionar ao `check.ts`** — Split em `check.ts` e `check-heavy.ts` se o arquivo ficar >500L
+5. **Mover de `ACTION_TO_FUNCTION` → `INLINED_HANDLERS`** no index.ts
+6. **Migrar chamadores frontend** — `useAgentLifecycle.tsx` e `useScheduledJobsHealth.ts` para usar `callGateway()`
+
+### Chamadores a migrar
+
+| Arquivo | Função chamada | Migrar para |
+|---|---|---|
+| `src/hooks/useAgentLifecycle.tsx` | `invoke('get-installation-pipeline-metrics')` | `callGateway('check', 'get-installation-pipeline-metrics')` |
+| `src/hooks/useScheduledJobsHealth.ts` | `invoke('health-monitor')` | `callGateway('check', 'health-monitor')` |
+
+### Validação
+
+1. Deploy ops-gateway
+2. Curl test para cada ação inlined (`check:check-stuck-jobs`, etc.)
+3. Verificar que `sli-collector` não tem mais o bug `parsedBody`
+4. Build frontend (0 erros TypeScript)
+5. Standalone functions mantidas 14 dias como fallback
+
+### Resultado esperado
+- **15 proxies eliminados** → zero double cold-starts no namespace check
+- **1 bug corrigido** (sli-collector parsedBody)
+- **~500L** de handlers adicionados ao ops-gateway
+- **Latência p95** reduz ~50% para operações check
