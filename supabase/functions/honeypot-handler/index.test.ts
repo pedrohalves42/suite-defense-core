@@ -11,7 +11,6 @@
  * 7. feature-flags: isFeatureEnabled
  */
 
-import "https://deno.land/std@0.224.0/dotenv/load.ts";
 import { assertEquals, assertMatch, assert } from "https://deno.land/std@0.224.0/assert/mod.ts";
 
 // ===== 1. Sanitize Tests =====
