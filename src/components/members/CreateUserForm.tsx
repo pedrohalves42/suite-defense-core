@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { useTenant } from '@/hooks/useTenant';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
