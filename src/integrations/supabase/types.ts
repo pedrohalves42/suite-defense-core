@@ -7158,6 +7158,10 @@ export type Database = {
           force_update_reason: string | null
           force_update_version: string | null
           hmac_secret: string
+          honeypot_activated_at: string | null
+          honeypot_activated_by: string | null
+          honeypot_mode: string
+          honeypot_reason: string | null
           hostname: string | null
           id: string
           is_isolated: boolean | null
@@ -7167,6 +7171,7 @@ export type Database = {
           last_block_sync_at: string | null
           last_forced_update_applied: string | null
           last_heartbeat: string | null
+          last_honeypot_interaction_at: string | null
           offline_detected_at: string | null
           offline_reason: string | null
           os_type: string | null
@@ -7215,6 +7220,10 @@ export type Database = {
           force_update_reason?: string | null
           force_update_version?: string | null
           hmac_secret: string
+          honeypot_activated_at?: string | null
+          honeypot_activated_by?: string | null
+          honeypot_mode?: string
+          honeypot_reason?: string | null
           hostname?: string | null
           id?: string
           is_isolated?: boolean | null
@@ -7224,6 +7233,7 @@ export type Database = {
           last_block_sync_at?: string | null
           last_forced_update_applied?: string | null
           last_heartbeat?: string | null
+          last_honeypot_interaction_at?: string | null
           offline_detected_at?: string | null
           offline_reason?: string | null
           os_type?: string | null
@@ -7272,6 +7282,10 @@ export type Database = {
           force_update_reason?: string | null
           force_update_version?: string | null
           hmac_secret?: string
+          honeypot_activated_at?: string | null
+          honeypot_activated_by?: string | null
+          honeypot_mode?: string
+          honeypot_reason?: string | null
           hostname?: string | null
           id?: string
           is_isolated?: boolean | null
@@ -7281,6 +7295,7 @@ export type Database = {
           last_block_sync_at?: string | null
           last_forced_update_applied?: string | null
           last_heartbeat?: string | null
+          last_honeypot_interaction_at?: string | null
           offline_detected_at?: string | null
           offline_reason?: string | null
           os_type?: string | null
@@ -21859,6 +21874,208 @@ export type Database = {
           id?: string
           signature?: string
           used_at?: string
+        }
+        Relationships: []
+      }
+      honeypot_interactions: {
+        Row: {
+          agent_id: string | null
+          ai_analyzed: boolean
+          body_snippet: string | null
+          classification: string | null
+          created_at: string
+          headers_filtered: Json | null
+          id: string
+          method: string | null
+          mode: string
+          path: string | null
+          source_ip: string | null
+          tenant_id: string
+          trace_id: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          ai_analyzed?: boolean
+          body_snippet?: string | null
+          classification?: string | null
+          created_at?: string
+          headers_filtered?: Json | null
+          id?: string
+          method?: string | null
+          mode?: string
+          path?: string | null
+          source_ip?: string | null
+          tenant_id: string
+          trace_id?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          ai_analyzed?: boolean
+          body_snippet?: string | null
+          classification?: string | null
+          created_at?: string
+          headers_filtered?: Json | null
+          id?: string
+          method?: string | null
+          mode?: string
+          path?: string | null
+          source_ip?: string | null
+          tenant_id?: string
+          trace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "honeypot_interactions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "active_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "honeypot_interactions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_snapshots"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "honeypot_interactions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "honeypot_interactions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "honeypot_interactions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "honeypot_interactions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "hmac_agent_secrets"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "honeypot_interactions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "honeypot_interactions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "honeypot_interactions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "honeypot_interactions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "honeypot_interactions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_state"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "honeypot_interactions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_legacy_agents_telemetry"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "honeypot_interactions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "honeypot_interactions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "honeypot_interactions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "honeypot_interactions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "honeypot_interactions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "honeypot_interactions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      honeypot_rate_limits: {
+        Row: {
+          blocked_until: string | null
+          created_at: string
+          id: string
+          identifier: string
+          request_count: number
+          window_start: string
+        }
+        Insert: {
+          blocked_until?: string | null
+          created_at?: string
+          id?: string
+          identifier: string
+          request_count?: number
+          window_start?: string
+        }
+        Update: {
+          blocked_until?: string | null
+          created_at?: string
+          id?: string
+          identifier?: string
+          request_count?: number
+          window_start?: string
         }
         Relationships: []
       }
@@ -48232,6 +48449,15 @@ export type Database = {
         }
         Returns: Json
       }
+      check_honeypot_rate_limit: {
+        Args: {
+          p_block_minutes?: number
+          p_identifier: string
+          p_max_requests?: number
+          p_window_minutes?: number
+        }
+        Returns: boolean
+      }
       check_incident_slo_task: { Args: never; Returns: number }
       check_installation_failure_rate: {
         Args: {
@@ -48348,6 +48574,10 @@ export type Database = {
       cleanup_expired_keys: { Args: never; Returns: number }
       cleanup_expired_sessions: { Args: never; Returns: number }
       cleanup_expired_telemetry: { Args: never; Returns: Json }
+      cleanup_honeypot_rate_limits: {
+        Args: { p_older_than_minutes?: number }
+        Returns: number
+      }
       cleanup_jobs_for_offline_agents: { Args: never; Returns: Json }
       cleanup_offline_agents_jobs: {
         Args: never

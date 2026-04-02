@@ -58,7 +58,7 @@ export async function authenticateAgent(
   const tokenHash = await hashToken(agentToken);
   
   // Build select fields: base fields + any extra requested
-  const baseFields = 'id, agent_name, tenant_id, hmac_secret';
+  const baseFields = 'id, agent_name, tenant_id, hmac_secret, honeypot_mode';
   const extraFields = options?.extraAgentFields?.length 
     ? ', ' + options.extraAgentFields.join(', ')
     : '';
@@ -97,8 +97,8 @@ export async function authenticateAgent(
 
   const agent = Array.isArray(token.agents) ? token.agents[0] : token.agents;
 
-  // Extract extra fields into agentData (everything beyond the base 4)
-  const { id, agent_name, tenant_id, hmac_secret, ...extraData } = agent as Record<string, unknown>;
+  // Extract extra fields into agentData (everything beyond the base 5, including honeypot_mode)
+  const { id, agent_name, tenant_id, hmac_secret, honeypot_mode, ...extraData } = agent as Record<string, unknown>;
 
   return {
     success: true,
@@ -108,6 +108,6 @@ export async function authenticateAgent(
       tenant_id: tenant_id as string,
       hmac_secret: hmac_secret as string | null,
     },
-    agentData: extraData,
+    agentData: { honeypot_mode, ...extraData },
   };
 }
