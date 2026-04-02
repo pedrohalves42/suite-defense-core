@@ -183,6 +183,12 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'notify:welcome': handleNotifyWelcome,
   'notify:security': handleNotifySecurity,
   'notify:get-telegram-chat-id': handleGetTelegramChatId,
+  // ── honeypot cron inlined (Phase 4) ──
+  'check:honeypot-alerts': handleCheckHoneypotAlerts,
+  'check:honeypot-dispatch-ai': handleHoneypotDispatchAi,
+  // ── sync cron inlined (Phase 4) ──
+  'sync:process-agent-updates': handleProcessAgentUpdates,
+  'sync:seed-collection-jobs': handleSeedCollectionJobs,
 };
 
 const ALL_VALID_ACTIONS = new Set([
