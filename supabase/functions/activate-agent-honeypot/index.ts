@@ -31,6 +31,15 @@ serveTenant(async (_req, ctx) => {
     );
   }
 
+  // === FLIPPED MODE FLAG (granular control separate from native) ===
+  const flippedEnabled = await isFeatureEnabled(supabase, 'HONEYPOT_FLIPPED_ENABLED', tenantId);
+  if (!flippedEnabled) {
+    return new Response(
+      JSON.stringify({ error: 'Honeypot flipping is currently disabled' }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
   // === STEP-UP AUTH ===
   const stepUpVerified = _req.headers.get('X-Step-Up-Verified');
   if (stepUpVerified !== 'true') {
