@@ -78,7 +78,7 @@ export function CreateUserForm({ open, onOpenChange }: CreateUserFormProps) {
         throw new Error('Nenhum tenant selecionado');
       }
       
-      const result = await callGateway('admin', 'create-user', {
+      const result = await callGateway<{ success: boolean; error?: string; user?: { id: string; username: string; full_name: string; role: string } }>('admin', 'create-user', {
         ...data,
         tenant_id: tenant.id,
       });
