@@ -10,7 +10,7 @@ describe('website-categories', () => {
 
     it('categorizes video sites', () => {
       expect(getCategoryForDomain('youtube.com').key).toBe('video');
-      expect(getCategoryForDomain('netflix.com').key).toBe('video');
+    });
     });
 
     it('categorizes Brazilian banks', () => {

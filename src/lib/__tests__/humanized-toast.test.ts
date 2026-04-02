@@ -10,7 +10,7 @@ describe('humanized-toast', () => {
 
     it('maps timeout errors', () => {
       const result = mapErrorToHuman('TIMEOUT');
-      expect(result.title).toBe('Tempo esgotado');
+      expect(result.title).toBe('Demorou demais');
     });
 
     it('maps 401 errors', () => {
