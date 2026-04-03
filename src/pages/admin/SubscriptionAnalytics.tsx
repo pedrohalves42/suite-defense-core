@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { callGateway } from '@/lib/gateway';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -65,8 +66,7 @@ export default function SubscriptionAnalytics() {
   const { data: analytics, isLoading, error } = useQuery<AnalyticsData>({
     queryKey: ['subscription-analytics'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('subscription-analytics');
-      if (error) throw error;
+      const data = await callGateway<Record<string, any>>('billing', 'subscription-analytics');
       return data as AnalyticsData;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes

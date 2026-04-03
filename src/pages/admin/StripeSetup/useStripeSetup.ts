@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { callGateway } from '@/lib/gateway';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -26,8 +27,7 @@ export function useStripeSetup() {
   const { data: healthStatus, isLoading: healthLoading, refetch: refetchHealth } = useQuery({
     queryKey: ['stripe-health-check'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('stripe-health-check');
-      if (error) throw error;
+      const data = await callGateway<Record<string, any>>('billing', 'stripe-health-check');
       return data as HealthCheckResponse;
     },
     refetchInterval: false,
