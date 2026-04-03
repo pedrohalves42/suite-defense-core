@@ -112,7 +112,7 @@ Todos os callers do frontend foram migrados para usar os gateways diretamente:
 
 1. ~~Migrar callers frontend para usar gateways diretamente~~ ✅
 2. ~~Migrar cron jobs para usar gateways (verificar pg_cron)~~ ✅
-3. Remover os 9 roteadores deprecados (-9 funcoes) — pendente
+3. ~~Remover os 9 roteadores deprecados (-9 funcoes)~~ ✅ (já removidos em fases anteriores)
 
 ### Cron jobs migrados (Phase 4):
 | Cron Job | Antes | Depois |
