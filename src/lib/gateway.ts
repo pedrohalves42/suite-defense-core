@@ -2,9 +2,11 @@ import { supabase } from '@/integrations/supabase/client';
 
 type GatewayNamespace =
   | 'admin' | 'billing' | 'security' | 'build' | 'agent'
-  | 'check' | 'sync' | 'playbook' | 'report' | 'cleanup' | 'notify';
+  | 'check' | 'sync' | 'playbook' | 'report' | 'cleanup' | 'notify'
+  | 'public';
 
 const API_GATEWAY_NAMESPACES: GatewayNamespace[] = ['admin', 'billing', 'security', 'build', 'agent'];
+const PUBLIC_GATEWAY_NAMESPACES: GatewayNamespace[] = ['public'];
 
 /**
  * Centralized gateway caller.
@@ -21,6 +23,8 @@ export async function callGateway<T = Record<string, unknown>>(
 ): Promise<T> {
   const gateway = API_GATEWAY_NAMESPACES.includes(namespace)
     ? 'api-gateway'
+    : PUBLIC_GATEWAY_NAMESPACES.includes(namespace)
+    ? 'public-gateway'
     : 'ops-gateway';
 
   const { data, error } = await supabase.functions.invoke(gateway, {

@@ -56,45 +56,48 @@ export function useLoginFlow() {
 
   useEffect(() => {
     const checkFailedAttempts = async () => {
-      const { data, error } = await supabase.functions.invoke('check-failed-logins', {
-        body: {},
-      });
+      try {
+        const { callGateway } = await import('@/lib/gateway');
+        const data = await callGateway<Record<string, unknown>>('public', 'check-failed-logins', {});
 
-      if (!error && data) {
-        if (data.blocked) {
-          toast({
-            variant: 'destructive',
-            title: t('loginPage.ipBlocked'),
-            description: t('loginPage.ipBlockedDesc', { until: formatBrazilDateTime(data.blockedUntil, 'datetime'), count: data.attemptCount || 5 }),
-            duration: 15000,
-          });
-          setLoading(true);
-          return;
-        }
-
-        setRequiresCaptcha(data.requiresCaptcha);
-        setAttemptCount(data.attemptCount);
-
-        if (data.requiresCaptcha) {
-          const script = document.createElement('script');
-          script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
-          script.async = true;
-          script.defer = true;
-          document.body.appendChild(script);
-
-          script.onload = () => {
-            const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
-            if (!siteKey) {
-              logger.error('VITE_TURNSTILE_SITE_KEY not configured');
-              return;
-            }
-            // @ts-expect-error - Turnstile global
-            window.turnstile?.render('#captcha-container', {
-              sitekey: siteKey,
-              callback: (token: string) => setCaptchaToken(token),
+        if (data) {
+          if (data.blocked) {
+            toast({
+              variant: 'destructive',
+              title: t('loginPage.ipBlocked'),
+              description: t('loginPage.ipBlockedDesc', { until: formatBrazilDateTime(String(data.blockedUntil ?? ''), 'datetime'), count: Number(data.attemptCount ?? 5) }),
+              duration: 15000,
             });
-          };
+            setLoading(true);
+            return;
+          }
+
+          setRequiresCaptcha(data.requiresCaptcha as boolean);
+          setAttemptCount(data.attemptCount as number);
+
+          if (data.requiresCaptcha) {
+            const script = document.createElement('script');
+            script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+            script.async = true;
+            script.defer = true;
+            document.body.appendChild(script);
+
+            script.onload = () => {
+              const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+              if (!siteKey) {
+                logger.error('VITE_TURNSTILE_SITE_KEY not configured');
+                return;
+              }
+              // @ts-expect-error - Turnstile global
+              window.turnstile?.render('#captcha-container', {
+                sitekey: siteKey,
+                callback: (token: string) => setCaptchaToken(token),
+              });
+            };
+          }
         }
+      } catch (err) {
+        logger.error('Failed to check failed login attempts', err);
       }
     };
 
@@ -182,9 +185,8 @@ export function useLoginFlow() {
       }
 
       try {
-        await supabase.functions.invoke('record-failed-login', {
-          body: { email: loginEmail },
-        });
+        const { callGateway } = await import('@/lib/gateway');
+        await callGateway('public', 'record-failed-login', { email: loginEmail });
       } catch (recordError) {
         logger.error('Failed to record login attempt', recordError);
       }

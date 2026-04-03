@@ -1,9 +1,7 @@
 /**
- * Evaluate Software Risk - Migrated to servePublic
- * Evaluates software against vulnerability baselines.
+ * Evaluate software risk handler
  */
-import { servePublic } from '../_shared/serve-tenant.ts';
-import { logger } from '../_shared/logger.ts';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
 const InputSchema = z.object({
@@ -59,22 +57,20 @@ function calculateRiskScore(risks: SoftwareRisk[]): number {
   return Math.min(score, 100);
 }
 
-servePublic(async (req, ctx) => {
-  const { supabase } = ctx;
-
-  const parsed = InputSchema.safeParse(ctx.body);
+export async function handleEvaluateSoftwareRisk(
+  supabase: SupabaseClient, _req: Request, _requestId: string, payload: Record<string, unknown>,
+): Promise<Response | Record<string, unknown>> {
+  const parsed = InputSchema.safeParse(payload);
   if (!parsed.success) {
     return new Response(JSON.stringify({ error: 'Invalid input', details: parsed.error.flatten().fieldErrors }), { status: 400 });
   }
 
   const { agent_id, software_list } = parsed.data;
-
   if (!agent_id && !software_list) {
     return new Response(JSON.stringify({ error: 'Either agent_id or software_list is required' }), { status: 400 });
   }
 
   let softwareItems: Array<{ name: string; version: string; vendor?: string }> = [];
-
   if (agent_id) {
     const { data: inventory } = await supabase.from('software_inventory').select('name, version, vendor').eq('agent_id', agent_id).order('name');
     softwareItems = inventory || [];
@@ -90,17 +86,16 @@ servePublic(async (req, ctx) => {
   const vulnerabilityBaselines = (baselines as VulnerabilityBaseline[]) || [];
 
   const risks: SoftwareRisk[] = [];
-
   for (const software of softwareItems) {
     if (!software.name || !software.version) continue;
     for (const baseline of vulnerabilityBaselines) {
       if (matchesSoftware(software.name, baseline)) {
-        const isVulnerable = compareVersions(software.version, baseline.min_safe_version) < 0;
         risks.push({
           software_name: software.name, installed_version: software.version,
           min_safe_version: baseline.min_safe_version, severity: baseline.severity,
           cve_refs: baseline.cve_refs, impact: baseline.impact, remediation: baseline.remediation,
-          action: baseline.action, vendor: baseline.vendor, is_vulnerable: isVulnerable,
+          action: baseline.action, vendor: baseline.vendor,
+          is_vulnerable: compareVersions(software.version, baseline.min_safe_version) < 0,
         });
         break;
       }
@@ -128,18 +123,15 @@ servePublic(async (req, ctx) => {
     const { data: agent } = await supabase.from('agents').select('tenant_id').eq('id', agent_id).single();
     if (agent?.tenant_id) {
       const findingRows = vulnerableRisks.map(risk => ({
-        tenant_id: agent.tenant_id,
-        agent_id: agent_id,
+        tenant_id: agent.tenant_id, agent_id: agent_id,
         severity: risk.severity,
         check_key: `baseline-${risk.software_name.toLowerCase().replace(/\s+/g, '-')}-${risk.min_safe_version}`,
         title: `${risk.software_name} desatualizado (${risk.installed_version} < ${risk.min_safe_version})`,
-        description: risk.impact,
-        remediation: risk.remediation,
-        last_seen_at: new Date().toISOString(),
+        description: risk.impact, remediation: risk.remediation, last_seen_at: new Date().toISOString(),
       }));
       await supabase.from('vuln_findings').upsert(findingRows, { onConflict: 'agent_id,check_key' });
     }
   }
 
   return summary;
-}, { methods: ['POST'] });
+}

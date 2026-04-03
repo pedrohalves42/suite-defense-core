@@ -83,31 +83,15 @@ export const ContactForm = () => {
         return;
       }
 
-      const { error } = await supabase.functions.invoke('submit-contact', {
-        body: {
-          name: formData.name,
-          email: formData.email,
-          company: formData.company || null,
-          phone: formData.phone || null,
-          endpoints: formData.endpoints ? parseInt(formData.endpoints) : null,
-          message: formData.message || null,
-        }
+      const { callGateway } = await import('@/lib/gateway');
+      await callGateway('public', 'submit-contact', {
+        name: formData.name,
+        email: formData.email,
+        company: formData.company || null,
+        phone: formData.phone || null,
+        endpoints: formData.endpoints ? parseInt(formData.endpoints) : null,
+        message: formData.message || null,
       });
-
-      if (error) {
-        logger.error("Error submitting contact form", error);
-        
-        if (error.message?.includes('429') || error.message?.includes('Rate limit')) {
-          toast({
-            title: t('contactForm.rateLimitTitle'),
-            description: t('contactForm.rateLimitDescription'),
-            variant: "destructive",
-          });
-          return;
-        }
-
-        throw error;
-      }
 
       toast({
         title: t('contactForm.successTitle'),
@@ -124,11 +108,21 @@ export const ContactForm = () => {
       });
     } catch (error) {
       logger.error("Error submitting contact form", error);
-      toast({
-        title: t('contactForm.errorTitle'),
-        description: t('contactForm.errorDescription'),
-        variant: "destructive",
-      });
+      
+      const errMsg = error instanceof Error ? error.message : '';
+      if (errMsg.includes('429') || errMsg.includes('Rate limit')) {
+        toast({
+          title: t('contactForm.rateLimitTitle'),
+          description: t('contactForm.rateLimitDescription'),
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: t('contactForm.errorTitle'),
+          description: t('contactForm.errorDescription'),
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }

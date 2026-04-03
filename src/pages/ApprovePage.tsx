@@ -40,28 +40,15 @@ export default function ApprovePage() {
     // Call the approve-via-token edge function
     const approveRequest = async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('approve-via-token', {
-          body: { token }
-        });
+        const { callGateway } = await import('@/lib/gateway');
+        const data = await callGateway<{ playbook_name?: string; execution_id?: string }>('public', 'approve-via-token', { token });
 
-        if (error) {
-          setStatus('error');
-          setResult({
-            success: false,
-            message: error.message || 'Erro ao processar aprovação',
-            error: 'API_ERROR'
-          });
-          return;
-        }
-
-        // The edge function returns HTML, but when called via SDK it returns parsed data
-        // If we get here, the call succeeded
         setStatus('success');
         setResult({
           success: true,
           message: 'Aprovação realizada com sucesso!',
-          playbook_name: data?.playbook_name,
-          execution_id: data?.execution_id
+          playbook_name: data?.playbook_name ?? '',
+          execution_id: data?.execution_id ?? ''
         });
       } catch (err) {
         setStatus('error');
