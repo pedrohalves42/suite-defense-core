@@ -106,6 +106,16 @@ import {
   handleAutoGenerateReport, handleScheduledReportGenerator,
 } from './handlers/report-scheduled.ts';
 
+// Inlined handlers — integrity-ops (Phase 2I)
+import {
+  handleCheckAgentIntegrity, handleDriftDetect, handleRunRlsTests,
+} from './handlers/integrity-ops.ts';
+
+// Inlined handlers — edr-ops (Phase 2I)
+import {
+  handleFetchNvdCves, handleCorrelateEdrEvents, handleEvaluateEdrDetections,
+} from './handlers/edr-ops.ts';
+
 // Inlined handlers — cleanup (Phase 3A)
 import {
   handleCleanupTelemetry, handleCleanupStaleReports, handleCleanupStaleUpdates,
@@ -252,6 +262,14 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'report:weekly': handleWeeklyReport,
   'report:auto': handleAutoGenerateReport,
   'report:scheduled': handleScheduledReportGenerator,
+  // ── integrity-ops inlined (Phase 2I) ──
+  'check:check-agent-integrity': handleCheckAgentIntegrity,
+  'check:drift-detect': handleDriftDetect,
+  'check:run-rls-tests': handleRunRlsTests,
+  // ── edr-ops inlined (Phase 2I) ──
+  'security:fetch-nvd-cves': handleFetchNvdCves,
+  'security:correlate-edr-events': handleCorrelateEdrEvents,
+  'security:evaluate-edr-detections': handleEvaluateEdrDetections,
 };
 
 const ALL_VALID_ACTIONS = new Set([
