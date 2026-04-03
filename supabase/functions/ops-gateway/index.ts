@@ -29,6 +29,11 @@ import {
   handleWatchdogNonExecution, handleCheckActionEffectiveness,
   handleAnalyzeJobFailurePatterns,
 } from './handlers/check-monitors.ts';
+// Inlined handlers — secret rotation compliance
+import {
+  handleSecretRotationCompliance, handleRecordSecretRotation,
+} from './handlers/check-secrets.ts';
+
 import {
   handleSliCollector, handleAnalyzeConfidenceGapTrend,
   handleAnalyzeNetworkAnomalies,
