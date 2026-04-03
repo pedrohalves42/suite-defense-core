@@ -65,6 +65,11 @@ import {
 import {
   handleTokenRotate, handleRecoverAgentCredentials, handleAgentVersionManagement,
 } from './handlers/agent-ops.ts';
+import { handleAnalyzeUrl } from './handlers/security-url.ts';
+import { handleCreateJob } from './handlers/job-mgmt.ts';
+import { handleSiemExport } from './handlers/security-export.ts';
+import { handleSecurityAdvisor } from './handlers/security-advisor.ts';
+import { handleChangePassword } from './handlers/user-auth.ts';
 
 const FETCH_TIMEOUT_MS = 30000;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
