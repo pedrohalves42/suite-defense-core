@@ -1,60 +1,46 @@
 
-# Fase 6: Consolidação de Proxy Maps + Migração Frontend — ✅ CONCLUÍDA
+# Plano: Corte de Custos Operacionais — Cron Jobs
 
-## Resultado: 80 standalone (sem deleções nesta fase, foco em padronização)
+## Problema
+5 cron jobs ativos consumindo CPU/rede sem gerar valor proporcional:
 
-### 6A: Novos proxies no api-gateway (12 funções adicionadas):
+| Cron Job | Schedule Atual | Invocações/dia | Problema |
+|---|---|---|---|
+| `honeypot-dispatch-ai` | `*/10 * * * *` | 144 | IA de honeypot é luxo sem tenants pagantes |
+| `evaluate-automation-rules-5min` | NÃO ENCONTRADO | — | Já removido (não existe mais no cron.job) ✅ |
+| `honeypot-update-agent-timestamps` | `*/15 * * * *` | 96 | Overkill para 47 agentes |
+| `honeypot-check-alerts` | `*/5 * * * *` | 288 | Alta frequência para base pequena |
+| `migrate-*-batch` (3 jobs) | `*/5 * * * *` | 864 | Migração de telemetria pode rodar menos |
 
-| Função | Action | Tipo |
-|--------|--------|------|
-| `action-center-feed` | `agent:action-center-feed` | serveTenant |
-| `ai-action-executor` | `agent:ai-action-executor` | serveTenant |
-| `ai-agent-assist` | `agent:ai-agent-assist` | serveTenant |
-| `ai-analyze-agent` | `agent:ai-analyze-agent` | serveTenant |
-| `ai-full-audit` | `agent:ai-full-audit` | serveTenant |
-| `ai-quality-check` | `agent:ai-quality-check` | serveTenant |
-| `ai-red-team-assessment` | `agent:ai-red-team-assessment` | serveTenant |
-| `ai-router` | `agent:ai-router` | serveTenant |
-| `ai-system-audit` | `agent:ai-system-audit` | serveTenant |
-| `calculate-compliance` | `security:calculate-compliance` | serveTenant |
-| `export-evidence-bundle` | `security:export-evidence-bundle` | serveTenant |
-| `fido2-register` | `security:fido2-register` | serveTenant |
-| `translate-cve` | `security:translate-cve` | serveTenant |
+## Ações
 
-### 6B: Novos proxies no ops-gateway (3 funções adicionadas):
+### 1. DESABILITAR `honeypot-dispatch-ai` (jobid 152)
+- **Motivo**: IA de honeypot sem receita = luxo. $0 de retorno.
+- **Economia**: ~144 invocações HTTP/dia eliminadas
 
-| Função | Action | Tipo |
-|--------|--------|------|
-| `ai-insight-dispatcher` | `sync:ai-insight-dispatcher` | serveInternal |
-| `ai-predict-agent-failure` | `check:ai-predict-agent-failure` | serveInternal |
-| `ai-system-analyzer` | `check:ai-system-analyzer` | serveInternal |
+### 2. REDUZIR `honeypot-update-agent-timestamps` (jobid 141) → 1x/hora
+- **De**: `*/15 * * * *` (96x/dia)
+- **Para**: `0 * * * *` (24x/dia)
+- **Economia**: -75% invocações
 
-### 6E: Frontend migrado para callGateway():
+### 3. REDUZIR `honeypot-check-alerts` (jobid 151) → 1x/hora
+- **De**: `*/5 * * * *` (288x/dia)
+- **Para**: `0 * * * *` (24x/dia)
+- **Economia**: -92% invocações HTTP
 
-| Arquivo | Antes | Depois |
-|---------|-------|--------|
-| `useActionCenter.ts` | `invoke('action-center-feed')` | `callGateway('agent', 'action-center-feed')` |
-| `RejectInsightDialog.tsx` | `invoke('action-center-feed')` | `callGateway('agent', 'action-center-feed')` |
-| `AgentVersionSync.tsx` | `invoke('force-reinstall-fleet')` | `callGateway('agent', 'force-reinstall-fleet')` |
-| `CVEDatabaseStatus.tsx` | `invoke('translate-cve')` | `callGateway('security', 'translate-cve')` |
-| `RegisterLatestRelease.tsx` | `invoke('register-agent-release')` | `callGateway('build', 'register-agent-release')` |
-| `ScriptUploader.tsx` | `invoke('upload-release-content')` | `callGateway('build', 'upload-release-content')` |
-| `useAgentSnapshot.ts` | `invoke('agent-snapshot')` | `callGateway('agent', 'agent-snapshot')` |
-| `useAiActionApproval.ts` | `invoke('ai-router')` | `callGateway('agent', 'ai-router')` |
-| `useAutoRemediation.ts` | `invoke('auto-remediate')` x2 | `callGateway('playbook', 'auto-remediate')` |
+### 4. REDUZIR `migrate-*-batch` (3 jobs: 148, 149, 150) → 1x/hora
+- **De**: `*/5 * * * *` (864x/dia total)
+- **Para**: `*/30 * * * *` (144x/dia total)
+- **Economia**: -83% execuções de migração
 
-### Validação:
-- ✅ Zero erros TypeScript (`npx tsc --noEmit --skipLibCheck`)
-- ✅ Deploy api-gateway + ops-gateway com sucesso
-- ✅ Auth 401 confirmado (proxy funcional, requer login)
+### 5. AJUSTAR `poll_interval_seconds` retornado pelo `poll-jobs`
+- Aumentar de ~15s para ~30s para agentes, reduzindo carga de polling
 
-### Gateways ativos: 3
-- `api-gateway` (admin, billing, security, build, agent — 46 inlined + 31 proxy)
-- `ops-gateway` (check, sync, playbook, report, cleanup, notify, security — 82 inlined + 10 proxy)
-- `public-gateway` (public — sem auth)
+## Economia Total Estimada
+- **~1.300 invocações/dia eliminadas ou reduzidas**
+- **~$2-5/mês em CPU de banco + cold starts de edge functions**
 
-### Próximas fases (6C/6D/6F):
-- 6C: Inline 6 single-file proxies do api-gateway (eliminar standalone)
-- 6D: Inline 3 proxies do ops-gateway
-- 6F: Inline 4 AI functions pequenas
-- Meta: < 65 standalone
+## Validação
+- Verificar que os cron jobs foram atualizados corretamente via `SELECT * FROM cron.job`
+- Nenhuma mudança em código de edge functions (apenas schedules)
+- Zero impacto em funcionalidade core (jobs, heartbeat, enroll)
