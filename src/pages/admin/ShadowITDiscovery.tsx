@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { callGateway } from "@/lib/gateway";
 import { useTenant } from "@/hooks/useTenant";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -47,11 +48,7 @@ export default function ShadowITDiscovery() {
 
   const classifyMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("classify-shadow-it", {
-        body: { tenant_id: tenant!.id },
-      });
-      if (error) throw error;
-      return data;
+      return await callGateway('security', 'classify-shadow-it', { tenant_id: tenant!.id });
     },
     onSuccess: (data: any) => {
       const msg = data?.ai_classified > 0 

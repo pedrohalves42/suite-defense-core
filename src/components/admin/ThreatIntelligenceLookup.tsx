@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -53,12 +54,7 @@ export default function ThreatIntelligenceLookup({ initialTarget, onAnalyze }: T
   
   const lookupMutation = useMutation({
     mutationFn: async (targetValue: string) => {
-      const response = await supabase.functions.invoke('threat-intelligence-lookup', {
-        body: { target: targetValue },
-      });
-      
-      if (response.error) throw response.error;
-      return response.data as ThreatIntelResult;
+      return await callGateway<ThreatIntelResult>('security', 'threat-intelligence-lookup', { target: targetValue });
     },
     onSuccess: (data) => {
       setResult(data);

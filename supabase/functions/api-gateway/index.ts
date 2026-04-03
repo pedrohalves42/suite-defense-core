@@ -48,6 +48,11 @@ import {
 import {
   handleActivateAgentHoneypot, handleRevertAgentHoneypot,
 } from './handlers/honeypot.ts';
+import {
+  handleAgentSnapshot, handleCheckAgentNameAvailability,
+  handleDiagnoseAgent, handleGetAgentTimeline,
+} from './handlers/agent-mgmt.ts';
+import { handleBuildCallback } from './handlers/build-ops.ts';
 
 const FETCH_TIMEOUT_MS = 30000;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -82,20 +87,16 @@ const ACTION_TO_FUNCTION: Record<string, string> = {
   'build:confirm-force-update': 'confirm-force-update',
   'build:get-diagnostic-script': 'get-diagnostic-script',
   'build:serve-installer': 'serve-installer',
-  // agent-mgmt proxy targets (from agent-mgmt-router)
-  'agent:agent-snapshot': 'agent-snapshot',
+  // agent-mgmt proxy targets (remaining — not yet inlined)
   'agent:agent-version-management': 'agent-version-management',
   'agent:check-agent-integrity': 'check-agent-integrity',
-  'agent:check-agent-name-availability': 'check-agent-name-availability',
   'agent:check-agent-updates': 'check-agent-updates',
-  'agent:diagnose-agent': 'diagnose-agent',
   'agent:diagnostics-agent-logs': 'diagnostics-agent-logs',
   'agent:enroll-agent': 'enroll-agent',
   'agent:get-agent-config': 'get-agent-config',
   'agent:get-agent-dashboard-data': 'get-agent-dashboard-data',
   'agent:get-agent-policy': 'get-agent-policy',
   'agent:get-agent-script-content': 'get-agent-script-content',
-  'agent:get-agent-timeline': 'get-agent-timeline',
   'agent:get-latest-agent-script': 'get-latest-agent-script',
   'agent:promote-agent-v5': 'promote-agent-v5',
   'agent:recover-agent-credentials': 'recover-agent-credentials',
@@ -160,6 +161,13 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'admin:update-user-role': handleUpdateUserRole,
   'admin:create-user': handleAdminCreateUser,
   'admin:rate-limit-stats': handleGetRateLimitStats,
+  // agent-mgmt inlined (Phase 2E)
+  'agent:agent-snapshot': handleAgentSnapshot,
+  'agent:check-agent-name-availability': handleCheckAgentNameAvailability,
+  'agent:diagnose-agent': handleDiagnoseAgent,
+  'agent:get-agent-timeline': handleGetAgentTimeline,
+  // build inlined (Phase 2E)
+  'build:build-callback': handleBuildCallback,
 };
 
 // API-key authenticated endpoints (still proxy — they have own auth flow)

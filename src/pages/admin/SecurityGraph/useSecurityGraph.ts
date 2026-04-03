@@ -3,6 +3,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
+import { callGateway } from '@/lib/gateway';
 import { getRiskInfo } from './constants';
 
 export function useSecurityGraph() {
@@ -14,11 +15,7 @@ export function useSecurityGraph() {
 
   const buildGraph = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('populate-security-graph', {
-        body: { tenant_id: tenant!.id },
-      });
-      if (error) throw error;
-      return data;
+      return await callGateway<{ nodes_created: number }>('security', 'populate-security-graph', { tenant_id: tenant!.id });
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['security-graph-nodes'] });
@@ -30,9 +27,7 @@ export function useSecurityGraph() {
 
   const autoBlock = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('auto-block-threats');
-      if (error) throw error;
-      return data;
+      return await callGateway<{ blocked: number; already_blocked: number; synced_agents: number }>('security', 'auto-block-threats');
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['blocked-websites'] });
