@@ -70,21 +70,8 @@ export function RejectInsightDialog({
         action: 'reject',
         reason: fullReason,
         tenant_id: tenant?.id || '',
-          reason_category: selectedReason,
-        },
+        reason_category: selectedReason,
       });
-
-      if (error) {
-        // Try to extract meaningful error from edge function response
-        let errorMsg = error.message || 'Erro ao rejeitar insight';
-        try {
-          if (error.context) {
-            const body = await error.context.json();
-            errorMsg = body?.error || errorMsg;
-          }
-        } catch { /* ignore parse errors */ }
-        throw new Error(errorMsg);
-      }
 
       return data;
     },
