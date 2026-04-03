@@ -42,7 +42,7 @@ serveInternal(async (req, ctx) => {
 
     try {
       await supabase.rpc('update_cron_health', {
-        p_cron_name: 'evaluate-automation-rules-5min', p_success: true,
+        p_cron_name: 'evaluate-automation-rules-daily', p_success: true,
         p_details: { tenants: tenants.length, evaluated: totalEvaluated, triggered: totalTriggered, blocked: totalBlocked, decisions: totalDecisions },
       });
     } catch (e) { logger.warn('[evaluate-automation-rules] Failed to update cron health:', e); }
