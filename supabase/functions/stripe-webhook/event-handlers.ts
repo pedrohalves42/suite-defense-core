@@ -6,6 +6,17 @@ import Stripe from "https://esm.sh/stripe@18.5.0";
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 
+// Map Stripe metadata plan names (checkout) → subscription_plans.name (DB)
+const PLAN_NAME_MAP: Record<string, string> = {
+  starter_compliance: 'starter',
+  business: 'pro',
+};
+
+function resolveDbPlanName(stripePlanName: string | undefined | null): string | null {
+  if (!stripePlanName) return null;
+  return PLAN_NAME_MAP[stripePlanName] || stripePlanName;
+}
+
 // V4: UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -65,7 +76,7 @@ export async function handleCheckoutCompleted(supabase: SupabaseClient, session:
   logger.info(`[STRIPE-WEBHOOK] Checkout completed: ${session.id}`);
   const customerId = session.customer as string;
   const tenantId = session.metadata?.tenant_id;
-  const planName = session.metadata?.plan_name;
+  const planName = resolveDbPlanName(session.metadata?.plan_name);
 
   if (tenantId && customerId) {
     const { data: plan } = await supabase
@@ -158,12 +169,12 @@ export async function handleSubscriptionUpdate(supabase: SupabaseClient, subscri
     metadata: { base_devices: baseDevices, addon_devices: addonDevices, base_price_id: basePriceId, status },
   });
 
-  // Feature sync
-  const planName = metadata?.plan_name;
+  // Feature sync — resolve metadata plan name to DB plan name
+  const resolvedPlanName = resolveDbPlanName(metadata?.plan_name);
   const maxDevices = metadata?.max_devices ? parseInt(metadata.max_devices) : null;
 
-  if (planName) {
-    await supabase.rpc("ensure_tenant_features", { p_tenant_id: tenantSub.tenant_id, p_plan_name: planName, p_device_quantity: maxDevices || totalDevices });
+  if (resolvedPlanName) {
+    await supabase.rpc("ensure_tenant_features", { p_tenant_id: tenantSub.tenant_id, p_plan_name: resolvedPlanName, p_device_quantity: maxDevices || totalDevices });
   } else if (tenantSub.plan_id) {
     const { data: plan } = await supabase.from("subscription_plans").select("name, max_devices").eq("id", tenantSub.plan_id).single();
     if (plan) {
