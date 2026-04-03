@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { isAgentOnline } from '@/lib/agent-status-constants';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { useTenant } from '@/hooks/useTenant';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
