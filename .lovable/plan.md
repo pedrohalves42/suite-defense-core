@@ -1,106 +1,121 @@
 
-# Plano Fase 6 — Monetização + Eficiência Operacional
+# Phase 6D + 6F: Edge Function Consolidation Plan
 
-## Pré-requisitos: Verificações iniciais
-- Verificar estado atual dos tenants (Genial Cred, Pedro Alves, tenant teste)
-- Verificar preços Stripe existentes no código
-- Verificar quota.ts e enroll-agent atuais
+## Current State: 81 functions → Target: <65
 
 ---
 
-## FASE 1: Corte de custos (já feito ✅)
-- honeypot-dispatch-ai desabilitado ✅
-- honeypot-check-alerts reduzido para 1x/hora ✅
-- honeypot-update-agent-timestamps reduzido para 1x/hora ✅
-- migrate-*-batch reduzido para */30 ✅
+## Phase 6D: servePublic → public-gateway (7 inlinable, 3 must stay)
+
+### ❌ CANNOT inline (direct URL access by agents/scripts):
+1. **serve-installer** (174L + 5 helpers) — Called via direct URL `/functions/v1/serve-installer/{key}` by PowerShell one-liners on endpoints. Gateway routing breaks this.
+2. **get-diagnostic-script** (347L) — Called via `irm .../get-diagnostic-script | iex` in PowerShell. Must remain direct URL.
+3. **get-latest-agent-script** (191L) — Called via direct URL in agent reinstall commands. Must remain direct URL.
+
+### ✅ CAN inline (called via `supabase.functions.invoke` or `callEdgeFunction`):
+
+| # | Function | Lines | Helper Files | Frontend Refs | Gateway Action |
+|---|----------|-------|-------------|---------------|----------------|
+| 1 | validate-invite | 87 | 0 | AcceptInvite.tsx (direct fetch) | `public:validate-invite` |
+| 2 | verify-document | 72 | 0 | None (external API) | `public:verify-document` |
+| 3 | verify-compliance-report | 202 | 0 | useVerification.ts | `public:verify-compliance-report` |
+| 4 | track-installation-event | 58 | 2 (agent-token-handler, jwt-handler) | AgentInstaller/utils.ts | `public:track-installation-event` |
+| 5 | validate-hmac-signature | 87 | 0 | useAgentCredentials.ts | `public:validate-hmac-signature` |
+| 6 | fido2-authenticate | 317 | 0 | FIDO2LoginButton.tsx | `public:fido2-authenticate` |
+| 7 | get-reinstall-by-name | 99 | 2 (auth-resolver, script-builder) | None found | `public:get-reinstall-by-name` |
+
+**Net reduction: -7 functions** (81 → 74)
+
+### Implementation Steps:
+
+#### Step 1: Create handler files in `public-gateway/handlers/`
+- `validate-invite.ts` — Extract logic from standalone
+- `verify-document.ts` — Extract logic from standalone  
+- `verify-compliance-report.ts` — Extract logic from standalone
+- `track-installation.ts` — Extract + merge helper files
+- `validate-hmac.ts` — Extract logic from standalone
+- `fido2-auth.ts` — Extract logic from standalone (largest, most complex)
+- `reinstall-by-name.ts` — Extract + merge helper files
+
+Each handler adapts to the `PublicHandler` signature:
+```ts
+(supabase, req, requestId, payload) => Promise<Response | Record<string, unknown>>
+```
+
+#### Step 2: Register in public-gateway/index.ts
+Add 7 new entries to `INLINED_HANDLERS` map.
+
+#### Step 3: Update frontend references
+- `src/pages/AcceptInvite.tsx` → route through `public-gateway`
+- `src/pages/VerificarLaudo/useVerification.ts` → route through `public-gateway`
+- `src/pages/AgentInstaller/utils.ts` → route through `public-gateway`
+- `src/pages/AgentInstaller/hooks/useAgentCredentials.ts` → route through `public-gateway`
+- `src/components/auth/FIDO2LoginButton.tsx` → route through `public-gateway`
+
+#### Step 4: Delete standalone directories (7 dirs)
+#### Step 5: Undeploy from Supabase (7 functions)
+#### Step 6: Deploy updated public-gateway
+#### Step 7: Test via curl_edge_functions
 
 ---
 
-## FASE 2: Monetização (URGENTE)
+## Phase 6F: agent-gateway for serveAgent functions (HIGH RISK)
 
-### 2A. Migration: Criar tabela `subscriptions`
-- Campos: tenant_id, stripe_customer_id, stripe_subscription_id, plan (free/starter/business), status, current_period_end, agent_limit, created_at, updated_at
-- RLS: admins do tenant podem ler, service_role pode escrever
-- Inserir registros free para todos os 16 tenants existentes
+### 22 serveAgent functions (1852 total lines):
 
-### 2B. Edge Functions: create-checkout + check-subscription
-- `create-checkout`: Cria sessão Stripe com price_id do plano escolhido
-- `check-subscription`: Verifica status da assinatura no Stripe
+| # | Function | Lines | HMAC? | Multi-file? |
+|---|----------|-------|-------|-------------|
+| 1 | ack-job | 103 | Yes | No |
+| 2 | check-agent-updates | 46 | No | No |
+| 3 | collect-router | 69 | Yes | No |
+| 4 | confirm-force-update | 94 | No | No |
+| 5 | diagnostics-agent-logs | 62 | No | No |
+| 6 | get-agent-config | 93 | No | No |
+| 7 | get-agent-policy | 78 | No | No |
+| 8 | get-blocked-websites | 84 | No | No |
+| 9 | list-reports | 28 | No | No |
+| 10 | post-installation-telemetry | 142 | No | No |
+| 11 | scan-virus | 114 | Yes | No |
+| 12 | serve-agent-update | 100 | No | No |
+| 13 | serve-dns-filter | 70 | Yes | No |
+| 14 | submit-antivirus-status | 64 | No | No |
+| 15 | submit-rollback-event | 88 | No | No |
+| 16 | submit-router | 88 | Yes | No |
+| 17 | submit-software-inventory | 55 | No | No |
+| 18 | submit-system-metrics | 105 | No | No |
+| 19 | submit-vuln-findings | 59 | No | No |
+| 20 | submit-web-activity | 59 | No | No |
+| 21 | update-baseline | 166 | Yes | No |
+| 22 | upload-report | 85 | No | No |
 
-### 2C. Enforçar limite free tier no enroll-agent
-- Verificar count de agentes ativos do tenant
-- Se tier=free e agentes >= 2, bloquear com erro 403
-- Se tier=starter e agentes >= 10, bloquear
-- Se tier=business e agentes >= 30, bloquear
+### Architecture:
+- New `supabase/functions/agent-gateway/index.ts`
+- Performs agent auth (X-Agent-Token + optional HMAC) ONCE at gateway level
+- Routes to handler based on `action` field (e.g., `agent:ack-job`)
+- Each handler receives authenticated `AgentContext`
 
-### 2D. Desativar agentes excedentes (Genial Cred + Pedro Alves + tenant teste)
-- Marcar agentes excedentes como `is_active = false` (manter os 2 mais recentes)
-- Registrar em audit_logs
+### Risk Mitigation:
+- Agent endpoints are called by PowerShell/Bash agents in production
+- Agents use **direct function URLs** (`/functions/v1/heartbeat`, etc.)
+- Changing URLs requires agent update rollout
+- **Must keep old standalone functions as thin proxies temporarily** until agents upgrade
 
----
+### Implementation Steps:
+1. Create `agent-gateway/index.ts` with shared auth
+2. Create handler files for each function
+3. Agent scripts must be updated to call `agent-gateway` with action routing
+4. Keep old standalone functions as deprecation proxies (forward to gateway)
+5. After agent fleet upgrades → delete proxies
 
-## FASE 3: Rotação de segredos
-
-### 3A. Criar cron semanal `rotate-audit`
-- Verificar idade de hmac_secret, enrollment_keys, agent_tokens
-- Registrar no secret_rotation_log
-- Disparar alerta se credencial > 90 dias
-
-### 3B. Ampliar integrity-sentinel-6h
-- Incluir checks de rotação de credenciais no sentinel existente
-
----
-
-## FASE 4: Taxa de falha de jobs
-
-### 4A. Pre-validation no poll-jobs/job-claimer
-- Skip de jobs para agentes com failure rate > 50% nos últimos 7 dias
-- Desabilitar job types com failure rate global > 40%
-
-### 4B. Dashboard de métricas de jobs por tipo
-- Componente no admin mostrando success/failure rate por job_type
-
----
-
-## FASE 5: Consolidação de Edge Functions (84 → <65)
-
-### 5A. Mover funções simples para gateways existentes
-- translate-cve → api-gateway
-- calculate-compliance → api-gateway
-- export-evidence-bundle → api-gateway
-- action-center-feed → api-gateway
-
-### 5B. Mover funções públicas para ops-gateway
-- fido2-authenticate, validate-invite, get-reinstall-by-name, serve-installer
+**Net reduction Phase 6F: -22 functions (but +22 proxy stubs initially, so net 0 until agents upgrade)**
+**This means 6F provides NO immediate function count reduction.**
 
 ---
 
-## FASE 6: Observabilidade
+## Recommended Execution Order:
+1. **Phase 6D first** (low risk, immediate -7 reduction → 74 functions)
+2. **Phase 6F deferred** — only valuable after agent fleet supports gateway routing
 
-### 6A. Dashboard de custo por tenant
-- Componente admin: agentes, jobs/mês, eventos/mês, custo estimado, plano
-- Alerta automático para tenant outlier (>5 agentes free ou >500 jobs/dia)
-
----
-
-## FASE 7: Precificação
-
-### 7A. Banner de upgrade no frontend
-- Quando tenant free tenta adicionar 3º agente, mostrar banner "Upgrade para Starter R$499/mês"
-
-### 7B. Configurar preços no Stripe
-- Starter: R$499/mês (10 agentes)
-- Business: R$899/mês (30 agentes)
-
----
-
-## Ordem de execução
-1. ✅ Corte de crons (já feito)
-2. Migration: tabela subscriptions
-3. Enforçar limites no enroll-agent + desativar excedentes
-4. Edge functions de billing (create-checkout, check-subscription)
-5. Rotação de segredos (cron rotate-audit)
-6. Pre-validation de jobs
-7. Consolidação de edge functions
-8. Dashboard de custo + observabilidade
-9. Banner de upgrade + pricing Stripe
+## Expected Final Count:
+- After 6D: **74 functions**
+- After 6F (eventual): **~55 functions**
