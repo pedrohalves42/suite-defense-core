@@ -1,24 +1,21 @@
-import { serveTenant } from '../_shared/serve-tenant.ts';
-import { aiSimpleComplete, getProviderStatus } from '../_shared/ai-multi-provider.ts';
-import { logger } from '../_shared/logger.ts';
-import { buildCorsHeaders } from '../_shared/cors.ts';
+/**
+ * translate-cve handler — Inlined from standalone function (Phase 6C)
+ * Translates CVE descriptions from English to Portuguese using AI.
+ */
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { aiSimpleComplete } from '../../_shared/ai-multi-provider.ts';
+import { logger } from '../../_shared/logger.ts';
 
-interface TranslateCveBody {
-  tenant_id?: string;
-  cve_id?: string;
-  description: string;
-}
-
-serveTenant<TranslateCveBody>(async (_req, ctx) => {
-  const origin = _req.headers.get("origin");
-  const { body, requestId } = ctx;
-  const { cve_id, description } = body;
+export async function handleTranslateCve(
+  _supabase: SupabaseClient,
+  requestId: string,
+  payload: Record<string, unknown>,
+): Promise<unknown> {
+  const description = payload.description as string | undefined;
+  const cve_id = payload.cve_id as string | undefined;
 
   if (!description) {
-    return new Response(
-      JSON.stringify({ error: 'Description required' }),
-      { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-    );
+    return { __status: 400, error: 'Description required' };
   }
 
   const systemPrompt = `Voce e um tradutor tecnico especializado em seguranca da informacao.
@@ -29,10 +26,7 @@ Seja conciso e claro. Responda APENAS com a traducao, sem explicacoes adicionais
   const response = await aiSimpleComplete(
     systemPrompt,
     `Traduza para portugues: "${description}"`,
-    {
-      maxTokens: 500,
-      functionName: 'translate-cve',
-    }
+    { maxTokens: 500, functionName: 'translate-cve' },
   );
 
   if (response.error) {
@@ -55,4 +49,4 @@ Seja conciso e claro. Responda APENAS com a traducao, sem explicacoes adicionais
     latencyMs: response.latencyMs,
     usedFallback: response.usedFallback,
   };
-});
+}

@@ -72,6 +72,11 @@ import { handleSecurityAdvisor } from './handlers/security-advisor.ts';
 import { handleChangePassword } from './handlers/user-auth.ts';
 import { handleSyncCveDatabase } from './handlers/sync-cve.ts';
 import { handleMitreSync } from './handlers/sync-mitre.ts';
+// Phase 6C inlined handlers
+import { handleTranslateCve } from './handlers/translate-cve.ts';
+import { handleCalculateCompliance } from './handlers/compliance.ts';
+import { handleExportEvidenceBundle } from './handlers/evidence-bundle.ts';
+import { handleTenantFeatures, handleTenantInfo, handleTenantStats } from './handlers/tenant-api.ts';
 
 const FETCH_TIMEOUT_MS = 30000;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -84,10 +89,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ACTION_TO_FUNCTION: Record<string, string> = {
   // security proxy targets — serveTenant (JWT-compatible)
   'security:scan-vulnerabilities': 'scan-vulnerabilities',
-  'security:calculate-compliance': 'calculate-compliance',
-  'security:export-evidence-bundle': 'export-evidence-bundle',
   'security:fido2-register': 'fido2-register',
-  'security:translate-cve': 'translate-cve',
   // build proxy targets — serveTenant (JWT-compatible)
   'build:build-agent-exe': 'build-agent-exe',
   'build:generate-deploy-package': 'generate-deploy-package',
@@ -194,19 +196,19 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'admin:create-job': handleCreateJob,
   'security:sync-cve-database': handleSyncCveDatabase as InlinedHandler,
   'security:mitre-sync': handleMitreSync as InlinedHandler,
-};
-
-// API-key authenticated endpoints (still proxy — they have own auth flow)
-const API_KEY_PROXY: Record<string, string> = {
-  'admin:tenant-features': 'api-tenant-features',
-  'admin:tenant-info': 'api-tenant-info',
-  'admin:tenant-stats': 'api-tenant-stats',
+  // ── Phase 6C: serveTenant inlined (consolidation) ──
+  'security:translate-cve': handleTranslateCve,
+  'security:calculate-compliance': handleCalculateCompliance,
+  'security:export-evidence-bundle': handleExportEvidenceBundle,
+  // ── Phase 6C: API-key endpoints inlined ──
+  'admin:tenant-features': handleTenantFeatures,
+  'admin:tenant-info': handleTenantInfo,
+  'admin:tenant-stats': handleTenantStats,
 };
 
 const ALL_VALID_ACTIONS = new Set([
   ...Object.keys(ACTION_TO_FUNCTION),
   ...Object.keys(INLINED_HANDLERS),
-  ...Object.keys(API_KEY_PROXY),
 ]);
 
 const RouterSchema = z.object({
@@ -299,17 +301,6 @@ Deno.serve(async (req) => {
         return jsonRes(rest, status, origin);
       }
       return jsonRes(result, 200, origin);
-    }
-
-    // API-key proxy
-    const apiKeyTarget = API_KEY_PROXY[action];
-    if (apiKeyTarget) {
-      const url = `${SUPABASE_URL}/functions/v1/${apiKeyTarget}`;
-      logger.info(`[api-gateway] API-key proxy: ${action} → ${apiKeyTarget}`, { requestId });
-      const response = await fetchWithTimeout(url, { method: 'POST', headers: forwardHeaders(req, requestId), body: JSON.stringify(payload), timeoutMs: FETCH_TIMEOUT_MS });
-      const responseData = await response.text();
-      logger.info(`[api-gateway] ${action} done in ${Date.now() - startedAt}ms (status: ${response.status})`);
-      return new Response(responseData, { status: response.status, headers: { ...buildCorsHeaders(origin), 'Content-Type': response.headers.get('Content-Type') || 'application/json' } });
     }
 
     // Proxy to target function

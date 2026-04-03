@@ -28,8 +28,8 @@ export default function SecurityBenchmark() {
     queryKey: ["tenant-compliance-score", tenant?.id],
     queryFn: async () => {
       // Try to get from compliance calculation edge function
-      const { data, error } = await supabase.functions.invoke("calculate-compliance", {
-        body: { tenant_id: tenant!.id },
+      const { data, error } = await supabase.functions.invoke("api-gateway", {
+        body: { action: "security:calculate-compliance", payload: { tenant_id: tenant!.id } },
       });
       if (error) return { overall_score: 0, grade: "N/A" };
       return data as { overall_score: number; grade: string };

@@ -1,9 +1,10 @@
 /**
- * calculate-compliance — Migrated to serveTenant
+ * calculate-compliance handler — Inlined from standalone function (Phase 6C)
  * Calculates compliance score for a tenant based on multiple data sources.
  */
-import { serveTenant } from '../_shared/serve-tenant.ts';
-import { logger } from '../_shared/logger.ts';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from '../../_shared/logger.ts';
+import type { HandlerContext } from './admin.ts';
 
 interface CategoryScore {
   category: string;
@@ -21,10 +22,16 @@ function gradeFromScore(score: number): string {
   return 'F';
 }
 
-serveTenant(async (_req, ctx) => {
-  const { supabase, tenantId, requestId } = ctx;
-  const startedAt = Date.now();
+export async function handleCalculateCompliance(
+  supabase: SupabaseClient,
+  requestId: string,
+  payload: Record<string, unknown>,
+  ctx?: HandlerContext,
+): Promise<unknown> {
+  const tenantId = (payload.tenant_id as string) || ctx?.tenantId;
+  if (!tenantId) return { __status: 400, error: 'tenant_id required' };
 
+  const startedAt = Date.now();
   logger.info(`[${requestId}] [calc-compliance] Starting for tenant ${tenantId}`);
 
   // 1. Vulnerability Management (weight: 25%)
@@ -168,4 +175,4 @@ serveTenant(async (_req, ctx) => {
     drift: { has_drift: hasDrift, trend, score_diff: scoreDiff },
     agents_total: totalAgents || 0,
   };
-});
+}

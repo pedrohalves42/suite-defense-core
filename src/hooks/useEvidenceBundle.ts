@@ -69,8 +69,8 @@ export function useExportEvidenceBundle() {
 
   return useMutation({
     mutationFn: async (options: ExportOptions) => {
-      const { data, error } = await supabase.functions.invoke('export-evidence-bundle', {
-        body: options,
+      const { data, error } = await supabase.functions.invoke('api-gateway', {
+        body: { action: 'security:export-evidence-bundle', payload: options },
       });
 
       if (error) throw error;

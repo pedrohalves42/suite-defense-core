@@ -1,7 +1,11 @@
-import { serveTenant } from '../_shared/serve-tenant.ts';
-import { logger } from '../_shared/logger.ts';
-import { buildCorsHeaders } from '../_shared/cors.ts';
+/**
+ * export-evidence-bundle handler — Inlined from standalone function (Phase 6C)
+ * Generates cryptographically verifiable evidence bundles for compliance.
+ */
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from '../../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
+import type { HandlerContext } from './admin.ts';
 
 const EvidenceBundleSchema = z.object({
   periodStart: z.string().min(1).max(30),
@@ -34,20 +38,23 @@ async function hashData(data: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-serveTenant(async (_req, ctx) => {
-  const origin = _req.headers.get("origin");
-  const { supabase, tenantId, userId, requestId, body } = ctx;
+export async function handleExportEvidenceBundle(
+  supabase: SupabaseClient,
+  requestId: string,
+  payload: Record<string, unknown>,
+  ctx?: HandlerContext,
+): Promise<unknown> {
+  const tenantId = (payload.tenant_id as string) || ctx?.tenantId;
+  const userId = ctx?.userId;
 
-  const parsed = EvidenceBundleSchema.safeParse(body);
+  if (!tenantId) return { __status: 400, error: 'tenant_id required' };
+
+  const parsed = EvidenceBundleSchema.safeParse(payload);
   if (!parsed.success) {
-    return new Response(
-      JSON.stringify({ error: 'Validation failed', issues: parsed.error.flatten().fieldErrors }),
-      { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-    );
+    return { __status: 400, error: 'Validation failed', issues: parsed.error.flatten().fieldErrors };
   }
 
   const { periodStart, periodEnd, bundleType, includeOptions, agentId } = parsed.data;
-
   const options = {
     securityEvents: true, jobs: true, signatures: true, hashChain: true,
     riskDecisions: true, playbookExecutions: true, auditLogs: true,
@@ -141,10 +148,7 @@ serveTenant(async (_req, ctx) => {
 
   if (insertError) {
     logger.error(`[export-evidence-bundle][${requestId}] Failed to save bundle:`, insertError);
-    return new Response(
-      JSON.stringify({ success: false, error: 'Failed to save bundle record' }),
-      { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-    );
+    return { __status: 500, success: false, error: 'Failed to save bundle record' };
   }
 
   const finalBundle = {
@@ -169,4 +173,4 @@ serveTenant(async (_req, ctx) => {
     success: true, auditId, manifestHash, verificationUrl: bundleRecord.verification_url,
     recordCount: totalRecords, sizeBytes: bundleSize, bundle: finalBundle,
   };
-});
+}
