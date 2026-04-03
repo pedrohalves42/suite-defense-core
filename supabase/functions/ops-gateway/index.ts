@@ -228,6 +228,18 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'security:integrity-sentinel': handleIntegritySentinel,
   'security:populate-security-graph': handlePopulateSecurityGraph,
   'security:publish-threat-ioc': handlePublishThreatIoc,
+  // ── playbook inlined (Phase 1C) ──
+  'playbook:execute-playbook': handleExecutePlaybook,
+  'playbook:process-playbook-trigger-logs': handleProcessPlaybookTriggerLogs,
+  'playbook:rollback-by-decision-event': handleRollbackByDecisionEvent,
+  'playbook:rollback-remediation': handleRollbackRemediation,
+  'playbook:resolve-action-policy': handleResolveActionPolicy,
+  'playbook:soar-engine': handleSoarEngine,
+  'playbook:auto-execute-ai-actions': handleAutoExecuteAiActions,
+  'playbook:oncall-integration': handleOncallIntegration,
+  'playbook:create-itsm-ticket': handleCreateItsmTicket,
+  'playbook:calculate-risk-score': handleCalculateRiskScore,
+  'playbook:run-attack-simulation': handleRunAttackSimulation,
 };
 
 const ALL_VALID_ACTIONS = new Set([
