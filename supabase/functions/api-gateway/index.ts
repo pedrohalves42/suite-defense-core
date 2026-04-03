@@ -70,8 +70,8 @@ import { handleCreateJob } from './handlers/job-mgmt.ts';
 import { handleSiemExport } from './handlers/security-export.ts';
 import { handleSecurityAdvisor } from './handlers/security-advisor.ts';
 import { handleChangePassword } from './handlers/user-auth.ts';
-import { handleSyncCveDatabase } from '../ops-gateway/handlers/sync-cve.ts';
-import { handleMitreSync } from '../ops-gateway/handlers/sync-mitre.ts';
+import { handleSyncCveDatabase } from './handlers/sync-cve.ts';
+import { handleMitreSync } from './handlers/sync-mitre.ts';
 
 const FETCH_TIMEOUT_MS = 30000;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
