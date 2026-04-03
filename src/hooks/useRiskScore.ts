@@ -83,11 +83,7 @@ export const useRiskScore = () => {
     mutationFn: async () => {
       if (!tenant?.id) throw new Error('Tenant não encontrado');
 
-      const { data, error } = await supabase.functions.invoke('calculate-risk-score', {
-        body: { tenant_id: tenant.id },
-      });
-
-      if (error) throw error;
+      const data = await callGateway('playbook', 'calculate-risk-score', { tenant_id: tenant.id });
       return data;
     },
     onSuccess: () => {

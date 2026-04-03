@@ -78,9 +78,7 @@ export const useItsmIntegrations = () => {
       agent_id?: string;
       agent_name?: string;
     }) => {
-      const { data, error } = await supabase.functions.invoke('create-itsm-ticket', {
-        body: params,
-      });
+      const data = await callGateway('playbook', 'create-itsm-ticket', params);
       if (error) throw error;
       return data;
     },

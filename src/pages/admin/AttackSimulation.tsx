@@ -41,10 +41,8 @@ export default function AttackSimulation() {
 
   const runSimulation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("run-attack-simulation", {
-        body: { tenant_id: tenant!.id, simulation_type: selectedType },
-      });
-      if (error) throw error;
+      const data = await callGateway('playbook', 'run-attack-simulation', { tenant_id: tenant!.id, simulation_type: selectedType });
+      return data;
       return data;
     },
     onSuccess: () => {
