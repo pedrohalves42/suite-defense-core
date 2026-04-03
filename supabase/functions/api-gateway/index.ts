@@ -45,6 +45,9 @@ import {
 import {
   handleThreatIntelligenceLookup, handleBuildSecurityGraph,
 } from './handlers/security-intel.ts';
+import {
+  handleActivateAgentHoneypot, handleRevertAgentHoneypot,
+} from './handlers/honeypot.ts';
 
 const FETCH_TIMEOUT_MS = 30000;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
