@@ -106,6 +106,16 @@ import {
   handleAutoGenerateReport, handleScheduledReportGenerator,
 } from './handlers/report-scheduled.ts';
 
+// Inlined handlers — integrity-ops (Phase 2I)
+import {
+  handleCheckAgentIntegrity, handleDriftDetect, handleRunRlsTests,
+} from './handlers/integrity-ops.ts';
+
+// Inlined handlers — edr-ops (Phase 2I)
+import {
+  handleFetchNvdCves, handleCorrelateEdrEvents, handleEvaluateEdrDetections,
+} from './handlers/edr-ops.ts';
+
 // Inlined handlers — cleanup (Phase 3A)
 import {
   handleCleanupTelemetry, handleCleanupStaleReports, handleCleanupStaleUpdates,
