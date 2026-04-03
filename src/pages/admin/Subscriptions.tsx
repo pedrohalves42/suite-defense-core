@@ -32,8 +32,7 @@ export default function Subscriptions() {
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
     queryKey: ['invoices', tenant?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('list-invoices');
-      if (error) throw error;
+      const data = await callGateway<{ invoices: any[] }>('billing', 'list-invoices');
       return data.invoices || [];
     },
     enabled: !!tenant?.id && subscription?.plan_name !== 'free',
