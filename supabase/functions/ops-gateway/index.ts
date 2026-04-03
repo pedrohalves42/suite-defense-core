@@ -117,24 +117,12 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 // ── Flat proxy map: "namespace:action" → target function ────────────────
 const ACTION_TO_FUNCTION: Record<string, string> = {
-  // sync proxy targets — all inlined in Phase 3B
-  // playbook proxy targets
-  'playbook:execute-playbook': 'execute-playbook',
+  // playbook proxy targets (remaining — complex/standalone)
   'playbook:execute-playbook-action': 'execute-playbook-action',
   'playbook:evaluate-playbook-triggers': 'evaluate-playbook-triggers',
-  'playbook:process-playbook-trigger-logs': 'process-playbook-trigger-logs',
   'playbook:evaluate-automation-rules': 'evaluate-automation-rules',
-  'playbook:auto-execute-ai-actions': 'auto-execute-ai-actions',
   'playbook:auto-remediate': 'auto-remediate',
   'playbook:autonomous-safe-mode': 'autonomous-safe-mode',
-  'playbook:rollback-by-decision-event': 'rollback-by-decision-event',
-  'playbook:rollback-remediation': 'rollback-remediation',
-  'playbook:resolve-action-policy': 'resolve-action-policy',
-  'playbook:soar-engine': 'soar-engine',
-  'playbook:oncall-integration': 'oncall-integration',
-  'playbook:create-itsm-ticket': 'create-itsm-ticket',
-  'playbook:run-attack-simulation': 'run-attack-simulation',
-  'playbook:calculate-risk-score': 'calculate-risk-score',
   'playbook:evaluate-software-risk': 'evaluate-software-risk',
   // report proxy targets (all proxy)
   'report:compliance': 'generate-compliance-report',
