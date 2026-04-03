@@ -66,13 +66,35 @@ export async function buildNormalResponse(
     })
   }
 
-  // CRITICAL FIX: Never send script_sha256 until Ed25519 signing is fully implemented.
-  // Sending an unsigned or incorrectly-normalized hash causes the agent to overwrite
-  // its local cache, triggering TOCTOU false positives and crash-restart loops (Exit 9004).
-  // The guard below is intentionally hardcoded to false — enable only when real
-  // Ed25519 signatures are generated and stored in agent_releases.script_hash_signature.
-  const hasValidSignature = false
-  const safeScriptSha256 = null
+  // Only send script_sha256 when the release has a valid Ed25519 signature.
+  // Without a signature, sending the hash causes TOCTOU false positives (Exit 9004).
+  let hasValidSignature = false
+  let safeScriptSha256: string | null = null
+
+  if (currentScriptSha256) {
+    try {
+      const currentVersion = agentVersionFromPayload || updateData.agent_version
+      if (currentVersion) {
+        const { data: sigCheck } = await supabase
+          .from('agent_releases')
+          .select('signature_base64')
+          .eq('version', currentVersion)
+          .eq('platform', platform)
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle()
+
+        if (sigCheck?.signature_base64) {
+          hasValidSignature = true
+          safeScriptSha256 = currentScriptSha256
+        }
+      }
+    } catch (sigCheckError) {
+      logger.warn('Failed to check release signature for heartbeat', {
+        agentName: agent.agent_name, error: (sigCheckError as Error).message,
+      })
+    }
+  }
 
   return new Response(
     JSON.stringify({
