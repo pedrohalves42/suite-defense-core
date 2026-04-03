@@ -84,12 +84,7 @@ export default function SalesPipeline() {
 
   const updateMutation = useMutation({
     mutationFn: async (deal: Partial<Deal> & { id: string }) => {
-      const response = await supabase.functions.invoke("sales-pipeline", {
-        method: "PATCH",
-        body: deal,
-      });
-      if (response.error) throw response.error;
-      return response.data;
+      return await callGateway<Record<string, any>>('billing', 'sales-pipeline', { _method: 'PATCH', ...deal });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales-pipeline"] });
@@ -105,12 +100,7 @@ export default function SalesPipeline() {
 
   const deleteMutation = useMutation({
     mutationFn: async (dealId: string) => {
-      const response = await supabase.functions.invoke("sales-pipeline", {
-        method: "DELETE",
-        body: { id: dealId },
-      });
-      if (response.error) throw response.error;
-      return response.data;
+      return await callGateway<Record<string, any>>('billing', 'sales-pipeline', { _method: 'DELETE', id: dealId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales-pipeline"] });
