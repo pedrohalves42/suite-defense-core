@@ -24,6 +24,7 @@ import { StuckJobsAlert } from '@/components/admin/jobs/StuckJobsAlert';
 import { JobAnomaliesCard } from '@/components/admin/jobs/JobAnomaliesCard';
 import { JobSLOStatusCard } from '@/components/admin/jobs/JobSLOStatusCard';
 import { calculateRealSuccessRate } from '@/components/admin/JobStatusSimplified';
+import { JobFailureAnalysis } from '@/components/admin/jobs/JobFailureAnalysis';
 import { SectionDivider } from '@/components/ui/section-divider';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -375,6 +376,15 @@ export default function JobsHealthDashboard() {
           </Card>
         </motion.div>
       </div>
+
+      {/* Failure Rate Analysis — Phase: Reduce Job Failure Rate */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35 }}
+      >
+        <JobFailureAnalysis />
+      </motion.div>
 
       {/* Metrics by Type Table */}
       <motion.div

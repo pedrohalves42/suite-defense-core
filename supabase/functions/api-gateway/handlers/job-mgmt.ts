@@ -7,6 +7,7 @@ import { CreateJobSchemaEnhanced } from '../../_shared/validation.ts';
 import { createAuditLog } from '../../_shared/audit.ts';
 import { checkRateLimit } from '../../_shared/rate-limit.ts';
 import { logSecurityEvent, extractIpAddress } from '../../_shared/security-log.ts';
+import { isFeatureEnabled } from '../../_shared/feature-flags.ts';
 import type { HandlerContext } from './admin.ts';
 
 type SB = ReturnType<typeof createClient>;
@@ -116,6 +117,30 @@ export async function handleCreateJob(
   // Cross-tenant check
   if (!hasSuperAdminRole && tenantId !== agentData.tenant_id) {
     return { __status: 403, error: { code: 'FORBIDDEN', message: 'Agente pertence a outro tenant.' } };
+  }
+
+  // Pre-validation: check if job type is disabled via feature flag
+  const jobTypeFlag = `JOB_TYPE_ENABLED_${type.toUpperCase()}`;
+  const jobTypeEnabled = await isFeatureEnabled(supabase, jobTypeFlag, effectiveTenantId);
+  if (!jobTypeEnabled) {
+    logger.info(`[create-job][${requestId}] Job type '${type}' disabled via feature flag for tenant ${effectiveTenantId}`);
+    return { __status: 409, error: { code: 'JOB_TYPE_DISABLED', message: `Tipo de job '${type}' esta desabilitado. Taxa de falha historica alta.` } };
+  }
+
+  // Pre-validation: check agent failure rate for this job type
+  const { data: failureCheck } = await supabase.rpc('check_agent_job_failure_rate', {
+    p_agent_id: agentData.id, p_job_type: type, p_days_back: 7, p_threshold: 50.0,
+  });
+  if (failureCheck && failureCheck.length > 0 && failureCheck[0].should_skip) {
+    const fr = failureCheck[0];
+    logger.warn(`[create-job][${requestId}] Skipping job '${type}' for agent '${agentName}': failure rate ${fr.failure_rate}% (${fr.failed_jobs}/${fr.total_jobs})`);
+    return {
+      __status: 409,
+      error: {
+        code: 'HIGH_FAILURE_RATE',
+        message: `Agente '${agentName}' tem taxa de falha de ${fr.failure_rate}% para '${type}' nos ultimos 7 dias (${fr.failed_jobs}/${fr.total_jobs} falharam). Job nao criado.`,
+      },
+    };
   }
 
   // Next run for recurring

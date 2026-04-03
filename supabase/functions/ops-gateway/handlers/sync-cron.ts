@@ -4,6 +4,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
+import { isFeatureEnabled } from '../../_shared/feature-flags.ts';
 import {
   SupabaseVersionQueryAdapter,
   SupabaseUpdateJobAdapter,
@@ -92,13 +93,46 @@ export async function handleSeedCollectionJobs(supabase: SB, requestId: string, 
 
   let totalCreated = 0;
   let totalSkipped = 0;
-  const agentResults: Array<{ agent: string; created: number; skipped: number }> = [];
+  let totalSkippedFailRate = 0;
+  let totalSkippedDisabled = 0;
+  const agentResults: Array<{ agent: string; created: number; skipped: number; skipped_fail_rate: number }> = [];
+
+  // Pre-check which job types are globally disabled via feature flags
+  const disabledTypes = new Set<string>();
+  for (const template of COLLECTION_TEMPLATES) {
+    const flagKey = `JOB_TYPE_ENABLED_${template.type.toUpperCase()}`;
+    const enabled = await isFeatureEnabled(supabase, flagKey, activeAgents[0]?.tenant_id);
+    if (!enabled) {
+      disabledTypes.add(template.type);
+      logger.info(`[${requestId}] Job type '${template.type}' disabled via feature flag`);
+    }
+  }
 
   for (const agent of activeAgents) {
     let created = 0;
     let skipped = 0;
+    let skippedFailRate = 0;
 
     for (const template of COLLECTION_TEMPLATES) {
+      // Skip disabled job types
+      if (disabledTypes.has(template.type)) {
+        skipped++;
+        totalSkippedDisabled++;
+        continue;
+      }
+
+      // Check agent failure rate for this type
+      try {
+        const { data: failureCheck } = await supabase.rpc('check_agent_job_failure_rate', {
+          p_agent_id: agent.id, p_job_type: template.type, p_days_back: 7, p_threshold: 50.0,
+        });
+        if (failureCheck && failureCheck.length > 0 && failureCheck[0].should_skip) {
+          skippedFailRate++;
+          totalSkippedFailRate++;
+          continue;
+        }
+      } catch (_) { /* fail-open: proceed with job creation */ }
+
       try {
         const { data: jobId, error: createError } = await supabase.rpc('create_job_if_not_exists', {
           p_agent_id: agent.id, p_tenant_id: agent.tenant_id, p_type: template.type,
@@ -114,11 +148,11 @@ export async function handleSeedCollectionJobs(supabase: SB, requestId: string, 
 
     totalCreated += created;
     totalSkipped += skipped;
-    agentResults.push({ agent: agent.agent_name, created, skipped });
+    agentResults.push({ agent: agent.agent_name, created, skipped, skipped_fail_rate: skippedFailRate });
   }
 
   const durationMs = Date.now() - startedAt;
-  const result = { success: true, agents_processed: activeAgents.length, jobs_created: totalCreated, jobs_skipped_dedup: totalSkipped, agent_details: agentResults, duration_ms: durationMs };
+  const result = { success: true, agents_processed: activeAgents.length, jobs_created: totalCreated, jobs_skipped_dedup: totalSkipped, jobs_skipped_failure_rate: totalSkippedFailRate, jobs_skipped_disabled: totalSkippedDisabled, agent_details: agentResults, duration_ms: durationMs };
 
   logger.info(`[${requestId}] [seed-collection-jobs] Done:`, JSON.stringify(result));
 
