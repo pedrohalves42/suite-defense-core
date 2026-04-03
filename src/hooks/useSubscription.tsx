@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { callGateway } from '@/lib/gateway';
 import { usePageVisibility } from './usePageVisibility';
 
 interface SubscriptionFeature {
