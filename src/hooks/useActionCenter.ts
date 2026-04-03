@@ -141,11 +141,9 @@ export function useExecuteActionItem() {
         item_id: itemId,
         source_type: sourceType,
         action,
-        reason
-        }
+        reason,
+        tenant_id: tenant.id,
       });
-
-      if (error) throw error;
       return data;
     },
     onSuccess: (response, { action, sourceType }) => {
