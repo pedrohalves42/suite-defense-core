@@ -116,7 +116,7 @@ export async function handleRunAttackSimulation(supabase: SupabaseClient, reques
 
   const jobType = `security_test_${simulation_type}`;
   await Promise.allSettled(agents.map(agent =>
-    supabase.from('jobs').insert({ tenant_id: tenantId, agent_id: agent.id, type: jobType, status: 'pending', payload: { simulation_id: simulation.id, simulation_type, test_params: getTestParams(simulation_type) } })
+    supabase.from('jobs').insert({ tenant_id: tenantId, agent_id: agent.id, type: jobType, status: 'queued', payload: { simulation_id: simulation.id, simulation_type, test_params: getTestParams(simulation_type) } })
   ));
 
   let detected = 0;

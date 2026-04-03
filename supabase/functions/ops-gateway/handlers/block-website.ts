@@ -49,7 +49,7 @@ export async function handleBlockWebsite(
   if (targetAgents && targetAgents.length > 0) {
     const jobRows = targetAgents.map(agent => ({
       agent_id: agent.id, agent_name: agent.agent_name, tenant_id: agent.tenant_id,
-      type: 'sync_blocked_websites', status: 'pending',
+      type: 'sync_blocked_websites', status: 'queued',
       payload: { action: 'block_website', block_id: blockRecord?.id, url, reason },
       priority: 2,
       expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
