@@ -80,7 +80,6 @@ export const useItsmIntegrations = () => {
       agent_name?: string;
     }) => {
       const data = await callGateway('playbook', 'create-itsm-ticket', params);
-      if (error) throw error;
       return data;
     },
     onSuccess: (data) => {
