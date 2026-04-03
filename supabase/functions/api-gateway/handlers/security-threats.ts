@@ -211,7 +211,7 @@ export async function handleAutoRemediate(
   const jobPayload = buildJobPayload(action_type, trigger_details);
   const { data: job, error: jobErr } = await supabase.from('jobs').insert({
     agent_id, agent_name: agent.agent_name, tenant_id: resolvedTenantId,
-    type: jobPayload.jobType, status: 'pending',
+    type: jobPayload.jobType, status: 'queued',
     payload: { ...jobPayload.payload, remediation_action_id: action?.id, rollback_supported: !!ROLLBACK_MAP[action_type] },
     priority: 1, expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
   }).select('id').single();
@@ -272,7 +272,7 @@ export async function handleRollbackRemediation(
 
   const { data: job, error: jobErr } = await supabase.from('jobs').insert({
     agent_id: action.agent_id, agent_name: action.agent_name, tenant_id: action.tenant_id,
-    type: 'service_health_check', status: 'pending',
+    type: 'service_health_check', status: 'queued',
     payload: { ...rollbackPayload, is_rollback: true, original_action_id: action_id },
     priority: 2, expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
   }).select('id').single();

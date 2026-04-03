@@ -103,7 +103,7 @@ export async function handleApplySecurityPatch(
   if (!affectedAgents?.length) return { success: true, message: 'No affected agents found', cve_id, patched_count: 0 };
 
   const jobs = affectedAgents.map(agent => ({
-    type: 'apply_security_patch', agent_name: agent.agent_name, tenant_id: agent.tenant_id, status: 'pending',
+    type: 'apply_security_patch', agent_name: agent.agent_name, tenant_id: agent.tenant_id, status: 'queued',
     payload: { cve_id, patch_method, severity: cve.severity, affected_product: cve.affected_products?.[0] || 'unknown' },
   }));
   const { error: jobsError } = await supabase.from('jobs').insert(jobs);

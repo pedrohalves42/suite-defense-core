@@ -192,7 +192,7 @@ serveTenant(async (req, ctx) => {
       agent_name: agent.agent_name,
       tenant_id: resolvedTenantId,
       type: jobPayload.jobType,
-      status: 'pending',
+      status: 'queued',
       payload: {
         ...jobPayload.payload,
         remediation_action_id: action?.id,
