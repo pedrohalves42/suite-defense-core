@@ -152,6 +152,10 @@ const ACTION_TO_FUNCTION: Record<string, string> = {
   'playbook:evaluate-software-risk': 'evaluate-software-risk',
   // report — list-reports stays standalone (serveAgent/HMAC)
   'report:list': 'list-reports',
+  // AI internal proxy targets — serveInternal
+  'sync:ai-insight-dispatcher': 'ai-insight-dispatcher',
+  'check:ai-predict-agent-failure': 'ai-predict-agent-failure',
+  'check:ai-system-analyzer': 'ai-system-analyzer',
 };
 
 // cleanup and notify are now fully inlined (Phase 3A) — no more router proxy
