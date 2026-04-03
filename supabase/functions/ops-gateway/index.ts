@@ -135,14 +135,7 @@ const ACTION_TO_FUNCTION: Record<string, string> = {
   'playbook:auto-remediate': 'auto-remediate',
   'playbook:autonomous-safe-mode': 'autonomous-safe-mode',
   'playbook:evaluate-software-risk': 'evaluate-software-risk',
-  // report proxy targets (all proxy)
-  'report:compliance': 'generate-compliance-report',
-  'report:executive': 'generate-executive-report',
-  'report:explainable': 'generate-explainable-report',
-  'report:security': 'generate-security-report',
-  'report:weekly': 'generate-weekly-report',
-  'report:auto': 'auto-generate-report',
-  'report:scheduled': 'scheduled-report-generator',
+  // report — list-reports stays standalone (serveAgent/HMAC)
   'report:list': 'list-reports',
 };
 
