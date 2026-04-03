@@ -142,7 +142,18 @@ export async function handleCheckSubscription(supabase: SB, requestId: string, _
     }
 
     logStep('No Stripe subscription found - Free plan');
-    return { subscribed: false, plan_name: 'free', is_legacy: false, base_devices: 3, addon_devices: 0, total_devices: 3, device_quantity: 0, status: 'inactive' };
+
+    const { count: installedAgents } = await supabase
+      .from('agents').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'active');
+
+    return {
+      subscribed: false, plan_name: 'free', is_legacy: false,
+      base_devices: 2, addon_devices: 0, total_devices: 2,
+      device_quantity: 0, max_devices: 2,
+      installed_agents: installedAgents || 0,
+      available_slots: Math.max(0, 2 - (installedAgents || 0)),
+      status: 'inactive',
+    };
   }
 
   logStep('Found local subscription', { subscriptionId: typedSub.stripe_subscription_id });
