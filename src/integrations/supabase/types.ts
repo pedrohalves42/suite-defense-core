@@ -49499,6 +49499,7 @@ export type Database = {
       }
       assert_system_allows_jobs: { Args: never; Returns: undefined }
       assert_system_not_stopped: { Args: never; Returns: undefined }
+      audit_credential_rotation: { Args: never; Returns: Json }
       authorize_agent_recovery: {
         Args: {
           p_agent_id: string

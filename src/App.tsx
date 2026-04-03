@@ -105,6 +105,7 @@ const MyAccount = lazy(() => import("./pages/admin/MyAccount"));
 const RealTimeSecurityDashboard = lazy(() => import("./pages/admin/RealTimeSecurityDashboard"));
 const AutonomyDashboard = lazy(() => import("./pages/admin/AutonomyDashboard"));
 const ActionCenterDashboard = lazy(() => import("./pages/admin/ActionCenterDashboard"));
+const TenantCostDashboard = lazy(() => import("./pages/admin/TenantCostDashboard"));
 const Automations = lazy(() => import("./pages/admin/Automations"));
 const MFASetupRequired = lazy(() => import("./pages/admin/MFASetupRequired"));
 const ExecutiveDashboard = lazy(() => import("./pages/admin/ExecutiveDashboard"));
@@ -268,6 +269,7 @@ const App = () => (
                 <Route path="ai-metrics" element={<RouteErrorBoundary route="AI Metrics"><AIMetrics /></RouteErrorBoundary>} />
                 <Route path="ai-governance" element={<RouteErrorBoundary route="AI Governance"><AIGovernance /></RouteErrorBoundary>} />
                 <Route path="tenant" element={<RouteErrorBoundary route="Tenant"><Tenant /></RouteErrorBoundary>} />
+                <Route path="tenant-costs" element={<RouteErrorBoundary route="Tenant Costs"><TenantCostDashboard /></RouteErrorBoundary>} />
                 <Route path="software-inventory" element={<Navigate to="/admin/asset-security?tab=inventory" replace />} />
                 <Route path="vulnerabilities" element={<Navigate to="/admin/vulnerability-center?tab=vulnerabilities" replace />} />
                 <Route path="web-activity" element={<Navigate to="/admin/network-security?tab=web-activity" replace />} />

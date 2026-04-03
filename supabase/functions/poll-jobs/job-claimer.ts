@@ -79,6 +79,31 @@ export async function claimAndBuildResponse(
   agent: AuthenticatedAgent,
   origin: string | null,
 ): Promise<Response> {
+  // Pre-validation: check agent failure rate in last 7 days
+  const { count: recentTotal } = await supabase
+    .from('jobs')
+    .select('*', { count: 'exact', head: true })
+    .eq('agent_id', agent.agentId)
+    .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+  const { count: recentFailed } = await supabase
+    .from('jobs')
+    .select('*', { count: 'exact', head: true })
+    .eq('agent_id', agent.agentId)
+    .eq('status', 'failed')
+    .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+  const failureRate = (recentTotal && recentTotal > 5) ? ((recentFailed || 0) / recentTotal) : 0;
+  if (failureRate > 0.5) {
+    logger.warn('Agent has >50% failure rate, throttling job delivery', {
+      agentName: agent.agentName,
+      failureRate: (failureRate * 100).toFixed(1) + '%',
+      recentTotal,
+      recentFailed,
+    });
+    return emptyResponse(agent.isLegacyAgent, origin);
+  }
+
   const { data: jobs, error: jobsError } = await supabase
     .rpc('claim_jobs_for_agent', { p_agent_id: agent.agentId, p_limit: 3 }) as { data: ClaimedJob[] | null; error: { message: string } | null };
 
