@@ -72,7 +72,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 // ── Proxy map: actions still dispatched via HTTP ────────────────────────
 const ACTION_TO_FUNCTION: Record<string, string> = {
-  // security proxy targets — remaining (standalone with specific auth)
+  // security proxy targets — remaining (standalone with specific auth / serveInternal)
   'security:verify-log-integrity': 'verify-log-integrity',
   'security:scan-vulnerabilities': 'scan-vulnerabilities',
   'security:fetch-nvd-cves': 'fetch-nvd-cves',
@@ -83,15 +83,12 @@ const ACTION_TO_FUNCTION: Record<string, string> = {
   'security:siem-export': 'siem-export',
   'security:run-rls-tests': 'run-rls-tests',
   'security:security-advisor': 'security-advisor',
-  // build proxy targets (from build-router)
+  // build proxy targets — remaining (serveAgent/servePublic/complex)
   'build:build-agent-exe': 'build-agent-exe',
-  'build:build-callback': 'build-callback',
   'build:generate-deploy-package': 'generate-deploy-package',
   'build:generate-portable-installer': 'generate-portable-installer',
-  'build:generate-enrollment-key': 'generate-enrollment-key',
   'build:auto-generate-enrollment': 'auto-generate-enrollment',
   'build:auto-renew-enrollment-keys': 'auto-renew-enrollment-keys',
-  'build:revoke-enrollment-key': 'revoke-enrollment-key',
   'build:register-agent-release': 'register-agent-release',
   'build:sign-release': 'sign-release',
   'build:upload-release-content': 'upload-release-content',
@@ -99,23 +96,19 @@ const ACTION_TO_FUNCTION: Record<string, string> = {
   'build:confirm-force-update': 'confirm-force-update',
   'build:get-diagnostic-script': 'get-diagnostic-script',
   'build:serve-installer': 'serve-installer',
-  // agent-mgmt proxy targets (remaining — not yet inlined)
-  'agent:agent-version-management': 'agent-version-management',
+  // agent proxy targets — remaining (serveAgent/HMAC auth)
   'agent:check-agent-integrity': 'check-agent-integrity',
   'agent:check-agent-updates': 'check-agent-updates',
   'agent:diagnostics-agent-logs': 'diagnostics-agent-logs',
   'agent:enroll-agent': 'enroll-agent',
   'agent:get-agent-config': 'get-agent-config',
-  'agent:get-agent-dashboard-data': 'get-agent-dashboard-data',
   'agent:get-agent-policy': 'get-agent-policy',
   'agent:get-agent-script-content': 'get-agent-script-content',
   'agent:get-latest-agent-script': 'get-latest-agent-script',
   'agent:promote-agent-v5': 'promote-agent-v5',
-  'agent:recover-agent-credentials': 'recover-agent-credentials',
   'agent:register-agent-key': 'register-agent-key',
   'agent:serve-agent-update': 'serve-agent-update',
   'agent:setup-agent-script': 'setup-agent-script',
-  'agent:token-rotate': 'token-rotate',
   'agent:validate-hmac-signature': 'validate-hmac-signature',
   'agent:force-reinstall-fleet': 'force-reinstall-fleet',
   'agent:create-reinstall-jobs': 'create-reinstall-jobs',
@@ -180,6 +173,21 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'agent:get-agent-timeline': handleGetAgentTimeline,
   // build inlined (Phase 2E)
   'build:build-callback': handleBuildCallback,
+  // ── Phase 2F: admin-auth inlined ──
+  'admin:accept-invite': handleAcceptInvite,
+  'admin:delete-invite': handleDeleteInvite,
+  'admin:send-invite': handleSendInvite,
+  // ── Phase 2F: enrollment inlined ──
+  'build:generate-enrollment-key': handleGenerateEnrollmentKey,
+  'build:revoke-enrollment-key': handleRevokeEnrollmentKey,
+  // ── Phase 2F: agent-data inlined ──
+  'agent:get-software-inventory': handleGetSoftwareInventory,
+  'agent:get-web-activity': handleGetWebActivity,
+  'agent:get-agent-dashboard-data': handleGetAgentDashboardData,
+  // ── Phase 2J: agent-ops inlined ──
+  'agent:token-rotate': handleTokenRotate,
+  'agent:recover-agent-credentials': handleRecoverAgentCredentials,
+  'agent:agent-version-management': handleAgentVersionManagement,
 };
 
 // API-key authenticated endpoints (still proxy — they have own auth flow)
