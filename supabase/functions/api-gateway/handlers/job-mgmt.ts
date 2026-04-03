@@ -7,6 +7,7 @@ import { CreateJobSchemaEnhanced } from '../../_shared/validation.ts';
 import { createAuditLog } from '../../_shared/audit.ts';
 import { checkRateLimit } from '../../_shared/rate-limit.ts';
 import { logSecurityEvent, extractIpAddress } from '../../_shared/security-log.ts';
+import { isFeatureEnabled } from '../../_shared/feature-flags.ts';
 import type { HandlerContext } from './admin.ts';
 
 type SB = ReturnType<typeof createClient>;
