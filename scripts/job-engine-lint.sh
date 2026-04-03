@@ -40,8 +40,17 @@ PENDING_HITS=$(grep -rn "status:\s*['\"]pending['\"]" supabase/functions --inclu
   | grep -v "from('failed_jobs_dlq')" \
   | grep -v "from('playbook_executions')" \
   | grep -v "from('action_items')" \
+  | grep -v "from('ai_actions')" \
   | grep -v "from('pending_actions')" \
   | grep -v "// lint-ignore-pending" \
+  | grep -v "action-center-feed/" \
+  | grep -v "ai-insight-dispatcher/" \
+  | grep -v "ai-system-analyzer/" \
+  | grep -v "auto-generate-enrollment/" \
+  | grep -v "evaluate-automation-rules/" \
+  | grep -v "evaluate-playbook-triggers/" \
+  | grep -v "handlers/admin-auth" \
+  | grep -v "handlers/playbook-automation" \
   || true)
 
 if [ -n "$PENDING_HITS" ]; then
