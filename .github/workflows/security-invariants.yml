@@ -6,6 +6,9 @@ on:
   push:
     branches: [main]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   contract-tests:
     name: 📋 Contract Tests (Edge ↔ DB)
@@ -16,27 +19,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: 'npm'
+          bun-version: latest
 
       - name: Install contract dependencies
         run: |
           cd contracts
-          npm ci
+          bun install --frozen-lockfile
 
       - name: Install Playwright
         run: |
           cd contracts
-          npx playwright install --with-deps chromium
+          bunx playwright install --with-deps chromium
 
       - name: Run Contract Tests
         id: contract-tests
         run: |
           cd contracts
-          npx playwright test --reporter=json --output-file=contract-results.json
+          bunx playwright test --reporter=json --output-file=contract-results.json
         env:
           VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -60,21 +62,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: 'npm'
+          bun-version: latest
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Install Playwright
-        run: npx playwright install --with-deps chromium
+        run: bunx playwright install --with-deps chromium
 
       - name: Run Security Invariants Tests
         id: security-tests
-        run: npx playwright test e2e/security-invariants.spec.ts --reporter=json --output-file=security-results.json
+        run: bunx playwright test e2e/security-invariants.spec.ts --reporter=json --output-file=security-results.json
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -83,7 +84,7 @@ jobs:
       - name: Generate Evidence Artifact
         if: always()
         run: |
-          npx tsx scripts/generate-security-evidence.ts || echo "Evidence generation skipped"
+          bunx tsx scripts/generate-security-evidence.ts || echo "Evidence generation skipped"
         env:
           COMMIT_SHA: ${{ github.sha }}
           CI_RUN_ID: ${{ github.run_id }}
