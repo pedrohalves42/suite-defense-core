@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { FormattedText } from '@/components/ui/FormattedText';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -227,7 +228,7 @@ export function OnboardingContent({ user, agentCount, hasOnlineAgent, copied, co
                 <h4 className="font-medium text-red-500 mb-2">{problem.title}</h4>
                 <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                   {problem.items.map((item, i) => (
-                    <li key={i} dangerouslySetInnerHTML={{ __html: item }} />
+                    <li key={i}><FormattedText text={item} /></li>
                   ))}
                 </ul>
               </div>
