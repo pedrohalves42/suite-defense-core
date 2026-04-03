@@ -12,14 +12,18 @@ interface SubscriptionFeature {
 interface SubscriptionData {
   subscribed: boolean;
   plan_name: string;
+  base_devices: number;
+  addon_devices: number;
+  total_devices: number;
   device_quantity: number;
   max_devices: number;
   installed_agents: number;
   available_slots: number;
   status: string;
+  is_legacy: boolean;
   trial_end: string | null;
   current_period_end: string | null;
-  features: Record<string, SubscriptionFeature>;
+  features?: Record<string, SubscriptionFeature>;
 }
 
 // COST-OPT-V9: Only hook that retains polling (10 min, paused when hidden)

@@ -99,10 +99,10 @@ export async function handleCheckSubscription(supabase: SB, requestId: string, _
 
   const getBaseDevices = (planName: string): number => {
     const map: Record<string, number> = {
-      starter_compliance: 10, business: 30, scale: 100,
-      enterprise: 1000, pro: 50, starter: 10, free: 3,
+      starter_compliance: 10, starter: 10, business: 30,
+      scale: 100, enterprise: 1000, pro: 30, free: 2,
     };
-    return map[planName] || 10;
+    return map[planName] || 2;
   };
 
   if (!typedSub?.stripe_subscription_id) {
@@ -142,7 +142,18 @@ export async function handleCheckSubscription(supabase: SB, requestId: string, _
     }
 
     logStep('No Stripe subscription found - Free plan');
-    return { subscribed: false, plan_name: 'free', is_legacy: false, base_devices: 3, addon_devices: 0, total_devices: 3, device_quantity: 0, status: 'inactive' };
+
+    const { count: installedAgents } = await supabase
+      .from('agents').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'active');
+
+    return {
+      subscribed: false, plan_name: 'free', is_legacy: false,
+      base_devices: 2, addon_devices: 0, total_devices: 2,
+      device_quantity: 0, max_devices: 2,
+      installed_agents: installedAgents || 0,
+      available_slots: Math.max(0, 2 - (installedAgents || 0)),
+      status: 'inactive',
+    };
   }
 
   logStep('Found local subscription', { subscriptionId: typedSub.stripe_subscription_id });
@@ -198,8 +209,8 @@ export async function handleCheckSubscription(supabase: SB, requestId: string, _
 
 // ── create-checkout ─────────────────────────────────────────────────────
 const STRIPE_PLANS: Record<string, { priceId: string; baseDevices: number; maxDevices: number }> = {
-  starter_compliance: { priceId: 'price_1Sj531FeHfNScQDP8kMvWUpP', baseDevices: 10, maxDevices: 50 },
-  business: { priceId: 'price_1Sj53TFeHfNScQDPyAN6B3RG', baseDevices: 30, maxDevices: 200 },
+  starter_compliance: { priceId: 'price_1T9ltDFeHfNScQDPDCs2evWV', baseDevices: 10, maxDevices: 50 },
+  business: { priceId: 'price_1T9lV8FeHfNScQDPfQJhglVa', baseDevices: 30, maxDevices: 200 },
 };
 
 const ADDON_PRICES: Record<string, string> = {

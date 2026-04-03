@@ -25,6 +25,7 @@ import { GovernanceHealthBanner } from '@/components/admin/GovernanceHealthBanne
 import { SecurityAdvisorCard } from '@/components/admin/SecurityAdvisorCard';
 import { NotificationSetupBanner } from '@/components/admin/NotificationSetupBanner';
 import { OnboardingRequiredBanner } from '@/components/admin/OnboardingRequiredBanner';
+import { PlanLimitBanner } from '@/components/PlanLimitBanner';
 import { SimpleDashboard } from '@/components/dashboard/SimpleDashboard';
 import { GuidedTour } from '@/components/admin/GuidedTour';
 import { GamificationHub } from '@/components/gamification/GamificationHub';
@@ -181,6 +182,7 @@ export default function Dashboard() {
     <div className="space-y-5">
       {/* Banners — contextuais, somem quando resolvidos */}
       <OnboardingRequiredBanner />
+      <PlanLimitBanner />
       <NotificationSetupBanner />
       <GovernanceHealthBanner />
 
