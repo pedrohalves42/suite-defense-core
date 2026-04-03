@@ -64,9 +64,10 @@ async function callGoogleGemini(
 async function callOpenAICompatible(
   config: AIProviderConfig, messages: AIMessage[], maxTokens: number
 ): Promise<{ content: string; tokens?: { prompt?: number; completion?: number; total?: number } }> {
-  const response = await fetch(config.baseUrl, {
+  const response = await fetchWithTimeout(config.baseUrl, {
     method: 'POST', headers: config.headers(),
     body: JSON.stringify({ model: config.model, messages, max_tokens: maxTokens, temperature: 0.7 }),
+    timeoutMs: TIMEOUT_TIERS.AI,
   });
   if (!response.ok) { const errorText = await response.text(); throw new Error(`${config.displayName} API error ${response.status}: ${errorText}`); }
   const data = await response.json();

@@ -81,12 +81,13 @@ export async function handleSecurityCopilot(
 
   const tenantContext = await getTenantContext(supabase, tenantId);
 
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+  const response = await fetchWithTimeout('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${LOVABLE_API_KEY}`,
       'Content-Type': 'application/json',
     },
+    timeoutMs: TIMEOUT_TIERS.AI,
     body: JSON.stringify({
       model: 'google/gemini-3-flash-preview',
       messages: [
