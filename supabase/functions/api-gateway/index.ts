@@ -303,17 +303,6 @@ Deno.serve(async (req) => {
       return jsonRes(result, 200, origin);
     }
 
-    // API-key proxy
-    const apiKeyTarget = API_KEY_PROXY[action];
-    if (apiKeyTarget) {
-      const url = `${SUPABASE_URL}/functions/v1/${apiKeyTarget}`;
-      logger.info(`[api-gateway] API-key proxy: ${action} → ${apiKeyTarget}`, { requestId });
-      const response = await fetchWithTimeout(url, { method: 'POST', headers: forwardHeaders(req, requestId), body: JSON.stringify(payload), timeoutMs: FETCH_TIMEOUT_MS });
-      const responseData = await response.text();
-      logger.info(`[api-gateway] ${action} done in ${Date.now() - startedAt}ms (status: ${response.status})`);
-      return new Response(responseData, { status: response.status, headers: { ...buildCorsHeaders(origin), 'Content-Type': response.headers.get('Content-Type') || 'application/json' } });
-    }
-
     // Proxy to target function
     const targetFn = ACTION_TO_FUNCTION[action];
     const url = `${SUPABASE_URL}/functions/v1/${targetFn}`;
