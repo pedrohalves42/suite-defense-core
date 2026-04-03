@@ -169,12 +169,12 @@ export async function handleSubscriptionUpdate(supabase: SupabaseClient, subscri
     metadata: { base_devices: baseDevices, addon_devices: addonDevices, base_price_id: basePriceId, status },
   });
 
-  // Feature sync
-  const planName = metadata?.plan_name;
+  // Feature sync — resolve metadata plan name to DB plan name
+  const resolvedPlanName = resolveDbPlanName(metadata?.plan_name);
   const maxDevices = metadata?.max_devices ? parseInt(metadata.max_devices) : null;
 
-  if (planName) {
-    await supabase.rpc("ensure_tenant_features", { p_tenant_id: tenantSub.tenant_id, p_plan_name: planName, p_device_quantity: maxDevices || totalDevices });
+  if (resolvedPlanName) {
+    await supabase.rpc("ensure_tenant_features", { p_tenant_id: tenantSub.tenant_id, p_plan_name: resolvedPlanName, p_device_quantity: maxDevices || totalDevices });
   } else if (tenantSub.plan_id) {
     const { data: plan } = await supabase.from("subscription_plans").select("name, max_devices").eq("id", tenantSub.plan_id).single();
     if (plan) {
