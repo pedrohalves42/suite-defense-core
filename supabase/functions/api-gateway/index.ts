@@ -209,7 +209,6 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
 const ALL_VALID_ACTIONS = new Set([
   ...Object.keys(ACTION_TO_FUNCTION),
   ...Object.keys(INLINED_HANDLERS),
-  ...Object.keys(API_KEY_PROXY),
 ]);
 
 const RouterSchema = z.object({
