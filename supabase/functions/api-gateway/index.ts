@@ -89,10 +89,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ACTION_TO_FUNCTION: Record<string, string> = {
   // security proxy targets — serveTenant (JWT-compatible)
   'security:scan-vulnerabilities': 'scan-vulnerabilities',
-  'security:calculate-compliance': 'calculate-compliance',
-  'security:export-evidence-bundle': 'export-evidence-bundle',
   'security:fido2-register': 'fido2-register',
-  'security:translate-cve': 'translate-cve',
   // build proxy targets — serveTenant (JWT-compatible)
   'build:build-agent-exe': 'build-agent-exe',
   'build:generate-deploy-package': 'generate-deploy-package',
