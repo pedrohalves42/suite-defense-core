@@ -49613,6 +49613,20 @@ export type Database = {
         Args: { p_action_type: string; p_tenant_id: string }
         Returns: boolean
       }
+      check_agent_job_failure_rate: {
+        Args: {
+          p_agent_id: string
+          p_days_back?: number
+          p_job_type: string
+          p_threshold?: number
+        }
+        Returns: {
+          failed_jobs: number
+          failure_rate: number
+          should_skip: boolean
+          total_jobs: number
+        }[]
+      }
       check_ai_circuit_breaker: {
         Args: { p_action_type: string; p_tenant_id: string }
         Returns: Json
@@ -50420,6 +50434,22 @@ export type Database = {
           status: string
           threshold: number
           total_attempts: number
+        }[]
+      }
+      get_job_failure_stats: {
+        Args: {
+          p_days_back?: number
+          p_group_by_agent?: boolean
+          p_tenant_id: string
+        }
+        Returns: {
+          agent_id: string
+          agent_name: string
+          completed_jobs: number
+          failed_jobs: number
+          failure_rate: number
+          job_type: string
+          total_jobs: number
         }[]
       }
       get_job_health_summary: { Args: never; Returns: Json }
