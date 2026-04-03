@@ -104,7 +104,7 @@ serveTenant(async (req, ctx) => {
       let signedBy: string | null = null;
 
       if (ED25519_PRIVATE_KEY) {
-        signatureBase64 = await signPayload(`release:${platform}:${VERSION}:${hash}`, ED25519_PRIVATE_KEY);
+        signatureBase64 = await signPayload(hash, ED25519_PRIVATE_KEY);
         signedAt = new Date().toISOString();
         signedBy = 'automation';
       }
