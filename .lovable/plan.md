@@ -1,51 +1,61 @@
 
-# Fase 1A: Inline Security Namespace (28 proxied → handlers) ✅ CONCLUÍDO
+# Fase 1D: Inline Report Namespace (8 proxied → handlers)
 
-## Resultado
-- 28 funções de segurança inlined nos gateways (api-gateway + ops-gateway)
-- Handlers criados: security-threats.ts, security-scanning.ts, security-intel.ts (api-gateway) + security-ops.ts (ops-gateway)
-- 6 funções mantidas standalone (auth específica): scan-virus, submit-vuln-findings, update-baseline, check-failed-logins, record-failed-login, translate-cve
+## Contexto
+- **149 funções standalone** atualmente (meta: < 60)
+- ops-gateway tem **8 report:** proxied via HTTP (double cold-start)
+- Inlinar essas 8 elimina 8 cold starts extras por chamada
 
----
+## Funções a Inlinar (8)
 
-# Fase 1B: Inline Honeypot + Anomaly + Block-Website (5 → handlers) ✅ CONCLUÍDO
+| Função | Middleware | Linhas | Handler Destino |
+|--------|-----------|--------|-----------------|
+| `generate-compliance-report` | serveTenant | 370 | `handlers/report-generators.ts` |
+| `generate-executive-report` | serveInternal | 171 | `handlers/report-generators.ts` |
+| `generate-explainable-report` | serveTenant | 175 | `handlers/report-generators.ts` |
+| `generate-security-report` | serveTenant | 429 | `handlers/report-generators.ts` |
+| `generate-weekly-report` | serveInternal | 316 | `handlers/report-scheduled.ts` |
+| `auto-generate-report` | serveInternal | 159 | `handlers/report-scheduled.ts` |
+| `scheduled-report-generator` | serveInternal | 212 | `handlers/report-scheduled.ts` |
+| `list-reports` | serveAgent | 28 | `handlers/report-scheduled.ts` |
 
-## Resultado
-- 5 funções inlined: activate-agent-honeypot, revert-agent-honeypot, create-honeypot-pool, ai-behavioral-anomaly-detector, block-website
-- 3 mantidas standalone: honeypot-handler, get-blocked-websites, serve-dns-filter
+### ⚠️ Exceções Importantes
+- `generate-compliance-report` (370 linhas) e `generate-security-report` (429 linhas) são grandes — verificar se possuem sub-módulos antes de decidir inlinar
+- `list-reports` usa `serveAgent` — precisará adaptação para `assertInternalCaller`
 
----
+## Funções Mantidas Standalone (não nesta fase)
+- Todas as **playbook complexas** (6): já documentadas na Fase 1C
+- Todas as **submit-* HMAC** (7): requerem raw body
+- Todas as **agent-facing** (agent:*, serveAgent/HMAC): auth incompatível
+- Todas as **build:*** e **security:*** proxied: fase futura
 
-# Fase 1C: Inline Playbook Namespace (11 → handlers) ✅ CONCLUÍDO
+## Plano de Execução
 
-## Funções Migradas (11)
+### Etapa 1: Análise de sub-módulos
+- Verificar imports de cada função report para mapear dependências
+- Funções com >400 linhas + sub-módulos complexos podem ser mantidas standalone
 
-| Função | Gateway | Handler |
-|--------|---------|---------|
-| `execute-playbook` | ops-gateway | `handlers/playbook-core.ts` |
-| `process-playbook-trigger-logs` | ops-gateway | `handlers/playbook-core.ts` |
-| `rollback-by-decision-event` | ops-gateway | `handlers/playbook-core.ts` |
-| `rollback-remediation` | ops-gateway | `handlers/playbook-core.ts` |
-| `resolve-action-policy` | ops-gateway | `handlers/playbook-core.ts` |
-| `soar-engine` | ops-gateway | `handlers/playbook-automation.ts` |
-| `auto-execute-ai-actions` | ops-gateway | `handlers/playbook-automation.ts` |
-| `oncall-integration` | ops-gateway | `handlers/playbook-automation.ts` |
-| `create-itsm-ticket` | ops-gateway | `handlers/playbook-automation.ts` |
-| `calculate-risk-score` | ops-gateway | `handlers/playbook-analysis.ts` |
-| `run-attack-simulation` | ops-gateway | `handlers/playbook-analysis.ts` |
+### Etapa 2: Criar handlers
+- `supabase/functions/ops-gateway/handlers/report-generators.ts` — geradores sob demanda
+- `supabase/functions/ops-gateway/handlers/report-scheduled.ts` — scheduled/cron reports
 
-## Funções Mantidas Standalone (6)
+### Etapa 3: Registrar no ops-gateway/index.ts
+- Mover de `ACTION_TO_FUNCTION` (proxy) para `INLINED_HANDLERS`
 
-| Função | Razão |
-|--------|-------|
-| `execute-playbook-action` | Orchestrator complexo (318+ linhas, sub-módulos) |
-| `auto-remediate` | Blast radius checks críticos (311 linhas) |
-| `evaluate-automation-rules` | 5 sub-módulos (700+ linhas total) |
-| `evaluate-playbook-triggers` | 3 sub-módulos (condition-engine, approval-handler) |
-| `autonomous-safe-mode` | 3 rules/ processors (1282 linhas total) |
-| `evaluate-software-risk` | servePublic — auth incompatível com gateway |
+### Etapa 4: Frontend
+- Buscar hooks/componentes que chamam essas funções diretamente
+- Migrar para `callGateway('report', ...)`
 
-## Ganhos Fase 1C
-- **-11 cold starts** por chamada playbook
-- **-11 funções standalone** deletadas
-- **Frontend atualizado**: 5 hooks/componentes migrados para callGateway
+### Etapa 5: Deletar standalone + Deploy
+- Deletar as 8 pastas de funções
+- Deletar deploys remotos
+- Atualizar docs
+
+### Etapa 6: Validação
+- TypeScript build check
+- Testar endpoint via curl
+
+## Ganhos Esperados
+- **-8 cold starts** por chamada report
+- **-8 funções standalone** (149 → 141)
+- **Economia**: ~$2-5/mês em compute por eliminar double cold-start
