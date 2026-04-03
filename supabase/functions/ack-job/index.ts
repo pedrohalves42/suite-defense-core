@@ -67,7 +67,7 @@ serveAgent(async (req, ctx) => {
   }
 
   // Idempotency
-  if (existingJob.status === 'done') {
+  if (existingJob.status === 'completed') {
     return {
       ok: true,
       message: 'Job ja estava confirmado (v1 - DEPRECATED)',
