@@ -40,15 +40,7 @@ export default function RevenueProjections() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["revenue-projections"],
     queryFn: async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) throw new Error("Not authenticated");
-
-      const response = await supabase.functions.invoke("revenue-projections", {
-        method: "GET",
-      });
-
-      if (response.error) throw response.error;
-      return response.data as RevenueProjectionsData;
+      return await callGateway<RevenueProjectionsData>('billing', 'revenue-projections');
     },
   });
 
