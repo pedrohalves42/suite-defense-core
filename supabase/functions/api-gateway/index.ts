@@ -161,6 +161,13 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'admin:update-user-role': handleUpdateUserRole,
   'admin:create-user': handleAdminCreateUser,
   'admin:rate-limit-stats': handleGetRateLimitStats,
+  // agent-mgmt inlined (Phase 2E)
+  'agent:agent-snapshot': handleAgentSnapshot,
+  'agent:check-agent-name-availability': handleCheckAgentNameAvailability,
+  'agent:diagnose-agent': handleDiagnoseAgent,
+  'agent:get-agent-timeline': handleGetAgentTimeline,
+  // build inlined (Phase 2E)
+  'build:build-callback': handleBuildCallback,
 };
 
 // API-key authenticated endpoints (still proxy — they have own auth flow)
