@@ -1,0 +1,122 @@
+/**
+ * public-gateway — Unified Public API Gateway (Phase 5)
+ *
+ * Consolidates servePublic functions that don't require JWT authentication.
+ * 
+ * Routing:
+ *   POST { action: "public:check-failed-logins", payload: {} }
+ *   GET  ?action=public:health
+ *   GET  ?action=public:approve-via-token&token=...
+ */
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { buildCorsHeaders } from '../_shared/cors.ts';
+import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+import { requireEnv } from '../_shared/env.ts';
+import { securityHeaders } from '../_shared/security-headers.ts';
+
+// Handlers
+import { handleCheckFailedLogins, handleRecordFailedLogin } from './handlers/auth-security.ts';
+import { handleApproveViaToken } from './handlers/approval.ts';
+import { handleSubmitContact } from './handlers/contact.ts';
+import { handleHealth } from './handlers/health.ts';
+import { handleEvaluateSoftwareRisk } from './handlers/software-risk.ts';
+import { handleGetReinstallScript, handleGetReinstallPreserveScript } from './handlers/scripts.ts';
+
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+
+type PublicHandler = (
+  supabase: SupabaseClient,
+  req: Request,
+  requestId: string,
+  payload: Record<string, unknown>,
+) => Promise<Response | Record<string, unknown>>;
+
+const INLINED_HANDLERS: Record<string, PublicHandler> = {
+  'public:check-failed-logins': handleCheckFailedLogins,
+  'public:record-failed-login': handleRecordFailedLogin,
+  'public:approve-via-token': handleApproveViaToken as PublicHandler,
+  'public:submit-contact': handleSubmitContact as PublicHandler,
+  'public:health': handleHealth as PublicHandler,
+  'public:evaluate-software-risk': handleEvaluateSoftwareRisk,
+  'public:get-reinstall-script': handleGetReinstallScript as PublicHandler,
+  'public:get-reinstall-preserve-script': handleGetReinstallPreserveScript as PublicHandler,
+};
+
+const ALL_ACTIONS = new Set(Object.keys(INLINED_HANDLERS));
+
+const RouterSchema = z.object({
+  action: z.string().min(1).max(80),
+  payload: z.record(z.unknown()).optional().default({}),
+});
+
+function jsonRes(data: unknown, status: number, origin: string | null) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...buildCorsHeaders(origin), ...securityHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+Deno.serve(async (req) => {
+  const origin = req.headers.get('origin');
+  if (req.method === 'OPTIONS') return new Response(null, { headers: buildCorsHeaders(origin) });
+
+  const requestId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
+  const startedAt = Date.now();
+
+  try {
+    const supabase = createClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'));
+
+    let action: string;
+    let payload: Record<string, unknown> = {};
+
+    if (req.method === 'GET') {
+      const url = new URL(req.url);
+      action = url.searchParams.get('action') || '';
+      // Pass all query params as payload for GET requests
+      for (const [key, value] of url.searchParams.entries()) {
+        if (key !== 'action') payload[key] = value;
+      }
+    } else if (req.method === 'POST') {
+      let body: unknown = {};
+      try { body = await req.json(); } catch { body = {}; }
+      const parsed = RouterSchema.safeParse(body);
+      if (!parsed.success) {
+        return jsonRes({ error: 'Invalid request', details: parsed.error.flatten().fieldErrors }, 400, origin);
+      }
+      action = parsed.data.action;
+      payload = parsed.data.payload;
+    } else {
+      return jsonRes({ error: 'Method not allowed' }, 405, origin);
+    }
+
+    if (!ALL_ACTIONS.has(action)) {
+      return jsonRes({
+        error: `Unknown action: ${action}`,
+        available_actions: Array.from(ALL_ACTIONS),
+        hint: 'Use format "public:action-name"',
+      }, 400, origin);
+    }
+
+    const handler = INLINED_HANDLERS[action];
+    logger.info(`[public-gateway] ${action}`, { requestId });
+
+    const result = await handler(supabase, req, requestId, payload);
+
+    if (result instanceof Response) return result;
+
+    const resultObj = result as Record<string, unknown>;
+    const status = typeof resultObj?.__status === 'number' ? resultObj.__status : 200;
+    if (resultObj?.__status) {
+      const { __status, ...rest } = resultObj;
+      return jsonRes(rest, status, origin);
+    }
+
+    const elapsed = Date.now() - startedAt;
+    logger.info(`[public-gateway] ${action} done in ${elapsed}ms`);
+    return jsonRes(result, 200, origin);
+  } catch (err) {
+    logger.error('[public-gateway] Error:', err);
+    return jsonRes({ error: 'Internal error', message: err instanceof Error ? err.message : 'Unknown', requestId }, 500, origin);
+  }
+});
