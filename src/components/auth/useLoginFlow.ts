@@ -65,7 +65,7 @@ export function useLoginFlow() {
             toast({
               variant: 'destructive',
               title: t('loginPage.ipBlocked'),
-              description: t('loginPage.ipBlockedDesc', { until: formatBrazilDateTime(data.blockedUntil, 'datetime'), count: data.attemptCount || 5 }),
+              description: t('loginPage.ipBlockedDesc', { until: formatBrazilDateTime(String(data.blockedUntil ?? ''), 'datetime'), count: Number(data.attemptCount ?? 5) }),
               duration: 15000,
             });
             setLoading(true);
