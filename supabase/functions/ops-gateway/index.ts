@@ -194,6 +194,9 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   // ── sync cron inlined (Phase 4) ──
   'sync:process-agent-updates': handleProcessAgentUpdates,
   'sync:seed-collection-jobs': handleSeedCollectionJobs,
+  // ── secret rotation compliance (SOC 2) ──
+  'check:secret-rotation-compliance': handleSecretRotationCompliance,
+  'check:record-secret-rotation': handleRecordSecretRotation,
 };
 
 const ALL_VALID_ACTIONS = new Set([
