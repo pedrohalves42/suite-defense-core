@@ -36,14 +36,9 @@ export const useSubscription = () => {
     queryFn: async () => {
       if (!user) throw new Error('Not authenticated');
 
-      const { data, error } = await supabase.functions.invoke('check-subscription', {
-        headers: {
-          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-        }
-      });
-
-      if (error) throw error;
-      return data as SubscriptionData;
+      const data = await callGateway<SubscriptionData>('billing', 'check-subscription');
+      return data;
+    },
     },
     enabled: !!user,
     staleTime: 5 * 60 * 1000, // 5 minutes
