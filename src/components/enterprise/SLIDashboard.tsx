@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Activity, Clock, RefreshCw, TrendingUp, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
-import { callEdgeFunction } from '@/lib/edge-function-client';
+import { callGateway } from '@/lib/gateway';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface SLIData {
