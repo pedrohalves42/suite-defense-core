@@ -66,6 +66,24 @@ import { handleCreateHoneypotPool } from './handlers/honeypot-pool.ts';
 import { handleAiBehavioralAnomalyDetector } from './handlers/anomaly-ops.ts';
 import { handleBlockWebsite } from './handlers/block-website.ts';
 
+// Inlined handlers — playbook-core (Phase 1C)
+import {
+  handleExecutePlaybook, handleProcessPlaybookTriggerLogs,
+  handleRollbackByDecisionEvent, handleRollbackRemediation,
+  handleResolveActionPolicy,
+} from './handlers/playbook-core.ts';
+
+// Inlined handlers — playbook-automation (Phase 1C)
+import {
+  handleSoarEngine, handleAutoExecuteAiActions,
+  handleOncallIntegration, handleCreateItsmTicket,
+} from './handlers/playbook-automation.ts';
+
+// Inlined handlers — playbook-analysis (Phase 1C)
+import {
+  handleCalculateRiskScore, handleRunAttackSimulation,
+} from './handlers/playbook-analysis.ts';
+
 // Inlined handlers — sync cron (Phase 4)
 import { handleProcessAgentUpdates, handleSeedCollectionJobs } from './handlers/sync-cron.ts';
 
@@ -99,24 +117,12 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 // ── Flat proxy map: "namespace:action" → target function ────────────────
 const ACTION_TO_FUNCTION: Record<string, string> = {
-  // sync proxy targets — all inlined in Phase 3B
-  // playbook proxy targets
-  'playbook:execute-playbook': 'execute-playbook',
+  // playbook proxy targets (remaining — complex/standalone)
   'playbook:execute-playbook-action': 'execute-playbook-action',
   'playbook:evaluate-playbook-triggers': 'evaluate-playbook-triggers',
-  'playbook:process-playbook-trigger-logs': 'process-playbook-trigger-logs',
   'playbook:evaluate-automation-rules': 'evaluate-automation-rules',
-  'playbook:auto-execute-ai-actions': 'auto-execute-ai-actions',
   'playbook:auto-remediate': 'auto-remediate',
   'playbook:autonomous-safe-mode': 'autonomous-safe-mode',
-  'playbook:rollback-by-decision-event': 'rollback-by-decision-event',
-  'playbook:rollback-remediation': 'rollback-remediation',
-  'playbook:resolve-action-policy': 'resolve-action-policy',
-  'playbook:soar-engine': 'soar-engine',
-  'playbook:oncall-integration': 'oncall-integration',
-  'playbook:create-itsm-ticket': 'create-itsm-ticket',
-  'playbook:run-attack-simulation': 'run-attack-simulation',
-  'playbook:calculate-risk-score': 'calculate-risk-score',
   'playbook:evaluate-software-risk': 'evaluate-software-risk',
   // report proxy targets (all proxy)
   'report:compliance': 'generate-compliance-report',
@@ -222,6 +228,18 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'security:integrity-sentinel': handleIntegritySentinel,
   'security:populate-security-graph': handlePopulateSecurityGraph,
   'security:publish-threat-ioc': handlePublishThreatIoc,
+  // ── playbook inlined (Phase 1C) ──
+  'playbook:execute-playbook': handleExecutePlaybook,
+  'playbook:process-playbook-trigger-logs': handleProcessPlaybookTriggerLogs,
+  'playbook:rollback-by-decision-event': handleRollbackByDecisionEvent,
+  'playbook:rollback-remediation': handleRollbackRemediation,
+  'playbook:resolve-action-policy': handleResolveActionPolicy,
+  'playbook:soar-engine': handleSoarEngine,
+  'playbook:auto-execute-ai-actions': handleAutoExecuteAiActions,
+  'playbook:oncall-integration': handleOncallIntegration,
+  'playbook:create-itsm-ticket': handleCreateItsmTicket,
+  'playbook:calculate-risk-score': handleCalculateRiskScore,
+  'playbook:run-attack-simulation': handleRunAttackSimulation,
 };
 
 const ALL_VALID_ACTIONS = new Set([

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Phone, Bell, RefreshCw, AlertTriangle, CheckCircle2, ArrowUpCircle, Clock, User } from 'lucide-react';
-import { callEdgeFunction } from '@/lib/edge-function-client';
+import { callGateway } from '@/lib/gateway';
 import { toast } from 'sonner';
 
 interface OnCallUser {
@@ -39,8 +39,8 @@ export function OnCallDashboard() {
     setLoading(true);
     try {
       const [oncallRes, alertsRes] = await Promise.all([
-        callEdgeFunction('oncall-integration', { action: 'who-is-oncall' }),
-        callEdgeFunction('oncall-integration', { action: 'alerts' }),
+        callGateway<{ oncall: OnCallUser[]; source: string }>('playbook', 'oncall-integration', { action: 'who-is-oncall' }),
+        callGateway<{ alerts: OnCallAlert[] }>('playbook', 'oncall-integration', { action: 'alerts' }),
       ]);
       setOncall(oncallRes.oncall || []);
       setSource(oncallRes.source || 'local');
@@ -60,7 +60,7 @@ export function OnCallDashboard() {
 
   const handleAcknowledge = async (alert: OnCallAlert) => {
     try {
-      await callEdgeFunction('oncall-integration', {
+      await callGateway('playbook', 'oncall-integration', {
         action: 'alert',
         summary: alert.summary,
         severity: 'low',
@@ -76,7 +76,7 @@ export function OnCallDashboard() {
   const handleEscalate = async () => {
     if (!selectedAlert) return;
     try {
-      await callEdgeFunction('oncall-integration', {
+      await callGateway('playbook', 'oncall-integration', {
         action: 'escalate',
         incidentId: selectedAlert.incident_id,
       });

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { useTenant } from './useTenant';
 import { toast } from 'sonner';
 
@@ -78,10 +79,7 @@ export const useItsmIntegrations = () => {
       agent_id?: string;
       agent_name?: string;
     }) => {
-      const { data, error } = await supabase.functions.invoke('create-itsm-ticket', {
-        body: params,
-      });
-      if (error) throw error;
+      const data = await callGateway('playbook', 'create-itsm-ticket', params);
       return data;
     },
     onSuccess: (data) => {

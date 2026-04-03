@@ -55,6 +55,23 @@
 | ~~ai-behavioral-anomaly-detector~~ | ops-gateway `check:ai-behavioral-anomaly-detector` |
 | ~~block-website~~ | ops-gateway `security:block-website` |
 
+### Inlined Standalone Functions (Phase 1C — 2026-04-03)
+> Playbook namespace functions inlined into ops-gateway.
+
+| Function | Replaced By |
+|---|---|
+| ~~execute-playbook~~ | ops-gateway `playbook:execute-playbook` |
+| ~~process-playbook-trigger-logs~~ | ops-gateway `playbook:process-playbook-trigger-logs` |
+| ~~rollback-by-decision-event~~ | ops-gateway `playbook:rollback-by-decision-event` |
+| ~~rollback-remediation~~ | ops-gateway `playbook:rollback-remediation` |
+| ~~resolve-action-policy~~ | ops-gateway `playbook:resolve-action-policy` |
+| ~~soar-engine~~ | ops-gateway `playbook:soar-engine` |
+| ~~auto-execute-ai-actions~~ | ops-gateway `playbook:auto-execute-ai-actions` |
+| ~~oncall-integration~~ | ops-gateway `playbook:oncall-integration` |
+| ~~create-itsm-ticket~~ | ops-gateway `playbook:create-itsm-ticket` |
+| ~~calculate-risk-score~~ | ops-gateway `playbook:calculate-risk-score` |
+| ~~run-attack-simulation~~ | ops-gateway `playbook:run-attack-simulation` |
+
 ## Justified Exceptions — Agent-Facing / HMAC (8 functions)
 > These require raw body access for HMAC signature verification or have triple auth flows (agent token + JWT + anonymous).
 

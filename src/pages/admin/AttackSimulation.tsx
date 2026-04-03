@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { callGateway } from "@/lib/gateway";
 import { useTenant } from "@/hooks/useTenant";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -41,10 +42,8 @@ export default function AttackSimulation() {
 
   const runSimulation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("run-attack-simulation", {
-        body: { tenant_id: tenant!.id, simulation_type: selectedType },
-      });
-      if (error) throw error;
+      const data = await callGateway('playbook', 'run-attack-simulation', { tenant_id: tenant!.id, simulation_type: selectedType });
+      return data;
       return data;
     },
     onSuccess: () => {

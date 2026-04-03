@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
 import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
@@ -147,11 +148,9 @@ export const useAutoRemediation = () => {
 
   const rollbackAction = useMutation({
     mutationFn: async (actionId: string) => {
-      const { data, error } = await supabase.functions.invoke('rollback-remediation', {
-        body: { action_id: actionId }
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.message || data.error);
+      const data = await callGateway('playbook', 'rollback-remediation', { action_id: actionId });
+      if (data?.error) throw new Error((data as Record<string, string>).message || (data as Record<string, string>).error);
+      return data;
       return data;
     },
     onSuccess: () => {
