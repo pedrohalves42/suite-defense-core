@@ -1,7 +1,7 @@
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import React from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,8 +32,7 @@ export default function Subscriptions() {
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
     queryKey: ['invoices', tenant?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('list-invoices');
-      if (error) throw error;
+      const data = await callGateway<{ invoices: any[] }>('billing', 'list-invoices');
       return data.invoices || [];
     },
     enabled: !!tenant?.id && subscription?.plan_name !== 'free',
@@ -42,9 +41,7 @@ export default function Subscriptions() {
   // Open customer portal
   const openPortal = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('customer-portal');
-      if (error) throw error;
-      return data;
+      return await callGateway<Record<string, any>>('billing', 'customer-portal');
     },
     onSuccess: (data) => {
       // Handle different response types

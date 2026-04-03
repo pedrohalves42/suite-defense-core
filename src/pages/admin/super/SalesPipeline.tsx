@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { callGateway } from "@/lib/gateway";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,26 +63,13 @@ export default function SalesPipeline() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["sales-pipeline"],
     queryFn: async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) throw new Error("Not authenticated");
-
-      const response = await supabase.functions.invoke("sales-pipeline", {
-        method: "GET",
-      });
-
-      if (response.error) throw response.error;
-      return response.data as PipelineData;
+      return await callGateway<PipelineData>('billing', 'sales-pipeline', { _method: 'GET' });
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (newDeal: typeof formData) => {
-      const response = await supabase.functions.invoke("sales-pipeline", {
-        method: "POST",
-        body: newDeal,
-      });
-      if (response.error) throw response.error;
-      return response.data;
+      return await callGateway<Record<string, any>>('billing', 'sales-pipeline', { _method: 'POST', ...newDeal });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales-pipeline"] });
@@ -97,12 +84,7 @@ export default function SalesPipeline() {
 
   const updateMutation = useMutation({
     mutationFn: async (deal: Partial<Deal> & { id: string }) => {
-      const response = await supabase.functions.invoke("sales-pipeline", {
-        method: "PATCH",
-        body: deal,
-      });
-      if (response.error) throw response.error;
-      return response.data;
+      return await callGateway<Record<string, any>>('billing', 'sales-pipeline', { _method: 'PATCH', ...deal });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales-pipeline"] });
@@ -118,12 +100,7 @@ export default function SalesPipeline() {
 
   const deleteMutation = useMutation({
     mutationFn: async (dealId: string) => {
-      const response = await supabase.functions.invoke("sales-pipeline", {
-        method: "DELETE",
-        body: { id: dealId },
-      });
-      if (response.error) throw response.error;
-      return response.data;
+      return await callGateway<Record<string, any>>('billing', 'sales-pipeline', { _method: 'DELETE', id: dealId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales-pipeline"] });

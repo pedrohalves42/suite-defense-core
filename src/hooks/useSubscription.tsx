@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { callGateway } from '@/lib/gateway';
 import { usePageVisibility } from './usePageVisibility';
 
 interface SubscriptionFeature {
@@ -35,24 +35,16 @@ export const useSubscription = () => {
     queryKey: ['subscription', user?.id],
     queryFn: async () => {
       if (!user) throw new Error('Not authenticated');
-
-      const { data, error } = await supabase.functions.invoke('check-subscription', {
-        headers: {
-          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-        }
-      });
-
-      if (error) throw error;
-      return data as SubscriptionData;
+      return await callGateway<SubscriptionData>('billing', 'check-subscription');
     },
     enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchInterval: isVisible ? 600_000 : false, // 10 min when visible, off when hidden
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: isVisible ? 600_000 : false,
   });
 
   return {
     subscription,
     isLoading,
-    refetch
+    refetch,
   };
 };

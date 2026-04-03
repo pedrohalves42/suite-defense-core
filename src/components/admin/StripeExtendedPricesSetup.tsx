@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { callGateway } from '@/lib/gateway';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,8 +40,7 @@ export function StripeExtendedPricesSetup() {
   // Create extended prices mutation
   const createPrices = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('create-stripe-products-extended');
-      if (error) throw error;
+      const data = await callGateway<Record<string, any>>('billing', 'create-stripe-products-extended');
       return data;
     },
     onSuccess: (data) => {

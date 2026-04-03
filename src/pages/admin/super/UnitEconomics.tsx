@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { callGateway } from "@/lib/gateway";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign, TrendingUp, Users, Clock, Target, Percent } from "lucide-react";
@@ -24,15 +24,7 @@ export default function UnitEconomics() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["unit-economics"],
     queryFn: async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) throw new Error("Not authenticated");
-
-      const response = await supabase.functions.invoke("unit-economics", {
-        method: "GET",
-      });
-
-      if (response.error) throw response.error;
-      return response.data as UnitEconomicsData;
+      return await callGateway<UnitEconomicsData>('billing', 'unit-economics');
     },
   });
 

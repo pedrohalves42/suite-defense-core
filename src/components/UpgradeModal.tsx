@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, Lock, Crown, ArrowRight, Loader2, AlertTriangle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { callGateway } from "@/lib/gateway";
 import { toast } from "sonner";
 import { PLAN_CONFIG, LEGACY_PLANS, isLegacyPlan } from "@/constants/plans";
 import { logger } from '@/lib/logger';
@@ -71,14 +71,10 @@ export function UpgradeModal({
   const handleUpgrade = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: {
-          planName: "business",
-          billingPeriod: "monthly",
-        },
+      const data = await callGateway<{ url?: string }>("billing", "create-checkout", {
+        planName: "business",
+        billingPeriod: "monthly",
       });
-
-      if (error) throw error;
 
       if (data?.url) {
         window.open(data.url, "_blank");
@@ -96,14 +92,10 @@ export function UpgradeModal({
     setLoading(true);
     try {
       // For legacy customers, create checkout for starter_compliance
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: {
-          planName: "starter_compliance",
-          billingPeriod: "monthly",
-        },
+      const data = await callGateway<{ url?: string }>("billing", "create-checkout", {
+        planName: "starter_compliance",
+        billingPeriod: "monthly",
       });
-
-      if (error) throw error;
 
       if (data?.url) {
         window.open(data.url, "_blank");

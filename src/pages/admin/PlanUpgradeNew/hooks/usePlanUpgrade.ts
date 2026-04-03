@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useTenant } from '@/hooks/useTenant';
@@ -14,23 +15,15 @@ export function usePlanUpgrade() {
   const { toast } = useToast();
   const { subscription, isLoading: subscriptionLoading, refetch: refetchSubscription } = useSubscription();
   const { tenant, loading: tenantLoading } = useTenant();
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('12m');
-
-  useEffect(() => {
-    logger.debug('PlanUpgradeNew loading states', { subscriptionLoading, tenantLoading, hasSubscription: !!subscription, hasTenant: !!tenant });
-  }, [subscriptionLoading, tenantLoading, subscription, tenant]);
 
   useEffect(() => {
     if (subscriptionLoading || tenantLoading) {
-      const timeoutId = setTimeout(() => {
-        logger.warn('PlanUpgradeNew loading timeout exceeded', { subscriptionLoading, tenantLoading, timeoutMs: LOADING_TIMEOUT_MS });
-        setLoadingTimedOut(true);
-      }, LOADING_TIMEOUT_MS);
-      return () => clearTimeout(timeoutId);
-    } else {
-      setLoadingTimedOut(false);
+      const timer = setTimeout(() => setLoadingTimedOut(true), LOADING_TIMEOUT_MS);
+      return () => clearTimeout(timer);
     }
+    setLoadingTimedOut(false);
   }, [subscriptionLoading, tenantLoading]);
 
   const { data: allPlans = [], isLoading: plansLoading, error: plansError } = useQuery({
@@ -49,9 +42,7 @@ export function usePlanUpgrade() {
 
   const createCheckout = useMutation({
     mutationFn: async ({ planName, period }: { planName: string; period: BillingPeriod }) => {
-      const { data, error } = await supabase.functions.invoke('create-checkout', { body: { planName, billingPeriod: period } });
-      if (error) throw error;
-      return data;
+      return await callGateway<Record<string, any>>('billing', 'create-checkout', { planName, billingPeriod: period });
     },
     onSuccess: (data) => {
       if (data.url) {
@@ -65,9 +56,7 @@ export function usePlanUpgrade() {
 
   const setupStripeProducts = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('create-stripe-products');
-      if (error) throw error;
-      return data;
+      return await callGateway<Record<string, any>>('billing', 'create-stripe-products');
     },
     onSuccess: () => {
       toast({ title: 'Produtos criados no Stripe!', description: 'Starter, Business e Scale configurados com sucesso.' });
@@ -78,9 +67,7 @@ export function usePlanUpgrade() {
 
   const openPortal = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('customer-portal');
-      if (error) throw error;
-      return data;
+      return await callGateway<Record<string, any>>('billing', 'customer-portal');
     },
     onSuccess: (data) => {
       if (data.url) {
