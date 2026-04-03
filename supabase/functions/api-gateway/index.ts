@@ -141,6 +141,13 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'billing:stripe-health-check': handleStripeHealthCheck,
   // security inlined
   'security:security-cleanup': handleSecurityCleanup,
+  // security inlined — Phase 1A (JWT-compatible)
+  'security:auto-block-threats': handleAutoBlockThreats,
+  'security:check-credential-leaks': handleCheckCredentialLeaks,
+  'security:clear-failed-logins': handleClearFailedLogins,
+  'security:classify-shadow-it': handleClassifyShadowIt,
+  'security:threat-intelligence-lookup': handleThreatIntelligenceLookup,
+  'security:build-security-graph': handleBuildSecurityGraph,
   // admin inlined (Phase 2A)
   'admin:get-admin-releases': handleGetAdminReleases,
   'admin:update-user-status': handleUpdateUserStatus,
