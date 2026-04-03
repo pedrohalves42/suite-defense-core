@@ -38,8 +38,8 @@ export function useVerification() {
           }
 
           if (reportData.audit_id) {
-            const { data: funcData, error: funcError } = await supabase.functions.invoke('verify-compliance-report', {
-              body: { audit_id: reportData.audit_id }
+            const { data: funcData, error: funcError } = await supabase.functions.invoke('public-gateway', {
+              body: { action: 'public:verify-compliance-report', payload: { audit_id: reportData.audit_id } }
             });
 
             if (funcError) {
