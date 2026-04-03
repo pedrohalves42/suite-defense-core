@@ -29,7 +29,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+
 import { Link } from 'react-router-dom';
 import { buildAgentReinstallCommand } from '@/lib/agentReinstallCommand';
 
