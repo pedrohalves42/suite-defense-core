@@ -14,7 +14,7 @@ const LOADING_TIMEOUT_MS = 15000;
 export function usePlanUpgrade() {
   const { toast } = useToast();
   const { subscription, isLoading: subscriptionLoading, refetch: refetchSubscription } = useSubscription();
-  const { tenant, isLoading: tenantLoading } = useTenant();
+  const { tenant, loading: tenantLoading } = useTenant();
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
 
