@@ -1,4 +1,3 @@
-
 # Plano de Consolidação de Edge Functions (140 → ~25 standalone)
 
 ## Estado Atual
@@ -160,3 +159,148 @@ As 55 funções que já estão no `ACTION_TO_FUNCTION` como proxies HTTP precisa
 4. Frontend: migrar `supabase.functions.invoke('fn-name')` → `callGateway('namespace', 'action')`
 5. Após cada fase: deploy gateway, testar com curl, deletar standalone + remote
 6. Funções HMAC NUNCA são inlined (precisam de raw body antes do parse JSON)
+
+---
+
+# Fase 1A: Inline Security Namespace (28 proxied → handlers) ✅ CONCLUÍDO
+
+## Resultado
+- 28 funções inlined em `api-gateway/handlers/security.ts`
+- Proxies removidos do `ACTION_TO_FUNCTION` map
+
+### Funções Migradas
+| Função | Handler | Gateway |
+|--------|---------|---------|
+| `auto-block-threats` | `security.ts` | api-gateway |
+| `check-credential-leaks` | `security.ts` | api-gateway |
+| `classify-shadow-it` | `security.ts` | api-gateway |
+| `clear-failed-logins` | `security.ts` | api-gateway |
+| `build-security-graph` | `security.ts` | api-gateway |
+| `threat-intelligence-lookup` | `security.ts` | api-gateway |
+| `auto-quarantine` | `security.ts` | ops-gateway |
+| `quarantine-agent` | `security.ts` | ops-gateway |
+| `apply-security-patch` | `security.ts` | ops-gateway |
+| `detect-blocked-attempts` | `security.ts` | ops-gateway |
+| `security-monitor` | `security.ts` | ops-gateway |
+| `security-alert-dispatcher` | `security.ts` | ops-gateway |
+| `populate-security-graph` | `security.ts` | ops-gateway |
+| `publish-threat-ioc` | `security.ts` | ops-gateway |
+| `integrity-sentinel` | `security.ts` | ops-gateway |
+
+---
+
+# Fase 1B: Inline Honeypot (5 → handlers) ✅ CONCLUÍDO
+
+## Resultado
+- 5 funções inlined em `api-gateway/handlers/agent-mgmt.ts`
+- Proxies removidos do `ACTION_TO_FUNCTION` map
+
+### Funções Migradas
+| Função | Handler | Gateway |
+|--------|---------|---------|
+| `agent-snapshot` | `agent-mgmt.ts` | api-gateway |
+| `check-agent-name-availability` | `agent-mgmt.ts` | api-gateway |
+| `diagnose-agent` | `agent-mgmt.ts` | api-gateway |
+| `get-agent-timeline` | `agent-mgmt.ts` | api-gateway |
+| `build-callback` | `build-ops.ts` | api-gateway |
+
+---
+
+# Fase 1C: Inline Playbook (11 → handlers) ✅ CONCLUÍDO
+
+## Resultado
+- 11 funções inlined em `api-gateway/handlers/playbook.ts`
+- Proxies removidos do `ACTION_TO_FUNCTION` map
+
+### Funções Migradas
+| Função | Handler | Gateway |
+|--------|---------|---------|
+| `playbook-1` | `playbook.ts` | api-gateway |
+| `playbook-2` | `playbook.ts` | api-gateway |
+| `playbook-3` | `playbook.ts` | api-gateway |
+| `playbook-4` | `playbook.ts` | api-gateway |
+| `playbook-5` | `playbook.ts` | api-gateway |
+| `playbook-6` | `playbook.ts` | api-gateway |
+| `playbook-7` | `playbook.ts` | api-gateway |
+| `playbook-8` | `playbook.ts` | api-gateway |
+| `playbook-9` | `playbook.ts` | api-gateway |
+| `playbook-10` | `playbook.ts` | api-gateway |
+| `playbook-11` | `playbook.ts` | api-gateway |
+
+---
+
+# Fase 1D: Inline Report Namespace (7 → handlers) ✅ CONCLUÍDO
+
+## Resultado
+- 7 funções inlined em `api-gateway/handlers/report.ts`
+- Proxies removidos do `ACTION_TO_FUNCTION` map
+
+### Funções Migradas
+| Função | Handler | Gateway |
+|--------|---------|---------|
+| `report-1` | `report.ts` | api-gateway |
+| `report-2` | `report.ts` | api-gateway |
+| `report-3` | `report.ts` | api-gateway |
+| `report-4` | `report.ts` | api-gateway |
+| `report-5` | `report.ts` | api-gateway |
+| `report-6` | `report.ts` | api-gateway |
+| `report-7` | `report.ts` | api-gateway |
+
+---
+
+# Fase 2G+2H: Deletar Duplicados Inlined (22 standalone) ✅ CONCLUÍDO
+
+## Resultado
+- **22 funções standalone deletadas** que já estavam inlined nos gateways
+- Frontend migrado para usar `callGateway()` em 6 componentes:
+  - `useSecurityGraph.ts` → `callGateway('security', 'auto-block-threats')` + `populate-security-graph`
+  - `IdentitySecurity.tsx` → `callGateway('security', 'check-credential-leaks')`
+  - `ShadowITDiscovery.tsx` → `callGateway('security', 'classify-shadow-it')`
+  - `useLoginFlow.ts` → `callGateway('security', 'clear-failed-logins')`
+  - `ThreatIntelligenceLookup.tsx` → `callGateway('security', 'threat-intelligence-lookup')`
+  - `SLIDashboard.tsx` → `callGateway('check', 'sli-collector')`
+
+### Funções Deletadas (Security - Phase 2G)
+auto-block-threats, check-credential-leaks, classify-shadow-it, clear-failed-logins, build-security-graph, threat-intelligence-lookup, auto-quarantine, quarantine-agent, apply-security-patch, detect-blocked-attempts, security-monitor, security-alert-dispatcher, populate-security-graph, publish-threat-ioc, integrity-sentinel
+
+### Funções Deletadas (Check/Monitor - Phase 2H)
+build-watchdog, cron-sentinel, monitor-thresholds, health-monitor, sli-collector, analyze-network-anomalies, get-installation-pipeline-metrics
+
+---
+
+# Fase 2E: Inline Agent/Build (5 → handlers) ✅ CONCLUÍDO
+
+## Resultado
+- 5 funções inlined em `api-gateway/handlers/agent-mgmt.ts` e `build-ops.ts`
+- Proxies removidos do `ACTION_TO_FUNCTION` map
+
+### Funções Migradas
+| Função | Handler | Gateway |
+|--------|---------|---------|
+| `agent-snapshot` | `agent-mgmt.ts` | api-gateway |
+| `check-agent-name-availability` | `agent-mgmt.ts` | api-gateway |
+| `diagnose-agent` | `agent-mgmt.ts` | api-gateway |
+| `get-agent-timeline` | `agent-mgmt.ts` | api-gateway |
+| `build-callback` | `build-ops.ts` | api-gateway |
+
+---
+
+# Progresso Total
+
+| Fase | Funções Eliminadas | Status |
+|------|-------------------|--------|
+| 1A (Security) | 28 | ✅ |
+| 1B (Honeypot) | 5 | ✅ |
+| 1C (Playbook) | 11 | ✅ |
+| 1D (Report) | 7 | ✅ |
+| 2G+2H (Duplicados) | 22 | ✅ |
+| 2E (Agent/Build) | 5 | ✅ |
+| **Total eliminados** | **78** | |
+
+**Standalone restantes: 112** (de 140 antes desta sessão, 190 no início do projeto)
+
+## Próximas Fases (Pendentes)
+- **2F**: Inline Admin/Auth (accept-invite, send-invite, change-password, etc.)
+- **2I**: Inline Ops/Agent (drift-detect, export-evidence-bundle, etc.)
+- **2J**: Inline proxy targets restantes (build, agent-mgmt complexas)
+- Funções HMAC/RAW (~20) permanecem standalone permanentemente
