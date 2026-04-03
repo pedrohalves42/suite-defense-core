@@ -26,14 +26,7 @@ export function useAgentMonitoring() {
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) return;
 
-      const { data, error } = await supabase.functions.invoke('get-agent-dashboard-data', {
-        body: { tenant_id: tenant.id },
-        headers: {
-          Authorization: `Bearer ${session.session.access_token}`,
-        },
-      });
-
-      if (error) throw error;
+      const data = await callGateway('agent', 'get-agent-dashboard-data', { tenant_id: tenant.id });
 
       setSummary(data.summary);
       setAgents(data.agents);

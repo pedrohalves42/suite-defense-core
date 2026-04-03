@@ -97,13 +97,10 @@ export function PreserveReinstallSection({ defaultAgentName }: PreserveReinstall
 
     try {
       setIsGeneratingAuto(true);
-      const { data, error } = await supabase.functions.invoke('recover-agent-credentials', {
-        body: { agent_name: agentName },
-      });
+      const data = await callGateway<Record<string, unknown>>('agent', 'recover-agent-credentials', { agent_name: agentName });
 
-      if (error) throw new Error(error.message || 'Falha ao recuperar credenciais');
       if (!data?.agentToken || !data?.hmacSecret || !data?.agentName) {
-        throw new Error(data?.error || 'Resposta inválida do servidor');
+        throw new Error((data?.error as string) || 'Resposta inválida do servidor');
       }
 
       const command = buildAgentReinstallCommand({
