@@ -15,11 +15,7 @@ export function useSecurityGraph() {
 
   const buildGraph = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('populate-security-graph', {
-        body: { tenant_id: tenant!.id },
-      });
-      if (error) throw error;
-      return data;
+      return await callGateway<{ nodes_created: number }>('security', 'populate-security-graph', { tenant_id: tenant!.id });
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['security-graph-nodes'] });
