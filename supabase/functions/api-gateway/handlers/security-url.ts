@@ -1,0 +1,170 @@
+/**
+ * analyze-url handler — inlined from standalone analyze-url function
+ * Analyzes URL reputation via VirusTotal / AbuseIPDB with caching
+ */
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from '../../_shared/logger.ts';
+import { checkRateLimit } from '../../_shared/rate-limit.ts';
+import { fetchWithTimeout } from '../../_shared/fetch-with-timeout.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+import type { HandlerContext } from './admin.ts';
+
+type SB = ReturnType<typeof createClient>;
+
+const AnalyzeUrlSchema = z.object({
+  url: z.string().min(1).max(2048).url('Invalid URL format'),
+});
+
+export async function handleAnalyzeUrl(
+  supabase: SB, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
+): Promise<unknown> {
+  const userId = ctx?.userId;
+  const tenantId = ctx?.tenantId;
+  if (!userId || !tenantId) return { __status: 401, error: 'Authentication required' };
+
+  // Rate limiting
+  const rl = await checkRateLimit(supabase, userId, 'analyze-url', {
+    maxRequests: 30, windowMinutes: 1, blockMinutes: 5,
+  });
+  if (!rl.allowed) {
+    return { __status: 429, error: 'Rate limit exceeded', resetAt: rl.resetAt?.toISOString() };
+  }
+
+  const parsed = AnalyzeUrlSchema.safeParse(payload);
+  if (!parsed.success) {
+    return { __status: 400, error: 'Validation failed', issues: parsed.error.flatten().fieldErrors };
+  }
+
+  const normalizedUrl = parsed.data.url.trim();
+  const parsedUrl = new URL(normalizedUrl);
+  const domain = parsedUrl.hostname;
+
+  logger.info(`[analyze-url][${requestId}] Analyzing URL: ${normalizedUrl}`);
+
+  // Check cache (24h TTL)
+  const { data: cached } = await supabase
+    .from('url_reputation')
+    .select('*')
+    .eq('url', normalizedUrl)
+    .eq('tenant_id', tenantId)
+    .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    .maybeSingle();
+
+  if (cached) {
+    return {
+      url: cached.url, domain: cached.domain, reputation: cached.reputation,
+      score: cached.score, category: cached.category, details: cached.details, cached: true,
+    };
+  }
+
+  let reputation = 'unknown';
+  let score = 0;
+  let category = 'unclassified';
+  let details: Record<string, unknown> = {};
+
+  const VIRUSTOTAL_API_KEY = Deno.env.get('VIRUSTOTAL_API_KEY');
+  const ABUSEIPDB_API_KEY = Deno.env.get('ABUSEIPDB_API_KEY');
+
+  if (VIRUSTOTAL_API_KEY) {
+    try {
+      const vtResult = await analyzeWithVirusTotal(normalizedUrl, VIRUSTOTAL_API_KEY);
+      reputation = vtResult.reputation;
+      score = vtResult.score;
+      category = vtResult.category;
+      details.virustotal = {
+        engines_detected: vtResult.engines_detected,
+        engines_total: vtResult.engines_total,
+        ...vtResult.details,
+      };
+    } catch (vtError) {
+      logger.error(`[analyze-url][${requestId}] VirusTotal error:`, vtError);
+    }
+  }
+
+  if ((reputation === 'unknown' || !VIRUSTOTAL_API_KEY) && ABUSEIPDB_API_KEY) {
+    try {
+      const ipMatch = domain.match(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/);
+      if (ipMatch) {
+        const abuseResult = await analyzeWithAbuseIPDB(domain, ABUSEIPDB_API_KEY);
+        if (abuseResult.abuse_confidence_score >= 75) {
+          reputation = 'malicious'; score = abuseResult.abuse_confidence_score;
+        } else if (abuseResult.abuse_confidence_score >= 25) {
+          reputation = 'suspicious'; score = abuseResult.abuse_confidence_score;
+        } else {
+          reputation = 'clean'; score = 100 - abuseResult.abuse_confidence_score;
+        }
+        details.abuseipdb = {
+          abuse_confidence_score: abuseResult.abuse_confidence_score,
+          country_code: abuseResult.country_code,
+          isp: abuseResult.isp,
+          total_reports: abuseResult.total_reports,
+        };
+      }
+    } catch (abuseError) {
+      logger.error(`[analyze-url][${requestId}] AbuseIPDB error:`, abuseError);
+    }
+  }
+
+  if (!VIRUSTOTAL_API_KEY && !ABUSEIPDB_API_KEY) {
+    details.warning = 'No threat intelligence APIs configured.';
+  }
+
+  await supabase.from('url_reputation').upsert({
+    tenant_id: tenantId, url: normalizedUrl, domain, reputation, score, category, details,
+    created_at: new Date().toISOString(),
+  }, { onConflict: 'tenant_id,url' });
+
+  return { url: normalizedUrl, domain, reputation, score, category, details, cached: false };
+}
+
+// ── VirusTotal ──
+interface VTResult { reputation: string; score: number; category: string; engines_detected: number; engines_total: number; details: Record<string, unknown>; }
+
+async function analyzeWithVirusTotal(url: string, apiKey: string): Promise<VTResult> {
+  const urlId = btoa(url).replace(/=/g, '');
+  const getResponse = await fetchWithTimeout(`https://www.virustotal.com/api/v3/urls/${urlId}`, {
+    method: 'GET', headers: { 'x-apikey': apiKey },
+  });
+  if (getResponse.status === 404) {
+    const scanResponse = await fetchWithTimeout('https://www.virustotal.com/api/v3/urls', {
+      method: 'POST', headers: { 'x-apikey': apiKey, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `url=${encodeURIComponent(url)}`,
+    });
+    if (!scanResponse.ok) throw new Error(`VirusTotal scan failed: ${scanResponse.status}`);
+    return { reputation: 'scanning', score: 50, category: 'pending_analysis', engines_detected: 0, engines_total: 0, details: { status: 'Scan submitted' } };
+  }
+  if (!getResponse.ok) throw new Error(`VirusTotal API error: ${getResponse.status}`);
+  const data = await getResponse.json();
+  const stats = data.data?.attributes?.last_analysis_stats || {};
+  const categories = data.data?.attributes?.categories || {};
+  const malicious = stats.malicious || 0;
+  const suspicious = stats.suspicious || 0;
+  const harmless = stats.harmless || 0;
+  const undetected = stats.undetected || 0;
+  const total = malicious + suspicious + harmless + undetected;
+  let reputation: string;
+  let score: number;
+  if (malicious >= 3) { reputation = 'malicious'; score = Math.max(0, 100 - (malicious / total) * 100); }
+  else if (malicious >= 1 || suspicious >= 3) { reputation = 'suspicious'; score = Math.max(0, 100 - ((malicious + suspicious) / total) * 100); }
+  else { reputation = 'clean'; score = Math.min(100, (harmless / total) * 100); }
+  const categoryValues = Object.values(categories);
+  const cat = categoryValues[0] as string || 'unclassified';
+  return { reputation, score: Math.round(score), category: cat, engines_detected: malicious + suspicious, engines_total: total, details: { stats, categories, last_analysis_date: data.data?.attributes?.last_analysis_date } };
+}
+
+// ── AbuseIPDB ──
+interface AbuseResult { abuse_confidence_score: number; country_code: string; isp: string; total_reports: number; }
+
+async function analyzeWithAbuseIPDB(ip: string, apiKey: string): Promise<AbuseResult> {
+  const response = await fetchWithTimeout(`https://api.abuseipdb.com/api/v2/check?ipAddress=${encodeURIComponent(ip)}&maxAgeInDays=90`, {
+    method: 'GET', headers: { 'Key': apiKey, 'Accept': 'application/json' },
+  });
+  if (!response.ok) throw new Error(`AbuseIPDB API error: ${response.status}`);
+  const data = await response.json();
+  const result = data.data || {};
+  return {
+    abuse_confidence_score: result.abuseConfidenceScore || 0,
+    country_code: result.countryCode || '', isp: result.isp || '',
+    total_reports: result.totalReports || 0,
+  };
+}
