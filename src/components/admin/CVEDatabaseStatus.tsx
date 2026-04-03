@@ -129,12 +129,8 @@ export default function CVEDatabaseStatus() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
       
-      const response = await supabase.functions.invoke('sync-cve-database', {
-        body: {},
-      });
-      
-      if (response.error) throw response.error;
-      return response.data;
+      const data = await callGateway('security', 'sync-cve-database', {});
+      return data;
     },
     onSuccess: (data) => {
       toast.success(`Sincronização concluída: ${data.cves_upserted} CVEs atualizados`);

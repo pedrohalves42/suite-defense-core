@@ -136,13 +136,13 @@ export const ClientComputers = () => {
       ];
 
       for (const jobType of jobTypes) {
-        const { error } = await supabase.functions.invoke('create-job', {
-          body: {
+        const { error } = await supabase.functions.invoke('api-gateway', {
+          body: { action: 'admin:create-job', payload: {
             tenant_id: tenant?.id,
             agent_name: agentName,
             job_type: jobType,
             payload: {}
-          }
+          }}
         });
 
         if (error) throw error;

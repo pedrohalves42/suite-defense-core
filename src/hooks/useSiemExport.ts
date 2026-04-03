@@ -81,10 +81,9 @@ export const useSiemExport = () => {
 
   const exportNow = useMutation({
     mutationFn: async (params: { format: SiemFormat; since?: string }) => {
-      const { data, error } = await supabase.functions.invoke('siem-export', {
-        body: { format: params.format, since: params.since },
+      const data = await callGateway('security', 'siem-export', {
+        format: params.format, since: params.since,
       });
-      if (error) throw error;
       return data;
     },
     onSuccess: (data, vars) => {

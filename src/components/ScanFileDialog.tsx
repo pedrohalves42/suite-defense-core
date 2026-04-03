@@ -51,13 +51,12 @@ export function ScanFileDialog() {
         ? { scanType: 'full_system' }
         : { filePath: filePath };
 
-      const { data, error } = await supabase.functions.invoke('create-job', {
-        body: {
+      const data = await callGateway('admin', 'create-job', {
           agent_name: agentName,
           job_type: jobType,
           payload
-        }
       });
+      const error = null;
 
       if (error) throw error;
       return data;

@@ -77,7 +77,7 @@ export function JobForm({ agents, activeAgents, latestVersion, loadingData, onJo
       if (isScheduled && scheduledAt) requestBody.scheduledAt = new Date(scheduledAt).toISOString();
       if (isRecurring) { requestBody.isRecurring = true; requestBody.recurrencePattern = recurrencePattern; }
 
-      const { error } = await supabase.functions.invoke('create-job', { body: requestBody });
+      const { error } = await supabase.functions.invoke('api-gateway', { body: { action: 'admin:create-job', payload: requestBody } });
 
       if (error) {
         const errorData = typeof error === 'object' && 'error' in error ? (error as Record<string, unknown>).error : error;

@@ -108,8 +108,8 @@ export function useDeadLetterQueue() {
       let successCount = 0;
       for (const entry of pendingEntries.slice(0, 10)) {
         try {
-          await supabase.functions.invoke('create-job', {
-            body: { agent_name: entry.agent_name, job_type: entry.job_type, payload: entry.payload },
+          await supabase.functions.invoke('api-gateway', {
+            body: { action: 'admin:create-job', payload: { agent_name: entry.agent_name, job_type: entry.job_type, payload: entry.payload } },
           });
           await supabase.from('failed_jobs_dlq')
             .update({ status: 'retrying', retry_count: entry.retry_count + 1 })
