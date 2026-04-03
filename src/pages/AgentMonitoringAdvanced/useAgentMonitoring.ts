@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { useTenant } from '@/hooks/useTenant';
