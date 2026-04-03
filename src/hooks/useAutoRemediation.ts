@@ -131,7 +131,7 @@ export const useAutoRemediation = () => {
             approved: true
           },
           requires_approval: false
-        }
+        }}
       });
       if (invokeErr) throw invokeErr;
       return data;
