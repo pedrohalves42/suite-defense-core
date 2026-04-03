@@ -33586,6 +33586,87 @@ export type Database = {
           },
         ]
       }
+      secret_rotation_log: {
+        Row: {
+          created_at: string
+          id: string
+          new_key_prefix: string | null
+          notes: string | null
+          overlap_expires_at: string | null
+          previous_key_prefix: string | null
+          rotated_at: string
+          rotated_by: string
+          rotation_method: string
+          secret_name: string
+          status: string
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          new_key_prefix?: string | null
+          notes?: string | null
+          overlap_expires_at?: string | null
+          previous_key_prefix?: string | null
+          rotated_at?: string
+          rotated_by?: string
+          rotation_method?: string
+          secret_name: string
+          status?: string
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          new_key_prefix?: string | null
+          notes?: string | null
+          overlap_expires_at?: string | null
+          previous_key_prefix?: string | null
+          rotated_at?: string
+          rotated_by?: string
+          rotation_method?: string
+          secret_name?: string
+          status?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "secret_rotation_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "secret_rotation_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "secret_rotation_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "secret_rotation_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "secret_rotation_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       security_definer_allowlist: {
         Row: {
           adr_reference: string | null
