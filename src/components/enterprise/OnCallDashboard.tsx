@@ -39,8 +39,8 @@ export function OnCallDashboard() {
     setLoading(true);
     try {
       const [oncallRes, alertsRes] = await Promise.all([
-        callGateway('playbook', 'oncall-integration', { action: 'who-is-oncall' }),
-        callGateway('playbook', 'oncall-integration', { action: 'alerts' }),
+        callGateway<{ oncall: OnCallUser[]; source: string }>('playbook', 'oncall-integration', { action: 'who-is-oncall' }),
+        callGateway<{ alerts: OnCallAlert[] }>('playbook', 'oncall-integration', { action: 'alerts' }),
       ]);
       setOncall(oncallRes.oncall || []);
       setSource(oncallRes.source || 'local');
