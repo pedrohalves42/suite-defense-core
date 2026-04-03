@@ -66,6 +66,24 @@ import { handleCreateHoneypotPool } from './handlers/honeypot-pool.ts';
 import { handleAiBehavioralAnomalyDetector } from './handlers/anomaly-ops.ts';
 import { handleBlockWebsite } from './handlers/block-website.ts';
 
+// Inlined handlers — playbook-core (Phase 1C)
+import {
+  handleExecutePlaybook, handleProcessPlaybookTriggerLogs,
+  handleRollbackByDecisionEvent, handleRollbackRemediation,
+  handleResolveActionPolicy,
+} from './handlers/playbook-core.ts';
+
+// Inlined handlers — playbook-automation (Phase 1C)
+import {
+  handleSoarEngine, handleAutoExecuteAiActions,
+  handleOncallIntegration, handleCreateItsmTicket,
+} from './handlers/playbook-automation.ts';
+
+// Inlined handlers — playbook-analysis (Phase 1C)
+import {
+  handleCalculateRiskScore, handleRunAttackSimulation,
+} from './handlers/playbook-analysis.ts';
+
 // Inlined handlers — sync cron (Phase 4)
 import { handleProcessAgentUpdates, handleSeedCollectionJobs } from './handlers/sync-cron.ts';
 
