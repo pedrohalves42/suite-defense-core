@@ -66,6 +66,14 @@ import { handleCheckHoneypotAlerts, handleHoneypotDispatchAi } from './handlers/
 // Inlined handlers — sync cron (Phase 4)
 import { handleProcessAgentUpdates, handleSeedCollectionJobs } from './handlers/sync-cron.ts';
 
+// Inlined handlers — security-ops (Phase 1A)
+import {
+  handleAutoQuarantine, handleQuarantineAgent, handleApplySecurityPatch,
+  handleDetectBlockedAttemptsSecurity, handleSecurityMonitor,
+  handleSecurityAlertDispatcher, handleIntegritySentinel,
+  handlePopulateSecurityGraph, handlePublishThreatIoc,
+} from './handlers/security-ops.ts';
+
 // Inlined handlers — cleanup (Phase 3A)
 import {
   handleCleanupTelemetry, handleCleanupStaleReports, handleCleanupStaleUpdates,
@@ -197,6 +205,16 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   // ── secret rotation compliance (SOC 2) ──
   'check:secret-rotation-compliance': handleSecretRotationCompliance,
   'check:record-secret-rotation': handleRecordSecretRotation,
+  // ── security-ops inlined (Phase 1A — serveInternal) ──
+  'security:auto-quarantine': handleAutoQuarantine,
+  'security:quarantine-agent': handleQuarantineAgent,
+  'security:apply-security-patch': handleApplySecurityPatch,
+  'security:detect-blocked-attempts': handleDetectBlockedAttemptsSecurity,
+  'security:security-monitor': handleSecurityMonitor,
+  'security:security-alert-dispatcher': handleSecurityAlertDispatcher,
+  'security:integrity-sentinel': handleIntegritySentinel,
+  'security:populate-security-graph': handlePopulateSecurityGraph,
+  'security:publish-threat-ioc': handlePublishThreatIoc,
 };
 
 const ALL_VALID_ACTIONS = new Set([
@@ -259,7 +277,7 @@ Deno.serve(async (req) => {
     if (!namespace) {
       return jsonRes({
         error: `Missing namespace in action: "${action}". Use format "namespace:action".`,
-        available_namespaces: ['check', 'sync', 'playbook', 'report', 'cleanup', 'notify'],
+        available_namespaces: ['check', 'sync', 'playbook', 'report', 'cleanup', 'notify', 'security'],
       }, 400, origin);
     }
 
@@ -277,7 +295,7 @@ Deno.serve(async (req) => {
     if (!ALL_VALID_ACTIONS.has(action)) {
       return jsonRes({
         error: `Unknown action: ${action}`,
-        available_namespaces: ['check', 'sync', 'playbook', 'report', 'cleanup', 'notify'],
+        available_namespaces: ['check', 'sync', 'playbook', 'report', 'cleanup', 'notify', 'security'],
         hint: 'Use format "namespace:action", e.g. "check:check-stuck-jobs"',
       }, 400, origin);
     }

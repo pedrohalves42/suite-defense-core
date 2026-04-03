@@ -36,6 +36,15 @@ import {
   handleAdminCreateUser, handleGetRateLimitStats,
   type HandlerContext,
 } from './handlers/admin.ts';
+import {
+  handleAutoBlockThreats,
+} from './handlers/security-threats.ts';
+import {
+  handleCheckCredentialLeaks, handleClassifyShadowIt, handleClearFailedLogins,
+} from './handlers/security-scanning.ts';
+import {
+  handleThreatIntelligenceLookup, handleBuildSecurityGraph,
+} from './handlers/security-intel.ts';
 
 const FETCH_TIMEOUT_MS = 30000;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -44,30 +53,15 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 // ── Proxy map: actions still dispatched via HTTP ────────────────────────
 const ACTION_TO_FUNCTION: Record<string, string> = {
   // billing proxy targets — all migrated to INLINED_HANDLERS in Phase 2B
-  // security proxy targets (from security-router)
-  'security:auto-block-threats': 'auto-block-threats',
-  'security:auto-quarantine': 'auto-quarantine',
-  'security:quarantine-agent': 'quarantine-agent',
-  'security:apply-security-patch': 'apply-security-patch',
-  'security:check-credential-leaks': 'check-credential-leaks',
+  // security proxy targets — remaining (no handler yet)
   'security:check-failed-logins': 'check-failed-logins',
-  'security:clear-failed-logins': 'clear-failed-logins',
   'security:record-failed-login': 'record-failed-login',
-  'security:detect-blocked-attempts': 'detect-blocked-attempts',
-  'security:security-monitor': 'security-monitor',
-  'security:security-alert-dispatcher': 'security-alert-dispatcher',
-  'security:build-security-graph': 'build-security-graph',
-  'security:populate-security-graph': 'populate-security-graph',
-  'security:integrity-sentinel': 'integrity-sentinel',
   'security:verify-log-integrity': 'verify-log-integrity',
-  'security:classify-shadow-it': 'classify-shadow-it',
   'security:scan-virus': 'scan-virus',
   'security:scan-vulnerabilities': 'scan-vulnerabilities',
   'security:fetch-nvd-cves': 'fetch-nvd-cves',
   'security:translate-cve': 'translate-cve',
   'security:sync-cve-database': 'sync-cve-database',
-  'security:publish-threat-ioc': 'publish-threat-ioc',
-  'security:threat-intelligence-lookup': 'threat-intelligence-lookup',
   'security:correlate-edr-events': 'correlate-edr-events',
   'security:evaluate-edr-detections': 'evaluate-edr-detections',
   'security:mitre-sync': 'mitre-sync',
@@ -147,6 +141,13 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'billing:stripe-health-check': handleStripeHealthCheck,
   // security inlined
   'security:security-cleanup': handleSecurityCleanup,
+  // security inlined — Phase 1A (JWT-compatible)
+  'security:auto-block-threats': handleAutoBlockThreats,
+  'security:check-credential-leaks': handleCheckCredentialLeaks,
+  'security:clear-failed-logins': handleClearFailedLogins,
+  'security:classify-shadow-it': handleClassifyShadowIt,
+  'security:threat-intelligence-lookup': handleThreatIntelligenceLookup,
+  'security:build-security-graph': handleBuildSecurityGraph,
   // admin inlined (Phase 2A)
   'admin:get-admin-releases': handleGetAdminReleases,
   'admin:update-user-status': handleUpdateUserStatus,
