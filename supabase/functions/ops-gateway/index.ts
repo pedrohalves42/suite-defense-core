@@ -295,7 +295,7 @@ Deno.serve(async (req) => {
     if (!ALL_VALID_ACTIONS.has(action)) {
       return jsonRes({
         error: `Unknown action: ${action}`,
-        available_namespaces: ['check', 'sync', 'playbook', 'report', 'cleanup', 'notify'],
+        available_namespaces: ['check', 'sync', 'playbook', 'report', 'cleanup', 'notify', 'security'],
         hint: 'Use format "namespace:action", e.g. "check:check-stuck-jobs"',
       }, 400, origin);
     }
