@@ -97,10 +97,10 @@ export function PreserveReinstallSection({ defaultAgentName }: PreserveReinstall
 
     try {
       setIsGeneratingAuto(true);
-      const data = await callGateway<Record<string, unknown>>('agent', 'recover-agent-credentials', { agent_name: agentName });
+      const data = await callGateway<{ agentToken: string; hmacSecret: string; agentName: string; error?: string }>('agent', 'recover-agent-credentials', { agent_name: agentName });
 
       if (!data?.agentToken || !data?.hmacSecret || !data?.agentName) {
-        throw new Error((data?.error as string) || 'Resposta inválida do servidor');
+        throw new Error(data?.error || 'Resposta inválida do servidor');
       }
 
       const command = buildAgentReinstallCommand({
