@@ -8,6 +8,7 @@
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
+import { fetchWithTimeout, TIMEOUT_TIERS } from '../../_shared/fetch-with-timeout.ts';
 
 // This handler proxies to the original submit-endpoint-events function
 // because it contains complex detection logic (15 MITRE rules, buffer pattern)
