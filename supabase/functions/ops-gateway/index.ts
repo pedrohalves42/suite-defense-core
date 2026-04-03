@@ -205,6 +205,16 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   // ── secret rotation compliance (SOC 2) ──
   'check:secret-rotation-compliance': handleSecretRotationCompliance,
   'check:record-secret-rotation': handleRecordSecretRotation,
+  // ── security-ops inlined (Phase 1A — serveInternal) ──
+  'security:auto-quarantine': handleAutoQuarantine,
+  'security:quarantine-agent': handleQuarantineAgent,
+  'security:apply-security-patch': handleApplySecurityPatch,
+  'security:detect-blocked-attempts': handleDetectBlockedAttemptsSecurity,
+  'security:security-monitor': handleSecurityMonitor,
+  'security:security-alert-dispatcher': handleSecurityAlertDispatcher,
+  'security:integrity-sentinel': handleIntegritySentinel,
+  'security:populate-security-graph': handlePopulateSecurityGraph,
+  'security:publish-threat-ioc': handlePublishThreatIoc,
 };
 
 const ALL_VALID_ACTIONS = new Set([
