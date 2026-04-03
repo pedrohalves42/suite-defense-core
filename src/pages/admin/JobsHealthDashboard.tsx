@@ -377,6 +377,15 @@ export default function JobsHealthDashboard() {
         </motion.div>
       </div>
 
+      {/* Failure Rate Analysis — Phase: Reduce Job Failure Rate */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35 }}
+      >
+        <JobFailureAnalysis />
+      </motion.div>
+
       {/* Metrics by Type Table */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
