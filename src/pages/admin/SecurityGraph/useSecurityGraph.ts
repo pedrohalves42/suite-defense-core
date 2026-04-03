@@ -31,7 +31,7 @@ export function useSecurityGraph() {
 
   const autoBlock = useMutation({
     mutationFn: async () => {
-      return await callGateway('security', 'auto-block-threats');
+      return await callGateway<{ blocked: number; already_blocked: number; synced_agents: number }>('security', 'auto-block-threats');
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['blocked-websites'] });

@@ -54,9 +54,9 @@ export function SLIDashboard({ tenantId }: SLIDashboardProps) {
     setLoading(true);
     try {
       const [sliRes, sloRes, dashRes] = await Promise.all([
-        callGateway('check', 'sli-collector', { action: 'sli', tenantId }),
-        callGateway('check', 'sli-collector', { action: 'slo', tenantId }),
-        callGateway('check', 'sli-collector', { action: 'dashboard', tenantId }),
+        callGateway<SLIData>('check', 'sli-collector', { action: 'sli', tenantId }),
+        callGateway<SLOData>('check', 'sli-collector', { action: 'slo', tenantId }),
+        callGateway<{ recentMetrics?: any[] }>('check', 'sli-collector', { action: 'dashboard', tenantId }),
       ]);
       setSli(sliRes);
       setSlo(sloRes);
