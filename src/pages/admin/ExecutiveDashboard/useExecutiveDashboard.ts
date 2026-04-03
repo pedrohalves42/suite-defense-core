@@ -66,7 +66,7 @@ export function useExecutiveDashboard() {
     refetchUnified();
     refetchExec();
     if (tenantId) {
-      supabase.functions.invoke('calculate-compliance', { body: { tenant_id: tenantId } })
+      supabase.functions.invoke('api-gateway', { body: { action: 'security:calculate-compliance', payload: { tenant_id: tenantId } } })
         .then(() => { setTimeout(() => refetchExec(), 3000); })
         .catch((err: unknown) => logger.error('Compliance recalc failed', err instanceof Error ? err : undefined));
     }
