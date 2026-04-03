@@ -53,11 +53,9 @@ export function useActionCenter() {
   const query = useQuery({
     queryKey: ['action-center', tenant?.id],
     queryFn: async (): Promise<ActionCenterFeed> => {
-      const { data, error } = await supabase.functions.invoke('action-center-feed', {
-        method: 'GET',
-        headers: {
-          'x-tenant-id': tenant!.id
-        }
+      const data = await callGateway<ActionCenterFeed>('agent', 'action-center-feed', {
+        action: 'get-feed',
+        tenant_id: tenant!.id
       });
 
       if (error) throw error;
