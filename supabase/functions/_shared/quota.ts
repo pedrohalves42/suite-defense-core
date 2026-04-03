@@ -32,8 +32,66 @@ export async function checkQuotaAvailable(
       .maybeSingle();
 
     if (error || !feature) {
-      // If feature doesn't exist, assume no quota limit (allowed)
-      logger.info(`[QUOTA] Feature ${featureKey} not found for tenant ${tenantId}, allowing by default`);
+      // If feature doesn't exist, check plan-level limit from subscription_plans
+      logger.info(`[QUOTA] Feature ${featureKey} not found in tenant_features for tenant ${tenantId}, checking subscription plan`);
+
+      const { data: sub } = await supabase
+        .from('tenant_subscriptions')
+        .select('subscription_plans!inner(max_agents, max_devices, max_users, max_scans_per_month)')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // deno-lint-ignore no-explicit-any
+      const plan = (sub as any)?.subscription_plans;
+      if (plan) {
+        const planLimitMap: Record<string, number | null> = {
+          max_agents: plan.max_agents,
+          max_devices: plan.max_devices,
+          max_users: plan.max_users,
+          max_scans_per_month: plan.max_scans_per_month,
+        };
+        const planLimit = planLimitMap[featureKey];
+        if (planLimit !== null && planLimit !== undefined) {
+          // Count current usage based on feature key
+          let currentUsage = 0;
+          if (featureKey === 'max_agents' || featureKey === 'max_devices') {
+            const { count } = await supabase
+              .from('agents').select('id', { count: 'exact', head: true })
+              .eq('tenant_id', tenantId).eq('status', 'active');
+            currentUsage = count || 0;
+          }
+          if (currentUsage >= planLimit) {
+            return {
+              allowed: false,
+              error: `Limite do plano atingido para '${featureKey}'. Uso: ${currentUsage}/${planLimit}. Faça upgrade para adicionar mais.`,
+              current: currentUsage,
+              limit: planLimit,
+            };
+          }
+          return { allowed: true, current: currentUsage, limit: planLimit };
+        }
+      }
+
+      // No plan found or no limit for this feature — default to free plan limit (2 agents)
+      if (featureKey === 'max_agents' || featureKey === 'max_devices') {
+        const FREE_LIMIT = 2;
+        const { count } = await supabase
+          .from('agents').select('id', { count: 'exact', head: true })
+          .eq('tenant_id', tenantId).eq('status', 'active');
+        const currentUsage = count || 0;
+        if (currentUsage >= FREE_LIMIT) {
+          return {
+            allowed: false,
+            error: `Limite do plano gratuito atingido (${FREE_LIMIT} agentes). Faça upgrade para adicionar mais.`,
+            current: currentUsage,
+            limit: FREE_LIMIT,
+          };
+        }
+        return { allowed: true, current: currentUsage, limit: FREE_LIMIT };
+      }
+
       return { allowed: true };
     }
 
