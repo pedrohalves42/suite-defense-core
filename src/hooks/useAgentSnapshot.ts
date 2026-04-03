@@ -49,11 +49,6 @@ export function useAgentSnapshot(agentId?: string) {
       const { callGateway } = await import('@/lib/gateway');
       const data = await callGateway<{ data?: AgentSnapshot }>('agent', 'agent-snapshot', { agent_id: agentId });
       
-      if (error) {
-        logger.error('[useAgentSnapshot] Error', error instanceof Error ? error : undefined);
-        throw new Error(error.message || 'Failed to fetch agent snapshot');
-      }
-      
       if (!data?.data) {
         throw new Error('No data returned from agent-snapshot');
       }

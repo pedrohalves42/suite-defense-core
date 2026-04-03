@@ -89,8 +89,6 @@ export function RegisterLatestRelease() {
         channel: "stable",
       });
 
-      if (error) throw error;
-
       return {
         platform,
         success: true,

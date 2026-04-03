@@ -78,7 +78,7 @@ export const useAutoRemediation = () => {
     }) => {
       const { callGateway } = await import('@/lib/gateway');
       const data = await callGateway<{ error?: string; message?: string; status?: string }>('playbook', 'auto-remediate', params);
-      if (error) throw error;
+      if (data?.error) throw new Error(data.message || data.error);
       if (data?.error) throw new Error(data.message || data.error);
       return data;
     },

@@ -53,9 +53,8 @@ export function ScriptUploader() {
         platform, version, content: fileContent,
       });
 
-      if (error) throw new Error(error.message || 'Erro no upload');
       if (data?.error) throw new Error(data.error);
-      return data;
+      return data as { error?: string; signed?: boolean; platform?: string; version?: string; size?: number };
     },
     onSuccess: (data) => {
       toast({

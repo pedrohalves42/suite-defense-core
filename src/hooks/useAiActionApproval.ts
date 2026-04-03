@@ -87,7 +87,7 @@ export function useApproveAiAction() {
         action: 'action-executor', payload: { action_id: actionId }
       });
 
-      if (execError) throw execError;
+      if (execResult?.error) throw new Error(execResult.error);
       if (execResult?.error) throw new Error(execResult.error);
 
       return { success: true, actionId, executionResult: execResult };

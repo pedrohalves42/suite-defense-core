@@ -101,7 +101,7 @@ export default function CVEDatabaseStatus() {
           cve_id: cve.cve_id, description: cve.description,
         });
         
-        if (!error && data?.translated) {
+        if (data?.translated) {
           translationCache[cve.cve_id] = data.translated;
           newTranslations[cve.cve_id] = data.translated;
         }
