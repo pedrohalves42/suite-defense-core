@@ -24,15 +24,7 @@ export default function UnitEconomics() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["unit-economics"],
     queryFn: async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) throw new Error("Not authenticated");
-
-      const response = await supabase.functions.invoke("unit-economics", {
-        method: "GET",
-      });
-
-      if (response.error) throw response.error;
-      return response.data as UnitEconomicsData;
+      return await callGateway<UnitEconomicsData>('billing', 'unit-economics');
     },
   });
 
