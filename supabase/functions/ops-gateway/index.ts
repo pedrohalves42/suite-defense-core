@@ -262,6 +262,14 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'report:weekly': handleWeeklyReport,
   'report:auto': handleAutoGenerateReport,
   'report:scheduled': handleScheduledReportGenerator,
+  // ── integrity-ops inlined (Phase 2I) ──
+  'check:check-agent-integrity': handleCheckAgentIntegrity,
+  'check:drift-detect': handleDriftDetect,
+  'check:run-rls-tests': handleRunRlsTests,
+  // ── edr-ops inlined (Phase 2I) ──
+  'security:fetch-nvd-cves': handleFetchNvdCves,
+  'security:correlate-edr-events': handleCorrelateEdrEvents,
+  'security:evaluate-edr-detections': handleEvaluateEdrDetections,
 };
 
 const ALL_VALID_ACTIONS = new Set([
