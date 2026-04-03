@@ -77,11 +77,13 @@ export async function handleBlockWebsite(
     tenant_id,
   });
 
-  await createAuditLog({
-    supabase, tenantId: tenant_id, action: 'block_website',
-    resourceType: 'blocked_websites', resourceId: blockRecord?.id,
+  await supabase.from('audit_logs').insert({
+    tenant_id,
+    action: 'block_website',
+    resource_type: 'blocked_websites',
+    resource_id: blockRecord?.id,
     details: { url, reason, jobs_created: jobsCreated.length },
-    success: true,
+    ip_address: 'internal',
   });
 
   return {
