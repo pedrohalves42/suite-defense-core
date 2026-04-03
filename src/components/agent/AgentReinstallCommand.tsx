@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
