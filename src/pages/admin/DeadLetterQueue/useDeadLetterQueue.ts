@@ -73,8 +73,8 @@ export function useDeadLetterQueue() {
 
   const retryMutation = useMutation({
     mutationFn: async (entry: DLQEntry) => {
-      const { error: jobError } = await supabase.functions.invoke('create-job', {
-        body: { agent_name: entry.agent_name, job_type: entry.job_type, payload: entry.payload },
+      const { error: jobError } = await supabase.functions.invoke('api-gateway', {
+        body: { action: 'admin:create-job', payload: { agent_name: entry.agent_name, job_type: entry.job_type, payload: entry.payload } },
       });
       if (jobError) throw jobError;
       const { error: dlqError } = await supabase
