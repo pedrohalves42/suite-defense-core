@@ -41,9 +41,7 @@ export default function Subscriptions() {
   // Open customer portal
   const openPortal = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('customer-portal');
-      if (error) throw error;
-      return data;
+      return await callGateway<{ url?: string; trial?: boolean; error?: string }>('billing', 'customer-portal');
     },
     onSuccess: (data) => {
       // Handle different response types
