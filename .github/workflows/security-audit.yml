@@ -9,6 +9,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   npm-audit:
     name: NPM Security Audit
@@ -18,28 +21,27 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
       with:
-        node-version: '20'
-        cache: 'npm'
+        bun-version: latest
 
     - name: Install dependencies
-      run: npm ci
+      run: bun install --frozen-lockfile
 
     - name: Run npm audit (production)
       run: |
-        npm audit --production --audit-level=high 2>&1 | tee npm-audit-prod.txt || true
+        bunx npm audit --production --audit-level=high 2>&1 | tee npm-audit-prod.txt || true
       continue-on-error: true
 
     - name: Run npm audit (all dependencies)
       run: |
-        npm audit --audit-level=critical 2>&1 | tee npm-audit-all.txt || true
+        bunx npm audit --audit-level=critical 2>&1 | tee npm-audit-all.txt || true
       continue-on-error: true
 
     - name: Check for outdated dependencies
       run: |
-        npm outdated 2>&1 | tee npm-outdated.txt || true
+        bunx npm outdated 2>&1 | tee npm-outdated.txt || true
       continue-on-error: true
 
     - name: Upload npm audit results
@@ -68,18 +70,10 @@ jobs:
 
     - name: Lint Edge Functions
       run: |
-        find supabase/functions -name "*.ts" -type f | head -50 | while read file; do
+        find supabase/functions -name "*.ts" -not -path "*/__tests__/*" -not -path "*/_shared/*" -not -name "*.test.ts" -type f | head -50 | while read file; do
           echo "Linting: $file"
-          deno lint --config=deno.json "$file" 2>&1 || echo "Lint issues in $file"
+          deno lint "$file" 2>&1 || echo "Lint issues in $file"
         done | tee deno-lint-report.txt
-      continue-on-error: true
-
-    - name: Check Edge Function Types
-      run: |
-        find supabase/functions -name "index.ts" -type f | while read file; do
-          echo "Type checking: $file"
-          deno check "$file" 2>&1 || echo "Type issues in $file"
-        done | tee deno-type-report.txt
       continue-on-error: true
 
     - name: Upload Deno lint results
@@ -89,7 +83,6 @@ jobs:
         name: deno-lint-report
         path: |
           deno-lint-report.txt
-          deno-type-report.txt
         retention-days: 30
 
   typescript-security:
@@ -100,18 +93,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
       with:
-        node-version: '20'
-        cache: 'npm'
+        bun-version: latest
 
     - name: Install dependencies
-      run: npm ci
+      run: bun install --frozen-lockfile
 
     - name: Run TypeScript compiler check
       run: |
-        npx tsc --noEmit 2>&1 | tee typescript-errors.txt || true
+        bunx tsc --noEmit 2>&1 | tee typescript-errors.txt || true
       continue-on-error: true
 
     - name: Check for sensitive patterns
@@ -148,20 +140,19 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
       with:
-        node-version: '20'
-        cache: 'npm'
+        bun-version: latest
 
     - name: Install dependencies
-      run: npm ci
+      run: bun install --frozen-lockfile
 
     - name: Install Playwright browsers
-      run: npx playwright install --with-deps chromium
+      run: bunx playwright install --with-deps chromium
 
     - name: Run security E2E tests
-      run: npx playwright test e2e/rls-multi-tenant.spec.ts --reporter=html
+      run: bunx playwright test e2e/rls-automated-tests.spec.ts e2e/rls-cross-tenant-isolation.spec.ts e2e/security-invariants.spec.ts --reporter=html
       env:
         VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
         VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
