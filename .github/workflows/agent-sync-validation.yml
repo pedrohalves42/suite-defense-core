@@ -10,6 +10,9 @@ on:
       - 'supabase/functions/_shared/agent-scripts/**'
       - 'public/agent-scripts/**'
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   validate-sync:
     runs-on: ubuntu-latest
