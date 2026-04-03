@@ -43,10 +43,10 @@ export default function AcceptInvite() {
       try {
         // SECURITY: Use Edge Function to validate invite - never query invites table directly
         // This prevents token exposure to frontend (Phase 3 RLS Hardening)
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-invite`, {
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/public-gateway`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token }),
+          body: JSON.stringify({ action: 'public:validate-invite', payload: { token } }),
         });
 
         if (!response.ok) {

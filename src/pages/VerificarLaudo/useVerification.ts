@@ -85,8 +85,8 @@ export function useVerification() {
             });
           }
         } else {
-          const { data: funcData, error: funcError } = await supabase.functions.invoke('verify-compliance-report', {
-            body: { audit_id: actualLaudoId }
+          const { data: funcData, error: funcError } = await supabase.functions.invoke('public-gateway', {
+            body: { action: 'public:verify-compliance-report', payload: { audit_id: actualLaudoId } }
           });
 
           if (funcError) {

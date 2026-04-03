@@ -48,8 +48,8 @@ export function useAgentCredentials(
 
       if (credentials.hmacSecret) {
         try {
-          const { data: validationResult, error: validationError } = await supabase.functions.invoke('validate-hmac-signature', {
-            body: { hmac_secret: credentials.hmacSecret, test_payload: 'installation_test' },
+          const { data: validationResult, error: validationError } = await supabase.functions.invoke('public-gateway', {
+            body: { action: 'public:validate-hmac-signature', payload: { hmac_secret: credentials.hmacSecret, test_payload: 'installation_test' } },
           });
           if (validationError || !validationResult?.valid) {
             toast.warning('[WARN] ? Aviso de seguranca', { description: 'A assinatura HMAC pode estar incorreta.', duration: 10000 });

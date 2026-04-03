@@ -49,9 +49,9 @@ export function FIDO2LoginButton({ email, onSuccess, disabled }: FIDO2LoginButto
 
     try {
       // 1. Begin authentication — get options from server
-      const options = await callEdgeFunction('fido2-authenticate', {
-        action: 'begin',
-        email,
+      const options = await callEdgeFunction('public-gateway', {
+        action: 'public:fido2-authenticate',
+        payload: { action: 'begin', email },
       });
 
       // 2. Build WebAuthn request

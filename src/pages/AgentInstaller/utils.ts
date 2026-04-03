@@ -91,7 +91,7 @@ export const calculateSha256 = async (buffer: ArrayBuffer): Promise<string> => {
  */
 export const trackInstallationEvent = (body: Record<string, string>) => {
   supabase.functions
-    .invoke('track-installation-event', { body })
+    .invoke('public-gateway', { body: { action: 'public:track-installation-event', payload: body } })
     .then(({ data, error }) => {
       if (error || (data && !data.ok)) {
         logger.warn('[telemetry] Failed to track event', { error, data });
