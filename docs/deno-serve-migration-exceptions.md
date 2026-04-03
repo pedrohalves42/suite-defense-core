@@ -72,6 +72,19 @@
 | ~~calculate-risk-score~~ | ops-gateway `playbook:calculate-risk-score` |
 | ~~run-attack-simulation~~ | ops-gateway `playbook:run-attack-simulation` |
 
+### Inlined Standalone Functions (Phase 1D — 2026-04-03)
+> Report namespace functions inlined into ops-gateway.
+
+| Function | Replaced By |
+|---|---|
+| ~~generate-compliance-report~~ | ops-gateway `report:compliance` |
+| ~~generate-executive-report~~ | ops-gateway `report:executive` |
+| ~~generate-explainable-report~~ | ops-gateway `report:explainable` |
+| ~~generate-security-report~~ | ops-gateway `report:security` |
+| ~~generate-weekly-report~~ | ops-gateway `report:weekly` |
+| ~~auto-generate-report~~ | ops-gateway `report:auto` |
+| ~~scheduled-report-generator~~ | ops-gateway `report:scheduled` |
+
 ## Justified Exceptions — Agent-Facing / HMAC (8 functions)
 > These require raw body access for HMAC signature verification or have triple auth flows (agent token + JWT + anonymous).
 

@@ -1,61 +1,50 @@
 
-# Fase 1D: Inline Report Namespace (8 proxied → handlers)
+# Fase 1A: Inline Security Namespace (28 proxied → handlers) ✅ CONCLUÍDO
 
-## Contexto
-- **149 funções standalone** atualmente (meta: < 60)
-- ops-gateway tem **8 report:** proxied via HTTP (double cold-start)
-- Inlinar essas 8 elimina 8 cold starts extras por chamada
+## Resultado
+- 28 funções de segurança inlined nos gateways (api-gateway + ops-gateway)
+- Handlers criados: security-threats.ts, security-scanning.ts, security-intel.ts (api-gateway) + security-ops.ts (ops-gateway)
+- 6 funções mantidas standalone (auth específica): scan-virus, submit-vuln-findings, update-baseline, check-failed-logins, record-failed-login, translate-cve
 
-## Funções a Inlinar (8)
+---
 
-| Função | Middleware | Linhas | Handler Destino |
-|--------|-----------|--------|-----------------|
-| `generate-compliance-report` | serveTenant | 370 | `handlers/report-generators.ts` |
-| `generate-executive-report` | serveInternal | 171 | `handlers/report-generators.ts` |
-| `generate-explainable-report` | serveTenant | 175 | `handlers/report-generators.ts` |
-| `generate-security-report` | serveTenant | 429 | `handlers/report-generators.ts` |
-| `generate-weekly-report` | serveInternal | 316 | `handlers/report-scheduled.ts` |
-| `auto-generate-report` | serveInternal | 159 | `handlers/report-scheduled.ts` |
-| `scheduled-report-generator` | serveInternal | 212 | `handlers/report-scheduled.ts` |
-| `list-reports` | serveAgent | 28 | `handlers/report-scheduled.ts` |
+# Fase 1B: Inline Honeypot + Anomaly + Block-Website (5 → handlers) ✅ CONCLUÍDO
 
-### ⚠️ Exceções Importantes
-- `generate-compliance-report` (370 linhas) e `generate-security-report` (429 linhas) são grandes — verificar se possuem sub-módulos antes de decidir inlinar
-- `list-reports` usa `serveAgent` — precisará adaptação para `assertInternalCaller`
+## Resultado
+- 5 funções inlined: activate-agent-honeypot, revert-agent-honeypot, create-honeypot-pool, ai-behavioral-anomaly-detector, block-website
+- 3 mantidas standalone: honeypot-handler, get-blocked-websites, serve-dns-filter
 
-## Funções Mantidas Standalone (não nesta fase)
-- Todas as **playbook complexas** (6): já documentadas na Fase 1C
-- Todas as **submit-* HMAC** (7): requerem raw body
-- Todas as **agent-facing** (agent:*, serveAgent/HMAC): auth incompatível
-- Todas as **build:*** e **security:*** proxied: fase futura
+---
 
-## Plano de Execução
+# Fase 1C: Inline Playbook Namespace (11 → handlers) ✅ CONCLUÍDO
 
-### Etapa 1: Análise de sub-módulos
-- Verificar imports de cada função report para mapear dependências
-- Funções com >400 linhas + sub-módulos complexos podem ser mantidas standalone
+## Resultado
+- 11 funções inlined em playbook-core.ts, playbook-automation.ts, playbook-analysis.ts
+- 6 mantidas standalone (complexidade/auth): execute-playbook-action, auto-remediate, evaluate-automation-rules, evaluate-playbook-triggers, autonomous-safe-mode, evaluate-software-risk
 
-### Etapa 2: Criar handlers
-- `supabase/functions/ops-gateway/handlers/report-generators.ts` — geradores sob demanda
-- `supabase/functions/ops-gateway/handlers/report-scheduled.ts` — scheduled/cron reports
+---
 
-### Etapa 3: Registrar no ops-gateway/index.ts
-- Mover de `ACTION_TO_FUNCTION` (proxy) para `INLINED_HANDLERS`
+# Fase 1D: Inline Report Namespace (7 → handlers) ✅ CONCLUÍDO
 
-### Etapa 4: Frontend
-- Buscar hooks/componentes que chamam essas funções diretamente
-- Migrar para `callGateway('report', ...)`
+## Funções Migradas (7)
 
-### Etapa 5: Deletar standalone + Deploy
-- Deletar as 8 pastas de funções
-- Deletar deploys remotos
-- Atualizar docs
+| Função | Gateway | Handler |
+|--------|---------|---------|
+| `generate-compliance-report` | ops-gateway | `handlers/report-generators.ts` |
+| `generate-security-report` | ops-gateway | `handlers/report-generators.ts` |
+| `generate-explainable-report` | ops-gateway | `handlers/report-generators.ts` |
+| `generate-executive-report` | ops-gateway | `handlers/report-scheduled.ts` |
+| `generate-weekly-report` | ops-gateway | `handlers/report-scheduled.ts` |
+| `auto-generate-report` | ops-gateway | `handlers/report-scheduled.ts` |
+| `scheduled-report-generator` | ops-gateway | `handlers/report-scheduled.ts` |
 
-### Etapa 6: Validação
-- TypeScript build check
-- Testar endpoint via curl
+## Funções Mantidas Standalone (1)
 
-## Ganhos Esperados
-- **-8 cold starts** por chamada report
-- **-8 funções standalone** (149 → 141)
-- **Economia**: ~$2-5/mês em compute por eliminar double cold-start
+| Função | Razão |
+|--------|-------|
+| `list-reports` | serveAgent com HMAC — auth incompatível com gateway |
+
+## Ganhos Fase 1D
+- **-7 cold starts** por chamada report
+- **-7 funções standalone** deletadas
+- **Frontend atualizado**: Automations.tsx migrado para ops-gateway
