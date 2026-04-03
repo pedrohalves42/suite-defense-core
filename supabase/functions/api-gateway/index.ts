@@ -196,13 +196,14 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'admin:create-job': handleCreateJob,
   'security:sync-cve-database': handleSyncCveDatabase as InlinedHandler,
   'security:mitre-sync': handleMitreSync as InlinedHandler,
-};
-
-// API-key authenticated endpoints (still proxy — they have own auth flow)
-const API_KEY_PROXY: Record<string, string> = {
-  'admin:tenant-features': 'api-tenant-features',
-  'admin:tenant-info': 'api-tenant-info',
-  'admin:tenant-stats': 'api-tenant-stats',
+  // ── Phase 6C: serveTenant inlined (consolidation) ──
+  'security:translate-cve': handleTranslateCve,
+  'security:calculate-compliance': handleCalculateCompliance,
+  'security:export-evidence-bundle': handleExportEvidenceBundle,
+  // ── Phase 6C: API-key endpoints inlined ──
+  'admin:tenant-features': handleTenantFeatures,
+  'admin:tenant-info': handleTenantInfo,
+  'admin:tenant-stats': handleTenantStats,
 };
 
 const ALL_VALID_ACTIONS = new Set([
