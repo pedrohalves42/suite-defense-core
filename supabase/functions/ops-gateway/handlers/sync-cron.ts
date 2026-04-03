@@ -4,6 +4,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
+import { isFeatureEnabled } from '../../_shared/feature-flags.ts';
 import {
   SupabaseVersionQueryAdapter,
   SupabaseUpdateJobAdapter,
