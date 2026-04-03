@@ -49,8 +49,9 @@ async function callGoogleGemini(
   };
   if (systemMsg) requestBody.systemInstruction = { parts: [{ text: systemMsg.content }] };
 
-  const response = await fetch(`${config.baseUrl}/${config.model}:generateContent?key=${apiKey}`, {
+  const response = await fetchWithTimeout(`${config.baseUrl}/${config.model}:generateContent?key=${apiKey}`, {
     method: 'POST', headers: config.headers(), body: JSON.stringify(requestBody),
+    timeoutMs: TIMEOUT_TIERS.AI,
   });
   if (!response.ok) { const errorText = await response.text(); throw new Error(`Gemini API error ${response.status}: ${errorText}`); }
   const data = await response.json();
