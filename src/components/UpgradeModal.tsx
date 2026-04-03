@@ -92,14 +92,10 @@ export function UpgradeModal({
     setLoading(true);
     try {
       // For legacy customers, create checkout for starter_compliance
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: {
-          planName: "starter_compliance",
-          billingPeriod: "monthly",
-        },
+      const data = await callGateway<{ url?: string }>("billing", "create-checkout", {
+        planName: "starter_compliance",
+        billingPeriod: "monthly",
       });
-
-      if (error) throw error;
 
       if (data?.url) {
         window.open(data.url, "_blank");
