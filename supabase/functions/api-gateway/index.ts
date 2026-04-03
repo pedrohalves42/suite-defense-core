@@ -52,15 +52,10 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 // ── Proxy map: actions still dispatched via HTTP ────────────────────────
 const ACTION_TO_FUNCTION: Record<string, string> = {
-  // billing proxy targets — all migrated to INLINED_HANDLERS in Phase 2B
-  // security proxy targets — remaining (no handler yet)
-  'security:check-failed-logins': 'check-failed-logins',
-  'security:record-failed-login': 'record-failed-login',
+  // security proxy targets — remaining (standalone with specific auth)
   'security:verify-log-integrity': 'verify-log-integrity',
-  'security:scan-virus': 'scan-virus',
   'security:scan-vulnerabilities': 'scan-vulnerabilities',
   'security:fetch-nvd-cves': 'fetch-nvd-cves',
-  'security:translate-cve': 'translate-cve',
   'security:sync-cve-database': 'sync-cve-database',
   'security:correlate-edr-events': 'correlate-edr-events',
   'security:evaluate-edr-detections': 'evaluate-edr-detections',
