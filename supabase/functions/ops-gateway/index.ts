@@ -95,6 +95,17 @@ import {
   handlePopulateSecurityGraph, handlePublishThreatIoc,
 } from './handlers/security-ops.ts';
 
+// Inlined handlers — report-generators (Phase 1D)
+import {
+  handleComplianceReport, handleSecurityReport, handleExplainableReport,
+} from './handlers/report-generators.ts';
+
+// Inlined handlers — report-scheduled (Phase 1D)
+import {
+  handleExecutiveReport, handleWeeklyReport,
+  handleAutoGenerateReport, handleScheduledReportGenerator,
+} from './handlers/report-scheduled.ts';
+
 // Inlined handlers — cleanup (Phase 3A)
 import {
   handleCleanupTelemetry, handleCleanupStaleReports, handleCleanupStaleUpdates,
@@ -124,14 +135,7 @@ const ACTION_TO_FUNCTION: Record<string, string> = {
   'playbook:auto-remediate': 'auto-remediate',
   'playbook:autonomous-safe-mode': 'autonomous-safe-mode',
   'playbook:evaluate-software-risk': 'evaluate-software-risk',
-  // report proxy targets (all proxy)
-  'report:compliance': 'generate-compliance-report',
-  'report:executive': 'generate-executive-report',
-  'report:explainable': 'generate-explainable-report',
-  'report:security': 'generate-security-report',
-  'report:weekly': 'generate-weekly-report',
-  'report:auto': 'auto-generate-report',
-  'report:scheduled': 'scheduled-report-generator',
+  // report — list-reports stays standalone (serveAgent/HMAC)
   'report:list': 'list-reports',
 };
 
@@ -240,6 +244,14 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'playbook:create-itsm-ticket': handleCreateItsmTicket,
   'playbook:calculate-risk-score': handleCalculateRiskScore,
   'playbook:run-attack-simulation': handleRunAttackSimulation,
+  // ── report inlined (Phase 1D) ──
+  'report:compliance': handleComplianceReport,
+  'report:executive': handleExecutiveReport,
+  'report:explainable': handleExplainableReport,
+  'report:security': handleSecurityReport,
+  'report:weekly': handleWeeklyReport,
+  'report:auto': handleAutoGenerateReport,
+  'report:scheduled': handleScheduledReportGenerator,
 };
 
 const ALL_VALID_ACTIONS = new Set([

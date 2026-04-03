@@ -18,34 +18,33 @@
 
 # Fase 1C: Inline Playbook Namespace (11 → handlers) ✅ CONCLUÍDO
 
-## Funções Migradas (11)
+## Resultado
+- 11 funções inlined em playbook-core.ts, playbook-automation.ts, playbook-analysis.ts
+- 6 mantidas standalone (complexidade/auth): execute-playbook-action, auto-remediate, evaluate-automation-rules, evaluate-playbook-triggers, autonomous-safe-mode, evaluate-software-risk
+
+---
+
+# Fase 1D: Inline Report Namespace (7 → handlers) ✅ CONCLUÍDO
+
+## Funções Migradas (7)
 
 | Função | Gateway | Handler |
 |--------|---------|---------|
-| `execute-playbook` | ops-gateway | `handlers/playbook-core.ts` |
-| `process-playbook-trigger-logs` | ops-gateway | `handlers/playbook-core.ts` |
-| `rollback-by-decision-event` | ops-gateway | `handlers/playbook-core.ts` |
-| `rollback-remediation` | ops-gateway | `handlers/playbook-core.ts` |
-| `resolve-action-policy` | ops-gateway | `handlers/playbook-core.ts` |
-| `soar-engine` | ops-gateway | `handlers/playbook-automation.ts` |
-| `auto-execute-ai-actions` | ops-gateway | `handlers/playbook-automation.ts` |
-| `oncall-integration` | ops-gateway | `handlers/playbook-automation.ts` |
-| `create-itsm-ticket` | ops-gateway | `handlers/playbook-automation.ts` |
-| `calculate-risk-score` | ops-gateway | `handlers/playbook-analysis.ts` |
-| `run-attack-simulation` | ops-gateway | `handlers/playbook-analysis.ts` |
+| `generate-compliance-report` | ops-gateway | `handlers/report-generators.ts` |
+| `generate-security-report` | ops-gateway | `handlers/report-generators.ts` |
+| `generate-explainable-report` | ops-gateway | `handlers/report-generators.ts` |
+| `generate-executive-report` | ops-gateway | `handlers/report-scheduled.ts` |
+| `generate-weekly-report` | ops-gateway | `handlers/report-scheduled.ts` |
+| `auto-generate-report` | ops-gateway | `handlers/report-scheduled.ts` |
+| `scheduled-report-generator` | ops-gateway | `handlers/report-scheduled.ts` |
 
-## Funções Mantidas Standalone (6)
+## Funções Mantidas Standalone (1)
 
 | Função | Razão |
 |--------|-------|
-| `execute-playbook-action` | Orchestrator complexo (318+ linhas, sub-módulos) |
-| `auto-remediate` | Blast radius checks críticos (311 linhas) |
-| `evaluate-automation-rules` | 5 sub-módulos (700+ linhas total) |
-| `evaluate-playbook-triggers` | 3 sub-módulos (condition-engine, approval-handler) |
-| `autonomous-safe-mode` | 3 rules/ processors (1282 linhas total) |
-| `evaluate-software-risk` | servePublic — auth incompatível com gateway |
+| `list-reports` | serveAgent com HMAC — auth incompatível com gateway |
 
-## Ganhos Fase 1C
-- **-11 cold starts** por chamada playbook
-- **-11 funções standalone** deletadas
-- **Frontend atualizado**: 5 hooks/componentes migrados para callGateway
+## Ganhos Fase 1D
+- **-7 cold starts** por chamada report
+- **-7 funções standalone** deletadas
+- **Frontend atualizado**: Automations.tsx migrado para ops-gateway
