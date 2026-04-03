@@ -170,6 +170,12 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'agent:token-rotate': handleTokenRotate,
   'agent:recover-agent-credentials': handleRecoverAgentCredentials,
   'agent:agent-version-management': handleAgentVersionManagement,
+  // ── Phase 3A: serveTenant inlined ──
+  'security:analyze-url': handleAnalyzeUrl,
+  'security:siem-export': handleSiemExport,
+  'security:security-advisor': handleSecurityAdvisor,
+  'admin:change-password': handleChangePassword,
+  'admin:create-job': handleCreateJob,
 };
 
 // API-key authenticated endpoints (still proxy — they have own auth flow)
