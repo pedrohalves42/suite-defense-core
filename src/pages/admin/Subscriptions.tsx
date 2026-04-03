@@ -41,7 +41,7 @@ export default function Subscriptions() {
   // Open customer portal
   const openPortal = useMutation({
     mutationFn: async () => {
-      return await callGateway<{ url?: string; trial?: boolean; error?: string }>('billing', 'customer-portal');
+      return await callGateway<Record<string, any>>('billing', 'customer-portal');
     },
     onSuccess: (data) => {
       // Handle different response types
