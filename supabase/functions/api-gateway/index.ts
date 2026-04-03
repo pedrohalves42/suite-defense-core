@@ -72,6 +72,11 @@ import { handleSecurityAdvisor } from './handlers/security-advisor.ts';
 import { handleChangePassword } from './handlers/user-auth.ts';
 import { handleSyncCveDatabase } from './handlers/sync-cve.ts';
 import { handleMitreSync } from './handlers/sync-mitre.ts';
+// Phase 6C inlined handlers
+import { handleTranslateCve } from './handlers/translate-cve.ts';
+import { handleCalculateCompliance } from './handlers/compliance.ts';
+import { handleExportEvidenceBundle } from './handlers/evidence-bundle.ts';
+import { handleTenantFeatures, handleTenantInfo, handleTenantStats } from './handlers/tenant-api.ts';
 
 const FETCH_TIMEOUT_MS = 30000;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
