@@ -66,6 +66,14 @@ import { handleCheckHoneypotAlerts, handleHoneypotDispatchAi } from './handlers/
 // Inlined handlers — sync cron (Phase 4)
 import { handleProcessAgentUpdates, handleSeedCollectionJobs } from './handlers/sync-cron.ts';
 
+// Inlined handlers — security-ops (Phase 1A)
+import {
+  handleAutoQuarantine, handleQuarantineAgent, handleApplySecurityPatch,
+  handleDetectBlockedAttemptsSecurity, handleSecurityMonitor,
+  handleSecurityAlertDispatcher, handleIntegritySentinel,
+  handlePopulateSecurityGraph, handlePublishThreatIoc,
+} from './handlers/security-ops.ts';
+
 // Inlined handlers — cleanup (Phase 3A)
 import {
   handleCleanupTelemetry, handleCleanupStaleReports, handleCleanupStaleUpdates,
