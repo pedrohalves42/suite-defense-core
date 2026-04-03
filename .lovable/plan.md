@@ -1,44 +1,76 @@
 
-# Fase 1A: Inline Security Namespace (28 proxied → handlers) ✅ CONCLUÍDO
+# Fase 1C: Inline Playbook Namespace no ops-gateway
 
-## Resultado
-- 28 funções de segurança inlined nos gateways (api-gateway + ops-gateway)
-- Handlers criados: security-threats.ts, security-scanning.ts, security-intel.ts (api-gateway) + security-ops.ts (ops-gateway)
-- 6 funções mantidas standalone (auth específica): scan-virus, submit-vuln-findings, update-baseline, check-failed-logins, record-failed-login, translate-cve
+## Objetivo
+Eliminar cold starts do namespace `playbook:*` no ops-gateway, movendo a lógica para handlers inlined. **Meta: -11 cold starts por chamada.**
 
----
+## Análise de Viabilidade
 
-# Fase 1B: Inline Honeypot + Anomaly + Block-Website (5 → handlers) ✅ CONCLUÍDO
+| Função | Linhas | Auth | Sub-módulos | Decisão |
+|--------|--------|------|-------------|---------|
+| execute-playbook | 146 | serveInternal | 0 | ✅ Inline |
+| process-playbook-trigger-logs | 105 | serveInternal | 0 | ✅ Inline |
+| rollback-by-decision-event | 146 | serveTenant | 0 | ✅ Inline |
+| rollback-remediation | 95 | serveTenant | 0 | ✅ Inline |
+| resolve-action-policy | 81 | serveTenant | 0 | ✅ Inline |
+| oncall-integration | 110 | serveInternal | 0 | ✅ Inline |
+| calculate-risk-score | 163 | serveTenant | 0 | ✅ Inline |
+| run-attack-simulation | 155 | serveTenant | 0 | ✅ Inline |
+| soar-engine | 174 | serveInternal | 1 (rules.ts) | ✅ Inline |
+| auto-execute-ai-actions | 272 | serveInternal | 2 (policy+executor) | ✅ Inline |
+| create-itsm-ticket | 200 | serveTenant | 0 | ✅ Inline |
 
-## Funções Migradas (5)
+### Mantidas Standalone (6) — Razões Técnicas
 
-| Função | Gateway | Handler | Auth Original |
-|--------|---------|---------|--------------|
-| `activate-agent-honeypot` | api-gateway | `handlers/honeypot.ts` | serveTenant |
-| `revert-agent-honeypot` | api-gateway | `handlers/honeypot.ts` | serveTenant |
-| `create-honeypot-pool` | ops-gateway | `handlers/honeypot-pool.ts` | serveInternal |
-| `ai-behavioral-anomaly-detector` | ops-gateway | `handlers/anomaly-ops.ts` | serveInternal |
-| `block-website` | ops-gateway | `handlers/block-website.ts` | serveInternal |
+| Função | Linhas Total | Razão |
+|--------|-------------|-------|
+| execute-playbook-action | 318+ | Orchestrator complexo com handlers/ e action-dispatcher |
+| auto-remediate | 311 | Blast radius checks, lógica de segurança crítica |
+| evaluate-automation-rules | 700+ | 5 sub-módulos, tenant-evaluator de 296 linhas |
+| evaluate-playbook-triggers | 338 | 3 sub-módulos (condition-engine, approval-handler) |
+| autonomous-safe-mode | 1282 | 3 rules/ processors (380+ linhas cada) |
+| evaluate-software-risk | 145 | servePublic — auth incompatível com gateway |
 
-## Ações Registradas
+## Plano de Execução
 
-| Gateway | Action | Handler |
-|---------|--------|---------|
-| api-gateway | `security:activate-agent-honeypot` | handleActivateAgentHoneypot |
-| api-gateway | `security:revert-agent-honeypot` | handleRevertAgentHoneypot |
-| ops-gateway | `sync:create-honeypot-pool` | handleCreateHoneypotPool |
-| ops-gateway | `check:ai-behavioral-anomaly-detector` | handleAiBehavioralAnomalyDetector |
-| ops-gateway | `security:block-website` | handleBlockWebsite |
+### Etapa 1 — Criar handlers no ops-gateway (3 arquivos)
 
-## Funções Mantidas Standalone (3) — Auth Especial
+1. **`handlers/playbook-core.ts`** (~500 linhas)
+   - handleExecutePlaybook
+   - handleProcessPlaybookTriggerLogs
+   - handleRollbackByDecisionEvent
+   - handleRollbackRemediation
+   - handleResolveActionPolicy
 
-| Função | Razão |
-|--------|-------|
-| `honeypot-handler` | serveHoneypot — auth customizada para agentes em modo honeypot |
-| `get-blocked-websites` | serveAgent/HMAC — chamada diretamente pelos agentes |
-| `serve-dns-filter` | serveAgent/HMAC — chamada diretamente pelos agentes |
+2. **`handlers/playbook-automation.ts`** (~500 linhas)
+   - handleSoarEngine (+ rules inline)
+   - handleAutoExecuteAiActions (+ policy-resolver + action-executor inline)
+   - handleOncallIntegration
+   - handleCreateItsmTicket
 
-## Ganhos Fase 1B
-- **-5 cold starts** por chamada
-- **-5 funções** no total
-- **ai-router** atualizado: removido proxy para `ai-behavioral-anomaly-detector` (era serveInternal, não acessível via ai-router)
+3. **`handlers/playbook-analysis.ts`** (~320 linhas)
+   - handleCalculateRiskScore
+   - handleRunAttackSimulation
+
+### Etapa 2 — Registrar no ops-gateway/index.ts
+- Adicionar 11 imports e registros no `INLINED_HANDLERS`
+- Remover 11 entradas do `ACTION_TO_FUNCTION` proxy map
+
+### Etapa 3 — Deletar standalone functions (11)
+- Deletar diretórios e chamar `delete_edge_functions`
+
+### Etapa 4 — Deploy e Validação
+- Deploy ops-gateway
+- Testar via curl todas as 11 ações
+- Verificar zero erros de sintaxe nos logs
+
+### Etapa 5 — Documentação
+- Atualizar `.lovable/plan.md`
+- Atualizar `docs/deno-serve-migration-exceptions.md`
+- Atualizar memory de consolidação
+
+## Impacto Estimado
+- **-11 cold starts** por chamada playbook
+- **-11 funções standalone** (~2200 linhas consolidadas)
+- **6 proxies restantes** no namespace playbook (funções complexas)
+- **Economia**: ~$2-4/mês em cold start costs
