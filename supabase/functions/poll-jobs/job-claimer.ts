@@ -24,7 +24,7 @@ const MAX_PENDING_JOBS = 50;
 
 export function emptyResponse(isLegacyAgent: boolean, origin: string | null): Response {
   return new Response(
-    JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 600 }),
+    JSON.stringify(isLegacyAgent ? [] : { jobs: [], poll_interval_seconds: 30 }),
     { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 200 }
   );
 }
