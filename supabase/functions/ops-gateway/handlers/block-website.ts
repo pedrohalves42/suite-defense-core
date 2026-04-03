@@ -3,7 +3,6 @@
  * Inlined from block-website (Phase 1B).
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { createAuditLog } from '../../_shared/audit.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
 const BlockSchema = z.object({
