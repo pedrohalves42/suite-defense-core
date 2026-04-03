@@ -97,7 +97,8 @@ serveTenant(async (req, ctx) => {
   let finalSignedBy = signed_by || 'manual';
   if (!finalSignature && ED25519_PRIVATE_KEY) {
     try {
-      finalSignature = await signPayload(`release:${platform}:${version}:${sha256}`, ED25519_PRIVATE_KEY);
+      // Sign the raw SHA-256 hash — agents verify signature against the hash they compute locally
+      finalSignature = await signPayload(sha256, ED25519_PRIVATE_KEY);
       finalSignedBy = 'automation';
     } catch (signError) {
       logger.error('[register-agent-release] Failed to auto-sign release', { requestId, error: (signError as Error).message });
