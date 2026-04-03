@@ -57,9 +57,7 @@ export function useActionCenter() {
         action: 'get-feed',
         tenant_id: tenant!.id
       });
-
-      if (error) throw error;
-      return data as ActionCenterFeed;
+      return data;
     },
     // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
     enabled: !tenantLoading && !!tenant?.id,
