@@ -277,7 +277,7 @@ Deno.serve(async (req) => {
     if (!namespace) {
       return jsonRes({
         error: `Missing namespace in action: "${action}". Use format "namespace:action".`,
-        available_namespaces: ['check', 'sync', 'playbook', 'report', 'cleanup', 'notify'],
+        available_namespaces: ['check', 'sync', 'playbook', 'report', 'cleanup', 'notify', 'security'],
       }, 400, origin);
     }
 
