@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Phone, Bell, RefreshCw, AlertTriangle, CheckCircle2, ArrowUpCircle, Clock, User } from 'lucide-react';
-import { callEdgeFunction } from '@/lib/edge-function-client';
+import { callGateway } from '@/lib/gateway';
 import { toast } from 'sonner';
 
 interface OnCallUser {
