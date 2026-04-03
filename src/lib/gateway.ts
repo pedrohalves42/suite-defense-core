@@ -4,7 +4,7 @@ type GatewayNamespace =
   | 'admin' | 'billing' | 'security' | 'build' | 'agent'
   | 'check' | 'sync' | 'playbook' | 'report' | 'cleanup' | 'notify';
 
-const API_GATEWAY_NAMESPACES: GatewayNamespace[] = ['admin', 'billing', 'security', 'build', 'agent', 'playbook'];
+const API_GATEWAY_NAMESPACES: GatewayNamespace[] = ['admin', 'billing', 'security', 'build', 'agent'];
 
 /**
  * Centralized gateway caller.
