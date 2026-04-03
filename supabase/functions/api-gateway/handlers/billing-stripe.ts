@@ -99,10 +99,10 @@ export async function handleCheckSubscription(supabase: SB, requestId: string, _
 
   const getBaseDevices = (planName: string): number => {
     const map: Record<string, number> = {
-      starter_compliance: 10, business: 30, scale: 100,
-      enterprise: 1000, pro: 50, starter: 10, free: 3,
+      starter_compliance: 10, starter: 10, business: 30,
+      scale: 100, enterprise: 1000, pro: 30, free: 2,
     };
-    return map[planName] || 10;
+    return map[planName] || 2;
   };
 
   if (!typedSub?.stripe_subscription_id) {
