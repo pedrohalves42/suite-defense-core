@@ -1,5 +1,6 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from './logger.ts';
+import { fetchWithTimeout, TIMEOUT_TIERS } from './fetch-with-timeout.ts';
 
 export interface SecurityLogParams {
   supabase: SupabaseClient;
@@ -59,12 +60,13 @@ export async function logSecurityEvent(params: SecurityLogParams): Promise<void>
         const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
         
         if (INTERNAL_SECRET && SUPABASE_URL) {
-          await fetch(`${SUPABASE_URL}/functions/v1/notification-dispatcher`, {
+          await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/notification-dispatcher`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'X-Internal-Secret': INTERNAL_SECRET,
             },
+            timeoutMs: TIMEOUT_TIERS.INTERNAL,
             body: JSON.stringify({
               channel: 'in_app',
               type: 'security_alert',

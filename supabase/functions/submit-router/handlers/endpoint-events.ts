@@ -8,6 +8,7 @@
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
+import { fetchWithTimeout, TIMEOUT_TIERS } from '../../_shared/fetch-with-timeout.ts';
 
 // This handler proxies to the original submit-endpoint-events function
 // because it contains complex detection logic (15 MITRE rules, buffer pattern)
@@ -26,13 +27,14 @@ export async function handleEndpointEvents(
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
   const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET') || '';
 
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/submit-endpoint-events`, {
+  const response = await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/submit-endpoint-events`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Internal-Secret': INTERNAL_SECRET,
       'X-Request-ID': requestId,
     },
+    timeoutMs: TIMEOUT_TIERS.INTERNAL,
     body: JSON.stringify({ ...body, _router_agent_id: agentId, _router_tenant_id: tenantId }),
   });
 

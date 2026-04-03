@@ -26,6 +26,7 @@ import type {
   AIProviderName, AIProviderConfig, AIMessage,
   AICompletionRequest, AICompletionResponse,
 } from './ai-multi-provider-types.ts';
+import { fetchWithTimeout, TIMEOUT_TIERS } from './fetch-with-timeout.ts';
 
 // Re-export types and helpers for backward compatibility
 export type { AIProviderName, AIProviderConfig, AIMessage, AICompletionRequest, AICompletionResponse };
@@ -48,8 +49,9 @@ async function callGoogleGemini(
   };
   if (systemMsg) requestBody.systemInstruction = { parts: [{ text: systemMsg.content }] };
 
-  const response = await fetch(`${config.baseUrl}/${config.model}:generateContent?key=${apiKey}`, {
+  const response = await fetchWithTimeout(`${config.baseUrl}/${config.model}:generateContent?key=${apiKey}`, {
     method: 'POST', headers: config.headers(), body: JSON.stringify(requestBody),
+    timeoutMs: TIMEOUT_TIERS.AI,
   });
   if (!response.ok) { const errorText = await response.text(); throw new Error(`Gemini API error ${response.status}: ${errorText}`); }
   const data = await response.json();
@@ -62,9 +64,10 @@ async function callGoogleGemini(
 async function callOpenAICompatible(
   config: AIProviderConfig, messages: AIMessage[], maxTokens: number
 ): Promise<{ content: string; tokens?: { prompt?: number; completion?: number; total?: number } }> {
-  const response = await fetch(config.baseUrl, {
+  const response = await fetchWithTimeout(config.baseUrl, {
     method: 'POST', headers: config.headers(),
     body: JSON.stringify({ model: config.model, messages, max_tokens: maxTokens, temperature: 0.7 }),
+    timeoutMs: TIMEOUT_TIERS.AI,
   });
   if (!response.ok) { const errorText = await response.text(); throw new Error(`${config.displayName} API error ${response.status}: ${errorText}`); }
   const data = await response.json();

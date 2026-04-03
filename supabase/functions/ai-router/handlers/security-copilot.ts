@@ -5,6 +5,7 @@
 import { TenantContext } from '../../_shared/serve-tenant.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
+import { fetchWithTimeout, TIMEOUT_TIERS } from '../../_shared/fetch-with-timeout.ts';
 
 const SYSTEM_PROMPT = `You are CyberShield Security Copilot ? an expert cybersecurity analyst assistant.
 
@@ -80,12 +81,13 @@ export async function handleSecurityCopilot(
 
   const tenantContext = await getTenantContext(supabase, tenantId);
 
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+  const response = await fetchWithTimeout('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${LOVABLE_API_KEY}`,
       'Content-Type': 'application/json',
     },
+    timeoutMs: TIMEOUT_TIERS.AI,
     body: JSON.stringify({
       model: 'google/gemini-3-flash-preview',
       messages: [
