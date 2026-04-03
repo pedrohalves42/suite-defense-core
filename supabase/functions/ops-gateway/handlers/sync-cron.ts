@@ -152,7 +152,7 @@ export async function handleSeedCollectionJobs(supabase: SB, requestId: string, 
   }
 
   const durationMs = Date.now() - startedAt;
-  const result = { success: true, agents_processed: activeAgents.length, jobs_created: totalCreated, jobs_skipped_dedup: totalSkipped, agent_details: agentResults, duration_ms: durationMs };
+  const result = { success: true, agents_processed: activeAgents.length, jobs_created: totalCreated, jobs_skipped_dedup: totalSkipped, jobs_skipped_failure_rate: totalSkippedFailRate, jobs_skipped_disabled: totalSkippedDisabled, agent_details: agentResults, duration_ms: durationMs };
 
   logger.info(`[${requestId}] [seed-collection-jobs] Done:`, JSON.stringify(result));
 
