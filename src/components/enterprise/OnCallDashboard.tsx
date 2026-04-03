@@ -39,8 +39,8 @@ export function OnCallDashboard() {
     setLoading(true);
     try {
       const [oncallRes, alertsRes] = await Promise.all([
-        callEdgeFunction('oncall-integration', { action: 'who-is-oncall' }),
-        callEdgeFunction('oncall-integration', { action: 'alerts' }),
+        callGateway('playbook', 'oncall-integration', { action: 'who-is-oncall' }),
+        callGateway('playbook', 'oncall-integration', { action: 'alerts' }),
       ]);
       setOncall(oncallRes.oncall || []);
       setSource(oncallRes.source || 'local');
@@ -60,7 +60,7 @@ export function OnCallDashboard() {
 
   const handleAcknowledge = async (alert: OnCallAlert) => {
     try {
-      await callEdgeFunction('oncall-integration', {
+      await callGateway('playbook', 'oncall-integration', {
         action: 'alert',
         summary: alert.summary,
         severity: 'low',
@@ -76,7 +76,7 @@ export function OnCallDashboard() {
   const handleEscalate = async () => {
     if (!selectedAlert) return;
     try {
-      await callEdgeFunction('oncall-integration', {
+      await callGateway('playbook', 'oncall-integration', {
         action: 'escalate',
         incidentId: selectedAlert.incident_id,
       });
