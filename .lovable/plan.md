@@ -1,187 +1,94 @@
 
-# Plano de Consolidação — Fases 2F, 2I, 2J
+# Fase 2J: Consolidação dos Proxy Targets Restantes
 
-**Estado atual:** 113 standalone functions. **Meta:** < 60 standalone.
-**Funções já inlined:** ~80 handlers nos gateways.
+## Diagnóstico Atual
 
----
-
-## Fase 2F — Admin/Auth (inline no api-gateway)
-
-Funções simples de DB/Auth que podem ser inlined como handlers:
-
-| Função | Handler | Complexidade |
-|--------|---------|-------------|
-| `accept-invite` | `admin:accept-invite` | Baixa - DB query |
-| `delete-invite` | `admin:delete-invite` | Baixa - DB delete |
-| `send-invite` | `admin:send-invite` | Média - email |
-| `validate-invite` | `admin:validate-invite` | Baixa - DB query |
-| `change-password` | `admin:change-password` | Baixa - Auth API |
-| `record-failed-login` | `admin:record-failed-login` | Baixa - DB insert |
-| `check-failed-logins` | `admin:check-failed-logins` | Baixa - DB query |
-| `approve-via-token` | `admin:approve-via-token` | Média - token validation |
-| `create-job` | `admin:create-job` | Média - DB + validation |
-| `action-center-feed` | `admin:action-center-feed` | Baixa - DB query |
-| `get-blocked-websites` | `security:get-blocked-websites` | Baixa - DB query |
-| `get-software-inventory` | `agent:get-software-inventory` | Baixa - DB query |
-| `get-web-activity` | `agent:get-web-activity` | Baixa - DB query |
-| `export-evidence-bundle` | `security:export-evidence-bundle` | Média - aggregation |
-| `calculate-compliance` | `security:calculate-compliance` | Média - computation |
-| `upload-report` | `report:upload` | Baixa - storage |
-| `verify-compliance-report` | `report:verify-compliance` | Baixa - DB query |
-| `verify-document` | `security:verify-document` | Baixa - hash check |
-| `drift-detect` | `security:drift-detect` | Média - comparison |
-| `update-baseline` | `security:update-baseline` | Baixa - DB update |
-
-**Subtotal: -20 standalone** → Arquivo: `api-gateway/handlers/admin-auth.ts` + `admin-ops.ts`
+### api-gateway — 44 proxy entries em ACTION_TO_FUNCTION
+### ops-gateway — 7 proxy entries em ACTION_TO_FUNCTION
 
 ---
 
-## Fase 2I — Ops/Agent (inline no ops-gateway ou manter como exceção)
+## Etapa 1: Remover entradas QUEBRADAS (funções deletadas)
+Ações no api-gateway que apontam para funções que não existem mais:
+- `security:verify-log-integrity` → NOT FOUND
+- `security:fetch-nvd-cves` → deletado (agora no ops-gateway Phase 2I)
+- `security:correlate-edr-events` → deletado (agora no ops-gateway Phase 2I)
+- `security:evaluate-edr-detections` → deletado (agora no ops-gateway Phase 2I)
+- `security:run-rls-tests` → deletado (agora no ops-gateway Phase 2I)
+- `agent:check-agent-integrity` → deletado (agora no ops-gateway Phase 2I)
+- `build:auto-renew-enrollment-keys` → NOT FOUND
 
-### 2I-a: Funções de submit (Agent-HMAC auth → EXCEÇÃO PERMANENTE)
-Estas usam autenticação HMAC do agente e **devem permanecer standalone**:
-
-- `submit-antivirus-status`, `submit-rollback-event`, `submit-software-inventory`
-- `submit-system-metrics`, `submit-vuln-findings`, `submit-web-activity`
-- `submit-router`, `collect-router` (roteadores de submit)
-- `serve-dns-filter`, `serve-installer`, `serve-agent-update`
-- `heartbeat`, `poll-jobs`, `submit-job-result`, `submit-processes`
-- `register-agent-key`, `enroll-agent`
-- `honeypot-handler`, `post-installation-telemetry`, `track-installation-event`
-
-**Total exceções agent-HMAC: ~20 (já exceções ou novas)**
-
-### 2I-b: Funções agent que podem ser inlined no api-gateway
-(Converter proxy → inline, frontend já usa `callGateway`):
-
-| Proxy atual | Ação |
-|-------------|------|
-| `agent-version-management` | Inline - DB queries |
-| `check-agent-integrity` | Inline - DB query |
-| `check-agent-updates` | Inline - DB query |
-| `diagnostics-agent-logs` | Inline - DB query |
-| `get-agent-config` | Inline - DB query |
-| `get-agent-dashboard-data` | Inline - DB query |
-| `get-agent-policy` | Inline - DB query |
-| `get-agent-script-content` | Inline - storage read |
-| `get-latest-agent-script` | Inline - DB query |
-| `promote-agent-v5` | Inline - DB update |
-| `recover-agent-credentials` | Inline - DB + crypto |
-| `token-rotate` | Inline - DB + crypto |
-
-**Subtotal: -12 standalone** → Arquivo: `api-gateway/handlers/agent-ops.ts`
-
-### 2I-c: Funções de reinstall (inline no api-gateway)
-
-| Proxy atual | Ação |
-|-------------|------|
-| `force-reinstall-fleet` | Inline - job creation |
-| `create-reinstall-jobs` | Inline - batch insert |
-| `get-reinstall-by-name` | Inline - DB query |
-| `get-reinstall-preserve-script` | Inline - script gen |
-| `get-reinstall-script` | Inline - script gen |
-
-**Subtotal: -5 standalone** → Arquivo: `api-gateway/handlers/reinstall.ts`
+**Ação:** Remover essas 7 entradas do ACTION_TO_FUNCTION.
 
 ---
 
-## Fase 2J — Proxy Targets Restantes
+## Etapa 2: Remover proxies para funções com auth incompatível
+Funções que usam serveAgent/HMAC, servePublic, ou Deno.serve raw NÃO funcionam via proxy do gateway (que usa assertInternalCaller). Devem ser chamadas diretamente:
 
-### 2J-a: Security proxies → inline no api-gateway
+### serveAgent (HMAC) — remover do proxy, chamar diretamente:
+- `agent:check-agent-updates`, `agent:diagnostics-agent-logs`, `agent:get-agent-config`, `agent:get-agent-policy`, `agent:serve-agent-update`, `build:confirm-force-update`
 
-| Proxy atual | Decisão |
-|-------------|---------|
-| `scan-vulnerabilities` | **EXCEÇÃO** - scan pesado, timeout longo |
-| `fetch-nvd-cves` | Inline - external API fetch |
-| `sync-cve-database` | Mover para ops-gateway sync |
-| `correlate-edr-events` | Inline - DB query + logic |
-| `evaluate-edr-detections` | Inline - DB + rules |
-| `mitre-sync` | Mover para ops-gateway sync |
-| `siem-export` | Inline - data aggregation |
-| `run-rls-tests` | Inline - RPC call |
-| `security-advisor` | Inline - DB + AI prompt |
+### servePublic — remover do proxy:
+- `agent:validate-hmac-signature`, `agent:get-reinstall-by-name`, `agent:get-reinstall-preserve-script`, `agent:get-reinstall-script`, `build:get-diagnostic-script`, `build:serve-installer`
 
-**Subtotal: -7 inline, 2 movidos para ops-gw**
+### Raw Deno.serve (HMAC custom) — remover do proxy:
+- `agent:enroll-agent`, `agent:register-agent-key`
 
-### 2J-b: Build proxies → inline no api-gateway
-
-| Proxy atual | Decisão |
-|-------------|---------|
-| `build-agent-exe` | **EXCEÇÃO** - GitHub Actions trigger, longa duração |
-| `generate-deploy-package` | **EXCEÇÃO** - file generation complexa |
-| `generate-portable-installer` | **EXCEÇÃO** - file generation |
-| `generate-enrollment-key` | Inline - DB + crypto |
-| `auto-generate-enrollment` | Inline - DB |
-| `revoke-enrollment-key` | Inline - DB update |
-| `register-agent-release` | Inline - DB insert |
-| `sign-release` | **EXCEÇÃO** - crypto pesado |
-| `upload-release-content` | **EXCEÇÃO** - storage upload |
-| `validate-build-pipeline` | Inline - DB query |
-| `confirm-force-update` | Inline - DB update |
-| `get-diagnostic-script` | Inline - template gen |
-| `serve-installer` | **EXCEÇÃO** - serves binary |
-
-**Subtotal: -7 inline, 5 exceções**
-
-### 2J-c: Ops-gateway playbook proxies → inline
-
-| Proxy atual | Decisão |
-|-------------|---------|
-| `execute-playbook-action` | Inline - DB + dispatch |
-| `evaluate-playbook-triggers` | Inline - rules engine |
-| `evaluate-automation-rules` | **EXCEÇÃO** - complexo demais |
-| `auto-remediate` | **EXCEÇÃO** - multi-step |
-| `autonomous-safe-mode` | **EXCEÇÃO** - critical safety |
-| `evaluate-software-risk` | Inline - scoring logic |
-| `list-reports` | **EXCEÇÃO** - serveAgent auth |
-
-**Subtotal: -3 inline, 4 exceções**
-
-### 2J-d: AI functions → EXCEÇÃO PERMANENTE (todas)
-
-- `ai-action-executor`, `ai-agent-assist`, `ai-analyze-agent`
-- `ai-full-audit`, `ai-insight-dispatcher`, `ai-predict-agent-failure`
-- `ai-quality-check`, `ai-red-team-assessment`, `ai-router`
-- `ai-system-analyzer`, `ai-system-audit`, `analyze-url`
-
-**Razão:** Submodules complexos, timeouts longos, imports pesados.
-**Total: 12 exceções permanentes**
-
-### 2J-e: Standalone com auth própria → EXCEÇÃO PERMANENTE
-
-- `fido2-authenticate`, `fido2-register` (WebAuthn)
-- `saml-sso`, `scim-provisioning` (Enterprise SSO)
-- `stripe-webhook` (webhook Stripe)
-- `health` (health check público)
-- `submit-contact` (público)
-- `rate-limit-check` (utility interna)
-- `scan-virus` (scan pesado)
-- `translate-cve` (NVD API)
+**Ação:** Remover essas 14 entradas. Total removido: 21 de 44.
 
 ---
 
-## Resumo de Impacto
+## Etapa 3: Inline serveInternal functions no ops-gateway
+Funções serveInternal que podem ser inlined (lógica DB-only ou simples):
 
-| Fase | Funções Inlined | Exceções Novas | Standalone Removidos |
-|------|----------------|----------------|---------------------|
-| 2F | 20 | 0 | -20 |
-| 2I-b/c | 17 | 20 (agent-HMAC) | -17 |
-| 2J | 17 | 21 | -17 |
-| **Total** | **54** | **41** | **-54** |
+### No ops-gateway (já tem auth interna compatível):
+- `sync-cve-database` → `sync:sync-cve-database`
+- `mitre-sync` → `sync:mitre-sync`
+- `setup-agent-script` → `sync:setup-agent-script`
+- `upload-release-content` → `sync:upload-release-content`
 
-**Projeção: 113 - 54 = 59 standalone** (meta < 60 ✅)
+### No ops-gateway (playbook serveInternal):
+- `evaluate-playbook-triggers` → `playbook:evaluate-playbook-triggers`
+- `evaluate-automation-rules` → `playbook:evaluate-automation-rules`
+- `autonomous-safe-mode` → `playbook:autonomous-safe-mode`
+
+**Ação:** Criar handlers e mover lógica. Deletar standalone directories após deploy.
 
 ---
 
-## Ordem de Execução
+## Etapa 4: Manter como proxy (serveTenant complexas — custo/benefício)
+Estas funções usam serveTenant e são multi-arquivo/complexas. O proxy funciona corretamente e o custo de inline não compensa:
 
-1. **2F** (Admin/Auth) — mais simples, maior impacto (-20)
-2. **2I-b/c** (Agent inline) — converte proxies existentes (-17)
-3. **2J-a/b** (Security + Build proxies → inline) (-14)
-4. **2J-c** (Playbook proxies → inline) (-3)
-5. Limpeza: remover diretórios standalone + `supabase--delete_edge_functions`
-6. Atualizar `ci/validate-middleware.sh` com novas exceções
-7. Build final + testes
+### api-gateway (permanecem como proxy):
+- `build:build-agent-exe` (multi-arquivo + GitHub dispatch)
+- `build:generate-deploy-package`, `build:generate-portable-installer`
+- `build:auto-generate-enrollment`, `build:register-agent-release`
+- `build:sign-release`, `build:validate-build-pipeline`
+- `agent:get-agent-script-content`, `agent:promote-agent-v5`
+- `agent:force-reinstall-fleet`, `agent:create-reinstall-jobs`
+- `security:scan-vulnerabilities` (multi-arquivo)
+- `security:security-advisor` (AI + complexo)
+- `security:siem-export`, `security:sync-cve-database`, `security:mitre-sync`
 
-**Tempo estimado: ~4-5 interações de implementação**
+### ops-gateway (permanecem como proxy):
+- `playbook:execute-playbook-action` (multi-arquivo, 851 linhas decompostas)
+- `playbook:auto-remediate` (serveTenant)
+- `playbook:evaluate-software-risk` (servePublic)
+- `report:list` (serveAgent/HMAC)
+
+---
+
+## Resultado Esperado
+- **api-gateway:** 44 → ~16 proxy entries (remove 21 quebradas/incompatíveis, inline 7)
+- **ops-gateway:** 7 → 0 proxy entries (inline 7 serveInternal)
+- **Funções standalone deletadas:** ~7 (serveInternal migradas)
+- **Cold starts eliminados:** ~7 (inline no ops-gateway)
+- **Custo reduzido:** Menos invocações de funções separadas
+
+---
+
+## Validação
+1. TypeScript check sem erros
+2. Deploy dos gateways
+3. Teste via curl das ações inlined
+4. Verificar que ações removidas não quebram frontend (buscar referências no src/)
