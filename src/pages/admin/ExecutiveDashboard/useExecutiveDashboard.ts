@@ -54,7 +54,7 @@ export function useExecutiveDashboard() {
         (Date.now() - new Date(execData.compliance.calculated_at).getTime()) > 3600000);
     if (needsCalc) {
       setComplianceTriggered(true);
-      supabase.functions.invoke('calculate-compliance', { body: { tenant_id: tenantId } })
+      supabase.functions.invoke('api-gateway', { body: { action: 'security:calculate-compliance', payload: { tenant_id: tenantId } } })
         .then(() => { setTimeout(() => refetchExec(), 3000); })
         .catch((err: unknown) => logger.error('Compliance calc failed', err instanceof Error ? err : undefined));
     }
