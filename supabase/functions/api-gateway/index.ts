@@ -53,30 +53,15 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 // ── Proxy map: actions still dispatched via HTTP ────────────────────────
 const ACTION_TO_FUNCTION: Record<string, string> = {
   // billing proxy targets — all migrated to INLINED_HANDLERS in Phase 2B
-  // security proxy targets (from security-router)
-  'security:auto-block-threats': 'auto-block-threats',
-  'security:auto-quarantine': 'auto-quarantine',
-  'security:quarantine-agent': 'quarantine-agent',
-  'security:apply-security-patch': 'apply-security-patch',
-  'security:check-credential-leaks': 'check-credential-leaks',
+  // security proxy targets — remaining (no handler yet)
   'security:check-failed-logins': 'check-failed-logins',
-  'security:clear-failed-logins': 'clear-failed-logins',
   'security:record-failed-login': 'record-failed-login',
-  'security:detect-blocked-attempts': 'detect-blocked-attempts',
-  'security:security-monitor': 'security-monitor',
-  'security:security-alert-dispatcher': 'security-alert-dispatcher',
-  'security:build-security-graph': 'build-security-graph',
-  'security:populate-security-graph': 'populate-security-graph',
-  'security:integrity-sentinel': 'integrity-sentinel',
   'security:verify-log-integrity': 'verify-log-integrity',
-  'security:classify-shadow-it': 'classify-shadow-it',
   'security:scan-virus': 'scan-virus',
   'security:scan-vulnerabilities': 'scan-vulnerabilities',
   'security:fetch-nvd-cves': 'fetch-nvd-cves',
   'security:translate-cve': 'translate-cve',
   'security:sync-cve-database': 'sync-cve-database',
-  'security:publish-threat-ioc': 'publish-threat-ioc',
-  'security:threat-intelligence-lookup': 'threat-intelligence-lookup',
   'security:correlate-edr-events': 'correlate-edr-events',
   'security:evaluate-edr-detections': 'evaluate-edr-detections',
   'security:mitre-sync': 'mitre-sync',
