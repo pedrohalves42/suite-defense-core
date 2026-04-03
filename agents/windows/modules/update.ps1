@@ -1,6 +1,7 @@
 <#
 .SYNOPSIS
     Agent auto-update with download-verify-execute pattern.
+    v7.0: Added Ed25519 signature verification (SSA-004).
     v6.0: TOCTOU guard via $Global:UpdateInProgress, BOM-safe hashing,
     ASCII safety check, atomic replace.
 #>
@@ -76,6 +77,7 @@ function Install-AgentUpdate {
         Follows download-verify-execute pattern:
         1. Download to temp
         2. Verify SHA-256 hash
+        2.5. Verify Ed25519 signature (SSA-004)
         3. Verify ASCII safety
         4. Backup current
         5. Atomic replace with TOCTOU guard
@@ -111,6 +113,39 @@ function Install-AgentUpdate {
         }
         else {
             Write-Log "No hash provided for update - proceeding with caution" "WARN"
+        }
+
+        # 2.5. Verify Ed25519 signature (SSA-004)
+        if ($Signature -and $Signature.Length -gt 10) {
+            # Signature provided — must verify
+            $ed25519Available = Test-Ed25519Available
+            if ($ed25519Available -and $Global:Ed25519PublicKeyBase64) {
+                $sigValid = Test-Ed25519Signature -ContentHash $actualHash -SignatureBase64 $Signature
+                if (-not $sigValid) {
+                    Write-Log "Update REJECTED - Ed25519 signature INVALID! Possible supply chain attack. Hash: $actualHash" "ERROR"
+                    Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+                    return $false
+                }
+                Write-Log "Ed25519 signature verified for update v$Version" "INFO"
+            }
+            elseif (-not $Global:Ed25519PublicKeyBase64) {
+                # No public key configured — audit-only mode (accept with warning)
+                Write-Log "Ed25519 public key not configured - accepting update based on SHA-256 only (audit-only)" "WARN"
+            }
+            else {
+                # Ed25519 not available on this runtime (.NET < 5) — accept with warning
+                Write-Log "Ed25519 not available on this runtime - accepting update based on SHA-256 only (PS 5.1 compat)" "WARN"
+            }
+        }
+        elseif ($Global:Ed25519PublicKeyBase64 -and (Test-Ed25519Available)) {
+            # No signature but Ed25519 is configured — reject unsigned updates (fail-closed)
+            Write-Log "Update REJECTED - No cryptographic signature on update payload. Unsigned updates blocked (SSA-004)." "ERROR"
+            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+            return $false
+        }
+        else {
+            # Legacy mode: no signature, no Ed25519 configured — accept with SHA-256 only
+            Write-Log "No signature provided and Ed25519 not configured - accepting update based on SHA-256 only" "WARN"
         }
 
         # 3. Verify ASCII safety (prevent PS 5.1 encoding issues)

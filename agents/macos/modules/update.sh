@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
 # CyberShield Agent macOS - Forced Update (launchd-aware)
+# v2.0: Added Ed25519 signature verification (SSA-004)
 #
 
 _apply_forced_update() {
@@ -19,6 +20,46 @@ _apply_forced_update() {
     local actual_hash
     actual_hash=$(shasum -a 256 "$temp_script" | awk '{print $1}')
     [[ "${actual_hash,,}" != "${expected_hash,,}" ]] && { rm -f "$temp_script"; return 1; }
+
+    # SSA-004: Verify Ed25519 signature on update payload
+    local update_signature
+    update_signature=$(echo "$response" | jq -r '.ecdsa_signature // .signature_base64 // ""' 2>/dev/null)
+    local ed25519_pubkey_path="${BASE_DIR:-/opt/cybershield}/keys/ed25519_server.pub"
+
+    if [[ -n "$update_signature" && ${#update_signature} -gt 10 ]]; then
+        # Signature provided — must verify
+        if [[ -f "$ed25519_pubkey_path" ]] && command -v openssl &>/dev/null; then
+            local _tmp_hash _tmp_sig
+            _tmp_hash=$(mktemp) || { log "ERROR" "[FORCE UPDATE] mktemp failed"; rm -f "$temp_script"; return 1; }
+            _tmp_sig=$(mktemp) || { rm -f "$_tmp_hash"; log "ERROR" "[FORCE UPDATE] mktemp failed"; rm -f "$temp_script"; return 1; }
+            echo -n "$actual_hash" > "$_tmp_hash"
+            echo "$update_signature" | base64 -D > "$_tmp_sig" 2>/dev/null || echo "$update_signature" | base64 -d > "$_tmp_sig" 2>/dev/null
+            if ! openssl pkeyutl -verify -pubin -inkey "$ed25519_pubkey_path" \
+                -sigfile "$_tmp_sig" -rawin -in "$_tmp_hash" 2>/dev/null; then
+                log "ERROR" "[FORCE UPDATE] REJECTED - Ed25519 signature INVALID! Possible supply chain attack."
+                logger -t CyberShield -p auth.err "FORCE UPDATE REJECTED: Invalid Ed25519 signature. SHA256: $actual_hash"
+                rm -f "$temp_script" "$_tmp_hash" "$_tmp_sig"
+                return 1
+            fi
+            rm -f "$_tmp_hash" "$_tmp_sig"
+            log "SUCCESS" "[FORCE UPDATE] Ed25519 signature VERIFIED for update payload"
+        else
+            # SEC-010: Fail-closed — reject if signature present but cannot verify
+            log "ERROR" "[FORCE UPDATE] REJECTED - Ed25519 public key or openssl not available. Cannot verify signature (SEC-010 fail-closed)."
+            logger -t CyberShield -p auth.err "FORCE UPDATE REJECTED: Ed25519 verification infrastructure missing."
+            rm -f "$temp_script"
+            return 1
+        fi
+    elif [[ -f "$ed25519_pubkey_path" ]]; then
+        # No signature but Ed25519 public key is deployed — reject unsigned (fail-closed)
+        log "ERROR" "[FORCE UPDATE] REJECTED - No cryptographic signature on update payload. Unsigned updates blocked."
+        logger -t CyberShield -p auth.err "Update rejected: missing cryptographic signature (unsigned payloads blocked)"
+        rm -f "$temp_script"
+        return 1
+    else
+        # Legacy mode: no signature, no public key — accept with SHA-256 only
+        log "WARN" "[FORCE UPDATE] No Ed25519 public key deployed - accepting update based on SHA-256 only"
+    fi
 
     local current_script
     current_script=$(readlink "$0" 2>/dev/null || echo "$0")
