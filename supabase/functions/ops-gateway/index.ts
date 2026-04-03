@@ -125,6 +125,11 @@ import {
   handleCleanupStaleHoneypots,
 } from './handlers/cleanup.ts';
 
+// Inlined handlers — sync-cve, mitre-sync, rate-limit (Phase 4)
+import { handleSyncCveDatabase } from './handlers/sync-cve.ts';
+import { handleMitreSync } from './handlers/sync-mitre.ts';
+import { handleRateLimitCheck } from './handlers/rate-limit.ts';
+
 // Inlined handlers — notify (Phase 3A)
 import {
   handleNotifyEmail, handleNotifyTelegram, handleNotifyWhatsApp,
