@@ -6,6 +6,17 @@ import Stripe from "https://esm.sh/stripe@18.5.0";
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 
+// Map Stripe metadata plan names (checkout) → subscription_plans.name (DB)
+const PLAN_NAME_MAP: Record<string, string> = {
+  starter_compliance: 'starter',
+  business: 'pro',
+};
+
+function resolveDbPlanName(stripePlanName: string | undefined | null): string | null {
+  if (!stripePlanName) return null;
+  return PLAN_NAME_MAP[stripePlanName] || stripePlanName;
+}
+
 // V4: UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
