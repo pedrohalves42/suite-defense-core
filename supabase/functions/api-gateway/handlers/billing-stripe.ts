@@ -209,8 +209,8 @@ export async function handleCheckSubscription(supabase: SB, requestId: string, _
 
 // ── create-checkout ─────────────────────────────────────────────────────
 const STRIPE_PLANS: Record<string, { priceId: string; baseDevices: number; maxDevices: number }> = {
-  starter_compliance: { priceId: 'price_1Sj531FeHfNScQDP8kMvWUpP', baseDevices: 10, maxDevices: 50 },
-  business: { priceId: 'price_1Sj53TFeHfNScQDPyAN6B3RG', baseDevices: 30, maxDevices: 200 },
+  starter_compliance: { priceId: 'price_1T9ltDFeHfNScQDPDCs2evWV', baseDevices: 10, maxDevices: 50 },
+  business: { priceId: 'price_1T9lV8FeHfNScQDPfQJhglVa', baseDevices: 30, maxDevices: 200 },
 };
 
 const ADDON_PRICES: Record<string, string> = {
