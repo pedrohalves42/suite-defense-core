@@ -54,9 +54,9 @@ export function SLIDashboard({ tenantId }: SLIDashboardProps) {
     setLoading(true);
     try {
       const [sliRes, sloRes, dashRes] = await Promise.all([
-        callEdgeFunction('sli-collector', { action: 'sli', tenantId }),
-        callEdgeFunction('sli-collector', { action: 'slo', tenantId }),
-        callEdgeFunction('sli-collector', { action: 'dashboard', tenantId }),
+        callGateway('check', 'sli-collector', { action: 'sli', tenantId }),
+        callGateway('check', 'sli-collector', { action: 'slo', tenantId }),
+        callGateway('check', 'sli-collector', { action: 'dashboard', tenantId }),
       ]);
       setSli(sliRes);
       setSlo(sloRes);

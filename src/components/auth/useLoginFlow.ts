@@ -103,7 +103,7 @@ export function useLoginFlow() {
   const completeLogin = async () => {
     setVerifyingSession(true);
 
-    await supabase.functions.invoke('clear-failed-logins', { body: {} });
+    await callGateway('security', 'clear-failed-logins').catch(() => {});
 
     const { data: { user } } = await supabase.auth.getUser();
 

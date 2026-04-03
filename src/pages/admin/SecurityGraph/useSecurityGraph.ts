@@ -31,9 +31,7 @@ export function useSecurityGraph() {
 
   const autoBlock = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('auto-block-threats');
-      if (error) throw error;
-      return data;
+      return await callGateway('security', 'auto-block-threats');
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['blocked-websites'] });

@@ -67,11 +67,7 @@ export default function IdentitySecurity() {
 
   const checkLeaksMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("check-credential-leaks", {
-        body: { tenant_id: tenant!.id },
-      });
-      if (error) throw error;
-      return data;
+      return await callGateway('security', 'check-credential-leaks', { tenant_id: tenant!.id });
     },
     onSuccess: (data: any) => {
       toast.success(`Verificação concluída: ${data?.leaks_found ?? 0} vazamentos encontrados`);

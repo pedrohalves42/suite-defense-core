@@ -53,12 +53,7 @@ export default function ThreatIntelligenceLookup({ initialTarget, onAnalyze }: T
   
   const lookupMutation = useMutation({
     mutationFn: async (targetValue: string) => {
-      const response = await supabase.functions.invoke('threat-intelligence-lookup', {
-        body: { target: targetValue },
-      });
-      
-      if (response.error) throw response.error;
-      return response.data as ThreatIntelResult;
+      return await callGateway<ThreatIntelResult>('security', 'threat-intelligence-lookup', { target: targetValue });
     },
     onSuccess: (data) => {
       setResult(data);

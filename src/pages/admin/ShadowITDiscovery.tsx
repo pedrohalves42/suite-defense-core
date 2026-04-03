@@ -47,11 +47,7 @@ export default function ShadowITDiscovery() {
 
   const classifyMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("classify-shadow-it", {
-        body: { tenant_id: tenant!.id },
-      });
-      if (error) throw error;
-      return data;
+      return await callGateway('security', 'classify-shadow-it', { tenant_id: tenant!.id });
     },
     onSuccess: (data: any) => {
       const msg = data?.ai_classified > 0 
