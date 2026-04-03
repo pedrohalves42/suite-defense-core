@@ -49,17 +49,7 @@ export default function Members() {
     queryKey: ['subscription', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) throw new Error('Tenant nao encontrado');
-
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const { data, error } = await supabase.functions.invoke('check-subscription', {
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-      });
-
-      if (error) throw error;
-      return data; // { subscribed, plan_name, device_quantity, status, features }
+      return await callGateway('billing', 'check-subscription');
     },
     enabled: !!tenant?.id,
   });

@@ -71,14 +71,10 @@ export function UpgradeModal({
   const handleUpgrade = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: {
-          planName: "business",
-          billingPeriod: "monthly",
-        },
+      const data = await callGateway<{ url?: string }>("billing", "create-checkout", {
+        planName: "business",
+        billingPeriod: "monthly",
       });
-
-      if (error) throw error;
 
       if (data?.url) {
         window.open(data.url, "_blank");
