@@ -63,16 +63,13 @@ export function RejectInsightDialog({
         : `${reasonLabel}${customReason ? `: ${customReason}` : ''}`;
 
       // Use the edge function handler for reject action (uses service role, handles audit trail)
-      const { data, error } = await supabase.functions.invoke('action-center-feed', {
-        method: 'POST',
-        headers: {
-          'x-tenant-id': tenant?.id || '',
-        },
-        body: {
-          item_id: insightId,
-          source_type: 'ai_insight',
-          action: 'reject',
-          reason: fullReason,
+      const { callGateway } = await import('@/lib/gateway');
+      const data = await callGateway('agent', 'action-center-feed', {
+        item_id: insightId,
+        source_type: 'ai_insight',
+        action: 'reject',
+        reason: fullReason,
+        tenant_id: tenant?.id || '',
           reason_category: selectedReason,
         },
       });

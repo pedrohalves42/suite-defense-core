@@ -80,14 +80,13 @@ export function RegisterLatestRelease() {
 
   const registerPlatform = async (platform: string, scriptContent: string): Promise<PlatformResult> => {
     try {
-      const { data, error } = await supabase.functions.invoke("register-agent-release", {
-        body: {
-          version: version.trim(),
-          platform,
-          script_content: scriptContent,
-          release_notes: releaseNotes.trim(),
-          channel: "stable",
-        },
+      const { callGateway } = await import('@/lib/gateway');
+      const data = await callGateway<{ version?: string; sha256?: string; error?: string }>('build', 'register-agent-release', {
+        version: version.trim(),
+        platform,
+        script_content: scriptContent,
+        release_notes: releaseNotes.trim(),
+        channel: "stable",
       });
 
       if (error) throw error;

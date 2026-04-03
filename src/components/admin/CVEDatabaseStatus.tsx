@@ -97,8 +97,8 @@ export default function CVEDatabaseStatus() {
       }
       
       try {
-        const { data, error } = await supabase.functions.invoke('translate-cve', {
-          body: { cve_id: cve.cve_id, description: cve.description },
+        const data = await callGateway<{ translated?: string }>('security', 'translate-cve', {
+          cve_id: cve.cve_id, description: cve.description,
         });
         
         if (!error && data?.translated) {

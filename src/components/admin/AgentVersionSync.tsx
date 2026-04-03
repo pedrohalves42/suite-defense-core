@@ -183,9 +183,8 @@ export function AgentVersionSync({
     if (!tenant?.id) return;
     setNuclearLoading(true);
     try {
-      const response = await supabase.functions.invoke('force-reinstall-fleet', {
-        body: { tenant_id: tenant.id }
-      });
+      const { callGateway } = await import('@/lib/gateway');
+      const result = await callGateway<Record<string, unknown>>('agent', 'force-reinstall-fleet', { tenant_id: tenant.id });
 
       if (response.error) throw response.error;
 

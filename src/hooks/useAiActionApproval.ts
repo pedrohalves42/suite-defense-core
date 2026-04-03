@@ -82,8 +82,9 @@ export function useApproveAiAction() {
       });
 
       // 5. Now execute the action via edge function
-      const { data: execResult, error: execError } = await supabase.functions.invoke('ai-router', {
-        body: { action: 'action-executor', payload: { action_id: actionId } },
+      const { callGateway } = await import('@/lib/gateway');
+      const execResult = await callGateway<{ error?: string }>('agent', 'ai-router', {
+        action: 'action-executor', payload: { action_id: actionId }
       });
 
       if (execError) throw execError;
