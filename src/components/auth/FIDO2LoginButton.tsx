@@ -49,9 +49,9 @@ export function FIDO2LoginButton({ email, onSuccess, disabled }: FIDO2LoginButto
 
     try {
       // 1. Begin authentication — get options from server
-      const options = await callEdgeFunction('fido2-authenticate', {
-        action: 'begin',
-        email,
+      const options = await callEdgeFunction('public-gateway', {
+        action: 'public:fido2-authenticate',
+        payload: { action: 'begin', email },
       });
 
       // 2. Build WebAuthn request
@@ -72,21 +72,24 @@ export function FIDO2LoginButton({ email, onSuccess, disabled }: FIDO2LoginButto
       const response = credential.response as AuthenticatorAssertionResponse;
 
       // 4. Complete authentication on server
-      const result = await callEdgeFunction('fido2-authenticate', {
-        action: 'complete',
-        email,
-        authResponse: {
-          id: credential.id,
-          rawId: bufferToBase64Url(credential.rawId),
-          type: credential.type,
-          response: {
-            clientDataJSON: bufferToBase64Url(response.clientDataJSON),
-            authenticatorData: bufferToBase64Url(response.authenticatorData),
-            signature: bufferToBase64Url(response.signature),
-            userHandle: response.userHandle ? bufferToBase64Url(response.userHandle) : null,
+      const result = await callEdgeFunction('public-gateway', {
+        action: 'public:fido2-authenticate',
+        payload: {
+          action: 'complete',
+          email,
+          authResponse: {
+            id: credential.id,
+            rawId: bufferToBase64Url(credential.rawId),
+            type: credential.type,
+            response: {
+              clientDataJSON: bufferToBase64Url(response.clientDataJSON),
+              authenticatorData: bufferToBase64Url(response.authenticatorData),
+              signature: bufferToBase64Url(response.signature),
+              userHandle: response.userHandle ? bufferToBase64Url(response.userHandle) : null,
+            },
           },
+          expectedChallenge: options.challenge,
         },
-        expectedChallenge: options.challenge,
       });
 
       if (!result.success) {

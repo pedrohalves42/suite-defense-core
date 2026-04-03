@@ -1,8 +1,11 @@
-import { servePublic } from '../_shared/serve-tenant.ts';
-import { buildCorsHeaders } from '../_shared/cors.ts';
-import { checkRateLimit } from '../_shared/rate-limit.ts';
-import { logger } from '../_shared/logger.ts';
+/**
+ * validate-hmac-signature handler — Inlined into public-gateway (Phase 6D)
+ * Tests HMAC key validity by signing a test payload.
+ */
+import { checkRateLimit } from '../../_shared/rate-limit.ts';
+import { logger } from '../../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
 const ValidateHmacSchema = z.object({
   hmac_secret: z.string().regex(/^[0-9a-f]{64}$/i, 'Must be 64-character hexadecimal string'),
@@ -17,10 +20,12 @@ function hexToBytes(hex: string): Uint8Array {
   return bytes;
 }
 
-servePublic(async (req, ctx) => {
-  const { supabase, requestId, body } = ctx;
-  const origin = req.headers.get('origin');
-
+export async function handleValidateHmacSignature(
+  supabase: SupabaseClient,
+  req: Request,
+  requestId: string,
+  payload: Record<string, unknown>,
+): Promise<Response | Record<string, unknown>> {
   // Rate limiting
   const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     || req.headers.get('cf-connecting-ip')
@@ -33,21 +38,20 @@ servePublic(async (req, ctx) => {
 
   if (!rateLimitResult.allowed) {
     logger.warn(`[${requestId}] Rate limit exceeded for IP: ${clientIP}`);
-    return new Response(JSON.stringify({
+    return {
       valid: false, error: "Rate limit exceeded", error_code: "RATE_LIMITED",
-      retry_after: rateLimitResult.resetAt?.toISOString(), request_id: requestId
-    }), {
-      status: 429,
-      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json', 'Retry-After': Math.ceil((rateLimitResult.resetAt!.getTime() - Date.now()) / 1000).toString() }
-    });
+      retry_after: rateLimitResult.resetAt?.toISOString(), request_id: requestId,
+      __status: 429,
+    };
   }
 
-  const parsed = ValidateHmacSchema.safeParse(body);
+  const parsed = ValidateHmacSchema.safeParse(payload);
   if (!parsed.success) {
-    return new Response(JSON.stringify({
+    return {
       valid: false, error: "Invalid payload", error_code: "INVALID_PAYLOAD",
-      issues: parsed.error.flatten().fieldErrors, request_id: requestId
-    }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
+      issues: parsed.error.flatten().fieldErrors, request_id: requestId,
+      __status: 400,
+    };
   }
 
   const { hmac_secret, test_payload } = parsed.data;
@@ -57,31 +61,31 @@ servePublic(async (req, ctx) => {
     keyBytes = hexToBytes(hmac_secret);
     if (keyBytes.length !== 32) throw new Error(`Expected 32 bytes, got ${keyBytes.length}`);
   } catch (conversionError) {
-    return new Response(JSON.stringify({
+    return {
       valid: false, error: "Failed to convert HEX to bytes", error_code: "HEX_CONVERSION_FAILED",
-      details: (conversionError as Error).message, request_id: requestId
-    }), { status: 422, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
+      details: (conversionError as Error).message, request_id: requestId,
+      __status: 422,
+    };
   }
 
   const timestamp = Date.now().toString();
   const nonce = crypto.randomUUID();
-  const payload = `${timestamp}:${nonce}:${test_payload}`;
+  const testPayload = `${timestamp}:${nonce}:${test_payload}`;
 
   const encoder = new TextEncoder();
-  const messageData = encoder.encode(payload);
-
   const cryptoKey = await crypto.subtle.importKey(
     'raw', keyBytes.buffer as ArrayBuffer,
     { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
   );
 
-  const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+  const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(testPayload));
   const signature = Array.from(new Uint8Array(signatureBuffer))
     .map(b => b.toString(16).padStart(2, '0')).join('');
 
   logger.info(`[${requestId}] HMAC validation successful`);
 
-  return new Response(JSON.stringify({
-    valid: true, signature, test_message: payload, timestamp, nonce, request_id: requestId
-  }), { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
-});
+  return {
+    valid: true, signature, test_message: testPayload,
+    timestamp, nonce, request_id: requestId,
+  };
+}

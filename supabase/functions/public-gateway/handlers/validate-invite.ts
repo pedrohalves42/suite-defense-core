@@ -1,13 +1,10 @@
 /**
- * validate-invite Edge Function
- * SECURITY: Validates invite tokens WITHOUT exposing sensitive data to frontend
- * Part of Phase 3 RLS Hardening - ADR-023
- * Migrated to servePublic middleware (no auth required - called before account creation)
+ * validate-invite handler — Inlined into public-gateway (Phase 6D)
+ * Validates invite tokens WITHOUT exposing sensitive data to frontend.
  */
-
-import { servePublic } from '../_shared/serve-tenant.ts';
-import { logger } from '../_shared/logger.ts';
+import { logger } from '../../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
 const ValidateInviteSchema = z.object({
   token: z.string().min(10).max(512),
@@ -22,13 +19,19 @@ interface SafeInviteData {
   error_code?: string;
 }
 
-servePublic(async (_req, { supabase, requestId, body }) => {
-  const parsed = ValidateInviteSchema.safeParse(body);
+export async function handleValidateInvite(
+  supabase: SupabaseClient,
+  _req: Request,
+  requestId: string,
+  payload: Record<string, unknown>,
+): Promise<Response | Record<string, unknown>> {
+  const parsed = ValidateInviteSchema.safeParse(payload);
   if (!parsed.success) {
-    return new Response(
-      JSON.stringify({ error: 'Token invalido', issues: parsed.error.flatten().fieldErrors }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
+    return {
+      error: 'Token invalido',
+      issues: parsed.error.flatten().fieldErrors,
+      __status: 400,
+    };
   }
   const { token } = parsed.data;
 
@@ -43,10 +46,7 @@ servePublic(async (_req, { supabase, requestId, body }) => {
 
   if (inviteError) {
     logger.error(`[${requestId}] Database error`, inviteError as Error);
-    return new Response(
-      JSON.stringify({ error: 'Erro ao validar convite' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    return { error: 'Erro ao validar convite', __status: 500 };
   }
 
   if (!invite) {
@@ -58,7 +58,7 @@ servePublic(async (_req, { supabase, requestId, body }) => {
       is_valid: false,
       error_code: 'NOT_FOUND',
     };
-    return response;
+    return response as unknown as Record<string, unknown>;
   }
 
   let tenantName: string | null = null;
@@ -83,5 +83,5 @@ servePublic(async (_req, { supabase, requestId, body }) => {
   };
 
   logger.info(`[${requestId}] Invite validated: ${invite.email}, valid: ${response.is_valid}`);
-  return response;
-});
+  return response as unknown as Record<string, unknown>;
+}

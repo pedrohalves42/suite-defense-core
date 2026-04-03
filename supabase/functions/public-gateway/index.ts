@@ -1,5 +1,5 @@
 /**
- * public-gateway — Unified Public API Gateway (Phase 5)
+ * public-gateway — Unified Public API Gateway (Phase 5 + 6D)
  *
  * Consolidates servePublic functions that don't require JWT authentication.
  * 
@@ -15,13 +15,22 @@ import { z } from 'https://esm.sh/zod@3.23.8';
 import { requireEnv } from '../_shared/env.ts';
 import { securityHeaders } from '../_shared/security-headers.ts';
 
-// Handlers
+// Phase 5 Handlers
 import { handleCheckFailedLogins, handleRecordFailedLogin } from './handlers/auth-security.ts';
 import { handleApproveViaToken } from './handlers/approval.ts';
 import { handleSubmitContact } from './handlers/contact.ts';
 import { handleHealth } from './handlers/health.ts';
 import { handleEvaluateSoftwareRisk } from './handlers/software-risk.ts';
 import { handleGetReinstallScript, handleGetReinstallPreserveScript } from './handlers/scripts.ts';
+
+// Phase 6D Handlers
+import { handleValidateInvite } from './handlers/validate-invite.ts';
+import { handleVerifyDocument } from './handlers/verify-document.ts';
+import { handleVerifyComplianceReport } from './handlers/verify-compliance-report.ts';
+import { handleTrackInstallationEvent } from './handlers/track-installation.ts';
+import { handleValidateHmacSignature } from './handlers/validate-hmac.ts';
+import { handleFido2Authenticate } from './handlers/fido2-auth.ts';
+import { handleGetReinstallByName } from './handlers/reinstall-by-name.ts';
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
@@ -33,6 +42,7 @@ type PublicHandler = (
 ) => Promise<Response | Record<string, unknown>>;
 
 const INLINED_HANDLERS: Record<string, PublicHandler> = {
+  // Phase 5
   'public:check-failed-logins': handleCheckFailedLogins,
   'public:record-failed-login': handleRecordFailedLogin,
   'public:approve-via-token': handleApproveViaToken as PublicHandler,
@@ -41,6 +51,14 @@ const INLINED_HANDLERS: Record<string, PublicHandler> = {
   'public:evaluate-software-risk': handleEvaluateSoftwareRisk,
   'public:get-reinstall-script': handleGetReinstallScript as PublicHandler,
   'public:get-reinstall-preserve-script': handleGetReinstallPreserveScript as PublicHandler,
+  // Phase 6D
+  'public:validate-invite': handleValidateInvite as PublicHandler,
+  'public:verify-document': handleVerifyDocument as PublicHandler,
+  'public:verify-compliance-report': handleVerifyComplianceReport as PublicHandler,
+  'public:track-installation-event': handleTrackInstallationEvent as PublicHandler,
+  'public:validate-hmac-signature': handleValidateHmacSignature as PublicHandler,
+  'public:fido2-authenticate': handleFido2Authenticate as PublicHandler,
+  'public:get-reinstall-by-name': handleGetReinstallByName as PublicHandler,
 };
 
 const ALL_ACTIONS = new Set(Object.keys(INLINED_HANDLERS));

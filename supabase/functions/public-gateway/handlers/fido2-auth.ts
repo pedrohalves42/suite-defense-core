@@ -1,11 +1,10 @@
 /**
- * FIDO2/WebAuthn Authentication - Migrated to servePublic middleware
- * Pre-auth endpoint: no JWT required. Users authenticate via security key.
- * Actions: begin (get auth options), complete (verify assertion)
+ * fido2-authenticate handler — Inlined into public-gateway (Phase 6D)
+ * WebAuthn authentication: begin (get options) and complete (verify assertion).
  */
-import { servePublic } from '../_shared/serve-tenant.ts';
-import { logger } from '../_shared/logger.ts';
+import { logger } from '../../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
 const RP_ID = Deno.env.get('FIDO2_RP_ID') || 'cybershield-audit.lovable.app';
 const ORIGIN = Deno.env.get('FIDO2_ORIGIN') || 'https://cybershield-audit.lovable.app';
@@ -38,35 +37,31 @@ function base64UrlDecode(base64url: string): Uint8Array {
   return bytes;
 }
 
-servePublic(async (_req, ctx) => {
-  const { supabase, requestId, body } = ctx;
-  const action = body?.action || 'begin';
+export async function handleFido2Authenticate(
+  supabase: SupabaseClient,
+  _req: Request,
+  requestId: string,
+  payload: Record<string, unknown>,
+): Promise<Response | Record<string, unknown>> {
+  const action = (payload.action as string) || 'begin';
 
-  // ??? BEGIN AUTHENTICATION ???
+  // ═══ BEGIN AUTHENTICATION ═══
   if (action === 'begin') {
-    const parsed = BeginSchema.safeParse(body);
+    const parsed = BeginSchema.safeParse(payload);
     if (!parsed.success) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid input', details: parsed.error.flatten().fieldErrors }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return { error: 'Invalid input', details: parsed.error.flatten().fieldErrors, __status: 400 };
     }
 
     const { email } = parsed.data;
 
-    // Look up user via admin API
     const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
     if (listError) throw listError;
 
     const user = users?.find(u => u.email === email);
     if (!user) {
-      return new Response(
-        JSON.stringify({ error: 'No account found with this email' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
+      return { error: 'No account found with this email', __status: 404 };
     }
 
-    // Fetch active FIDO2 credentials
     const { data: credentials, error: credError } = await supabase
       .from('fido2_credentials')
       .select('credential_id, transports')
@@ -76,18 +71,13 @@ servePublic(async (_req, ctx) => {
     if (credError) throw credError;
 
     if (!credentials || credentials.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'No security keys registered for this account' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return { error: 'No security keys registered for this account', __status: 400 };
     }
 
-    // Generate challenge
     const challengeBytes = new Uint8Array(32);
     crypto.getRandomValues(challengeBytes);
     const challenge = Array.from(challengeBytes).map(b => b.toString(16).padStart(2, '0')).join('');
 
-    // Store challenge in session_store
     const challengeKey = `fido2:auth:${user.id}:${challenge}`;
     await supabase.from('session_store').upsert({
       key: challengeKey,
@@ -95,7 +85,8 @@ servePublic(async (_req, ctx) => {
       expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
     });
 
-    const options = {
+    logger.info(`[fido2-authenticate][${requestId}] Begin for ${email}, ${credentials.length} key(s)`);
+    return {
       challenge,
       rpId: RP_ID,
       allowCredentials: credentials.map((cred: Record<string, unknown>) => ({
@@ -106,34 +97,23 @@ servePublic(async (_req, ctx) => {
       userVerification: 'required',
       timeout: 60000,
     };
-
-    logger.info(`[fido2-authenticate][${requestId}] Begin for ${email}, ${credentials.length} key(s)`);
-    return options;
   }
 
-  // ??? COMPLETE AUTHENTICATION ???
+  // ═══ COMPLETE AUTHENTICATION ═══
   if (action === 'complete') {
-    const parsed = CompleteSchema.safeParse(body);
+    const parsed = CompleteSchema.safeParse(payload);
     if (!parsed.success) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid input', details: parsed.error.flatten().fieldErrors }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return { error: 'Invalid input', details: parsed.error.flatten().fieldErrors, __status: 400 };
     }
 
     const { email, authResponse, expectedChallenge } = parsed.data;
 
-    // Look up user
     const { data: { users } } = await supabase.auth.admin.listUsers();
     const user = users?.find(u => u.email === email);
     if (!user) {
-      return new Response(
-        JSON.stringify({ error: 'User not found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
+      return { error: 'User not found', __status: 404 };
     }
 
-    // Verify challenge exists and hasn't expired
     const challengeKey = `fido2:auth:${user.id}:${expectedChallenge}`;
     const { data: storedData } = await supabase
       .from('session_store')
@@ -142,21 +122,14 @@ servePublic(async (_req, ctx) => {
       .single();
 
     if (!storedData) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid or expired challenge' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return { error: 'Invalid or expired challenge', __status: 400 };
     }
 
     if (new Date(storedData.expires_at) < new Date()) {
       await supabase.from('session_store').delete().eq('key', challengeKey);
-      return new Response(
-        JSON.stringify({ error: 'Challenge expired' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return { error: 'Challenge expired', __status: 400 };
     }
 
-    // Fetch the credential used for authentication
     const { data: credential, error: credError } = await supabase
       .from('fido2_credentials')
       .select('*')
@@ -166,51 +139,36 @@ servePublic(async (_req, ctx) => {
       .single();
 
     if (credError || !credential) {
-      return new Response(
-        JSON.stringify({ error: 'Credential not found or revoked' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return { error: 'Credential not found or revoked', __status: 400 };
     }
 
-    // Verify clientDataJSON contains correct challenge and origin
+    // Verify clientDataJSON
     try {
       const clientDataBytes = base64UrlDecode(authResponse.response.clientDataJSON);
       const clientData = JSON.parse(new TextDecoder().decode(clientDataBytes));
 
-      if (clientData.type !== 'webauthn.get') {
-        throw new Error('Invalid clientData type');
-      }
+      if (clientData.type !== 'webauthn.get') throw new Error('Invalid clientData type');
 
       if (clientData.origin !== ORIGIN) {
         logger.warn(`[fido2-authenticate] Origin mismatch: ${clientData.origin} vs ${ORIGIN}`);
-        if (!clientData.origin.includes('lovable.app')) {
-          throw new Error('Origin mismatch');
-        }
+        if (!clientData.origin.includes('lovable.app')) throw new Error('Origin mismatch');
       }
 
       const receivedChallenge = clientData.challenge;
       if (receivedChallenge !== expectedChallenge) {
         const hexChallenge = Array.from(base64UrlDecode(receivedChallenge))
           .map((b: number) => b.toString(16).padStart(2, '0')).join('');
-        if (hexChallenge !== expectedChallenge) {
-          throw new Error('Challenge mismatch');
-        }
+        if (hexChallenge !== expectedChallenge) throw new Error('Challenge mismatch');
       }
     } catch (verifyError) {
       logger.error('[fido2-authenticate] ClientData verification failed:', verifyError);
-      return new Response(
-        JSON.stringify({ error: `Authentication verification failed: ${(verifyError as Error).message}` }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return { error: `Authentication verification failed: ${(verifyError as Error).message}`, __status: 400 };
     }
 
     // Verify authenticatorData flags
     const authDataBytes = base64UrlDecode(authResponse.response.authenticatorData);
     if (authDataBytes.length < 37) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid authenticator data' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return { error: 'Invalid authenticator data', __status: 400 };
     }
 
     const flags = authDataBytes[32];
@@ -218,53 +176,37 @@ servePublic(async (_req, ctx) => {
     const userVerified = (flags & 0x04) !== 0;
 
     if (!userPresent) {
-      return new Response(
-        JSON.stringify({ error: 'User presence flag not set' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return { error: 'User presence flag not set', __status: 400 };
     }
 
-    // Extract sign count
     const signCount = (authDataBytes[33] << 24) | (authDataBytes[34] << 16) | (authDataBytes[35] << 8) | authDataBytes[36];
 
-    // Check for cloned authenticator
+    // Clone detection
     if (credential.sign_count > 0 && signCount <= credential.sign_count) {
       logger.error(`[fido2-authenticate] SECURITY: Possible cloned authenticator for ${credential.credential_id}`);
 
       const { data: userRoleData } = await supabase
-        .from('user_roles')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .single();
+        .from('user_roles').select('tenant_id').eq('user_id', user.id).limit(1).single();
 
       await supabase.from('security_events').insert({
         tenant_id: userRoleData?.tenant_id,
         severity: 'critical',
         event_type: 'fido2_cloned_authenticator',
         details: {
-          user_id: user.id,
-          credential_id: credential.credential_id,
-          expected_sign_count: credential.sign_count,
-          received_sign_count: signCount,
+          user_id: user.id, credential_id: credential.credential_id,
+          expected_sign_count: credential.sign_count, received_sign_count: signCount,
         },
       });
 
-      return new Response(
-        JSON.stringify({ error: 'Security alert: authenticator may have been cloned' }),
-        { status: 403, headers: { 'Content-Type': 'application/json' } }
-      );
+      return { error: 'Security alert: authenticator may have been cloned', __status: 403 };
     }
 
-    // Update credential sign count and last_used
     await supabase.from('fido2_credentials')
       .update({ sign_count: signCount, last_used_at: new Date().toISOString() })
       .eq('id', credential.id);
 
-    // Cleanup challenge
     await supabase.from('session_store').delete().eq('key', challengeKey);
 
-    // Generate a magic link
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email: user.email!,
@@ -272,32 +214,18 @@ servePublic(async (_req, ctx) => {
 
     if (linkError || !linkData) {
       logger.error('[fido2-authenticate] Failed to generate session link:', linkError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to create session' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
+      return { error: 'Failed to create session', __status: 500 };
     }
 
-    // Audit log
     const { data: userRole } = await supabase
-      .from('user_roles')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .limit(1)
-      .maybeSingle();
+      .from('user_roles').select('tenant_id').eq('user_id', user.id).limit(1).maybeSingle();
 
     if (userRole?.tenant_id) {
       await supabase.from('audit_logs').insert({
-        tenant_id: userRole.tenant_id,
-        user_id: user.id,
-        action: 'fido2_authentication_success',
-        resource_type: 'auth',
+        tenant_id: userRole.tenant_id, user_id: user.id,
+        action: 'fido2_authentication_success', resource_type: 'auth',
         resource_id: credential.credential_id,
-        details: {
-          user_verified: userVerified,
-          sign_count: signCount,
-          device_name: credential.device_name,
-        },
+        details: { user_verified: userVerified, sign_count: signCount, device_name: credential.device_name },
       });
     }
 
@@ -310,8 +238,5 @@ servePublic(async (_req, ctx) => {
     };
   }
 
-  return new Response(
-    JSON.stringify({ error: 'Unknown action. Use "begin" or "complete"' }),
-    { status: 400, headers: { 'Content-Type': 'application/json' } }
-  );
-}, { methods: ['POST'] });
+  return { error: 'Unknown action. Use "begin" or "complete"', __status: 400 };
+}

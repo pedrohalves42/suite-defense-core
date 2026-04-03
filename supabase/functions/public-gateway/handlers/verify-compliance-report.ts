@@ -1,39 +1,30 @@
 /**
- * Verify Compliance Report - Migrated to servePublic middleware
- * Public endpoint for cryptographic verification of compliance reports.
- * No authentication required ? anyone with an audit_id can verify.
+ * verify-compliance-report handler — Inlined into public-gateway (Phase 6D)
+ * Cryptographic verification of compliance reports.
  */
-import { servePublic } from '../_shared/serve-tenant.ts';
-import { logger } from '../_shared/logger.ts';
+import { logger } from '../../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
-import { requireEnv } from '../_shared/env.ts';
+import { requireEnv } from '../../_shared/env.ts';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
 const VerifySchema = z.object({
   audit_id: z.string().min(1, 'audit_id is required'),
 });
 
-// Real SHA256 using Web Crypto API
 async function generateSHA256(data: string): Promise<string> {
   const encoder = new TextEncoder();
   const dataBuffer = encoder.encode(data);
   const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-// HMAC-SHA256 for digital signature verification
 async function generateHMAC(data: string, secret: string): Promise<string> {
   const encoder = new TextEncoder();
-  const keyData = encoder.encode(secret);
-  const dataBuffer = encoder.encode(data);
-
   const key = await crypto.subtle.importKey(
-    "raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    "raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
   );
-
-  const signature = await crypto.subtle.sign("HMAC", key, dataBuffer);
-  const signatureArray = Array.from(new Uint8Array(signature));
-  return signatureArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
+  return Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
 interface ReportData {
@@ -52,36 +43,31 @@ interface ReportData {
   report_type: string;
 }
 
-servePublic(async (req, ctx) => {
-  const { supabase, requestId } = ctx;
-
-  // Get audit_id from query params (GET) or body (POST)
+export async function handleVerifyComplianceReport(
+  supabase: SupabaseClient,
+  req: Request,
+  requestId: string,
+  payload: Record<string, unknown>,
+): Promise<Response | Record<string, unknown>> {
+  // Support GET (query param) and POST (payload)
   let auditId: string | null = null;
 
   if (req.method === "GET") {
-    const url = new URL(req.url);
-    auditId = url.searchParams.get("audit_id");
+    auditId = (payload.audit_id as string) || null;
   } else {
-    const parsed = VerifySchema.safeParse(ctx.body);
+    const parsed = VerifySchema.safeParse(payload);
     if (!parsed.success) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'audit_id is required', integrity: { valid: false } }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return { success: false, error: 'audit_id is required', integrity: { valid: false }, __status: 400 };
     }
     auditId = parsed.data.audit_id;
   }
 
   if (!auditId) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'audit_id is required', integrity: { valid: false } }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
+    return { success: false, error: 'audit_id is required', integrity: { valid: false }, __status: 400 };
   }
 
   logger.info(`[verify-compliance-report][${requestId}] Verifying report: ${auditId}`);
 
-  // Fetch report by audit_id
   const { data: report, error: fetchError } = await supabase
     .from("generated_reports")
     .select("id, audit_id, sha256, hmac_signature, report_data, tenant_id, title, risk_score, risk_level, status, created_at, expires_at, report_type")
@@ -89,19 +75,12 @@ servePublic(async (req, ctx) => {
     .single();
 
   if (fetchError || !report) {
-    logger.info(`[verify-compliance-report][${requestId}] Report NOT found for audit_id: "${auditId}"`);
-    return new Response(
-      JSON.stringify({ success: false, error: 'Relatorio nao encontrado', audit_id: auditId, integrity: { valid: false } }),
-      { status: 404, headers: { 'Content-Type': 'application/json' } }
-    );
+    return { success: false, error: 'Relatorio nao encontrado', audit_id: auditId, integrity: { valid: false }, __status: 404 };
   }
 
   const typedReport = report as ReportData;
-
-  // Get HMAC secret for verification
   const hmacSecret = requireEnv('COMPLIANCE_HMAC_SECRET');
 
-  // Reconstruct payload for hash verification
   const reportData = typedReport.report_data;
   const payloadForHash = JSON.stringify({
     audit_id: reportData.audit_id,
@@ -115,22 +94,16 @@ servePublic(async (req, ctx) => {
     statistics: reportData.statistics,
   });
 
-  // Calculate hashes
   const calculatedSha256 = await generateSHA256(payloadForHash);
   const calculatedHmac = await generateHMAC(payloadForHash, hmacSecret);
 
-  // Verify integrity
   const sha256Match = calculatedSha256 === typedReport.sha256;
   const hmacValid = calculatedHmac === typedReport.hmac_signature;
   const isIntegrityValid = sha256Match && hmacValid;
-
-  // Check expiration
   const isExpired = typedReport.expires_at ? new Date(typedReport.expires_at) < new Date() : false;
 
-  // Get client IP for audit trail
   const clientIp = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
 
-  // Log verification to audit trail
   await supabase.from("audit_report_verifications").insert({
     report_id: typedReport.id,
     audit_id: auditId,
@@ -146,7 +119,6 @@ servePublic(async (req, ctx) => {
     },
   });
 
-  // Update report with last verification time if valid
   if (isIntegrityValid) {
     await supabase
       .from("generated_reports")
@@ -154,7 +126,6 @@ servePublic(async (req, ctx) => {
       .eq("id", typedReport.id);
   }
 
-  // Get tenant name
   const { data: tenant } = await supabase
     .from("tenants")
     .select("name")
@@ -199,4 +170,4 @@ servePublic(async (req, ctx) => {
       compliance_standards: ["SOC2", "ISO 27001"],
     },
   };
-}, { methods: ['GET', 'POST'] });
+}
