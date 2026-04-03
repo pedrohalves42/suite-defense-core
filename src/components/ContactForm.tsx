@@ -83,16 +83,17 @@ export const ContactForm = () => {
         return;
       }
 
-      const { error } = await supabase.functions.invoke('submit-contact', {
-        body: {
+      const { callGateway } = await import('@/lib/gateway');
+      try {
+        await callGateway('public', 'submit-contact', {
           name: formData.name,
           email: formData.email,
           company: formData.company || null,
           phone: formData.phone || null,
           endpoints: formData.endpoints ? parseInt(formData.endpoints) : null,
           message: formData.message || null,
-        }
-      });
+        });
+        const error = null;
 
       if (error) {
         logger.error("Error submitting contact form", error);

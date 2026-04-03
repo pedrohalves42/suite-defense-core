@@ -40,9 +40,9 @@ export default function ApprovePage() {
     // Call the approve-via-token edge function
     const approveRequest = async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('approve-via-token', {
-          body: { token }
-        });
+        const { callGateway } = await import('@/lib/gateway');
+        const data = await callGateway<Record<string, unknown>>('public', 'approve-via-token', { token });
+        const error = null;
 
         if (error) {
           setStatus('error');

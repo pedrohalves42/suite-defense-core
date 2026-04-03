@@ -183,9 +183,8 @@ export function useLoginFlow() {
       }
 
       try {
-        await supabase.functions.invoke('record-failed-login', {
-          body: { email: loginEmail },
-        });
+        const { callGateway } = await import('@/lib/gateway');
+        await callGateway('public', 'record-failed-login', { email: loginEmail });
       } catch (recordError) {
         logger.error('Failed to record login attempt', recordError);
       }
