@@ -178,6 +178,8 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'security:security-advisor': handleSecurityAdvisor,
   'admin:change-password': handleChangePassword,
   'admin:create-job': handleCreateJob,
+  'security:sync-cve-database': handleSyncCveDatabase as InlinedHandler,
+  'security:mitre-sync': handleMitreSync as InlinedHandler,
 };
 
 // API-key authenticated endpoints (still proxy — they have own auth flow)
