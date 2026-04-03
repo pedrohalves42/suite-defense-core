@@ -76,7 +76,7 @@ export async function handleCheckoutCompleted(supabase: SupabaseClient, session:
   logger.info(`[STRIPE-WEBHOOK] Checkout completed: ${session.id}`);
   const customerId = session.customer as string;
   const tenantId = session.metadata?.tenant_id;
-  const planName = session.metadata?.plan_name;
+  const planName = resolveDbPlanName(session.metadata?.plan_name);
 
   if (tenantId && customerId) {
     const { data: plan } = await supabase
