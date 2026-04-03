@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { toast } from 'sonner';
 import { useTenant } from './useTenant';
 import { logger } from '@/lib/logger';
@@ -52,15 +53,11 @@ export function useActionCenter() {
   const query = useQuery({
     queryKey: ['action-center', tenant?.id],
     queryFn: async (): Promise<ActionCenterFeed> => {
-      const { data, error } = await supabase.functions.invoke('action-center-feed', {
-        method: 'GET',
-        headers: {
-          'x-tenant-id': tenant!.id
-        }
+      const data = await callGateway<ActionCenterFeed>('agent', 'action-center-feed', {
+        action: 'get-feed',
+        tenant_id: tenant!.id
       });
-
-      if (error) throw error;
-      return data as ActionCenterFeed;
+      return data;
     },
     // V-FIX: Guard with !tenantLoading to prevent queries before JWT sync completes
     enabled: !tenantLoading && !!tenant?.id,
@@ -138,20 +135,13 @@ export function useExecuteActionItem() {
     }) => {
       // V-5007 FIX: Guard against empty tenant_id
       if (!tenant?.id) throw new Error('Tenant not found');
-      const { data, error } = await supabase.functions.invoke('action-center-feed', {
-        method: 'POST',
-        headers: {
-          'x-tenant-id': tenant.id
-        },
-        body: {
-          item_id: itemId,
-          source_type: sourceType,
-          action,
-          reason
-        }
+      const data = await callGateway('agent', 'action-center-feed', {
+        item_id: itemId,
+        source_type: sourceType,
+        action,
+        reason,
+        tenant_id: tenant.id,
       });
-
-      if (error) throw error;
       return data;
     },
     onSuccess: (response, { action, sourceType }) => {

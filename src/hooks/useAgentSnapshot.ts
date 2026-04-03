@@ -46,14 +46,8 @@ export function useAgentSnapshot(agentId?: string) {
   return useQuery({
     queryKey: ['agent-snapshot', agentId],
     queryFn: async (): Promise<AgentSnapshot> => {
-      const { data, error } = await supabase.functions.invoke('agent-snapshot', {
-        body: { agent_id: agentId }
-      });
-      
-      if (error) {
-        logger.error('[useAgentSnapshot] Error', error instanceof Error ? error : undefined);
-        throw new Error(error.message || 'Failed to fetch agent snapshot');
-      }
+      const { callGateway } = await import('@/lib/gateway');
+      const data = await callGateway<{ data?: AgentSnapshot }>('agent', 'agent-snapshot', { agent_id: agentId });
       
       if (!data?.data) {
         throw new Error('No data returned from agent-snapshot');

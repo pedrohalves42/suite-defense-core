@@ -84,6 +84,10 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ACTION_TO_FUNCTION: Record<string, string> = {
   // security proxy targets — serveTenant (JWT-compatible)
   'security:scan-vulnerabilities': 'scan-vulnerabilities',
+  'security:calculate-compliance': 'calculate-compliance',
+  'security:export-evidence-bundle': 'export-evidence-bundle',
+  'security:fido2-register': 'fido2-register',
+  'security:translate-cve': 'translate-cve',
   // build proxy targets — serveTenant (JWT-compatible)
   'build:build-agent-exe': 'build-agent-exe',
   'build:generate-deploy-package': 'generate-deploy-package',
@@ -99,6 +103,16 @@ const ACTION_TO_FUNCTION: Record<string, string> = {
   'agent:setup-agent-script': 'setup-agent-script',
   'agent:force-reinstall-fleet': 'force-reinstall-fleet',
   'agent:create-reinstall-jobs': 'create-reinstall-jobs',
+  'agent:action-center-feed': 'action-center-feed',
+  // AI proxy targets — serveTenant (JWT-compatible)
+  'agent:ai-action-executor': 'ai-action-executor',
+  'agent:ai-agent-assist': 'ai-agent-assist',
+  'agent:ai-analyze-agent': 'ai-analyze-agent',
+  'agent:ai-full-audit': 'ai-full-audit',
+  'agent:ai-quality-check': 'ai-quality-check',
+  'agent:ai-red-team-assessment': 'ai-red-team-assessment',
+  'agent:ai-router': 'ai-router',
+  'agent:ai-system-audit': 'ai-system-audit',
 };
 
 // ── Inlined handlers (no HTTP hop) ──────────────────────────────────────

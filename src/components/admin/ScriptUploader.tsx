@@ -48,13 +48,13 @@ export function ScriptUploader() {
     mutationFn: async () => {
       if (!fileContent || !version) throw new Error('Selecione um arquivo e versão');
 
-      const { data, error } = await supabase.functions.invoke('upload-release-content', {
-        body: { platform, version, content: fileContent },
+      const { callGateway } = await import('@/lib/gateway');
+      const data = await callGateway<{ error?: string }>('build', 'upload-release-content', {
+        platform, version, content: fileContent,
       });
 
-      if (error) throw new Error(error.message || 'Erro no upload');
       if (data?.error) throw new Error(data.error);
-      return data;
+      return data as { error?: string; signed?: boolean; platform?: string; version?: string; size?: number };
     },
     onSuccess: (data) => {
       toast({

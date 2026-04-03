@@ -76,10 +76,9 @@ export const useAutoRemediation = () => {
       trigger_details: Record<string, unknown>;
       requires_approval?: boolean;
     }) => {
-      const { data, error } = await supabase.functions.invoke('auto-remediate', {
-        body: params
-      });
-      if (error) throw error;
+      const { callGateway } = await import('@/lib/gateway');
+      const data = await callGateway<{ error?: string; message?: string; status?: string }>('playbook', 'auto-remediate', params);
+      if (data?.error) throw new Error(data.message || data.error);
       if (data?.error) throw new Error(data.message || data.error);
       return data;
     },
@@ -121,8 +120,8 @@ export const useAutoRemediation = () => {
         .eq('tenant_id', tenant.id);
       if (updateErr) throw updateErr;
 
-      const { data, error: invokeErr } = await supabase.functions.invoke('auto-remediate', {
-        body: {
+      const { data, error: invokeErr } = await supabase.functions.invoke('api-gateway', {
+        body: { action: 'playbook:auto-remediate', payload: {
           agent_id: action.agent_id,
           action_type: action.action_type,
           trigger_source: `approved:${action.trigger_source}`,
@@ -132,7 +131,7 @@ export const useAutoRemediation = () => {
             approved: true
           },
           requires_approval: false
-        }
+        }}
       });
       if (invokeErr) throw invokeErr;
       return data;

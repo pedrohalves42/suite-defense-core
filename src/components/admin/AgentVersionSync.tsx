@@ -183,13 +183,9 @@ export function AgentVersionSync({
     if (!tenant?.id) return;
     setNuclearLoading(true);
     try {
-      const response = await supabase.functions.invoke('force-reinstall-fleet', {
-        body: { tenant_id: tenant.id }
-      });
+      const { callGateway } = await import('@/lib/gateway');
+      const result = await callGateway<{ commands: { powershell_oneliner: string }; outdated_agents: { id: string; name: string; current_version: string; force_update_delivered_count: number }[]; latest_version: string }>('agent', 'force-reinstall-fleet', { tenant_id: tenant.id });
 
-      if (response.error) throw response.error;
-
-      const result = response.data;
       setNuclearCommands({
         powershell_oneliner: result.commands.powershell_oneliner,
         outdated_agents: result.outdated_agents,
