@@ -42,7 +42,7 @@ serveInternal(async (req, ctx) => {
 
     try {
       await supabase.rpc('update_cron_health', {
-        p_cron_name: 'evaluate-automation-rules-5min', p_success: true,
+        p_cron_name: 'evaluate-automation-rules-daily', p_success: true,
         p_details: { tenants: tenants.length, evaluated: totalEvaluated, triggered: totalTriggered, blocked: totalBlocked, decisions: totalDecisions },
       });
     } catch (e) { logger.warn('[evaluate-automation-rules] Failed to update cron health:', e); }
@@ -58,7 +58,7 @@ serveInternal(async (req, ctx) => {
   const result = await evaluateForTenant(supabase, tenant_id);
 
   try {
-    await supabase.rpc('update_cron_health', { p_cron_name: 'evaluate-automation-rules-5min', p_success: true, p_details: result });
+    await supabase.rpc('update_cron_health', { p_cron_name: 'evaluate-automation-rules-daily', p_success: true, p_details: result });
   } catch (e) { logger.warn('[evaluate-automation-rules] cron health update failed:', e); }
 
   logger.info(`[Enterprise Engine v2] tenant=${tenant_id} | ${result.evaluated} rules | ${result.triggered} triggered | ${result.blocked} blocked | ${result.decisions} decisions | risk=${result.risk_score ?? 'n/a'}`);
