@@ -48,6 +48,11 @@ import {
 import {
   handleActivateAgentHoneypot, handleRevertAgentHoneypot,
 } from './handlers/honeypot.ts';
+import {
+  handleAgentSnapshot, handleCheckAgentNameAvailability,
+  handleDiagnoseAgent, handleGetAgentTimeline,
+} from './handlers/agent-mgmt.ts';
+import { handleBuildCallback } from './handlers/build-ops.ts';
 
 const FETCH_TIMEOUT_MS = 30000;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
