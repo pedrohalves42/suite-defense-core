@@ -3,6 +3,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
+import { callGateway } from '@/lib/gateway';
 import { getRiskInfo } from './constants';
 
 export function useSecurityGraph() {
