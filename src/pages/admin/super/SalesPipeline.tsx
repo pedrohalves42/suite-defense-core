@@ -63,15 +63,7 @@ export default function SalesPipeline() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["sales-pipeline"],
     queryFn: async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) throw new Error("Not authenticated");
-
-      const response = await supabase.functions.invoke("sales-pipeline", {
-        method: "GET",
-      });
-
-      if (response.error) throw response.error;
-      return response.data as PipelineData;
+      return await callGateway<PipelineData>('billing', 'sales-pipeline', { _method: 'GET' });
     },
   });
 
