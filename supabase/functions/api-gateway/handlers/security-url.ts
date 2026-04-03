@@ -1,63 +1,47 @@
-import { serveTenant } from '../_shared/serve-tenant.ts';
-import { logger } from '../_shared/logger.ts';
-import { checkRateLimit } from '../_shared/rate-limit.ts';
-import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+/**
+ * analyze-url handler — inlined from standalone analyze-url function
+ * Analyzes URL reputation via VirusTotal / AbuseIPDB with caching
+ */
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from '../../_shared/logger.ts';
+import { checkRateLimit } from '../../_shared/rate-limit.ts';
+import { fetchWithTimeout } from '../../_shared/fetch-with-timeout.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
+import type { HandlerContext } from './admin.ts';
 
-const VIRUSTOTAL_API_KEY = Deno.env.get('VIRUSTOTAL_API_KEY');
-const ABUSEIPDB_API_KEY = Deno.env.get('ABUSEIPDB_API_KEY');
+type SB = ReturnType<typeof createClient>;
 
 const AnalyzeUrlSchema = z.object({
   url: z.string().min(1).max(2048).url('Invalid URL format'),
 });
 
-interface VirusTotalResult {
-  reputation: string;
-  score: number;
-  category: string;
-  engines_detected: number;
-  engines_total: number;
-  details: Record<string, unknown>;
-}
-
-interface AbuseIPDBResult {
-  is_public: boolean;
-  abuse_confidence_score: number;
-  country_code: string;
-  isp: string;
-  domain: string;
-  total_reports: number;
-}
-
-serveTenant(async (req, ctx) => {
-  const { supabase, tenantId, userId, requestId, body } = ctx;
+export async function handleAnalyzeUrl(
+  supabase: SB, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
+): Promise<unknown> {
+  const userId = ctx?.userId;
+  const tenantId = ctx?.tenantId;
+  if (!userId || !tenantId) return { __status: 401, error: 'Authentication required' };
 
   // Rate limiting
-  const rateLimitResult = await checkRateLimit(supabase, userId, 'analyze-url', {
+  const rl = await checkRateLimit(supabase, userId, 'analyze-url', {
     maxRequests: 30, windowMinutes: 1, blockMinutes: 5,
   });
-  if (!rateLimitResult.allowed) {
-    return new Response(
-      JSON.stringify({ error: 'Rate limit exceeded', resetAt: rateLimitResult.resetAt?.toISOString() }),
-      { status: 429, headers: { 'Content-Type': 'application/json' } }
-    );
+  if (!rl.allowed) {
+    return { __status: 429, error: 'Rate limit exceeded', resetAt: rl.resetAt?.toISOString() };
   }
 
-  const parsed = AnalyzeUrlSchema.safeParse(body);
+  const parsed = AnalyzeUrlSchema.safeParse(payload);
   if (!parsed.success) {
-    return new Response(
-      JSON.stringify({ error: 'Validation failed', issues: parsed.error.flatten().fieldErrors }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
+    return { __status: 400, error: 'Validation failed', issues: parsed.error.flatten().fieldErrors };
   }
 
   const normalizedUrl = parsed.data.url.trim();
   const parsedUrl = new URL(normalizedUrl);
   const domain = parsedUrl.hostname;
 
-  logger.info(`[${requestId}] Analyzing URL: ${normalizedUrl}`);
+  logger.info(`[analyze-url][${requestId}] Analyzing URL: ${normalizedUrl}`);
 
-  // Check cache first (24h TTL)
+  // Check cache (24h TTL)
   const { data: cached } = await supabase
     .from('url_reputation')
     .select('*')
@@ -67,7 +51,6 @@ serveTenant(async (req, ctx) => {
     .maybeSingle();
 
   if (cached) {
-    logger.info(`[${requestId}] Cache hit for: ${domain}`);
     return {
       url: cached.url, domain: cached.domain, reputation: cached.reputation,
       score: cached.score, category: cached.category, details: cached.details, cached: true,
@@ -78,6 +61,9 @@ serveTenant(async (req, ctx) => {
   let score = 0;
   let category = 'unclassified';
   let details: Record<string, unknown> = {};
+
+  const VIRUSTOTAL_API_KEY = Deno.env.get('VIRUSTOTAL_API_KEY');
+  const ABUSEIPDB_API_KEY = Deno.env.get('ABUSEIPDB_API_KEY');
 
   if (VIRUSTOTAL_API_KEY) {
     try {
@@ -90,9 +76,8 @@ serveTenant(async (req, ctx) => {
         engines_total: vtResult.engines_total,
         ...vtResult.details,
       };
-      logger.info(`[${requestId}] VirusTotal result: ${reputation} (score: ${score})`);
     } catch (vtError) {
-      logger.error(`[${requestId}] VirusTotal error:`, vtError);
+      logger.error(`[analyze-url][${requestId}] VirusTotal error:`, vtError);
     }
   }
 
@@ -116,7 +101,7 @@ serveTenant(async (req, ctx) => {
         };
       }
     } catch (abuseError) {
-      logger.error(`[${requestId}] AbuseIPDB error:`, abuseError);
+      logger.error(`[analyze-url][${requestId}] AbuseIPDB error:`, abuseError);
     }
   }
 
@@ -124,21 +109,18 @@ serveTenant(async (req, ctx) => {
     details.warning = 'No threat intelligence APIs configured.';
   }
 
-  const { error: insertError } = await supabase
-    .from('url_reputation')
-    .upsert({
-      tenant_id: tenantId, url: normalizedUrl, domain, reputation, score, category, details,
-      created_at: new Date().toISOString(),
-    }, { onConflict: 'tenant_id,url' });
-
-  if (insertError) {
-    logger.error(`[${requestId}] Failed to insert URL reputation`, insertError);
-  }
+  await supabase.from('url_reputation').upsert({
+    tenant_id: tenantId, url: normalizedUrl, domain, reputation, score, category, details,
+    created_at: new Date().toISOString(),
+  }, { onConflict: 'tenant_id,url' });
 
   return { url: normalizedUrl, domain, reputation, score, category, details, cached: false };
-}, { methods: ['POST'] });
+}
 
-async function analyzeWithVirusTotal(url: string, apiKey: string): Promise<VirusTotalResult> {
+// ── VirusTotal ──
+interface VTResult { reputation: string; score: number; category: string; engines_detected: number; engines_total: number; details: Record<string, unknown>; }
+
+async function analyzeWithVirusTotal(url: string, apiKey: string): Promise<VTResult> {
   const urlId = btoa(url).replace(/=/g, '');
   const getResponse = await fetchWithTimeout(`https://www.virustotal.com/api/v3/urls/${urlId}`, {
     method: 'GET', headers: { 'x-apikey': apiKey },
@@ -166,11 +148,14 @@ async function analyzeWithVirusTotal(url: string, apiKey: string): Promise<Virus
   else if (malicious >= 1 || suspicious >= 3) { reputation = 'suspicious'; score = Math.max(0, 100 - ((malicious + suspicious) / total) * 100); }
   else { reputation = 'clean'; score = Math.min(100, (harmless / total) * 100); }
   const categoryValues = Object.values(categories);
-  const category = categoryValues[0] as string || 'unclassified';
-  return { reputation, score: Math.round(score), category, engines_detected: malicious + suspicious, engines_total: total, details: { stats, categories, last_analysis_date: data.data?.attributes?.last_analysis_date } };
+  const cat = categoryValues[0] as string || 'unclassified';
+  return { reputation, score: Math.round(score), category: cat, engines_detected: malicious + suspicious, engines_total: total, details: { stats, categories, last_analysis_date: data.data?.attributes?.last_analysis_date } };
 }
 
-async function analyzeWithAbuseIPDB(ip: string, apiKey: string): Promise<AbuseIPDBResult> {
+// ── AbuseIPDB ──
+interface AbuseResult { abuse_confidence_score: number; country_code: string; isp: string; total_reports: number; }
+
+async function analyzeWithAbuseIPDB(ip: string, apiKey: string): Promise<AbuseResult> {
   const response = await fetchWithTimeout(`https://api.abuseipdb.com/api/v2/check?ipAddress=${encodeURIComponent(ip)}&maxAgeInDays=90`, {
     method: 'GET', headers: { 'Key': apiKey, 'Accept': 'application/json' },
   });
@@ -178,8 +163,8 @@ async function analyzeWithAbuseIPDB(ip: string, apiKey: string): Promise<AbuseIP
   const data = await response.json();
   const result = data.data || {};
   return {
-    is_public: result.isPublic || false, abuse_confidence_score: result.abuseConfidenceScore || 0,
-    country_code: result.countryCode || '', isp: result.isp || '', domain: result.domain || '',
+    abuse_confidence_score: result.abuseConfidenceScore || 0,
+    country_code: result.countryCode || '', isp: result.isp || '',
     total_reports: result.totalReports || 0,
   };
 }

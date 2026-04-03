@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { isAgentOnline } from '@/lib/agent-status-constants';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { useTenant } from '@/hooks/useTenant';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -135,13 +136,13 @@ export const ClientComputers = () => {
       ];
 
       for (const jobType of jobTypes) {
-        const { error } = await supabase.functions.invoke('create-job', {
-          body: {
+        const { error } = await supabase.functions.invoke('api-gateway', {
+          body: { action: 'admin:create-job', payload: {
             tenant_id: tenant?.id,
             agent_name: agentName,
             job_type: jobType,
             payload: {}
-          }
+          }}
         });
 
         if (error) throw error;

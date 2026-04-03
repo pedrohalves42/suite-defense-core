@@ -125,6 +125,11 @@ import {
   handleCleanupStaleHoneypots,
 } from './handlers/cleanup.ts';
 
+// Inlined handlers — sync-cve, mitre-sync, rate-limit (Phase 4)
+import { handleSyncCveDatabase } from './handlers/sync-cve.ts';
+import { handleMitreSync } from './handlers/sync-mitre.ts';
+import { handleRateLimitCheck } from './handlers/rate-limit.ts';
+
 // Inlined handlers — notify (Phase 3A)
 import {
   handleNotifyEmail, handleNotifyTelegram, handleNotifyWhatsApp,
@@ -270,6 +275,10 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'security:fetch-nvd-cves': handleFetchNvdCves,
   'security:correlate-edr-events': handleCorrelateEdrEvents,
   'security:evaluate-edr-detections': handleEvaluateEdrDetections,
+  // ── Phase 4: serveInternal inlined ──
+  'sync:sync-cve-database': handleSyncCveDatabase,
+  'sync:mitre-sync': handleMitreSync,
+  'check:rate-limit-check': handleRateLimitCheck,
 };
 
 const ALL_VALID_ACTIONS = new Set([

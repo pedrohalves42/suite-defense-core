@@ -65,8 +65,8 @@ export function useAgentTest() {
 
       // Step 1
       addTestResult({ step: '1. Criar Job de Teste', status: 'running', message: 'Criando job de teste tipo \'report\'...' });
-      const { data: jobResponse, error: jobError } = await supabase.functions.invoke('create-job', {
-        body: { agentName, type: 'report', payload: { test: true, timestamp: new Date().toISOString() }, approved: true },
+      const { data: jobResponse, error: jobError } = await supabase.functions.invoke('api-gateway', {
+        body: { action: 'admin:create-job', payload: { agentName, type: 'report', payload: { test: true, timestamp: new Date().toISOString() }, approved: true } },
       });
       if (jobError) {
         const errorData = typeof jobError === 'object' && 'error' in jobError ? jobError.error : jobError;

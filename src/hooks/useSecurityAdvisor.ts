@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { useTenant } from './useTenant';
 
 export interface SecurityTip {
@@ -33,12 +33,10 @@ export function useSecurityAdvisor() {
   return useQuery({
     queryKey: ['security-advisor', tenant?.id],
     queryFn: async (): Promise<SecurityAdvisorData> => {
-      const { data, error } = await supabase.functions.invoke('security-advisor', {
-        body: { tenant_id: tenant!.id }
+      const data = await callGateway<SecurityAdvisorData>('security', 'security-advisor', {
+        tenant_id: tenant!.id,
       });
-
-      if (error) throw new Error(error.message || 'Failed to fetch security advisor');
-      return data as SecurityAdvisorData;
+      return data;
     },
     enabled: !tenantLoading && !!tenant?.id,
     staleTime: 10 * 60 * 1000, // 10 minutes

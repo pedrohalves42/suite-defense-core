@@ -65,6 +65,13 @@ import {
 import {
   handleTokenRotate, handleRecoverAgentCredentials, handleAgentVersionManagement,
 } from './handlers/agent-ops.ts';
+import { handleAnalyzeUrl } from './handlers/security-url.ts';
+import { handleCreateJob } from './handlers/job-mgmt.ts';
+import { handleSiemExport } from './handlers/security-export.ts';
+import { handleSecurityAdvisor } from './handlers/security-advisor.ts';
+import { handleChangePassword } from './handlers/user-auth.ts';
+import { handleSyncCveDatabase } from './handlers/sync-cve.ts';
+import { handleMitreSync } from './handlers/sync-mitre.ts';
 
 const FETCH_TIMEOUT_MS = 30000;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -77,10 +84,6 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ACTION_TO_FUNCTION: Record<string, string> = {
   // security proxy targets — serveTenant (JWT-compatible)
   'security:scan-vulnerabilities': 'scan-vulnerabilities',
-  'security:sync-cve-database': 'sync-cve-database',
-  'security:mitre-sync': 'mitre-sync',
-  'security:siem-export': 'siem-export',
-  'security:security-advisor': 'security-advisor',
   // build proxy targets — serveTenant (JWT-compatible)
   'build:build-agent-exe': 'build-agent-exe',
   'build:generate-deploy-package': 'generate-deploy-package',
@@ -169,6 +172,14 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'agent:token-rotate': handleTokenRotate,
   'agent:recover-agent-credentials': handleRecoverAgentCredentials,
   'agent:agent-version-management': handleAgentVersionManagement,
+  // ── Phase 3A: serveTenant inlined ──
+  'security:analyze-url': handleAnalyzeUrl,
+  'security:siem-export': handleSiemExport,
+  'security:security-advisor': handleSecurityAdvisor,
+  'admin:change-password': handleChangePassword,
+  'admin:create-job': handleCreateJob,
+  'security:sync-cve-database': handleSyncCveDatabase as InlinedHandler,
+  'security:mitre-sync': handleMitreSync as InlinedHandler,
 };
 
 // API-key authenticated endpoints (still proxy — they have own auth flow)

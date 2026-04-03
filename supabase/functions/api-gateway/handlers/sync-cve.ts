@@ -1,11 +1,12 @@
 /**
- * sync-cve-database - Syncs CVE data from NVD
- * Migrated to serveInternal middleware
+ * sync-cve-database handler — inlined from standalone sync-cve-database function
  */
-import { serveInternal } from '../_shared/serve-tenant.ts';
-import { logger } from '../_shared/logger.ts';
-import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from '../../_shared/logger.ts';
+import { fetchWithTimeout } from '../../_shared/fetch-with-timeout.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
+
+type SB = ReturnType<typeof createClient>;
 
 const FETCH_TIMEOUT_MS = 30000;
 
@@ -22,12 +23,10 @@ const CVE_KEYWORDS = [
   'zoom', 'slack', 'teams', 'outlook', 'excel', 'word', 'powerpoint',
   'vmware', 'virtualbox', 'hyper-v', 'citrix',
   '7-zip', 'winrar', 'vlc', 'notepad++', 'putty', 'filezilla',
-  'openssh', 'openssl', 'curl', 'wget'
+  'openssh', 'openssl', 'curl', 'wget',
 ];
 
 interface NVDResponse {
-  resultsPerPage: number;
-  startIndex: number;
   totalResults: number;
   vulnerabilities: Array<{
     cve: {
@@ -50,26 +49,24 @@ async function fetchNVDCVEs(keyword: string): Promise<NVDResponse | null> {
   const endDate = new Date();
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - 90);
-
   const params = new URLSearchParams({ keywordSearch: keyword, pubStartDate: startDate.toISOString(), pubEndDate: endDate.toISOString(), resultsPerPage: '100', startIndex: '0' });
   const headers: HeadersInit = { 'Accept': 'application/json' };
   if (NVD_API_KEY) headers['apiKey'] = NVD_API_KEY;
-
   try {
     const response = await fetchWithTimeout(`https://services.nvd.nist.gov/rest/json/cves/2.0?${params}`, { timeoutMs: FETCH_TIMEOUT_MS, headers });
-    if (response.status === 403) { logger.warn(`NVD API rate limited for keyword: ${keyword}`); return null; }
-    if (!response.ok) { logger.error(`NVD API error: ${response.status} ${response.statusText}`); return null; }
+    if (response.status === 403) { logger.warn(`NVD rate limited: ${keyword}`); return null; }
+    if (!response.ok) { logger.error(`NVD error: ${response.status}`); return null; }
     return await response.json();
-  } catch (error) { logger.error(`NVD fetch error for ${keyword}:`, error); return null; }
+  } catch (error) { logger.error(`NVD fetch error ${keyword}:`, error); return null; }
 }
 
-function extractCVSSData(metrics: NVDResponse['vulnerabilities'][0]['cve']['metrics']) {
-  if (metrics?.cvssMetricV31?.[0]) { const v31 = metrics.cvssMetricV31[0].cvssData; return { score: v31.baseScore, severity: v31.baseSeverity, vector: v31.vectorString, version: '3.1' }; }
-  if (metrics?.cvssMetricV2?.[0]) { const v2 = metrics.cvssMetricV2[0].cvssData; return { score: v2.baseScore, severity: v2.baseScore >= 7 ? 'HIGH' : v2.baseScore >= 4 ? 'MEDIUM' : 'LOW', vector: null, version: '2.0' }; }
+function extractCVSS(metrics: NVDResponse['vulnerabilities'][0]['cve']['metrics']) {
+  if (metrics?.cvssMetricV31?.[0]) { const v = metrics.cvssMetricV31[0].cvssData; return { score: v.baseScore, severity: v.baseSeverity, vector: v.vectorString, version: '3.1' }; }
+  if (metrics?.cvssMetricV2?.[0]) { const v = metrics.cvssMetricV2[0].cvssData; return { score: v.baseScore, severity: v.baseScore >= 7 ? 'HIGH' : v.baseScore >= 4 ? 'MEDIUM' : 'LOW', vector: null, version: '2.0' }; }
   return { score: null, severity: 'UNKNOWN', vector: null, version: null };
 }
 
-function extractAffectedVersions(configurations: NVDResponse['vulnerabilities'][0]['cve']['configurations']) {
+function extractVersions(configurations: NVDResponse['vulnerabilities'][0]['cve']['configurations']) {
   const versions: Array<{ cpe: string; versionStart?: string; versionEnd?: string; versionStartType?: string; versionEndType?: string }> = [];
   if (!configurations) return versions;
   for (const config of configurations) for (const node of config.nodes) for (const match of node.cpeMatch) if (match.vulnerable) {
@@ -78,16 +75,14 @@ function extractAffectedVersions(configurations: NVDResponse['vulnerabilities'][
   return versions;
 }
 
-serveInternal(async (_req, ctx) => {
-  const { supabase, requestId, body } = ctx;
+export async function handleSyncCveDatabase(
+  supabase: SB, requestId: string, payload: Record<string, unknown>,
+): Promise<unknown> {
   const startTime = Date.now();
+  logger.info(`[sync-cve-database][${requestId}] Starting CVE sync...`);
 
-  logger.info(`[sync-cve-database][${requestId}] Starting CVE database sync...`);
-
-  const parsed = BodySchema.safeParse(body || {});
-  if (!parsed.success) {
-    return new Response(JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-  }
+  const parsed = BodySchema.safeParse(payload || {});
+  if (!parsed.success) return { __status: 400, error: 'Invalid input', issues: parsed.error.flatten().fieldErrors };
 
   let keywords = CVE_KEYWORDS;
   if (parsed.data.keywords) keywords = parsed.data.keywords;
@@ -97,17 +92,15 @@ serveInternal(async (_req, ctx) => {
 
   for (let i = 0; i < keywords.length; i++) {
     const keyword = keywords[i];
-    logger.info(`[sync-cve-database][${requestId}] Processing keyword ${i + 1}/${keywords.length}: ${keyword}`);
-
     const result = await fetchNVDCVEs(keyword);
-    if (!result) { errors.push(`Failed to fetch CVEs for: ${keyword}`); await new Promise(r => setTimeout(r, 6000)); continue; }
+    if (!result) { errors.push(`Failed: ${keyword}`); await new Promise(r => setTimeout(r, 6000)); continue; }
     totalFetched += result.totalResults;
 
     const cveRecords = result.vulnerabilities.map((vuln: Record<string, unknown>) => {
-      const cve = vuln.cve;
-      const cvss = extractCVSSData(cve.metrics);
-      const affectedVersions = extractAffectedVersions(cve.configurations);
-      const description = cve.descriptions.find((d: Record<string, unknown>) => d.lang === 'en')?.value || cve.descriptions[0]?.value || '';
+      const cve = vuln.cve as NVDResponse['vulnerabilities'][0]['cve'];
+      const cvss = extractCVSS(cve.metrics);
+      const affectedVersions = extractVersions(cve.configurations);
+      const description = cve.descriptions.find(d => d.lang === 'en')?.value || cve.descriptions[0]?.value || '';
       return { cve_id: cve.id, description: description.substring(0, 5000), cvss_score: cvss.score, severity: cvss.severity, cvss_vector: cvss.vector, cvss_version: cvss.version, published_date: cve.published, last_modified: cve.lastModified, affected_versions: affectedVersions, cve_references: cve.references?.slice(0, 10) || [], source: 'nvd', cached_at: new Date().toISOString(), is_active: true };
     });
 
@@ -115,20 +108,18 @@ serveInternal(async (_req, ctx) => {
     for (let b = 0; b < cveRecords.length; b += BATCH_SIZE) {
       const batch = cveRecords.slice(b, b + BATCH_SIZE);
       const { error: upsertError } = await supabase.from('cve_database').upsert(batch, { onConflict: 'cve_id', ignoreDuplicates: false });
-      if (upsertError) logger.error(`Batch upsert error (offset ${b}):`, upsertError);
+      if (upsertError) logger.error(`Batch upsert error:`, upsertError);
       else totalInserted += batch.length;
     }
-
     await new Promise(r => setTimeout(r, 5000));
   }
 
   const syncDuration = Math.round((Date.now() - startTime) / 1000);
   const { data: existingStatus } = await supabase.from('cve_sync_status').select('id').limit(1).single();
   const syncStatusId = existingStatus?.id || crypto.randomUUID();
-
   await supabase.from('cve_sync_status').upsert({ id: syncStatusId, last_sync_at: new Date().toISOString(), sync_status: errors.length > 0 ? 'partial' : 'success', total_cves_synced: totalInserted, error_message: errors.length > 0 ? errors.join('; ') : null }, { onConflict: 'id' });
 
   const { count } = await supabase.from('cve_database').select('*', { count: 'exact', head: true });
 
   return { success: true, sync_duration_seconds: syncDuration, keywords_processed: keywords.length, total_cves_fetched: totalFetched, cves_upserted: totalInserted, total_cves_in_database: count || 0, errors: errors.length > 0 ? errors : undefined };
-});
+}
