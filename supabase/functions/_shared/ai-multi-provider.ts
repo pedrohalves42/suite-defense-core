@@ -26,6 +26,7 @@ import type {
   AIProviderName, AIProviderConfig, AIMessage,
   AICompletionRequest, AICompletionResponse,
 } from './ai-multi-provider-types.ts';
+import { fetchWithTimeout, TIMEOUT_TIERS } from './fetch-with-timeout.ts';
 
 // Re-export types and helpers for backward compatibility
 export type { AIProviderName, AIProviderConfig, AIMessage, AICompletionRequest, AICompletionResponse };
