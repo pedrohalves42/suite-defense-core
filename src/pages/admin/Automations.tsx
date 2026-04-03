@@ -118,7 +118,7 @@ export default function Automations() {
     'watchdog_non_execution': 'cron-watchdog-non-execution',
     'ai_system_analyzer': 'ai-system-analyzer',
     'integrity_sentinel': 'integrity-sentinel',
-    'scheduled_reports': 'scheduled-report-generator',
+    'scheduled_reports': 'ops-gateway',
     'detect_blocked_attempts': 'detect-blocked-attempts',
     'ai_insight_generator': 'ai-insight-generator',
     'scan_vulnerabilities': 'scan-vulnerabilities'
