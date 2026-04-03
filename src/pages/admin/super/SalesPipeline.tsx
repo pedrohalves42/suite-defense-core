@@ -69,12 +69,7 @@ export default function SalesPipeline() {
 
   const createMutation = useMutation({
     mutationFn: async (newDeal: typeof formData) => {
-      const response = await supabase.functions.invoke("sales-pipeline", {
-        method: "POST",
-        body: newDeal,
-      });
-      if (response.error) throw response.error;
-      return response.data;
+      return await callGateway<Record<string, any>>('billing', 'sales-pipeline', { _method: 'POST', ...newDeal });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales-pipeline"] });
