@@ -71,50 +71,31 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 // ── Proxy map: actions still dispatched via HTTP ────────────────────────
+// Only serveTenant functions that accept JWT auth forwarded from the gateway.
+// serveAgent/HMAC, servePublic, and raw Deno.serve functions must be called
+// directly — their auth is incompatible with assertInternalCaller proxy.
 const ACTION_TO_FUNCTION: Record<string, string> = {
-  // security proxy targets — remaining (standalone with specific auth / serveInternal)
-  'security:verify-log-integrity': 'verify-log-integrity',
+  // security proxy targets — serveTenant (JWT-compatible)
   'security:scan-vulnerabilities': 'scan-vulnerabilities',
-  'security:fetch-nvd-cves': 'fetch-nvd-cves',
   'security:sync-cve-database': 'sync-cve-database',
-  'security:correlate-edr-events': 'correlate-edr-events',
-  'security:evaluate-edr-detections': 'evaluate-edr-detections',
   'security:mitre-sync': 'mitre-sync',
   'security:siem-export': 'siem-export',
-  'security:run-rls-tests': 'run-rls-tests',
   'security:security-advisor': 'security-advisor',
-  // build proxy targets — remaining (serveAgent/servePublic/complex)
+  // build proxy targets — serveTenant (JWT-compatible)
   'build:build-agent-exe': 'build-agent-exe',
   'build:generate-deploy-package': 'generate-deploy-package',
   'build:generate-portable-installer': 'generate-portable-installer',
   'build:auto-generate-enrollment': 'auto-generate-enrollment',
-  'build:auto-renew-enrollment-keys': 'auto-renew-enrollment-keys',
   'build:register-agent-release': 'register-agent-release',
   'build:sign-release': 'sign-release',
   'build:upload-release-content': 'upload-release-content',
   'build:validate-build-pipeline': 'validate-build-pipeline',
-  'build:confirm-force-update': 'confirm-force-update',
-  'build:get-diagnostic-script': 'get-diagnostic-script',
-  'build:serve-installer': 'serve-installer',
-  // agent proxy targets — remaining (serveAgent/HMAC auth)
-  'agent:check-agent-integrity': 'check-agent-integrity',
-  'agent:check-agent-updates': 'check-agent-updates',
-  'agent:diagnostics-agent-logs': 'diagnostics-agent-logs',
-  'agent:enroll-agent': 'enroll-agent',
-  'agent:get-agent-config': 'get-agent-config',
-  'agent:get-agent-policy': 'get-agent-policy',
+  // agent proxy targets — serveTenant (JWT-compatible)
   'agent:get-agent-script-content': 'get-agent-script-content',
-  'agent:get-latest-agent-script': 'get-latest-agent-script',
   'agent:promote-agent-v5': 'promote-agent-v5',
-  'agent:register-agent-key': 'register-agent-key',
-  'agent:serve-agent-update': 'serve-agent-update',
   'agent:setup-agent-script': 'setup-agent-script',
-  'agent:validate-hmac-signature': 'validate-hmac-signature',
   'agent:force-reinstall-fleet': 'force-reinstall-fleet',
   'agent:create-reinstall-jobs': 'create-reinstall-jobs',
-  'agent:get-reinstall-by-name': 'get-reinstall-by-name',
-  'agent:get-reinstall-preserve-script': 'get-reinstall-preserve-script',
-  'agent:get-reinstall-script': 'get-reinstall-script',
 };
 
 // ── Inlined handlers (no HTTP hop) ──────────────────────────────────────
