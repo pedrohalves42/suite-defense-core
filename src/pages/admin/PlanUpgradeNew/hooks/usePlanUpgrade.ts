@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useTenant } from '@/hooks/useTenant';
