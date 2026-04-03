@@ -24,6 +24,7 @@ import { StuckJobsAlert } from '@/components/admin/jobs/StuckJobsAlert';
 import { JobAnomaliesCard } from '@/components/admin/jobs/JobAnomaliesCard';
 import { JobSLOStatusCard } from '@/components/admin/jobs/JobSLOStatusCard';
 import { calculateRealSuccessRate } from '@/components/admin/JobStatusSimplified';
+import { JobFailureAnalysis } from '@/components/admin/jobs/JobFailureAnalysis';
 import { SectionDivider } from '@/components/ui/section-divider';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
