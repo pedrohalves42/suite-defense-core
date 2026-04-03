@@ -146,6 +146,9 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'security:classify-shadow-it': handleClassifyShadowIt,
   'security:threat-intelligence-lookup': handleThreatIntelligenceLookup,
   'security:build-security-graph': handleBuildSecurityGraph,
+  // honeypot inlined (Phase 1B)
+  'security:activate-agent-honeypot': handleActivateAgentHoneypot,
+  'security:revert-agent-honeypot': handleRevertAgentHoneypot,
   // admin inlined (Phase 2A)
   'admin:get-admin-releases': handleGetAdminReleases,
   'admin:update-user-status': handleUpdateUserStatus,

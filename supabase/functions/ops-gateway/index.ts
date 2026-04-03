@@ -205,6 +205,10 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   // ── sync cron inlined (Phase 4) ──
   'sync:process-agent-updates': handleProcessAgentUpdates,
   'sync:seed-collection-jobs': handleSeedCollectionJobs,
+  // ── honeypot-pool + anomaly + block-website inlined (Phase 1B) ──
+  'sync:create-honeypot-pool': handleCreateHoneypotPool,
+  'check:ai-behavioral-anomaly-detector': handleAiBehavioralAnomalyDetector,
+  'security:block-website': handleBlockWebsite,
   // ── secret rotation compliance (SOC 2) ──
   'check:secret-rotation-compliance': handleSecretRotationCompliance,
   'check:record-secret-rotation': handleRecordSecretRotation,
