@@ -95,6 +95,17 @@ import {
   handlePopulateSecurityGraph, handlePublishThreatIoc,
 } from './handlers/security-ops.ts';
 
+// Inlined handlers — report-generators (Phase 1D)
+import {
+  handleComplianceReport, handleSecurityReport, handleExplainableReport,
+} from './handlers/report-generators.ts';
+
+// Inlined handlers — report-scheduled (Phase 1D)
+import {
+  handleExecutiveReport, handleWeeklyReport,
+  handleAutoGenerateReport, handleScheduledReportGenerator,
+} from './handlers/report-scheduled.ts';
+
 // Inlined handlers — cleanup (Phase 3A)
 import {
   handleCleanupTelemetry, handleCleanupStaleReports, handleCleanupStaleUpdates,
