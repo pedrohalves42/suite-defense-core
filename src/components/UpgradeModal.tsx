@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, Lock, Crown, ArrowRight, Loader2, AlertTriangle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { callGateway } from "@/lib/gateway";
 import { toast } from "sonner";
 import { PLAN_CONFIG, LEGACY_PLANS, isLegacyPlan } from "@/constants/plans";
 import { logger } from '@/lib/logger';
