@@ -23,6 +23,8 @@ export async function callGateway<T = Record<string, unknown>>(
 ): Promise<T> {
   const gateway = API_GATEWAY_NAMESPACES.includes(namespace)
     ? 'api-gateway'
+    : PUBLIC_GATEWAY_NAMESPACES.includes(namespace)
+    ? 'public-gateway'
     : 'ops-gateway';
 
   const { data, error } = await supabase.functions.invoke(gateway, {
