@@ -169,29 +169,9 @@ Deno.serve(async (req) => {
         });
     }
 
-    // ?? Bloco A: Trigger process_anomaly automation rules ??
-    let automationTriggered = 0;
-    if (suspiciousProcesses.length > 0 || newProcesses.length > 5) {
-      try {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-        const evalUrl = `${supabaseUrl}/functions/v1/evaluate-automation-rules`;
-        const evalResponse = await fetchWithTimeout(evalUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseServiceKey}`,
-          },
-          body: JSON.stringify({ tenant_id: tenantId }),
-        });
-        if (evalResponse.ok) {
-          const result = await evalResponse.json();
-          automationTriggered = result.triggered || 0;
-        }
-      } catch (e) {
-        logger.warn('Automation evaluation failed (non-blocking)', e);
-      }
-    }
+    // COST-OPT: Automation rules evaluation moved to daily cron (Bloco 5)
+    // Previously called evaluate-automation-rules inline on every submit-processes
+    const automationTriggered = 0;
 
     logger.info(`Process snapshot saved for agent ${agentId}: ${processes.length} processes, ${services.length} services, ${newProcesses.length} new, ${suspiciousProcesses.length} suspicious, ${automationTriggered} automations`);
 

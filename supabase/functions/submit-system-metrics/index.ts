@@ -75,25 +75,9 @@ serveAgent(async (_req, ctx) => {
 
   await autoResolveAlerts(supabase, agentId, { cpu_usage_percent: metrics.cpu_usage_percent, memory_usage_percent: metrics.memory_usage_percent, disk_usage_percent: metrics.disk_usage_percent });
 
-  // Automation rules evaluation
-  let automationTriggered = 0;
-  try {
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const { data: activeRules } = await supabase.from('automation_rules').select('id').eq('tenant_id', tenantId).eq('is_active', true).eq('trigger_type', 'metric_threshold').limit(1);
-    if (activeRules?.length) {
-      const evalResponse = await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/evaluate-automation-rules`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
-        body: JSON.stringify({ tenant_id: tenantId }),
-      });
-      if (evalResponse.ok) {
-        const evalResult = await evalResponse.json();
-        automationTriggered = evalResult.triggered || 0;
-      }
-    }
-  } catch (automationError) {
-    logger.warn('Automation evaluation failed (non-blocking)', automationError);
-  }
+  // COST-OPT: Automation rules evaluation moved to daily cron (Bloco 5)
+  // Previously called evaluate-automation-rules inline on every submit-system-metrics
+  const automationTriggered = 0;
 
   const lightModeConfig = await evaluateLightMode(supabase, agentId, agentName, tenantId,
     metrics.cpu_usage_percent ?? 0, (metrics.network_bytes_sent ?? 0) + (metrics.network_bytes_received ?? 0));
