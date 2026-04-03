@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -71,11 +72,7 @@ export default function Invites() {
   // SECURITY: Use Edge Function for delete (Phase 3 hardening - column privileges block direct access)
   const deleteInvite = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.functions.invoke('delete-invite', {
-        body: { inviteId: id },
-      });
-      
-      if (error) throw error;
+      await callGateway('admin', 'delete-invite', { inviteId: id });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invites'] });

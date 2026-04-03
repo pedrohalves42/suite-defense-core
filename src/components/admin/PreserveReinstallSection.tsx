@@ -7,6 +7,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { callGateway } from '@/lib/gateway';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +29,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+
 import { Link } from 'react-router-dom';
 import { buildAgentReinstallCommand } from '@/lib/agentReinstallCommand';
 
@@ -96,11 +97,8 @@ export function PreserveReinstallSection({ defaultAgentName }: PreserveReinstall
 
     try {
       setIsGeneratingAuto(true);
-      const { data, error } = await supabase.functions.invoke('recover-agent-credentials', {
-        body: { agent_name: agentName },
-      });
+      const data = await callGateway<{ agentToken: string; hmacSecret: string; agentName: string; error?: string }>('agent', 'recover-agent-credentials', { agent_name: agentName });
 
-      if (error) throw new Error(error.message || 'Falha ao recuperar credenciais');
       if (!data?.agentToken || !data?.hmacSecret || !data?.agentName) {
         throw new Error(data?.error || 'Resposta inválida do servidor');
       }

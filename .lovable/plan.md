@@ -1,94 +1,214 @@
 
-# Fase 2J: Consolidação dos Proxy Targets Restantes
+# Consolidação Completa de Edge Functions — Plano Master
 
-## Diagnóstico Atual
-
-### api-gateway — 44 proxy entries em ACTION_TO_FUNCTION
-### ops-gateway — 7 proxy entries em ACTION_TO_FUNCTION
-
----
-
-## Etapa 1: Remover entradas QUEBRADAS (funções deletadas)
-Ações no api-gateway que apontam para funções que não existem mais:
-- `security:verify-log-integrity` → NOT FOUND
-- `security:fetch-nvd-cves` → deletado (agora no ops-gateway Phase 2I)
-- `security:correlate-edr-events` → deletado (agora no ops-gateway Phase 2I)
-- `security:evaluate-edr-detections` → deletado (agora no ops-gateway Phase 2I)
-- `security:run-rls-tests` → deletado (agora no ops-gateway Phase 2I)
-- `agent:check-agent-integrity` → deletado (agora no ops-gateway Phase 2I)
-- `build:auto-renew-enrollment-keys` → NOT FOUND
-
-**Ação:** Remover essas 7 entradas do ACTION_TO_FUNCTION.
+## Estado Atual
+- **107 funções standalone** (excluindo gateways)
+- **~68 handlers inlined** no api-gateway
+- **~96 handlers inlined** no ops-gateway  
+- **18 proxy entries** no api-gateway + 3 API-key proxy
+- **7 proxy entries** no ops-gateway
+- **Meta:** < 60 funções standalone
 
 ---
 
-## Etapa 2: Remover proxies para funções com auth incompatível
-Funções que usam serveAgent/HMAC, servePublic, ou Deno.serve raw NÃO funcionam via proxy do gateway (que usa assertInternalCaller). Devem ser chamadas diretamente:
+## FASE 1: Quick Wins — Deletar Diretórios Zumbis (0 risco)
+Funções já inlined nos gateways SEM chamadas diretas do frontend.
+**Ação:** Deletar diretórios standalone + remover do Supabase.
 
-### serveAgent (HMAC) — remover do proxy, chamar diretamente:
-- `agent:check-agent-updates`, `agent:diagnostics-agent-logs`, `agent:get-agent-config`, `agent:get-agent-policy`, `agent:serve-agent-update`, `build:confirm-force-update`
+| Função | Inlined como | Chamadas diretas |
+|--------|-------------|-----------------|
+| accept-invite | admin:accept-invite | 0 |
+| send-invite | admin:send-invite | 0 |
+| generate-enrollment-key | build:generate-enrollment-key | 0 |
+| revoke-enrollment-key | build:revoke-enrollment-key | 0 |
+| get-software-inventory | agent:get-software-inventory | 0 |
+| get-web-activity | agent:get-web-activity | 0 |
+| token-rotate | agent:token-rotate | 0 |
+| agent-version-management | agent:agent-version-management | 0 |
 
-### servePublic — remover do proxy:
-- `agent:validate-hmac-signature`, `agent:get-reinstall-by-name`, `agent:get-reinstall-preserve-script`, `agent:get-reinstall-script`, `build:get-diagnostic-script`, `build:serve-installer`
-
-### Raw Deno.serve (HMAC custom) — remover do proxy:
-- `agent:enroll-agent`, `agent:register-agent-key`
-
-**Ação:** Remover essas 14 entradas. Total removido: 21 de 44.
-
----
-
-## Etapa 3: Inline serveInternal functions no ops-gateway
-Funções serveInternal que podem ser inlined (lógica DB-only ou simples):
-
-### No ops-gateway (já tem auth interna compatível):
-- `sync-cve-database` → `sync:sync-cve-database`
-- `mitre-sync` → `sync:mitre-sync`
-- `setup-agent-script` → `sync:setup-agent-script`
-- `upload-release-content` → `sync:upload-release-content`
-
-### No ops-gateway (playbook serveInternal):
-- `evaluate-playbook-triggers` → `playbook:evaluate-playbook-triggers`
-- `evaluate-automation-rules` → `playbook:evaluate-automation-rules`
-- `autonomous-safe-mode` → `playbook:autonomous-safe-mode`
-
-**Ação:** Criar handlers e mover lógica. Deletar standalone directories após deploy.
+**Resultado:** 107 → 99 standalone (-8)
 
 ---
 
-## Etapa 4: Manter como proxy (serveTenant complexas — custo/benefício)
-Estas funções usam serveTenant e são multi-arquivo/complexas. O proxy funciona corretamente e o custo de inline não compensa:
+## FASE 2: Migrar Frontend + Deletar (baixo risco)
+Funções inlined mas ainda com chamadas `functions.invoke()` diretas. Migrar para `callGateway()`.
 
-### api-gateway (permanecem como proxy):
-- `build:build-agent-exe` (multi-arquivo + GitHub dispatch)
-- `build:generate-deploy-package`, `build:generate-portable-installer`
-- `build:auto-generate-enrollment`, `build:register-agent-release`
-- `build:sign-release`, `build:validate-build-pipeline`
-- `agent:get-agent-script-content`, `agent:promote-agent-v5`
-- `agent:force-reinstall-fleet`, `agent:create-reinstall-jobs`
-- `security:scan-vulnerabilities` (multi-arquivo)
-- `security:security-advisor` (AI + complexo)
-- `security:siem-export`, `security:sync-cve-database`, `security:mitre-sync`
+| Função | Inlined como | Chamadas | Ação Frontend |
+|--------|-------------|----------|---------------|
+| delete-invite | admin:delete-invite | 2 | → callGateway('admin','delete-invite') |
+| get-agent-dashboard-data | agent:get-agent-dashboard-data | 1 | → callGateway('agent','get-agent-dashboard-data') |
+| recover-agent-credentials | agent:recover-agent-credentials | 2 | → callGateway('agent','recover-agent-credentials') |
 
-### ops-gateway (permanecem como proxy):
-- `playbook:execute-playbook-action` (multi-arquivo, 851 linhas decompostas)
-- `playbook:auto-remediate` (serveTenant)
-- `playbook:evaluate-software-risk` (servePublic)
-- `report:list` (serveAgent/HMAC)
+**Resultado:** 99 → 96 standalone (-3)
 
 ---
 
-## Resultado Esperado
-- **api-gateway:** 44 → ~16 proxy entries (remove 21 quebradas/incompatíveis, inline 7)
-- **ops-gateway:** 7 → 0 proxy entries (inline 7 serveInternal)
-- **Funções standalone deletadas:** ~7 (serveInternal migradas)
-- **Cold starts eliminados:** ~7 (inline no ops-gateway)
-- **Custo reduzido:** Menos invocações de funções separadas
+## FASE 3: Inline novos serveTenant simples no api-gateway
+Funções single-file serveTenant que podem ser convertidas em handlers.
+
+### 3A — Funções chamadas pelo frontend (migrar invoke → callGateway):
+| Função | Files | Frontend calls |
+|--------|-------|---------------|
+| calculate-compliance | 2 | 3 |
+| create-job | 1 | 6 |
+| export-evidence-bundle | 1 | 1 |
+| translate-cve | 1 | 1 |
+| analyze-url | 1 | 0 |
+| change-password | 1 | 0 |
+| fido2-register | 1 | 0 |
+| create-reinstall-jobs | 1 | 0 (proxy only) |
+
+### 3B — Funções complexas (multi-file, inline custo alto → manter como proxy):
+| Função | Files/Dirs | Razão |
+|--------|-----------|-------|
+| action-center-feed | 5 files | Multi-módulo |
+| ai-router | 2 files + 1 dir | Roteador AI complexo |
+| ai-agent-assist | 3 files | AI complexo |
+| ai-red-team-assessment | 5 files | AI + multi-módulo |
+| build-agent-exe | 4 files | GitHub Actions dispatch |
+| scan-vulnerabilities | 3 files | Scanner multi-módulo |
+| security-advisor | 2 files | AI + fetch externo |
+| serve-installer | 6 files | Gerador complexo |
+| execute-playbook-action | 3 files + 1 dir | Dispatcher decomposto |
+
+**Resultado estimado Fase 3A:** 96 → 88 standalone (-8)
 
 ---
 
-## Validação
-1. TypeScript check sem erros
-2. Deploy dos gateways
-3. Teste via curl das ações inlined
-4. Verificar que ações removidas não quebram frontend (buscar referências no src/)
+## FASE 4: Inline serveInternal simples no ops-gateway
+Funções serveInternal que são chamadas por cron/internal.
+
+| Função | Files | Proxy atual |
+|--------|-------|------------|
+| sync-cve-database | 1 | ops-gw proxy |
+| mitre-sync | 1 | ops-gw proxy |
+| setup-agent-script | 1 | api-gw proxy |
+| upload-release-content | 1 | api-gw proxy |
+| rate-limit-check | 1 | nenhum |
+| ai-predict-agent-failure | 2 | nenhum |
+| ai-insight-dispatcher | 4 | nenhum |
+| ai-system-analyzer | 4 | nenhum |
+
+**Resultado estimado:** 88 → 80 standalone (-8)
+
+---
+
+## FASE 5: Funções servePublic — avaliar consolidação parcial
+servePublic não pode ir para gateways (auth incompatível), mas algumas podem ser agrupadas em um "public-gateway":
+
+| Função | Chamadas | Status |
+|--------|----------|--------|
+| approve-via-token | 1 | Standalone obrigatório |
+| check-failed-logins | 1 | Standalone obrigatório |
+| fido2-authenticate | 0 | Standalone obrigatório |
+| get-diagnostic-script | 0 | Standalone obrigatório |
+| get-latest-agent-script | 0 | Standalone obrigatório |
+| get-reinstall-by-name | 0 | Standalone obrigatório |
+| get-reinstall-preserve-script | 0 | Standalone obrigatório |
+| get-reinstall-script | 0 | Standalone obrigatório |
+| health | 0 | Standalone obrigatório |
+| record-failed-login | 1 | Standalone obrigatório |
+| submit-contact | 1 | Standalone obrigatório |
+| validate-hmac-signature | 1 | Standalone obrigatório |
+| validate-invite | 0 | Standalone obrigatório |
+| verify-compliance-report | 2 | Standalone obrigatório |
+| verify-document | 0 | Standalone obrigatório |
+| evaluate-software-risk | 0 | Standalone obrigatório |
+| track-installation-event | 0 | Standalone obrigatório |
+| api-tenant-features | 0 | API-key proxy |
+| api-tenant-info | 0 | API-key proxy |
+| api-tenant-stats | 0 | API-key proxy |
+
+**Ação:** Manter como exceções autorizadas (20 funções).
+
+---
+
+## FASE 6: Funções serveAgent/HMAC — exceções autorizadas
+Estas DEVEM permanecer standalone (auth HMAC incompatível com gateways):
+
+| Função | Tipo |
+|--------|------|
+| ack-job | serveAgent |
+| check-agent-updates | serveAgent |
+| collect-router | serveAgent + subdir |
+| confirm-force-update | serveAgent |
+| diagnostics-agent-logs | serveAgent |
+| get-agent-config | serveAgent |
+| get-agent-policy | serveAgent |
+| get-blocked-websites | serveAgent |
+| list-reports | serveAgent |
+| post-installation-telemetry | serveAgent |
+| scan-virus | serveAgent |
+| serve-agent-update | serveAgent + 4 files |
+| serve-dns-filter | serveAgent |
+| submit-antivirus-status | serveAgent |
+| submit-rollback-event | serveAgent |
+| submit-router | serveAgent + subdir |
+| submit-software-inventory | serveAgent |
+| submit-system-metrics | serveAgent |
+| submit-vuln-findings | serveAgent |
+| submit-web-activity | serveAgent |
+| update-baseline | serveAgent |
+| upload-report | serveAgent |
+
+**Ação:** Manter como exceções autorizadas (22 funções).
+
+---
+
+## FASE 7: Funções Deno.serve raw — exceções autorizadas
+| Função | Razão |
+|--------|-------|
+| enroll-agent | HMAC custom + raw body |
+| heartbeat | HMAC custom + multi-file |
+| poll-jobs | HMAC custom + multi-file |
+| register-agent-key | HMAC custom + raw body |
+| stripe-webhook | Webhook signature verification |
+
+**Ação:** Manter como exceções autorizadas (5 funções).
+
+---
+
+## FASE 8: Funções especiais — avaliar caso a caso
+| Função | Auth | Files | Decisão |
+|--------|------|-------|---------|
+| honeypot-handler | custom | 2 | Manter standalone |
+| saml-sso | custom | 1 | Manter standalone |
+| scim-provisioning | custom | 4 | Manter standalone |
+| submit-job-result | custom | 7+1dir | Manter standalone |
+| submit-processes | custom | 1 | Manter standalone |
+
+**Ação:** Manter como exceções autorizadas (5 funções).
+
+---
+
+## Resumo de Resultados
+
+| Métrica | Antes | Depois |
+|---------|-------|--------|
+| Funções standalone | 107 | ~60 |
+| Gateways | 2 | 2 |
+| Proxy entries (api-gw) | 18+3 | ~10+3 |
+| Proxy entries (ops-gw) | 7 | ~3 |
+| Cold starts eliminados | — | ~47 |
+
+### Exceções autorizadas finais (~52 funções):
+- 22 serveAgent/HMAC
+- 20 servePublic
+- 5 Deno.serve raw
+- 5 especiais (honeypot, SAML, SCIM, etc.)
+
+### Prioridade de execução:
+1. **Fase 1** (imediato, 0 risco) — deletar 8 zumbis
+2. **Fase 2** (baixo risco) — migrar 3 frontend calls + deletar
+3. **Fase 3A** (médio) — inline 8 serveTenant simples
+4. **Fase 4** (médio) — inline 8 serveInternal
+5. **Fases 5-8** — documentar exceções
+
+---
+
+## Validação em cada fase
+1. `deno check` nos gateways
+2. `npx tsc --noEmit` no frontend
+3. Deploy gateway
+4. Teste curl das ações migradas
+5. Deletar standalone + `supabase--delete_edge_functions`

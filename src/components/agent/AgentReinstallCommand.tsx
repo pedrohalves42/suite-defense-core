@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
@@ -31,13 +31,10 @@ export function AgentReinstallCommand({ agentId, agentName }: AgentReinstallComm
 
   const generateMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('recover-agent-credentials', {
-        body: { agent_name: agentName },
-      });
+      const data = await callGateway<Record<string, unknown>>('agent', 'recover-agent-credentials', { agent_name: agentName });
 
-      if (error) throw new Error(error.message || 'Falha ao gerar credenciais');
       if (!data?.agentToken || !data?.hmacSecret) {
-        throw new Error(data?.error || 'Resposta inválida do servidor');
+        throw new Error((data?.error as string) || 'Resposta inválida do servidor');
       }
 
       return data as { agentToken: string; hmacSecret: string; agentName: string };

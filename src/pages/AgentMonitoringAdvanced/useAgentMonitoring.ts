@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { useTenant } from '@/hooks/useTenant';
@@ -25,14 +26,7 @@ export function useAgentMonitoring() {
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) return;
 
-      const { data, error } = await supabase.functions.invoke('get-agent-dashboard-data', {
-        body: { tenant_id: tenant.id },
-        headers: {
-          Authorization: `Bearer ${session.session.access_token}`,
-        },
-      });
-
-      if (error) throw error;
+      const data = await callGateway<{ summary: DashboardSummary; agents: AgentMetrics[]; recent_alerts: SystemAlert[] }>('agent', 'get-agent-dashboard-data', { tenant_id: tenant.id });
 
       setSummary(data.summary);
       setAgents(data.agents);
