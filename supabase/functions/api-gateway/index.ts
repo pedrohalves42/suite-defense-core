@@ -36,6 +36,15 @@ import {
   handleAdminCreateUser, handleGetRateLimitStats,
   type HandlerContext,
 } from './handlers/admin.ts';
+import {
+  handleAutoBlockThreats,
+} from './handlers/security-threats.ts';
+import {
+  handleCheckCredentialLeaks, handleClassifyShadowIt, handleClearFailedLogins,
+} from './handlers/security-scanning.ts';
+import {
+  handleThreatIntelligenceLookup, handleBuildSecurityGraph,
+} from './handlers/security-intel.ts';
 
 const FETCH_TIMEOUT_MS = 30000;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
