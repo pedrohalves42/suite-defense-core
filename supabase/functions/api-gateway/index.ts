@@ -53,6 +53,18 @@ import {
   handleDiagnoseAgent, handleGetAgentTimeline,
 } from './handlers/agent-mgmt.ts';
 import { handleBuildCallback } from './handlers/build-ops.ts';
+import {
+  handleAcceptInvite, handleDeleteInvite, handleSendInvite,
+} from './handlers/admin-auth.ts';
+import {
+  handleGenerateEnrollmentKey, handleRevokeEnrollmentKey,
+} from './handlers/enrollment.ts';
+import {
+  handleGetSoftwareInventory, handleGetWebActivity, handleGetAgentDashboardData,
+} from './handlers/agent-data.ts';
+import {
+  handleTokenRotate, handleRecoverAgentCredentials, handleAgentVersionManagement,
+} from './handlers/agent-ops.ts';
 
 const FETCH_TIMEOUT_MS = 30000;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
