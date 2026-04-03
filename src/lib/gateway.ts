@@ -2,9 +2,11 @@ import { supabase } from '@/integrations/supabase/client';
 
 type GatewayNamespace =
   | 'admin' | 'billing' | 'security' | 'build' | 'agent'
-  | 'check' | 'sync' | 'playbook' | 'report' | 'cleanup' | 'notify';
+  | 'check' | 'sync' | 'playbook' | 'report' | 'cleanup' | 'notify'
+  | 'public';
 
 const API_GATEWAY_NAMESPACES: GatewayNamespace[] = ['admin', 'billing', 'security', 'build', 'agent'];
+const PUBLIC_GATEWAY_NAMESPACES: GatewayNamespace[] = ['public'];
 
 /**
  * Centralized gateway caller.
