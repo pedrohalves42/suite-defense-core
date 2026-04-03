@@ -44,7 +44,7 @@ const DIRECT_HANDLERS: Record<string, AIHandler> = {
 // ── Proxy targets (complex functions that remain standalone) ─────────────────
 const PROXY_TARGETS: Record<string, string> = {
   'analyze-agent': 'ai-analyze-agent',
-  'behavioral-anomaly-detector': 'ai-behavioral-anomaly-detector',
+  // 'behavioral-anomaly-detector' removed — now inlined in ops-gateway (Phase 1B)
   'quality-check': 'ai-quality-check',
   'red-team-assessment': 'ai-red-team-assessment',
   'system-audit': 'ai-system-audit',

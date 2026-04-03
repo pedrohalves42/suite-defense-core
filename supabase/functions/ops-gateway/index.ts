@@ -62,6 +62,9 @@ import {
 
 // Inlined handlers — honeypot cron (Phase 4)
 import { handleCheckHoneypotAlerts, handleHoneypotDispatchAi } from './handlers/check-honeypot.ts';
+import { handleCreateHoneypotPool } from './handlers/honeypot-pool.ts';
+import { handleAiBehavioralAnomalyDetector } from './handlers/anomaly-ops.ts';
+import { handleBlockWebsite } from './handlers/block-website.ts';
 
 // Inlined handlers — sync cron (Phase 4)
 import { handleProcessAgentUpdates, handleSeedCollectionJobs } from './handlers/sync-cron.ts';
@@ -202,6 +205,10 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   // ── sync cron inlined (Phase 4) ──
   'sync:process-agent-updates': handleProcessAgentUpdates,
   'sync:seed-collection-jobs': handleSeedCollectionJobs,
+  // ── honeypot-pool + anomaly + block-website inlined (Phase 1B) ──
+  'sync:create-honeypot-pool': handleCreateHoneypotPool,
+  'check:ai-behavioral-anomaly-detector': handleAiBehavioralAnomalyDetector,
+  'security:block-website': handleBlockWebsite,
   // ── secret rotation compliance (SOC 2) ──
   'check:secret-rotation-compliance': handleSecretRotationCompliance,
   'check:record-secret-rotation': handleRecordSecretRotation,

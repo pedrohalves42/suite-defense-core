@@ -45,6 +45,9 @@ import {
 import {
   handleThreatIntelligenceLookup, handleBuildSecurityGraph,
 } from './handlers/security-intel.ts';
+import {
+  handleActivateAgentHoneypot, handleRevertAgentHoneypot,
+} from './handlers/honeypot.ts';
 
 const FETCH_TIMEOUT_MS = 30000;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -143,6 +146,9 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'security:classify-shadow-it': handleClassifyShadowIt,
   'security:threat-intelligence-lookup': handleThreatIntelligenceLookup,
   'security:build-security-graph': handleBuildSecurityGraph,
+  // honeypot inlined (Phase 1B)
+  'security:activate-agent-honeypot': handleActivateAgentHoneypot,
+  'security:revert-agent-honeypot': handleRevertAgentHoneypot,
   // admin inlined (Phase 2A)
   'admin:get-admin-releases': handleGetAdminReleases,
   'admin:update-user-status': handleUpdateUserStatus,

@@ -44,6 +44,17 @@
 | ~~playbook-router~~ | ops-gateway `playbook:*` |
 | ~~report-router~~ | ops-gateway `report:*` |
 
+### Inlined Standalone Functions (Phase 1B — 2026-04-03)
+> These were standalone functions inlined into gateways for reduced cold starts.
+
+| Function | Replaced By |
+|---|---|
+| ~~activate-agent-honeypot~~ | api-gateway `security:activate-agent-honeypot` |
+| ~~revert-agent-honeypot~~ | api-gateway `security:revert-agent-honeypot` |
+| ~~create-honeypot-pool~~ | ops-gateway `sync:create-honeypot-pool` |
+| ~~ai-behavioral-anomaly-detector~~ | ops-gateway `check:ai-behavioral-anomaly-detector` |
+| ~~block-website~~ | ops-gateway `security:block-website` |
+
 ## Justified Exceptions — Agent-Facing / HMAC (8 functions)
 > These require raw body access for HMAC signature verification or have triple auth flows (agent token + JWT + anonymous).
 

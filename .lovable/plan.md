@@ -1,45 +1,44 @@
 
-# Fase 1A: Inline Security Namespace (28 proxied → handlers)
+# Fase 1A: Inline Security Namespace (28 proxied → handlers) ✅ CONCLUÍDO
 
-## Situação Atual
-- **28 ações security** no `ACTION_TO_FUNCTION` fazem proxy HTTP para funções standalone
-- Cada proxy = 1 cold start extra + ~50-200ms de latência desnecessária
-- Total: ~4.500 linhas de lógica a migrar
+## Resultado
+- 28 funções de segurança inlined nos gateways (api-gateway + ops-gateway)
+- Handlers criados: security-threats.ts, security-scanning.ts, security-intel.ts (api-gateway) + security-ops.ts (ops-gateway)
+- 6 funções mantidas standalone (auth específica): scan-virus, submit-vuln-findings, update-baseline, check-failed-logins, record-failed-login, translate-cve
 
-## Estratégia: Dividir em 5 handler files por subdomínio
+---
 
-### Handler Files (dentro de `api-gateway/handlers/`)
+# Fase 1B: Inline Honeypot + Anomaly + Block-Website (5 → handlers) ✅ CONCLUÍDO
 
-| Arquivo | Ações | Linhas est. |
-|---------|-------|-------------|
-| `security-threats.ts` | auto-block-threats, auto-quarantine, quarantine-agent, auto-remediate, rollback-remediation, detect-blocked-attempts | ~800 |
-| `security-scanning.ts` | scan-virus, scan-vulnerabilities, check-credential-leaks, check-agent-integrity, integrity-sentinel, classify-shadow-it | ~600 |
-| `security-intel.ts` | publish-threat-ioc, threat-intelligence-lookup, fetch-nvd-cves, translate-cve, sync-cve-database, correlate-edr-events, evaluate-edr-detections, mitre-sync | ~900 |
-| `security-monitoring.ts` | security-monitor, security-alert-dispatcher, build-security-graph, populate-security-graph, siem-export, run-rls-tests, security-advisor, generate-security-report | ~1100 |
-| `security-auth.ts` | check-failed-logins, clear-failed-logins, record-failed-login, verify-log-integrity, apply-security-patch, update-baseline, analyze-network-anomalies, submit-vuln-findings | ~700 |
+## Funções Migradas (5)
 
-### Passos de Execução
+| Função | Gateway | Handler | Auth Original |
+|--------|---------|---------|--------------|
+| `activate-agent-honeypot` | api-gateway | `handlers/honeypot.ts` | serveTenant |
+| `revert-agent-honeypot` | api-gateway | `handlers/honeypot.ts` | serveTenant |
+| `create-honeypot-pool` | ops-gateway | `handlers/honeypot-pool.ts` | serveInternal |
+| `ai-behavioral-anomaly-detector` | ops-gateway | `handlers/anomaly-ops.ts` | serveInternal |
+| `block-website` | ops-gateway | `handlers/block-website.ts` | serveInternal |
 
-**1. Criar os 5 handler files** — extrair a lógica core de cada standalone, removendo boilerplate (serve middleware, CORS, auth) que já é feito pelo api-gateway
+## Ações Registradas
 
-**2. Registrar no INLINED_HANDLERS** — mover as 28 entradas de `ACTION_TO_FUNCTION` para `INLINED_HANDLERS`
+| Gateway | Action | Handler |
+|---------|--------|---------|
+| api-gateway | `security:activate-agent-honeypot` | handleActivateAgentHoneypot |
+| api-gateway | `security:revert-agent-honeypot` | handleRevertAgentHoneypot |
+| ops-gateway | `sync:create-honeypot-pool` | handleCreateHoneypotPool |
+| ops-gateway | `check:ai-behavioral-anomaly-detector` | handleAiBehavioralAnomalyDetector |
+| ops-gateway | `security:block-website` | handleBlockWebsite |
 
-**3. Atualizar imports no index.ts** — adicionar imports dos novos handlers
+## Funções Mantidas Standalone (3) — Auth Especial
 
-**4. Deletar 28 funções standalone** — remover diretórios e chamar `delete_edge_functions`
+| Função | Razão |
+|--------|-------|
+| `honeypot-handler` | serveHoneypot — auth customizada para agentes em modo honeypot |
+| `get-blocked-websites` | serveAgent/HMAC — chamada diretamente pelos agentes |
+| `serve-dns-filter` | serveAgent/HMAC — chamada diretamente pelos agentes |
 
-**5. Deploy e validação** — deploy do api-gateway atualizado, testar ações via curl
-
-### Funções NÃO incluídas (auth própria / fluxo especial)
-- `serve-dns-filter` (serveAgent com HMAC — chamada direta pelo agente)
-- `block-website` / `get-blocked-websites` (serveInternal/serveAgent)
-- `activate-agent-honeypot` / `revert-agent-honeypot` / `create-honeypot-pool` / `honeypot-handler` (ops-gateway)
-- `ai-behavioral-anomaly-detector` (ops-gateway)
-
-Essas 8 ficam para Fase 1B (ops-gateway) ou permanecem standalone por terem auth diferente.
-
-### Ganhos Esperados
-- **-28 cold starts** por chamada
-- **~100-200ms** economia de latência por request
-- **-28 funções** no total (163 → 135)
-- **Custo**: menos invocações de edge function = menos billing
+## Ganhos Fase 1B
+- **-5 cold starts** por chamada
+- **-5 funções** no total
+- **ai-router** atualizado: removido proxy para `ai-behavioral-anomaly-detector` (era serveInternal, não acessível via ai-router)

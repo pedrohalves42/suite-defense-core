@@ -1,10 +1,8 @@
 /**
- * block-website - Creates website block rules and distributes to agents
- * Migrated to serveInternal middleware
+ * Block website handler — creates block rules and distributes to agents.
+ * Inlined from block-website (Phase 1B).
  */
-import { serveInternal } from '../_shared/serve-tenant.ts';
-import { logger } from '../_shared/logger.ts';
-import { createAuditLog } from '../_shared/audit.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
 const BlockSchema = z.object({
@@ -15,19 +13,17 @@ const BlockSchema = z.object({
   agent_ids: z.array(z.string().uuid()).optional(),
 });
 
-serveInternal(async (req, ctx) => {
-  const { supabase, requestId, body } = ctx;
-
-  const parsed = BlockSchema.safeParse(body);
+export async function handleBlockWebsite(
+  supabase: ReturnType<typeof createClient>,
+  requestId: string,
+  payload: Record<string, unknown>,
+): Promise<unknown> {
+  const parsed = BlockSchema.safeParse(payload);
   if (!parsed.success) {
-    return new Response(
-      JSON.stringify({ error: 'Invalid input', details: parsed.error.flatten().fieldErrors }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
+    return { error: 'Invalid input', details: parsed.error.flatten().fieldErrors, __status: 400 };
   }
 
   const { url, reason, severity, tenant_id, agent_ids } = parsed.data;
-  logger.info(`[block-website][${requestId}] Blocking URL`, { url, reason });
 
   const { data: blockRecord, error: blockError } = await supabase
     .from('blocked_websites')
@@ -51,7 +47,6 @@ serveInternal(async (req, ctx) => {
 
   const jobsCreated: string[] = [];
   if (targetAgents && targetAgents.length > 0) {
-    // Batch insert all jobs at once instead of N+1
     const jobRows = targetAgents.map(agent => ({
       agent_id: agent.id, agent_name: agent.agent_name, tenant_id: agent.tenant_id,
       type: 'sync_blocked_websites', status: 'pending',
@@ -82,15 +77,17 @@ serveInternal(async (req, ctx) => {
     tenant_id,
   });
 
-  await createAuditLog({
-    supabase, tenantId: tenant_id, action: 'block_website',
-    resourceType: 'blocked_websites', resourceId: blockRecord?.id,
+  await supabase.from('audit_logs').insert({
+    tenant_id,
+    action: 'block_website',
+    resource_type: 'blocked_websites',
+    resource_id: blockRecord?.id,
     details: { url, reason, jobs_created: jobsCreated.length },
-    request: req, success: true,
+    ip_address: 'internal',
   });
 
   return {
     success: true, block_id: blockRecord?.id,
     jobs_created: jobsCreated.length, agents_targeted: targetAgents?.length || 0,
   };
-});
+}

@@ -1,18 +1,8 @@
 /**
- * create-honeypot-pool — Maintains a fixed pool of native honeypot agents per tenant.
- * 
- * Via serveInternal (cron).
- * 
- * Rules:
- * - Fixed pool size per tenant (default: 2)
- * - NO token/HMAC for native honeypots (they don't need to authenticate)
- * - NO agent_tokens entries for native honeypots
- * - hmac_secret is NULL (not empty string)
- * - Recycles only when below target pool size
- * - Never creates infinitely
+ * Honeypot pool handler — maintains native honeypot agent pool.
+ * Inlined from create-honeypot-pool (Phase 1B).
  */
-
-import { serveInternal } from '../_shared/serve-internal.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
 const HONEYPOT_NAMES = [
   'WKS-FINANCE-01', 'SRV-BACKUP-02', 'DC-SECONDARY-01',
@@ -21,20 +11,17 @@ const HONEYPOT_NAMES = [
   'WKS-RECEPTION-01', 'SRV-DB-STANDBY', 'WKS-IT-SPARE',
 ];
 
-/** Default pool size per tenant */
 const DEFAULT_POOL_SIZE = 2;
 
-serveInternal(async (_req, { supabase, requestId, body }) => {
-  const params = body as {
-    tenant_id?: string;
-    pool_size?: number;
-  };
-
-  // Get tenants
+export async function handleCreateHoneypotPool(
+  supabase: ReturnType<typeof createClient>,
+  requestId: string,
+  payload: Record<string, unknown>,
+): Promise<unknown> {
   let tenantIds: string[] = [];
 
-  if (params.tenant_id) {
-    tenantIds = [params.tenant_id];
+  if (payload.tenant_id) {
+    tenantIds = [payload.tenant_id as string];
   } else {
     const { data: tenants } = await supabase
       .from('tenants')
@@ -43,11 +30,10 @@ serveInternal(async (_req, { supabase, requestId, body }) => {
     tenantIds = (tenants || []).map((t: { id: string }) => t.id);
   }
 
-  const poolSize = params.pool_size || DEFAULT_POOL_SIZE;
+  const poolSize = (payload.pool_size as number) || DEFAULT_POOL_SIZE;
   const results: Array<{ tenant_id: string; existing: number; created: number }> = [];
 
   for (const tenantId of tenantIds) {
-    // Count existing native honeypots
     const { count: existing } = await supabase
       .from('agents')
       .select('id', { count: 'exact', head: true })
@@ -65,8 +51,6 @@ serveInternal(async (_req, { supabase, requestId, body }) => {
       const name = HONEYPOT_NAMES[Math.floor(Math.random() * HONEYPOT_NAMES.length)] +
         '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
 
-      // Create agent WITHOUT token or HMAC secret (native doesn't authenticate)
-      // hmac_secret is NULL — not empty string
       const { error: agentError } = await supabase
         .from('agents')
         .insert({
@@ -78,7 +62,6 @@ serveInternal(async (_req, { supabase, requestId, body }) => {
           honeypot_mode: 'native',
           honeypot_activated_at: new Date().toISOString(),
           honeypot_reason: 'Pool-seeded native honeypot',
-          // hmac_secret intentionally omitted — NULL, not empty string
           last_honeypot_state_change_at: new Date().toISOString(),
         });
 
@@ -86,8 +69,6 @@ serveInternal(async (_req, { supabase, requestId, body }) => {
         console.error(`[create-honeypot-pool] Failed: ${agentError.message}`);
         continue;
       }
-
-      // NO token creation for native honeypots
       created++;
     }
 
@@ -101,4 +82,4 @@ serveInternal(async (_req, { supabase, requestId, body }) => {
     results,
     total_created: results.reduce((sum, r) => sum + r.created, 0),
   };
-});
+}
