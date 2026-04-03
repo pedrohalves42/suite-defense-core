@@ -56,9 +56,10 @@ export function useLoginFlow() {
 
   useEffect(() => {
     const checkFailedAttempts = async () => {
-      const { data, error } = await supabase.functions.invoke('check-failed-logins', {
-        body: {},
-      });
+      const { callGateway } = await import('@/lib/gateway');
+      try {
+        const data = await callGateway<Record<string, unknown>>('public', 'check-failed-logins', {});
+        const error = null;
 
       if (!error && data) {
         if (data.blocked) {
