@@ -120,8 +120,8 @@ export const useAutoRemediation = () => {
         .eq('tenant_id', tenant.id);
       if (updateErr) throw updateErr;
 
-      const { data, error: invokeErr } = await supabase.functions.invoke('auto-remediate', {
-        body: {
+      const { data, error: invokeErr } = await supabase.functions.invoke('api-gateway', {
+        body: { action: 'playbook:auto-remediate', payload: {
           agent_id: action.agent_id,
           action_type: action.action_type,
           trigger_source: `approved:${action.trigger_source}`,
