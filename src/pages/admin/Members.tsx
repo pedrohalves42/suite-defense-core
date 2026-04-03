@@ -49,7 +49,7 @@ export default function Members() {
     queryKey: ['subscription', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) throw new Error('Tenant nao encontrado');
-      return await callGateway('billing', 'check-subscription');
+      return await callGateway<{ subscribed: boolean; plan_name: string; max_users?: number; features?: Record<string, { enabled: boolean; quota_limit: number | null; quota_used: number }> }>('billing', 'check-subscription');
     },
     enabled: !!tenant?.id,
   });
