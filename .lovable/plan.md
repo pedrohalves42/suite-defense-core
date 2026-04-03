@@ -1,45 +1,49 @@
 
-# Plano: Otimização de Crons e Custos Operacionais
+# Plano: Integração Stripe Checkout — Diagnóstico e Ações
 
-## Diagnóstico Atual (25 cron jobs ativos, ~450 execuções/dia)
+## ✅ O que JÁ EXISTE (não precisa criar)
 
-### Problemas Identificados
+| Componente | Status | Local |
+|---|---|---|
+| Tabela `tenant_subscriptions` | ✅ Existe | 15 colunas incluindo `stripe_customer_id`, `stripe_subscription_id`, `status`, `trial_end`, `current_period_end` |
+| Tabela `subscription_plans` | ✅ Existe | 6 planos ativos (free, starter, pro, enterprise + 2 addons) com `stripe_price_id` |
+| Tabela `subscription_events` | ✅ Existe | Auditoria completa de eventos |
+| `create-checkout` handler | ✅ Existe | `api-gateway/handlers/billing-stripe.ts` — cria sessão Stripe com trial 14 dias, suporta addons e cupons MSP |
+| `check-subscription` handler | ✅ Existe | `api-gateway/handlers/billing-stripe.ts` + edge function standalone |
+| `customer-portal` handler | ✅ Existe | `api-gateway/handlers/billing-stripe.ts` |
+| `manage-subscription` handler | ✅ Existe | Upgrade/downgrade entre planos |
+| `stripe-webhook` edge function | ✅ Existe | Handlers: checkout.completed, subscription.created/updated/deleted, trial_will_end, payment_failed |
+| Webhook event handlers | ✅ Existe | `event-handlers.ts` — sync tenant_subscriptions, auditoria, downgrade automático para free |
+| Frontend: PlanUpgrade page | ✅ Existe | `src/pages/admin/PlanUpgradeNew/` com seleção de plano e checkout |
+| Frontend: UpgradeModal | ✅ Existe | `src/components/UpgradeModal.tsx` |
+| Frontend: CheckoutSuccess/Cancel | ✅ Existe | Páginas de retorno do Stripe |
+| Frontend: useSubscription hook | ✅ Existe | Polling a cada 10min via gateway |
+| Secrets configurados | ✅ | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` |
+| Produtos no Stripe | ✅ | 10 produtos com prices em BRL (Starter R$499, Business R$899, addons, períodos variados) |
 
-| # | Job ID | Problema | Frequência Atual | Execuções/Dia |
-|---|--------|----------|-------------------|---------------|
-| 1 | 139 | **DUPLICADO** de 136 (`aggregate_honeypot_hourly_stats` vs `aggregate_honeypot_hourly`) | `5 * * * *` | 24 |
-| 2 | 135 | **EXCESSIVO** — purge HMAC para apenas 15 assinaturas | `*/10 * * * *` | **144** |
-| 3 | 152 | Já desabilitado (Feb 31) — `honeypot-dispatch-ai` | `0 0 31 2 *` | 0 |
-| 4 | 141 | Honeypot agent timestamps — **já está 1x/hora** (OK) | `0 * * * *` | 24 |
-| 5 | — | `evaluate-automation-rules` — **não está em pg_cron** (possivelmente via system-maintenance) | — | — |
+## 🔍 Gap: Nenhum tenant tem `stripe_customer_id` ou `stripe_subscription_id` preenchido
 
-### Ações
+Todos os 10 tenants consultados têm `stripe_customer_id: null` — indica que **nenhum checkout foi completado com sucesso** ainda. Isso pode significar:
+1. O webhook não está recebendo eventos (URL incorreta no Stripe Dashboard)
+2. O webhook está falhando silenciosamente
+3. Ninguém fez checkout ainda (cenário legítimo em fase de testes)
 
-#### 1. Remover cron duplicado (jobid 139)
-- `aggregate_honeypot_hourly_stats` é redundante com `aggregate_honeypot_hourly` (jobid 136)
-- **Economia: -24 execuções/dia**
+## Ações Necessárias
 
-#### 2. Reduzir purge-hmac-signatures (jobid 135) de `*/10` para `0 4 * * *` (1x/dia)
-- Apenas 15 assinaturas no banco — limpeza a cada 10min é desperdício puro
-- **Economia: -143 execuções/dia**
+### 1. Verificar configuração do Webhook no Stripe
+- Confirmar que o endpoint `https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/stripe-webhook` está configurado no Stripe Dashboard
+- Verificar se os eventos corretos estão habilitados: `checkout.session.completed`, `customer.subscription.*`, `invoice.payment_failed`
 
-#### 3. Confirmar honeypot-dispatch-ai (jobid 152) permanece desabilitado
-- Já usando schedule impossível (`Feb 31`) — nenhuma ação necessária
+### 2. Teste end-to-end do fluxo
+- Criar checkout via `callGateway('billing', 'create-checkout', { planName: 'starter_compliance' })`
+- Verificar se a sessão Stripe é criada corretamente
+- Usar cartão de teste do Stripe para completar pagamento
+- Verificar se o webhook atualiza `tenant_subscriptions`
 
-#### 4. Honeypot agent timestamps (jobid 141) — já está 1x/hora
-- A frequência solicitada (1x/hora) já é a atual — nenhuma ação necessária
+### 3. (Opcional) Sincronizar nomes de plano
+- O handler `create-checkout` aceita `starter_compliance` e `business`
+- Mas a tabela `subscription_plans` tem `starter` e `pro` como nomes
+- Verificar se o mapeamento está correto no `stripe_plan_mapping`
 
-#### 5. Consolidar honeypot-alerts check (jobid 151) de 1x/hora para 1x/6h
-- Alertas de honeypot não precisam de verificação horária sem volume real
-- **Economia: -20 execuções/dia**
-
-### Resultado Esperado
-
-| Métrica | Antes | Depois | Economia |
-|---------|-------|--------|----------|
-| Execuções/dia | ~450 | ~263 | **~42% redução** |
-| Crons duplicados | 1 | 0 | -1 job |
-| Crons com frequência excessiva | 2 | 0 | Otimizados |
-
-### Implementação
-- Uma única migration SQL usando `cron.unschedule()` e `cron.schedule()` para ajustar frequências
+## Resultado
+A integração Stripe Checkout **já está 95% completa**. O trabalho restante é validação e teste, não implementação.
