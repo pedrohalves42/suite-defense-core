@@ -1,76 +1,51 @@
 
-# Fase 1C: Inline Playbook Namespace no ops-gateway
+# Fase 1A: Inline Security Namespace (28 proxied → handlers) ✅ CONCLUÍDO
 
-## Objetivo
-Eliminar cold starts do namespace `playbook:*` no ops-gateway, movendo a lógica para handlers inlined. **Meta: -11 cold starts por chamada.**
+## Resultado
+- 28 funções de segurança inlined nos gateways (api-gateway + ops-gateway)
+- Handlers criados: security-threats.ts, security-scanning.ts, security-intel.ts (api-gateway) + security-ops.ts (ops-gateway)
+- 6 funções mantidas standalone (auth específica): scan-virus, submit-vuln-findings, update-baseline, check-failed-logins, record-failed-login, translate-cve
 
-## Análise de Viabilidade
+---
 
-| Função | Linhas | Auth | Sub-módulos | Decisão |
-|--------|--------|------|-------------|---------|
-| execute-playbook | 146 | serveInternal | 0 | ✅ Inline |
-| process-playbook-trigger-logs | 105 | serveInternal | 0 | ✅ Inline |
-| rollback-by-decision-event | 146 | serveTenant | 0 | ✅ Inline |
-| rollback-remediation | 95 | serveTenant | 0 | ✅ Inline |
-| resolve-action-policy | 81 | serveTenant | 0 | ✅ Inline |
-| oncall-integration | 110 | serveInternal | 0 | ✅ Inline |
-| calculate-risk-score | 163 | serveTenant | 0 | ✅ Inline |
-| run-attack-simulation | 155 | serveTenant | 0 | ✅ Inline |
-| soar-engine | 174 | serveInternal | 1 (rules.ts) | ✅ Inline |
-| auto-execute-ai-actions | 272 | serveInternal | 2 (policy+executor) | ✅ Inline |
-| create-itsm-ticket | 200 | serveTenant | 0 | ✅ Inline |
+# Fase 1B: Inline Honeypot + Anomaly + Block-Website (5 → handlers) ✅ CONCLUÍDO
 
-### Mantidas Standalone (6) — Razões Técnicas
+## Resultado
+- 5 funções inlined: activate-agent-honeypot, revert-agent-honeypot, create-honeypot-pool, ai-behavioral-anomaly-detector, block-website
+- 3 mantidas standalone: honeypot-handler, get-blocked-websites, serve-dns-filter
 
-| Função | Linhas Total | Razão |
-|--------|-------------|-------|
-| execute-playbook-action | 318+ | Orchestrator complexo com handlers/ e action-dispatcher |
-| auto-remediate | 311 | Blast radius checks, lógica de segurança crítica |
-| evaluate-automation-rules | 700+ | 5 sub-módulos, tenant-evaluator de 296 linhas |
-| evaluate-playbook-triggers | 338 | 3 sub-módulos (condition-engine, approval-handler) |
-| autonomous-safe-mode | 1282 | 3 rules/ processors (380+ linhas cada) |
-| evaluate-software-risk | 145 | servePublic — auth incompatível com gateway |
+---
 
-## Plano de Execução
+# Fase 1C: Inline Playbook Namespace (11 → handlers) ✅ CONCLUÍDO
 
-### Etapa 1 — Criar handlers no ops-gateway (3 arquivos)
+## Funções Migradas (11)
 
-1. **`handlers/playbook-core.ts`** (~500 linhas)
-   - handleExecutePlaybook
-   - handleProcessPlaybookTriggerLogs
-   - handleRollbackByDecisionEvent
-   - handleRollbackRemediation
-   - handleResolveActionPolicy
+| Função | Gateway | Handler |
+|--------|---------|---------|
+| `execute-playbook` | ops-gateway | `handlers/playbook-core.ts` |
+| `process-playbook-trigger-logs` | ops-gateway | `handlers/playbook-core.ts` |
+| `rollback-by-decision-event` | ops-gateway | `handlers/playbook-core.ts` |
+| `rollback-remediation` | ops-gateway | `handlers/playbook-core.ts` |
+| `resolve-action-policy` | ops-gateway | `handlers/playbook-core.ts` |
+| `soar-engine` | ops-gateway | `handlers/playbook-automation.ts` |
+| `auto-execute-ai-actions` | ops-gateway | `handlers/playbook-automation.ts` |
+| `oncall-integration` | ops-gateway | `handlers/playbook-automation.ts` |
+| `create-itsm-ticket` | ops-gateway | `handlers/playbook-automation.ts` |
+| `calculate-risk-score` | ops-gateway | `handlers/playbook-analysis.ts` |
+| `run-attack-simulation` | ops-gateway | `handlers/playbook-analysis.ts` |
 
-2. **`handlers/playbook-automation.ts`** (~500 linhas)
-   - handleSoarEngine (+ rules inline)
-   - handleAutoExecuteAiActions (+ policy-resolver + action-executor inline)
-   - handleOncallIntegration
-   - handleCreateItsmTicket
+## Funções Mantidas Standalone (6)
 
-3. **`handlers/playbook-analysis.ts`** (~320 linhas)
-   - handleCalculateRiskScore
-   - handleRunAttackSimulation
+| Função | Razão |
+|--------|-------|
+| `execute-playbook-action` | Orchestrator complexo (318+ linhas, sub-módulos) |
+| `auto-remediate` | Blast radius checks críticos (311 linhas) |
+| `evaluate-automation-rules` | 5 sub-módulos (700+ linhas total) |
+| `evaluate-playbook-triggers` | 3 sub-módulos (condition-engine, approval-handler) |
+| `autonomous-safe-mode` | 3 rules/ processors (1282 linhas total) |
+| `evaluate-software-risk` | servePublic — auth incompatível com gateway |
 
-### Etapa 2 — Registrar no ops-gateway/index.ts
-- Adicionar 11 imports e registros no `INLINED_HANDLERS`
-- Remover 11 entradas do `ACTION_TO_FUNCTION` proxy map
-
-### Etapa 3 — Deletar standalone functions (11)
-- Deletar diretórios e chamar `delete_edge_functions`
-
-### Etapa 4 — Deploy e Validação
-- Deploy ops-gateway
-- Testar via curl todas as 11 ações
-- Verificar zero erros de sintaxe nos logs
-
-### Etapa 5 — Documentação
-- Atualizar `.lovable/plan.md`
-- Atualizar `docs/deno-serve-migration-exceptions.md`
-- Atualizar memory de consolidação
-
-## Impacto Estimado
+## Ganhos Fase 1C
 - **-11 cold starts** por chamada playbook
-- **-11 funções standalone** (~2200 linhas consolidadas)
-- **6 proxies restantes** no namespace playbook (funções complexas)
-- **Economia**: ~$2-4/mês em cold start costs
+- **-11 funções standalone** deletadas
+- **Frontend atualizado**: 5 hooks/componentes migrados para callGateway
