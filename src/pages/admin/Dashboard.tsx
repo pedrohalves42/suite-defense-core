@@ -182,6 +182,7 @@ export default function Dashboard() {
     <div className="space-y-5">
       {/* Banners — contextuais, somem quando resolvidos */}
       <OnboardingRequiredBanner />
+      <PlanLimitBanner />
       <NotificationSetupBanner />
       <GovernanceHealthBanner />
 
