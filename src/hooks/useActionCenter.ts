@@ -137,16 +137,11 @@ export function useExecuteActionItem() {
     }) => {
       // V-5007 FIX: Guard against empty tenant_id
       if (!tenant?.id) throw new Error('Tenant not found');
-      const { data, error } = await supabase.functions.invoke('action-center-feed', {
-        method: 'POST',
-        headers: {
-          'x-tenant-id': tenant.id
-        },
-        body: {
-          item_id: itemId,
-          source_type: sourceType,
-          action,
-          reason
+      const data = await callGateway('agent', 'action-center-feed', {
+        item_id: itemId,
+        source_type: sourceType,
+        action,
+        reason
         }
       });
 
