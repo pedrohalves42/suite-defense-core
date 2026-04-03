@@ -269,6 +269,7 @@ const App = () => (
                 <Route path="ai-metrics" element={<RouteErrorBoundary route="AI Metrics"><AIMetrics /></RouteErrorBoundary>} />
                 <Route path="ai-governance" element={<RouteErrorBoundary route="AI Governance"><AIGovernance /></RouteErrorBoundary>} />
                 <Route path="tenant" element={<RouteErrorBoundary route="Tenant"><Tenant /></RouteErrorBoundary>} />
+                <Route path="tenant-costs" element={<RouteErrorBoundary route="Tenant Costs"><TenantCostDashboard /></RouteErrorBoundary>} />
                 <Route path="software-inventory" element={<Navigate to="/admin/asset-security?tab=inventory" replace />} />
                 <Route path="vulnerabilities" element={<Navigate to="/admin/vulnerability-center?tab=vulnerabilities" replace />} />
                 <Route path="web-activity" element={<Navigate to="/admin/network-security?tab=web-activity" replace />} />
