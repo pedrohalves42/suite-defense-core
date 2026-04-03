@@ -244,6 +244,14 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'playbook:create-itsm-ticket': handleCreateItsmTicket,
   'playbook:calculate-risk-score': handleCalculateRiskScore,
   'playbook:run-attack-simulation': handleRunAttackSimulation,
+  // ── report inlined (Phase 1D) ──
+  'report:compliance': handleComplianceReport,
+  'report:executive': handleExecutiveReport,
+  'report:explainable': handleExplainableReport,
+  'report:security': handleSecurityReport,
+  'report:weekly': handleWeeklyReport,
+  'report:auto': handleAutoGenerateReport,
+  'report:scheduled': handleScheduledReportGenerator,
 };
 
 const ALL_VALID_ACTIONS = new Set([
