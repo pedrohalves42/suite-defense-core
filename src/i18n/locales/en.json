@@ -625,44 +625,45 @@
       "title": "Contact Us"
     },
     "differentiators": {
+      "badge": "What makes us unique",
       "title": "Why CyberShield is Different",
-      "subtitle": "Proprietary technology that would take 18+ months to replicate",
+      "subtitle": "Technology no competitor offers today",
       "items": {
         "0": {
-          "title": "Intelligent Honeypot",
-          "description": "The only Brazilian EDR with integrated deception technology. Native agents simulate vulnerable endpoints. Flipped mode diverts real agents for forensic observation.",
+          "title": "Traps for Intruders",
+          "description": "We create fake computers that attract hackers. When someone tries to break in, the system detects and observes — without putting your real data at risk.",
           "metric": "Exclusive",
-          "metricLabel": "in Brazilian market"
+          "metricLabel": "in Brazil"
         },
         "1": {
-          "title": "Hash Chain Logs",
-          "description": "Blockchain-inspired immutable cryptographic chain. Each record references the previous hash. Tampering is impossible without breaking the entire chain.",
+          "title": "Records Nobody Can Alter",
+          "description": "Every action is logged in a chain. If someone tries to change a record, the chain breaks and the system alerts immediately.",
           "metric": "100%",
-          "metricLabel": "tamper-proof"
+          "metricLabel": "fraud-proof"
         },
         "2": {
-          "title": "Multi-Provider AI",
-          "description": "Smart rotation between Gemini, GPT and Groq with response caching and automatic fallback. No provider downtime affects your operation.",
+          "title": "Cost-Effective AI",
+          "description": "We use multiple AI providers simultaneously. If one goes down, another takes over automatically. Result: up to 80% lower cost and zero downtime.",
           "metric": "80%",
-          "metricLabel": "lower AI cost"
+          "metricLabel": "AI savings"
         },
         "3": {
-          "title": "SOAR with Circuit Breaker",
-          "description": "Automated response with blast radius control (max 10% of fleet), global circuit breaker and fail-closed mode.",
+          "title": "Auto-Response with Safety Brake",
+          "description": "The system responds to threats automatically, but with limits: it never acts on more than 10% of computers at once. If something goes wrong, it stops itself.",
           "metric": "10%",
-          "metricLabel": "impact limit per action"
+          "metricLabel": "limit per action"
         },
         "4": {
-          "title": "Zero Trust by Design",
-          "description": "HMAC-SHA256 with nonce for each agent. Replay attack protection. No PKI certificates needed. Works on Windows, Linux and macOS.",
+          "title": "No Access Trusted by Default",
+          "description": "Every computer must prove its identity on each communication. Works on Windows, Linux and macOS without complex setup.",
           "metric": "Zero",
-          "metricLabel": "implicit trust"
+          "metricLabel": "blind trust"
         },
         "5": {
-          "title": "Atomic Multi-Tenant",
-          "description": "JWT claims isolation with atomic context switching. RLS across 80+ database partitions. MSPs manage dozens of clients safely.",
-          "metric": "80+",
-          "metricLabel": "isolated partitions"
+          "title": "Each Client Fully Isolated",
+          "description": "Each company's data is completely separate. IT providers manage dozens of clients with zero risk of data leaking between them.",
+          "metric": "100%",
+          "metricLabel": "data isolation"
         }
       }
     }

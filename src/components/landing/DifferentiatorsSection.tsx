@@ -27,7 +27,7 @@ export function DifferentiatorsSection() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cta-positive/15 border border-cta-positive/25 mb-4">
             <Shield className="w-4 h-4 text-cta-positive" />
-            <span className="text-sm font-medium text-cta-positive">Tecnologia Proprietária</span>
+            <span className="text-sm font-medium text-cta-positive">{t('landing.differentiators.badge', 'O que nos torna únicos')}</span>
           </div>
           <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight">
             {differentiators.title}
