@@ -24,9 +24,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Always log to browser console so we can capture the stack trace
+    console.error('[ErrorBoundary] CRASH:', error);
+    console.error('[ErrorBoundary] Stack:', error.stack);
+    console.error('[ErrorBoundary] Component stack:', errorInfo.componentStack);
     logger.error('ErrorBoundary caught an error', error, { errorInfo });
-    logger.error('[ErrorBoundary] CRASH:', error, { stack: error.stack });
-    logger.error('[ErrorBoundary] Component stack:', error, { componentStack: errorInfo.componentStack });
   }
 
   private handleReload = () => {
@@ -54,11 +56,16 @@ export class ErrorBoundary extends Component<Props, State> {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {import.meta.env.DEV && this.state.error && (
-                <div className="p-4 rounded-lg bg-muted">
+              {this.state.error && (
+                <div className="p-4 rounded-lg bg-muted max-h-48 overflow-auto">
                   <p className="text-xs font-mono text-muted-foreground break-all">
                     {this.state.error.toString()}
                   </p>
+                  {this.state.error.stack && (
+                    <pre className="text-[10px] font-mono text-muted-foreground/70 mt-2 whitespace-pre-wrap break-all">
+                      {this.state.error.stack}
+                    </pre>
+                  )}
                 </div>
               )}
               <p className="text-sm text-muted-foreground text-center">
