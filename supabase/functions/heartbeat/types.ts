@@ -11,6 +11,7 @@ export interface OSInfo {
   os_version?: string;
   hostname?: string;
   agent_version?: string;
+  state?: string; // Agent lifecycle state (ENFORCING, SAFE_MODE, DEGRADED, INITIALIZING)
   ed25519_supported?: boolean;
   signature_mode?: string;
   system_metrics?: SystemMetricsPayload;
@@ -55,6 +56,7 @@ export interface AgentContext {
   hmac_secret: string;
   tenant_id: string;
   status: string;
+  state?: string; // Agent lifecycle state (ENFORCING, SAFE_MODE, DEGRADED, INITIALIZING)
   skip_firewall_remediation: boolean;
   agent_version: string | null;
   force_update_version: string | null;
@@ -70,6 +72,7 @@ export interface AgentContext {
 export interface AgentUpdate {
   last_heartbeat: string;
   status: string;
+  state?: string;
   os_type?: string;
   os_version?: string;
   hostname?: string;

@@ -16,6 +16,10 @@ import type { AgentContext, AgentUpdate } from './types.ts'
  *
  * Cost-optimized: single DB query for release data (script_content + signature).
  * Security: script_sha256 is only sent when a valid Ed25519 signature exists.
+ *
+ * FIX: Uses agentState from payload to decide resync (avoids extra DB query).
+ * FIX: Accepts both 'active' and 'online' status for resync eligibility.
+ * FIX: Returns script_hash_signature for Windows agents that require it.
  */
 export async function buildNormalResponse(
   supabase: SupabaseClient,
@@ -26,6 +30,7 @@ export async function buildNormalResponse(
   origin: string | null,
 ): Promise<Response> {
   let safeScriptSha256: string | null = null
+  let scriptHashSignature: string | null = null
   let scriptHashSignedAt: string | null = null
   let forceHashResync = false
 
@@ -62,6 +67,8 @@ export async function buildNormalResponse(
         const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes)
         safeScriptSha256 = Array.from(new Uint8Array(hashBuffer))
           .map(b => b.toString(16).padStart(2, '0')).join('')
+        // Return the full signature trio for Windows agents
+        scriptHashSignature = release.signature_base64
         scriptHashSignedAt = release.signed_at || null
       }
     }
@@ -71,25 +78,20 @@ export async function buildNormalResponse(
     })
   }
 
-  // Detect agents needing hash resync: only when agent reported a degraded state
-  // or when we have a valid hash to send (avoids pointless resync signals)
-  if (safeScriptSha256 && agent.status === 'online') {
-    try {
-      const { data: agentState } = await supabase
-        .from('agents')
-        .select('state')
-        .eq('id', agent.id)
-        .single()
-
-      // Only signal resync for agents in problematic states
+  // Detect agents needing hash resync using state from the payload (cost-optimized: no extra DB query).
+  // FIX: Accept both 'active' and 'online' status (heartbeat writes 'active', legacy uses 'online').
+  if (safeScriptSha256) {
+    const agentStatus = agent.status
+    if (agentStatus === 'active' || agentStatus === 'online') {
+      // Use state from updateData (payload) first, fallback to agent context
+      const agentState = updateData.state || agent.state || null
       const degradedStates = ['SAFE_MODE', 'DEGRADED', 'INITIALIZING']
-      if (agentState?.state && degradedStates.includes(agentState.state)) {
+      if (agentState && degradedStates.includes(agentState)) {
         forceHashResync = true
+        logger.info('Triggering force_hash_resync for degraded agent', {
+          agentName: agent.agent_name, agentState, agentStatus,
+        })
       }
-    } catch (resyncError) {
-      logger.warn('Failed to evaluate hash resync', {
-        agentName: agent.agent_name, error: (resyncError as Error).message,
-      })
     }
   }
 
@@ -99,6 +101,7 @@ export async function buildNormalResponse(
       agent: agent.agent_name,
       timestamp: new Date().toISOString(),
       script_sha256: safeScriptSha256,
+      script_hash_signature: scriptHashSignature,
       script_hash_signed_at: scriptHashSignedAt,
       force_hash_resync: forceHashResync,
       heartbeat_interval_seconds: 60,

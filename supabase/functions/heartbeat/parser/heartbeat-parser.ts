@@ -19,6 +19,7 @@ const HeartbeatPayloadSchema = z.object({
   os_version: z.string().max(128).optional(),
   hostname: z.string().max(255).optional(),
   agent_version: z.string().max(32).optional(),
+  state: z.string().max(32).optional(),
   ed25519_supported: z.boolean().optional(),
   signature_mode: z.string().max(32).optional(),
 }).passthrough()  // Allow extra fields for forward compatibility
@@ -66,6 +67,11 @@ export function buildAgentUpdate(
   }
   if (osInfo.os_version) updateData.os_version = osInfo.os_version
   if (osInfo.hostname) updateData.hostname = osInfo.hostname
+
+  // Persist agent state (ENFORCING, SAFE_MODE, DEGRADED, INITIALIZING)
+  if (osInfo.state) {
+    updateData.state = osInfo.state
+  }
 
   // Capturar agent_version do payload (somente quando realmente mudou)
   if (osInfo.agent_version) {
