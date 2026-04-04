@@ -78,6 +78,8 @@ const Landing = () => {
             <BenefitsSection />
             {/* 7. Funcionalidades */}
             <FeaturesSection />
+            {/* 7.5 Diferenciais exclusivos */}
+            <DifferentiatorsSection />
             {/* 8. Para quem é */}
             <TargetAudienceSection />
             {/* 9. Prova e confiança */}
