@@ -49480,18 +49480,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      archive_agent:
-        | { Args: { p_agent_id: string }; Returns: Json }
-        | {
-            Args: {
-              p_actor_id?: string
-              p_actor_type: string
-              p_agent_id: string
-              p_notes?: string
-              p_reason: string
-            }
-            Returns: undefined
-          }
+      archive_agent: { Args: { p_agent_id: string }; Returns: Json }
       archive_old_evidence_logs: {
         Args: { retention_days?: number }
         Returns: number
