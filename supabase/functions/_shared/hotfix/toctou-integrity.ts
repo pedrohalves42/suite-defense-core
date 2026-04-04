@@ -251,6 +251,30 @@ export function hotfixToctouDualHash(ctx: HotfixContext): void {
   }
 }
 
+/** HOTFIX 45: Ed25519 fail-open when public key is null (prevents false REJECTED on hash cache update) */
+export function hotfixEd25519HashCacheFailOpen(ctx: HotfixContext): void {
+  // Bug: Test-Ed25519HashSignature returns $false when $Global:Ed25519PublicKeyBase64 is $null,
+  // and the caller treats $false as "INVALID signature" → rejects hash cache update.
+  // Fix: Before the REJECTED block, check if the key is actually available.
+  if (
+    ctx.content.includes('REJECTED hash cache update - Ed25519 signature INVALID') &&
+    !ctx.content.includes('HOTFIX-ED25519-HASHCACHE-FAILOPEN')
+  ) {
+    // Pattern: if (-not $sigValid) { ... REJECTED hash cache update ... }
+    ctx.content = ctx.content.replace(
+      /if\s*\(\s*-not\s+\$sigValid\s*\)\s*\{[^}]*REJECTED hash cache update - Ed25519 signature INVALID[^}]*\}/g,
+      `# HOTFIX-ED25519-HASHCACHE-FAILOPEN: Distinguish "no key" from "bad signature"
+            if (-not $sigValid -and $Global:Ed25519PublicKeyBase64) {
+                Write-Log "[INTEGRITY] REJECTED hash cache update - Ed25519 signature INVALID. Possible server compromise!" "ERROR"
+                return
+            } elseif (-not $sigValid) {
+                Write-Log "[INTEGRITY] Ed25519 public key not available - accepting hash cache update (audit-only mode)" "WARN"
+            }`
+    );
+    ctx.reasons.push('ed25519_hashcache_failopen');
+  }
+}
+
 /** HOTFIX 24c: Repair previously persisted pre-logger calls */
 export function hotfixPreloggerRepair(ctx: HotfixContext): void {
   if (ctx.content.includes('HOTFIX-TOCTOU-SELFHEAL') && ctx.content.includes('Write-Log "[TOCTOU-SELFHEAL]')) {
