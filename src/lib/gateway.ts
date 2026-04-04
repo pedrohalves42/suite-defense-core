@@ -10,11 +10,13 @@ const PUBLIC_GATEWAY_NAMESPACES: GatewayNamespace[] = ['public'];
 
 /**
  * Centralized gateway caller.
- * Routes to api-gateway or ops-gateway based on namespace.
+ * Routes to api-gateway, public-gateway, or ops-gateway based on namespace.
  *
  * @example
  * const data = await callGateway('notify', 'dispatch', { tenant_id, severity: 'info' });
  * const data = await callGateway('admin', 'create-user', { email, role });
+ * const data = await callGateway('public', 'get-diagnostic-script', {});
+ * const data = await callGateway('public', 'serve-installer', { enrollmentKey, mode: 'args' });
  */
 export async function callGateway<T = Record<string, unknown>>(
   namespace: GatewayNamespace,
