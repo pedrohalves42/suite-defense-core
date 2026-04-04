@@ -48,7 +48,7 @@ export function useNotifications() {
       try {
         new Notification(n.title, {
           body: n.message,
-          icon: "/pwa-icon-192.png",
+          icon: "/favicon.ico",
           tag: notification.id,
         });
       } catch (e) {

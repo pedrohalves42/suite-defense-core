@@ -41,25 +41,15 @@ export const usePushNotifications = () => {
   const showNotification = useCallback((options: PushNotificationOptions) => {
     if (permission !== 'granted') return;
 
-    // Use service worker if available for better PWA integration
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.ready.then(registration => {
-        registration.showNotification(options.title, {
-          body: options.body,
-          icon: options.icon || '/pwa-icon-192.png',
-          badge: options.badge || '/pwa-icon-192.png',
-          tag: options.tag || 'cybershield-notification',
-          data: options.data,
-          ...(('vibrate' in Notification.prototype) ? { vibrate: [200, 100, 200] } : {}),
-        });
-      });
-    } else {
-      // Fallback to regular Notification API
+    // Use regular Notification API (PWA/SW removed)
+    try {
       new Notification(options.title, {
         body: options.body,
-        icon: options.icon || '/pwa-icon-192.png',
+        icon: options.icon || '/favicon.ico',
         tag: options.tag || 'cybershield-notification',
       });
+    } catch (err) {
+      logger.error('[PushNotifications] Failed to show notification:', err);
     }
   }, [permission]);
 
