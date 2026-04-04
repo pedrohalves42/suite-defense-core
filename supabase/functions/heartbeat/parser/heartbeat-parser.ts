@@ -68,6 +68,11 @@ export function buildAgentUpdate(
   if (osInfo.os_version) updateData.os_version = osInfo.os_version
   if (osInfo.hostname) updateData.hostname = osInfo.hostname
 
+  // Persist agent state (ENFORCING, SAFE_MODE, DEGRADED, INITIALIZING)
+  if (osInfo.state) {
+    updateData.state = osInfo.state
+  }
+
   // Capturar agent_version do payload (somente quando realmente mudou)
   if (osInfo.agent_version) {
     const incomingNorm = normalizeVersion(osInfo.agent_version)

@@ -71,6 +71,7 @@ export interface AgentContext {
 export interface AgentUpdate {
   last_heartbeat: string;
   status: string;
+  state?: string;
   os_type?: string;
   os_version?: string;
   hostname?: string;
