@@ -36022,6 +36022,78 @@ export type Database = {
           },
         ]
       }
+      soc2_control_status: {
+        Row: {
+          auto_filled: boolean | null
+          control_id: string
+          created_at: string
+          filled_at: string
+          filled_by: string | null
+          id: string
+          notes: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          auto_filled?: boolean | null
+          control_id: string
+          created_at?: string
+          filled_at?: string
+          filled_by?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          auto_filled?: boolean | null
+          control_id?: string
+          created_at?: string
+          filled_at?: string
+          filled_by?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "soc2_control_status_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soc2_control_status_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soc2_control_status_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "soc2_control_status_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "soc2_control_status_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       soc2_controls: {
         Row: {
           control_code: string
@@ -36269,6 +36341,93 @@ export type Database = {
           },
           {
             foreignKeyName: "soc2_criteria_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      soc2_evidence: {
+        Row: {
+          collected_at: string
+          control_id: string
+          created_at: string
+          description: string | null
+          evidence_type: string
+          hash: string | null
+          id: string
+          metadata: Json | null
+          reference: string
+          status: string
+          tenant_id: string
+          updated_at: string
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          collected_at?: string
+          control_id: string
+          created_at?: string
+          description?: string | null
+          evidence_type: string
+          hash?: string | null
+          id?: string
+          metadata?: Json | null
+          reference: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Update: {
+          collected_at?: string
+          control_id?: string
+          created_at?: string
+          description?: string | null
+          evidence_type?: string
+          hash?: string | null
+          id?: string
+          metadata?: Json | null
+          reference?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "soc2_evidence_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soc2_evidence_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soc2_evidence_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "soc2_evidence_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "soc2_evidence_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
