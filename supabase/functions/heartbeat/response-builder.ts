@@ -13,6 +13,9 @@ import type { AgentContext, AgentUpdate } from './types.ts'
 /**
  * Build the normal heartbeat response.
  * Includes current script hash for self-heal and config flags.
+ *
+ * Cost-optimized: single DB query for release data (script_content + signature).
+ * Security: script_sha256 is only sent when a valid Ed25519 signature exists.
  */
 export async function buildNormalResponse(
   supabase: SupabaseClient,
@@ -22,16 +25,17 @@ export async function buildNormalResponse(
   platform: string,
   origin: string | null,
 ): Promise<Response> {
-  // Compute current script hash for agent self-heal
-  let currentScriptSha256: string | null = null
-  let currentScriptHashSignedAt: string | null = null
+  let safeScriptSha256: string | null = null
+  let scriptHashSignedAt: string | null = null
+  let forceHashResync = false
 
   try {
     const currentVersion = agentVersionFromPayload || updateData.agent_version
     if (currentVersion) {
-      const { data: currentRelease } = await supabase
+      // Single query: fetch script_content AND signature in one round-trip
+      const { data: release } = await supabase
         .from('agent_releases')
-        .select('script_content, signed_at')
+        .select('script_content, signature_base64, signed_at')
         .eq('version', currentVersion)
         .eq('platform', platform)
         .eq('is_active', true)
@@ -39,82 +43,54 @@ export async function buildNormalResponse(
         .limit(1)
         .maybeSingle()
 
-      if (currentRelease?.script_content) {
-        let currentScript = currentRelease.script_content
+      if (release?.script_content && release.signature_base64) {
+        // Only compute hash when signature exists (prevents TOCTOU false positives)
+        let script = release.script_content
 
         if (platform === 'windows' || platform === 'Windows') {
-          const hotfixResult = applyWindowsScriptHotfix(currentScript)
+          const hotfixResult = applyWindowsScriptHotfix(script)
           if (hotfixResult.changed) {
-            currentScript = hotfixResult.content
+            script = hotfixResult.content
           }
         }
 
         const isWindows = platform === 'windows' || platform === 'Windows'
         const normalizedScript = isWindows
-          ? normalizeForWindows(currentScript)
-          : currentScript.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-        const currentBytes = new TextEncoder().encode(normalizedScript)
-        const hashBuffer = await crypto.subtle.digest('SHA-256', currentBytes)
-        currentScriptSha256 = Array.from(new Uint8Array(hashBuffer))
+          ? normalizeForWindows(script)
+          : script.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+        const scriptBytes = new TextEncoder().encode(normalizedScript)
+        const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes)
+        safeScriptSha256 = Array.from(new Uint8Array(hashBuffer))
           .map(b => b.toString(16).padStart(2, '0')).join('')
-        currentScriptHashSignedAt = currentRelease.signed_at || null
+        scriptHashSignedAt = release.signed_at || null
       }
     }
-  } catch (hashHealError) {
-    logger.warn('Failed to compute current script hash for heartbeat self-heal', {
-      agentName: agent.agent_name, error: (hashHealError as Error).message,
+  } catch (hashError) {
+    logger.warn('Failed to compute script hash for heartbeat', {
+      agentName: agent.agent_name, error: (hashError as Error).message,
     })
   }
 
-  // Only send script_sha256 when the release has a valid Ed25519 signature.
-  // Without a signature, sending the hash causes TOCTOU false positives (Exit 9004).
-  let hasValidSignature = false
-  let safeScriptSha256: string | null = null
-
-  if (currentScriptSha256) {
+  // Detect agents needing hash resync: only when agent reported a degraded state
+  // or when we have a valid hash to send (avoids pointless resync signals)
+  if (safeScriptSha256 && agent.status === 'online') {
     try {
-      const currentVersion = agentVersionFromPayload || updateData.agent_version
-      if (currentVersion) {
-        const { data: sigCheck } = await supabase
-          .from('agent_releases')
-          .select('signature_base64')
-          .eq('version', currentVersion)
-          .eq('platform', platform)
-          .eq('is_active', true)
-          .limit(1)
-          .maybeSingle()
+      const { data: agentState } = await supabase
+        .from('agents')
+        .select('state')
+        .eq('id', agent.id)
+        .single()
 
-        if (sigCheck?.signature_base64) {
-          hasValidSignature = true
-          safeScriptSha256 = currentScriptSha256
-        }
+      // Only signal resync for agents in problematic states
+      const degradedStates = ['SAFE_MODE', 'DEGRADED', 'INITIALIZING']
+      if (agentState?.state && degradedStates.includes(agentState.state)) {
+        forceHashResync = true
       }
-    } catch (sigCheckError) {
-      logger.warn('Failed to check release signature for heartbeat', {
-        agentName: agent.agent_name, error: (sigCheckError as Error).message,
+    } catch (resyncError) {
+      logger.warn('Failed to evaluate hash resync', {
+        agentName: agent.agent_name, error: (resyncError as Error).message,
       })
     }
-  }
-
-  // Detect TOCTOU loop: if agent is sending heartbeats but status shows
-  // repeated restarts, signal it to resync its hash cache
-  let forceHashResync = false
-  try {
-    // Check if agent has restarted multiple times recently (boot_count or rapid heartbeats)
-    const { data: recentHeartbeats } = await supabase
-      .from('agents')
-      .select('last_seen_at, status, agent_version')
-      .eq('id', agent.id)
-      .single()
-
-    if (recentHeartbeats?.status === 'online' && currentScriptSha256) {
-      // Always send resync signal — the agent will compare and only update if needed
-      forceHashResync = true
-    }
-  } catch (resyncError) {
-    logger.warn('Failed to evaluate hash resync', {
-      agentName: agent.agent_name, error: (resyncError as Error).message,
-    })
   }
 
   return new Response(
@@ -122,9 +98,8 @@ export async function buildNormalResponse(
       ok: true,
       agent: agent.agent_name,
       timestamp: new Date().toISOString(),
-      script_sha256: safeScriptSha256 || currentScriptSha256,
-      script_hash_signature: null,
-      script_hash_signed_at: hasValidSignature ? currentScriptHashSignedAt : null,
+      script_sha256: safeScriptSha256,
+      script_hash_signed_at: scriptHashSignedAt,
       force_hash_resync: forceHashResync,
       heartbeat_interval_seconds: 60,
       poll_interval_seconds: 30,
