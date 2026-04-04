@@ -7,6 +7,9 @@ on:
     branches: [ main, develop ]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   # 🛡 Guardian - System Validation (runs first)
   guardian:
@@ -17,21 +20,20 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
       with:
-        node-version: '20'
-        cache: 'npm'
+        bun-version: latest
 
     - name: Install dependencies
-      run: npm install --no-audit --no-fund
+      run: bun install --frozen-lockfile
 
     - name: ASCII Guard - Block non-ASCII characters
-      run: npm run ascii:check
+      run: bun run ascii:check
       continue-on-error: false
 
     - name: Run Guardian (validate-system.ts)
-      run: npm run validate:all
+      run: bun run validate:all
       env:
         VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
         VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -50,27 +52,26 @@ jobs:
   test:
     timeout-minutes: 30
     runs-on: ubuntu-latest
-    needs: guardian  # Depends on Guardian passing
+    needs: guardian
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
       with:
-        node-version: '20'
-        cache: 'npm'
+        bun-version: latest
 
     - name: Install dependencies
-      run: npm install --no-audit --no-fund
+      run: bun install --frozen-lockfile
 
     - name: 🔄 Validate Agent Script Sync
       run: |
-        npm run sync:agent
+        bun run sync:agent
         if ! git diff --exit-code supabase/functions/_shared/agent-script-windows-content.ts; then
           echo "❌ ERRO: Agent script não sincronizado!"
-          echo "Execute localmente: npm run sync:agent"
+          echo "Execute localmente: bun run sync:agent"
           echo ""
           echo "Diff encontrado (primeiras linhas):"
           git diff supabase/functions/_shared/agent-script-windows-content.ts | head -80
@@ -78,17 +79,17 @@ jobs:
         fi
 
     - name: Install Playwright Browsers
-      run: npx playwright install --with-deps chromium
+      run: bunx playwright install --with-deps chromium
 
     - name: Build application
-      run: npm run build
+      run: bun run build
       env:
         VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
         VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
 
     - name: Run E2E tests
-      run: npx playwright test
+      run: bunx playwright test
       env:
         VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
         VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -101,7 +102,7 @@ jobs:
         SUPER_ADMIN_PASSWORD: ${{ secrets.SUPER_ADMIN_PASSWORD }}
 
     - name: Run one-click installation tests
-      run: npx playwright test one-click-installation
+      run: bunx playwright test one-click-installation
       continue-on-error: true
       env:
         VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
@@ -110,7 +111,7 @@ jobs:
         TEST_ADMIN_PASSWORD: ${{ secrets.TEST_ADMIN_PASSWORD }}
     
     - name: Run analytics tests
-      run: npx playwright test installation-analytics
+      run: bunx playwright test installation-analytics
       continue-on-error: true
       env:
         VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
@@ -143,20 +144,19 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
       with:
-        node-version: '20'
-        cache: 'npm'
+        bun-version: latest
 
     - name: Install dependencies
-      run: npm install --no-audit --no-fund
+      run: bun install --frozen-lockfile
 
     - name: Install Playwright Browsers
-      run: npx playwright install --with-deps chromium
+      run: bunx playwright install --with-deps chromium
 
     - name: Run load tests
-      run: npx playwright test load-test
+      run: bunx playwright test load-test
       env:
         VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
         VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -178,20 +178,19 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
       with:
-        node-version: '20'
-        cache: 'npm'
+        bun-version: latest
 
     - name: Install dependencies
-      run: npm install --no-audit --no-fund
+      run: bun install --frozen-lockfile
 
     - name: Install Playwright Browsers
-      run: npx playwright install --with-deps chromium
+      run: bunx playwright install --with-deps chromium
     
     - name: Check for security issues
-      run: npx playwright test input-validation
+      run: bunx playwright test input-validation
       env:
         VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
         VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -207,21 +206,20 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
       with:
-        node-version: '20'
-        cache: 'npm'
+        bun-version: latest
 
     - name: Install dependencies
-      run: npm ci
+      run: bun install --frozen-lockfile
 
     - name: 🔄 Validate Agent Script Sync
       run: |
-        npm run sync:agent
+        bun run sync:agent
         if ! git diff --exit-code supabase/functions/_shared/agent-script-windows-content.ts; then
           echo "❌ ERRO: Agent script não sincronizado!"
-          echo "Execute localmente: npm run sync:agent"
+          echo "Execute localmente: bun run sync:agent"
           echo ""
           echo "Diff encontrado (primeiras linhas):"
           git diff supabase/functions/_shared/agent-script-windows-content.ts | head -80
@@ -235,7 +233,7 @@ jobs:
         SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         INTERNAL_FUNCTION_SECRET: ${{ secrets.INTERNAL_FUNCTION_SECRET }}
         CI: "true"
-      run: timeout 5m npm run validate:all
+      run: timeout 5m bun run validate:all
 
     - name: Upload validation report
       uses: actions/upload-artifact@v4
@@ -244,5 +242,3 @@ jobs:
         name: guardian-validation-report
         path: validation-report.json
         retention-days: 30
-
-
