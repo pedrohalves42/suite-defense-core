@@ -563,9 +563,9 @@
       "cases": []
     },
     "pricing": {
-      "badge": "Planos",
-      "title": "Planos que cabem na sua operação",
-      "subtitle": "Escolha o plano ideal para o tamanho do seu ambiente",
+      "badge": "🛡️ Proteção completa a partir de R$ 899/mês",
+      "title": "Segurança profissional sem equipe de TI",
+      "subtitle": "O plano Business inclui EDR, honeypot e logs imutáveis — tudo que sua empresa precisa",
       "perMonth": "/mês",
       "baseDevices": "dispositivos inclusos",
       "extraDevice": "por dispositivo extra",
@@ -585,29 +585,29 @@
             "Suporte em português",
             "Evidências auditáveis"
           ],
-          "cta": "Começar agora"
+          "cta": "Ver detalhes"
         },
         "business": {
-          "name": "Business",
-          "badge": "Mais popular",
-          "description": "Para operações que exigem EDR completo, automação avançada e multi-tenant.",
+          "name": "Business Completo",
+          "badge": "⭐ Recomendado",
+          "description": "O plano mais escolhido: EDR completo, honeypot, logs imutáveis e automação avançada em um só lugar.",
           "price": "899",
           "baseInfo": "Base: 20 dispositivos • +R$ 24/adicional",
           "maxInfo": "Até 200 dispositivos",
           "features": [
-            "Tudo do Starter +",
-            "EDR integrado completo",
-            "Automação avançada",
-            "Operação multi-tenant",
-            "Histórico confiável de ações",
-            "Governança e rastreabilidade"
+            "EDR com 100 regras MITRE ATT&CK",
+            "Honeypot inteligente integrado",
+            "Logs imutáveis com cadeia hash",
+            "Automação com blast radius adaptativo",
+            "Operação multi-tenant completa",
+            "Governança e rastreabilidade total"
           ],
-          "cta": "Começar agora"
+          "cta": "Começar teste grátis de 14 dias"
         },
         "enterprise": {
           "name": "Enterprise",
           "badge": "",
-          "description": "Para MSPs e grandes operações que precisam de escala e personalização.",
+          "description": "Para MSPs e grandes operações com +200 dispositivos.",
           "price": "Sob consulta",
           "baseInfo": "Para empresas +200 dispositivos ou MSPs",
           "maxInfo": "Dispositivos ilimitados",
