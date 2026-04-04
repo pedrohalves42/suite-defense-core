@@ -296,20 +296,20 @@
       "subtitle": "Diferenciais técnicos com impacto direto no negócio",
       "cards": {
         "0": {
-          "title": "Deception Technology integrada",
-          "description": "Honeypots nativos e flipped detectam invasores antes que causem dano. Sem hardware extra, sem custo adicional."
+          "title": "Armadilhas digitais integradas",
+          "description": "Computadores falsos atraem e detectam invasores antes que causem dano. Sem equipamento extra, sem custo adicional."
         },
         "1": {
-          "title": "Resposta inteligente e segura",
-          "description": "Automação SOAR com blast radius controlado, circuit breaker e modo dry-run. Sua frota protegida sem risco de danos colaterais."
+          "title": "Resposta automática com segurança",
+          "description": "O sistema responde a ameaças sozinho, mas com limites inteligentes. Sua operação protegida sem risco de efeitos colaterais."
         },
         "2": {
-          "title": "IA custo-eficiente",
-          "description": "Rotação automática entre 3+ provedores de IA com cache inteligente. Custo até 80% menor que concorrentes que usam GPT-4 direto."
+          "title": "IA que custa menos",
+          "description": "Usa vários provedores de inteligência artificial ao mesmo tempo. Custo até 80% menor que concorrentes — sem depender de um único fornecedor."
         },
         "3": {
-          "title": "Compliance nativo, não bolted-on",
-          "description": "SOC 2, LGPD e ISO 27001 embutidos na arquitetura — não é um módulo à parte. Evidências geradas automaticamente."
+          "title": "Compliance já incluso",
+          "description": "LGPD, SOC 2 e ISO 27001 já fazem parte do sistema — não é um módulo à parte. Evidências geradas automaticamente."
         }
       }
     },
