@@ -56,6 +56,7 @@ export interface AgentContext {
   hmac_secret: string;
   tenant_id: string;
   status: string;
+  state?: string; // Agent lifecycle state (ENFORCING, SAFE_MODE, DEGRADED, INITIALIZING)
   skip_firewall_remediation: boolean;
   agent_version: string | null;
   force_update_version: string | null;
