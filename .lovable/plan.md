@@ -1,70 +1,37 @@
+## Fase 2 — Integração com o Assistente SOC 2
 
-# Análise de Paridade: Unix/macOS vs Windows
+### Escopo
+Integrar o `soc2-evidence-collector` (Fase 1) ao `SOC2PolicyWizard` existente, adicionando auto-preenchimento inteligente e indicadores visuais.
 
-## ✅ Já implementado e em paridade (NÃO precisa de mudança)
+### Tarefas
 
-| Capacidade | Windows | Linux | macOS |
-|---|---|---|---|
-| FSM (6 estados) | ✅ | ✅ | ✅ |
-| HMAC Auth (timing-safe) | ✅ | ✅ | ✅ |
-| Hash Chain (integridade de execução) | ✅ | ✅ | ✅ |
-| TOCTOU 3-strikes + self-heal | ✅ | ✅ | ✅ |
-| Heartbeat + force_hash_resync | ✅ | ✅ | ✅ |
-| Job polling + dispatch whitelist | ✅ | ✅ | ✅ |
-| Process baseline + anomaly detection | ✅ | ✅ | ✅ |
-| System metrics (CPU/RAM/Disk) | ✅ | ✅ | ✅ |
-| Kill process (com proteção) | ✅ | ✅ | ✅ |
-| Stop/Restart service | ✅ | ✅ | ✅ |
-| DNS Filter (block/remove) | ✅ | ✅ | ✅ |
-| Network diagnostics | ✅ | ✅ | ❌ |
-| Service health check | ✅ | ✅ | ❌ |
-| Disable service | ✅ | ✅ | ❌ |
-| Software inventory | ✅ | ✅ | ✅ |
-| Vuln scan (leve) | ✅ | ✅ | ✅ |
-| Auto-repair (disco/CPU) | ✅ | ✅ | ✅ |
-| Security events (MITRE ATT&CK) | ✅ | ✅ | ✅ |
-| Adaptive sleep | ✅ | ✅ | ✅ |
-| Log buffering | ✅ | ✅ | ✅ |
+#### 2.1 — Botão "Auto-preencher" no Wizard
+- Adicionar botão "🤖 Auto-preencher" no header de cada step de critério
+- Ao clicar, chama o hook `useSOC2EvidenceCollector` e preenche `notes` e `status`
+- Custo-eficiente: coleta evidências uma única vez e distribui para todos os steps
 
-## 🔴 Lacunas reais (existem no Windows, faltam no Unix)
+#### 2.2 — Preenchimento automático das Notas
+- Mapear as descrições de evidência do coletor para o campo `notes` de cada critério
+- Concatenar múltiplas evidências em texto formatado
+- Definir `status` automaticamente baseado na força (strong→implemented, moderate→in_progress, weak/none→not_started)
 
-### 1. Disk Metrics por drive/volume (Baixo impacto)
-- **Windows**: Coleta métricas por drive (C:, D:, etc.) → tabela `agent_disk_metrics`
-- **Linux/macOS**: Apenas disco raiz via `df /`
-- **Custo**: Baixo (sem nova tabela, insert no heartbeat)
+#### 2.3 — Indicador visual de força (🔴🟡🟢)
+- Badge ao lado de cada step no wizard mostrando força do controle
+- Baseado no summary retornado pelo coletor
 
-### 2. Certificados instalados (Médio impacto)
-- **Windows**: Coleta certificados de cert stores → tabela `agent_certificates`
-- **Linux**: `/etc/ssl/certs`, `/usr/local/share/ca-certificates`
-- **macOS**: `security find-certificate -a`
-- **Custo**: Médio (job handler + insert)
+#### 2.4 — Edição manual após auto-preenchimento
+- Campo `notes` permanece editável após auto-preenchimento (já funciona com state atual)
+- Adicionar indicador "Auto-preenchido" quando notas vêm do coletor
 
-### 3. Event Log collection (Baixo impacto)
-- **Windows**: EventLog (System, Security, Application)
-- **Linux**: journald / syslog
-- **macOS**: `log show`
-- **Relevância**: O heartbeat já envia `enable_eventlog: true` — os agentes Unix não processam
+#### 2.5 — Histórico de preenchimento na tabela `soc2_control_status`
+- Ao salvar (handleSave), gravar também na tabela `soc2_control_status`
+- Campo `auto_filled` indica se foi automático
 
-### 4. Job types faltantes no macOS
-- `network_diagnostics` (ping targets)
-- `service_health_check` (launchctl status)
-- `disable_service` (launchctl bootout)
+### Arquitetura (custo-eficiente)
+- Uma ÚNICA chamada à Edge Function coleta tudo (não por controle)
+- Cache do resultado no state React (não refaz a cada step)
+- Sem chamadas adicionais ao banco no frontend
 
-### 5. Skip Firewall Remediation flag
-- **Windows**: Processa `skip_firewall_remediation` do heartbeat
-- **Unix**: Ignora este campo
-
-## 📊 Recomendação prática (custo vs valor)
-
-### Implementar agora (alto valor, baixo custo):
-1. **macOS: 3 job handlers faltantes** — ~30 linhas de código
-2. **Skip firewall flag no heartbeat Unix** — ~5 linhas
-
-### Implementar depois (médio valor):
-3. **Disk metrics por volume** — precisa de lógica de parsing multivolume
-4. **Certificados** — handler de coleta + insert
-
-### Não implementar (baixo valor, alto custo):
-5. **Event Log** — volume alto de dados, custo de IOPS significativo para 4 agentes
-
-## Quer que eu implemente as lacunas de alto valor agora (itens 1 e 2)?
+### Arquivos modificados
+- `src/components/soc2/SOC2PolicyWizard.tsx` — principal
+- Nenhum novo componente necessário (tudo inline no wizard)
