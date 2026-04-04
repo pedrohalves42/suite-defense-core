@@ -1,4 +1,5 @@
 import type { HotfixContext } from './types.ts';
+export { hotfixEd25519HashCacheFailOpen } from './toctou-integrity.ts';
 
 /** HOTFIX 16: Self-healing TOCTOU hash cache on startup */
 export function hotfixToctouSelfheal(ctx: HotfixContext): void {
