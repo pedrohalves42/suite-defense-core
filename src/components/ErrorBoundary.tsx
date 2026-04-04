@@ -24,9 +24,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Always log to browser console so we can capture the stack trace
+    console.error('[ErrorBoundary] CRASH:', error);
+    console.error('[ErrorBoundary] Stack:', error.stack);
+    console.error('[ErrorBoundary] Component stack:', errorInfo.componentStack);
     logger.error('ErrorBoundary caught an error', error, { errorInfo });
-    logger.error('[ErrorBoundary] CRASH:', error, { stack: error.stack });
-    logger.error('[ErrorBoundary] Component stack:', error, { componentStack: errorInfo.componentStack });
   }
 
   private handleReload = () => {
