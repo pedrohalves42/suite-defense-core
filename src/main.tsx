@@ -9,8 +9,8 @@ import App from "./App.tsx";
 import "./i18n";
 import "./index.css";
 
-// Clean up stale service workers on preview (non-blocking, fire-and-forget)
-if (typeof window !== "undefined" && /preview--/.test(window.location.hostname)) {
+// Unconditionally purge legacy PWA artifacts (all environments)
+if (typeof window !== "undefined") {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.getRegistrations().then(regs =>
       regs.forEach(r => r.unregister())

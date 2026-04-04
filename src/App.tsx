@@ -151,7 +151,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <PWAInstallPrompt />
+      
       <BrowserRouter
         future={{
           v7_startTransition: true,
