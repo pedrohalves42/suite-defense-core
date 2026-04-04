@@ -625,44 +625,45 @@
       "title": "Contáctenos"
     },
     "differentiators": {
+      "badge": "Lo que nos hace únicos",
       "title": "Por qué CyberShield es diferente",
-      "subtitle": "Tecnología propietaria que tomaría 18+ meses replicar",
+      "subtitle": "Tecnología que ningún competidor ofrece hoy",
       "items": {
         "0": {
-          "title": "Honeypot Inteligente",
-          "description": "El único EDR brasileño con tecnología de deception integrada. Agentes nativos simulan endpoints vulnerables. Modo flipped desvía agentes reales para observación forense.",
+          "title": "Trampas para invasores",
+          "description": "Creamos computadoras falsas que atraen hackers. Cuando alguien intenta invadir, el sistema detecta y observa — sin poner sus datos reales en riesgo.",
           "metric": "Exclusivo",
-          "metricLabel": "en el mercado brasileño"
+          "metricLabel": "en Brasil"
         },
         "1": {
-          "title": "Logs con Hash Chain",
-          "description": "Cadena criptográfica inmutable inspirada en blockchain. Cada registro referencia el hash anterior. La adulteración es imposible sin romper toda la cadena.",
+          "title": "Registros que nadie altera",
+          "description": "Cada acción se registra de forma encadenada. Si alguien intenta cambiar un registro, la cadena se rompe y el sistema avisa inmediatamente.",
           "metric": "100%",
-          "metricLabel": "a prueba de manipulación"
+          "metricLabel": "a prueba de fraude"
         },
         "2": {
-          "title": "IA Multi-Proveedor",
-          "description": "Rotación inteligente entre Gemini, GPT y Groq con caché de respuestas y fallback automático. Ninguna caída de proveedor afecta su operación.",
+          "title": "IA que cuesta menos",
+          "description": "Usamos varios proveedores de IA al mismo tiempo. Si uno falla, otro asume automáticamente. Resultado: hasta 80% menos costo y cero interrupciones.",
           "metric": "80%",
-          "metricLabel": "menor costo de IA"
+          "metricLabel": "ahorro en IA"
         },
         "3": {
-          "title": "SOAR con Circuit Breaker",
-          "description": "Respuesta automatizada con control de radio de impacto (máx. 10% de la flota), circuit breaker global y modo fail-closed.",
+          "title": "Respuesta automática con freno",
+          "description": "El sistema responde a amenazas solo, pero con límite: nunca actúa en más del 10% de las computadoras a la vez. Si algo sale mal, se detiene automáticamente.",
           "metric": "10%",
-          "metricLabel": "límite de impacto por acción"
+          "metricLabel": "límite por acción"
         },
         "4": {
-          "title": "Zero Trust por Diseño",
-          "description": "HMAC-SHA256 con nonce para cada agente. Protección contra replay attacks. Sin certificados PKI. Funciona en Windows, Linux y macOS.",
+          "title": "Ningún acceso es confiable por defecto",
+          "description": "Cada computadora debe probar su identidad en cada comunicación. Funciona en Windows, Linux y macOS sin configuración compleja.",
           "metric": "Zero",
-          "metricLabel": "confianza implícita"
+          "metricLabel": "confianza ciega"
         },
         "5": {
-          "title": "Multi-Tenant Atómico",
-          "description": "Aislamiento via JWT claims con cambio atómico de contexto. RLS en 80+ particiones de base de datos. MSPs gestionan decenas de clientes sin riesgo.",
-          "metric": "80+",
-          "metricLabel": "particiones aisladas"
+          "title": "Cada cliente totalmente aislado",
+          "description": "Los datos de cada empresa quedan completamente separados. Proveedores de TI gestionan decenas de clientes sin riesgo de que uno vea datos del otro.",
+          "metric": "100%",
+          "metricLabel": "aislamiento de datos"
         }
       }
     }

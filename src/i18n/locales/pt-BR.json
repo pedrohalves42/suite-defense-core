@@ -181,7 +181,7 @@
       "badge": "Proteção + Automação + Compliance",
       "title1": "Descubra em 48h onde sua empresa está exposta",
       "title2": "— e como corrigir com uma única plataforma",
-      "description": "A única plataforma brasileira que combina EDR, automação SOAR, compliance e deception (honeypot) ",
+      "description": "A única plataforma brasileira que combina proteção, detecção de invasores, resposta automática e compliance ",
       "descriptionBold": "em uma operação unificada.",
       "ctaButton": "Solicitar diagnóstico gratuito",
       "ctaSecondary": "Agendar demo rápida",
@@ -201,10 +201,10 @@
         }
       },
       "benefits": [
-        "Honeypot inteligente que engana invasores em tempo real",
-        "Logs imutáveis com cadeia de hash — evidência à prova de adulteração",
-        "IA multi-provedor com fallback automático (sem vendor lock-in)",
-        "Isolamento multi-tenant com criptografia ponta a ponta"
+        "Armadilhas digitais que detectam invasores em tempo real",
+        "Registros à prova de fraude — evidência que auditores aceitam",
+        "Inteligência artificial que nunca para e custa até 80% menos",
+        "Dados de cada cliente 100% isolados e protegidos"
       ]
     },
     "painPoints": {
@@ -249,9 +249,9 @@
       "cta": "Solicitar diagnóstico gratuito"
     },
     "valueProp": {
-      "title": "A única plataforma que une EDR, Deception, SOAR e Compliance",
-      "text": "Enquanto a concorrência vende peças separadas, o CyberShield entrega uma operação de segurança completa — com honeypot inteligente, IA multi-provedor, logs imutáveis e automação segura — em uma única plataforma.",
-      "tagline": "Protege. Engana. Automatiza. Comprova."
+      "title": "Proteção, detecção, resposta e compliance — tudo em um só lugar",
+      "text": "Enquanto a concorrência vende ferramentas separadas, o CyberShield entrega uma operação de segurança completa — com armadilhas para invasores, inteligência artificial, registros à prova de fraude e automação segura — em uma única plataforma.",
+      "tagline": "Protege. Detecta. Automatiza. Comprova."
     },
     "howItWorks": {
       "title": "Como o CyberShield entra na sua operação",
@@ -296,20 +296,20 @@
       "subtitle": "Diferenciais técnicos com impacto direto no negócio",
       "cards": {
         "0": {
-          "title": "Deception Technology integrada",
-          "description": "Honeypots nativos e flipped detectam invasores antes que causem dano. Sem hardware extra, sem custo adicional."
+          "title": "Armadilhas digitais integradas",
+          "description": "Computadores falsos atraem e detectam invasores antes que causem dano. Sem equipamento extra, sem custo adicional."
         },
         "1": {
-          "title": "Resposta inteligente e segura",
-          "description": "Automação SOAR com blast radius controlado, circuit breaker e modo dry-run. Sua frota protegida sem risco de danos colaterais."
+          "title": "Resposta automática com segurança",
+          "description": "O sistema responde a ameaças sozinho, mas com limites inteligentes. Sua operação protegida sem risco de efeitos colaterais."
         },
         "2": {
-          "title": "IA custo-eficiente",
-          "description": "Rotação automática entre 3+ provedores de IA com cache inteligente. Custo até 80% menor que concorrentes que usam GPT-4 direto."
+          "title": "IA que custa menos",
+          "description": "Usa vários provedores de inteligência artificial ao mesmo tempo. Custo até 80% menor que concorrentes — sem depender de um único fornecedor."
         },
         "3": {
-          "title": "Compliance nativo, não bolted-on",
-          "description": "SOC 2, LGPD e ISO 27001 embutidos na arquitetura — não é um módulo à parte. Evidências geradas automaticamente."
+          "title": "Compliance já incluso",
+          "description": "LGPD, SOC 2 e ISO 27001 já fazem parte do sistema — não é um módulo à parte. Evidências geradas automaticamente."
         }
       }
     },
@@ -318,28 +318,28 @@
       "subtitle": "Diferenciais exclusivos do CyberShield",
       "items": {
         "0": {
-          "title": "Honeypot Inteligente (Exclusivo)",
-          "description": "Crie armadilhas digitais com agentes nativos ou desvie agentes reais para observar invasores — sem hardware extra. Ativação sob demanda com kill-switch global."
+          "title": "Armadilhas para invasores (Exclusivo)",
+          "description": "Crie computadores falsos que atraem hackers ou desvie máquinas reais para observar invasores — sem equipamento extra. Ative e desative quando quiser."
         },
         "1": {
-          "title": "Logs Imutáveis com Hash Chain",
-          "description": "Cada ação gera um registro com hash criptográfico encadeado, criando uma trilha de auditoria à prova de adulteração. Conformidade SOC 2 nativa."
+          "title": "Registros que ninguém altera",
+          "description": "Cada ação gera um registro encadeado. Se alguém tentar modificar, o sistema detecta imediatamente. Ideal para auditorias e compliance."
         },
         "2": {
-          "title": "IA com Fallback Multi-Provedor",
-          "description": "Análise inteligente com rotação automática entre provedores (Gemini, GPT, Groq). Cache de respostas reduz custos em até 80%. Sem vendor lock-in."
+          "title": "IA que nunca para",
+          "description": "Usa vários provedores de inteligência artificial ao mesmo tempo. Se um sair do ar, outro assume. Resultado: economia de até 80% e sem interrupção."
         },
         "3": {
-          "title": "Automação SOAR com Circuit Breaker",
-          "description": "Remediação automática com controle de blast radius (máx. 10% da frota). Circuit breaker global impede danos em cascata. Modo fail-closed."
+          "title": "Resposta automática com freio",
+          "description": "Corrige problemas automaticamente, mas nunca age em mais de 10% dos computadores de uma vez. Se algo der errado, para sozinho."
         },
         "4": {
-          "title": "Multi-Tenant Atômico com JWT",
-          "description": "MSPs gerenciam múltiplos clientes com isolamento criptográfico via claims JWT. Troca de contexto atômica sem risco de vazamento cross-tenant."
+          "title": "Isolamento total por cliente",
+          "description": "Provedores de TI gerenciam vários clientes com dados completamente separados. Nenhum cliente acessa dados de outro."
         },
         "5": {
-          "title": "Autenticação Zero Trust (HMAC)",
-          "description": "Agentes autenticados via HMAC-SHA256 com nonce e proteção contra replay. Compatível com Windows, Linux e macOS sem certificados PKI."
+          "title": "Identidade verificada a cada acesso",
+          "description": "Todo computador prova sua identidade a cada comunicação. Funciona em Windows, Linux e macOS sem configuração complexa."
         }
       }
     },
@@ -370,20 +370,20 @@
       "text": "Cada ação no CyberShield gera evidência criptográfica verificável. Não é promessa — é prova técnica.",
       "blocks": {
         "0": {
-          "title": "Hash Chain Imutável",
-          "description": "Registros encadeados criptograficamente. Qualquer alteração quebra a cadeia e é detectada automaticamente."
+          "title": "Registros encadeados",
+          "description": "Cada ação é registrada de forma encadeada. Se alguém mudar algo, o sistema detecta na hora."
         },
         "1": {
-          "title": "Rastreabilidade End-to-End",
-          "description": "Cada operação tem trace_id único que percorre do agente ao dashboard — sem gaps de visibilidade."
+          "title": "Rastreio completo",
+          "description": "Cada operação tem um identificador único que acompanha todo o caminho — do computador até o painel."
         },
         "2": {
-          "title": "Relatórios com Laudo Verificável",
-          "description": "Laudos de compliance com hash SHA-256, verificáveis publicamente. Evidência que auditores confiam."
+          "title": "Relatórios verificáveis",
+          "description": "Relatórios de conformidade com assinatura digital. Evidência que auditores e reguladores aceitam."
         },
         "3": {
-          "title": "RLS em 80+ Partições",
-          "description": "Isolamento de dados por tenant no nível do banco de dados, com herança automática em novas partições."
+          "title": "Dados completamente separados",
+          "description": "Os dados de cada empresa ficam isolados no banco de dados. Novos clientes herdam a proteção automaticamente."
         }
       }
     },
@@ -393,21 +393,21 @@
       "before": {
         "label": "Soluções tradicionais",
         "items": [
-          "Sem honeypot — invasores agem sem serem detectados",
-          "Logs editáveis — evidências podem ser contestadas",
-          "IA de um único provedor — downtime = sem análise",
-          "Automação sem controle — risco de danos em massa",
-          "Multi-tenant básico — risco de vazamento de dados"
+          "Sem armadilhas — invasores agem sem serem detectados",
+          "Registros editáveis — evidências podem ser contestadas",
+          "IA de um único fornecedor — se cair, fica sem análise",
+          "Automação sem controle — risco de afetar tudo de uma vez",
+          "Dados de clientes misturados — risco de vazamento"
         ]
       },
       "after": {
         "label": "Com CyberShield",
         "items": [
-          "Honeypot inteligente detecta e observa invasores",
-          "Hash chain imutável — evidência forense admissível",
-          "3+ provedores de IA com fallback automático",
-          "Circuit breaker + blast radius = automação segura",
-          "Isolamento atômico com criptografia JWT por tenant"
+          "Armadilhas inteligentes detectam e observam invasores",
+          "Registros encadeados — evidência à prova de fraude",
+          "3+ provedores de IA com troca automática",
+          "Resposta automática com freio de segurança",
+          "Cada cliente com dados 100% isolados"
         ]
       }
     },
@@ -633,44 +633,45 @@
       "label": "Dispositivos"
     },
     "differentiators": {
+      "badge": "O que nos torna únicos",
       "title": "Por que o CyberShield é diferente",
-      "subtitle": "Tecnologia proprietária que levaria 18+ meses para ser replicada",
+      "subtitle": "Tecnologia que nenhum concorrente oferece hoje no Brasil",
       "items": {
         "0": {
-          "title": "Honeypot Inteligente",
-          "description": "Único EDR brasileiro com deception technology integrada. Agentes nativos simulam endpoints vulneráveis. Modo flipped desvia agentes reais para observação forense de invasores.",
+          "title": "Armadilhas para invasores",
+          "description": "Criamos computadores falsos que atraem hackers. Quando alguém tenta invadir, o sistema detecta e observa — sem colocar seus dados reais em risco.",
           "metric": "Exclusivo",
-          "metricLabel": "no mercado brasileiro"
+          "metricLabel": "no Brasil"
         },
         "1": {
-          "title": "Logs com Hash Chain",
-          "description": "Cadeia criptográfica imutável inspirada em blockchain. Cada registro referencia o hash anterior. Adulteração é impossível sem quebrar toda a cadeia.",
+          "title": "Registros que ninguém altera",
+          "description": "Cada ação do sistema é registrada de forma encadeada. Se alguém tentar mudar um registro, a cadeia se quebra e o sistema avisa imediatamente.",
           "metric": "100%",
-          "metricLabel": "à prova de adulteração"
+          "metricLabel": "à prova de fraude"
         },
         "2": {
-          "title": "IA Multi-Provedor",
-          "description": "Rotação inteligente entre Gemini, GPT e Groq com cache de respostas e fallback automático. Nenhum downtime de provedor afeta sua operação.",
+          "title": "Inteligência artificial econômica",
+          "description": "Usamos vários provedores de IA ao mesmo tempo. Se um sair do ar, outro assume automaticamente. Resultado: custo até 80% menor e zero interrupção.",
           "metric": "80%",
-          "metricLabel": "menor custo de IA"
+          "metricLabel": "economia em IA"
         },
         "3": {
-          "title": "SOAR com Circuit Breaker",
-          "description": "Automação de resposta com controle de blast radius (máx. 10% da frota), circuit breaker global e modo fail-closed. Proteção contra danos em cascata.",
+          "title": "Resposta automática com freio de segurança",
+          "description": "O sistema responde a ameaças sozinho, mas com limite: nunca age em mais de 10% dos computadores de uma vez. Se algo der errado, ele para automaticamente.",
           "metric": "10%",
-          "metricLabel": "limite de impacto por ação"
+          "metricLabel": "limite por ação"
         },
         "4": {
-          "title": "Zero Trust por Design",
-          "description": "HMAC-SHA256 com nonce para cada agente. Proteção contra replay attacks. Sem certificados PKI. Funciona em Windows, Linux e macOS nativamente.",
+          "title": "Nenhum acesso é confiado por padrão",
+          "description": "Todo computador precisa provar sua identidade a cada comunicação. Funciona em Windows, Linux e macOS sem configuração complexa.",
           "metric": "Zero",
-          "metricLabel": "confiança implícita"
+          "metricLabel": "confiança cega"
         },
         "5": {
-          "title": "Multi-Tenant Atômico",
-          "description": "Isolamento via JWT claims com troca atômica de contexto. RLS em 80+ partições do banco de dados. MSPs gerenciam dezenas de clientes sem risco.",
-          "metric": "80+",
-          "metricLabel": "partições isoladas"
+          "title": "Cada cliente totalmente isolado",
+          "description": "Os dados de cada empresa ficam completamente separados. Provedores de TI gerenciam dezenas de clientes sem risco de um ver dados do outro.",
+          "metric": "100%",
+          "metricLabel": "isolamento de dados"
         }
       }
     }
