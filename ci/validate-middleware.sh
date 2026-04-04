@@ -13,6 +13,7 @@ FAILURES=0
 EXCEPTIONS=(
   "api-gateway"
   "ops-gateway"
+  "public-gateway"
   "notification-router"
   "ops-router"
   "heartbeat"
