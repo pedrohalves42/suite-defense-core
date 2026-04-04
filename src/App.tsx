@@ -14,6 +14,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { RouteErrorBoundary } from "./components/RouteErrorBoundary";
 import { AdminMFAGuard } from "./components/auth/AdminMFAGuard";
 import { Server } from "lucide-react";
+import ActionCenterDashboard from "./pages/admin/ActionCenterDashboard";
 
 // Lazy route-level loading fallback
 const RouteFallback = () => (
@@ -105,7 +106,6 @@ const ApiDocumentation = lazy(() => import("./pages/admin/ApiDocumentation"));
 const MyAccount = lazy(() => import("./pages/admin/MyAccount"));
 const RealTimeSecurityDashboard = lazy(() => import("./pages/admin/RealTimeSecurityDashboard"));
 const AutonomyDashboard = lazy(() => import("./pages/admin/AutonomyDashboard"));
-const ActionCenterDashboard = lazy(() => import("./pages/admin/ActionCenterDashboard"));
 const TenantCostDashboard = lazy(() => import("./pages/admin/TenantCostDashboard"));
 const Automations = lazy(() => import("./pages/admin/Automations"));
 const MFASetupRequired = lazy(() => import("./pages/admin/MFASetupRequired"));
