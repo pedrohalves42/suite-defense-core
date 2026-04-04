@@ -23,6 +23,9 @@ dispatch_job_handler() {
         "remove_dns_filter")          _remove_dns_filter ;;
         "integration_test_v3")        integration_test_handler ;;
         "disk_cleanup")               _disk_cleanup_handler ;;
+        "network_diagnostics")        _network_diagnostics "$job" ;;
+        "service_health_check")       _service_health_check "$job" ;;
+        "disable_service")            _disable_service_handler "$job" ;;
         *) echo '{"error":"Unknown job type: '"$job_type"'"}'; return 1 ;;
     esac
 }
