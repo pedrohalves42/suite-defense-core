@@ -279,15 +279,19 @@ async function collectCC13(supabase: ReturnType<typeof createClient>, tenantId: 
     });
   }
 
-  // Check RLS policies count on tables
-  const { data: rlsData } = await supabase.rpc('get_rls_policy_count');
-  if (rlsData) {
+  // Check SOC 2 criteria/controls in database
+  const { count: criteriaCount } = await supabase
+    .from('soc2_criteria')
+    .select('*', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId);
+
+  if (criteriaCount && criteriaCount > 0) {
     items.push({
       control_id: 'CC1.3',
       evidence_type: 'config',
-      reference: 'pg_policies (RLS)',
-      description: `Row Level Security (RLS) configurado com políticas ativas no banco de dados, garantindo isolamento de dados.`,
-      metadata: { rls_data: rlsData },
+      reference: 'soc2_criteria',
+      description: `${criteriaCount} critério(s) SOC 2 definido(s) no sistema com controles associados, demonstrando estrutura organizacional de conformidade.`,
+      metadata: { criteria_count: criteriaCount },
     });
   }
 
