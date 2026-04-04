@@ -4,7 +4,8 @@ import {
   Shield, Building2, Scale, Stethoscope, Laptop,
   BarChart, FileText, CheckCircle,
   FileCheck, Server, ShieldCheck, Lock, Activity,
-  Package, Cpu, HardDrive, Globe2, Zap, Eye, Clock, Users
+  Package, Cpu, HardDrive, Globe2, Zap, Eye, Clock, Users,
+  Link2, Brain, Fingerprint, Layers
 } from "lucide-react";
 
 /**
