@@ -282,14 +282,14 @@ export function SOC2PolicyWizard() {
       weak: 'Fraco',
       none: 'Sem dados',
     };
-    const colors: Record<ControlSummary['strength'], string> = {
-      strong: 'bg-green-500/10 text-green-700 border-green-200',
-      moderate: 'bg-yellow-500/10 text-yellow-700 border-yellow-200',
-      weak: 'bg-red-500/10 text-red-700 border-red-200',
-      none: 'bg-muted text-muted-foreground border-border',
+    const variants: Record<ControlSummary['strength'], 'default' | 'secondary' | 'destructive' | 'outline'> = {
+      strong: 'default',
+      moderate: 'secondary',
+      weak: 'destructive',
+      none: 'outline',
     };
     return (
-      <Badge variant="outline" className={`text-xs ${colors[summary.strength]}`}>
+      <Badge variant={variants[summary.strength]} className="text-xs">
         {emoji} {labels[summary.strength]} ({summary.count})
       </Badge>
     );
