@@ -12,6 +12,10 @@
    ============================================================ */
 
 @layer base {
+  html {
+    font-size: 14px; /* Scale down from 16px default — removes the "zoomed in" feel */
+  }
+
   :root {
     /* === PREMIUM LIGHT MODE === */
     --background: 220 14% 96%;         /* #F3F4F6 */
