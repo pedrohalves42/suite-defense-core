@@ -11,6 +11,7 @@ export interface OSInfo {
   os_version?: string;
   hostname?: string;
   agent_version?: string;
+  state?: string; // Agent lifecycle state (ENFORCING, SAFE_MODE, DEGRADED, INITIALIZING)
   ed25519_supported?: boolean;
   signature_mode?: string;
   system_metrics?: SystemMetricsPayload;
