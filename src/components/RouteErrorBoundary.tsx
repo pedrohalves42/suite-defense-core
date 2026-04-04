@@ -57,7 +57,7 @@ export class RouteErrorBoundary extends Component<Props, State> {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {import.meta.env.DEV && this.state.error && (
+              {this.state.error && (
                 <details className="mt-2">
                   <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
                     Detalhes técnicos
