@@ -91,7 +91,7 @@ const Landing = () => {
             <FAQSection />
             {/* 14. CTA final */}
             <CTASection />
-          </Suspense>
+          </>
         </main>
 
         {/* Footer */}
