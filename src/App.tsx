@@ -108,7 +108,6 @@ const RealTimeSecurityDashboard = lazy(() => import("./pages/admin/RealTimeSecur
 const AutonomyDashboard = lazy(() => import("./pages/admin/AutonomyDashboard"));
 const TenantCostDashboard = lazy(() => import("./pages/admin/TenantCostDashboard"));
 const Automations = lazy(() => import("./pages/admin/Automations"));
-const Automations = lazy(() => import("./pages/admin/Automations"));
 const MFASetupRequired = lazy(() => import("./pages/admin/MFASetupRequired"));
 const ExecutiveDashboard = lazy(() => import("./pages/admin/ExecutiveDashboard"));
 const AlertResolutionCenter = lazy(() => import("./pages/admin/AlertResolutionCenter"));
