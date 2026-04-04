@@ -11,6 +11,7 @@ const HowItWorksSection = lazy(() => import("@/components/landing/HowItWorksSect
 const AssessmentSection = lazy(() => import("@/components/landing/AssessmentSection").then(m => ({ default: m.AssessmentSection })));
 const BenefitsSection = lazy(() => import("@/components/landing/BenefitsSection").then(m => ({ default: m.BenefitsSection })));
 const FeaturesSection = lazy(() => import("@/components/landing/FeaturesSection").then(m => ({ default: m.FeaturesSection })));
+const DifferentiatorsSection = lazy(() => import("@/components/landing/DifferentiatorsSection").then(m => ({ default: m.DifferentiatorsSection })));
 const TargetAudienceSection = lazy(() => import("@/components/landing/TargetAudienceSection").then(m => ({ default: m.TargetAudienceSection })));
 const TrustProofSection = lazy(() => import("@/components/landing/TrustProofSection").then(m => ({ default: m.TrustProofSection })));
 const ComparisonSection = lazy(() => import("@/components/landing/ComparisonSection").then(m => ({ default: m.ComparisonSection })));
