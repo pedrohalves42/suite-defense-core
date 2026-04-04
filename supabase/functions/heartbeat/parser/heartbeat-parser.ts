@@ -19,6 +19,7 @@ const HeartbeatPayloadSchema = z.object({
   os_version: z.string().max(128).optional(),
   hostname: z.string().max(255).optional(),
   agent_version: z.string().max(32).optional(),
+  state: z.string().max(32).optional(),
   ed25519_supported: z.boolean().optional(),
   signature_mode: z.string().max(32).optional(),
 }).passthrough()  // Allow extra fields for forward compatibility
