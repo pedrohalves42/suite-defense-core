@@ -4,7 +4,8 @@ import {
   Shield, Building2, Scale, Stethoscope, Laptop,
   BarChart, FileText, CheckCircle,
   FileCheck, Server, ShieldCheck, Lock, Activity,
-  Package, Cpu, HardDrive, Globe2, Zap, Eye, Clock, Users
+  Package, Cpu, HardDrive, Globe2, Zap, Eye, Clock, Users,
+  Link2, Brain, Fingerprint, Layers
 } from "lucide-react";
 
 /**
@@ -152,6 +153,16 @@ export function useLandingContent() {
     },
     contact: {
       title: t('landing.contact.title'),
+    },
+    differentiators: {
+      title: t('landing.differentiators.title'),
+      subtitle: t('landing.differentiators.subtitle'),
+      items: Array.from({ length: 6 }, (_, i) => ({
+        title: t(`landing.differentiators.items.${i}.title`),
+        description: t(`landing.differentiators.items.${i}.description`),
+        metric: t(`landing.differentiators.items.${i}.metric`),
+        metricLabel: t(`landing.differentiators.items.${i}.metricLabel`),
+      })),
     },
   }), [t]);
 }

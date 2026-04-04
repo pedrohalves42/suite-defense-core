@@ -623,6 +623,48 @@
     },
     "contact": {
       "title": "Contact Us"
+    },
+    "differentiators": {
+      "title": "Why CyberShield is Different",
+      "subtitle": "Proprietary technology that would take 18+ months to replicate",
+      "items": {
+        "0": {
+          "title": "Intelligent Honeypot",
+          "description": "The only Brazilian EDR with integrated deception technology. Native agents simulate vulnerable endpoints. Flipped mode diverts real agents for forensic observation.",
+          "metric": "Exclusive",
+          "metricLabel": "in Brazilian market"
+        },
+        "1": {
+          "title": "Hash Chain Logs",
+          "description": "Blockchain-inspired immutable cryptographic chain. Each record references the previous hash. Tampering is impossible without breaking the entire chain.",
+          "metric": "100%",
+          "metricLabel": "tamper-proof"
+        },
+        "2": {
+          "title": "Multi-Provider AI",
+          "description": "Smart rotation between Gemini, GPT and Groq with response caching and automatic fallback. No provider downtime affects your operation.",
+          "metric": "80%",
+          "metricLabel": "lower AI cost"
+        },
+        "3": {
+          "title": "SOAR with Circuit Breaker",
+          "description": "Automated response with blast radius control (max 10% of fleet), global circuit breaker and fail-closed mode.",
+          "metric": "10%",
+          "metricLabel": "impact limit per action"
+        },
+        "4": {
+          "title": "Zero Trust by Design",
+          "description": "HMAC-SHA256 with nonce for each agent. Replay attack protection. No PKI certificates needed. Works on Windows, Linux and macOS.",
+          "metric": "Zero",
+          "metricLabel": "implicit trust"
+        },
+        "5": {
+          "title": "Atomic Multi-Tenant",
+          "description": "JWT claims isolation with atomic context switching. RLS across 80+ database partitions. MSPs manage dozens of clients safely.",
+          "metric": "80+",
+          "metricLabel": "isolated partitions"
+        }
+      }
     }
   },
   "adminPages": {

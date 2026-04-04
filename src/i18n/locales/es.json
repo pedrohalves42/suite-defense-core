@@ -623,6 +623,48 @@
     },
     "contact": {
       "title": "Contáctenos"
+    },
+    "differentiators": {
+      "title": "Por qué CyberShield es diferente",
+      "subtitle": "Tecnología propietaria que tomaría 18+ meses replicar",
+      "items": {
+        "0": {
+          "title": "Honeypot Inteligente",
+          "description": "El único EDR brasileño con tecnología de deception integrada. Agentes nativos simulan endpoints vulnerables. Modo flipped desvía agentes reales para observación forense.",
+          "metric": "Exclusivo",
+          "metricLabel": "en el mercado brasileño"
+        },
+        "1": {
+          "title": "Logs con Hash Chain",
+          "description": "Cadena criptográfica inmutable inspirada en blockchain. Cada registro referencia el hash anterior. La adulteración es imposible sin romper toda la cadena.",
+          "metric": "100%",
+          "metricLabel": "a prueba de manipulación"
+        },
+        "2": {
+          "title": "IA Multi-Proveedor",
+          "description": "Rotación inteligente entre Gemini, GPT y Groq con caché de respuestas y fallback automático. Ninguna caída de proveedor afecta su operación.",
+          "metric": "80%",
+          "metricLabel": "menor costo de IA"
+        },
+        "3": {
+          "title": "SOAR con Circuit Breaker",
+          "description": "Respuesta automatizada con control de radio de impacto (máx. 10% de la flota), circuit breaker global y modo fail-closed.",
+          "metric": "10%",
+          "metricLabel": "límite de impacto por acción"
+        },
+        "4": {
+          "title": "Zero Trust por Diseño",
+          "description": "HMAC-SHA256 con nonce para cada agente. Protección contra replay attacks. Sin certificados PKI. Funciona en Windows, Linux y macOS.",
+          "metric": "Zero",
+          "metricLabel": "confianza implícita"
+        },
+        "5": {
+          "title": "Multi-Tenant Atómico",
+          "description": "Aislamiento via JWT claims con cambio atómico de contexto. RLS en 80+ particiones de base de datos. MSPs gestionan decenas de clientes sin riesgo.",
+          "metric": "80+",
+          "metricLabel": "particiones aisladas"
+        }
+      }
     }
   },
   "adminPages": {
