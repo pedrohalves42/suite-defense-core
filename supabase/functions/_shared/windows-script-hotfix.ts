@@ -103,6 +103,7 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
   hotfixToctouRuntimeSelfheal(ctx);
   hotfixHeartbeatSha256Sync(ctx);
   hotfixToctouDualHash(ctx);
+  hotfixEd25519HashCacheFailOpen(ctx);
 
   // 6. Firewall skip
   hotfixSkipFwBoot(ctx);
