@@ -14,6 +14,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { RouteErrorBoundary } from "./components/RouteErrorBoundary";
 import { AdminMFAGuard } from "./components/auth/AdminMFAGuard";
 import { Server } from "lucide-react";
+import ActionCenterDashboard from "./pages/admin/ActionCenterDashboard";
 
 // Lazy route-level loading fallback
 const RouteFallback = () => (
