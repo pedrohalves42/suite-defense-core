@@ -20,9 +20,19 @@ export function hotfixBaselineDedup(ctx: HotfixContext): void {
       /\$(?:Global:)?ProcessBaseline\[([^\]]+)\]\s*=\s*\$proc(?!\s*<#\s*HOTFIX)/g,
       '$Global:ProcessBaseline[$1] = $proc <# HOTFIX-BASELINE-DEDUP #>'
     );
+    // Replace ALL .Add() calls on baseline/hashtable objects (not just first_seen)
+    // This prevents "O item já foi adicionado" (duplicate key) crashes
     ctx.content = ctx.content.replace(
       /\.Add\(\s*["']first_seen["']\s*,/g,
       '["first_seen"] = <# HOTFIX-BASELINE-DEDUP-ADD #>'
+    );
+    ctx.content = ctx.content.replace(
+      /\$baseline\.Add\(\s*\$([a-zA-Z_]+)\s*,\s*([^)]+)\)/g,
+      '$baseline[$$$1] = $2 <# HOTFIX-BASELINE-DEDUP-DICTADD #>'
+    );
+    ctx.content = ctx.content.replace(
+      /\$(?:processDict|procDict|dict)\.Add\(\s*\$([a-zA-Z_]+)\s*,\s*([^)]+)\)/g,
+      '$$processDict[$$$1] = $2 <# HOTFIX-BASELINE-DEDUP-DICTADD #>'
     );
     if (ctx.content.includes('Detect-ProcessAnomalies') && !ctx.content.includes('HOTFIX-BASELINE-DEDUP-TRYCATCH')) {
       ctx.content = ctx.content.replace(
