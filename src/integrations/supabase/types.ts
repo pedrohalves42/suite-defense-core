@@ -50641,6 +50641,22 @@ export type Database = {
         Returns: Database["public"]["Enums"]["system_operational_mode"]
       }
       get_system_mode_safe: { Args: never; Returns: string }
+      get_tenant_cost_metrics: {
+        Args: never
+        Returns: {
+          abuse_alerts_7d: number
+          active_agents: number
+          agent_limit: number
+          estimated_monthly_cost: number
+          failed_jobs_24h: number
+          jobs_24h: number
+          jobs_30d: number
+          jobs_7d: number
+          tenant_id: string
+          tenant_name: string
+          tenant_plan: string
+        }[]
+      }
       get_tenant_mfa_policy: { Args: { _tenant_id: string }; Returns: Json }
       get_threat_intel_stats: { Args: { p_tenant_id: string }; Returns: Json }
       get_trace_timeline: {
