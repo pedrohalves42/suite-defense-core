@@ -1,5 +1,5 @@
 /**
- * Types for serve-installer Edge Function
+ * Types for serve-installer (shared for gateway handler + stub)
  */
 
 export interface AgentData {

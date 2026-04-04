@@ -1,12 +1,9 @@
 /**
- * Telemetry & hash persistence for serve-installer
+ * Telemetry & hash persistence for serve-installer (shared)
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { logger } from '../_shared/logger.ts';
+import { logger } from './logger.ts';
 
-/**
- * Calculates SHA256 hash and persists installer metadata
- */
 export async function persistInstallerHash(
   supabaseClient: SupabaseClient,
   templateContent: string,
@@ -23,11 +20,7 @@ export async function persistInstallerHash(
   try {
     const { error: updateError } = await supabaseClient
       .from('enrollment_keys')
-      .update({
-        installer_sha256: sha256,
-        installer_size_bytes: sizeBytes,
-        installer_generated_at: new Date().toISOString(),
-      })
+      .update({ installer_sha256: sha256, installer_size_bytes: sizeBytes, installer_generated_at: new Date().toISOString() })
       .eq('key', enrollmentKey);
 
     if (updateError) {
@@ -42,9 +35,6 @@ export async function persistInstallerHash(
   return { sha256, sizeBytes };
 }
 
-/**
- * Tracks download event in installation_analytics
- */
 export async function trackDownloadEvent(
   supabaseClient: SupabaseClient,
   tenantId: string,
@@ -60,17 +50,12 @@ export async function trackDownloadEvent(
     const { error: telemetryError } = await supabaseClient
       .from('installation_analytics')
       .insert({
-        tenant_id: tenantId,
-        agent_id: agentId,
-        agent_name: agentName,
-        event_type: 'downloaded',
-        platform,
-        installation_method: 'one_click',
-        success: true,
+        tenant_id: tenantId, agent_id: agentId, agent_name: agentName,
+        event_type: 'downloaded', platform, installation_method: 'one_click', success: true,
         ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown',
         user_agent: req.headers.get('user-agent') || 'unknown',
         metadata: {
-          installer_version: (await import('../_shared/installer-version.ts')).INSTALLER_VERSION,
+          installer_version: (await import('./installer-version.ts')).INSTALLER_VERSION,
           installer_size_bytes: sizeBytes,
           installer_sha256: sha256.substring(0, 16) + '...',
         },
