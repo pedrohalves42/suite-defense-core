@@ -2,6 +2,9 @@
  * Heartbeat state updater module.
  * Handles all DB writes: agent status update, system metrics, processes, token touch.
  * All operations are idempotent and safe for retries.
+ *
+ * COST OPTIMIZATION: Metrics and processes are throttled to 1 insert per 5 minutes
+ * per agent to reduce IOPS (~80% reduction vs every heartbeat).
  */
 
 import { logger } from '../_shared/logger.ts'
@@ -10,6 +13,9 @@ import type { AgentContext, AgentUpdate, OSInfo } from './types.ts'
 
 // Re-export types used by callers
 export type { AgentContext, AgentUpdate, OSInfo }
+
+/** Throttle interval for metrics/process inserts (5 minutes) */
+const TELEMETRY_THROTTLE_MS = 5 * 60 * 1000
 
 /**
  * Update agent heartbeat status in DB.
@@ -40,6 +46,9 @@ export async function updateAgentStatus(
 /**
  * Execute all parallel side-effect operations (metrics, processes, token touch).
  * Fire-and-forget semantics — failures are logged but don't block heartbeat response.
+ *
+ * COST OPTIMIZATION: Metrics and processes are only inserted if the last insert
+ * was more than 5 minutes ago (checked via a single lightweight query).
  */
 export async function executeParallelOps(
   supabase: SupabaseClient,
@@ -59,18 +68,56 @@ export async function executeParallelOps(
     ).then(() => {}),
   )
 
-  // 2. System metrics insert
-  const systemMetrics = osInfo.system_metrics
-  if (systemMetrics && typeof systemMetrics === 'object' && !systemMetrics.error) {
-    parallelOps.push(insertSystemMetrics(supabase, agent, systemMetrics))
-  }
+  // 2. Check if telemetry insert is needed (throttle to 1 per 5 min)
+  const hasTelemetry = (osInfo.system_metrics && typeof osInfo.system_metrics === 'object' && !osInfo.system_metrics.error)
+    || (osInfo.processes && typeof osInfo.processes === 'object' && !osInfo.processes.error)
 
-  // 3. Process data insert
-  if (osInfo.processes && typeof osInfo.processes === 'object' && !osInfo.processes.error) {
-    parallelOps.push(insertProcessData(supabase, agent, osInfo.processes, osInfo.process_anomalies))
+  if (hasTelemetry) {
+    const shouldInsert = await shouldInsertTelemetry(supabase, agent.id)
+
+    if (shouldInsert) {
+      // 2a. System metrics insert
+      const systemMetrics = osInfo.system_metrics
+      if (systemMetrics && typeof systemMetrics === 'object' && !systemMetrics.error) {
+        parallelOps.push(insertSystemMetrics(supabase, agent, systemMetrics))
+      }
+
+      // 2b. Process data insert
+      if (osInfo.processes && typeof osInfo.processes === 'object' && !osInfo.processes.error) {
+        parallelOps.push(insertProcessData(supabase, agent, osInfo.processes, osInfo.process_anomalies))
+      }
+    }
   }
 
   await Promise.all(parallelOps)
+}
+
+/**
+ * Check if enough time has passed since the last telemetry insert for this agent.
+ * Uses a single lightweight query to the most recent metrics row.
+ */
+async function shouldInsertTelemetry(
+  supabase: SupabaseClient,
+  agentId: string,
+): Promise<boolean> {
+  try {
+    const { data } = await supabase
+      .from('agent_system_metrics_partitioned')
+      .select('collected_at')
+      .eq('agent_id', agentId)
+      .order('collected_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (!data?.collected_at) return true // No previous data, insert
+
+    const lastInsert = new Date(data.collected_at).getTime()
+    const elapsed = Date.now() - lastInsert
+    return elapsed >= TELEMETRY_THROTTLE_MS
+  } catch {
+    // On error, allow insert to avoid data loss
+    return true
+  }
 }
 
 async function insertSystemMetrics(
