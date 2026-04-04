@@ -1,48 +1,70 @@
 
-# Plano: TOCTOU v5.0.15 — Validação Completa da Auto-Cura
+# Análise de Paridade: Unix/macOS vs Windows
 
-## Problemas Identificados no Código Atual
+## ✅ Já implementado e em paridade (NÃO precisa de mudança)
 
-### 🔴 Bug 1: Agente não processa `force_hash_resync`
-O `heartbeat.sh` (linha 22-31) processa `force_update`, `heartbeat_interval_seconds` e `poll_interval_seconds`, mas **ignora completamente** `force_hash_resync` e `script_sha256`. A auto-cura nunca acontece.
+| Capacidade | Windows | Linux | macOS |
+|---|---|---|---|
+| FSM (6 estados) | ✅ | ✅ | ✅ |
+| HMAC Auth (timing-safe) | ✅ | ✅ | ✅ |
+| Hash Chain (integridade de execução) | ✅ | ✅ | ✅ |
+| TOCTOU 3-strikes + self-heal | ✅ | ✅ | ✅ |
+| Heartbeat + force_hash_resync | ✅ | ✅ | ✅ |
+| Job polling + dispatch whitelist | ✅ | ✅ | ✅ |
+| Process baseline + anomaly detection | ✅ | ✅ | ✅ |
+| System metrics (CPU/RAM/Disk) | ✅ | ✅ | ✅ |
+| Kill process (com proteção) | ✅ | ✅ | ✅ |
+| Stop/Restart service | ✅ | ✅ | ✅ |
+| DNS Filter (block/remove) | ✅ | ✅ | ✅ |
+| Network diagnostics | ✅ | ✅ | ❌ |
+| Service health check | ✅ | ✅ | ❌ |
+| Disable service | ✅ | ✅ | ❌ |
+| Software inventory | ✅ | ✅ | ✅ |
+| Vuln scan (leve) | ✅ | ✅ | ✅ |
+| Auto-repair (disco/CPU) | ✅ | ✅ | ✅ |
+| Security events (MITRE ATT&CK) | ✅ | ✅ | ✅ |
+| Adaptive sleep | ✅ | ✅ | ✅ |
+| Log buffering | ✅ | ✅ | ✅ |
 
-### 🔴 Bug 2: `forceHashResync` sempre `true` (sem valor)
-Em `response-builder.ts` (linha 110-112), o flag é `true` para **qualquer** agente online com hash, tornando o sinal sem significado — não distingue agentes em loop de agentes saudáveis.
+## 🔴 Lacunas reais (existem no Windows, faltam no Unix)
 
-### 🟡 Bug 3: Query duplicada ao banco
-`response-builder.ts` consulta `agent_releases` **duas vezes** (linhas 32-40 e 78-85) para o mesmo registro, desperdiçando IOPS e aumentando latência.
+### 1. Disk Metrics por drive/volume (Baixo impacto)
+- **Windows**: Coleta métricas por drive (C:, D:, etc.) → tabela `agent_disk_metrics`
+- **Linux/macOS**: Apenas disco raiz via `df /`
+- **Custo**: Baixo (sem nova tabela, insert no heartbeat)
 
-### 🟡 Bug 4: Fallback inseguro do `script_sha256`
-Linha 125: `safeScriptSha256 || currentScriptSha256` envia o hash mesmo sem assinatura válida, contradizendo o comentário de segurança da linha 69-70 (causa falsos positivos TOCTOU).
+### 2. Certificados instalados (Médio impacto)
+- **Windows**: Coleta certificados de cert stores → tabela `agent_certificates`
+- **Linux**: `/etc/ssl/certs`, `/usr/local/share/ca-certificates`
+- **macOS**: `security find-certificate -a`
+- **Custo**: Médio (job handler + insert)
 
----
+### 3. Event Log collection (Baixo impacto)
+- **Windows**: EventLog (System, Security, Application)
+- **Linux**: journald / syslog
+- **macOS**: `log show`
+- **Relevância**: O heartbeat já envia `enable_eventlog: true` — os agentes Unix não processam
 
-## Etapas de Implementação
+### 4. Job types faltantes no macOS
+- `network_diagnostics` (ping targets)
+- `service_health_check` (launchctl status)
+- `disable_service` (launchctl bootout)
 
-### Etapa 1: Corrigir `response-builder.ts` (servidor)
-- **Eliminar query duplicada**: buscar `script_content` e `signature_base64` numa única consulta
-- **Corrigir lógica `forceHashResync`**: enviar `true` apenas quando há evidência de instabilidade (ex: agente com status recente de restart ou SAFE_MODE)
-- **Remover fallback inseguro**: enviar `script_sha256` SOMENTE quando há assinatura válida
-- **Resultado**: menos queries, resposta correta, custo menor
+### 5. Skip Firewall Remediation flag
+- **Windows**: Processa `skip_firewall_remediation` do heartbeat
+- **Unix**: Ignora este campo
 
-### Etapa 2: Implementar processamento no agente (`heartbeat.sh`)
-- Adicionar leitura de `script_sha256` e `force_hash_resync` da resposta do heartbeat
-- Quando `force_hash_resync=true` e `script_sha256` presente: atualizar o cache local (`expected_script_hash.json`) com o hash do servidor
-- Resetar contador `TOCTOU_CONSECUTIVE_FAILURES` após resync bem-sucedido
-- **Resultado**: agente se auto-cura sem reinstalação
+## 📊 Recomendação prática (custo vs valor)
 
-### Etapa 3: Atualizar teste unitário (`response-builder.test.ts`)
-- Testar cenário sem release (hash null)
-- Testar cenário com release assinada (hash presente)
-- Testar cenário com release sem assinatura (hash NÃO enviado)
-- Testar que `force_hash_resync` reflete o estado real do agente
+### Implementar agora (alto valor, baixo custo):
+1. **macOS: 3 job handlers faltantes** — ~30 linhas de código
+2. **Skip firewall flag no heartbeat Unix** — ~5 linhas
 
-### Etapa 4: Validação em produção via curl
-- Testar endpoint heartbeat com agente real para confirmar resposta correta
-- Verificar logs para ausência de erros
+### Implementar depois (médio valor):
+3. **Disk metrics por volume** — precisa de lógica de parsing multivolume
+4. **Certificados** — handler de coleta + insert
 
----
+### Não implementar (baixo valor, alto custo):
+5. **Event Log** — volume alto de dados, custo de IOPS significativo para 4 agentes
 
-## Impacto em Custos
-- **Antes**: 3 queries por heartbeat × ~3 agentes × ~60 heartbeats/hora = ~540 queries/hora
-- **Depois**: 1 query por heartbeat = ~180 queries/hora (redução de 67%)
+## Quer que eu implemente as lacunas de alto valor agora (itens 1 e 2)?

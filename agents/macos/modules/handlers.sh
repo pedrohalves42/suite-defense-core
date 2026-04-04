@@ -23,6 +23,9 @@ dispatch_job_handler() {
         "remove_dns_filter")          _remove_dns_filter ;;
         "integration_test_v3")        integration_test_handler ;;
         "disk_cleanup")               _disk_cleanup_handler ;;
+        "network_diagnostics")        _network_diagnostics "$job" ;;
+        "service_health_check")       _service_health_check "$job" ;;
+        "disable_service")            _disable_service_handler "$job" ;;
         *) echo '{"error":"Unknown job type: '"$job_type"'"}'; return 1 ;;
     esac
 }
@@ -151,4 +154,47 @@ _disk_cleanup_handler() {
     local after
     after=$(df -g / | tail -1 | awk '{print $4}')
     echo '{"success":true,"freed_gb":'$((after - before))'}'
+}
+
+_network_diagnostics() {
+    local job="$1"
+    local targets
+    targets=$(echo "$job" | jq -r '.payload.targets // ["8.8.8.8"] | .[]' 2>/dev/null)
+    local results='[]'
+    while IFS= read -r t; do
+        [[ -z "$t" ]] && continue
+        local ok=false
+        ping -c 1 -W 3 "$t" &>/dev/null && ok=true
+        results=$(echo "$results" | jq --arg t "$t" --argjson ok "$ok" '. + [{"target":$t,"reachable":$ok}]')
+    done <<< "$targets"
+    echo '{"diagnostics":'"$results"'}'
+}
+
+_service_health_check() {
+    local job="$1"
+    local svcs
+    svcs=$(echo "$job" | jq -r '.payload.services // ["com.cybershield.agent"] | .[]' 2>/dev/null)
+    local results='[]' checked=0
+    while IFS= read -r svc; do
+        [[ -z "$svc" ]] && continue
+        local status="unknown"
+        if launchctl list "$svc" &>/dev/null; then
+            status="running"
+        else
+            status="stopped"
+        fi
+        results=$(echo "$results" | jq --arg n "$svc" --arg s "$status" '. + [{"name":$n,"status":$s}]')
+        checked=$((checked + 1))
+    done <<< "$svcs"
+    echo '{"services_checked":'"$checked"',"services":'"$results"'}'
+}
+
+_disable_service_handler() {
+    local job="$1"
+    local svc
+    svc=$(echo "$job" | jq -r '.payload.service_name // empty' 2>/dev/null)
+    [[ -z "$svc" ]] && { echo '{"success":false,"error":"Missing service_name"}'; return; }
+    echo "$PROTECTED_SERVICES" | grep -qw "$svc" && { echo '{"success":false,"error":"SECURITY_BLOCK","blocked":true}'; return; }
+    launchctl bootout system "/Library/LaunchDaemons/$svc.plist" 2>/dev/null
+    echo '{"success":true,"service":"'"$svc"'","status":"disabled"}'
 }
