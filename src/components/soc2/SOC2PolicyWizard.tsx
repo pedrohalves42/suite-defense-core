@@ -1,9 +1,9 @@
 /**
  * Assistente Guiado para Preenchimento de Políticas SOC 2
- * Wizard step-by-step para ajudar organizações a preencher a conformidade
+ * Fase 2: Integrado com soc2-evidence-collector para auto-preenchimento
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,13 +12,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle2, ChevronLeft, ChevronRight, FileText, AlertTriangle, Shield, Sparkles } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, FileText, AlertTriangle, Shield, Sparkles, Bot, Loader2 } from 'lucide-react';
 import { SOC2_TRUST_CRITERIA, COMPLIANCE_POLICIES, type CriteriaCode, type PolicyDefinition } from '@/types/soc2-compliance';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 import { useQueryClient } from '@tanstack/react-query';
+import { useSOC2EvidenceCollector, type EvidenceCollectionResult, type ControlSummary } from '@/hooks/useSOC2EvidenceCollector';
 
 interface WizardStep {
   id: string;
@@ -27,6 +28,22 @@ interface WizardStep {
   type: 'criteria' | 'policy' | 'evidence' | 'review';
   criteriaCode?: CriteriaCode;
   policyDef?: PolicyDefinition;
+}
+
+// Map evidence strength to wizard status
+function strengthToStatus(strength: ControlSummary['strength']): string {
+  switch (strength) {
+    case 'strong': return 'implemented';
+    case 'moderate': return 'in_progress';
+    default: return 'not_started';
+  }
+}
+
+// Map criteria code (CC1) to sub-controls (CC1.1, CC1.2, etc.)
+function getCriteriaSubControls(criteriaCode: CriteriaCode): string[] {
+  const criteria = SOC2_TRUST_CRITERIA.find(c => c.code === criteriaCode);
+  if (!criteria) return [];
+  return criteria.controls.map(c => c.code);
 }
 
 function buildWizardSteps(): WizardStep[] {
@@ -75,6 +92,9 @@ export function SOC2PolicyWizard() {
   const [currentStep, setCurrentStep] = useState(0);
   const [responses, setResponses] = useState<Record<string, Record<string, string>>>({});
   const [saving, setSaving] = useState(false);
+  const [autoFilledSteps, setAutoFilledSteps] = useState<Set<string>>(new Set());
+  const { collectEvidence, isCollecting, result: evidenceResult, getStrengthEmoji } = useSOC2EvidenceCollector();
+
   const steps = buildWizardSteps();
   const step = steps[currentStep];
   const progress = Math.round(((currentStep) / (steps.length - 1)) * 100);
@@ -93,6 +113,97 @@ export function SOC2PolicyWizard() {
   };
 
   const completedSteps = steps.filter(s => isStepComplete(s.id)).length;
+
+  // Get strength for a criteria from cached evidence result
+  const getCriteriaStrength = useCallback((criteriaCode: CriteriaCode): ControlSummary | null => {
+    if (!evidenceResult?.summary) return null;
+    // Sum up sub-controls (CC1.1, CC1.2, etc.)
+    const subControls = getCriteriaSubControls(criteriaCode);
+    const summaries = subControls
+      .map(sc => evidenceResult.summary[sc])
+      .filter(Boolean);
+    
+    if (summaries.length === 0) return null;
+
+    const totalCount = summaries.reduce((s, x) => s + x.count, 0);
+    const allDescriptions = summaries.flatMap(x => x.descriptions);
+    const avgStrength = totalCount === 0 ? 'none' as const
+      : totalCount <= summaries.length ? 'weak' as const
+      : totalCount <= summaries.length * 3 ? 'moderate' as const
+      : 'strong' as const;
+
+    return { count: totalCount, strength: avgStrength, descriptions: allDescriptions };
+  }, [evidenceResult]);
+
+  // Auto-fill ALL criteria steps from a single evidence collection call
+  const handleAutoFillAll = useCallback(async () => {
+    const data = await collectEvidence(true); // save=true to persist
+    if (!data?.success) return;
+
+    const newResponses = { ...responses };
+    const newAutoFilled = new Set(autoFilledSteps);
+
+    for (const criteria of SOC2_TRUST_CRITERIA) {
+      const stepId = `criteria-${criteria.code}`;
+      const subControls = getCriteriaSubControls(criteria.code);
+      const summaries = subControls
+        .map(sc => data.summary[sc])
+        .filter(Boolean);
+
+      if (summaries.length === 0) continue;
+
+      const descriptions = summaries.flatMap(s => s.descriptions);
+      const totalCount = summaries.reduce((s, x) => s + x.count, 0);
+      const avgStrength = totalCount === 0 ? 'none' as const
+        : totalCount <= summaries.length ? 'weak' as const
+        : totalCount <= summaries.length * 3 ? 'moderate' as const
+        : 'strong' as const;
+
+      const notesText = descriptions.length > 0
+        ? `[Auto-preenchido em ${new Date().toLocaleString('pt-BR')}]\n\n${descriptions.map((d, i) => `${i + 1}. ${d}`).join('\n\n')}`
+        : '';
+
+      newResponses[stepId] = {
+        ...newResponses[stepId],
+        status: strengthToStatus(avgStrength),
+        notes: notesText,
+      };
+      newAutoFilled.add(stepId);
+    }
+
+    setResponses(newResponses);
+    setAutoFilledSteps(newAutoFilled);
+  }, [collectEvidence, responses, autoFilledSteps]);
+
+  // Auto-fill current step only (uses cached result if available)
+  const handleAutoFillCurrent = useCallback(async () => {
+    let data = evidenceResult;
+    if (!data) {
+      data = await collectEvidence(false);
+    }
+    if (!data?.success || !step?.criteriaCode) return;
+
+    const stepId = step.id;
+    const subControls = getCriteriaSubControls(step.criteriaCode);
+    const summaries = subControls
+      .map(sc => data!.summary[sc])
+      .filter(Boolean);
+
+    const descriptions = summaries.flatMap(s => s.descriptions);
+    const totalCount = summaries.reduce((s, x) => s + x.count, 0);
+    const avgStrength = totalCount === 0 ? 'none' as const
+      : totalCount <= summaries.length ? 'weak' as const
+      : totalCount <= summaries.length * 3 ? 'moderate' as const
+      : 'strong' as const;
+
+    const notesText = descriptions.length > 0
+      ? `[Auto-preenchido em ${new Date().toLocaleString('pt-BR')}]\n\n${descriptions.map((d, i) => `${i + 1}. ${d}`).join('\n\n')}`
+      : 'Nenhuma evidência encontrada automaticamente. Preencha manualmente.';
+
+    updateResponse(stepId, 'status', strengthToStatus(avgStrength));
+    updateResponse(stepId, 'notes', notesText);
+    setAutoFilledSteps(prev => new Set(prev).add(stepId));
+  }, [evidenceResult, collectEvidence, step]);
 
   const handleSave = async () => {
     if (!tenant?.id) return;
@@ -116,6 +227,18 @@ export function SOC2PolicyWizard() {
           }, { onConflict: 'tenant_id,criteria_code' });
 
         if (error) logger.error(`Error saving criteria ${criteria.code}`, { error: error.message });
+
+        // Save to soc2_control_status for history tracking
+        await supabase
+          .from('soc2_control_status')
+          .insert({
+            tenant_id: tenant.id,
+            control_id: criteria.code,
+            status: r.status || 'not_started',
+            notes: r.notes || '',
+            filled_by: (await supabase.auth.getUser()).data.user?.id,
+            auto_filled: autoFilledSteps.has(stepId),
+          });
       }
 
       // Save policy statuses
@@ -148,6 +271,30 @@ export function SOC2PolicyWizard() {
     }
   };
 
+  // Strength badge component
+  const StrengthBadge = ({ criteriaCode }: { criteriaCode: CriteriaCode }) => {
+    const summary = getCriteriaStrength(criteriaCode);
+    if (!summary) return null;
+    const emoji = getStrengthEmoji(summary.strength);
+    const labels: Record<ControlSummary['strength'], string> = {
+      strong: 'Forte',
+      moderate: 'Moderado',
+      weak: 'Fraco',
+      none: 'Sem dados',
+    };
+    const colors: Record<ControlSummary['strength'], string> = {
+      strong: 'bg-green-500/10 text-green-700 border-green-200',
+      moderate: 'bg-yellow-500/10 text-yellow-700 border-yellow-200',
+      weak: 'bg-red-500/10 text-red-700 border-red-200',
+      none: 'bg-muted text-muted-foreground border-border',
+    };
+    return (
+      <Badge variant="outline" className={`text-xs ${colors[summary.strength]}`}>
+        {emoji} {labels[summary.strength]} ({summary.count})
+      </Badge>
+    );
+  };
+
   const renderStepContent = () => {
     if (!step) return null;
     const stepData = responses[step.id] || {};
@@ -178,6 +325,26 @@ export function SOC2PolicyWizard() {
               <p className="text-xs mt-1">30 Controles</p>
             </div>
           </div>
+          
+          {/* Auto-fill all button on intro */}
+          <div className="pt-4 border-t max-w-md mx-auto">
+            <Button
+              onClick={handleAutoFillAll}
+              disabled={isCollecting}
+              className="w-full gap-2"
+              variant="default"
+            >
+              {isCollecting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Bot className="h-4 w-4" />
+              )}
+              {isCollecting ? 'Coletando evidências...' : '🤖 Auto-preencher todos os critérios'}
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2">
+              Coleta evidências reais do sistema e preenche automaticamente notas e status de cada critério.
+            </p>
+          </div>
         </div>
       );
     }
@@ -199,7 +366,13 @@ export function SOC2PolicyWizard() {
                 ) : (
                   <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0" />
                 )}
-                <span className="text-sm">{s.title}</span>
+                <span className="text-sm flex-1">{s.title}</span>
+                {s.criteriaCode && <StrengthBadge criteriaCode={s.criteriaCode} />}
+                {autoFilledSteps.has(s.id) && (
+                  <Badge variant="secondary" className="text-xs gap-1">
+                    <Bot className="h-3 w-3" /> Auto
+                  </Badge>
+                )}
               </div>
             ))}
             {steps.filter(s => s.type === 'policy').map(s => (
@@ -222,11 +395,31 @@ export function SOC2PolicyWizard() {
 
     if (step.type === 'criteria' && step.criteriaCode) {
       const criteria = SOC2_TRUST_CRITERIA.find(c => c.code === step.criteriaCode)!;
+      const isAutoFilled = autoFilledSteps.has(step.id);
       return (
         <div className="space-y-4">
-          <div>
-            <h3 className="font-semibold text-lg">{criteria.fullName}</h3>
-            <p className="text-sm text-muted-foreground">{criteria.objective}</p>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <h3 className="font-semibold text-lg">{criteria.fullName}</h3>
+              <p className="text-sm text-muted-foreground">{criteria.objective}</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <StrengthBadge criteriaCode={step.criteriaCode} />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleAutoFillCurrent}
+                disabled={isCollecting}
+                className="gap-1.5"
+              >
+                {isCollecting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Bot className="h-3.5 w-3.5" />
+                )}
+                Auto-preencher
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -249,13 +442,25 @@ export function SOC2PolicyWizard() {
             </div>
 
             <div>
-              <Label>Notas de Implementação</Label>
+              <div className="flex items-center gap-2 mb-1">
+                <Label>Notas de Implementação</Label>
+                {isAutoFilled && (
+                  <Badge variant="secondary" className="text-xs gap-1">
+                    <Bot className="h-3 w-3" /> Auto-preenchido
+                  </Badge>
+                )}
+              </div>
               <Textarea
                 placeholder={`Descreva como o critério ${criteria.code} está implementado na sua organização...`}
                 value={stepData.notes || ''}
                 onChange={(e) => updateResponse(step.id, 'notes', e.target.value)}
-                rows={4}
+                rows={6}
               />
+              {isAutoFilled && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  💡 Você pode editar livremente as notas auto-preenchidas.
+                </p>
+              )}
             </div>
           </div>
 
@@ -354,9 +559,17 @@ export function SOC2PolicyWizard() {
               Passo {currentStep + 1} de {steps.length} — {step?.title}
             </CardDescription>
           </div>
-          <Badge variant="outline" className="text-sm">
-            {completedSteps}/{steps.length - 2} preenchidos
-          </Badge>
+          <div className="flex items-center gap-2">
+            {evidenceResult && (
+              <Badge variant="outline" className="text-xs gap-1 bg-primary/5">
+                <Bot className="h-3 w-3" />
+                {evidenceResult.evidence.length} evidências
+              </Badge>
+            )}
+            <Badge variant="outline" className="text-sm">
+              {completedSteps}/{steps.length - 2} preenchidos
+            </Badge>
+          </div>
         </div>
         <Progress value={progress} className="mt-2" />
       </CardHeader>
