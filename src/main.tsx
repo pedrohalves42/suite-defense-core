@@ -12,13 +12,63 @@ import "./index.css";
 // Unconditionally purge legacy PWA artifacts (all environments)
 if (typeof window !== "undefined") {
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.getRegistrations().then(regs =>
-      regs.forEach(r => r.unregister())
+    navigator.serviceWorker.getRegistrations().then((regs) =>
+      regs.forEach((r) => r.unregister())
     );
   }
   if ("caches" in window) {
-    caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+    caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
   }
+
+  const DEPLOY_RECOVERY_KEY = "__cybershield_deploy_recovery__";
+  const DEPLOY_RECOVERY_COOLDOWN_MS = 15_000;
+
+  const recoverFromStaleAssets = () => {
+    try {
+      const lastAttempt = Number(sessionStorage.getItem(DEPLOY_RECOVERY_KEY) || "0");
+      if (Date.now() - lastAttempt < DEPLOY_RECOVERY_COOLDOWN_MS) {
+        return;
+      }
+      sessionStorage.setItem(DEPLOY_RECOVERY_KEY, String(Date.now()));
+      window.location.reload();
+    } catch {
+      window.location.reload();
+    }
+  };
+
+  window.addEventListener("vite:preloadError", (event) => {
+    event.preventDefault?.();
+    recoverFromStaleAssets();
+  });
+
+  window.addEventListener(
+    "unhandledrejection",
+    (event) => {
+      const reason = event.reason;
+      const message = typeof reason?.message === "string" ? reason.message : String(reason || "");
+
+      if (message.includes("Failed to fetch dynamically imported module")) {
+        event.preventDefault?.();
+        recoverFromStaleAssets();
+      }
+    }
+  );
+
+  window.addEventListener(
+    "error",
+    (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLScriptElement || target instanceof HTMLLinkElement)) {
+        return;
+      }
+
+      const assetUrl = target instanceof HTMLScriptElement ? target.src : target.href;
+      if (assetUrl?.includes("/assets/")) {
+        recoverFromStaleAssets();
+      }
+    },
+    true
+  );
 }
 
 // QueryClient with optimized cache configuration (APEX optimization)
