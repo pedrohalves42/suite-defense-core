@@ -154,5 +154,15 @@ export function useLandingContent() {
     contact: {
       title: t('landing.contact.title'),
     },
+    differentiators: {
+      title: t('landing.differentiators.title'),
+      subtitle: t('landing.differentiators.subtitle'),
+      items: Array.from({ length: 6 }, (_, i) => ({
+        title: t(`landing.differentiators.items.${i}.title`),
+        description: t(`landing.differentiators.items.${i}.description`),
+        metric: t(`landing.differentiators.items.${i}.metric`),
+        metricLabel: t(`landing.differentiators.items.${i}.metricLabel`),
+      })),
+    },
   }), [t]);
 }
