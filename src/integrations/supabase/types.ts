@@ -50475,6 +50475,10 @@ export type Database = {
         }[]
       }
       get_mfa_user_count: { Args: { p_tenant_id: string }; Returns: Json }
+      get_mitre_coverage_by_tactic: {
+        Args: { tenant_uuid: string }
+        Returns: Json
+      }
       get_pending_events: {
         Args: { p_limit?: number; p_tenant_id: string }
         Returns: {
@@ -50997,6 +51001,7 @@ export type Database = {
         Args: { p_context: Json; p_tenant_id: string }
         Returns: boolean
       }
+      snapshot_mitre_coverage: { Args: { tenant_uuid: string }; Returns: Json }
       submit_agent_evidence: {
         Args: {
           p_agent_id: string
