@@ -318,28 +318,28 @@
       "subtitle": "Diferenciais exclusivos do CyberShield",
       "items": {
         "0": {
-          "title": "Honeypot Inteligente (Exclusivo)",
-          "description": "Crie armadilhas digitais com agentes nativos ou desvie agentes reais para observar invasores — sem hardware extra. Ativação sob demanda com kill-switch global."
+          "title": "Armadilhas para invasores (Exclusivo)",
+          "description": "Crie computadores falsos que atraem hackers ou desvie máquinas reais para observar invasores — sem equipamento extra. Ative e desative quando quiser."
         },
         "1": {
-          "title": "Logs Imutáveis com Hash Chain",
-          "description": "Cada ação gera um registro com hash criptográfico encadeado, criando uma trilha de auditoria à prova de adulteração. Conformidade SOC 2 nativa."
+          "title": "Registros que ninguém altera",
+          "description": "Cada ação gera um registro encadeado. Se alguém tentar modificar, o sistema detecta imediatamente. Ideal para auditorias e compliance."
         },
         "2": {
-          "title": "IA com Fallback Multi-Provedor",
-          "description": "Análise inteligente com rotação automática entre provedores (Gemini, GPT, Groq). Cache de respostas reduz custos em até 80%. Sem vendor lock-in."
+          "title": "IA que nunca para",
+          "description": "Usa vários provedores de inteligência artificial ao mesmo tempo. Se um sair do ar, outro assume. Resultado: economia de até 80% e sem interrupção."
         },
         "3": {
-          "title": "Automação SOAR com Circuit Breaker",
-          "description": "Remediação automática com controle de blast radius (máx. 10% da frota). Circuit breaker global impede danos em cascata. Modo fail-closed."
+          "title": "Resposta automática com freio",
+          "description": "Corrige problemas automaticamente, mas nunca age em mais de 10% dos computadores de uma vez. Se algo der errado, para sozinho."
         },
         "4": {
-          "title": "Multi-Tenant Atômico com JWT",
-          "description": "MSPs gerenciam múltiplos clientes com isolamento criptográfico via claims JWT. Troca de contexto atômica sem risco de vazamento cross-tenant."
+          "title": "Isolamento total por cliente",
+          "description": "Provedores de TI gerenciam vários clientes com dados completamente separados. Nenhum cliente acessa dados de outro."
         },
         "5": {
-          "title": "Autenticação Zero Trust (HMAC)",
-          "description": "Agentes autenticados via HMAC-SHA256 com nonce e proteção contra replay. Compatível com Windows, Linux e macOS sem certificados PKI."
+          "title": "Identidade verificada a cada acesso",
+          "description": "Todo computador prova sua identidade a cada comunicação. Funciona em Windows, Linux e macOS sem configuração complexa."
         }
       }
     },
