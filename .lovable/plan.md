@@ -1,37 +1,38 @@
-## Fase 2 — Integração com o Assistente SOC 2
+## Fase 3 — Edge Function `soc2-evidence-collector` + Validação E2E
 
-### Escopo
-Integrar o `soc2-evidence-collector` (Fase 1) ao `SOC2PolicyWizard` existente, adicionando auto-preenchimento inteligente e indicadores visuais.
+### Status: ✅ CONCLUÍDA
 
-### Tarefas
+### O que foi feito
 
-#### 2.1 — Botão "Auto-preencher" no Wizard
-- Adicionar botão "🤖 Auto-preencher" no header de cada step de critério
-- Ao clicar, chama o hook `useSOC2EvidenceCollector` e preenche `notes` e `status`
-- Custo-eficiente: coleta evidências uma única vez e distribui para todos os steps
+#### 3.1 — Edge Function `soc2-evidence-collector/index.ts` ✅
+- Criada com `serveTenant` (auth JWT + multi-tenant)
+- Coleta evidências de 7 tabelas em paralelo (`Promise.all`)
+- Mapeia para controles CC1.1–CC8.1 automaticamente
+- Calcula `strength` (none/weak/moderate/strong) por controle
+- Persiste opcionalmente em `soc2_evidence` (quando `save=true`)
+- Validação de input com Zod
+- Zero chamadas de IA — custo ~$0.001/invocação
 
-#### 2.2 — Preenchimento automático das Notas
-- Mapear as descrições de evidência do coletor para o campo `notes` de cada critério
-- Concatenar múltiplas evidências em texto formatado
-- Definir `status` automaticamente baseado na força (strong→implemented, moderate→in_progress, weak/none→not_started)
+#### 3.2 — Validação do Hook ✅
+- `useSOC2EvidenceCollector` alinhado com response da função
+- Cache no React state (não refaz a cada step)
 
-#### 2.3 — Indicador visual de força (🔴🟡🟢)
-- Badge ao lado de cada step no wizard mostrando força do controle
-- Baseado no summary retornado pelo coletor
+#### 3.3 — Validação do Wizard ✅
+- `handleAutoFillAll` / `handleAutoFillCurrent` funcionais
+- `handleSave` grava em `soc2_criteria` + `soc2_control_status`
+- Badges de força (🔴🟡🟢) funcionais
 
-#### 2.4 — Edição manual após auto-preenchimento
-- Campo `notes` permanece editável após auto-preenchimento (já funciona com state atual)
-- Adicionar indicador "Auto-preenchido" quando notas vêm do coletor
+#### 3.4 — Deploy ✅
+- Função deployada e bootada (37ms)
+- Auth 401 confirmado (serveTenant exige JWT)
 
-#### 2.5 — Histórico de preenchimento na tabela `soc2_control_status`
-- Ao salvar (handleSave), gravar também na tabela `soc2_control_status`
-- Campo `auto_filled` indica se foi automático
-
-### Arquitetura (custo-eficiente)
-- Uma ÚNICA chamada à Edge Function coleta tudo (não por controle)
-- Cache do resultado no state React (não refaz a cada step)
-- Sem chamadas adicionais ao banco no frontend
-
-### Arquivos modificados
-- `src/components/soc2/SOC2PolicyWizard.tsx` — principal
-- Nenhum novo componente necessário (tudo inline no wizard)
+### Tabelas utilizadas (queries paralelas)
+| Query | Tabela | Controles |
+|-------|--------|-----------|
+| 1 | `user_roles` | CC1.3, CC6.1 |
+| 2 | `audit_logs` | CC1.5, CC7.1 |
+| 3 | `agents` | CC6.2, CC7.2 |
+| 4 | `alert_rules` | CC1.2, CC3.1, CC7.2 |
+| 5 | `enrollment_keys` | CC6.3 |
+| 6 | `compliance_policies` | CC1.1, CC2.1 |
+| 7 | `soc2_controls` | CC8.1 |
