@@ -52,12 +52,13 @@ export function ThreatIntelDashboard() {
         <SourceBreakdown />
       </div>
 
-      <Tabs defaultValue="indicators" className="w-full">
+      <Tabs defaultValue="mitre-coverage" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="mitre-coverage">
             <Shield className="h-4 w-4 mr-2" />
             MITRE Coverage
           </TabsTrigger>
+          <TabsTrigger value="indicators">
             <Target className="h-4 w-4 mr-2" />
             Indicadores
           </TabsTrigger>
@@ -70,6 +71,10 @@ export function ThreatIntelDashboard() {
             Histórico de Sync
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="mitre-coverage">
+          <MitreCoverageMatrix />
+        </TabsContent>
 
         <TabsContent value="indicators">
           <Card>
