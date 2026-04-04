@@ -393,21 +393,21 @@
       "before": {
         "label": "Soluções tradicionais",
         "items": [
-          "Sem honeypot — invasores agem sem serem detectados",
-          "Logs editáveis — evidências podem ser contestadas",
-          "IA de um único provedor — downtime = sem análise",
-          "Automação sem controle — risco de danos em massa",
-          "Multi-tenant básico — risco de vazamento de dados"
+          "Sem armadilhas — invasores agem sem serem detectados",
+          "Registros editáveis — evidências podem ser contestadas",
+          "IA de um único fornecedor — se cair, fica sem análise",
+          "Automação sem controle — risco de afetar tudo de uma vez",
+          "Dados de clientes misturados — risco de vazamento"
         ]
       },
       "after": {
         "label": "Com CyberShield",
         "items": [
-          "Honeypot inteligente detecta e observa invasores",
-          "Hash chain imutável — evidência forense admissível",
-          "3+ provedores de IA com fallback automático",
-          "Circuit breaker + blast radius = automação segura",
-          "Isolamento atômico com criptografia JWT por tenant"
+          "Armadilhas inteligentes detectam e observam invasores",
+          "Registros encadeados — evidência à prova de fraude",
+          "3+ provedores de IA com troca automática",
+          "Resposta automática com freio de segurança",
+          "Cada cliente com dados 100% isolados"
         ]
       }
     },
