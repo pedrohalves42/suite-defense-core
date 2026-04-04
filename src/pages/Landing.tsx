@@ -60,7 +60,7 @@ const Landing = () => {
           {/* 1. Hero */}
           <HeroSection />
           
-          <Suspense fallback={<SectionFallback />}>
+          <>
             {/* 2. Dor do mercado */}
             <PainPointsSection />
             {/* 3. Proposta de valor */}
