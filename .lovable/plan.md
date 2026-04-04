@@ -1,25 +1,33 @@
-## Bloco 5 – Crons e Polling (Custo Imediato)
+## Bloco: Observabilidade e Alertas Preventivos
 
-### Contexto
-- **poll-jobs**: O agente já usa `$Global:JobPollIntervalSeconds = 30` por padrão. O server-side pode ajustar dinamicamente via heartbeat response (`poll_interval_seconds`). O rate-limit atual é 6 req/min. **O agente JÁ está configurado para 30s** — não há mudança necessária no script.
-- **evaluate-automation-rules-5min**: Não existe como cron job no `pg_cron` (lista vazia na query). É chamado event-driven por `submit-processes` e `submit-system-metrics` quando há regras ativas. O nome "5min" é legado. **Não há cron ativo para desabilitar.**
+### 1. Edge Function `check-tenant-abuse` (cron 1x/hora)
+- **Objetivo**: Detectar tenants com uso anômalo (excesso de jobs, agentes, API calls) para prevenir abuso e custos descontrolados
+- **Métricas monitoradas**:
+  - Jobs criados/hora por tenant (threshold: >500)
+  - Agentes registrados vs limite do plano
+  - Falhas de autenticação por tenant (>50/hora = suspicious)
+  - Volume de telemetria ingerida (bytes/hora)
+- **Ações**: Registrar alertas em `system_alerts` com severidade e notificar via log estruturado
+- **Custo**: ~$0.01/hora (1 invocação leve com queries otimizadas via índices existentes)
 
-### Ações Planejadas
+### 2. Cron job via pg_cron
+- Schedule: `0 * * * *` (a cada hora cheia)
+- Invoca a Edge Function via `net.http_post`
 
-#### 1. Confirmar poll-jobs a 30s (Já implementado ✅)
-- O agente v5.0.9+ já usa `JobPollIntervalSeconds = 30` como default
-- O heartbeat response pode ajustar dinamicamente via `poll_interval_seconds`
-- **Ação**: Garantir que o heartbeat edge function retorna `poll_interval_seconds: 30` explicitamente para controle server-side
+### 3. Dashboard de Custo por Tenant (Super Admin only)
+- **Rota**: `/super-admin/tenant-costs`
+- **Proteção**: `SuperAdminLayout` (já existente) + RPC `is_super_admin`
+- **Dados exibidos**:
+  - Jobs executados (24h/7d/30d) por tenant
+  - Agentes ativos vs limite do plano
+  - Volume de telemetria (estimativa de custo)
+  - Alertas de abuso recentes
+- **Componentes**: Tabela com sorting + cards de resumo + gráfico de tendência
+- **RPC**: `get_tenant_cost_metrics` (SECURITY DEFINER, validação super_admin)
 
-#### 2. Reduzir evaluate-automation-rules para 1x/dia
-- Não há cron ativo — a função é chamada event-driven por submit-processes e submit-system-metrics
-- **Ação**: Adicionar rate-limiting temporal na função para não executar mais que 1x/dia por tenant (cache de última execução)
-- **OU**: Criar um cron job 1x/dia e remover as chamadas inline dos submit-* (mais limpo)
-
-#### 3. Validar consistência
-- Verificar que poll-jobs rate-limit (6/min) está adequado para 30s
-- Rodar lint para garantir zero erros
-
-### Impacto de Custo
-- **poll-jobs**: Já otimizado (30s default). Com COST-OPT-V6 os jobs vêm via heartbeat, poll-jobs standalone só roda como safety net (2x interval = 60s)
-- **evaluate-automation-rules**: Reduzir de event-driven (potencialmente centenas/dia) para 1x/dia = **~95% redução de invocações**
+### Ordem de execução:
+1. Migration: criar RPC `get_tenant_cost_metrics`
+2. Edge Function `check-tenant-abuse`
+3. Cron job (via insert tool)
+4. Página do dashboard
+5. Registro da rota no router
