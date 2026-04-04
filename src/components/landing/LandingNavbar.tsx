@@ -4,6 +4,7 @@ import cybershieldLogo from "@/assets/logo-cybshield-new.png";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LogIn } from "lucide-react";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 /**
  * Minimal landing page navbar — logo left, trust + login + CTA right
@@ -36,6 +37,7 @@ export function LandingNavbar() {
 
         {/* Right: trust signal + login + CTA */}
         <div className="flex items-center gap-3">
+          <LanguageSwitcher />
           <span className={cn(
             "hidden sm:inline text-sm transition-colors",
             scrolled ? "text-muted-foreground" : "text-white/60"
