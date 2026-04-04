@@ -370,20 +370,20 @@
       "text": "Cada ação no CyberShield gera evidência criptográfica verificável. Não é promessa — é prova técnica.",
       "blocks": {
         "0": {
-          "title": "Hash Chain Imutável",
-          "description": "Registros encadeados criptograficamente. Qualquer alteração quebra a cadeia e é detectada automaticamente."
+          "title": "Registros encadeados",
+          "description": "Cada ação é registrada de forma encadeada. Se alguém mudar algo, o sistema detecta na hora."
         },
         "1": {
-          "title": "Rastreabilidade End-to-End",
-          "description": "Cada operação tem trace_id único que percorre do agente ao dashboard — sem gaps de visibilidade."
+          "title": "Rastreio completo",
+          "description": "Cada operação tem um identificador único que acompanha todo o caminho — do computador até o painel."
         },
         "2": {
-          "title": "Relatórios com Laudo Verificável",
-          "description": "Laudos de compliance com hash SHA-256, verificáveis publicamente. Evidência que auditores confiam."
+          "title": "Relatórios verificáveis",
+          "description": "Relatórios de conformidade com assinatura digital. Evidência que auditores e reguladores aceitam."
         },
         "3": {
-          "title": "RLS em 80+ Partições",
-          "description": "Isolamento de dados por tenant no nível do banco de dados, com herança automática em novas partições."
+          "title": "Dados completamente separados",
+          "description": "Os dados de cada empresa ficam isolados no banco de dados. Novos clientes herdam a proteção automaticamente."
         }
       }
     },
