@@ -563,9 +563,9 @@
       "cases": []
     },
     "pricing": {
-      "badge": "Planos",
-      "title": "Planos que cabem na sua operação",
-      "subtitle": "Escolha o plano ideal para o tamanho do seu ambiente",
+      "badge": "🛡️ Proteção completa a partir de R$ 899/mês",
+      "title": "Segurança profissional sem equipe de TI",
+      "subtitle": "O plano Business inclui EDR, honeypot e logs imutáveis — tudo que sua empresa precisa",
       "perMonth": "/mês",
       "baseDevices": "dispositivos inclusos",
       "extraDevice": "por dispositivo extra",
