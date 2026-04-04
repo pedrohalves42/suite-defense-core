@@ -9,17 +9,37 @@ import App from "./App.tsx";
 import "./i18n";
 import "./index.css";
 
-// Clean up stale service workers on preview (non-blocking, fire-and-forget)
-if (typeof window !== "undefined" && /preview--/.test(window.location.hostname)) {
+const clearLegacyPWAArtifacts = () => {
+  if (typeof window === "undefined") return;
+
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.getRegistrations().then(regs =>
-      regs.forEach(r => r.unregister())
-    );
+    navigator.serviceWorker
+      .getRegistrations()
+      .then((registrations) => {
+        registrations.forEach((registration) => {
+          void registration.unregister();
+        });
+      })
+      .catch(() => undefined);
   }
+
   if ("caches" in window) {
-    caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+    const legacyCacheNames = ["workbox", "google-fonts-cache", "gstatic-fonts-cache"];
+
+    caches
+      .keys()
+      .then((keys) => {
+        keys
+          .filter((key) => legacyCacheNames.some((name) => key.includes(name)))
+          .forEach((key) => {
+            void caches.delete(key);
+          });
+      })
+      .catch(() => undefined);
   }
-}
+};
+
+clearLegacyPWAArtifacts();
 
 // QueryClient with optimized cache configuration (APEX optimization)
 const queryClient = new QueryClient({
