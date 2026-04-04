@@ -10,6 +10,7 @@ import { SourceBreakdown } from './components/SourceBreakdown';
 import { IndicatorsList } from './components/IndicatorsList';
 import { MatchesList } from './components/MatchesList';
 import { SyncHistory } from './components/SyncHistory';
+import { MitreCoverageMatrix } from '@/components/security/MitreCoverageMatrix';
 
 export function ThreatIntelDashboard() {
   const syncMutation = useSyncThreatFeeds();
