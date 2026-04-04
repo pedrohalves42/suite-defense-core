@@ -50,8 +50,8 @@ export function PricingSection() {
                 transition={{ delay: index * 0.1 }}
                 className={`relative rounded-2xl border p-8 flex flex-col ${
                   isPopular
-                    ? "border-primary bg-card shadow-xl shadow-primary/10 scale-[1.02]"
-                    : "border-border bg-card"
+                    ? "border-primary bg-card shadow-2xl shadow-primary/20 scale-[1.04] ring-2 ring-primary/30"
+                    : "border-border bg-card opacity-90"
                 }`}
               >
                 {isPopular && (
