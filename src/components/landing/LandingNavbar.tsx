@@ -4,6 +4,7 @@ import cybershieldLogo from "@/assets/logo-cybshield-new.png";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LogIn } from "lucide-react";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 /**
  * Minimal landing page navbar — logo left, trust + login + CTA right
