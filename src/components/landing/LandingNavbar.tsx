@@ -37,6 +37,7 @@ export function LandingNavbar() {
 
         {/* Right: trust signal + login + CTA */}
         <div className="flex items-center gap-3">
+          <LanguageSwitcher />
           <span className={cn(
             "hidden sm:inline text-sm transition-colors",
             scrolled ? "text-muted-foreground" : "text-white/60"
