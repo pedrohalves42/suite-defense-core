@@ -7,6 +7,7 @@ const ICONS = [Shield, Link2, Brain, Zap, Fingerprint, Layers];
 
 export function DifferentiatorsSection() {
   const { differentiators } = useLandingContent();
+  const { t } = useTranslation();
 
   if (!differentiators) return null;
 
