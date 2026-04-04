@@ -50475,6 +50475,10 @@ export type Database = {
         }[]
       }
       get_mfa_user_count: { Args: { p_tenant_id: string }; Returns: Json }
+      get_mitre_coverage_by_platform: {
+        Args: { tenant_uuid: string }
+        Returns: Json
+      }
       get_mitre_coverage_by_tactic: {
         Args: { tenant_uuid: string }
         Returns: Json
