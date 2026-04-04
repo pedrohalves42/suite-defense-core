@@ -56,11 +56,16 @@ export class ErrorBoundary extends Component<Props, State> {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {import.meta.env.DEV && this.state.error && (
-                <div className="p-4 rounded-lg bg-muted">
+              {this.state.error && (
+                <div className="p-4 rounded-lg bg-muted max-h-48 overflow-auto">
                   <p className="text-xs font-mono text-muted-foreground break-all">
                     {this.state.error.toString()}
                   </p>
+                  {this.state.error.stack && (
+                    <pre className="text-[10px] font-mono text-muted-foreground/70 mt-2 whitespace-pre-wrap break-all">
+                      {this.state.error.stack}
+                    </pre>
+                  )}
                 </div>
               )}
               <p className="text-sm text-muted-foreground text-center">
