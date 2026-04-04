@@ -344,6 +344,7 @@ const App = () => (
                 <Route path="risk-analysis" element={<RiskAnalysis />} />
                 <Route path="rollout-policies" element={<RolloutPolicies />} />
                 <Route path="tenant-suspension" element={<TenantSuspensionManager />} />
+                <Route path="tenant-costs" element={<TenantCosts />} />
               </Route>
 
               {/* Client Routes (Viewers/Operators) */}
