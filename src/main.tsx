@@ -9,37 +9,17 @@ import App from "./App.tsx";
 import "./i18n";
 import "./index.css";
 
-const clearLegacyPWAArtifacts = () => {
-  if (typeof window === "undefined") return;
-
+// Unconditionally purge legacy PWA artifacts (all environments)
+if (typeof window !== "undefined") {
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker
-      .getRegistrations()
-      .then((registrations) => {
-        registrations.forEach((registration) => {
-          void registration.unregister();
-        });
-      })
-      .catch(() => undefined);
+    navigator.serviceWorker.getRegistrations().then(regs =>
+      regs.forEach(r => r.unregister())
+    );
   }
-
   if ("caches" in window) {
-    const legacyCacheNames = ["workbox", "google-fonts-cache", "gstatic-fonts-cache"];
-
-    caches
-      .keys()
-      .then((keys) => {
-        keys
-          .filter((key) => legacyCacheNames.some((name) => key.includes(name)))
-          .forEach((key) => {
-            void caches.delete(key);
-          });
-      })
-      .catch(() => undefined);
+    caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
   }
-};
-
-clearLegacyPWAArtifacts();
+}
 
 // QueryClient with optimized cache configuration (APEX optimization)
 const queryClient = new QueryClient({
