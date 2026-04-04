@@ -1,70 +1,30 @@
+## Fase 1 – Fundação da Automação SOC 2
 
-# Análise de Paridade: Unix/macOS vs Windows
+Vamos implementar a Fase 1 completa, que é a base para tudo que vem depois.
 
-## ✅ Já implementado e em paridade (NÃO precisa de mudança)
+### 1. Migração de Banco de Dados
+- Criar tabela `soc2_evidence` com campos: `control_id`, `evidence_type`, `reference`, `description`, `collected_at`, `valid_until`, `hash`, `status`, `tenant_id`
+- Criar tabela `soc2_control_status` com campos: `control_id`, `status`, `notes`, `filled_by`, `filled_at`, `tenant_id`
+- RLS com isolamento multi-tenant via `get_active_tenant_id()`
+- Índices para performance
 
-| Capacidade | Windows | Linux | macOS |
-|---|---|---|---|
-| FSM (6 estados) | ✅ | ✅ | ✅ |
-| HMAC Auth (timing-safe) | ✅ | ✅ | ✅ |
-| Hash Chain (integridade de execução) | ✅ | ✅ | ✅ |
-| TOCTOU 3-strikes + self-heal | ✅ | ✅ | ✅ |
-| Heartbeat + force_hash_resync | ✅ | ✅ | ✅ |
-| Job polling + dispatch whitelist | ✅ | ✅ | ✅ |
-| Process baseline + anomaly detection | ✅ | ✅ | ✅ |
-| System metrics (CPU/RAM/Disk) | ✅ | ✅ | ✅ |
-| Kill process (com proteção) | ✅ | ✅ | ✅ |
-| Stop/Restart service | ✅ | ✅ | ✅ |
-| DNS Filter (block/remove) | ✅ | ✅ | ✅ |
-| Network diagnostics | ✅ | ✅ | ❌ |
-| Service health check | ✅ | ✅ | ❌ |
-| Disable service | ✅ | ✅ | ❌ |
-| Software inventory | ✅ | ✅ | ✅ |
-| Vuln scan (leve) | ✅ | ✅ | ✅ |
-| Auto-repair (disco/CPU) | ✅ | ✅ | ✅ |
-| Security events (MITRE ATT&CK) | ✅ | ✅ | ✅ |
-| Adaptive sleep | ✅ | ✅ | ✅ |
-| Log buffering | ✅ | ✅ | ✅ |
+### 2. Edge Function `soc2-evidence-collector`
+- Consulta dados reais do banco (RLS policies, user_roles, audit_logs, compliance_policies, etc.)
+- Mapeia evidências para controles CC1.1–CC1.5 (primeiros 5)
+- Retorna JSON estruturado com evidências e descrições
+- Salva evidências na tabela `soc2_evidence`
+- Validação Zod + CORS + autenticação
 
-## 🔴 Lacunas reais (existem no Windows, faltam no Unix)
+### 3. Hook Frontend `useSOC2EvidenceCollector`
+- Hook React que chama a Edge Function
+- Exibe resultado no console e prepara para integração com o assistente
 
-### 1. Disk Metrics por drive/volume (Baixo impacto)
-- **Windows**: Coleta métricas por drive (C:, D:, etc.) → tabela `agent_disk_metrics`
-- **Linux/macOS**: Apenas disco raiz via `df /`
-- **Custo**: Baixo (sem nova tabela, insert no heartbeat)
+### ⚠️ Fases 2 e 3
+Serão implementadas após validação da Fase 1:
+- Fase 2: Integração com assistente (auto-preenchimento, indicadores visuais)
+- Fase 3: Relatórios PDF, cron jobs, dashboard de saúde
 
-### 2. Certificados instalados (Médio impacto)
-- **Windows**: Coleta certificados de cert stores → tabela `agent_certificates`
-- **Linux**: `/etc/ssl/certs`, `/usr/local/share/ca-certificates`
-- **macOS**: `security find-certificate -a`
-- **Custo**: Médio (job handler + insert)
-
-### 3. Event Log collection (Baixo impacto)
-- **Windows**: EventLog (System, Security, Application)
-- **Linux**: journald / syslog
-- **macOS**: `log show`
-- **Relevância**: O heartbeat já envia `enable_eventlog: true` — os agentes Unix não processam
-
-### 4. Job types faltantes no macOS
-- `network_diagnostics` (ping targets)
-- `service_health_check` (launchctl status)
-- `disable_service` (launchctl bootout)
-
-### 5. Skip Firewall Remediation flag
-- **Windows**: Processa `skip_firewall_remediation` do heartbeat
-- **Unix**: Ignora este campo
-
-## 📊 Recomendação prática (custo vs valor)
-
-### Implementar agora (alto valor, baixo custo):
-1. **macOS: 3 job handlers faltantes** — ~30 linhas de código
-2. **Skip firewall flag no heartbeat Unix** — ~5 linhas
-
-### Implementar depois (médio valor):
-3. **Disk metrics por volume** — precisa de lógica de parsing multivolume
-4. **Certificados** — handler de coleta + insert
-
-### Não implementar (baixo valor, alto custo):
-5. **Event Log** — volume alto de dados, custo de IOPS significativo para 4 agentes
-
-## Quer que eu implemente as lacunas de alto valor agora (itens 1 e 2)?
+### Observações de Segurança
+- Tabelas com `tenant_id` obrigatório e RLS
+- Edge Function valida JWT e papel do usuário (admin/compliance_officer)
+- Evidências incluem hash SHA256 para integridade
