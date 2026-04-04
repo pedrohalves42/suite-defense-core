@@ -1,12 +1,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Shield, Target, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Shield, Target, Monitor } from 'lucide-react';
 import { useMitreCoverage } from '@/hooks/useMitreCoverage';
 import { CoverageBarChart } from './CoverageBarChart';
 import { CoverageHeatmap } from './CoverageHeatmap';
 import { CoverageSummaryCards } from './CoverageSummaryCards';
 import { CoverageGaps } from './CoverageGaps';
+import { PlatformCoverageChart } from './PlatformCoverageChart';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function MitreCoverageMatrix() {
   const { data, isLoading } = useMitreCoverage();
@@ -54,13 +54,26 @@ export function MitreCoverageMatrix() {
               <Shield className="h-4 w-4" />
               Heatmap de Cobertura
             </CardTitle>
-            <CardDescription>Visão geral da cobertura — verde = coberto, amarelo = parcial, vermelho = ausente</CardDescription>
+            <CardDescription>Visão geral — verde = coberto, amarelo = parcial, vermelho = ausente</CardDescription>
           </CardHeader>
           <CardContent>
             <CoverageHeatmap tactics={data.tactics} />
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Monitor className="h-4 w-4" />
+            Cobertura por Plataforma
+          </CardTitle>
+          <CardDescription>Distribuição de cobertura por sistema operacional</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PlatformCoverageChart />
+        </CardContent>
+      </Card>
 
       <CoverageGaps tactics={data.tactics} />
     </div>
