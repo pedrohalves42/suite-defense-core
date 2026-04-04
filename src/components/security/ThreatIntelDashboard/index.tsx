@@ -53,8 +53,11 @@ export function ThreatIntelDashboard() {
       </div>
 
       <Tabs defaultValue="indicators" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="indicators">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="mitre-coverage">
+            <Shield className="h-4 w-4 mr-2" />
+            MITRE Coverage
+          </TabsTrigger>
             <Target className="h-4 w-4 mr-2" />
             Indicadores
           </TabsTrigger>
