@@ -1,30 +1,37 @@
-## Fase 1 – Fundação da Automação SOC 2
+## Fase 2 — Integração com o Assistente SOC 2
 
-Vamos implementar a Fase 1 completa, que é a base para tudo que vem depois.
+### Escopo
+Integrar o `soc2-evidence-collector` (Fase 1) ao `SOC2PolicyWizard` existente, adicionando auto-preenchimento inteligente e indicadores visuais.
 
-### 1. Migração de Banco de Dados
-- Criar tabela `soc2_evidence` com campos: `control_id`, `evidence_type`, `reference`, `description`, `collected_at`, `valid_until`, `hash`, `status`, `tenant_id`
-- Criar tabela `soc2_control_status` com campos: `control_id`, `status`, `notes`, `filled_by`, `filled_at`, `tenant_id`
-- RLS com isolamento multi-tenant via `get_active_tenant_id()`
-- Índices para performance
+### Tarefas
 
-### 2. Edge Function `soc2-evidence-collector`
-- Consulta dados reais do banco (RLS policies, user_roles, audit_logs, compliance_policies, etc.)
-- Mapeia evidências para controles CC1.1–CC1.5 (primeiros 5)
-- Retorna JSON estruturado com evidências e descrições
-- Salva evidências na tabela `soc2_evidence`
-- Validação Zod + CORS + autenticação
+#### 2.1 — Botão "Auto-preencher" no Wizard
+- Adicionar botão "🤖 Auto-preencher" no header de cada step de critério
+- Ao clicar, chama o hook `useSOC2EvidenceCollector` e preenche `notes` e `status`
+- Custo-eficiente: coleta evidências uma única vez e distribui para todos os steps
 
-### 3. Hook Frontend `useSOC2EvidenceCollector`
-- Hook React que chama a Edge Function
-- Exibe resultado no console e prepara para integração com o assistente
+#### 2.2 — Preenchimento automático das Notas
+- Mapear as descrições de evidência do coletor para o campo `notes` de cada critério
+- Concatenar múltiplas evidências em texto formatado
+- Definir `status` automaticamente baseado na força (strong→implemented, moderate→in_progress, weak/none→not_started)
 
-### ⚠️ Fases 2 e 3
-Serão implementadas após validação da Fase 1:
-- Fase 2: Integração com assistente (auto-preenchimento, indicadores visuais)
-- Fase 3: Relatórios PDF, cron jobs, dashboard de saúde
+#### 2.3 — Indicador visual de força (🔴🟡🟢)
+- Badge ao lado de cada step no wizard mostrando força do controle
+- Baseado no summary retornado pelo coletor
 
-### Observações de Segurança
-- Tabelas com `tenant_id` obrigatório e RLS
-- Edge Function valida JWT e papel do usuário (admin/compliance_officer)
-- Evidências incluem hash SHA256 para integridade
+#### 2.4 — Edição manual após auto-preenchimento
+- Campo `notes` permanece editável após auto-preenchimento (já funciona com state atual)
+- Adicionar indicador "Auto-preenchido" quando notas vêm do coletor
+
+#### 2.5 — Histórico de preenchimento na tabela `soc2_control_status`
+- Ao salvar (handleSave), gravar também na tabela `soc2_control_status`
+- Campo `auto_filled` indica se foi automático
+
+### Arquitetura (custo-eficiente)
+- Uma ÚNICA chamada à Edge Function coleta tudo (não por controle)
+- Cache do resultado no state React (não refaz a cada step)
+- Sem chamadas adicionais ao banco no frontend
+
+### Arquivos modificados
+- `src/components/soc2/SOC2PolicyWizard.tsx` — principal
+- Nenhum novo componente necessário (tudo inline no wizard)

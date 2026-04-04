@@ -38,7 +38,7 @@ export function useSOC2EvidenceCollector() {
   const [result, setResult] = useState<EvidenceCollectionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const collectEvidence = useCallback(async (save = false) => {
+  const collectEvidence = useCallback(async (save = false): Promise<EvidenceCollectionResult | null> => {
     if (!tenant?.id) {
       toast.error('Tenant não identificado');
       return null;
