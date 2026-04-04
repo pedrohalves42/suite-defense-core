@@ -53,11 +53,24 @@ try {
   }
 }
 
-/** HOTFIX 42: Runtime TOCTOU self-heal */
+/** HOTFIX 42: Runtime TOCTOU self-heal (v2 - expanded regex for v5.0.15+) */
 export function hotfixToctouRuntimeSelfheal(ctx: HotfixContext): void {
   if (ctx.content.includes('TOCTOU VIOLATION') && !ctx.content.includes('HOTFIX-TOCTOU-RUNTIME-SELFHEAL')) {
-    ctx.content = ctx.content.replace(
+    // Try multiple regex patterns to match different agent versions
+    const patterns = [
+      // Original pattern: Write-Log "[INTEGRITY] TOCTOU VIOLATION..." "ERROR" ... exit 1|Stop-Process
       /Write-Log\s*"\[INTEGRITY\]\s*TOCTOU VIOLATION[^"]*"\s*"(?:ERROR|CRITICAL)"[\s\S]*?(?:exit\s+1|Stop-Process\s+-Id\s+\$PID\s+-Force|return)/m,
+      // v5.0.15 pattern: "RUNTIME TOCTOU VIOLATION" with break or exit
+      /Write-Log\s*"\[INTEGRITY\]\s*(?:RUNTIME\s+)?TOCTOU VIOLATION[^"]*"\s*"(?:ERROR|CRITICAL|WARN)"[\s\S]*?(?:exit\s+\d+|Stop-Process[^\n]*|break|return)/m,
+      // Broader: any "TOCTOU VIOLATION" log followed by termination within 10 lines
+      /Write-Log\s*"[^"]*TOCTOU VIOLATION[^"]*"\s*"[A-Z]+"[\s\S]{0,500}?(?:exit\s+\d+|Stop-Process[^\n]*\$PID[^\n]*|break\b)/m,
+    ];
+
+    let matched = false;
+    for (const pattern of patterns) {
+      if (pattern.test(ctx.content)) {
+        ctx.content = ctx.content.replace(
+          pattern,
       `Write-Log "[INTEGRITY] TOCTOU hash mismatch detected - attempting self-heal instead of exit" "WARN" <# HOTFIX-TOCTOU-RUNTIME-SELFHEAL #>
                 try {
                     $selfHealHash = (Get-FileHash $scriptPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
