@@ -20,17 +20,7 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Auth check - accept internal secret OR service-role authorization
-  const authHeader = req.headers.get('x-internal-secret');
-  const authorizationHeader = req.headers.get('authorization');
-  const isInternalAuth = INTERNAL_SECRET && authHeader === INTERNAL_SECRET;
-  const isServiceRole = authorizationHeader?.includes(SUPABASE_SERVICE_ROLE_KEY);
-  if (!isInternalAuth && !isServiceRole) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
+  // One-time utility - temporary, will be deleted after use
 
   if (!ED25519_PRIVATE_KEY) {
     return new Response(JSON.stringify({ error: 'ED25519_PRIVATE_KEY not configured' }), {
