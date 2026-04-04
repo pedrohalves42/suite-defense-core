@@ -30,6 +30,11 @@ send_heartbeat() {
             new_job=$(echo "$result" | jq -r '.poll_interval_seconds // 0' 2>/dev/null)
             [[ "$new_job" -ge 10 && "$new_job" != "$JOB_POLL_INTERVAL" ]] && JOB_POLL_INTERVAL=$new_job
 
+            # Skip firewall remediation flag
+            local skip_fw
+            skip_fw=$(echo "$result" | jq -r '.skip_firewall_remediation // false' 2>/dev/null)
+            [[ "$skip_fw" == "true" ]] && SKIP_FIREWALL_REMEDIATION=true || SKIP_FIREWALL_REMEDIATION=false
+
             # TOCTOU Self-Heal: process force_hash_resync from server
             _process_hash_resync "$result"
         fi
