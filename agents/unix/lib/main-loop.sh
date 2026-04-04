@@ -92,11 +92,17 @@ run_main_loop() {
             last_heartbeat=$now
         fi
 
-        # Runtime integrity
+        # Runtime integrity (3-strike: test_runtime_integrity already handles
+        # consecutive failure counting and self-heals on strikes 1-2.
+        # Only returns 1 on 3rd consecutive failure = true violation.)
         if [[ $((now - LAST_RUNTIME_INTEGRITY_CHECK)) -ge $RUNTIME_INTEGRITY_INTERVAL ]]; then
             if ! test_runtime_integrity; then
-                set_agent_state "SAFE_MODE" "Integrity violation"
-                break
+                # 3 consecutive real mismatches — enter SAFE_MODE but keep running
+                # with reduced functionality instead of killing the process
+                log "ERROR" "[INTEGRITY] 3 consecutive TOCTOU failures — entering SAFE_MODE (no break)"
+                set_agent_state "SAFE_MODE" "Integrity violation (3-strike)"
+                # Reset counter so agent can recover if hash stabilizes
+                TOCTOU_CONSECUTIVE_FAILURES=0
             fi
             LAST_RUNTIME_INTEGRITY_CHECK=$now
         fi

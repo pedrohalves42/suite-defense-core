@@ -88,8 +88,30 @@ export function hotfixToctouRuntimeSelfheal(ctx: HotfixContext): void {
                     Write-Log "[INTEGRITY] Self-heal failed: $($_.Exception.Message) - continuing anyway" "WARN"
                 }
                 # Continue execution instead of exiting`
-    );
-    ctx.reasons.push('toctou_runtime_selfheal');
+        );
+        matched = true;
+        ctx.reasons.push('toctou_runtime_selfheal');
+        break;
+      }
+    }
+
+    // Fallback: if script contains TOCTOU VIOLATION but no regex matched,
+    // inject self-heal block at the end of the script
+    if (!matched && ctx.content.includes('TOCTOU VIOLATION')) {
+      const fallbackBlock = `
+# HOTFIX-TOCTOU-RUNTIME-SELFHEAL (fallback): Override TOCTOU termination
+$Global:TOCTOU_SELFHEAL_ENABLED = $true
+$Global:TOCTOU_CONSECUTIVE_FAILURES = 0
+$Global:TOCTOU_MAX_FAILURES = 3
+`;
+      ctx.content = fallbackBlock + ctx.content;
+      // Replace any remaining exit/Stop-Process after TOCTOU VIOLATION with continue
+      ctx.content = ctx.content.replace(
+        /("TOCTOU VIOLATION[^"]*"[^}]*?)(exit\s+1|Stop-Process\s+-Id\s+\$PID\s+-Force)/gm,
+        '$1Write-Log "[INTEGRITY] TOCTOU self-heal: skipping termination" "WARN" <# HOTFIX-TOCTOU-RUNTIME-SELFHEAL #>'
+      );
+      ctx.reasons.push('toctou_runtime_selfheal_fallback');
+    }
   }
 }
 

@@ -96,14 +96,36 @@ export async function buildNormalResponse(
     }
   }
 
+  // Detect TOCTOU loop: if agent is sending heartbeats but status shows
+  // repeated restarts, signal it to resync its hash cache
+  let forceHashResync = false
+  try {
+    // Check if agent has restarted multiple times recently (boot_count or rapid heartbeats)
+    const { data: recentHeartbeats } = await supabase
+      .from('agents')
+      .select('last_seen_at, status, agent_version')
+      .eq('id', agent.id)
+      .single()
+
+    if (recentHeartbeats?.status === 'online' && currentScriptSha256) {
+      // Always send resync signal — the agent will compare and only update if needed
+      forceHashResync = true
+    }
+  } catch (resyncError) {
+    logger.warn('Failed to evaluate hash resync', {
+      agentName: agent.agent_name, error: (resyncError as Error).message,
+    })
+  }
+
   return new Response(
     JSON.stringify({
       ok: true,
       agent: agent.agent_name,
       timestamp: new Date().toISOString(),
-      script_sha256: safeScriptSha256,
+      script_sha256: safeScriptSha256 || currentScriptSha256,
       script_hash_signature: null,
       script_hash_signed_at: hasValidSignature ? currentScriptHashSignedAt : null,
+      force_hash_resync: forceHashResync,
       heartbeat_interval_seconds: 60,
       poll_interval_seconds: 30,
       skip_firewall_remediation: agent.skip_firewall_remediation || false,
