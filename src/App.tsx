@@ -82,6 +82,7 @@ const SubscriptionAnalytics = lazy(() => import("./pages/admin/SubscriptionAnaly
 const UnitEconomics = lazy(() => import("./pages/admin/super/UnitEconomics"));
 const CohortAnalysis = lazy(() => import("./pages/admin/super/CohortAnalysis"));
 const RevenueProjections = lazy(() => import("./pages/admin/super/RevenueProjections"));
+const TenantCosts = lazy(() => import("./pages/super-admin/TenantCosts"));
 const SalesPipeline = lazy(() => import("./pages/admin/super/SalesPipeline"));
 const PitchDeck = lazy(() => import("./pages/admin/super/PitchDeck"));
 const RiskAnalysis = lazy(() => import("./pages/admin/super/RiskAnalysis"));
