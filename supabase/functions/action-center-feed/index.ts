@@ -50,6 +50,13 @@ serveTenant(async (req, ctx) => {
     }
     const body = parsed.data as Record<string, unknown>;
 
+    // Handle 'get-feed' action from gateway proxy (gateway always sends POST)
+    if (body.action === 'get-feed') {
+      logger.debug(`[action-center-feed][${requestId}] Building feed for tenant ${tenantId} (via POST get-feed)`);
+      const feed = await buildFeed(serviceClient, tenantId);
+      return feed;
+    }
+
     // Create user-context client for function invocations
     const authHeader = req.headers.get('Authorization') || '';
     const userClient = createClient(supabaseUrl, supabaseServiceKey, {
