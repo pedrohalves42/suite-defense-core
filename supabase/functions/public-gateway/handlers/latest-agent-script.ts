@@ -6,6 +6,7 @@ import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
 import { buildCorsHeaders } from '../../_shared/cors.ts';
 import { prepareAgentScriptContent } from '../../_shared/agent-script-preparation.ts';
+import { resignIfNeeded } from '../../_shared/script-resigner.ts';
 
 function normalizeVersion(v: string | null | undefined): string {
   return v?.replace(/^v/i, '').trim() || '';
@@ -98,18 +99,28 @@ export async function handleGetLatestAgentScript(
 
   logger.info(`[${requestId}] Serving ${platform} script v${release.version} (${prepared.normalizedContent.length} bytes)`);
 
-  // Fetch signature metadata for the response
+  // Fetch signature metadata and re-sign if hotfix changed content
   const { data: releaseSig } = await supabase
     .from('agent_releases')
-    .select('signature_base64, signed_at')
+    .select('signature_base64, signed_at, signed_by')
     .eq('id', release.id)
     .single();
+
+  const resignResult = await resignIfNeeded({
+    sha256: prepared.sha256,
+    originalSignature: releaseSig?.signature_base64 || null,
+    originalSignedAt: releaseSig?.signed_at || null,
+    originalSignedBy: releaseSig?.signed_by || null,
+    contentChanged: prepared.changed,
+    logContext: { version: release.version, platform, scope: 'latest-agent-script', requestId },
+  });
 
   const responsePayload: Record<string, unknown> = {
     version: release.version, script_content_base64: prepared.base64Content,
     sha256: prepared.sha256, platform, release_notes: release.release_notes, requestId,
     expected_sha256: prepared.sha256,
-    signature_timestamp: prepared.changed ? null : (releaseSig?.signed_at || null),
+    signature_base64: resignResult.signatureBase64,
+    signature_timestamp: resignResult.signedAt,
   };
 
   if (includeScriptContent) {

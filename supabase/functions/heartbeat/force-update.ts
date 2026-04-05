@@ -6,6 +6,7 @@
 
 import { normalizeVersion } from '../_shared/hexagonal/update-decision-service.ts'
 import { prepareAgentScriptContent } from '../_shared/agent-script-preparation.ts'
+import { resignIfNeeded } from '../_shared/script-resigner.ts'
 import { logger } from '../_shared/logger.ts'
 import { buildCorsHeaders } from '../_shared/cors.ts'
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
@@ -240,16 +241,17 @@ async function buildForceUpdateResponse(
     return null
   }
 
-  // Signature staleness: if hotfix changed content, the old signature is invalid
-  const signatureValid = !prepared.changed
-  const signatureBase64 = signatureValid ? (release.signature_base64 || null) : null
-  const signedAt = signatureValid ? (release.signed_at || null) : null
-
-  if (prepared.changed && release.signature_base64) {
-    logger.warn('Hotfix changed script content — invalidating stale Ed25519 signature', {
-      agentName: agent.agent_name, targetVersion, reasons: prepared.reasons,
-    })
-  }
+  // Re-sign if hotfix changed content (eliminates stale signature warnings)
+  const resignResult = await resignIfNeeded({
+    sha256: prepared.sha256,
+    originalSignature: release.signature_base64,
+    originalSignedAt: release.signed_at,
+    originalSignedBy: release.signed_by || null,
+    contentChanged: prepared.changed,
+    logContext: { agentName: agent.agent_name, targetVersion, scope: 'heartbeat/force-update' },
+  })
+  const signatureBase64 = resignResult.signatureBase64
+  const signedAt = resignResult.signedAt
 
   const overrideSafeMode = !!(agent.force_update_override_safe_mode &&
     (!agent.force_update_override_safe_mode_expires_at ||

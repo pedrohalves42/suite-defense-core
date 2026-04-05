@@ -4,6 +4,7 @@
  */
 
 import { prepareAgentScriptContent } from '../_shared/agent-script-preparation.ts'
+import { resignIfNeeded } from '../_shared/script-resigner.ts'
 import { logger } from '../_shared/logger.ts'
 import { buildCorsHeaders } from '../_shared/cors.ts'
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
@@ -62,16 +63,17 @@ export async function buildNormalResponse(
         if (prepared) {
           safeScriptSha256 = prepared.sha256
 
-          // Signature staleness: if hotfix changed content, old signature is invalid
-          const signatureValid = !prepared.changed && !!release.signature_base64
-          scriptHashSignature = signatureValid ? release.signature_base64 : null
-          scriptHashSignedAt = signatureValid ? (release.signed_at || null) : null
-
-          if (prepared.changed && release.signature_base64) {
-            logger.warn('Hotfix changed script — invalidating stale Ed25519 signature in heartbeat response', {
-              agentName: agent.agent_name, version: currentVersion, reasons: prepared.reasons,
-            })
-          }
+          // Re-sign if hotfix changed content (eliminates stale signature warnings)
+          const resignResult = await resignIfNeeded({
+            sha256: prepared.sha256,
+            originalSignature: release.signature_base64,
+            originalSignedAt: release.signed_at,
+            originalSignedBy: null,
+            contentChanged: prepared.changed,
+            logContext: { agentName: agent.agent_name, version: currentVersion, scope: 'heartbeat/response-builder' },
+          })
+          scriptHashSignature = resignResult.signatureBase64
+          scriptHashSignedAt = resignResult.signedAt
         }
       }
     }
@@ -109,7 +111,7 @@ export async function buildNormalResponse(
       expected_sha256: safeScriptSha256,
       signature_timestamp: scriptHashSignedAt,
       force_hash_resync: forceHashResync,
-      heartbeat_interval_seconds: 60,
+      heartbeat_interval_seconds: _getHeartbeatInterval(updateData.state || agent.state),
       poll_interval_seconds: 30,
       skip_firewall_remediation: agent.skip_firewall_remediation || false,
       enable_eventlog: true,
@@ -121,4 +123,14 @@ export async function buildNormalResponse(
       status: 200,
     },
   )
+}
+
+/**
+ * Dynamic heartbeat interval based on agent state.
+ * ENFORCING (stable) → 60s, degraded states → 30s (faster recovery).
+ */
+function _getHeartbeatInterval(agentState: string | null | undefined): number {
+  const degradedStates = ['SAFE_MODE', 'DEGRADED', 'INITIALIZING']
+  if (agentState && degradedStates.includes(agentState)) return 30
+  return 60
 }
