@@ -59,11 +59,11 @@ export function hotfixToctouRuntimeSelfheal(ctx: HotfixContext): void {
     // Try multiple regex patterns to match different agent versions
     const patterns = [
       // Original pattern: Write-Log "[INTEGRITY] TOCTOU VIOLATION..." "ERROR" ... exit 1|Stop-Process
-      /Write-Log\s*"\[INTEGRITY\]\s*TOCTOU VIOLATION[^"]*"\s*"(?:ERROR|CRITICAL)"[\s\S]*?(?:exit\s+1|Stop-Process\s+-Id\s+\$PID\s+-Force|return)/m,
+      /Write-Log\s*"\[INTEGRITY\]\s*TOCTOU VIOLATION[^"]*"\s*"(?:ERROR|CRITICAL)"[\s\S]*?(?:exit\s+1|\[Environment\]::Exit\(\d+\)|Stop-Process\s+-Id\s+\$PID\s+-Force|return)/m,
       // v5.0.15 pattern: "RUNTIME TOCTOU VIOLATION" with break or exit
-      /Write-Log\s*"\[INTEGRITY\]\s*(?:RUNTIME\s+)?TOCTOU VIOLATION[^"]*"\s*"(?:ERROR|CRITICAL|WARN)"[\s\S]*?(?:exit\s+\d+|Stop-Process[^\n]*|break|return)/m,
+      /Write-Log\s*"\[INTEGRITY\]\s*(?:RUNTIME\s+)?TOCTOU VIOLATION[^"]*"\s*"(?:ERROR|CRITICAL|WARN)"[\s\S]*?(?:exit\s+\d+|\[Environment\]::Exit\(\d+\)|Stop-Process[^\n]*|break|return)/m,
       // Broader: any "TOCTOU VIOLATION" log followed by termination within 10 lines
-      /Write-Log\s*"[^"]*TOCTOU VIOLATION[^"]*"\s*"[A-Z]+"[\s\S]{0,500}?(?:exit\s+\d+|Stop-Process[^\n]*\$PID[^\n]*|break\b)/m,
+      /Write-Log\s*"[^"]*TOCTOU VIOLATION[^"]*"\s*"[A-Z]+"[\s\S]{0,500}?(?:exit\s+\d+|\[Environment\]::Exit\(\d+\)|Stop-Process[^\n]*\$PID[^\n]*|break\b)/m,
     ];
 
     let matched = false;
@@ -71,21 +71,44 @@ export function hotfixToctouRuntimeSelfheal(ctx: HotfixContext): void {
       if (pattern.test(ctx.content)) {
         ctx.content = ctx.content.replace(
           pattern,
-      `Write-Log "[INTEGRITY] TOCTOU hash mismatch detected - attempting self-heal instead of exit" "WARN" <# HOTFIX-TOCTOU-RUNTIME-SELFHEAL #>
+      `Write-Log "[INTEGRITY] TOCTOU hash mismatch detected - keeping agent alive for trusted resync" "WARN" <# HOTFIX-TOCTOU-RUNTIME-SELFHEAL #>
                 try {
-                    $selfHealHash = (Get-FileHash $scriptPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
-                    $selfHealCachePath = "C:\\CyberShield\\data\\expected_script_hash.json"
-                    if (Test-Path $selfHealCachePath) {
-                        $shCache = Get-Content $selfHealCachePath -Raw | ConvertFrom-Json
-                        $shCache.sha256 = $selfHealHash
-                        $shCache | Add-Member -NotePropertyName "self_healed" -NotePropertyValue $true -Force
-                        $shCache | Add-Member -NotePropertyName "self_healed_at" -NotePropertyValue (Get-Date).ToString("o") -Force
-                        $shCache | Add-Member -NotePropertyName "self_heal_reason" -NotePropertyValue "runtime_toctou_mismatch" -Force
-                        $shCache | ConvertTo-Json -Depth 5 | Set-Content $selfHealCachePath -Encoding UTF8 -Force
-                        Write-Log "[INTEGRITY] Hash cache self-healed: $selfHealHash" "INFO"
+                    if ($null -eq $Global:ToctouFailures) { $Global:ToctouFailures = 0 }
+                    $Global:ToctouFailures = [int]$Global:ToctouFailures + 1
+                    $runtimeScriptPath = if ($PSCommandPath) { $PSCommandPath } elseif ($MyInvocation.MyCommand.Path) { $MyInvocation.MyCommand.Path } else { $null }
+                    if ($runtimeScriptPath) {
+                        $Global:LastToctouObservedHash = (Get-FileHash $runtimeScriptPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLower()
+                    }
+
+                    if ($Global:ToctouFailures -ge 3) {
+                        Write-Log "[INTEGRITY] 3 consecutive TOCTOU violations - entering SAFE_MODE" "ERROR"
+                        try {
+                            if (Get-Command Set-AgentState -ErrorAction SilentlyContinue) {
+                                Set-AgentState -NewState "SAFE_MODE" -Reason "3 consecutive TOCTOU mismatches" | Out-Null
+                            } else {
+                                $Global:CurrentState = "SAFE_MODE"
+                            }
+                        } catch {
+                            $Global:CurrentState = "SAFE_MODE"
+                        }
+                        if (Get-Command Flush-LogBuffer -ErrorAction SilentlyContinue) { Flush-LogBuffer }
+                        $Global:ToctouFailures = 0
+                    } else {
+                        if (-not $Global:CurrentState -or $Global:CurrentState -ne "SAFE_MODE") {
+                            try {
+                                if (Get-Command Set-AgentState -ErrorAction SilentlyContinue) {
+                                    Set-AgentState -NewState "DEGRADED" -Reason "Runtime TOCTOU mismatch ($($Global:ToctouFailures)/3)" | Out-Null
+                                } else {
+                                    $Global:CurrentState = "DEGRADED"
+                                }
+                            } catch {
+                                $Global:CurrentState = "DEGRADED"
+                            }
+                        }
+                        Write-Log "[INTEGRITY] TOCTOU mismatch ($($Global:ToctouFailures)/3) - awaiting trusted resync" "WARN"
                     }
                 } catch {
-                    Write-Log "[INTEGRITY] Self-heal failed: $($_.Exception.Message) - continuing anyway" "WARN"
+                    Write-Log "[INTEGRITY] TOCTOU keepalive handler failed: $($_.Exception.Message) - continuing anyway" "WARN"
                 }
                 # Continue execution instead of exiting`
         );
@@ -97,7 +120,11 @@ export function hotfixToctouRuntimeSelfheal(ctx: HotfixContext): void {
 
     // Fallback: if script contains TOCTOU VIOLATION but no regex matched,
     // inject self-heal block at the end of the script
-    if (!matched && ctx.content.includes('TOCTOU VIOLATION')) {
+    const fallbackPattern = /("TOCTOU VIOLATION[^"]*"[^}]*?)(exit\s+1|\[Environment\]::Exit\(\d+\)|Stop-Process\s+-Id\s+\$PID\s+-Force)/gm;
+    const hasFallbackTermination = fallbackPattern.test(ctx.content);
+    fallbackPattern.lastIndex = 0;
+
+    if (!matched && hasFallbackTermination) {
       const fallbackBlock = `
 # HOTFIX-TOCTOU-RUNTIME-SELFHEAL (fallback): Override TOCTOU termination
 $Global:TOCTOU_SELFHEAL_ENABLED = $true
@@ -107,7 +134,7 @@ $Global:TOCTOU_MAX_FAILURES = 3
       ctx.content = fallbackBlock + ctx.content;
       // Replace any remaining exit/Stop-Process after TOCTOU VIOLATION with continue
       ctx.content = ctx.content.replace(
-        /("TOCTOU VIOLATION[^"]*"[^}]*?)(exit\s+1|Stop-Process\s+-Id\s+\$PID\s+-Force)/gm,
+        fallbackPattern,
         '$1Write-Log "[INTEGRITY] TOCTOU self-heal: skipping termination" "WARN" <# HOTFIX-TOCTOU-RUNTIME-SELFHEAL #>'
       );
       ctx.reasons.push('toctou_runtime_selfheal_fallback');
@@ -163,6 +190,7 @@ export function hotfixToctouDualHash(ctx: HotfixContext): void {
     ctx.content.includes('expected_script_hash.json') &&
     !ctx.content.includes('HOTFIX-TOCTOU-DUAL-HASH')
   ) {
+    const beforeDualHash = ctx.content;
     const dualHashInit = `
                 # HOTFIX-TOCTOU-DUAL-HASH: Upgrade hash cache to dual-hash format
                 try {
@@ -207,7 +235,7 @@ export function hotfixToctouDualHash(ctx: HotfixContext): void {
                             $hashCache.mode = 'DEGRADED'
                             $hashCache.toctou_failures = 0
                             $hashCache | ConvertTo-Json | Set-Content $hashCachePath -Force
-                            $Global:AgentMode = 'DEGRADED'
+                            $Global:CurrentState = 'DEGRADED'
                             $toctouHandled = $true
                         } else {
                             $failures++
@@ -220,16 +248,16 @@ export function hotfixToctouDualHash(ctx: HotfixContext): void {
                             $hashCache | ConvertTo-Json | Set-Content $hashCachePath -Force
                             
                             if ($failures -ge 3) {
-                                Write-Log "[INTEGRITY] 3 consecutive unknown hashes - entering SAFE mode (reduced permissions)" "ERROR"
-                                $Global:AgentMode = 'SAFE'
+                                Write-Log "[INTEGRITY] 3 consecutive unknown hashes - entering SAFE_MODE" "ERROR"
+                                $Global:CurrentState = 'SAFE_MODE'
                             } else {
-                                $Global:AgentMode = 'DEGRADED'
+                                $Global:CurrentState = 'DEGRADED'
                             }
                             $toctouHandled = $true
                         }
                     } catch {
                         Write-Log "[INTEGRITY] Dual-hash evaluation failed: $_ - continuing in degraded mode" "WARN"
-                        $Global:AgentMode = 'DEGRADED'
+                        $Global:CurrentState = 'DEGRADED'
                         $toctouHandled = $true
                     }
                     
@@ -238,16 +266,18 @@ export function hotfixToctouDualHash(ctx: HotfixContext): void {
                     }`;
 
     ctx.content = ctx.content.replace(
-      /Write-Log\s*"\[INTEGRITY\]\s*TOCTOU VIOLATION[^"]*"[^}]*?(?:exit\s+1|Stop-Process[^}]*?\$PID)/gm,
+      /Write-Log\s*"\[INTEGRITY\]\s*TOCTOU VIOLATION[^"]*"[^}]*?(?:exit\s+1|\[Environment\]::Exit\(\d+\)|Stop-Process[^}]*?\$PID)/gm,
       degradedModeHandler
     );
 
     ctx.content = ctx.content.replace(
-      /Write-Log\s*"\[INTEGRITY\]\s*Script integrity check FAILED[^"]*"[^}]*?(?:exit\s+1|return\s+\$false)/gm,
+      /Write-Log\s*"\[INTEGRITY\]\s*Script integrity check FAILED[^"]*"[^}]*?(?:exit\s+1|\[Environment\]::Exit\(\d+\)|return\s+\$false)/gm,
       degradedModeHandler
     );
 
-    ctx.reasons.push('toctou_degraded_mode');
+    if (ctx.content !== beforeDualHash) {
+      ctx.reasons.push('toctou_degraded_mode');
+    }
   }
 }
 

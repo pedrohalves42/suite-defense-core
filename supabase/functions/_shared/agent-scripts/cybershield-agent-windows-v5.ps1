@@ -582,6 +582,8 @@ try {
 } catch {
     $Global:BootScriptHash = $null
 }
+$Global:ToctouFailures = 0
+$Global:LastToctouObservedHash = $null
 
 # v5.0.13-fix: ProtectedProcessSet must be declared before use (StrictMode compatibility)
 $Global:ProtectedProcessSet = $null
@@ -904,7 +906,8 @@ function Test-RuntimeIntegrity {
                 }
                 # File ACTUALLY changed during execution (real TOCTOU)
                 Write-Log "[INTEGRITY] RUNTIME TOCTOU VIOLATION: Script modified while running! Boot: $($Global:BootScriptHash.Substring(0,16))..., Now: $($currentHash.Substring(0,16))..." "ERROR"
-                Write-SafeEventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "RUNTIME INTEGRITY VIOLATION: Script SHA256 changed during execution (TOCTOU). Terminating." -ErrorAction SilentlyContinue
+                Write-SafeEventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "RUNTIME INTEGRITY VIOLATION: Script SHA256 changed during execution (TOCTOU). Entering protected keepalive flow." -ErrorAction SilentlyContinue
+                $Global:LastToctouObservedHash = $currentHash
                 return $false
             }
         }
@@ -7273,10 +7276,25 @@ while ($true) {
         # ============================================
         if (($now - $Global:LastIntegrityCheck).TotalSeconds -ge $Global:IntegrityCheckIntervalSeconds) {
             if (-not (Test-RuntimeIntegrity)) {
-                Write-Log "[INTEGRITY] TOCTOU VIOLATION DETECTED - terminating agent immediately" "ERROR"
-                Write-SafeEventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "TOCTOU integrity violation - agent script modified during runtime. Terminating." -ErrorAction SilentlyContinue
-                Flush-LogBuffer
-                [Environment]::Exit(9004)
+                if ($null -eq $Global:ToctouFailures) { $Global:ToctouFailures = 0 }
+                $Global:ToctouFailures = [int]$Global:ToctouFailures + 1
+
+                if ($Global:ToctouFailures -ge 3) {
+                    Write-Log "[INTEGRITY] 3 consecutive TOCTOU violations - entering SAFE_MODE" "ERROR"
+                    Write-SafeEventLog -LogName Application -Source "CyberShield" -EventId 9004 -EntryType Error -Message "TOCTOU integrity violation persisted for 3 checks. Entering SAFE_MODE." -ErrorAction SilentlyContinue
+                    Set-AgentState -NewState "SAFE_MODE" -Reason "3 consecutive TOCTOU mismatches" | Out-Null
+                    Flush-LogBuffer
+                    $Global:ToctouFailures = 0
+                } else {
+                    Write-Log "[INTEGRITY] TOCTOU mismatch ($($Global:ToctouFailures)/3) - entering DEGRADED and awaiting trusted resync" "WARN"
+                    if ($Global:CurrentState -ne "SAFE_MODE") {
+                        Set-AgentState -NewState "DEGRADED" -Reason "Runtime TOCTOU mismatch ($($Global:ToctouFailures)/3)" | Out-Null
+                    }
+                }
+            } else {
+                if ($Global:ToctouFailures) {
+                    $Global:ToctouFailures = 0
+                }
             }
             $Global:LastIntegrityCheck = Get-Date
         }
