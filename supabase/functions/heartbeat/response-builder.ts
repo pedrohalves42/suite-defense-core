@@ -111,7 +111,7 @@ export async function buildNormalResponse(
       expected_sha256: safeScriptSha256,
       signature_timestamp: scriptHashSignedAt,
       force_hash_resync: forceHashResync,
-      heartbeat_interval_seconds: 60,
+      heartbeat_interval_seconds: _getHeartbeatInterval(updateData.state || agent.state),
       poll_interval_seconds: 30,
       skip_firewall_remediation: agent.skip_firewall_remediation || false,
       enable_eventlog: true,
