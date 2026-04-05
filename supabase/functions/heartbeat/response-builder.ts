@@ -63,16 +63,17 @@ export async function buildNormalResponse(
         if (prepared) {
           safeScriptSha256 = prepared.sha256
 
-          // Signature staleness: if hotfix changed content, old signature is invalid
-          const signatureValid = !prepared.changed && !!release.signature_base64
-          scriptHashSignature = signatureValid ? release.signature_base64 : null
-          scriptHashSignedAt = signatureValid ? (release.signed_at || null) : null
-
-          if (prepared.changed && release.signature_base64) {
-            logger.warn('Hotfix changed script — invalidating stale Ed25519 signature in heartbeat response', {
-              agentName: agent.agent_name, version: currentVersion, reasons: prepared.reasons,
-            })
-          }
+          // Re-sign if hotfix changed content (eliminates stale signature warnings)
+          const resignResult = await resignIfNeeded({
+            sha256: prepared.sha256,
+            originalSignature: release.signature_base64,
+            originalSignedAt: release.signed_at,
+            originalSignedBy: null,
+            contentChanged: prepared.changed,
+            logContext: { agentName: agent.agent_name, version: currentVersion, scope: 'heartbeat/response-builder' },
+          })
+          scriptHashSignature = resignResult.signatureBase64
+          scriptHashSignedAt = resignResult.signedAt
         }
       }
     }
