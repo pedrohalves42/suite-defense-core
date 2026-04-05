@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, CheckCircle, Clock, Mail, Activity, Shield, Filter } from "lucide-react";
+import { AlertFeedbackButtons } from "@/components/admin/AlertFeedbackButtons";
 import { useTenant } from "@/hooks/useTenant";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { RecentAuditActivity } from "@/components/admin/RecentAuditActivity";
@@ -30,7 +31,7 @@ export default function SystemLogs() {
     queryFn: async () => {
       let query = supabase
         .from('system_alerts')
-        .select('id, tenant_id, title, message, severity, alert_type, source, status, acknowledged, acknowledged_at, resolved, resolved_at, email_sent, email_sent_at, details, created_at');
+        .select('id, tenant_id, title, message, severity, alert_type, source, status, acknowledged, acknowledged_at, resolved, resolved_at, email_sent, email_sent_at, details, feedback, created_at');
       
       // Filter by tenant if not super admin
       if (!isSuperAdmin && tenant?.id) {
@@ -265,20 +266,27 @@ export default function SystemLogs() {
                         </details>
                       )}
                     </div>
-                    <div className="text-right text-sm text-muted-foreground ml-4">
-                      <div>
-                        {formatBrazilDateTime(alert.created_at, 'full')}
+                    <div className="flex flex-col items-end gap-2 ml-4">
+                      <div className="text-right text-sm text-muted-foreground">
+                        <div>
+                          {formatBrazilDateTime(alert.created_at, 'full')}
+                        </div>
+                        {alert.resolved_at && (
+                          <div className="text-xs mt-1">
+                            Resolvido em {formatBrazilDateTime(alert.resolved_at, 'short')}
+                          </div>
+                        )}
+                        {alert.email_sent_at && (
+                          <div className="text-xs mt-1">
+                            Email em {formatBrazilDateTime(alert.email_sent_at, 'short')}
+                          </div>
+                        )}
                       </div>
-                      {alert.resolved_at && (
-                        <div className="text-xs mt-1">
-                          Resolvido em {formatBrazilDateTime(alert.resolved_at, 'short')}
-                        </div>
-                      )}
-                      {alert.email_sent_at && (
-                        <div className="text-xs mt-1">
-                          Email em {formatBrazilDateTime(alert.email_sent_at, 'short')}
-                        </div>
-                      )}
+                      <AlertFeedbackButtons
+                        alertId={alert.id}
+                        tenantId={alert.tenant_id}
+                        currentFeedback={alert.feedback}
+                      />
                     </div>
                   </div>
                 </div>

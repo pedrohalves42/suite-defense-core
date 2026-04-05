@@ -37060,8 +37060,12 @@ export type Database = {
           created_at: string
           decision_event_id: string | null
           details: Json | null
+          detection_rule_id: string | null
           email_sent: boolean | null
           email_sent_at: string | null
+          feedback: string | null
+          feedback_at: string | null
+          feedback_by: string | null
           human_reviewed: boolean | null
           id: string
           message: string
@@ -37088,8 +37092,12 @@ export type Database = {
           created_at?: string
           decision_event_id?: string | null
           details?: Json | null
+          detection_rule_id?: string | null
           email_sent?: boolean | null
           email_sent_at?: string | null
+          feedback?: string | null
+          feedback_at?: string | null
+          feedback_by?: string | null
           human_reviewed?: boolean | null
           id?: string
           message: string
@@ -37116,8 +37124,12 @@ export type Database = {
           created_at?: string
           decision_event_id?: string | null
           details?: Json | null
+          detection_rule_id?: string | null
           email_sent?: boolean | null
           email_sent_at?: string | null
+          feedback?: string | null
+          feedback_at?: string | null
+          feedback_by?: string | null
           human_reviewed?: boolean | null
           id?: string
           message?: string
@@ -51279,6 +51291,15 @@ export type Database = {
           p_tenant_id: string
         }
         Returns: string
+      }
+      submit_alert_feedback: {
+        Args: {
+          p_alert_id: string
+          p_is_true_positive: boolean
+          p_tenant_id: string
+          p_user_id: string
+        }
+        Returns: undefined
       }
       submit_approval: {
         Args: { p_decision: string; p_reason?: string; p_request_id: string }
