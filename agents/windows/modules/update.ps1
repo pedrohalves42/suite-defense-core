@@ -85,7 +85,9 @@ function Install-AgentUpdate {
         Follows download-verify-execute pattern:
         1. Download to temp
         2. Verify SHA-256 hash
-        2.5. Verify Ed25519 signature (SSA-004)
+        2.5. Phase 3: Cross-validate expected_sha256 from server
+        2.6. Verify Ed25519 signature (SSA-004)
+        2.7. Phase 3: Reject stale signatures (signature_timestamp check)
         3. Verify ASCII safety
         4. Backup current
         5. Atomic replace with TOCTOU guard
@@ -94,7 +96,9 @@ function Install-AgentUpdate {
         [string]$Version,
         [string]$Url,
         [string]$Hash,
-        [string]$Signature
+        [string]$Signature,
+        [string]$ExpectedSha256,
+        [string]$SignatureTimestamp
     )
 
     $tempFile = "$script:TempDir\agent_update_$Version`_$(Get-Random).ps1"
@@ -115,6 +119,7 @@ function Install-AgentUpdate {
             if ($actualHash -ne $Hash.ToLower()) {
                 Write-Log "Update hash mismatch (expected: $Hash, got: $actualHash) - ABORTED" "ERROR"
                 Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+                $Global:ToctouFailures = ($Global:ToctouFailures -as [int]) + 1
                 return $false
             }
             Write-Log "Update hash verified" "INFO"
@@ -123,7 +128,18 @@ function Install-AgentUpdate {
             Write-Log "No hash provided for update - proceeding with caution" "WARN"
         }
 
-        # 2.5. Verify Ed25519 signature (SSA-004)
+        # 2.5. Phase 3: Cross-validate expected_sha256 from server (defense in depth)
+        if ($ExpectedSha256 -and $actualHash) {
+            if ($actualHash -ne $ExpectedSha256.ToLower()) {
+                Write-Log "FATAL: expected_sha256 from server does NOT match downloaded content hash! Possible MITM or replay attack. (server=$ExpectedSha256, local=$actualHash) - ABORTED" "ERROR"
+                Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+                $Global:ToctouFailures = ($Global:ToctouFailures -as [int]) + 1
+                return $false
+            }
+            Write-Log "Phase 3: expected_sha256 cross-validated OK" "INFO"
+        }
+
+        # 2.6. Verify Ed25519 signature (SSA-004)
         if ($Signature -and $Signature.Length -gt 10) {
             # Signature provided — must verify
             $ed25519Available = Test-Ed25519Available
@@ -132,6 +148,7 @@ function Install-AgentUpdate {
                 if (-not $sigValid) {
                     Write-Log "Update REJECTED - Ed25519 signature INVALID! Possible supply chain attack. Hash: $actualHash" "ERROR"
                     Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+                    $Global:ToctouFailures = ($Global:ToctouFailures -as [int]) + 1
                     return $false
                 }
                 Write-Log "Ed25519 signature verified for update v$Version" "INFO"
@@ -149,11 +166,36 @@ function Install-AgentUpdate {
             # No signature but Ed25519 is configured — reject unsigned updates (fail-closed)
             Write-Log "Update REJECTED - No cryptographic signature on update payload. Unsigned updates blocked (SSA-004)." "ERROR"
             Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+            $Global:ToctouFailures = ($Global:ToctouFailures -as [int]) + 1
             return $false
         }
         else {
             # Legacy mode: no signature, no Ed25519 configured — accept with SHA-256 only
             Write-Log "No signature provided and Ed25519 not configured - accepting update based on SHA-256 only" "WARN"
+        }
+
+        # 2.7. Phase 3: Reject stale signatures (defense in depth)
+        if ($SignatureTimestamp) {
+            try {
+                $sigTime = [DateTime]::Parse($SignatureTimestamp).ToUniversalTime()
+                $lastUpdateFile = "$script:DataDir\last_successful_update.json"
+                if (Test-Path $lastUpdateFile) {
+                    $lastUpdateData = Get-Content $lastUpdateFile -Raw | ConvertFrom-Json -ErrorAction SilentlyContinue
+                    if ($lastUpdateData -and $lastUpdateData.timestamp) {
+                        $lastTime = [DateTime]::Parse($lastUpdateData.timestamp).ToUniversalTime()
+                        if ($sigTime -le $lastTime) {
+                            Write-Log "Phase 3: STALE signature detected (sig=$sigTime <= lastUpdate=$lastTime). Possible replay attack - ABORTED" "ERROR"
+                            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+                            $Global:ToctouFailures = ($Global:ToctouFailures -as [int]) + 1
+                            return $false
+                        }
+                    }
+                }
+                Write-Log "Phase 3: Signature timestamp validated ($sigTime)" "INFO"
+            }
+            catch {
+                Write-Log "Phase 3: Could not parse signature_timestamp '$SignatureTimestamp' - continuing (non-blocking)" "WARN"
+            }
         }
 
         # 3. Verify ASCII safety (prevent PS 5.1 encoding issues)
@@ -180,6 +222,12 @@ function Install-AgentUpdate {
             $newHash = Get-BOMSafeFileHash -FilePath $script:Config.ScriptPath
             @{ hash = $newHash; updated = (Get-Date -Format "o") } | ConvertTo-Json | Out-File "$script:DataDir\expected_script_hash.json" -Encoding UTF8 -Force
             $Global:BootScriptHash = $newHash
+
+            # Phase 3: Record successful update timestamp for stale signature detection
+            @{ timestamp = (Get-Date).ToUniversalTime().ToString("o"); version = $Version; sha256 = $newHash } | ConvertTo-Json | Out-File "$script:DataDir\last_successful_update.json" -Encoding UTF8 -Force
+
+            # Reset TOCTOU failure counter on success
+            $Global:ToctouFailures = 0
 
             Write-Log "Agent updated to v$Version" "INFO"
             return $true
