@@ -6,6 +6,7 @@
 
 import { normalizeVersion } from '../_shared/hexagonal/update-decision-service.ts'
 import { prepareAgentScriptContent } from '../_shared/agent-script-preparation.ts'
+import { resignIfNeeded } from '../_shared/script-resigner.ts'
 import { logger } from '../_shared/logger.ts'
 import { buildCorsHeaders } from '../_shared/cors.ts'
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
