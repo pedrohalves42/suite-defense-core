@@ -106,6 +106,8 @@ export async function buildNormalResponse(
       script_sha256: safeScriptSha256,
       script_hash_signature: scriptHashSignature,
       script_hash_signed_at: scriptHashSignedAt,
+      expected_sha256: safeScriptSha256,
+      signature_timestamp: scriptHashSignedAt,
       force_hash_resync: forceHashResync,
       heartbeat_interval_seconds: 60,
       poll_interval_seconds: 30,
