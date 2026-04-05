@@ -124,3 +124,13 @@ export async function buildNormalResponse(
     },
   )
 }
+
+/**
+ * Dynamic heartbeat interval based on agent state.
+ * ENFORCING (stable) → 60s, degraded states → 30s (faster recovery).
+ */
+function _getHeartbeatInterval(agentState: string | null | undefined): number {
+  const degradedStates = ['SAFE_MODE', 'DEGRADED', 'INITIALIZING']
+  if (agentState && degradedStates.includes(agentState)) return 30
+  return 60
+}
