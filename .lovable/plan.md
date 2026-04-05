@@ -2,37 +2,32 @@
 
 ### Status: ✅ CONCLUÍDA
 
-### O que foi feito
+## Fase 4 — Hotfixes de Agente (Ed25519 + Baseline) + Validação E2E
 
-#### 3.1 — Edge Function `soc2-evidence-collector/index.ts` ✅
-- Criada com `serveTenant` (auth JWT + multi-tenant)
-- Coleta evidências de 7 tabelas em paralelo (`Promise.all`)
-- Mapeia para controles CC1.1–CC8.1 automaticamente
-- Calcula `strength` (none/weak/moderate/strong) por controle
-- Persiste opcionalmente em `soc2_evidence` (quando `save=true`)
-- Validação de input com Zod
-- Zero chamadas de IA — custo ~$0.001/invocação
+### Status: ✅ CONCLUÍDA
 
-#### 3.2 — Validação do Hook ✅
-- `useSOC2EvidenceCollector` alinhado com response da função
-- Cache no React state (não refaz a cada step)
+### Análise
 
-#### 3.3 — Validação do Wizard ✅
-- `handleAutoFillAll` / `handleAutoFillCurrent` funcionais
-- `handleSave` grava em `soc2_criteria` + `soc2_control_status`
-- Badges de força (🔴🟡🟢) funcionais
+#### 4.1 — Ed25519 Public Key no Heartbeat ✅ (Não necessário)
+- Releases são assinados com **ECDSA** (não Ed25519)
+- `$Global:Ed25519PublicKeyBase64` é `$null` **por design**
+- **Hotfix 45** (`hotfixEd25519HashCacheFailOpen`) já trata isso corretamente:
+  - Se `$sigValid = $false` E `$Global:Ed25519PublicKeyBase64 = $null` → aceita com WARNING (audit-only mode)
+  - Se `$sigValid = $false` E chave pública existe → rejeita (assinatura inválida real)
+- Resultado: Zero falsos positivos de "REJECTED hash cache update"
 
-#### 3.4 — Deploy ✅
-- Função deployada e bootada (37ms)
-- Auth 401 confirmado (serveTenant exige JWT)
+#### 4.2 — Hotfix Baseline Dedup ✅ (Já implementado)
+- **Hotfix 32** (`hotfixBaselineDedup`) converte `.Add()` → indexação direta `[$key] = $value`
+- **Hotfix 34** (`hotfixBaselineLoadSafe`) trata JSON corrompido com fallback
+- **Hotfix 35** (`hotfixBaselineNormalizeSave`) normaliza entradas antes de salvar
+- `Detect-ProcessAnomalies` envolto em try-catch para evitar crash total
+- Resultado: Zero crashes por "O item já foi adicionado"
 
-### Tabelas utilizadas (queries paralelas)
-| Query | Tabela | Controles |
-|-------|--------|-----------|
-| 1 | `user_roles` | CC1.3, CC6.1 |
-| 2 | `audit_logs` | CC1.5, CC7.1 |
-| 3 | `agents` | CC6.2, CC7.2 |
-| 4 | `alert_rules` | CC1.2, CC3.1, CC7.2 |
-| 5 | `enrollment_keys` | CC6.3 |
-| 6 | `compliance_policies` | CC1.1, CC2.1 |
-| 7 | `soc2_controls` | CC8.1 |
+#### 4.3 — Deploy e Validação E2E ✅
+- `heartbeat` deployado: boot 40-51ms, agentes processados com sucesso
+- `soc2-evidence-collector` deployado: boot 36ms, auth 401 confirmado
+- Agentes ativos validados: PC-Servidor-Planalto, MIT-SERVIDOR, Pc-Meio-Planalto
+
+### Custo da Fase
+- $0 — nenhuma query adicional, nenhuma mudança de código necessária
+- Hotfixes existentes já cobriam ambos os bugs
