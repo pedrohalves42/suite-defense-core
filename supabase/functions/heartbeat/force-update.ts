@@ -1,11 +1,11 @@
 /**
  * Force-update logic module for heartbeat.
  * Handles all force_update decision-making, self-healing, delivery, and cleanup.
+ * Uses the canonical prepareAgentScriptContent pipeline.
  */
 
-import { encodeBase64 } from 'https://deno.land/std@0.208.0/encoding/base64.ts'
-import { normalizeVersion, normalizeForWindows } from '../_shared/hexagonal/update-decision-service.ts'
-import { applyWindowsScriptHotfix } from '../_shared/windows-script-hotfix.ts'
+import { normalizeVersion } from '../_shared/hexagonal/update-decision-service.ts'
+import { prepareAgentScriptContent } from '../_shared/agent-script-preparation.ts'
 import { logger } from '../_shared/logger.ts'
 import { buildCorsHeaders } from '../_shared/cors.ts'
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
@@ -209,44 +209,26 @@ async function buildForceUpdateResponse(
     return null
   }
 
-  // SAFETY: Reject HTML content from DB (corrupted releases)
-  if (release.script_content?.trimStart().startsWith('<!DOCTYPE') ||
-      release.script_content?.trimStart().startsWith('<html')) {
-    logger.error('Force update script is corrupted HTML, skipping delivery', {
+  // Unified pipeline: decode → hotfix → reject HTML → normalize → SHA-256 → base64
+  const prepared = await prepareAgentScriptContent({
+    supabase,
+    releaseId: release.id,
+    rawScriptContent: release.script_content,
+    platform,
+    requestId: `fu-${agent.agent_name}`,
+    logScope: 'heartbeat/force-update',
+    persistIfChanged: true,
+  })
+
+  if (!prepared) {
+    logger.error('Force update script invalid after preparation', {
       agentName: agent.agent_name, targetVersion,
     })
     return null
   }
 
-  let finalScript = release.script_content
-
-  // Apply runtime hotfixes for Windows
-  if (platform === 'windows' || platform === 'Windows') {
-    try {
-      const hotfixResult = applyWindowsScriptHotfix(finalScript)
-      if (hotfixResult.changed) {
-        finalScript = hotfixResult.content
-        logger.info('Applied runtime hotfixes to force_update script', {
-          agentName: agent.agent_name, hotfixes: hotfixResult.reasons, count: hotfixResult.reasons.length,
-        })
-        // Best-effort: persist hotfixed content back
-        const hotfixBytes = new TextEncoder().encode(finalScript)
-        const hotfixHashBuf = await crypto.subtle.digest('SHA-256', hotfixBytes)
-        const hotfixHash = Array.from(new Uint8Array(hotfixHashBuf))
-          .map(b => b.toString(16).padStart(2, '0')).join('')
-        await supabase.from('agent_releases')
-          .update({ script_content: finalScript, sha256: hotfixHash })
-          .eq('id', release.id)
-      }
-    } catch (hotfixErr) {
-      logger.warn('Hotfix injection failed (non-fatal), delivering original script', {
-        agentName: agent.agent_name, error: (hotfixErr as Error).message,
-      })
-    }
-  }
-
   // SAFETY: Version header validation
-  const headerMatch = finalScript.match(/CyberShield\s+Agent\s*[-?]\s*\w+\s+v?([\d]+\.[\d]+)/i)
+  const headerMatch = prepared.content.match(/CyberShield\s+Agent\s*[-?]\s*\w+\s+v?([\d]+\.[\d]+)/i)
   const scriptMajor = headerMatch?.[1] || ''
   const targetMajor = normalizeVersion(targetVersion)?.split('.').slice(0, 2).join('.') || ''
 
@@ -258,13 +240,16 @@ async function buildForceUpdateResponse(
     return null
   }
 
-  // Encode and hash
-  const normalizedScript = normalizeForWindows(finalScript)
-  const scriptBytes = new TextEncoder().encode(normalizedScript)
-  const base64Script = encodeBase64(scriptBytes)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes)
-  const calculatedSha256 = Array.from(new Uint8Array(hashBuffer))
-    .map(b => b.toString(16).padStart(2, '0')).join('')
+  // Signature staleness: if hotfix changed content, the old signature is invalid
+  const signatureValid = !prepared.changed
+  const signatureBase64 = signatureValid ? (release.signature_base64 || null) : null
+  const signedAt = signatureValid ? (release.signed_at || null) : null
+
+  if (prepared.changed && release.signature_base64) {
+    logger.warn('Hotfix changed script content — invalidating stale Ed25519 signature', {
+      agentName: agent.agent_name, targetVersion, reasons: prepared.reasons,
+    })
+  }
 
   const overrideSafeMode = !!(agent.force_update_override_safe_mode &&
     (!agent.force_update_override_safe_mode_expires_at ||
@@ -272,9 +257,9 @@ async function buildForceUpdateResponse(
 
   logger.info('Sending force update via heartbeat response', {
     agentName: agent.agent_name, targetVersion: release.version, platform,
-    deliveryAttempt, hasSignature: !!release.signature_base64,
+    deliveryAttempt, hasSignature: !!signatureBase64,
     skipFirewallRemediation: agent.skip_firewall_remediation,
-    sha256: calculatedSha256.substring(0, 16) + '...',
+    sha256: prepared.sha256.substring(0, 16) + '...',
   })
 
   return new Response(
@@ -285,15 +270,15 @@ async function buildForceUpdateResponse(
       force_update: true,
       target_version: release.version,
       version: release.version,
-      script_content_base64: base64Script,
-      script_content: finalScript,
-      sha256: calculatedSha256,
-      script_sha256: calculatedSha256,
-      sha256_base64: calculatedSha256,
-      ecdsa_signature: release.signature_base64 || null,
-      script_hash_signature: release.signature_base64 || null,
-      signature_base64: release.signature_base64 || null,
-      script_hash_signed_at: release.signed_at || null,
+      script_content_base64: prepared.base64Content,
+      script_content: prepared.content,
+      sha256: prepared.sha256,
+      script_sha256: prepared.sha256,
+      sha256_base64: prepared.sha256,
+      ecdsa_signature: signatureBase64,
+      script_hash_signature: signatureBase64,
+      signature_base64: signatureBase64,
+      script_hash_signed_at: signedAt,
       skip_firewall_remediation: agent.skip_firewall_remediation || false,
       reason: reason || 'Forced update via backend',
       force_update_reason: reason || 'Forced update via backend',

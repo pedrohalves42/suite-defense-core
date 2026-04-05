@@ -95,7 +95,8 @@ serveTenant(async (req, ctx) => {
       }
 
       // 4. Fetch & validate agent script from storage
-      const { validateAgentScriptContent, calculateScriptHash } = await import('../_shared/agent-script-validator.ts');
+      const { validateAgentScriptContent } = await import('../_shared/agent-script-validator.ts');
+      const { prepareAgentScriptContent } = await import('../_shared/agent-script-preparation.ts');
 
       const { data: fileData, error: storageError } = await supabase.storage
         .from('agent-installers')
@@ -105,11 +106,26 @@ serveTenant(async (req, ctx) => {
         return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Agent script not found in storage', 503, requestId);
       }
 
-      const agentScriptContent = await fileData.text();
+      const rawScriptText = await fileData.text();
+
+      // Unified pipeline: decode → hotfix → reject HTML → normalize → SHA-256 → base64
+      const prepared = await prepareAgentScriptContent({
+        rawScriptContent: rawScriptText,
+        platform: 'windows',
+        requestId,
+        logScope: 'build-agent-exe',
+        persistIfChanged: false, // Storage source, not DB
+      });
+
+      if (!prepared) {
+        return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Agent script preparation failed', 503, requestId);
+      }
+
+      const agentScriptContent = prepared.content;
       if (!validateAgentScriptContent(agentScriptContent)) {
         return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Agent script content is invalid', 503, requestId);
       }
-      const agentScriptHash = await calculateScriptHash(agentScriptContent);
+      const agentScriptHash = prepared.sha256;
 
       // 5. Check build cache
       const cachedResponse = await checkBuildCache(supabase, tenantId, agentScriptHash, requestId);

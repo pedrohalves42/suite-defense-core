@@ -1,5 +1,6 @@
 /**
  * Script builder: fetches release scripts and builds installer content (shared)
+ * Uses the canonical prepareAgentScriptContent pipeline.
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from './logger.ts';
@@ -15,6 +16,7 @@ import {
 } from './installer-template-envvars.ts';
 import { INSTALLER_VERSION } from './installer-version.ts';
 import type { AgentData } from './installer-types.ts';
+import { prepareAgentScriptContent } from './agent-script-preparation.ts';
 
 interface ScriptBuildResult {
   templateContent: string;
@@ -31,13 +33,13 @@ export async function buildInstallerScript(
   requestId: string,
   origin: string | null,
 ): Promise<ScriptBuildResult | Response> {
-  const { validateAgentScriptContent, calculateScriptHash } = await import('./agent-script-validator.ts');
+  const { validateAgentScriptContent } = await import('./agent-script-validator.ts');
 
   logger.debug(`[${requestId}] Fetching ${platform} agent script from agent_releases database`);
 
   const { data: releaseData, error: releaseError } = await supabaseClient
     .from('agent_releases')
-    .select('script_content, version, sha256')
+    .select('id, script_content, version, sha256')
     .eq('platform', platform === 'windows' ? 'windows' : platform)
     .eq('is_active', true)
     .like('version', 'v%')
@@ -54,23 +56,39 @@ export async function buildInstallerScript(
     );
   }
 
-  const agentScriptContent = releaseData.script_content;
+  // Unified pipeline: decode → hotfix → reject HTML → normalize → SHA-256 → base64
+  const prepared = await prepareAgentScriptContent({
+    supabase: supabaseClient,
+    releaseId: releaseData.id,
+    rawScriptContent: releaseData.script_content,
+    platform,
+    requestId,
+    logScope: 'installer-script-builder',
+    persistIfChanged: true,
+  });
+
+  if (!prepared) {
+    logger.error(`[${requestId}] Script preparation failed for ${platform} release`);
+    return new Response('Failed to generate secure installer - script preparation failed', { status: 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain' } });
+  }
+
+  const agentScriptContent = prepared.content;
+  const agentScriptHash = prepared.sha256;
 
   if (platform === 'windows' && !validateAgentScriptContent(agentScriptContent)) {
     logger.error(`[${requestId}] CRITICAL: Script validation failed for ${platform} release`);
     return new Response('Failed to generate secure installer - script validation failed', { status: 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain' } });
   }
 
-  if (platform === 'windows' && (!agentScriptContent || agentScriptContent.length < 5000)) {
-    logger.error(`[${requestId}] Agent script validation failed: invalid content length (${agentScriptContent?.length || 0} bytes)`);
+  if (platform === 'windows' && agentScriptContent.length < 5000) {
+    logger.error(`[${requestId}] Agent script validation failed: invalid content length (${agentScriptContent.length} bytes)`);
     return new Response('Agent script validation failed: content too short or missing', { status: 503, headers: buildCorsHeaders(origin) });
   }
-
-  const agentScriptHash = await calculateScriptHash(agentScriptContent);
 
   logger.debug(`[${requestId}] ${platform} agent script loaded from database`, {
     size: agentScriptContent.length, sizeKB: (agentScriptContent.length / 1024).toFixed(2),
     hash: agentScriptHash, registeredVersion: releaseData.version, source: 'agent_releases',
+    hotfixApplied: prepared.changed, hotfixReasons: prepared.reasons,
   });
 
   let templateContent: string;

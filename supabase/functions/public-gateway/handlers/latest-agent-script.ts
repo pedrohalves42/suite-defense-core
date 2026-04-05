@@ -1,10 +1,11 @@
 /**
  * Handler: get-latest-agent-script (inlined into public-gateway)
+ * Uses the canonical prepareAgentScriptContent pipeline.
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { applyWindowsScriptHotfix } from '../../_shared/windows-script-hotfix.ts';
 import { logger } from '../../_shared/logger.ts';
 import { buildCorsHeaders } from '../../_shared/cors.ts';
+import { prepareAgentScriptContent } from '../../_shared/agent-script-preparation.ts';
 
 function normalizeVersion(v: string | null | undefined): string {
   return v?.replace(/^v/i, '').trim() || '';
@@ -58,34 +59,19 @@ export async function handleGetLatestAgentScript(
     );
   }
 
-  let releaseScriptContent = release.script_content;
-  if (releaseScriptContent && !releaseScriptContent.includes('[CmdletBinding()]') && !releaseScriptContent.startsWith('<#')) {
-    try {
-      const decoded = atob(releaseScriptContent);
-      if (decoded.includes('[CmdletBinding()]') || decoded.startsWith('<#')) {
-        logger.info(`[${requestId}] Decoded base64 script_content (${releaseScriptContent.length} -> ${decoded.length} chars)`);
-        releaseScriptContent = decoded;
-      }
-    } catch { /* Not base64 */ }
-  }
+  // Unified pipeline: decode → hotfix → reject HTML → normalize → SHA-256 → base64
+  const prepared = await prepareAgentScriptContent({
+    supabase,
+    releaseId: release.id,
+    rawScriptContent: release.script_content,
+    platform,
+    requestId,
+    logScope: 'latest-agent-script',
+    persistIfChanged: true,
+  });
 
-  if (platform === 'windows' && releaseScriptContent) {
-    const hotfix = applyWindowsScriptHotfix(releaseScriptContent);
-    if (hotfix.changed) {
-      releaseScriptContent = hotfix.content;
-      logger.warn(`[${requestId}] Applied Windows ECDSA hotfix at serve-time`, { releaseVersion: release.version, reasons: hotfix.reasons });
-
-      try {
-        const { error: persistError } = await supabase.from('agent_releases').update({ script_content: releaseScriptContent }).eq('id', release.id);
-        if (persistError) logger.warn(`[${requestId}] Could not persist hotfixed script_content`, { error: persistError.message, releaseId: release.id });
-      } catch (persistErr) {
-        logger.warn(`[${requestId}] Exception persisting hotfix: ${(persistErr as Error).message}`);
-      }
-    }
-  }
-
-  if (!releaseScriptContent || releaseScriptContent.length < 5000) {
-    logger.error(`[${requestId}] Script content too short: ${releaseScriptContent?.length || 0} bytes`);
+  if (!prepared || prepared.content.length < 5000) {
+    logger.error(`[${requestId}] Script content too short: ${prepared?.content.length || 0} bytes`);
     return new Response(
       JSON.stringify({ error: 'Invalid script content', message: 'Script content is missing or corrupted', requestId }),
       { status: 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
@@ -93,50 +79,32 @@ export async function handleGetLatestAgentScript(
   }
 
   const declaredVersion = normalizeVersion(release.version);
-  const embeddedVersion = extractScriptVersion(releaseScriptContent);
+  const embeddedVersion = extractScriptVersion(prepared.content);
   if (embeddedVersion && normalizeVersion(embeddedVersion) !== declaredVersion) {
     logger.warn(`[${requestId}] Release/script version mismatch (non-blocking)`, { releaseVersion: release.version, embeddedVersion, platform });
   }
 
-  let normalizedScript = releaseScriptContent;
-  if (platform === 'windows') {
-    normalizedScript = releaseScriptContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\r\n');
-  }
-
-  const encoder = new TextEncoder();
-  const scriptBytes = encoder.encode(normalizedScript);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes);
-  const sha256 = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-
   if (format === 'plain' || format === 'ps1' || format === 'text') {
-    logger.info(`[${requestId}] Serving ${platform} script v${release.version} as text/plain (${scriptBytes.length} bytes)`);
-    return new Response(normalizedScript, {
+    logger.info(`[${requestId}] Serving ${platform} script v${release.version} as text/plain (${prepared.normalizedContent.length} bytes)`);
+    return new Response(prepared.normalizedContent, {
       status: 200,
       headers: {
         ...buildCorsHeaders(origin), 'Content-Type': 'text/plain; charset=utf-8',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'X-Agent-Version': release.version, 'X-Agent-Sha256': sha256, 'X-Request-ID': requestId,
+        'X-Agent-Version': release.version, 'X-Agent-Sha256': prepared.sha256, 'X-Request-ID': requestId,
       },
     });
   }
 
-  const base64Chunks: string[] = [];
-  const chunkSize = 0x8000;
-  for (let i = 0; i < scriptBytes.length; i += chunkSize) {
-    const chunk = scriptBytes.subarray(i, i + chunkSize);
-    base64Chunks.push(String.fromCharCode(...chunk));
-  }
-  const base64Script = btoa(base64Chunks.join(''));
-
-  logger.info(`[${requestId}] Serving ${platform} script v${release.version} (${scriptBytes.length} bytes)`);
+  logger.info(`[${requestId}] Serving ${platform} script v${release.version} (${prepared.normalizedContent.length} bytes)`);
 
   const responsePayload: Record<string, unknown> = {
-    version: release.version, script_content_base64: base64Script,
-    sha256, platform, release_notes: release.release_notes, requestId,
+    version: release.version, script_content_base64: prepared.base64Content,
+    sha256: prepared.sha256, platform, release_notes: release.release_notes, requestId,
   };
 
   if (includeScriptContent) {
-    responsePayload.script_content = normalizedScript;
+    responsePayload.script_content = prepared.normalizedContent;
   }
 
   return new Response(JSON.stringify(responsePayload), {
