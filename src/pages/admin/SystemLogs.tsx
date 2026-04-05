@@ -266,20 +266,27 @@ export default function SystemLogs() {
                         </details>
                       )}
                     </div>
-                    <div className="text-right text-sm text-muted-foreground ml-4">
-                      <div>
-                        {formatBrazilDateTime(alert.created_at, 'full')}
+                    <div className="flex flex-col items-end gap-2 ml-4">
+                      <div className="text-right text-sm text-muted-foreground">
+                        <div>
+                          {formatBrazilDateTime(alert.created_at, 'full')}
+                        </div>
+                        {alert.resolved_at && (
+                          <div className="text-xs mt-1">
+                            Resolvido em {formatBrazilDateTime(alert.resolved_at, 'short')}
+                          </div>
+                        )}
+                        {alert.email_sent_at && (
+                          <div className="text-xs mt-1">
+                            Email em {formatBrazilDateTime(alert.email_sent_at, 'short')}
+                          </div>
+                        )}
                       </div>
-                      {alert.resolved_at && (
-                        <div className="text-xs mt-1">
-                          Resolvido em {formatBrazilDateTime(alert.resolved_at, 'short')}
-                        </div>
-                      )}
-                      {alert.email_sent_at && (
-                        <div className="text-xs mt-1">
-                          Email em {formatBrazilDateTime(alert.email_sent_at, 'short')}
-                        </div>
-                      )}
+                      <AlertFeedbackButtons
+                        alertId={alert.id}
+                        tenantId={alert.tenant_id}
+                        currentFeedback={alert.feedback}
+                      />
                     </div>
                   </div>
                 </div>
