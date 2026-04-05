@@ -81,17 +81,19 @@ serveAgent(async (req, ctx) => {
     return new Response(JSON.stringify({ error: 'No valid script available' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
   }
 
-  // Signature staleness: if hotfix changed content, the old signature is invalid
-  const contentChanged = prepared.contentChanged;
-  const safeSignature = contentChanged ? null : (release.signature_base64 || null);
-  const safeSignedAt = contentChanged ? null : (release.signed_at || null);
-  const safeSignedBy = contentChanged ? null : (release.signed_by || null);
-
-  if (contentChanged && release.signature_base64) {
-    logger.warn('[serve-agent-update] Hotfix changed script content — invalidating stale Ed25519 signature', {
-      requestId, agentName, version: release.version,
-    });
-  }
+  // Re-sign if hotfix changed content (eliminates stale signature warnings)
+  const { resignIfNeeded } = await import('../_shared/script-resigner.ts');
+  const resignResult = await resignIfNeeded({
+    sha256: prepared.calculatedSha256,
+    originalSignature: release.signature_base64,
+    originalSignedAt: release.signed_at,
+    originalSignedBy: release.signed_by || null,
+    contentChanged: prepared.contentChanged,
+    logContext: { agentName, version: release.version, scope: 'serve-agent-update', requestId },
+  });
+  const safeSignature = resignResult.signatureBase64;
+  const safeSignedAt = resignResult.signedAt;
+  const safeSignedBy = resignResult.signedBy;
 
   await logRolloutDecision(supabase, agentId, agentName, platform, agentData.agent_version as string | null, release.version, bucket, rolloutPolicy?.rollout_percentage || 100, 'allowed', requestId);
 
