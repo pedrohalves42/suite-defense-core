@@ -77,14 +77,25 @@ serveTenant(async (_req, ctx) => {
   }
 
   const { validateAgentScriptContent, calculateScriptHash } = await import('../_shared/agent-script-validator.ts');
-  const agentScriptContent = await fileData.text();
+  const { prepareAgentScriptContent } = await import('../_shared/agent-script-preparation.ts');
+  const rawScriptText = await fileData.text();
 
-  if (!validateAgentScriptContent(agentScriptContent)) {
+  // Unified pipeline: decode → hotfix → reject HTML → normalize → SHA-256 → base64
+  const prepared = await prepareAgentScriptContent({
+    rawScriptContent: rawScriptText,
+    platform: 'windows',
+    requestId,
+    logScope: 'generate-portable-installer',
+    persistIfChanged: false,
+  });
+
+  if (!prepared || !validateAgentScriptContent(prepared.content)) {
     return new Response(
       JSON.stringify({ error: 'Agent script validation failed' }),
       { status: 503, headers: { 'Content-Type': 'application/json' } }
     );
   }
+  const agentScriptContent = prepared.content;
 
   // Build the installer PS1
   const installerPs1 = buildInstallerPs1({
