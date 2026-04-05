@@ -115,6 +115,26 @@ export async function handleGetLatestAgentScript(
     logContext: { version: release.version, platform, scope: 'latest-agent-script', requestId },
   });
 
+  if (prepared.changed && resignResult.resigned && resignResult.signatureBase64 && resignResult.signedAt) {
+    const { error: persistSignatureError } = await supabase
+      .from('agent_releases')
+      .update({
+        signature_base64: resignResult.signatureBase64,
+        signed_at: resignResult.signedAt,
+        signed_by: resignResult.signedBy,
+        sha256: prepared.sha256,
+      })
+      .eq('id', release.id);
+
+    if (persistSignatureError) {
+      logger.warn(`[${requestId}] Failed to persist re-signed latest-agent-script metadata`, {
+        version: release.version,
+        platform,
+        error: persistSignatureError.message,
+      });
+    }
+  }
+
   const responsePayload: Record<string, unknown> = {
     version: release.version, script_content_base64: prepared.base64Content,
     sha256: prepared.sha256, platform, release_notes: release.release_notes, requestId,

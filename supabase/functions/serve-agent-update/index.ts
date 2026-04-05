@@ -95,6 +95,27 @@ serveAgent(async (req, ctx) => {
   const safeSignedAt = resignResult.signedAt;
   const safeSignedBy = resignResult.signedBy;
 
+  if (prepared.contentChanged && resignResult.resigned && safeSignature && safeSignedAt) {
+    const { error: persistSignatureError } = await supabase
+      .from('agent_releases')
+      .update({
+        signature_base64: safeSignature,
+        signed_at: safeSignedAt,
+        signed_by: safeSignedBy,
+        sha256: prepared.calculatedSha256,
+      })
+      .eq('id', release.id);
+
+    if (persistSignatureError) {
+      logger.warn('[serve-agent-update] Failed to persist re-signed script metadata', {
+        requestId,
+        agentName,
+        version: release.version,
+        error: persistSignatureError.message,
+      });
+    }
+  }
+
   await logRolloutDecision(supabase, agentId, agentName, platform, agentData.agent_version as string | null, release.version, bucket, rolloutPolicy?.rollout_percentage || 100, 'allowed', requestId);
 
   return {

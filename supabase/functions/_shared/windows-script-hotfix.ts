@@ -131,5 +131,5 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
   hotfixForceUpdateTaskRetarget(ctx);
   hotfixUsbWhitelistNoise(ctx);
 
-  return { content: ctx.content, changed: ctx.reasons.length > 0, reasons: ctx.reasons };
+  return { content: ctx.content, changed: ctx.content !== script, reasons: ctx.reasons };
 }

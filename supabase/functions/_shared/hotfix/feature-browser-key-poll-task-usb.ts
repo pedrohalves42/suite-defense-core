@@ -133,16 +133,16 @@ export function hotfixKeyReadyGate(ctx: HotfixContext): void {
   }
 }
 
-/** HOTFIX 39: Normalize poll interval to 600s */
+/** HOTFIX 39: Normalize poll interval to 60s */
 export function hotfixUnifiedPoll(ctx: HotfixContext): void {
   if (ctx.content.includes('$Global:JobPollIntervalSeconds') && !ctx.content.includes('HOTFIX-UNIFIED-POLL')) {
     ctx.content = ctx.content.replace(
       /\$Global:JobPollIntervalSeconds\s*=\s*300/g,
-      '$Global:JobPollIntervalSeconds = 600 <# HOTFIX-UNIFIED-POLL #>'
+      '$Global:JobPollIntervalSeconds = 60 <# HOTFIX-UNIFIED-POLL #>'
     );
     ctx.content = ctx.content.replace(
       /if\s*\(\$newJobInterval\s*-lt\s*\d+\)\s*\{\s*\$newJobInterval\s*=\s*\d+\s*\}/g,
-      'if ($newJobInterval -lt 600) { $newJobInterval = 600 } <# HOTFIX-UNIFIED-POLL #>'
+      'if ($newJobInterval -lt 60) { $newJobInterval = 60 } <# HOTFIX-UNIFIED-POLL #>'
     );
     if (ctx.content.includes('HOTFIX-UNIFIED-POLL')) {
       ctx.reasons.push('unified_poll_interval');

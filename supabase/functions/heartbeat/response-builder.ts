@@ -61,9 +61,6 @@ export async function buildNormalResponse(
         })
 
         if (prepared) {
-          safeScriptSha256 = prepared.sha256
-
-          // Re-sign if hotfix changed content (eliminates stale signature warnings)
           const resignResult = await resignIfNeeded({
             sha256: prepared.sha256,
             originalSignature: release.signature_base64,
@@ -72,8 +69,32 @@ export async function buildNormalResponse(
             contentChanged: prepared.changed,
             logContext: { agentName: agent.agent_name, version: currentVersion, scope: 'heartbeat/response-builder' },
           })
-          scriptHashSignature = resignResult.signatureBase64
-          scriptHashSignedAt = resignResult.signedAt
+
+          if (prepared.changed && resignResult.resigned && resignResult.signatureBase64 && resignResult.signedAt) {
+            const { error: persistSignatureError } = await supabase
+              .from('agent_releases')
+              .update({
+                signature_base64: resignResult.signatureBase64,
+                signed_at: resignResult.signedAt,
+                signed_by: resignResult.signedBy,
+                sha256: prepared.sha256,
+              })
+              .eq('id', release.id)
+
+            if (persistSignatureError) {
+              logger.warn('Failed to persist re-signed script metadata for heartbeat', {
+                agentName: agent.agent_name,
+                version: currentVersion,
+                error: persistSignatureError.message,
+              })
+            }
+          }
+
+          if (resignResult.signatureBase64) {
+            safeScriptSha256 = prepared.sha256
+            scriptHashSignature = resignResult.signatureBase64
+            scriptHashSignedAt = resignResult.signedAt
+          }
         }
       }
     }
