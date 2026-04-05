@@ -3,8 +3,7 @@
  * Constructs the normal (non-force-update) heartbeat response.
  */
 
-import { normalizeForWindows } from '../_shared/hexagonal/update-decision-service.ts'
-import { applyWindowsScriptHotfix } from '../_shared/windows-script-hotfix.ts'
+import { prepareAgentScriptContent } from '../_shared/agent-script-preparation.ts'
 import { logger } from '../_shared/logger.ts'
 import { buildCorsHeaders } from '../_shared/cors.ts'
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
@@ -40,7 +39,7 @@ export async function buildNormalResponse(
       // Single query: fetch script_content AND signature in one round-trip
       const { data: release } = await supabase
         .from('agent_releases')
-        .select('script_content, signature_base64, signed_at')
+        .select('id, script_content, sha256, signature_base64, signed_at')
         .eq('version', currentVersion)
         .eq('platform', platform)
         .eq('is_active', true)
@@ -48,28 +47,32 @@ export async function buildNormalResponse(
         .limit(1)
         .maybeSingle()
 
-      if (release?.script_content && release.signature_base64) {
-        // Only compute hash when signature exists (prevents TOCTOU false positives)
-        let script = release.script_content
+      if (release?.script_content) {
+        // Use canonical pipeline for hash computation (includes hotfix + normalize)
+        const prepared = await prepareAgentScriptContent({
+          supabase,
+          releaseId: release.id,
+          rawScriptContent: release.script_content,
+          platform,
+          requestId: `hb-${agent.agent_name}`,
+          logScope: 'heartbeat/response-builder',
+          persistIfChanged: true,
+        })
 
-        if (platform === 'windows' || platform === 'Windows') {
-          const hotfixResult = applyWindowsScriptHotfix(script)
-          if (hotfixResult.changed) {
-            script = hotfixResult.content
+        if (prepared) {
+          safeScriptSha256 = prepared.sha256
+
+          // Signature staleness: if hotfix changed content, old signature is invalid
+          const signatureValid = !prepared.changed && !!release.signature_base64
+          scriptHashSignature = signatureValid ? release.signature_base64 : null
+          scriptHashSignedAt = signatureValid ? (release.signed_at || null) : null
+
+          if (prepared.changed && release.signature_base64) {
+            logger.warn('Hotfix changed script — invalidating stale Ed25519 signature in heartbeat response', {
+              agentName: agent.agent_name, version: currentVersion, reasons: prepared.reasons,
+            })
           }
         }
-
-        const isWindows = platform === 'windows' || platform === 'Windows'
-        const normalizedScript = isWindows
-          ? normalizeForWindows(script)
-          : script.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-        const scriptBytes = new TextEncoder().encode(normalizedScript)
-        const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes)
-        safeScriptSha256 = Array.from(new Uint8Array(hashBuffer))
-          .map(b => b.toString(16).padStart(2, '0')).join('')
-        // Return the full signature trio for Windows agents
-        scriptHashSignature = release.signature_base64
-        scriptHashSignedAt = release.signed_at || null
       }
     }
   } catch (hashError) {

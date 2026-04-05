@@ -10,6 +10,7 @@ interface PreparedScript {
   normalizedScript: string;
   base64Script: string;
   calculatedSha256: string;
+  contentChanged: boolean;
 }
 
 /**
@@ -48,5 +49,6 @@ export async function prepareScriptForDelivery(
     normalizedScript: result.normalizedContent,
     base64Script: result.base64Content,
     calculatedSha256: result.sha256,
+    contentChanged: result.changed,
   };
 }
