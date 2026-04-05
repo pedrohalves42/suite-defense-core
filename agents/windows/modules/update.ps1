@@ -44,17 +44,25 @@ function Invoke-CheckForUpdate {
     .SYNOPSIS
         Query the server for available updates and apply if needed.
         Uses download-verify-execute pattern per security standard.
+        v7.1: Passes expected_sha256 and signature_timestamp for Phase 3 validation.
     #>
     try {
         $response = Invoke-SecureApi -Endpoint "agents/$($script:Config.AgentId)/check-update"
 
         if ($response -and $response.needs_update) {
             Write-Log "Update available: v$($response.version)" "INFO"
+
+            # Phase 3: extract optional integrity fields (backward-compatible)
+            $expectedSha256 = if ($response.PSObject.Properties['expected_sha256']) { $response.expected_sha256 } else { $null }
+            $signatureTimestamp = if ($response.PSObject.Properties['signature_timestamp']) { $response.signature_timestamp } else { $null }
+
             $updated = Install-AgentUpdate `
                 -Version $response.version `
                 -Url $response.url `
                 -Hash $response.hash `
-                -Signature $response.signature
+                -Signature $response.signature `
+                -ExpectedSha256 $expectedSha256 `
+                -SignatureTimestamp $signatureTimestamp
             if ($updated) {
                 Write-Log "Update applied to v$($response.version) - restarting agent" "INFO"
                 Export-PersistedState
