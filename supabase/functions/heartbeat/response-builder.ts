@@ -133,7 +133,7 @@ export async function buildNormalResponse(
       signature_timestamp: scriptHashSignedAt,
       force_hash_resync: forceHashResync,
       heartbeat_interval_seconds: _getHeartbeatInterval(updateData.state || agent.state),
-      poll_interval_seconds: 30,
+      poll_interval_seconds: _getPollInterval(updateData.state || agent.state),
       skip_firewall_remediation: agent.skip_firewall_remediation || false,
       enable_eventlog: true,
       aggregation: null,
@@ -151,6 +151,12 @@ export async function buildNormalResponse(
  * ENFORCING (stable) → 60s, degraded states → 30s (faster recovery).
  */
 function _getHeartbeatInterval(agentState: string | null | undefined): number {
+  const degradedStates = ['SAFE_MODE', 'DEGRADED', 'INITIALIZING']
+  if (agentState && degradedStates.includes(agentState)) return 30
+  return 60
+}
+
+function _getPollInterval(agentState: string | null | undefined): number {
   const degradedStates = ['SAFE_MODE', 'DEGRADED', 'INITIALIZING']
   if (agentState && degradedStates.includes(agentState)) return 30
   return 60
