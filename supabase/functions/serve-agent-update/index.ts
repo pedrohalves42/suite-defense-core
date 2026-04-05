@@ -82,7 +82,7 @@ serveAgent(async (req, ctx) => {
   }
 
   // Signature staleness: if hotfix changed content, the old signature is invalid
-  const contentChanged = prepared.calculatedSha256 !== (release.sha256 || '');
+  const contentChanged = prepared.contentChanged;
   const safeSignature = contentChanged ? null : (release.signature_base64 || null);
   const safeSignedAt = contentChanged ? null : (release.signed_at || null);
   const safeSignedBy = contentChanged ? null : (release.signed_by || null);
