@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     const agent = authResult.agent;
 
     // Rate limiting
-    const rateLimitResult = await checkRateLimit(supabase, agent.agentName, 'poll-jobs', { maxRequests: 6, windowMinutes: 1, blockMinutes: 5 });
+    const rateLimitResult = await checkRateLimit(supabase, agent.agentName, 'poll-jobs', { maxRequests: 3, windowMinutes: 1, blockMinutes: 5 });
     if (!rateLimitResult.allowed) {
       return new Response(JSON.stringify({ error: 'Rate limit excedido', resetAt: rateLimitResult.resetAt, traceId }), { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json', 'X-Trace-ID': traceId } });
     }
