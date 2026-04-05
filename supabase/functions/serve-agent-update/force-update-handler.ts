@@ -6,6 +6,7 @@ import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { prepareAgentScriptContent } from '../_shared/agent-script-preparation.ts';
+import { resignIfNeeded } from '../_shared/script-resigner.ts';
 
 interface AgentInfo {
   id: string;
@@ -75,16 +76,38 @@ export async function handleForceUpdate(
     );
   }
 
-  // Signature staleness: if hotfix changed content, the old signature is invalid
-  const signatureValid = !prepared.changed;
-  const safeSignature = signatureValid ? (forcedRelease.signature_base64 || null) : null;
-  const safeSignedAt = signatureValid ? (forcedRelease.signed_at || null) : null;
-  const safeSignedBy = signatureValid ? (forcedRelease.signed_by || null) : null;
+  const resignResult = await resignIfNeeded({
+    sha256: prepared.sha256,
+    originalSignature: forcedRelease.signature_base64 || null,
+    originalSignedAt: forcedRelease.signed_at || null,
+    originalSignedBy: forcedRelease.signed_by || null,
+    contentChanged: prepared.changed,
+    logContext: { requestId, agentName: agent.agent_name, version: forcedRelease.version, scope: 'serve-agent-update/force-update' },
+  });
 
-  if (prepared.changed && forcedRelease.signature_base64) {
-    logger.warn('[serve-agent-update] Hotfix changed script content — invalidating stale Ed25519 signature in force-update', {
-      requestId, agentName: agent.agent_name, forceVersion: forcedRelease.version, reasons: prepared.reasons,
-    });
+  const safeSignature = resignResult.signatureBase64;
+  const safeSignedAt = resignResult.signedAt;
+  const safeSignedBy = resignResult.signedBy;
+
+  if (prepared.changed && resignResult.resigned && safeSignature && safeSignedAt) {
+    const { error: persistSignatureError } = await supabase
+      .from('agent_releases')
+      .update({
+        signature_base64: safeSignature,
+        signed_at: safeSignedAt,
+        signed_by: safeSignedBy,
+        sha256: prepared.sha256,
+      })
+      .eq('id', forcedRelease.id);
+
+    if (persistSignatureError) {
+      logger.warn('[serve-agent-update] Failed to persist re-signed force-update metadata', {
+        requestId,
+        agentName: agent.agent_name,
+        forceVersion: forcedRelease.version,
+        error: persistSignatureError.message,
+      });
+    }
   }
 
   // Increment delivery counter

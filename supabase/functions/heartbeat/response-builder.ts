@@ -61,9 +61,6 @@ export async function buildNormalResponse(
         })
 
         if (prepared) {
-          safeScriptSha256 = prepared.sha256
-
-          // Re-sign if hotfix changed content (eliminates stale signature warnings)
           const resignResult = await resignIfNeeded({
             sha256: prepared.sha256,
             originalSignature: release.signature_base64,
@@ -72,8 +69,32 @@ export async function buildNormalResponse(
             contentChanged: prepared.changed,
             logContext: { agentName: agent.agent_name, version: currentVersion, scope: 'heartbeat/response-builder' },
           })
-          scriptHashSignature = resignResult.signatureBase64
-          scriptHashSignedAt = resignResult.signedAt
+
+          if (prepared.changed && resignResult.resigned && resignResult.signatureBase64 && resignResult.signedAt) {
+            const { error: persistSignatureError } = await supabase
+              .from('agent_releases')
+              .update({
+                signature_base64: resignResult.signatureBase64,
+                signed_at: resignResult.signedAt,
+                signed_by: resignResult.signedBy,
+                sha256: prepared.sha256,
+              })
+              .eq('id', release.id)
+
+            if (persistSignatureError) {
+              logger.warn('Failed to persist re-signed script metadata for heartbeat', {
+                agentName: agent.agent_name,
+                version: currentVersion,
+                error: persistSignatureError.message,
+              })
+            }
+          }
+
+          if (resignResult.signatureBase64) {
+            safeScriptSha256 = prepared.sha256
+            scriptHashSignature = resignResult.signatureBase64
+            scriptHashSignedAt = resignResult.signedAt
+          }
         }
       }
     }
@@ -112,7 +133,7 @@ export async function buildNormalResponse(
       signature_timestamp: scriptHashSignedAt,
       force_hash_resync: forceHashResync,
       heartbeat_interval_seconds: _getHeartbeatInterval(updateData.state || agent.state),
-      poll_interval_seconds: 30,
+      poll_interval_seconds: _getPollInterval(updateData.state || agent.state),
       skip_firewall_remediation: agent.skip_firewall_remediation || false,
       enable_eventlog: true,
       aggregation: null,
@@ -130,6 +151,12 @@ export async function buildNormalResponse(
  * ENFORCING (stable) → 60s, degraded states → 30s (faster recovery).
  */
 function _getHeartbeatInterval(agentState: string | null | undefined): number {
+  const degradedStates = ['SAFE_MODE', 'DEGRADED', 'INITIALIZING']
+  if (agentState && degradedStates.includes(agentState)) return 30
+  return 60
+}
+
+function _getPollInterval(agentState: string | null | undefined): number {
   const degradedStates = ['SAFE_MODE', 'DEGRADED', 'INITIALIZING']
   if (agentState && degradedStates.includes(agentState)) return 30
   return 60

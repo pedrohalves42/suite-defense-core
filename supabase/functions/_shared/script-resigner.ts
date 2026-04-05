@@ -1,9 +1,6 @@
 /**
- * Script Re-Signer: Signs the post-hotfix script content with ECDSA/Ed25519.
- * Used across all delivery channels to eliminate stale signature warnings.
- * 
- * Flow: If hotfix changed content AND a signing key is available,
- * re-compute signature over the new normalized content's SHA-256.
+ * Script Re-Signer: signs the post-hotfix SHA-256 with the same algorithm
+ * expected by the agents, preferring Ed25519 and falling back to ECDSA.
  */
 import { logger } from './logger.ts';
 
@@ -27,6 +24,31 @@ export interface ResignResult {
   signedBy: string | null;
   resigned: boolean;
 }
+
+interface SigningStrategy {
+  envName: 'ED25519_PRIVATE_KEY' | 'ECDSA_PRIVATE_KEY';
+  importParams: EcKeyImportParams | Algorithm;
+  signParams: AlgorithmIdentifier;
+  signedBy: string;
+  label: string;
+}
+
+const SIGNING_STRATEGIES: SigningStrategy[] = [
+  {
+    envName: 'ED25519_PRIVATE_KEY',
+    importParams: { name: 'Ed25519' },
+    signParams: 'Ed25519',
+    signedBy: 'hotfix-resigner-ed25519',
+    label: 'Ed25519',
+  },
+  {
+    envName: 'ECDSA_PRIVATE_KEY',
+    importParams: { name: 'ECDSA', namedCurve: 'P-256' },
+    signParams: { name: 'ECDSA', hash: 'SHA-256' },
+    signedBy: 'hotfix-resigner-ecdsa',
+    label: 'ECDSA-P256',
+  },
+];
 
 /**
  * Attempt to re-sign a script's SHA-256 hash after hotfix modifications.
@@ -59,31 +81,54 @@ export async function resignIfNeeded(params: {
     };
   }
 
-  // Content changed — try to re-sign
-  const ecdsaKey = Deno.env.get('ECDSA_PRIVATE_KEY');
-  if (!ecdsaKey) {
-    logger.warn('Hotfix changed script but ECDSA_PRIVATE_KEY not available for re-signing', logContext);
-    return { signatureBase64: null, signedAt: null, signedBy: null, resigned: false };
+  const encoder = new TextEncoder();
+
+  for (const strategy of SIGNING_STRATEGIES) {
+    const privateKeyBase64 = Deno.env.get(strategy.envName);
+    if (!privateKeyBase64) continue;
+
+    try {
+      const keyData = base64ToArrayBuffer(privateKeyBase64);
+      const privateKey = await crypto.subtle.importKey(
+        'pkcs8',
+        keyData,
+        strategy.importParams,
+        false,
+        ['sign'],
+      );
+
+      const signatureBuffer = await crypto.subtle.sign(
+        strategy.signParams,
+        privateKey,
+        encoder.encode(sha256),
+      );
+      const signatureBase64 = arrayBufferToBase64(signatureBuffer);
+      const signedAt = new Date().toISOString();
+
+      logger.info('Re-signed post-hotfix script content', {
+        ...logContext,
+        algorithm: strategy.label,
+        sha256: sha256.substring(0, 16) + '...',
+      });
+
+      return {
+        signatureBase64,
+        signedAt,
+        signedBy: strategy.signedBy,
+        resigned: true,
+      };
+    } catch (err) {
+      logger.warn('Failed to re-sign post-hotfix script with available key', {
+        ...logContext,
+        algorithm: strategy.label,
+        error: (err as Error).message,
+      });
+    }
   }
 
-  try {
-    const keyData = base64ToArrayBuffer(ecdsaKey);
-    const privateKey = await crypto.subtle.importKey(
-      'pkcs8', keyData, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign'],
-    );
-
-    const encoder = new TextEncoder();
-    const signatureBuffer = await crypto.subtle.sign(
-      { name: 'ECDSA', hash: 'SHA-256' }, privateKey, encoder.encode(sha256),
-    );
-    const signatureBase64 = arrayBufferToBase64(signatureBuffer);
-    const signedAt = new Date().toISOString();
-
-    logger.info('Re-signed post-hotfix script content', { ...logContext, sha256: sha256.substring(0, 16) + '...' });
-
-    return { signatureBase64, signedAt, signedBy: 'hotfix-resigner', resigned: true };
-  } catch (err) {
-    logger.warn('Failed to re-sign post-hotfix script', { ...logContext, error: (err as Error).message });
-    return { signatureBase64: null, signedAt: null, signedBy: null, resigned: false };
-  }
+  logger.warn('Hotfix changed script but no signing key was available for re-signing', {
+    ...logContext,
+    attemptedKeys: SIGNING_STRATEGIES.map((strategy) => strategy.envName),
+  });
+  return { signatureBase64: null, signedAt: null, signedBy: null, resigned: false };
 }
