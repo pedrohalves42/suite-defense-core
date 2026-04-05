@@ -98,6 +98,8 @@ export async function handleForceUpdate(
       signature_base64: forcedRelease.signature_base64 || null,
       signed_at: forcedRelease.signed_at || null,
       signed_by: forcedRelease.signed_by || null,
+      expected_sha256: calculatedSha256,
+      signature_timestamp: forcedRelease.signed_at || null,
       release_notes: forcedRelease.release_notes,
       platform,
       current_version: agent.agent_version,

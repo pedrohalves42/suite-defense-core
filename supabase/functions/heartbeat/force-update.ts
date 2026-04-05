@@ -279,6 +279,8 @@ async function buildForceUpdateResponse(
       script_hash_signature: signatureBase64,
       signature_base64: signatureBase64,
       script_hash_signed_at: signedAt,
+      expected_sha256: prepared.sha256,
+      signature_timestamp: signedAt,
       skip_firewall_remediation: agent.skip_firewall_remediation || false,
       reason: reason || 'Forced update via backend',
       force_update_reason: reason || 'Forced update via backend',
