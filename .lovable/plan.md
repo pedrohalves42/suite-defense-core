@@ -31,3 +31,34 @@
 ### Custo da Fase
 - $0 — nenhuma query adicional, nenhuma mudança de código necessária
 - Hotfixes existentes já cobriam ambos os bugs
+
+## Fase 5 — Automação do Assistente de Conformidade SOC 2
+
+### Status: ✅ CONCLUÍDA
+
+### O que foi implementado
+
+#### 5.1 — Tabelas de dados (pré-existentes) ✅
+- `soc2_evidence`: armazena evidências com `control_id`, `evidence_type`, `reference`, `metadata`, `valid_from/until`, `hash`, `status`
+- `soc2_control_status`: histórico de preenchimento com `auto_filled`, `filled_by`, `notes`
+- Ambas com RLS e `tenant_id` para isolamento multi-tenant
+
+#### 5.2 — Edge Function `soc2-evidence-collector` (pré-existente) ✅
+- Coleta paralela de 7 fontes: `user_roles`, `audit_logs`, `agents`, `alert_rules`, `enrollment_keys`, `compliance_policies`, `soc2_controls`
+- Mapeia para controles: CC1.1, CC1.2, CC1.3, CC1.5, CC2.1, CC3.1, CC6.1, CC6.2, CC6.3, CC7.1, CC7.2, CC8.1
+- Cálculo de força: none/weak/moderate/strong baseado em contagem de evidências
+- Persistência opcional (flag `save`)
+- Zero chamadas de IA — puro SQL + lógica determinística
+
+#### 5.3 — Integração Frontend ✅ (NOVO)
+- **`useSOC2ControlStatus` hook**: CRUD na tabela `soc2_control_status` com dedup por `control_id`
+- **Botão "Auto-preencher"**: chama o coletor, salva status de todos os controles automaticamente
+- **Indicadores visuais**: 🟢 Conforme / 🟡 Parcial / 🔴 Não Conforme baseados em evidências reais
+- **Notas editáveis**: auto-preenchidas com descrições das evidências, sobrescrita manual permitida
+- **Banner de resultado**: mostra total de evidências coletadas e timestamp
+- **Eliminação de `Math.random()`**: controles SOC 2 agora são 100% data-driven
+- **Frameworks não-SOC2**: mantidos com lógica determinística baseada em métricas reais
+
+### Custo da Fase
+- $0 — sem novas tabelas, sem novas edge functions, sem chamadas de IA
+- Reaproveitamento total da infraestrutura existente
