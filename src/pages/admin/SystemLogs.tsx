@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, CheckCircle, Clock, Mail, Activity, Shield, Filter } from "lucide-react";
+import { AlertFeedbackButtons } from "@/components/admin/AlertFeedbackButtons";
 import { useTenant } from "@/hooks/useTenant";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { RecentAuditActivity } from "@/components/admin/RecentAuditActivity";
