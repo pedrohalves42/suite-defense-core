@@ -17,11 +17,13 @@ export function useDetectionRules() {
         .select('id, tenant_id, rule_name, description, severity, event_type, is_enabled, mitre_technique_id, mitre_tactic, mitre_technique_name, confidence_base, tags, created_at, updated_at')
         .or(`tenant_id.is.null,tenant_id.eq.${activeTenant!.id}`)
         .eq('is_enabled', true)
-        .order('severity', { ascending: false });
+        .order('severity', { ascending: false })
+        .limit(500);
       if (error) throw error;
       return data || [];
     },
     enabled: !loading && !!activeTenant?.id,
+    staleTime: 5 * 60_000, // 5 min cache — rules rarely change
   });
 }
 
