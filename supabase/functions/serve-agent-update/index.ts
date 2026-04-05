@@ -99,6 +99,8 @@ serveAgent(async (req, ctx) => {
     version: release.version, script_content: prepared.finalContent, sha256: prepared.calculatedSha256,
     script_sha256: prepared.calculatedSha256, script_content_base64: prepared.base64Script, sha256_base64: prepared.calculatedSha256,
     signature_base64: safeSignature, signed_at: safeSignedAt, signed_by: safeSignedBy,
+    expected_sha256: prepared.calculatedSha256,
+    signature_timestamp: safeSignedAt,
     release_notes: release.release_notes, platform, current_version: agentData.agent_version,
     legacy_agent_detected: isLegacyAgent,
     self_healing_note: isLegacyAgent ? 'Script saved to disk. New version active after Windows reboot.' : null,
