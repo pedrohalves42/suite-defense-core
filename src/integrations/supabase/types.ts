@@ -16260,6 +16260,97 @@ export type Database = {
           },
         ]
       }
+      correlation_results: {
+        Row: {
+          agent_id: string | null
+          correlation_rule_id: string
+          created_at: string
+          event_a_summary: string | null
+          event_a_time: string
+          event_b_summary: string | null
+          event_b_time: string
+          id: string
+          is_false_positive: boolean | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          severity: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id?: string | null
+          correlation_rule_id: string
+          created_at?: string
+          event_a_summary?: string | null
+          event_a_time: string
+          event_b_summary?: string | null
+          event_b_time: string
+          id?: string
+          is_false_positive?: boolean | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          severity?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string | null
+          correlation_rule_id?: string
+          created_at?: string
+          event_a_summary?: string | null
+          event_a_time?: string
+          event_b_summary?: string | null
+          event_b_time?: string
+          id?: string
+          is_false_positive?: boolean | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          severity?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "correlation_results_correlation_rule_id_fkey"
+            columns: ["correlation_rule_id"]
+            isOneToOne: false
+            referencedRelation: "correlation_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "correlation_results_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "correlation_results_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "correlation_results_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "correlation_results_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "correlation_results_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       correlation_rules: {
         Row: {
           created_at: string
@@ -17373,16 +17464,21 @@ export type Database = {
           created_at: string
           description: string | null
           event_type: string
+          false_positive_count: number
           id: string
           is_enabled: boolean
+          last_triggered_at: string | null
           mitre_tactic: string
           mitre_technique_id: string
           mitre_technique_name: string
+          mode: string
+          risk_score: number | null
           rule_logic: Json
           rule_name: string
           severity: string
           tags: string[] | null
           tenant_id: string | null
+          true_positive_count: number
           updated_at: string
         }
         Insert: {
@@ -17390,16 +17486,21 @@ export type Database = {
           created_at?: string
           description?: string | null
           event_type: string
+          false_positive_count?: number
           id?: string
           is_enabled?: boolean
+          last_triggered_at?: string | null
           mitre_tactic: string
           mitre_technique_id: string
           mitre_technique_name: string
+          mode?: string
+          risk_score?: number | null
           rule_logic?: Json
           rule_name: string
           severity?: string
           tags?: string[] | null
           tenant_id?: string | null
+          true_positive_count?: number
           updated_at?: string
         }
         Update: {
@@ -17407,16 +17508,21 @@ export type Database = {
           created_at?: string
           description?: string | null
           event_type?: string
+          false_positive_count?: number
           id?: string
           is_enabled?: boolean
+          last_triggered_at?: string | null
           mitre_tactic?: string
           mitre_technique_id?: string
           mitre_technique_name?: string
+          mode?: string
+          risk_score?: number | null
           rule_logic?: Json
           rule_name?: string
           severity?: string
           tags?: string[] | null
           tenant_id?: string | null
+          true_positive_count?: number
           updated_at?: string
         }
         Relationships: [
@@ -51035,6 +51141,10 @@ export type Database = {
         Args: { p_agent_id?: string }
         Returns: Json
       }
+      recalculate_risk_scores: {
+        Args: { p_tenant_id: string }
+        Returns: undefined
+      }
       recalculate_tenant_risk_score: {
         Args: { p_tenant_id: string }
         Returns: number
@@ -51133,6 +51243,7 @@ export type Database = {
           passed: boolean
         }[]
       }
+      run_correlation_engine: { Args: { p_tenant_id: string }; Returns: number }
       run_integrity_sentinel: { Args: never; Returns: Json }
       run_maintenance_v2: {
         Args: { p_archive_limit?: number; p_expire_limit?: number }
