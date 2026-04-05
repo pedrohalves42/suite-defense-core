@@ -3,8 +3,7 @@
  * Constructs the normal (non-force-update) heartbeat response.
  */
 
-import { normalizeForWindows } from '../_shared/hexagonal/update-decision-service.ts'
-import { applyWindowsScriptHotfix } from '../_shared/windows-script-hotfix.ts'
+import { prepareAgentScriptContent } from '../_shared/agent-script-preparation.ts'
 import { logger } from '../_shared/logger.ts'
 import { buildCorsHeaders } from '../_shared/cors.ts'
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'

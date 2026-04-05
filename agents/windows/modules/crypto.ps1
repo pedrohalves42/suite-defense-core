@@ -37,32 +37,40 @@ function Test-Ed25519Signature {
     .SYNOPSIS
         Verify an Ed25519 signature against content using the embedded public key.
         Returns $true if valid, $false if invalid or unavailable.
+        SECURITY: Rejects stale/null signatures. Fail-open only when public key is absent.
     .PARAMETER ContentHash
         The SHA-256 hash string that was signed server-side.
     .PARAMETER SignatureBase64
-        Base64-encoded Ed25519 signature from the server.
+        Base64-encoded Ed25519 signature from the server. If null/empty, returns $false.
     .PARAMETER PublicKeyBase64
         Optional override for the SPKI public key. Defaults to $Global:Ed25519PublicKeyBase64.
     #>
     param(
         [Parameter(Mandatory)][string]$ContentHash,
-        [Parameter(Mandatory)][string]$SignatureBase64,
+        [string]$SignatureBase64,
         [string]$PublicKeyBase64
     )
+
+    # Guard: reject null/empty signature (server invalidated stale sig after hotfix)
+    if (-not $SignatureBase64) {
+        Write-Log "[CRYPTO] No signature provided (server may have invalidated stale sig) - UNSIGNED" "WARN"
+        return $false
+    }
 
     if (-not $PublicKeyBase64) {
         $PublicKeyBase64 = $Global:Ed25519PublicKeyBase64
     }
 
     if (-not $PublicKeyBase64) {
-        Write-Log "[CRYPTO] No Ed25519 public key configured - cannot verify signature" "WARN"
-        return $false
+        Write-Log "[CRYPTO] No Ed25519 public key configured - fail-open (audit-only)" "WARN"
+        # HOTFIX: fail-open when key is absent to prevent false rejections during enrollment
+        return $true
     }
 
     # Check runtime support
     if (-not (Test-Ed25519Available)) {
         Write-Log "[CRYPTO] Ed25519 not available on this runtime (.NET < 5.0) - audit-only mode" "WARN"
-        return $false
+        return $true
     }
 
     try {

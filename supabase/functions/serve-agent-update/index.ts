@@ -81,12 +81,24 @@ serveAgent(async (req, ctx) => {
     return new Response(JSON.stringify({ error: 'No valid script available' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
   }
 
+  // Signature staleness: if hotfix changed content, the old signature is invalid
+  const contentChanged = prepared.calculatedSha256 !== (release.sha256 || '');
+  const safeSignature = contentChanged ? null : (release.signature_base64 || null);
+  const safeSignedAt = contentChanged ? null : (release.signed_at || null);
+  const safeSignedBy = contentChanged ? null : (release.signed_by || null);
+
+  if (contentChanged && release.signature_base64) {
+    logger.warn('[serve-agent-update] Hotfix changed script content — invalidating stale Ed25519 signature', {
+      requestId, agentName, version: release.version,
+    });
+  }
+
   await logRolloutDecision(supabase, agentId, agentName, platform, agentData.agent_version as string | null, release.version, bucket, rolloutPolicy?.rollout_percentage || 100, 'allowed', requestId);
 
   return {
     version: release.version, script_content: prepared.finalContent, sha256: prepared.calculatedSha256,
     script_sha256: prepared.calculatedSha256, script_content_base64: prepared.base64Script, sha256_base64: prepared.calculatedSha256,
-    signature_base64: release.signature_base64 || null, signed_at: release.signed_at || null, signed_by: release.signed_by || null,
+    signature_base64: safeSignature, signed_at: safeSignedAt, signed_by: safeSignedBy,
     release_notes: release.release_notes, platform, current_version: agentData.agent_version,
     legacy_agent_detected: isLegacyAgent,
     self_healing_note: isLegacyAgent ? 'Script saved to disk. New version active after Windows reboot.' : null,
