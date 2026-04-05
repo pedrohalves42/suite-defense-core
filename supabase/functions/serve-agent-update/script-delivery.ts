@@ -10,6 +10,7 @@ interface PreparedScript {
   normalizedScript: string;
   base64Script: string;
   calculatedSha256: string;
+  contentChanged: boolean;
 }
 
 /**
