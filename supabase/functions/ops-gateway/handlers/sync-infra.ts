@@ -196,7 +196,7 @@ export async function handleSyncStorageBucket(supabase: SB, requestId: string, p
 
   const { data: releaseData, error: releaseError } = await supabase
     .from('agent_releases')
-    .select('script_content, version, sha256, created_at')
+    .select('id, script_content, version, sha256, created_at')
     .eq('platform', platform).eq('is_active', true)
     .order('created_at', { ascending: false }).limit(1).maybeSingle();
 
@@ -204,11 +204,23 @@ export async function handleSyncStorageBucket(supabase: SB, requestId: string, p
     return { error: `No active ${platform} release found`, requestId };
   }
 
-  const { script_content, version } = releaseData;
+  // Unified pipeline: decode → hotfix → reject HTML → normalize → SHA-256 → base64
+  const { prepareAgentScriptContent } = await import('../../_shared/agent-script-preparation.ts');
+  const prepared = await prepareAgentScriptContent({
+    supabase,
+    releaseId: releaseData.id,
+    rawScriptContent: releaseData.script_content,
+    platform,
+    requestId,
+    logScope: 'sync-storage-bucket',
+    persistIfChanged: true,
+  });
 
-  const encoder = new TextEncoder();
-  const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(script_content));
-  const calculatedSha256 = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+  if (!prepared) {
+    return { error: `Script preparation failed for ${platform}`, requestId };
+  }
+
+  const calculatedSha256 = prepared.sha256;
 
   const scriptFileName = platform === 'windows' ? 'cybershield-agent-windows-v5.ps1'
     : platform === 'linux' ? 'cybershield-agent-linux-v5.sh' : 'cybershield-agent-macos-v5.sh';
@@ -222,23 +234,25 @@ export async function handleSyncStorageBucket(supabase: SB, requestId: string, p
       const { data: currentFile, error: downloadError } = await supabase.storage.from('agent-installers').download(filePath);
       if (!downloadError && currentFile) {
         const currentContent = await currentFile.text();
+        const encoder = new TextEncoder();
         const currentBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(currentContent));
         currentStorageHash = Array.from(new Uint8Array(currentBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
         if (currentStorageHash === calculatedSha256) {
-          return { success: true, synced: false, message: 'Storage already synced', version, sha256: calculatedSha256, platform, requestId };
+          return { success: true, synced: false, message: 'Storage already synced', version: releaseData.version, sha256: calculatedSha256, platform, requestId };
         }
         needsUpdate = true;
       } else { needsUpdate = true; }
     } catch { needsUpdate = true; }
   }
 
-  if (!needsUpdate) return { success: true, synced: false, message: 'No update needed', version, requestId };
+  if (!needsUpdate) return { success: true, synced: false, message: 'No update needed', version: releaseData.version, requestId };
 
+  // Use the normalized content from the unified pipeline
   const { error: uploadError } = await supabase.storage.from('agent-installers')
-    .upload(filePath, new Blob([script_content], { type: 'application/octet-stream' }), { upsert: true, contentType: 'application/octet-stream' });
+    .upload(filePath, new Blob([prepared.normalizedContent], { type: 'application/octet-stream' }), { upsert: true, contentType: 'application/octet-stream' });
   if (uploadError) throw uploadError;
 
-  return { success: true, synced: true, message: `Storage synced with ${version}`, platform, version, file_path: filePath, size_bytes: script_content.length, sha256: calculatedSha256, previous_hash: currentStorageHash || null, requestId };
+  return { success: true, synced: true, message: `Storage synced with ${releaseData.version}`, platform, version: releaseData.version, file_path: filePath, size_bytes: prepared.normalizedContent.length, sha256: calculatedSha256, expected_sha256: calculatedSha256, previous_hash: currentStorageHash || null, requestId };
 }
 
 // ── sync-stripe-subscriptions ────────────────────────────────────────────

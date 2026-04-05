@@ -1,18 +1,19 @@
 /**
  * Force update handler — highest priority, bypasses rollout and jobs.
+ * Uses the canonical prepareAgentScriptContent pipeline.
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { encodeBase64 } from 'https://deno.land/std@0.208.0/encoding/base64.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
-import { applyWindowsScriptHotfix } from '../_shared/windows-script-hotfix.ts';
-import { normalizeForWindows } from '../_shared/hexagonal/update-decision-service.ts';
+import { prepareAgentScriptContent } from '../_shared/agent-script-preparation.ts';
 
 interface AgentInfo {
   id: string;
   agent_name: string;
   tenant_id: string;
+  hmac_secret?: string;
   agent_version: string | null;
+  os_type?: string | null;
   force_update_version: string | null;
   force_update_reason: string | null;
 }
@@ -55,31 +56,36 @@ export async function handleForceUpdate(
     );
   }
 
-  let scriptContent = forcedRelease.script_content;
-  if (platform === 'windows' && scriptContent) {
-    const hotfix = applyWindowsScriptHotfix(scriptContent);
-    if (hotfix.changed) {
-      scriptContent = hotfix.content;
-      logger.warn('[serve-agent-update] Applied Windows hotfix in force-update path', { requestId, forceVersion: forcedRelease.version, reasons: hotfix.reasons });
-      const { error: persistError } = await supabase.from('agent_releases').update({ script_content: scriptContent }).eq('id', forcedRelease.id);
-      if (persistError) logger.warn('[serve-agent-update] Could not persist force-update hotfix', { requestId, error: persistError.message });
-    }
-  }
+  // Unified pipeline: decode → hotfix → reject HTML → normalize → SHA-256 → base64
+  const prepared = await prepareAgentScriptContent({
+    supabase,
+    releaseId: forcedRelease.id,
+    rawScriptContent: forcedRelease.script_content,
+    platform,
+    requestId,
+    logScope: 'serve-agent-update/force-update',
+    persistIfChanged: true,
+  });
 
-  // SAFETY: Reject HTML content
-  if (scriptContent?.trimStart().startsWith('<!DOCTYPE') || scriptContent?.trimStart().startsWith('<html')) {
-    logger.error('[serve-agent-update] Force update script is corrupted HTML', { requestId, forceVersion: agent.force_update_version });
+  if (!prepared) {
+    logger.error('[serve-agent-update] Force update script invalid after preparation', { requestId, forceVersion: agent.force_update_version });
     return new Response(
-      JSON.stringify({ error: 'Script content corrupted (HTML)', version: agent.force_update_version }),
+      JSON.stringify({ error: 'Script content corrupted', version: agent.force_update_version }),
       { status: 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
     );
   }
 
-  const normalizedScript = normalizeForWindows(scriptContent);
-  const scriptBytes = new TextEncoder().encode(normalizedScript);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes);
-  const calculatedSha256 = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-  const base64Script = encodeBase64(scriptBytes);
+  // Signature staleness: if hotfix changed content, the old signature is invalid
+  const signatureValid = !prepared.changed;
+  const safeSignature = signatureValid ? (forcedRelease.signature_base64 || null) : null;
+  const safeSignedAt = signatureValid ? (forcedRelease.signed_at || null) : null;
+  const safeSignedBy = signatureValid ? (forcedRelease.signed_by || null) : null;
+
+  if (prepared.changed && forcedRelease.signature_base64) {
+    logger.warn('[serve-agent-update] Hotfix changed script content — invalidating stale Ed25519 signature in force-update', {
+      requestId, agentName: agent.agent_name, forceVersion: forcedRelease.version, reasons: prepared.reasons,
+    });
+  }
 
   // Increment delivery counter
   const { data: currentAgent } = await supabase.from('agents').select('force_update_delivery_count').eq('id', agent.id).single();
@@ -90,16 +96,16 @@ export async function handleForceUpdate(
   return new Response(
     JSON.stringify({
       version: forcedRelease.version,
-      script_content: scriptContent,
-      sha256: calculatedSha256,
-      script_sha256: calculatedSha256,
-      script_content_base64: base64Script,
-      sha256_base64: calculatedSha256,
-      signature_base64: forcedRelease.signature_base64 || null,
-      signed_at: forcedRelease.signed_at || null,
-      signed_by: forcedRelease.signed_by || null,
-      expected_sha256: calculatedSha256,
-      signature_timestamp: forcedRelease.signed_at || null,
+      script_content: prepared.content,
+      sha256: prepared.sha256,
+      script_sha256: prepared.sha256,
+      script_content_base64: prepared.base64Content,
+      sha256_base64: prepared.sha256,
+      signature_base64: safeSignature,
+      signed_at: safeSignedAt,
+      signed_by: safeSignedBy,
+      expected_sha256: prepared.sha256,
+      signature_timestamp: safeSignedAt,
       release_notes: forcedRelease.release_notes,
       platform,
       current_version: agent.agent_version,
