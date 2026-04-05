@@ -49,5 +49,6 @@ export async function prepareScriptForDelivery(
     normalizedScript: result.normalizedContent,
     base64Script: result.base64Content,
     calculatedSha256: result.sha256,
+    contentChanged: result.changed,
   };
 }
