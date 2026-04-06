@@ -12,7 +12,7 @@ export const BRASILIA_TIMEZONE = 'America/Sao_Paulo';
  * Drop-in replacement for date-fns `format()` that always uses Brasília timezone.
  * Usage: import { format } from '@/lib/date-utils'; (instead of date-fns)
  */
-export function format(date: Date | string | number, formatStr: string, options?: { locale?: any }): string {
+export function format(date: Date | string | number, formatStr: string, options?: { locale?: Locale }): string {
   const d = typeof date === 'string' ? new Date(date) : typeof date === 'number' ? new Date(date) : date;
   if (isNaN(d.getTime())) return '-';
   const zonedDate = toZonedTime(d, BRASILIA_TIMEZONE);
