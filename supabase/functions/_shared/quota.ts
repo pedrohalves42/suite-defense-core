@@ -43,8 +43,7 @@ export async function checkQuotaAvailable(
         .limit(1)
         .maybeSingle();
 
-      // deno-lint-ignore no-explicit-any
-      const plan = (sub as any)?.subscription_plans;
+      const plan = (sub as Record<string, unknown>)?.subscription_plans as Record<string, number | null> | undefined;
       if (plan) {
         const planLimitMap: Record<string, number | null> = {
           max_agents: plan.max_agents,

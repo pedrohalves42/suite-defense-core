@@ -498,8 +498,7 @@ export async function handleAnalyzeJobFailurePatterns(supabase: SB, requestId: s
 
         const lastFailure = failedJobs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
-        // deno-lint-ignore no-explicit-any
-        const agentName = (((typeJobs[0] as Record<string, unknown>).agents as any)?.agent_name as string) || 'Unknown';
+        const agentName = (((typeJobs[0] as Record<string, unknown>).agents as Record<string, unknown> | undefined)?.agent_name as string) || 'Unknown';
 
         patterns.push({
           agent_id: agentId, agent_name: agentName, job_type: jobType,
