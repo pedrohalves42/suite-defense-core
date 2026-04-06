@@ -246,7 +246,7 @@ export default function AgentTimeline() {
                   {filtered.map((event, idx) => {
                     const meta = getEventMeta(event.event_type);
                     const Icon = meta.icon;
-                    const summary = meta.summary(event.data);
+                    const summary = meta.summary(event.data as Record<string, unknown> | undefined);
 
                     return (
                       <motion.div
