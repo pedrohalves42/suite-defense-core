@@ -77,7 +77,7 @@ export async function handleActivateAgentHoneypot(
     .eq('id', agentId);
 
   if (updateError) {
-    console.error(`[activate-honeypot] Update error: ${updateError.message}`);
+    logger.error(`[activate-honeypot] Update error`, { message: updateError.message });
     return errRes('Failed to activate honeypot mode', 500);
   }
 
