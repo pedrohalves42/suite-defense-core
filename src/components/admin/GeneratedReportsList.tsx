@@ -223,7 +223,7 @@ export function GeneratedReportsList() {
     if (data.web_activity && data.web_activity.length > 0) {
       csvContent += "ATIVIDADE WEB\n";
       csvContent += "Domínio,Fonte,Data\n";
-      data.web_activity.forEach((web: any) => {
+      data.web_activity.forEach((web: Record<string, unknown>) => {
         csvContent += `"${web.domain || ''}","${web.source || ''}","${web.visited_at || ''}"\n`;
       });
     }

@@ -3,7 +3,7 @@ export interface AIAction {
   insight_id: string;
   tenant_id: string;
   action_type: string;
-  action_payload: any;
+  action_payload: Record<string, unknown>;
   status: string;
   created_at: string;
   risk_level?: string;
@@ -12,11 +12,11 @@ export interface AIAction {
     description: string;
     severity: string;
     confidence_score: number;
-    evidence: any;
+    evidence: Record<string, unknown>;
   };
   ai_action_executions?: Array<{
     execution_status: string;
-    execution_result: any;
+    execution_result: Record<string, unknown>;
     error_message: string;
     executed_at: string;
   }>;

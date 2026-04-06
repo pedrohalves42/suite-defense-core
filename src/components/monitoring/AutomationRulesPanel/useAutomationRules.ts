@@ -31,11 +31,9 @@ export interface AutomationExecution {
   id: string;
   rule_id: string;
   agent_id: string | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  trigger_data: any;
+  trigger_data: Record<string, unknown>;
   action_taken: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  action_result: any | null;
+  action_result: Record<string, unknown> | null;
   status: string;
   triggered_at: string;
 }

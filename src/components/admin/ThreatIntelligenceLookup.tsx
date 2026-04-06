@@ -28,7 +28,7 @@ interface ThreatIntelSource {
   name: string;
   verdict: string;
   confidence: number;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 interface ThreatIntelResult {
@@ -37,8 +37,8 @@ interface ThreatIntelResult {
   reputation: 'clean' | 'suspicious' | 'malicious' | 'unknown';
   risk_score: number;
   sources: ThreatIntelSource[];
-  whois_data?: any;
-  ssl_data?: any;
+  whois_data?: Record<string, unknown>;
+  ssl_data?: Record<string, unknown>;
   cached: boolean;
   cached_at?: string;
 }

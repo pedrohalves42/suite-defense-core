@@ -7,9 +7,9 @@ import { formatBrazilDateTime } from '@/lib/date-utils';
 type EffectivenessStatus = 'pending' | 'resolved' | 'partial' | 'failed' | 'unknown';
 
 interface EffectivenessEvidence {
-  before?: any;
-  after?: any;
-  comparison?: any;
+  before?: Record<string, unknown>;
+  after?: Record<string, unknown>;
+  comparison?: Record<string, unknown>;
   verdict?: string;
   note?: string;
 }
