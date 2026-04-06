@@ -1,6 +1,8 @@
 import { securityHeaders } from './security-headers.ts';
 
 const ALLOWED_ORIGINS = [
+  'https://cybshield.com.br',
+  'https://www.cybshield.com.br',
   'https://cybershield.com.br',
   'https://www.cybershield.com.br',
   'https://cybershield-audit.lovable.app',
