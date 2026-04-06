@@ -18,7 +18,7 @@ interface TenantFeature {
   enabled: boolean;
   quota_limit: number | null;
   quota_used: number;
-  metadata: Record<string, unknown> | null;
+  metadata: any;
 }
 
 const featureDefinitions = [
