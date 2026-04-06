@@ -83,7 +83,7 @@ function securityEventSummary(data: Record<string, unknown> | undefined): string
   return parts.join(' ');
 }
 
-function forceUpdateSummary(data: any | undefined): string {
+function forceUpdateSummary(data: Record<string, unknown> | undefined): string {
   if (!data) return 'Atualização forçada';
   const oldV = data.old_version as string | undefined;
   const newV = data.new_version as string | undefined;
