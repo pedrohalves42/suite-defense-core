@@ -118,11 +118,14 @@ export function useAgentMonitoring() {
         p_include_archived: false,
       });
       if (error) throw error;
-      return (data || []).map((agent: any) => ({
-        agent_name: agent.agent_name,
-        last_heartbeat: agent.last_heartbeat,
-        enrolled_at: agent.enrolled_at,
-      }));
+      return (data || []).map((agent: unknown) => {
+        const a = agent as Record<string, unknown>;
+        return {
+          agent_name: String(a.agent_name ?? ''),
+          last_heartbeat: a.last_heartbeat ? String(a.last_heartbeat) : null,
+          enrolled_at: String(a.enrolled_at ?? ''),
+        };
+      });
     },
     enabled: !tenantLoading && !!tenant?.id,
   });
