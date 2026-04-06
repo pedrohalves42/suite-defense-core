@@ -9,8 +9,7 @@ type JobExecutionInsert = Database['public']['Tables']['job_executions']['Insert
  * Maps between Supabase DB rows and Job/JobExecution domain entities.
  */
 export class JobMapper {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static toDomain(row: any): Job {
+  static toDomain(row: Record<string, unknown>): Job {
     return Job.reconstitute({
       id: row.id,
       agentId: row.agent_id,
