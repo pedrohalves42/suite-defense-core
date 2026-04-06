@@ -62,23 +62,17 @@ export function useRealtimeAlerts(tenantId: string | undefined, opts?: { activeO
     queryKey: ['rt-alerts', tenantId, activeOnly],
     queryFn: async () => {
       if (!tenantId) return [];
-      if (activeOnly) {
-        const { data, error } = await supabase
-          .from('system_alerts')
-          .select('id, alert_type, severity, title, description, is_active, created_at, resolved_at')
-          .eq('tenant_id', tenantId)
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(100);
-        if (error) throw error;
-        return data || [];
-      }
-      const { data, error } = await supabase
+      // TS2589 workaround: Supabase query builder hits infinite type depth with system_alerts relationships
+      const query = supabase
         .from('system_alerts')
         .select('id, alert_type, severity, title, description, is_active, created_at, resolved_at')
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .eq('tenant_id', tenantId) as unknown as { eq: (col: string, val: unknown) => typeof baseQ; order: (col: string, opts: { ascending: boolean }) => { limit: (n: number) => Promise<{ data: Record<string, unknown>[] | null; error: Error | null }> } };
+      const baseQ = supabase.from('system_alerts').select('*');
+      void baseQ;
+      const { data, error } = await (activeOnly
+        ? supabase.from('system_alerts').select('id, alert_type, severity, title, description, is_active, created_at, resolved_at').eq('tenant_id', tenantId).eq('is_active', true).order('created_at', { ascending: false }).limit(100)
+        : supabase.from('system_alerts').select('id, alert_type, severity, title, description, is_active, created_at, resolved_at').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(100)
+      );
       if (error) throw error;
       return data || [];
     },
