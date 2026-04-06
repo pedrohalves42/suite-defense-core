@@ -73,7 +73,7 @@ export function useCreateCorrelationRule() {
       if (!activeTenant?.id) throw new Error('No active tenant');
       const { error } = await supabase
         .from('correlation_rules')
-        .insert({ ...rule, tenant_id: activeTenant.id } as any);
+        .insert({ ...rule, tenant_id: activeTenant.id } as Omit<CorrelationRule, 'id' | 'risk_score' | 'match_count' | 'false_positive_count' | 'created_at' | 'updated_at'> & { tenant_id: string });
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['correlation-rules'] }),
