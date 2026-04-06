@@ -37,7 +37,9 @@ export function SAMLConfigPanel({ tenantId }: SAMLConfigPanelProps) {
 
   const loadConfig = useCallback(async () => {
     try {
-      const data = await callEdgeFunction('saml-sso', { action: 'config', tenantId });
+      const data = await callEdgeFunction<{
+        enabled?: boolean; provider?: string; entity_id?: string; sso_url?: string;
+      }>('saml-sso', { action: 'config', tenantId });
       setConfig(data);
       if (data?.enabled) {
         setProvider(data.provider || 'custom');
