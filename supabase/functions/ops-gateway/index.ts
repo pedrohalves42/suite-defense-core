@@ -129,6 +129,7 @@ import {
 import { handleSyncCveDatabase } from './handlers/sync-cve.ts';
 import { handleMitreSync } from './handlers/sync-mitre.ts';
 import { handleRateLimitCheck } from './handlers/rate-limit.ts';
+import { handleAccessReview } from './handlers/access-review.ts';
 
 // Inlined handlers — notify (Phase 3A)
 import {
@@ -283,6 +284,8 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'sync:sync-cve-database': handleSyncCveDatabase,
   'sync:mitre-sync': handleMitreSync,
   'check:rate-limit-check': handleRateLimitCheck,
+  // ── SOC 2 CC6.3: Periodic Access Review ──
+  'check:access-review': handleAccessReview,
 };
 
 const ALL_VALID_ACTIONS = new Set([
