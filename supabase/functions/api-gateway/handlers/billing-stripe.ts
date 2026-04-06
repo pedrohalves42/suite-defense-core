@@ -316,8 +316,7 @@ export async function handleCreateCheckout(supabase: SB, requestId: string, payl
   const mspCouponId = getMspCouponId(totalDevices);
   const origin = ctx?.req?.headers.get('origin') || 'http://localhost:8080';
 
-  // deno-lint-ignore no-explicit-any
-  const sessionParams: any = {
+  const sessionParams: Record<string, unknown> = {
     customer: customerId,
     line_items: lineItems,
     mode: 'subscription',
