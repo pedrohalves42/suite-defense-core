@@ -46,7 +46,7 @@ export function useAIFeedbackDashboard() {
 
       if (error) throw error;
 
-      const insightIds = (insightsData || []).map((i: any) => i.id);
+      const insightIds = (insightsData || []).map((i) => i.id);
       if (insightIds.length === 0) return [];
 
       const { data: feedbackData } = await supabase
