@@ -190,7 +190,7 @@ export async function handleRevertAgentHoneypot(
     });
 
   if (insertError) {
-    console.error(`[revert-honeypot] New token error: ${insertError.message}`);
+    logger.error(`[revert-honeypot] New token error`, { message: insertError.message });
     return errRes('Agent reverted but new token creation failed. Manual intervention required.', 500);
   }
 

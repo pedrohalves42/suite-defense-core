@@ -21,6 +21,7 @@ import { buildHoneypotResponse, type ResponseProfileType } from './response-prof
 import { buildCorsHeaders } from '../cors.ts';
 import { securityHeaders } from '../security-headers.ts';
 import { isKillSwitchEnabled } from '../feature-flags.ts';
+import { logger } from '../logger.ts';
 
 export interface HoneypotAgentContext {
   agentId: string;

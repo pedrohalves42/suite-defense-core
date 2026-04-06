@@ -28,6 +28,7 @@ import {
 import { classifyPayload } from './honeypot/classify.ts';
 import { checkHoneypotRateLimit } from './honeypot/rate-limit.ts';
 import { buildHoneypotResponse, type ResponseProfileType } from './honeypot/response-profiles.ts';
+import { logger } from './logger.ts';
 
 export interface HoneypotContext {
   supabase: SupabaseClient;

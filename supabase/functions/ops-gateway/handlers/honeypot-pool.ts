@@ -67,7 +67,7 @@ export async function handleCreateHoneypotPool(
         });
 
       if (agentError) {
-        console.error(`[create-honeypot-pool] Failed: ${agentError.message}`);
+        logger.error(`[create-honeypot-pool] Failed`, { message: agentError.message });
         continue;
       }
       created++;
