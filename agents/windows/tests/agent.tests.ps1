@@ -18,7 +18,7 @@ Describe "CyberShield Agent v6.0 Module Integration" {
         $Global:CachedHmacKey = $null
         $Global:TlsPinnedThumbprint = $null
         $Global:ConsecutivePollErrors = 0
-        $Global:JobPollIntervalSeconds = 60
+        $Global:JobPollIntervalSeconds = 30
         $Global:LoopTimestamp = $null
         $Global:StatePath = "$env:TEMP\CyberShield\test-integration\agent_state.json"
         $Global:DnsBlocklistPath = "$env:TEMP\CyberShield\test-integration\dns_blocklist.json"
