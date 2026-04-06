@@ -420,8 +420,7 @@ export async function handleManageSubscription(supabase: SB, requestId: string, 
       }
 
       if (extraDevices > 0) {
-        // deno-lint-ignore no-explicit-any
-        const existingAddon = stripeSub.items.data.find((item: any) => allAddonPriceIds.includes(item.price.id));
+        const existingAddon = stripeSub.items.data.find((item: StripeSubscriptionItem) => allAddonPriceIds.includes(item.price.id));
         if (existingAddon) {
           const addonItem = items.find(i => i.id === existingAddon.id);
           if (addonItem) addonItem.quantity = (addonItem.quantity || 0) + extraDevices;
