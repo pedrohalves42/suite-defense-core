@@ -83,7 +83,7 @@ export function useAIActionApprovalData() {
       try {
         const blastResult = await checkBlastRadius.mutateAsync({
           actionType: action.action_type,
-          affectedCount: action.action_payload.affected_count,
+          affectedCount: Number(action.action_payload.affected_count),
         });
         if (!blastResult.allowed) {
           toast({ title: 'Ação bloqueada pelo Blast Radius', description: blastResult.message, variant: 'destructive' });
