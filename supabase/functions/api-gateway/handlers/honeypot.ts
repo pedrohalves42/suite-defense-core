@@ -158,7 +158,7 @@ export async function handleRevertAgentHoneypot(
     .eq('id', agentId);
 
   if (updateError) {
-    console.error(`[revert-honeypot] Update error: ${updateError.message}`);
+    logger.error(`[revert-honeypot] Update error`, { message: updateError.message });
     return errRes('Failed to revert honeypot mode', 500);
   }
 
