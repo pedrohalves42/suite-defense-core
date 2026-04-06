@@ -204,7 +204,7 @@ export const ClientSecurityStatus = () => {
             <CardContent>
               {data?.software && data.software.length > 0 ? (
                 <div className="space-y-2">
-                  {data.software.map((sw: any, index: number) => (
+                  {data.software.map((sw: Record<string, unknown>, index: number) => (
                     <motion.div 
                       key={sw.id}
                       initial={{ opacity: 0, x: -10 }}
