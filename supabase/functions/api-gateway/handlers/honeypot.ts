@@ -4,7 +4,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { hashToken } from '../../_shared/token-hash.ts';
-import { isFeatureEnabled } from '../../_shared/feature-flags.ts';
+import { isKillSwitchEnabled } from '../../_shared/feature-flags.ts';
 import type { HandlerContext } from './admin.ts';
 
 /** 24 hour cooldown between state changes */
@@ -24,11 +24,11 @@ export async function handleActivateAgentHoneypot(
   const userId = ctx?.userId;
 
   // === KILL SWITCH ===
-  const honeypotEnabled = await isFeatureEnabled(supabase, 'HONEYPOT_ENABLED', tenantId);
+  const honeypotEnabled = await isKillSwitchEnabled(supabase, 'HONEYPOT_ENABLED', tenantId);
   if (!honeypotEnabled) return errRes('Honeypot feature is currently disabled', 503);
 
   // === FLIPPED MODE FLAG ===
-  const flippedEnabled = await isFeatureEnabled(supabase, 'HONEYPOT_FLIPPED_ENABLED', tenantId);
+  const flippedEnabled = await isKillSwitchEnabled(supabase, 'HONEYPOT_FLIPPED_ENABLED', tenantId);
   if (!flippedEnabled) return errRes('Honeypot flipping is currently disabled', 503);
 
   // === STEP-UP AUTH ===
@@ -109,7 +109,7 @@ export async function handleRevertAgentHoneypot(
   const userId = ctx?.userId;
 
   // === KILL SWITCH ===
-  const honeypotEnabled = await isFeatureEnabled(supabase, 'HONEYPOT_ENABLED', tenantId);
+  const honeypotEnabled = await isKillSwitchEnabled(supabase, 'HONEYPOT_ENABLED', tenantId);
   if (!honeypotEnabled) return errRes('Honeypot feature is currently disabled', 503);
 
   // === STEP-UP AUTH ===

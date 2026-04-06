@@ -20,7 +20,7 @@ import { classifyPayload } from './classify.ts';
 import { buildHoneypotResponse, type ResponseProfileType } from './response-profiles.ts';
 import { buildCorsHeaders } from '../cors.ts';
 import { securityHeaders } from '../security-headers.ts';
-import { isFeatureEnabled } from '../feature-flags.ts';
+import { isKillSwitchEnabled } from '../feature-flags.ts';
 
 export interface HoneypotAgentContext {
   agentId: string;
@@ -49,7 +49,8 @@ export async function handleHoneypotAgentRequest(
   const method = req.method;
 
   // === KILL SWITCH ===
-  const honeypotEnabled = await isFeatureEnabled(supabase, 'HONEYPOT_ENABLED', ctx.tenantId);
+  // FAIL-CLOSED: If RPC fails, honeypot is DISABLED (safe default)
+  const honeypotEnabled = await isKillSwitchEnabled(supabase, 'HONEYPOT_ENABLED', ctx.tenantId);
   if (!honeypotEnabled) {
     return new Response(JSON.stringify({ status: 'ok' }), {
       status: 200,

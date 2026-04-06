@@ -15,7 +15,7 @@
 
 import { serveHoneypot } from '../_shared/serve-honeypot.ts';
 import { buildHoneypotResponse } from '../_shared/honeypot/response-profiles.ts';
-import { isFeatureEnabled } from '../_shared/feature-flags.ts';
+import { isKillSwitchEnabled } from '../_shared/feature-flags.ts';
 
 const SUPPORTED_ROUTES = new Set(['/heartbeat', '/poll-jobs', '/submit-job-result']);
 
@@ -24,7 +24,8 @@ serveHoneypot(async (_req, ctx) => {
     classification, method, path, responseProfile } = ctx;
 
   // === KILL SWITCH (global + tenant) ===
-  const honeypotEnabled = await isFeatureEnabled(supabase, 'HONEYPOT_ENABLED');
+  // FAIL-CLOSED: If RPC fails, honeypot is DISABLED (safe default)
+  const honeypotEnabled = await isKillSwitchEnabled(supabase, 'HONEYPOT_ENABLED');
   if (!honeypotEnabled) {
     return new Response(
       JSON.stringify({ status: 'ok' }),
