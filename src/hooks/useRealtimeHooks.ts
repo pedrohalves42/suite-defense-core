@@ -71,21 +71,22 @@ export function useRealtimeAlerts(tenantId: string | undefined, opts?: { activeO
   const activeOnly = opts?.activeOnly ?? true;
   return useRealtimeQuery({
     queryKey: ['rt-alerts', tenantId, activeOnly],
-    queryFn: async () => {
+    queryFn: async (): Promise<SystemAlert[]> => {
       if (!tenantId) return [];
-      // TS2589 workaround: Supabase query builder hits infinite type depth with system_alerts relationships
-      const query = supabase
-        .from('system_alerts')
-        .select('id, alert_type, severity, title, description, is_active, created_at, resolved_at')
-        .eq('tenant_id', tenantId) as unknown as { eq: (col: string, val: unknown) => typeof baseQ; order: (col: string, opts: { ascending: boolean }) => { limit: (n: number) => Promise<{ data: Record<string, unknown>[] | null; error: Error | null }> } };
-      const baseQ = supabase.from('system_alerts').select('*');
-      void baseQ;
-      const { data, error } = await (activeOnly
-        ? supabase.from('system_alerts').select('id, alert_type, severity, title, description, is_active, created_at, resolved_at').eq('tenant_id', tenantId).eq('is_active', true).order('created_at', { ascending: false }).limit(100)
-        : supabase.from('system_alerts').select('id, alert_type, severity, title, description, is_active, created_at, resolved_at').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(100)
-      );
+      // TS2589: system_alerts has too many FK relationships causing infinite type depth in Supabase SDK.
+      // Using typed RPC-style workaround with explicit result type.
+      const params: Record<string, unknown> = { tenant_id: tenantId };
+      if (activeOnly) params.is_active = true;
+      
+      const builder = supabase
+        .from('system_alerts' as 'active_sessions')
+        .select('id, alert_type, severity, title, description, is_active, created_at, resolved_at');
+      
+      let q = builder.eq('tenant_id' as 'id', tenantId);
+      if (activeOnly) q = q.eq('is_active' as 'id', true);
+      const { data, error } = await q.order('created_at' as 'id', { ascending: false }).limit(100);
       if (error) throw error;
-      return data || [];
+      return (data || []) as unknown as SystemAlert[];
     },
     realtimeTable: 'system_alerts',
     realtimeFilter: `tenant_id=eq.${tenantId}`,
