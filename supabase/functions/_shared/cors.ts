@@ -36,7 +36,7 @@ export function buildCorsHeaders(origin: string | null): Record<string, string> 
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Expose-Headers': 'X-Request-ID, X-Trace-ID, X-Response-Time',
     'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Max-Age': '86400',
+    'Access-Control-Max-Age': '600',
     'Vary': 'Origin',
     ...securityHeaders,
   };
