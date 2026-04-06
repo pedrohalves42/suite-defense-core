@@ -58,8 +58,7 @@ export async function handleListInvoices(supabase: SB, requestId: string, _paylo
   const { stripe } = await getStripe();
   const invoices = await stripe.invoices.list({ customer: subscription.stripe_customer_id, limit: 12 });
 
-  // deno-lint-ignore no-explicit-any
-  const formattedInvoices = invoices.data.map((inv: any) => ({
+  const formattedInvoices = invoices.data.map((inv: StripeInvoice) => ({
     id: inv.id, number: inv.number, amount_due: inv.amount_due, amount_paid: inv.amount_paid,
     currency: inv.currency, status: inv.status, created: inv.created, due_date: inv.due_date,
     hosted_invoice_url: inv.hosted_invoice_url, invoice_pdf: inv.invoice_pdf,
