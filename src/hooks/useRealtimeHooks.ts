@@ -1,6 +1,16 @@
 import { supabase } from '@/integrations/supabase/client';
-import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 import { useRealtimeQuery } from './useRealtimeQuery';
+
+interface SystemAlert {
+  id: string;
+  alert_type: string;
+  severity: string;
+  title: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  resolved_at: string | null;
+}
 
 /**
  * Realtime-powered hook for agents list.
