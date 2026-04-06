@@ -231,23 +231,23 @@ export function useAgentMonitoring() {
   const last7Days = getLast7Days();
 
   const scansTrendData: ScansTrendPoint[] = last7Days.map(day => {
-    const dayScans = historicalScans?.filter((s: any) => s.scanned_at.startsWith(day.date)) || [];
+    const dayScans = historicalScans?.filter(s => s.scanned_at.startsWith(day.date)) || [];
     return {
       date: day.label,
       total: dayScans.length,
-      malicious: dayScans.filter((s: any) => s.is_malicious).length,
-      clean: dayScans.filter((s: any) => !s.is_malicious).length,
+      malicious: dayScans.filter(s => s.is_malicious).length,
+      clean: dayScans.filter(s => !s.is_malicious).length,
     };
   });
 
   const jobsTrendData: JobsTrendPoint[] = last7Days.map(day => {
-    const dayJobs = historicalJobs?.filter((j: any) => j.created_at.startsWith(day.date)) || [];
+    const dayJobs = historicalJobs?.filter(j => j.created_at.startsWith(day.date)) || [];
     return {
       date: day.label,
       total: dayJobs.length,
-      completed: dayJobs.filter((j: any) => j.status === 'completed').length,
-      failed: dayJobs.filter((j: any) => j.status === 'failed').length,
-      pending: dayJobs.filter((j: any) => j.status === 'queued' || j.status === 'delivered').length,
+      completed: dayJobs.filter(j => j.status === 'completed').length,
+      failed: dayJobs.filter(j => j.status === 'failed').length,
+      pending: dayJobs.filter(j => j.status === 'queued' || j.status === 'delivered').length,
     };
   });
 
