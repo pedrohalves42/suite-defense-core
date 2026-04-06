@@ -411,10 +411,8 @@ export async function handleManageSubscription(supabase: SB, requestId: string, 
       logStep('Target plan config', newConfig);
 
       const stripeSub = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id);
-      // deno-lint-ignore no-explicit-any
-      const items: any[] = [];
-      // deno-lint-ignore no-explicit-any
-      for (const item of stripeSub.items.data as any[]) {
+      const items: Array<{ id?: string; price: string; quantity: number }> = [];
+      for (const item of stripeSub.items.data) {
         const isAddon = allAddonPriceIds.includes(item.price.id);
         items.push(isAddon
           ? { id: item.id, price: newConfig.addonPriceId, quantity: item.quantity }
