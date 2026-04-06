@@ -50,7 +50,7 @@ export default function ShadowITDiscovery() {
     mutationFn: async () => {
       return await callGateway('security', 'classify-shadow-it', { tenant_id: tenant!.id });
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: Record<string, unknown>) => {
       const msg = data?.ai_classified > 0 
         ? `${data.classified} apps classificados (${data.local_classified} por regras, ${data.ai_classified} por IA)`
         : `${data?.classified ?? 0} apps classificados`;
