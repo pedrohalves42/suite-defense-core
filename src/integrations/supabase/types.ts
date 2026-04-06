@@ -51464,6 +51464,19 @@ export type Database = {
           total_records: number
         }[]
       }
+      verify_log_chain: {
+        Args: {
+          p_end_date?: string
+          p_start_date?: string
+          p_tenant_id: string
+        }
+        Returns: {
+          broken_links: number
+          chain_integrity_percent: number
+          total_logs: number
+          valid_links: number
+        }[]
+      }
       verify_security_log_chain: {
         Args: {
           p_end_date?: string

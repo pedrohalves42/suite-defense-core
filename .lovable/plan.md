@@ -1,35 +1,26 @@
 
-## Plano de Otimização FinOps – Crons, Polling e Alertas
+# Plano: Correção da Hash Chain de audit_logs
 
-### Fase 1 – Cortar/Reduzir Crons
+## Diagnóstico Confirmado
+- **Causa raiz:** O trigger `calculate_audit_log_hash` usa `ORDER BY created_at DESC LIMIT 1` SEM tiebreaker por `id`. Quando registros compartilham o mesmo timestamp (ex: batch inserts), o trigger seleciona o registro "anterior" de forma não-determinística, quebrando a cadeia.
+- **Evidência:** 32/184 registros quebrados no tenant principal, todos em timestamps duplicados.
+- **Problema secundário:** A fórmula de hash do trigger (usa `state_before`, `state_after`) difere da fórmula do backfill (usa `user_id`, `success`), tornando re-ancoragem via backfill incompatível.
 
-**1.1 Desativar `honeypot-dispatch-ai`**
-- Remover o cron job do pg_cron (via SQL)
-- O processamento de IA do honeypot já é assíncrono via outbox; o cron dedicado é redundante
+## Etapa 1: Migração — Corrigir trigger `calculate_audit_log_hash`
+- Adicionar `id ASC` como tiebreaker no `ORDER BY created_at DESC, id DESC LIMIT 1`
+- Unificar a fórmula de hash entre trigger e backfill para usar os mesmos campos
+- Campos canônicos: `previous_hash + id + action + resource_type + resource_id + state_before + state_after + created_at`
 
-**1.2 Reduzir `evaluate-automation-rules` para 1x/dia**
-- Atualizar o schedule no pg_cron de qualquer frequência atual para `0 3 * * *` (03:00 UTC, 1x/dia)
+## Etapa 2: Re-ancorar cadeia existente
+- Usar a RPC `reanchor_audit_log_chain` (já existente) para corrigir os `previous_log_hash` de cada tenant
+- Depois, executar um backfill que recalcula `integrity_hash` usando a fórmula canônica unificada
+- Custo: operação única, sem impacto em runtime
 
-**1.3 Reduzir `honeypot-update-agent-timestamps` para 1x/hora**
-- Atualizar o schedule no pg_cron para `0 * * * *` (topo de cada hora)
+## Etapa 3: Validação
+- Query de verificação da cadeia para confirmar 0 broken links
+- Sem custo recorrente — correção é estrutural
 
-### Fase 2 – Reduzir Polling
-
-**2.1 `poll-jobs`: 10s → 30s**
-- Atualizar o intervalo no script do agente PowerShell (constante de polling)
-- Atualizar rate limit no edge function `poll-jobs` de 6/min para 3/min (compatível com 30s)
-
-**2.2 `purge-hmac-signatures`: 10min → 1x/dia**
-- Atualizar o cron job para `0 4 * * *` (04:00 UTC, 1x/dia)
-
-### Fase 3 – Alertas de Tenant Outlier
-
-**3.1 Configurar cron `check-tenant-abuse` horário**
-- Criar/atualizar cron job para `5 * * * *` (minuto 5 de cada hora)
-- A edge function já existe e está funcional
-
-### Fase 4 – Validação
-
-- Verificar todos os cron jobs ativos via consulta a `cron.job`
-- Confirmar que as edge functions deployam sem erros
-- Validar sintaxe de todas as alterações
+## Impacto
+- **Custo:** Zero custo recorrente. Operação única de re-seed.
+- **Performance:** Nenhuma degradação — o trigger continua O(1) por INSERT.
+- **SOC 2:** Desbloqueia CC7.2 (Audit Trail) e PI1 (Processing Integrity).
