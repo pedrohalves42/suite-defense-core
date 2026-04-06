@@ -329,7 +329,7 @@ export async function handleCreateCheckout(supabase: SB, requestId: string, payl
     metadata: { tenant_id: tenantId, plan_name: planName, total_devices: totalDevices.toString() },
   };
 
-  if (mspCouponId) sessionParams.discounts = [{ coupon: mspCouponId }];
+  if (mspCouponId) (sessionParams as Record<string, unknown>).discounts = [{ coupon: mspCouponId }];
 
   const session = await stripe.checkout.sessions.create(sessionParams);
   logStep('Checkout session created', { sessionId: session.id, url: session.url });
