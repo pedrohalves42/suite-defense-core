@@ -35,7 +35,7 @@ export const OverviewTab = ({
     <SectionDivider label="Antivírus" />
     {antivirusStatus && antivirusStatus.length > 0 ? (
       <div className="space-y-2">
-        {antivirusStatus.map((av: Record<string, unknown>, idx: number) => (
+        {antivirusStatus.map((av, idx: number) => (
           <div key={av.id || idx} className="p-3 rounded-lg bg-muted/30 border">
             <div className="flex items-center justify-between">
               <div>
