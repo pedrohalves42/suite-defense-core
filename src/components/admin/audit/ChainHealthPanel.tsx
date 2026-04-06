@@ -51,7 +51,7 @@ export function ChainHealthPanel({ tenantId }: ChainHealthPanelProps) {
       if (error) throw error;
       return data as unknown as Record<string, unknown>;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: Record<string, unknown>) => {
       toast.success(`Cadeia de auditoria reparada: ${data?.links_repaired || 0} links corrigidos`);
       queryClient.invalidateQueries({ queryKey: ['chain-health'] });
       queryClient.invalidateQueries({ queryKey: ['audit-integrity'] });
