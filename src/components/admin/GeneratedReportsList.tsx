@@ -205,7 +205,7 @@ export function GeneratedReportsList() {
     if (data.vulnerabilities && data.vulnerabilities.length > 0) {
       csvContent += "VULNERABILIDADES\n";
       csvContent += "Severidade,Título,Descrição\n";
-      data.vulnerabilities.forEach((vuln: any) => {
+      data.vulnerabilities.forEach((vuln: Record<string, unknown>) => {
         csvContent += `"${vuln.severity || ''}","${vuln.title || vuln.check_key || ''}","${String(vuln.description || '').replace(/"/g, '""')}"\n`;
       });
       csvContent += "\n";
