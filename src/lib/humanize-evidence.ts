@@ -198,7 +198,7 @@ const EVIDENCE_LABELS: Record<string, {
 /**
  * Transform raw evidence object into array of humanized items
  */
-export function humanizeEvidence(evidence: any): HumanizedEvidence[] {
+export function humanizeEvidence(evidence: Record<string, unknown>): HumanizedEvidence[] {
   if (!evidence || typeof evidence !== 'object') {
     return [];
   }
