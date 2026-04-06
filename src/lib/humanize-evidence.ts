@@ -198,15 +198,16 @@ const EVIDENCE_LABELS: Record<string, {
 /**
  * Transform raw evidence object into array of humanized items
  */
-export function humanizeEvidence(evidence: any): HumanizedEvidence[] {
+export function humanizeEvidence(evidence: unknown): HumanizedEvidence[] {
   if (!evidence || typeof evidence !== 'object') {
     return [];
   }
 
   const items: (HumanizedEvidence & { priority: number })[] = [];
+  const ev = evidence as Record<string, unknown>;
   
   // First, check if there's agent-specific data in evidence_pack
-  const evidencePack = evidence.evidence_pack as Array<Record<string, unknown>> | undefined;
+  const evidencePack = ev.evidence_pack as Array<Record<string, unknown>> | undefined;
   
   // If evidence_pack exists, parse its actual structure
   // Real structure: [{"value": 10.84, "data_point": "Uso Médio de CPU"}, {"value": {"cpu": 93, "disk": 51}, "data_point": "Agente com Problema: DESKTOP-X"}]
@@ -329,7 +330,7 @@ export function humanizeEvidence(evidence: any): HumanizedEvidence[] {
 /**
  * Get a summary string from evidence (for compact views)
  */
-export function getEvidenceSummary(evidence: any): string {
+export function getEvidenceSummary(evidence: unknown): string {
   const items = humanizeEvidence(evidence);
   if (items.length === 0) return '';
   

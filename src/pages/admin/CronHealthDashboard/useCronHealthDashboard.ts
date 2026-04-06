@@ -15,7 +15,7 @@ export interface CronHealthRecord {
   total_failures: number;
   avg_duration_ms: number | null;
   last_duration_ms: number | null;
-  metadata: any | null;
+  metadata: Record<string, unknown> | null;
   updated_at: string;
 }
 

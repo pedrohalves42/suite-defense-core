@@ -59,7 +59,7 @@ export function getMemberLimit(
 /**
  * Helper para construir display name com fallback inteligente
  */
-export function buildDisplayName(user: any, profile?: any): string {
+export function buildDisplayName(user: { email?: string; user_metadata?: { full_name?: string } } | null, profile?: { full_name?: string } | null): string {
   const email: string = user?.email ?? '';
   const emailName = email ? email.split('@')[0] : '';
 

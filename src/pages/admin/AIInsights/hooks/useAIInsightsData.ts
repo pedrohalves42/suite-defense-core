@@ -11,7 +11,7 @@ export interface AIInsight {
   severity: 'info' | 'warning' | 'critical';
   title: string;
   description: string;
-  evidence: any;
+  evidence: Record<string, unknown> & { problematicJobsCount?: number; systemAlertsCount?: number; evidence_pack?: Array<Record<string, unknown>>; reasoning_summary?: string };
   recommendation: string;
   confidence_score: number;
   created_at: string;
@@ -101,7 +101,7 @@ export function useAIInsightsData() {
   });
 
   const executeSolutionMutation = useMutation({
-    mutationFn: async ({ actionId, solutionType, parameters }: { actionId: string; solutionType: string; parameters?: any }) => {
+    mutationFn: async ({ actionId, solutionType, parameters }: { actionId: string; solutionType: string; parameters?: Record<string, unknown> }) => {
       const { data, error } = await supabase.functions.invoke('ai-router', {
         body: { action: 'execute-solution', payload: { action_id: actionId, solution_type: solutionType, parameters } }
       });

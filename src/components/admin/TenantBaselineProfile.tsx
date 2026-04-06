@@ -77,13 +77,13 @@ export function TenantBaselineProfile() {
       const data = metricsRes.data;
       if (!data || data.length === 0) return null;
 
-      const avgCpu = data.reduce((s: number, m: any) => s + (m.cpu_usage_percent || 0), 0) / data.length;
-      const avgMem = data.reduce((s: number, m: any) => s + (m.memory_usage_percent || 0), 0) / data.length;
+      const avgCpu = data.reduce((s: number, m: Record<string, unknown>) => s + (Number(m.cpu_usage_percent) || 0), 0) / data.length;
+      const avgMem = data.reduce((s: number, m: Record<string, unknown>) => s + (Number(m.memory_usage_percent) || 0), 0) / data.length;
 
       // Calculate avg processes per agent
       const procData = procRes.data || [];
       const agentProcCounts = new Map<string, number>();
-      procData.forEach((p: any) => {
+      procData.forEach((p: Record<string, unknown>) => {
         agentProcCounts.set(String(p.agent_id), (agentProcCounts.get(String(p.agent_id)) || 0) + 1);
       });
       const avgProcs = agentProcCounts.size > 0

@@ -19,7 +19,7 @@ interface PendingApproval {
   id: string;
   tenant_id: string;
   action_type: string;
-  action_payload: any;
+  action_payload: Record<string, unknown>;
   status: string;
   required_approvers: number;
   current_approvers: number;

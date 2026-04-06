@@ -12,8 +12,7 @@ export interface SecurityLog {
   attack_type: string;
   severity: string;
   blocked: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  details: any;
+  details: Record<string, unknown>;
   user_agent: string;
 }
 

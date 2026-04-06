@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { SectionDivider } from '@/components/ui/section-divider';
 import { AgentSystemInfo } from '@/components/agent/AgentSystemInfo';
 import { AgentStateExplainer } from '@/components/agent/AgentStateExplainer';
+import type { AntivirusStatus } from '@/types/security';
+import type { AgentCausality } from '@/hooks/useAgentCausality';
 import {
   Stethoscope, ExternalLink, ShieldAlert, RefreshCw, FileText,
 } from 'lucide-react';
@@ -11,8 +13,8 @@ interface OverviewTabProps {
   agentId: string;
   agentName?: string;
   tenantId?: string;
-  antivirusStatus: any[] | undefined;
-  causality: any;
+  antivirusStatus: AntivirusStatus[] | undefined;
+  causality: AgentCausality | null;
   generatingReport: boolean;
   onGenerateReport: () => void;
   onViewDiagnostics: () => void;
@@ -33,7 +35,7 @@ export const OverviewTab = ({
     <SectionDivider label="Antivírus" />
     {antivirusStatus && antivirusStatus.length > 0 ? (
       <div className="space-y-2">
-        {antivirusStatus.map((av: any, idx: number) => (
+        {antivirusStatus.map((av, idx: number) => (
           <div key={av.id || idx} className="p-3 rounded-lg bg-muted/30 border">
             <div className="flex items-center justify-between">
               <div>

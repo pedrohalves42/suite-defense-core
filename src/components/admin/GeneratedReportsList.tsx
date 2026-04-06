@@ -205,7 +205,7 @@ export function GeneratedReportsList() {
     if (data.vulnerabilities && data.vulnerabilities.length > 0) {
       csvContent += "VULNERABILIDADES\n";
       csvContent += "Severidade,Título,Descrição\n";
-      data.vulnerabilities.forEach((vuln: any) => {
+      data.vulnerabilities.forEach((vuln: Record<string, unknown>) => {
         csvContent += `"${vuln.severity || ''}","${vuln.title || vuln.check_key || ''}","${String(vuln.description || '').replace(/"/g, '""')}"\n`;
       });
       csvContent += "\n";
@@ -214,7 +214,7 @@ export function GeneratedReportsList() {
     if (data.antivirus_status && data.antivirus_status.length > 0) {
       csvContent += "STATUS ANTIVÍRUS\n";
       csvContent += "Engine,Versão,Status,Ameaças\n";
-      data.antivirus_status.forEach((av: any) => {
+      data.antivirus_status.forEach((av: Record<string, unknown>) => {
         csvContent += `"${av.engine_name || ''}","${av.engine_version || ''}","${av.status || ''}","${av.threats_found || 0}"\n`;
       });
       csvContent += "\n";
@@ -223,7 +223,7 @@ export function GeneratedReportsList() {
     if (data.web_activity && data.web_activity.length > 0) {
       csvContent += "ATIVIDADE WEB\n";
       csvContent += "Domínio,Fonte,Data\n";
-      data.web_activity.forEach((web: any) => {
+      data.web_activity.forEach((web: Record<string, unknown>) => {
         csvContent += `"${web.domain || ''}","${web.source || ''}","${web.visited_at || ''}"\n`;
       });
     }

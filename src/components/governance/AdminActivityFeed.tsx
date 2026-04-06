@@ -42,7 +42,7 @@ interface AuditEntry {
   created_at: string;
   ip_address: string | null;
   user_agent: string | null;
-  details: any | null;
+  details: Record<string, unknown> | null;
 }
 
 export function AdminActivityFeed({

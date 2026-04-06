@@ -13,7 +13,7 @@ export interface EvidenceLog {
   agent_name: string;
   agent_version: string | null;
   event_type: string;
-  event_data: any;
+  event_data: Record<string, unknown>;
   evidence_hash: string;
   severity: string | null;
   state_before: string | null;

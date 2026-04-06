@@ -33,7 +33,7 @@ interface PolicyDetailsProps {
   policyImpact: PolicyImpact;
   rules: any[];
   agentGroups: AgentGroupWithCount[];
-  policyGroupAssignments: any[];
+  policyGroupAssignments: Array<{ id: string; agent_groups?: { name: string } }>;
   // Rule form
   ruleType: RuleType;
   setRuleType: (v: RuleType) => void;
@@ -231,7 +231,7 @@ export function PolicyDetails({
               <div className="text-center py-8 text-muted-foreground border rounded-lg">Política não atribuída a nenhum grupo</div>
             ) : (
               <div className="space-y-2">
-                {policyGroupAssignments.map((assignment: any) => (
+                {policyGroupAssignments.map((assignment) => (
                   <div key={assignment.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4" />

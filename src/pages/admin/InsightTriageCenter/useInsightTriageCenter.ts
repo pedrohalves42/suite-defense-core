@@ -10,7 +10,7 @@ export interface AIInsight {
   severity: string;
   title: string;
   description: string;
-  evidence: any;
+  evidence: Record<string, unknown>;
   suggested_action: string | null;
   created_at: string;
   acknowledged: boolean;

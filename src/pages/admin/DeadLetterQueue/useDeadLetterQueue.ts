@@ -11,8 +11,7 @@ export interface DLQEntry {
   tenant_id: string;
   agent_name: string;
   job_type: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  payload: any | null;
+  payload: Record<string, unknown> | null;
   error_message: string | null;
   error_count: number;
   retry_count: number;
@@ -24,8 +23,7 @@ export interface DLQEntry {
   resolution_notes: string | null;
   resolved_at: string | null;
   resolved_by: string | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  metadata: any | null;
+  metadata: Record<string, unknown> | null;
 }
 
 export function useDeadLetterQueue() {

@@ -50,8 +50,8 @@ export default function ShadowITDiscovery() {
     mutationFn: async () => {
       return await callGateway('security', 'classify-shadow-it', { tenant_id: tenant!.id });
     },
-    onSuccess: (data: any) => {
-      const msg = data?.ai_classified > 0 
+    onSuccess: (data: { ai_classified?: number; classified?: number; local_classified?: number }) => {
+      const msg = data?.ai_classified && data.ai_classified > 0 
         ? `${data.classified} apps classificados (${data.local_classified} por regras, ${data.ai_classified} por IA)`
         : `${data?.classified ?? 0} apps classificados`;
       toast.success(msg);
@@ -74,7 +74,7 @@ export default function ShadowITDiscovery() {
     },
   });
 
-  const filtered = catalog.filter((app: any) => {
+  const filtered = catalog.filter((app) => {
     const matchSearch = !search || app.app_name.toLowerCase().includes(search.toLowerCase());
     const matchRisk = filterRisk === "all" || app.risk_level === filterRisk;
     return matchSearch && matchRisk;
@@ -165,7 +165,7 @@ export default function ShadowITDiscovery() {
                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Nenhuma aplicação encontrada. Clique em "Classificar com IA" para iniciar.
                 </TableCell></TableRow>
-              ) : filtered.map((app: any) => {
+              ) : filtered.map((app) => {
                 const Icon = categoryIcons[app.app_category] || Search;
                 return (
                   <TableRow key={app.id}>

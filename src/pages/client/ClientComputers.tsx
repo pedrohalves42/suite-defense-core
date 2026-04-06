@@ -97,7 +97,7 @@ export const ClientComputers = () => {
       if (error) throw error;
 
       // Fetch latest metrics for each agent
-      const agentIds = agentsData?.map((a: Record<string, unknown>) => a.id as string) || [];
+      const agentIds = agentsData?.map((a: any) => a.id as string) || [];
       
       if (agentIds.length === 0) return [];
 
@@ -108,7 +108,7 @@ export const ClientComputers = () => {
         .order('collected_at', { ascending: false });
 
       // Get latest metrics per agent
-      const latestMetrics: Record<string, any> = {};
+      const latestMetrics: Record<string, typeof metricsData extends Array<infer T> ? T : never> = {};
       metricsData?.forEach(m => {
         if (!latestMetrics[m.agent_id]) {
           latestMetrics[m.agent_id] = m;

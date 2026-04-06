@@ -41,7 +41,7 @@ export interface SystemAlert {
     disk_usage?: number;
     memory_usage?: number;
     cpu_usage?: number;
-    [key: string]: any;
+    [key: string]: number | undefined;
   };
 }
 

@@ -80,7 +80,7 @@ export function getJobTypeName(jobType: string): string {
 /**
  * Get default payload for job type
  */
-export function getDefaultJobPayload(jobType: string): any {
+export function getDefaultJobPayload(jobType: string): Record<string, unknown> {
   const payloads: Record<string, Record<string, unknown>> = {
     software_inventory_collect: { include_32bit: true, include_updates: true },
     light_vuln_scan: { scan_depth: 'standard', include_cve_check: true },

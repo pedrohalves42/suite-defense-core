@@ -1,4 +1,4 @@
-import { format as fnsFormat } from 'date-fns';
+import { format as fnsFormat, type Locale } from 'date-fns';
 import { format as formatTz, toZonedTime } from 'date-fns-tz';
 import { ptBR } from 'date-fns/locale';
 import { formatDistanceToNow as fnsFormatDistanceToNow } from 'date-fns';
@@ -12,7 +12,7 @@ export const BRASILIA_TIMEZONE = 'America/Sao_Paulo';
  * Drop-in replacement for date-fns `format()` that always uses Brasília timezone.
  * Usage: import { format } from '@/lib/date-utils'; (instead of date-fns)
  */
-export function format(date: Date | string | number, formatStr: string, options?: { locale?: any }): string {
+export function format(date: Date | string | number, formatStr: string, options?: { locale?: Locale }): string {
   const d = typeof date === 'string' ? new Date(date) : typeof date === 'number' ? new Date(date) : date;
   if (isNaN(d.getTime())) return '-';
   const zonedDate = toZonedTime(d, BRASILIA_TIMEZONE);
@@ -25,7 +25,7 @@ export function format(date: Date | string | number, formatStr: string, options?
 /**
  * Drop-in replacement for date-fns `formatDistanceToNow()` using Brasília timezone.
  */
-export function formatDistanceToNow(date: Date | string | number, options?: { addSuffix?: boolean; locale?: any }): string {
+export function formatDistanceToNow(date: Date | string | number, options?: { addSuffix?: boolean; locale?: Locale }): string {
   const d = typeof date === 'string' ? new Date(date) : typeof date === 'number' ? new Date(date) : date;
   if (isNaN(d.getTime())) return '-';
   return fnsFormatDistanceToNow(d, { 
