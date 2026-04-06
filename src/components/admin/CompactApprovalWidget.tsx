@@ -3,7 +3,7 @@
  * For Dashboard integration
  */
 
-import { usePendingApprovalRequests, useSubmitApproval, ACTION_TYPE_LABELS, ACTION_TYPE_SEVERITY } from '@/hooks/useApprovalRequests';
+import { usePendingApprovalRequests, useSubmitApproval, ACTION_TYPE_LABELS, ACTION_TYPE_SEVERITY, type ApprovalRequest } from '@/hooks/useApprovalRequests';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
