@@ -48,7 +48,7 @@ function CountdownBadge({ expiresAt }: { expiresAt: string }) {
 }
 
 function ApprovalItem({ request, onApprove, onReject, isPending }: {
-  request: Record<string, unknown>;
+  request: ApprovalRequest;
   onApprove: () => void;
   onReject: () => void;
   isPending: boolean;
