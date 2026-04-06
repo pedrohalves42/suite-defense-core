@@ -11,7 +11,7 @@ export interface AIInsight {
   severity: 'info' | 'warning' | 'critical';
   title: string;
   description: string;
-  evidence: Record<string, unknown> & { problematicJobsCount?: number; systemAlertsCount?: number; evidence_pack?: Array<Record<string, unknown>> };
+  evidence: Record<string, unknown> & { problematicJobsCount?: number; systemAlertsCount?: number; evidence_pack?: Array<Record<string, unknown>>; reasoning_summary?: string };
   recommendation: string;
   confidence_score: number;
   created_at: string;
