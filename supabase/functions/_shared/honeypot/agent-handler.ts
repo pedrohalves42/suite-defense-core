@@ -49,7 +49,8 @@ export async function handleHoneypotAgentRequest(
   const method = req.method;
 
   // === KILL SWITCH ===
-  const honeypotEnabled = await isFeatureEnabled(supabase, 'HONEYPOT_ENABLED', ctx.tenantId);
+  // FAIL-CLOSED: If RPC fails, honeypot is DISABLED (safe default)
+  const honeypotEnabled = await isKillSwitchEnabled(supabase, 'HONEYPOT_ENABLED', ctx.tenantId);
   if (!honeypotEnabled) {
     return new Response(JSON.stringify({ status: 'ok' }), {
       status: 200,

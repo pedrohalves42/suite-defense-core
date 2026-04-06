@@ -24,7 +24,8 @@ serveHoneypot(async (_req, ctx) => {
     classification, method, path, responseProfile } = ctx;
 
   // === KILL SWITCH (global + tenant) ===
-  const honeypotEnabled = await isFeatureEnabled(supabase, 'HONEYPOT_ENABLED');
+  // FAIL-CLOSED: If RPC fails, honeypot is DISABLED (safe default)
+  const honeypotEnabled = await isKillSwitchEnabled(supabase, 'HONEYPOT_ENABLED');
   if (!honeypotEnabled) {
     return new Response(
       JSON.stringify({ status: 'ok' }),
