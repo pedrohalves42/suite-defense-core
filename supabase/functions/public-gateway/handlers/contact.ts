@@ -49,7 +49,7 @@ export async function handleSubmitContact(
   try {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    await fetch(`${SUPABASE_URL}/functions/v1/ops-gateway`, {
+    await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/ops-gateway`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -57,6 +57,7 @@ export async function handleSubmitContact(
         'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '',
       },
       body: JSON.stringify({ action: 'notify:webhook', payload: { type: 'new_contact', data: { name, email, company, endpoints } } }),
+      timeoutMs: TIMEOUT_TIERS.INTERNAL,
     });
   } catch (_) { /* non-critical */ }
 
