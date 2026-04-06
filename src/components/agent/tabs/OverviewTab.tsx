@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { SectionDivider } from '@/components/ui/section-divider';
 import { AgentSystemInfo } from '@/components/agent/AgentSystemInfo';
 import { AgentStateExplainer } from '@/components/agent/AgentStateExplainer';
+import type { AntivirusStatus } from '@/types/security';
+import type { AgentCausality } from '@/hooks/useAgentCausality';
 import {
   Stethoscope, ExternalLink, ShieldAlert, RefreshCw, FileText,
 } from 'lucide-react';
@@ -11,8 +13,8 @@ interface OverviewTabProps {
   agentId: string;
   agentName?: string;
   tenantId?: string;
-  antivirusStatus: Array<Record<string, unknown>> | undefined;
-  causality: Record<string, unknown>;
+  antivirusStatus: AntivirusStatus[] | undefined;
+  causality: AgentCausality | null;
   generatingReport: boolean;
   onGenerateReport: () => void;
   onViewDiagnostics: () => void;
