@@ -42,7 +42,7 @@ export async function isFeatureEnabled(
     });
 
     if (error) {
-      console.error(`[feature-flags] RPC error for ${flagKey} (defaulting to ${defaultOnError}):`, error.message);
+      logger.error(`[feature-flags] RPC error for ${flagKey} (defaulting to ${defaultOnError})`, { message: error.message });
       return defaultOnError;
     }
 
