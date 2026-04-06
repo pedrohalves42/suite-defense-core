@@ -49,7 +49,7 @@ export async function checkHoneypotRateLimit(
     });
 
     if (error) {
-      console.error('[honeypot-rate-limit] RPC error (fail-closed):', error.message);
+      logger.error('[honeypot-rate-limit] RPC error (fail-closed)', { message: error.message });
       return false;
     }
 
