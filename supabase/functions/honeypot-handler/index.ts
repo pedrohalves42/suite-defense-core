@@ -15,7 +15,7 @@
 
 import { serveHoneypot } from '../_shared/serve-honeypot.ts';
 import { buildHoneypotResponse } from '../_shared/honeypot/response-profiles.ts';
-import { isFeatureEnabled } from '../_shared/feature-flags.ts';
+import { isKillSwitchEnabled } from '../_shared/feature-flags.ts';
 
 const SUPPORTED_ROUTES = new Set(['/heartbeat', '/poll-jobs', '/submit-job-result']);
 
