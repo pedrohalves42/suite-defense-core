@@ -42,7 +42,7 @@ const ALERT_TYPE_LABELS: Record<string, string> = {
   unauthorized_access: '🚷 Acesso não autorizado',
 };
 
-function securityEventSummary(data: any | undefined): string {
+function securityEventSummary(data: Record<string, unknown> | undefined): string {
   if (!data) return '';
 
   const alertType = data.alert_type as string | undefined;
