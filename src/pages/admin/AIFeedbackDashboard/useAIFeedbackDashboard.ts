@@ -56,7 +56,7 @@ export function useAIFeedbackDashboard() {
         .in('insight_id', insightIds);
 
       const feedbackMap = new Map(
-        (feedbackData || []).map((f: any) => [f.insight_id, { type: f.feedback_type, comment: f.comment }])
+        (feedbackData || []).map((f) => [f.insight_id, { type: f.feedback_type, comment: f.comment }])
       );
 
       return (insightsData || []).map((insight: any) => ({
