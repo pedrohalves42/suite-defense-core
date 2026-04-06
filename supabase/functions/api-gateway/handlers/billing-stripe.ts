@@ -308,8 +308,7 @@ export async function handleCreateCheckout(supabase: SB, requestId: string, payl
     customerId = customer.id;
   }
 
-  // deno-lint-ignore no-explicit-any
-  const lineItems: any[] = [{ price: planConfig.priceId, quantity: 1 }];
+  const lineItems: Array<{ price: string; quantity: number }> = [{ price: planConfig.priceId, quantity: 1 }];
   if (extraDevices > 0) {
     lineItems.push({ price: ADDON_PRICES[planName], quantity: extraDevices });
   }
