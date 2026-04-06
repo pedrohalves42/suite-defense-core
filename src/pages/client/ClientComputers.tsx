@@ -108,7 +108,7 @@ export const ClientComputers = () => {
         .order('collected_at', { ascending: false });
 
       // Get latest metrics per agent
-      const latestMetrics: Record<string, any> = {};
+      const latestMetrics: Record<string, Record<string, unknown>> = {};
       metricsData?.forEach(m => {
         if (!latestMetrics[m.agent_id]) {
           latestMetrics[m.agent_id] = m;
