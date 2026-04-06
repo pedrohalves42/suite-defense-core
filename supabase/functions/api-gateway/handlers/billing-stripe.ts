@@ -194,11 +194,9 @@ export async function handleCheckSubscription(supabase: SB, requestId: string, _
   const { data: addonMappings } = await supabase
     .from('stripe_plan_mapping').select('stripe_price_id').eq('plan_type', 'addon');
 
-  // deno-lint-ignore no-explicit-any
-  const ADDON_PRICE_IDS = addonMappings?.map((m: any) => m.stripe_price_id) || [];
+  const ADDON_PRICE_IDS = addonMappings?.map((m: StripePlanMapping) => m.stripe_price_id) || [];
   let addonDevicesFromStripe = 0;
-  // deno-lint-ignore no-explicit-any
-  for (const item of stripeSubscription.items.data as any[]) {
+  for (const item of stripeSubscription.items.data) {
     if (ADDON_PRICE_IDS.includes(item.price.id)) {
       addonDevicesFromStripe += item.quantity || 0;
     }
