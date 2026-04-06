@@ -181,7 +181,7 @@ export async function claimAndBuildResponse(
   }
 
   return new Response(
-    JSON.stringify({ jobs: jobsResponse, poll_interval_seconds: 30 }),
+    JSON.stringify({ jobs: jobsResponse, poll_interval_seconds: 120 }),
     { headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' }, status: 200 }
   );
 }
