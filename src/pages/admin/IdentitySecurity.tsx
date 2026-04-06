@@ -152,7 +152,7 @@ export default function IdentitySecurity() {
           </div>
           {monitors.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-3">
-              {monitors.map((m: any) => (
+              {monitors.map((m) => (
                 <Badge key={m.id} variant="outline">{m.email_domain}</Badge>
               ))}
             </div>
