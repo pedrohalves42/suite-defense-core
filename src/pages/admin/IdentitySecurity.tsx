@@ -96,8 +96,8 @@ export default function IdentitySecurity() {
 
   const stats = {
     total: leaks.length,
-    new: leaks.filter((l: any) => l.status === "new").length,
-    critical: leaks.filter((l: any) => l.severity === "critical").length,
+    new: leaks.filter((l) => l.status === "new").length,
+    critical: leaks.filter((l) => l.severity === "critical").length,
     domains: monitors.length,
   };
 
