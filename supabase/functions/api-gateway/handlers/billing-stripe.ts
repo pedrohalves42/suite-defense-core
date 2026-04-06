@@ -147,8 +147,7 @@ export async function handleCheckSubscription(supabase: SB, requestId: string, _
       const { data: features } = await supabase
         .from('tenant_features').select('feature_key, enabled, quota_limit, quota_used').eq('tenant_id', tenantId);
 
-      // deno-lint-ignore no-explicit-any
-      const featuresMap = features?.reduce((acc: Record<string, unknown>, f: any) => {
+      const featuresMap = features?.reduce((acc: Record<string, unknown>, f: TenantFeature) => {
         acc[f.feature_key] = { enabled: f.enabled, quota_limit: f.quota_limit, quota_used: f.quota_used };
         return acc;
       }, {});
