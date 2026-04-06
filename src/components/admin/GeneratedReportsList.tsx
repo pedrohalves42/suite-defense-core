@@ -214,7 +214,7 @@ export function GeneratedReportsList() {
     if (data.antivirus_status && data.antivirus_status.length > 0) {
       csvContent += "STATUS ANTIVÍRUS\n";
       csvContent += "Engine,Versão,Status,Ameaças\n";
-      data.antivirus_status.forEach((av: any) => {
+      data.antivirus_status.forEach((av: Record<string, unknown>) => {
         csvContent += `"${av.engine_name || ''}","${av.engine_version || ''}","${av.status || ''}","${av.threats_found || 0}"\n`;
       });
       csvContent += "\n";
