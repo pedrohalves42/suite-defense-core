@@ -3,6 +3,7 @@
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
+import { fetchWithTimeout, TIMEOUT_TIERS } from '../../_shared/fetch-with-timeout.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
 const IpAddressSchema = z.string()
@@ -101,7 +102,7 @@ export async function handleRecordFailedLogin(
       try {
         const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
         const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-        await fetch(`${SUPABASE_URL}/functions/v1/ops-gateway`, {
+        await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/ops-gateway`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -113,6 +114,7 @@ export async function handleRecordFailedLogin(
             payload: { ipAddress, email, attemptCount: blockData.attempt_count,
               blockedUntil: blockData.blocked_until, userAgent, blockLevel: blockData.block_level },
           }),
+          timeoutMs: TIMEOUT_TIERS.INTERNAL,
         });
       } catch (alertError) {
         logger.error(`[record-failed-login][${requestId}] Failed to send alert:`, alertError);
