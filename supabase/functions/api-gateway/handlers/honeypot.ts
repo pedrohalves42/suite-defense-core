@@ -28,7 +28,7 @@ export async function handleActivateAgentHoneypot(
   if (!honeypotEnabled) return errRes('Honeypot feature is currently disabled', 503);
 
   // === FLIPPED MODE FLAG ===
-  const flippedEnabled = await isFeatureEnabled(supabase, 'HONEYPOT_FLIPPED_ENABLED', tenantId);
+  const flippedEnabled = await isKillSwitchEnabled(supabase, 'HONEYPOT_FLIPPED_ENABLED', tenantId);
   if (!flippedEnabled) return errRes('Honeypot flipping is currently disabled', 503);
 
   // === STEP-UP AUTH ===
