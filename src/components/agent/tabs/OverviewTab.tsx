@@ -11,8 +11,8 @@ interface OverviewTabProps {
   agentId: string;
   agentName?: string;
   tenantId?: string;
-  antivirusStatus: any[] | undefined;
-  causality: any;
+  antivirusStatus: Array<Record<string, unknown>> | undefined;
+  causality: Record<string, unknown>;
   generatingReport: boolean;
   onGenerateReport: () => void;
   onViewDiagnostics: () => void;
