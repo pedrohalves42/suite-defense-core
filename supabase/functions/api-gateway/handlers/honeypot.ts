@@ -170,7 +170,7 @@ export async function handleRevertAgentHoneypot(
     .eq('is_active', true);
 
   if (tokenError) {
-    console.error(`[revert-honeypot] Token invalidation error: ${tokenError.message}`);
+    logger.error(`[revert-honeypot] Token invalidation error`, { message: tokenError.message });
   }
 
   // 5. Generate new token
