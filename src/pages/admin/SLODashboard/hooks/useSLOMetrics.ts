@@ -26,8 +26,6 @@ export function useSLOMetrics() {
   useEffect(() => {
     if (tenantId) {
       loadMetrics();
-      const interval = setInterval(loadMetrics, 300_000);
-      return () => clearInterval(interval);
     }
   }, [tenantId]);
 

@@ -57,11 +57,7 @@ export function useAgentMonitoring() {
     }
   }, [tenant?.id, fetchDashboardData]);
 
-  useEffect(() => {
-    if (!tenant?.id) return;
-    const refreshInterval = setInterval(fetchDashboardData, 300_000);
-    return () => clearInterval(refreshInterval);
-  }, [tenant?.id, fetchDashboardData]);
+  // Removed: setInterval polling replaced by staleTime-based React Query or manual refresh
 
   const acknowledgeAlert = useCallback(async (alertId: string) => {
     try {
