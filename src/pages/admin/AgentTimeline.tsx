@@ -124,7 +124,7 @@ const EVENT_MAP: Record<string, EventMeta> = {
   certificate_check:     { icon: Shield,       color: 'text-primary',        dot: 'bg-primary',        label: 'Certificados verificados', summary: fallbackSummary },
   disk_check:            { icon: HardDrive,    color: 'text-primary',        dot: 'bg-primary',        label: 'Disco verificado',        summary: (d) => d?.disk_usage_percent ? `${d.disk_usage_percent}% em uso` : '' },
   process_killed:        { icon: Ban,          color: 'text-destructive',    dot: 'bg-destructive',    label: 'Programa suspeito encerrado', summary: (d) => d?.process_name ? String(d.process_name) : '' },
-  decision:              { icon: Shield,       color: 'text-warning',        dot: 'bg-warning',        label: 'Ação de segurança',       summary: (d) => d?.rule_name ? d.rule_name.replace(/_/g, ' ') : '' },
+  decision:              { icon: Shield,       color: 'text-warning',        dot: 'bg-warning',        label: 'Ação de segurança',       summary: (d) => d?.rule_name ? String(d.rule_name).replace(/_/g, ' ') : '' },
   security_event:        { icon: Shield,       color: 'text-warning',        dot: 'bg-warning',        label: 'Alerta de segurança',     summary: securityEventSummary },
 };
 
