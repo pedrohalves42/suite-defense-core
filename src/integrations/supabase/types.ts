@@ -50178,6 +50178,17 @@ export type Database = {
         Returns: Json
       }
       cleanup_zombie_executions: { Args: never; Returns: Json }
+      collect_soc2_evidence_all_tenants: {
+        Args: never
+        Returns: {
+          evidence_count: number
+          tenant_id: string
+        }[]
+      }
+      collect_soc2_evidence_for_tenant: {
+        Args: { p_tenant_id: string }
+        Returns: number
+      }
       collect_task_evidence: {
         Args: { p_agent_id: string; p_task_type: string }
         Returns: Json
