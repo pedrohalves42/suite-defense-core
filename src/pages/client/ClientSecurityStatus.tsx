@@ -270,7 +270,7 @@ export const ClientSecurityStatus = () => {
 
               {data?.vulnerabilities && data.vulnerabilities.length > 0 ? (
                 <div className="space-y-2">
-                  {data.vulnerabilities.map((vuln, index: number) => (
+                  {(data.vulnerabilities as unknown as Array<Record<string, unknown>>).map((vuln, index: number) => (
                     <motion.div 
                       key={vuln.id}
                       initial={{ opacity: 0, x: -10 }}
