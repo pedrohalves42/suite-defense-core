@@ -31,9 +31,9 @@ const RULE_TYPE_ICONS: Record<RuleType, React.ReactNode> = {
 interface PolicyDetailsProps {
   selectedPolicy: SecurityPolicy;
   policyImpact: PolicyImpact;
-  rules: Record<string, unknown>[];
+  rules: Array<Record<string, string | number>>;
   agentGroups: AgentGroupWithCount[];
-  policyGroupAssignments: Record<string, unknown>[];
+  policyGroupAssignments: Array<{ id: string; agent_groups?: { name: string } }>;
   // Rule form
   ruleType: RuleType;
   setRuleType: (v: RuleType) => void;
