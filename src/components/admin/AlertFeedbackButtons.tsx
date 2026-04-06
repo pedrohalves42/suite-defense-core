@@ -35,7 +35,7 @@ export function AlertFeedbackButtons({ alertId, tenantId, currentFeedback }: Ale
       toast.success(isTruePositive ? 'Marcado como ameaça real' : 'Marcado como falso positivo');
       queryClient.invalidateQueries({ queryKey: ['system-alerts'] });
       queryClient.invalidateQueries({ queryKey: ['detection-rules'] });
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(`Erro ao enviar feedback: ${err.message}`);
     } finally {
       setLoading(false);

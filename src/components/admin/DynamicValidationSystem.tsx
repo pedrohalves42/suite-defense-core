@@ -78,7 +78,7 @@ export function DynamicValidationSystem() {
       });
       const agentsData = ((agentsRaw as unknown as Array<Record<string, unknown>>) || [])
         .filter((a: Record<string, unknown>) => a.status === 'active')
-        .sort((a: any, b: any) => (a.agent_name || '').localeCompare(b.agent_name || ''));
+        .sort((a: Record<string, unknown>, b: Record<string, unknown>) => (String(a.agent_name || '')).localeCompare(String(b.agent_name || '')));
 
       if (!agentsData) {
         setAgents([]);

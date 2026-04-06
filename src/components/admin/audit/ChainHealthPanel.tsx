@@ -67,7 +67,7 @@ export function ChainHealthPanel({ tenantId }: ChainHealthPanelProps) {
       if (error) throw error;
       return data as unknown as Record<string, unknown>;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: Record<string, unknown>) => {
       toast.success(`Cadeias de execução reancoradas: ${data?.agents_reanchored || 0} agentes`);
       queryClient.invalidateQueries({ queryKey: ['chain-health'] });
     },

@@ -30,7 +30,7 @@ interface AIEvidence {
   source_table: string;
   source_id?: string;
   timestamp: string;
-  value: any;
+  value: string | number | boolean | Record<string, unknown>;
   severity?: "info" | "warning" | "critical";
 }
 
