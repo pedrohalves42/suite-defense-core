@@ -338,15 +338,12 @@ export async function handleCreateCheckout(supabase: SB, requestId: string, payl
 }
 
 // ── manage-subscription ─────────────────────────────────────────────────
-// deno-lint-ignore no-explicit-any
 async function getPlanConfig(supabase: SB, planName: string): Promise<{ basePriceId: string; addonPriceId: string; baseDevices: number } | null> {
   const { data: mappings, error } = await supabase
     .from('stripe_plan_mapping').select('plan_type, stripe_price_id, base_devices').eq('logical_plan', planName);
   if (error || !mappings || mappings.length === 0) return null;
-  // deno-lint-ignore no-explicit-any
-  const base = mappings.find((m: any) => m.plan_type === 'base');
-  // deno-lint-ignore no-explicit-any
-  const addon = mappings.find((m: any) => m.plan_type === 'addon');
+  const base = mappings.find((m: StripePlanMapping) => m.plan_type === 'base');
+  const addon = mappings.find((m: StripePlanMapping) => m.plan_type === 'addon');
   if (!base || !addon) return null;
   return { basePriceId: base.stripe_price_id, addonPriceId: addon.stripe_price_id, baseDevices: base.base_devices };
 }
