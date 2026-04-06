@@ -87,9 +87,9 @@ export function useAIFeedbackDashboard() {
       if (error) throw error;
 
       const total = data.length;
-      const useful = data.filter((f: any) => f.feedback_type === 'useful').length;
-      const noise = data.filter((f: any) => f.feedback_type === 'noise').length;
-      const falsePositive = data.filter((f: any) => f.feedback_type === 'false_positive').length;
+      const useful = data.filter((f) => f.feedback_type === 'useful').length;
+      const noise = data.filter((f) => f.feedback_type === 'noise').length;
+      const falsePositive = data.filter((f) => f.feedback_type === 'false_positive').length;
       const pending = (insights?.filter(i => !i.feedback_type).length) || 0;
 
       return { total, useful, noise, falsePositive, pending };

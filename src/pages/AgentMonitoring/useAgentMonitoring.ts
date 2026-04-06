@@ -251,7 +251,7 @@ export function useAgentMonitoring() {
     };
   });
 
-  const uptimeChartData: UptimeDataPoint[] = agentUptimeData?.map((agent: any) => {
+  const uptimeChartData: UptimeDataPoint[] = agentUptimeData?.map((agent) => {
     const lastHeartbeat = agent.last_heartbeat ? new Date(agent.last_heartbeat) : null;
     const diffMins = lastHeartbeat ? (Date.now() - lastHeartbeat.getTime()) / (1000 * 60) : 999;
     return {

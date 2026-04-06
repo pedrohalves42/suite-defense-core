@@ -183,7 +183,7 @@ export default function IdentitySecurity() {
                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Nenhum vazamento detectado. Adicione domínios e clique em "Verificar".
                 </TableCell></TableRow>
-              ) : leaks.map((leak: any) => (
+              ) : leaks.map((leak) => (
                 <TableRow key={leak.id}>
                   <TableCell className="font-mono text-sm">{leak.email}</TableCell>
                   <TableCell>{leak.breach_name || leak.breach_source || "—"}</TableCell>
