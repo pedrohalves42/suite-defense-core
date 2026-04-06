@@ -6,43 +6,61 @@
  * - Per-tenant flags
  * - Kill switch pattern: global disabled = denied for ALL tenants
  * 
- * For kill switches (like HONEYPOT_ENABLED):
- * - Create a global flag with enabled=true to enable
- * - Set enabled=false to disable globally (no deploy needed)
- * - Per-tenant overrides only apply if global is enabled or absent
+ * SECURITY: Kill switches default to FAIL-CLOSED (defaultOnError: false).
+ * Regular feature flags default to FAIL-OPEN (defaultOnError: true).
  */
 
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
+export interface FeatureFlagOptions {
+  /**
+   * Value returned when the RPC call fails.
+   * - true  = fail-open  (feature stays enabled on error) — use for non-critical features
+   * - false = fail-closed (feature is disabled on error)  — USE FOR KILL SWITCHES & SECURITY
+   * @default true
+   */
+  defaultOnError?: boolean;
+}
+
 /**
  * Check if a feature flag is enabled.
  * 
- * Priority: global disabled (deny) > tenant flag > global enabled > default (true)
- * 
- * Kill switch: to disable globally without deploy, set a global flag (tenant_id=NULL) to enabled=false.
+ * Priority: global disabled (deny) > tenant flag > global enabled > defaultOnError
  */
 export async function isFeatureEnabled(
   supabase: SupabaseClient,
   flagKey: string,
   tenantId?: string,
+  options?: FeatureFlagOptions,
 ): Promise<boolean> {
+  const defaultOnError = options?.defaultOnError ?? true;
+
   try {
-    // Use the DB function which handles global + tenant priority
     const { data, error } = await supabase.rpc('is_feature_enabled', {
       p_flag_key: flagKey,
       p_tenant_id: tenantId || null,
     });
 
     if (error) {
-      // Fail-open for feature flags, fail-closed for kill switches
-      // Since we can't distinguish here, fail-open (existing behavior)
-      console.error(`[feature-flags] RPC error for ${flagKey}:`, error.message);
-      return true;
+      console.error(`[feature-flags] RPC error for ${flagKey} (defaulting to ${defaultOnError}):`, error.message);
+      return defaultOnError;
     }
 
     return data === true;
   } catch (err) {
-    console.error(`[feature-flags] Exception for ${flagKey}:`, err);
-    return true; // Fail-open
+    console.error(`[feature-flags] Exception for ${flagKey} (defaulting to ${defaultOnError}):`, err);
+    return defaultOnError;
   }
+}
+
+/**
+ * Convenience: Check a KILL SWITCH flag (fail-closed on error).
+ * If the RPC fails, the feature is DISABLED — preventing destructive actions.
+ */
+export async function isKillSwitchEnabled(
+  supabase: SupabaseClient,
+  flagKey: string,
+  tenantId?: string,
+): Promise<boolean> {
+  return isFeatureEnabled(supabase, flagKey, tenantId, { defaultOnError: false });
 }
