@@ -66,8 +66,7 @@ export function useDataExport() {
     link.click();
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const exportToExcel = async (data: any[], filename: string) => {
+  const exportToExcel = async (data: Record<string, unknown>[], filename: string) => {
     const ExcelJS = (await import('exceljs')).default;
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Dados');
