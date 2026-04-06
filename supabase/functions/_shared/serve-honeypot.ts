@@ -164,7 +164,7 @@ export function serveHoneypot(handler: HoneypotHandler) {
       return jsonResponse(result, 200, { ...corsH, 'X-Request-ID': requestId, 'X-Trace-ID': traceId });
     } catch (error) {
       // Never leak stack traces or topology
-      console.error(`[serveHoneypot][${requestId}] Error:`, error instanceof Error ? error.message : 'unknown');
+      logger.error(`[serveHoneypot][${requestId}] Error`, error instanceof Error ? error : undefined);
       return jsonResponse(
         { status: 'ok' }, // Don't reveal errors to attackers
         200,

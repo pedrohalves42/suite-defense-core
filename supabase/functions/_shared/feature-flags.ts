@@ -48,7 +48,7 @@ export async function isFeatureEnabled(
 
     return data === true;
   } catch (err) {
-    console.error(`[feature-flags] Exception for ${flagKey} (defaulting to ${defaultOnError}):`, err);
+    logger.error(`[feature-flags] Exception for ${flagKey} (defaulting to ${defaultOnError})`, err);
     return defaultOnError;
   }
 }

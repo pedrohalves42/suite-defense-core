@@ -113,7 +113,7 @@ serveHoneypot(async (_req, ctx) => {
         response_profile: responseProfile,
       })
       .then(({ error }) => {
-        if (error) console.error(`[honeypot-handler] Insert error: ${error.message}`);
+        if (error) logger.error(`[honeypot-handler] Insert error`, { message: error.message });
       });
   }
 

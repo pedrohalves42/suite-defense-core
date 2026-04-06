@@ -88,7 +88,7 @@ export async function handleHoneypotAgentRequest(
       response_profile: profile,
     })
     .then(({ error }) => {
-      if (error) console.error(`[honeypot-agent] Insert error: ${error.message}`);
+      if (error) logger.error(`[honeypot-agent] Insert error`, { message: error.message });
     });
 
   return new Response(JSON.stringify(response.body), {

@@ -55,7 +55,7 @@ export async function checkHoneypotRateLimit(
 
     return data === true;
   } catch (err) {
-    console.error('[honeypot-rate-limit] Exception (fail-closed):', err);
+    logger.error('[honeypot-rate-limit] Exception (fail-closed)', err);
     return false;
   }
 }
