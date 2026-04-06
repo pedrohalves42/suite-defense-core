@@ -115,10 +115,13 @@ export const ClientComputers = () => {
         }
       });
 
-      return agentsData?.map((agent) => ({
-        ...(agent as Record<string, unknown>),
-        metrics: latestMetrics[String((agent as Record<string, unknown>).id)] || null
-      })) || [];
+      return agentsData?.map((agent) => {
+        const a = agent as Record<string, unknown>;
+        return {
+          ...a,
+          metrics: latestMetrics[String(a.id)] || null
+        };
+      }) || [];
     },
     enabled: !!tenant?.id,
     refetchInterval: false,
