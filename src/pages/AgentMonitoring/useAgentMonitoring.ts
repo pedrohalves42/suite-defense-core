@@ -39,14 +39,14 @@ export function useAgentMonitoring() {
         p_include_archived: false,
       });
       if (error) throw error;
-      return ((data || []) as unknown[])
-        .map((agent: any) => ({
-          id: agent.id,
-          agent_name: agent.agent_name,
-          status: agent.status,
-          last_heartbeat: agent.last_heartbeat,
-          enrolled_at: agent.enrolled_at,
-          agent_state: agent.agent_state,
+      return ((data || []) as unknown as Record<string, unknown>[])
+        .map((agent) => ({
+          id: String(agent.id ?? ''),
+          agent_name: String(agent.agent_name ?? ''),
+          status: String(agent.status ?? ''),
+          last_heartbeat: agent.last_heartbeat ? String(agent.last_heartbeat) : null,
+          enrolled_at: String(agent.enrolled_at ?? ''),
+          agent_state: agent.agent_state ? String(agent.agent_state) : null,
         }))
         .sort((a: Agent, b: Agent) => new Date(b.enrolled_at).getTime() - new Date(a.enrolled_at).getTime()) as Agent[];
     },
