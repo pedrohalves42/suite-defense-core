@@ -49,7 +49,10 @@ export function FIDO2LoginButton({ email, onSuccess, disabled }: FIDO2LoginButto
 
     try {
       // 1. Begin authentication — get options from server
-      const options = await callEdgeFunction('public-gateway', {
+      const options = await callEdgeFunction<{
+        challenge: string; rpId: string; timeout: number; userVerification: string;
+        allowCredentials?: Array<{ id: string; type: string; transports?: string[] }>;
+      }>('public-gateway', {
         action: 'public:fido2-authenticate',
         payload: { action: 'begin', email },
       });
@@ -72,7 +75,9 @@ export function FIDO2LoginButton({ email, onSuccess, disabled }: FIDO2LoginButto
       const response = credential.response as AuthenticatorAssertionResponse;
 
       // 4. Complete authentication on server
-      const result = await callEdgeFunction('public-gateway', {
+      const result = await callEdgeFunction<{
+        success: boolean; error?: string; token_hash?: string; email?: string;
+      }>('public-gateway', {
         action: 'public:fido2-authenticate',
         payload: {
           action: 'complete',

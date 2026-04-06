@@ -13,7 +13,7 @@ export interface CreateJobCommand {
   agentId: string;
   tenantId: string;
   type: string;
-  payload?: any;
+  payload?: Record<string, unknown>;
   priority?: number;
   timeoutSeconds?: number;
   maxRetries?: number;

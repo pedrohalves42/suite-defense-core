@@ -16,6 +16,7 @@
 import { serveHoneypot } from '../_shared/serve-honeypot.ts';
 import { buildHoneypotResponse } from '../_shared/honeypot/response-profiles.ts';
 import { isKillSwitchEnabled } from '../_shared/feature-flags.ts';
+import { logger } from '../_shared/logger.ts';
 
 const SUPPORTED_ROUTES = new Set(['/heartbeat', '/poll-jobs', '/submit-job-result']);
 
@@ -113,7 +114,7 @@ serveHoneypot(async (_req, ctx) => {
         response_profile: responseProfile,
       })
       .then(({ error }) => {
-        if (error) console.error(`[honeypot-handler] Insert error: ${error.message}`);
+        if (error) logger.error(`[honeypot-handler] Insert error`, { message: error.message });
       });
   }
 

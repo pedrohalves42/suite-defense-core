@@ -54,7 +54,13 @@ export const useWebAuthn = () => {
 
       try {
         // 1. Get registration options from backend
-        const options = await callEdgeFunction('fido2-register', {
+        const options = await callEdgeFunction<{
+          challenge: string; rp: PublicKeyCredentialRpEntity;
+          user: { id: string; name: string; displayName: string };
+          pubKeyCredParams: PublicKeyCredentialParameters[];
+          authenticatorSelection: { authenticatorAttachment?: string; residentKey?: string; userVerification?: string };
+          attestation?: string; timeout?: number;
+        }>('fido2-register', {
           action: 'begin',
           deviceName,
         });
@@ -119,7 +125,7 @@ export const useWebAuthn = () => {
 
   const listKeys = useCallback(async (): Promise<WebAuthnCredential[]> => {
     try {
-      const data = await callEdgeFunction('fido2-register', {
+      const data = await callEdgeFunction<WebAuthnCredential[]>('fido2-register', {
         action: 'keys',
       });
       return data || [];

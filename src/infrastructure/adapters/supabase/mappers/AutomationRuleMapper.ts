@@ -6,7 +6,7 @@ import { TenantId } from '../../../../domain/value-objects/TenantId';
  */
 export class AutomationRuleMapper {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static toDomain(row: any): AutomationRule {
+  static toDomain(row: Record<string, any>): AutomationRule {
     const conditions = row.trigger_conditions || {};
     const actionConfig = row.action_config || {};
 

@@ -10,6 +10,7 @@
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { hashIp } from './sanitize.ts';
+import { logger } from '../logger.ts';
 
 export interface HoneypotRateLimitConfig {
   maxRequests: number;
@@ -48,13 +49,13 @@ export async function checkHoneypotRateLimit(
     });
 
     if (error) {
-      console.error('[honeypot-rate-limit] RPC error (fail-closed):', error.message);
+      logger.error('[honeypot-rate-limit] RPC error (fail-closed)', { message: error.message });
       return false;
     }
 
     return data === true;
   } catch (err) {
-    console.error('[honeypot-rate-limit] Exception (fail-closed):', err);
+    logger.error('[honeypot-rate-limit] Exception (fail-closed)', err);
     return false;
   }
 }

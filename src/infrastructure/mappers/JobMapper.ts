@@ -10,7 +10,7 @@ type JobExecutionInsert = Database['public']['Tables']['job_executions']['Insert
  */
 export class JobMapper {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static toDomain(row: any): Job {
+  static toDomain(row: Record<string, any>): Job {
     return Job.reconstitute({
       id: row.id,
       agentId: row.agent_id,
@@ -51,7 +51,7 @@ export class JobMapper {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static executionToDomain(row: any): JobExecution {
+  static executionToDomain(row: Record<string, any>): JobExecution {
     const props: JobExecutionProps = {
       id: row.id,
       jobId: row.job_id,

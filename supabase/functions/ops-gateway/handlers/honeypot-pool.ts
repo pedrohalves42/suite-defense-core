@@ -3,6 +3,7 @@
  * Inlined from create-honeypot-pool (Phase 1B).
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from '../../_shared/logger.ts';
 
 const HONEYPOT_NAMES = [
   'WKS-FINANCE-01', 'SRV-BACKUP-02', 'DC-SECONDARY-01',
@@ -66,7 +67,7 @@ export async function handleCreateHoneypotPool(
         });
 
       if (agentError) {
-        console.error(`[create-honeypot-pool] Failed: ${agentError.message}`);
+        logger.error(`[create-honeypot-pool] Failed`, { message: agentError.message });
         continue;
       }
       created++;

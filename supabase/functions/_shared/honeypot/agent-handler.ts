@@ -21,6 +21,7 @@ import { buildHoneypotResponse, type ResponseProfileType } from './response-prof
 import { buildCorsHeaders } from '../cors.ts';
 import { securityHeaders } from '../security-headers.ts';
 import { isKillSwitchEnabled } from '../feature-flags.ts';
+import { logger } from '../logger.ts';
 
 export interface HoneypotAgentContext {
   agentId: string;
@@ -88,7 +89,7 @@ export async function handleHoneypotAgentRequest(
       response_profile: profile,
     })
     .then(({ error }) => {
-      if (error) console.error(`[honeypot-agent] Insert error: ${error.message}`);
+      if (error) logger.error(`[honeypot-agent] Insert error`, { message: error.message });
     });
 
   return new Response(JSON.stringify(response.body), {

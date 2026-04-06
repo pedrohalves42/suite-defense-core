@@ -6,7 +6,7 @@ import { AgentId } from '../../../../domain/value-objects/AgentId';
  */
 export class LightModeConfigMapper {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static toDomain(row: any): LightModeConfig {
+  static toDomain(row: Record<string, any>): LightModeConfig {
     const agentIdResult = AgentId.create(row.agent_id);
     if (agentIdResult.isFailure) {
       throw new Error(`Invalid agent_id in light_mode_configs: ${row.agent_id}`);

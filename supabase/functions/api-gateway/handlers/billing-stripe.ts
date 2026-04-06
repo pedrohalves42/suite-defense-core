@@ -8,12 +8,38 @@ import type { HandlerContext } from './admin.ts';
 
 type SB = ReturnType<typeof createClient>;
 
-// deno-lint-ignore no-explicit-any
-async function getStripe(): Promise<{ stripe: any; Stripe: any }> {
+/** Minimal Stripe types — avoids `any` for dynamically imported SDK */
+interface StripeInvoice {
+  id: string; number: string; amount_due: number; amount_paid: number;
+  currency: string; status: string; created: number; due_date: number | null;
+  hosted_invoice_url: string | null; invoice_pdf: string | null;
+}
+interface StripeSubscriptionItem {
+  id: string; price: { id: string }; quantity: number;
+}
+interface StripeSubscription {
+  id: string; status: string; trial_end: number | null;
+  current_period_end: number; items: { data: StripeSubscriptionItem[] };
+}
+interface StripeInstance {
+  invoices: { list(params: Record<string, unknown>): Promise<{ data: StripeInvoice[] }> };
+  billingPortal: { sessions: { create(params: Record<string, unknown>): Promise<{ url: string }> } };
+  customers: { list(params: Record<string, unknown>): Promise<{ data: Array<{ id: string }> }>; create(params: Record<string, unknown>): Promise<{ id: string }> };
+  checkout: { sessions: { create(params: Record<string, unknown>): Promise<{ id: string; url: string }> } };
+  subscriptions: {
+    retrieve(id: string): Promise<StripeSubscription>;
+    update(id: string, params: Record<string, unknown>): Promise<StripeSubscription>;
+    cancel(id: string, params?: Record<string, unknown>): Promise<StripeSubscription>;
+  };
+}
+interface StripePlanMapping { plan_type: string; stripe_price_id: string; base_devices: number }
+interface TenantFeature { feature_key: string; enabled: boolean; quota_limit: number | null; quota_used: number | null }
+
+async function getStripe(): Promise<{ stripe: StripeInstance; Stripe: unknown }> {
   const { default: Stripe } = await import('https://esm.sh/stripe@18.5.0');
   const key = Deno.env.get('STRIPE_SECRET_KEY');
   if (!key) throw new Error('STRIPE_SECRET_KEY is not set');
-  return { stripe: new Stripe(key, { apiVersion: '2025-08-27.basil' }), Stripe };
+  return { stripe: new Stripe(key, { apiVersion: '2025-08-27.basil' }) as StripeInstance, Stripe };
 }
 
 // ── list-invoices ───────────────────────────────────────────────────────
@@ -32,8 +58,7 @@ export async function handleListInvoices(supabase: SB, requestId: string, _paylo
   const { stripe } = await getStripe();
   const invoices = await stripe.invoices.list({ customer: subscription.stripe_customer_id, limit: 12 });
 
-  // deno-lint-ignore no-explicit-any
-  const formattedInvoices = invoices.data.map((inv: any) => ({
+  const formattedInvoices = invoices.data.map((inv: StripeInvoice) => ({
     id: inv.id, number: inv.number, amount_due: inv.amount_due, amount_paid: inv.amount_paid,
     currency: inv.currency, status: inv.status, created: inv.created, due_date: inv.due_date,
     hosted_invoice_url: inv.hosted_invoice_url, invoice_pdf: inv.invoice_pdf,
@@ -94,8 +119,13 @@ export async function handleCheckSubscription(supabase: SB, requestId: string, _
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false }).limit(1).maybeSingle();
 
-  // deno-lint-ignore no-explicit-any
-  const typedSub = subscription as any;
+  interface SubscriptionWithPlan {
+    stripe_subscription_id: string | null; stripe_customer_id: string | null;
+    device_quantity: number | null; addon_devices: number | null; is_legacy: boolean | null;
+    status: string | null; trial_end: string | null; current_period_end: string | null;
+    plan_id: string | null; subscription_plans: { name: string; stripe_price_id: string; max_devices: number | null } | null;
+  }
+  const typedSub = subscription as SubscriptionWithPlan | null;
 
   const getBaseDevices = (planName: string): number => {
     const map: Record<string, number> = {
@@ -117,8 +147,7 @@ export async function handleCheckSubscription(supabase: SB, requestId: string, _
       const { data: features } = await supabase
         .from('tenant_features').select('feature_key, enabled, quota_limit, quota_used').eq('tenant_id', tenantId);
 
-      // deno-lint-ignore no-explicit-any
-      const featuresMap = features?.reduce((acc: Record<string, unknown>, f: any) => {
+      const featuresMap = features?.reduce((acc: Record<string, unknown>, f: TenantFeature) => {
         acc[f.feature_key] = { enabled: f.enabled, quota_limit: f.quota_limit, quota_used: f.quota_used };
         return acc;
       }, {});
@@ -165,11 +194,9 @@ export async function handleCheckSubscription(supabase: SB, requestId: string, _
   const { data: addonMappings } = await supabase
     .from('stripe_plan_mapping').select('stripe_price_id').eq('plan_type', 'addon');
 
-  // deno-lint-ignore no-explicit-any
-  const ADDON_PRICE_IDS = addonMappings?.map((m: any) => m.stripe_price_id) || [];
+  const ADDON_PRICE_IDS = addonMappings?.map((m: StripePlanMapping) => m.stripe_price_id) || [];
   let addonDevicesFromStripe = 0;
-  // deno-lint-ignore no-explicit-any
-  for (const item of stripeSubscription.items.data as any[]) {
+  for (const item of stripeSubscription.items.data) {
     if (ADDON_PRICE_IDS.includes(item.price.id)) {
       addonDevicesFromStripe += item.quantity || 0;
     }
@@ -281,8 +308,7 @@ export async function handleCreateCheckout(supabase: SB, requestId: string, payl
     customerId = customer.id;
   }
 
-  // deno-lint-ignore no-explicit-any
-  const lineItems: any[] = [{ price: planConfig.priceId, quantity: 1 }];
+  const lineItems: Array<{ price: string; quantity: number }> = [{ price: planConfig.priceId, quantity: 1 }];
   if (extraDevices > 0) {
     lineItems.push({ price: ADDON_PRICES[planName], quantity: extraDevices });
   }
@@ -290,8 +316,7 @@ export async function handleCreateCheckout(supabase: SB, requestId: string, payl
   const mspCouponId = getMspCouponId(totalDevices);
   const origin = ctx?.req?.headers.get('origin') || 'http://localhost:8080';
 
-  // deno-lint-ignore no-explicit-any
-  const sessionParams: any = {
+  const sessionParams: Record<string, unknown> = {
     customer: customerId,
     line_items: lineItems,
     mode: 'subscription',
@@ -304,7 +329,7 @@ export async function handleCreateCheckout(supabase: SB, requestId: string, payl
     metadata: { tenant_id: tenantId, plan_name: planName, total_devices: totalDevices.toString() },
   };
 
-  if (mspCouponId) sessionParams.discounts = [{ coupon: mspCouponId }];
+  if (mspCouponId) (sessionParams as Record<string, unknown>).discounts = [{ coupon: mspCouponId }];
 
   const session = await stripe.checkout.sessions.create(sessionParams);
   logStep('Checkout session created', { sessionId: session.id, url: session.url });
@@ -313,23 +338,19 @@ export async function handleCreateCheckout(supabase: SB, requestId: string, payl
 }
 
 // ── manage-subscription ─────────────────────────────────────────────────
-// deno-lint-ignore no-explicit-any
 async function getPlanConfig(supabase: SB, planName: string): Promise<{ basePriceId: string; addonPriceId: string; baseDevices: number } | null> {
   const { data: mappings, error } = await supabase
     .from('stripe_plan_mapping').select('plan_type, stripe_price_id, base_devices').eq('logical_plan', planName);
   if (error || !mappings || mappings.length === 0) return null;
-  // deno-lint-ignore no-explicit-any
-  const base = mappings.find((m: any) => m.plan_type === 'base');
-  // deno-lint-ignore no-explicit-any
-  const addon = mappings.find((m: any) => m.plan_type === 'addon');
+  const base = mappings.find((m: StripePlanMapping) => m.plan_type === 'base');
+  const addon = mappings.find((m: StripePlanMapping) => m.plan_type === 'addon');
   if (!base || !addon) return null;
   return { basePriceId: base.stripe_price_id, addonPriceId: addon.stripe_price_id, baseDevices: base.base_devices };
 }
 
 async function getAllAddonPriceIds(supabase: SB): Promise<string[]> {
   const { data } = await supabase.from('stripe_plan_mapping').select('stripe_price_id').eq('plan_type', 'addon');
-  // deno-lint-ignore no-explicit-any
-  return data?.map((m: any) => m.stripe_price_id) || [];
+  return data?.map((m: StripePlanMapping) => m.stripe_price_id) || [];
 }
 
 export async function handleManageSubscription(supabase: SB, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext) {
@@ -362,8 +383,7 @@ export async function handleManageSubscription(supabase: SB, requestId: string, 
 
   if (!subscription) throw new Error('No subscription found for this tenant');
 
-  // deno-lint-ignore no-explicit-any
-  const currentPlan = (subscription as any).subscription_plans?.name;
+  const currentPlan = (subscription as Record<string, unknown> & { subscription_plans?: { name: string } }).subscription_plans?.name as string;
   const isLegacy = subscription.is_legacy || false;
 
   logStep('Current subscription', { currentPlan, isLegacy, subscriptionId: subscription.stripe_subscription_id });
@@ -391,10 +411,8 @@ export async function handleManageSubscription(supabase: SB, requestId: string, 
       logStep('Target plan config', newConfig);
 
       const stripeSub = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id);
-      // deno-lint-ignore no-explicit-any
-      const items: any[] = [];
-      // deno-lint-ignore no-explicit-any
-      for (const item of stripeSub.items.data as any[]) {
+      const items: Array<{ id?: string; price: string; quantity: number }> = [];
+      for (const item of stripeSub.items.data) {
         const isAddon = allAddonPriceIds.includes(item.price.id);
         items.push(isAddon
           ? { id: item.id, price: newConfig.addonPriceId, quantity: item.quantity }
@@ -402,8 +420,7 @@ export async function handleManageSubscription(supabase: SB, requestId: string, 
       }
 
       if (extraDevices > 0) {
-        // deno-lint-ignore no-explicit-any
-        const existingAddon = stripeSub.items.data.find((item: any) => allAddonPriceIds.includes(item.price.id));
+        const existingAddon = stripeSub.items.data.find((item: StripeSubscriptionItem) => allAddonPriceIds.includes(item.price.id));
         if (existingAddon) {
           const addonItem = items.find(i => i.id === existingAddon.id);
           if (addonItem) addonItem.quantity = (addonItem.quantity || 0) + extraDevices;
@@ -436,8 +453,7 @@ export async function handleManageSubscription(supabase: SB, requestId: string, 
       if (!planConfig) throw new Error(`Cannot add devices to plan: ${currentPlan}`);
 
       const stripeSub = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id);
-      // deno-lint-ignore no-explicit-any
-      const existingAddon = stripeSub.items.data.find((item: any) => item.price.id === planConfig.addonPriceId);
+      const existingAddon = stripeSub.items.data.find((item: StripeSubscriptionItem) => item.price.id === planConfig.addonPriceId);
 
       const updated = existingAddon
         ? await stripe.subscriptions.update(subscription.stripe_subscription_id, {

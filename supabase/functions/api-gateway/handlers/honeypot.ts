@@ -5,6 +5,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { hashToken } from '../../_shared/token-hash.ts';
 import { isKillSwitchEnabled } from '../../_shared/feature-flags.ts';
+import { logger } from '../../_shared/logger.ts';
 import type { HandlerContext } from './admin.ts';
 
 /** 24 hour cooldown between state changes */
@@ -76,7 +77,7 @@ export async function handleActivateAgentHoneypot(
     .eq('id', agentId);
 
   if (updateError) {
-    console.error(`[activate-honeypot] Update error: ${updateError.message}`);
+    logger.error(`[activate-honeypot] Update error`, { message: updateError.message });
     return errRes('Failed to activate honeypot mode', 500);
   }
 
@@ -157,7 +158,7 @@ export async function handleRevertAgentHoneypot(
     .eq('id', agentId);
 
   if (updateError) {
-    console.error(`[revert-honeypot] Update error: ${updateError.message}`);
+    logger.error(`[revert-honeypot] Update error`, { message: updateError.message });
     return errRes('Failed to revert honeypot mode', 500);
   }
 
@@ -169,7 +170,7 @@ export async function handleRevertAgentHoneypot(
     .eq('is_active', true);
 
   if (tokenError) {
-    console.error(`[revert-honeypot] Token invalidation error: ${tokenError.message}`);
+    logger.error(`[revert-honeypot] Token invalidation error`, { message: tokenError.message });
   }
 
   // 5. Generate new token
@@ -189,7 +190,7 @@ export async function handleRevertAgentHoneypot(
     });
 
   if (insertError) {
-    console.error(`[revert-honeypot] New token error: ${insertError.message}`);
+    logger.error(`[revert-honeypot] New token error`, { message: insertError.message });
     return errRes('Agent reverted but new token creation failed. Manual intervention required.', 500);
   }
 

@@ -7,7 +7,7 @@ type BehavioralBaselineInsert = Database['public']['Tables']['agent_behavioral_b
 
 export class BehavioralBaselineMapper {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static toDomain(row: any): BehavioralBaseline {
+  static toDomain(row: Record<string, any>): BehavioralBaseline {
     return BehavioralBaseline.reconstitute({
       id: row.id as string,
       agentId: AgentId.create(row.agent_id as string).value,

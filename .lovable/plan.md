@@ -1,20 +1,34 @@
-## Problema
-`feature-flags.ts` retorna `true` (fail-open) quando o RPC falha, habilitando automações destrutivas (honeypot, SOAR, remediação) por padrão em caso de erro.
 
-## Plano
+# Plano: Eliminação de `any` e `console.*` — Abordagem Faseada
 
-### 1. Edge Function: `_shared/feature-flags.ts`
-- Adicionar parâmetro `defaultValue` (default: `true` para backward compat)
-- Kill switches usam `defaultValue: false` (fail-closed)
-- Documentar padrão claramente
+## Métricas Atuais
+| Categoria | Contagem |
+|---|---|
+| `as any` em `src/` | 87 |
+| `: any` em `src/` | 218 |
+| `as any` em edge functions | 7 |
+| `: any` em edge functions | 14 |
+| `console.*` em edge functions (prod) | ~95 ocorrências em 8 arquivos |
 
-### 2. Todos os consumidores de kill switches
-- `honeypot-handler/index.ts` → `isFeatureEnabled(..., { defaultOnError: false })`
-- `_shared/honeypot/agent-handler.ts` → idem
-- Qualquer outro consumidor de flags de segurança
+## Fase 1 — Edge Functions Críticas de Segurança (Prioridade Máxima)
+**Escopo:** `feature-flags.ts`, `honeypot/agent-handler.ts`, `honeypot-handler/index.ts`, `serve-honeypot.ts`, `honeypot/rate-limit.ts`, `api-gateway/handlers/honeypot.ts`, `ops-gateway/handlers/honeypot-pool.ts`
 
-### 3. Frontend: `useTenantFeatures.tsx`
-- Já é seguro (retorna `false` por padrão) — sem mudança necessária
+- Substituir todos os `console.error/log` por `logger` estruturado (já existe em `_shared/logger.ts`)
+- Tipar todos os `any` com tipos concretos
+- **~21 ocorrências de `any` + ~95 de `console.*`**
 
-### 4. Validação
-- Verificar sintaxe de todos os arquivos alterados
+## Fase 2 — `src/` Frontend — `any` mais críticos
+**Escopo:** Os 87 `as any` + 218 `: any` no frontend
+
+- Priorizar arquivos com mais ocorrências
+- Substituir por tipos concretos, generics, ou `unknown` + type guards
+- Trabalhar em lotes de ~20-30 arquivos por iteração
+
+## Fase 3 — Validação e Governança
+- Verificar `npx tsc --noEmit --skipLibCheck` passa sem erros
+- Confirmar que ESLint `@typescript-eslint/no-explicit-any: "error"` não gera novos warnings
+- Atualizar memórias de governança com contagens reais
+
+---
+
+**Começarei pela Fase 1** (edge functions de segurança) que tem o maior impacto em compliance SOC 2 com o menor volume de mudanças.

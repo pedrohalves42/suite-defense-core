@@ -9,8 +9,8 @@
  * SECURITY: Kill switches default to FAIL-CLOSED (defaultOnError: false).
  * Regular feature flags default to FAIL-OPEN (defaultOnError: true).
  */
-
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from './logger.ts';
 
 export interface FeatureFlagOptions {
   /**
@@ -42,13 +42,13 @@ export async function isFeatureEnabled(
     });
 
     if (error) {
-      console.error(`[feature-flags] RPC error for ${flagKey} (defaulting to ${defaultOnError}):`, error.message);
+      logger.error(`[feature-flags] RPC error for ${flagKey} (defaulting to ${defaultOnError})`, { message: error.message });
       return defaultOnError;
     }
 
     return data === true;
   } catch (err) {
-    console.error(`[feature-flags] Exception for ${flagKey} (defaulting to ${defaultOnError}):`, err);
+    logger.error(`[feature-flags] Exception for ${flagKey} (defaulting to ${defaultOnError})`, err);
     return defaultOnError;
   }
 }
