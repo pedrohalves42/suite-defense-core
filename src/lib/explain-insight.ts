@@ -89,7 +89,7 @@ export function explainDecisionForAudit(
     title: string;
     description?: string | null;
     severity: string;
-    evidence?: any | null;
+    evidence?: Record<string, unknown> | null;
   },
   executedBy: string,
   policyName?: string
