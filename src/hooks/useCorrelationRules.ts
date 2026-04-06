@@ -154,7 +154,7 @@ export function useUpdateDetectionRuleMode() {
       if (!activeTenant?.id) throw new Error('No active tenant');
       const { error } = await supabase
         .from('detection_rules')
-        .update({ mode, updated_at: new Date().toISOString() } as any)
+        .update({ mode, updated_at: new Date().toISOString() } as Record<string, unknown>)
         .eq('id', ruleId)
         .or(`tenant_id.eq.${activeTenant.id},tenant_id.is.null`);
       if (error) throw error;
