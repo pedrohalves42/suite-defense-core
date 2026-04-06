@@ -383,8 +383,7 @@ export async function handleManageSubscription(supabase: SB, requestId: string, 
 
   if (!subscription) throw new Error('No subscription found for this tenant');
 
-  // deno-lint-ignore no-explicit-any
-  const currentPlan = (subscription as any).subscription_plans?.name;
+  const currentPlan = (subscription as Record<string, unknown> & { subscription_plans?: { name: string } }).subscription_plans?.name as string;
   const isLegacy = subscription.is_legacy || false;
 
   logStep('Current subscription', { currentPlan, isLegacy, subscriptionId: subscription.stripe_subscription_id });
