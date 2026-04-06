@@ -87,8 +87,6 @@ export const IntegrityScoreCard = () => {
 
   useEffect(() => {
     loadMetrics();
-    const interval = setInterval(loadMetrics, 300_000); // COST-OPT: 60s → 5min
-    return () => clearInterval(interval);
   }, []);
 
   const handleRefresh = () => {

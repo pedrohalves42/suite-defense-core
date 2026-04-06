@@ -70,8 +70,6 @@ export function SLIDashboard({ tenantId }: SLIDashboardProps) {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 300_000); // COST-OPT: 60s → 5min
-    return () => clearInterval(interval);
   }, [loadData]);
 
   const chartData = metrics

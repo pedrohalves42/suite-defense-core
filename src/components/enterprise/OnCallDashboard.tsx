@@ -54,8 +54,6 @@ export function OnCallDashboard() {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 300_000); // COST-OPT: 30s → 5min
-    return () => clearInterval(interval);
   }, [loadData]);
 
   const handleAcknowledge = async (alert: OnCallAlert) => {
