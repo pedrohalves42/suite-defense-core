@@ -115,7 +115,7 @@ export const ClientComputers = () => {
         }
       });
 
-      return agentsData?.map((agent: any) => ({
+      return agentsData?.map((agent: Record<string, unknown>) => ({
         ...agent,
         metrics: latestMetrics[agent.id] || null
       })) || [];
