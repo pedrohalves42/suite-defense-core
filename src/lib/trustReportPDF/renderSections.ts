@@ -7,10 +7,8 @@ import { COLORS as C } from './types';
 import { addLogoToPDF } from '@/lib/pdfLogoHelper';
 
 interface RenderCtx {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  doc: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  autoTable: (...args: any[]) => void;
+  doc: InstanceType<typeof import('jspdf').jsPDF>;
+  autoTable: (...args: unknown[]) => void;
   y: number;
   W: number;
   H: number;
@@ -272,7 +270,7 @@ export function renderCoverageGatesSection(ctx: RenderCtx) {
       g.count > 0 ? `${g.count}` : '—',
     ]),
     theme: 'striped', headStyles: { fillColor: C.brand, fontSize: 8 }, bodyStyles: { fontSize: 8 },
-    didParseCell: (hookData: any) => {
+    didParseCell: (hookData: { section: string; column: { index: number }; cell: { raw: unknown; styles: Record<string, unknown> } }) => {
       if (hookData.section === 'body' && hookData.column.index === 1) {
         const val = hookData.cell.raw as string;
         hookData.cell.styles.textColor = val.startsWith('✓') ? C.green : C.red;
@@ -304,7 +302,7 @@ export function renderGuaranteesSection(ctx: RenderCtx) {
     head: [['Controle', 'Implementação', 'Status']], body: guarantees,
     theme: 'striped', headStyles: { fillColor: C.brand, fontSize: 8 }, bodyStyles: { fontSize: 7.5 },
     columnStyles: { 0: { fontStyle: 'bold' } },
-    didParseCell: (hookData: any) => {
+    didParseCell: (hookData: { section: string; column: { index: number }; cell: { raw: unknown; styles: Record<string, unknown> } }) => {
       if (hookData.section === 'body' && hookData.column.index === 2) {
         const val = hookData.cell.raw as string;
         if (val.startsWith('✓')) hookData.cell.styles.textColor = C.green;

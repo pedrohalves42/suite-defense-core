@@ -19,7 +19,7 @@ interface EventMeta {
   color: string;       // tailwind text color token
   dot: string;         // tailwind bg color token for the dot
   label: string;
-  summary: (data: any) => string;
+  summary: (data: Record<string, unknown> | undefined) => string;
 }
 
 const fallbackSummary = () => '';
@@ -42,7 +42,7 @@ const ALERT_TYPE_LABELS: Record<string, string> = {
   unauthorized_access: '🚷 Acesso não autorizado',
 };
 
-function securityEventSummary(data: any | undefined): string {
+function securityEventSummary(data: Record<string, unknown> | undefined): string {
   if (!data) return '';
 
   const alertType = data.alert_type as string | undefined;
@@ -83,7 +83,7 @@ function securityEventSummary(data: any | undefined): string {
   return parts.join(' ');
 }
 
-function forceUpdateSummary(data: any | undefined): string {
+function forceUpdateSummary(data: Record<string, unknown> | undefined): string {
   if (!data) return 'Atualização forçada';
   const oldV = data.old_version as string | undefined;
   const newV = data.new_version as string | undefined;
@@ -92,7 +92,7 @@ function forceUpdateSummary(data: any | undefined): string {
   return 'Atualização forçada aplicada';
 }
 
-function stateChangeSummary(data: any | undefined): string {
+function stateChangeSummary(data: Record<string, unknown> | undefined): string {
   if (!data) return '';
   const from = data.old_status || data.from_state;
   const to = data.new_status || data.to_state;
@@ -124,7 +124,7 @@ const EVENT_MAP: Record<string, EventMeta> = {
   certificate_check:     { icon: Shield,       color: 'text-primary',        dot: 'bg-primary',        label: 'Certificados verificados', summary: fallbackSummary },
   disk_check:            { icon: HardDrive,    color: 'text-primary',        dot: 'bg-primary',        label: 'Disco verificado',        summary: (d) => d?.disk_usage_percent ? `${d.disk_usage_percent}% em uso` : '' },
   process_killed:        { icon: Ban,          color: 'text-destructive',    dot: 'bg-destructive',    label: 'Programa suspeito encerrado', summary: (d) => d?.process_name ? String(d.process_name) : '' },
-  decision:              { icon: Shield,       color: 'text-warning',        dot: 'bg-warning',        label: 'Ação de segurança',       summary: (d) => d?.rule_name ? d.rule_name.replace(/_/g, ' ') : '' },
+  decision:              { icon: Shield,       color: 'text-warning',        dot: 'bg-warning',        label: 'Ação de segurança',       summary: (d) => d?.rule_name ? String(d.rule_name).replace(/_/g, ' ') : '' },
   security_event:        { icon: Shield,       color: 'text-warning',        dot: 'bg-warning',        label: 'Alerta de segurança',     summary: securityEventSummary },
 };
 
@@ -246,7 +246,7 @@ export default function AgentTimeline() {
                   {filtered.map((event, idx) => {
                     const meta = getEventMeta(event.event_type);
                     const Icon = meta.icon;
-                    const summary = meta.summary(event.data);
+                    const summary = meta.summary(event.data as Record<string, unknown> | undefined);
 
                     return (
                       <motion.div

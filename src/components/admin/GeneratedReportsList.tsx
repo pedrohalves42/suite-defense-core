@@ -23,7 +23,9 @@ interface GeneratedReport {
   title: string;
   risk_score: number | null;
   risk_level: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   statistics: Record<string, any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   report_data: Record<string, any>;
   status: string;
   triggered_by: string;
@@ -194,8 +196,8 @@ export function GeneratedReportsList() {
     if (data.software_inventory && data.software_inventory.length > 0) {
       csvContent += "INVENTÁRIO DE SOFTWARE\n";
       csvContent += "Nome,Versão,Fornecedor,Risco\n";
-      data.software_inventory.forEach((sw: any) => {
-        csvContent += `"${sw.name || ''}","${sw.version || ''}","${sw.vendor || ''}","${sw.risk_level || ''}"\n`;
+      const swList = data.software_inventory as Array<Record<string, unknown>>;
+      swList.forEach((sw) => {
       });
       csvContent += "\n";
     }

@@ -46,7 +46,7 @@ export function useAIFeedbackDashboard() {
 
       if (error) throw error;
 
-      const insightIds = (insightsData || []).map((i: any) => i.id);
+      const insightIds = (insightsData || []).map((i) => i.id);
       if (insightIds.length === 0) return [];
 
       const { data: feedbackData } = await supabase
@@ -56,10 +56,10 @@ export function useAIFeedbackDashboard() {
         .in('insight_id', insightIds);
 
       const feedbackMap = new Map(
-        (feedbackData || []).map((f: any) => [f.insight_id, { type: f.feedback_type, comment: f.comment }])
+        (feedbackData || []).map((f) => [f.insight_id, { type: f.feedback_type, comment: f.comment }])
       );
 
-      return (insightsData || []).map((insight: any) => ({
+      return (insightsData || []).map((insight) => ({
         id: insight.id,
         insight_type: insight.insight_type,
         severity: insight.severity,
@@ -87,9 +87,9 @@ export function useAIFeedbackDashboard() {
       if (error) throw error;
 
       const total = data.length;
-      const useful = data.filter((f: any) => f.feedback_type === 'useful').length;
-      const noise = data.filter((f: any) => f.feedback_type === 'noise').length;
-      const falsePositive = data.filter((f: any) => f.feedback_type === 'false_positive').length;
+      const useful = data.filter((f) => f.feedback_type === 'useful').length;
+      const noise = data.filter((f) => f.feedback_type === 'noise').length;
+      const falsePositive = data.filter((f) => f.feedback_type === 'false_positive').length;
       const pending = (insights?.filter(i => !i.feedback_type).length) || 0;
 
       return { total, useful, noise, falsePositive, pending };

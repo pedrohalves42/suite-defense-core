@@ -39,14 +39,14 @@ export function useAgentMonitoring() {
         p_include_archived: false,
       });
       if (error) throw error;
-      return ((data || []) as unknown[])
-        .map((agent: any) => ({
-          id: agent.id,
-          agent_name: agent.agent_name,
-          status: agent.status,
-          last_heartbeat: agent.last_heartbeat,
-          enrolled_at: agent.enrolled_at,
-          agent_state: agent.agent_state,
+      return ((data || []) as unknown as Record<string, unknown>[])
+        .map((agent) => ({
+          id: String(agent.id ?? ''),
+          agent_name: String(agent.agent_name ?? ''),
+          status: String(agent.status ?? ''),
+          last_heartbeat: agent.last_heartbeat ? String(agent.last_heartbeat) : null,
+          enrolled_at: String(agent.enrolled_at ?? ''),
+          agent_state: agent.agent_state ? String(agent.agent_state) : null,
         }))
         .sort((a: Agent, b: Agent) => new Date(b.enrolled_at).getTime() - new Date(a.enrolled_at).getTime()) as Agent[];
     },
@@ -118,11 +118,14 @@ export function useAgentMonitoring() {
         p_include_archived: false,
       });
       if (error) throw error;
-      return (data || []).map((agent: any) => ({
-        agent_name: agent.agent_name,
-        last_heartbeat: agent.last_heartbeat,
-        enrolled_at: agent.enrolled_at,
-      }));
+      return (data || []).map((agent: unknown) => {
+        const a = agent as Record<string, unknown>;
+        return {
+          agent_name: String(a.agent_name ?? ''),
+          last_heartbeat: a.last_heartbeat ? String(a.last_heartbeat) : null,
+          enrolled_at: String(a.enrolled_at ?? ''),
+        };
+      });
     },
     enabled: !tenantLoading && !!tenant?.id,
   });
@@ -228,27 +231,27 @@ export function useAgentMonitoring() {
   const last7Days = getLast7Days();
 
   const scansTrendData: ScansTrendPoint[] = last7Days.map(day => {
-    const dayScans = historicalScans?.filter((s: any) => s.scanned_at.startsWith(day.date)) || [];
+    const dayScans = historicalScans?.filter(s => s.scanned_at.startsWith(day.date)) || [];
     return {
       date: day.label,
       total: dayScans.length,
-      malicious: dayScans.filter((s: any) => s.is_malicious).length,
-      clean: dayScans.filter((s: any) => !s.is_malicious).length,
+      malicious: dayScans.filter(s => s.is_malicious).length,
+      clean: dayScans.filter(s => !s.is_malicious).length,
     };
   });
 
   const jobsTrendData: JobsTrendPoint[] = last7Days.map(day => {
-    const dayJobs = historicalJobs?.filter((j: any) => j.created_at.startsWith(day.date)) || [];
+    const dayJobs = historicalJobs?.filter(j => j.created_at.startsWith(day.date)) || [];
     return {
       date: day.label,
       total: dayJobs.length,
-      completed: dayJobs.filter((j: any) => j.status === 'completed').length,
-      failed: dayJobs.filter((j: any) => j.status === 'failed').length,
-      pending: dayJobs.filter((j: any) => j.status === 'queued' || j.status === 'delivered').length,
+      completed: dayJobs.filter(j => j.status === 'completed').length,
+      failed: dayJobs.filter(j => j.status === 'failed').length,
+      pending: dayJobs.filter(j => j.status === 'queued' || j.status === 'delivered').length,
     };
   });
 
-  const uptimeChartData: UptimeDataPoint[] = agentUptimeData?.map((agent: any) => {
+  const uptimeChartData: UptimeDataPoint[] = agentUptimeData?.map((agent) => {
     const lastHeartbeat = agent.last_heartbeat ? new Date(agent.last_heartbeat) : null;
     const diffMins = lastHeartbeat ? (Date.now() - lastHeartbeat.getTime()) / (1000 * 60) : 999;
     return {

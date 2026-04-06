@@ -42,8 +42,7 @@ export function useDataExport() {
     enabled: !!tenant?.id,
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const exportToCSV = (data: any[], filename: string) => {
+  const exportToCSV = (data: Record<string, unknown>[], filename: string) => {
     if (data.length === 0) return;
     const headers = Object.keys(data[0]);
     const csvContent = [
@@ -67,8 +66,7 @@ export function useDataExport() {
     link.click();
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const exportToExcel = async (data: any[], filename: string) => {
+  const exportToExcel = async (data: Record<string, unknown>[], filename: string) => {
     const ExcelJS = (await import('exceljs')).default;
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Dados');
@@ -99,8 +97,7 @@ export function useDataExport() {
     }
     setIsExporting(true);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let data: any[] = [];
+      let data: Record<string, unknown>[] = [];
       let filename = '';
       const dateFilter = dateRange === 'all' ? null : subDays(new Date(), parseInt(dateRange)).toISOString();
 
@@ -108,15 +105,21 @@ export function useDataExport() {
         case 'agents': {
           const { data: agentsRaw } = await supabase.rpc('get_agents_list', { p_tenant_id: tenant.id, p_include_archived: true });
           const agentsList = (agentsRaw as unknown as unknown[]) || [];
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const agentsSorted = dateFilter ? agentsList.filter((a: any) => a.enrolled_at >= dateFilter) : agentsList;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          data = agentsSorted.map((a: any) => ({
-            'Nome do Agente': a.agent_name, 'Status': a.status,
-            'Data de Registro': formatBrazilDateTime(String(a.enrolled_at), 'datetime'),
-            'Ultimo Heartbeat': a.last_heartbeat ? formatBrazilDateTime(String(a.last_heartbeat), 'datetime') : 'Nunca',
-            'Tenant ID': a.tenant_id,
-          }));
+          const agentsSorted = dateFilter
+            ? agentsList.filter((a) => {
+                const rec = a as Record<string, unknown>;
+                return rec.enrolled_at && String(rec.enrolled_at) >= dateFilter;
+              })
+            : agentsList;
+          data = agentsSorted.map((a) => {
+            const rec = a as Record<string, unknown>;
+            return {
+              'Nome do Agente': String(rec.agent_name ?? ''), 'Status': String(rec.status ?? ''),
+              'Data de Registro': formatBrazilDateTime(String(rec.enrolled_at ?? ''), 'datetime'),
+              'Ultimo Heartbeat': rec.last_heartbeat ? formatBrazilDateTime(String(rec.last_heartbeat), 'datetime') : 'Nunca',
+              'Tenant ID': String(rec.tenant_id ?? ''),
+            };
+          });
           filename = `agentes_${formatBrazilDateTime(new Date(), 'filename')}`;
           break;
         }

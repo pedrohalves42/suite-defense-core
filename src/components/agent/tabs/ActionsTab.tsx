@@ -15,13 +15,18 @@ interface ActionsTabProps {
   isThrottled?: boolean | null;
   isIsolated?: boolean | null;
   isInSafeMode?: boolean | null;
-  causality: any;
-  agentActions: any;
-  firewallSkipData: any;
+  causality: { stateTransitions: unknown[] } | null;
+  agentActions: {
+    removeThrottle: { mutate: (id: string) => void; isPending: boolean };
+    removeIsolation: { mutate: (id: string) => void; isPending: boolean };
+    resetSafeMode: { mutate: (args: { agentId: string; tenantId: string }) => void; isPending: boolean };
+    enableOverrideSafeMode: { mutate: (id: string) => void; isPending: boolean };
+  };
+  firewallSkipData: { skip_firewall_remediation?: boolean } | null | undefined;
   firewallSkipLoading: boolean;
   firewallSkipError: boolean;
   effectiveTenantId?: string;
-  toggleFirewallSkip: any;
+  toggleFirewallSkip: { mutate: (checked: boolean) => void; isPending: boolean };
   onViewDiagnostics: () => void;
   onViewTimeline: () => void;
   onAgentDeleted: () => void;

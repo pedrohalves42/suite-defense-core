@@ -1,34 +1,93 @@
 
-# Plano: Eliminação de `any` e `console.*` — Abordagem Faseada
+# Plano: Remediação de Dívida Técnica Não-Crítica
 
-## Métricas Atuais
-| Categoria | Contagem |
-|---|---|
-| `as any` em `src/` | 87 |
-| `: any` em `src/` | 218 |
-| `as any` em edge functions | 7 |
-| `: any` em edge functions | 14 |
-| `console.*` em edge functions (prod) | ~95 ocorrências em 8 arquivos |
-
-## Fase 1 — Edge Functions Críticas de Segurança (Prioridade Máxima)
-**Escopo:** `feature-flags.ts`, `honeypot/agent-handler.ts`, `honeypot-handler/index.ts`, `serve-honeypot.ts`, `honeypot/rate-limit.ts`, `api-gateway/handlers/honeypot.ts`, `ops-gateway/handlers/honeypot-pool.ts`
-
-- Substituir todos os `console.error/log` por `logger` estruturado (já existe em `_shared/logger.ts`)
-- Tipar todos os `any` com tipos concretos
-- **~21 ocorrências de `any` + ~95 de `console.*`**
-
-## Fase 2 — `src/` Frontend — `any` mais críticos
-**Escopo:** Os 87 `as any` + 218 `: any` no frontend
-
-- Priorizar arquivos com mais ocorrências
-- Substituir por tipos concretos, generics, ou `unknown` + type guards
-- Trabalhar em lotes de ~20-30 arquivos por iteração
-
-## Fase 3 — Validação e Governança
-- Verificar `npx tsc --noEmit --skipLibCheck` passa sem erros
-- Confirmar que ESLint `@typescript-eslint/no-explicit-any: "error"` não gera novos warnings
-- Atualizar memórias de governança com contagens reais
+## Diagnóstico Atual
+| Item | Estado | Dados |
+|---|---|---|
+| backup_verifications | 1 registro | Último: 2026-04-06 |
+| secret_rotation_log | 6 registros | Último: 2026-04-06 |
+| access_review (audit_logs) | 1 registro | Sem execução trimestral |
+| `any` no frontend | 140 arquivos, ~300 ocorrências | Top: useAgentMonitoring(10), AIFeedbackDashboard(6), IdentitySecurity(5) |
+| setInterval em produção | 15 pontos ativos | JobTestRunner(5s), OnboardingWizard(10s), AgentBuild(poll) |
 
 ---
 
-**Começarei pela Fase 1** (edge functions de segurança) que tem o maior impacto em compliance SOC 2 com o menor volume de mudanças.
+## Fase 1 — Automação de Evidências SOC 2 (DB + Crons)
+
+### 1A. Cron para Teste de Restore Mensal
+- Criar cron `dr-restore-monthly` que executa `ops-gateway` com action `check:dr-restore`
+- O handler insere evidência sintética em `backup_verifications` com status `scheduled`
+- **Custo**: 1 execução/mês = ~$0.001
+
+### 1B. Cron para Access Review Trimestral
+- Criar cron `access-review-quarterly` que executa `ops-gateway` com action `check:access-review`
+- Já existe handler `access-review.ts` funcional
+- Agendar para dia 1 de Jan/Abr/Jul/Out às 07:00
+- **Custo**: 4 execuções/ano = negligível
+
+### 1C. Enriquecer Rotação de Segredos
+- O cron `rotate-audit` já existe e roda semanalmente
+- Verificar se está gerando registros em `secret_rotation_log` consistentemente
+- Se necessário, ajustar para garantir ao menos 1 registro/semana
+
+---
+
+## Fase 2 — Eliminação de `any` (Frontend) — Top 30 Arquivos
+
+Prioridade por impacto (arquivos com mais ocorrências):
+
+**Lote 1 — Hooks e Use Cases (maior risco de runtime)**
+1. `useAgentMonitoring.ts` (10 any)
+2. `useAIFeedbackDashboard.ts` (6 any)
+3. `useDataExport.ts` (5 any)
+4. `IdentitySecurity.tsx` (5 any)
+5. `AgentTimeline.tsx` (4 any)
+6. `ActionsTab.tsx` (4 any)
+7. `renderSections.ts` (4 any)
+8. `GeneratedReportsList.tsx` (4 any)
+
+**Lote 2 — Componentes e Pages**
+9-20. Arquivos com 3 ocorrências cada (~12 arquivos)
+
+**Lote 3 — Restantes**
+21-30. Arquivos com 2 ocorrências
+
+**Estratégia**: `unknown` + type guards para dados externos; generics para funções utilitárias; tipos concretos para mappers.
+
+---
+
+## Fase 3 — Otimização de Polling (setInterval → React Query)
+
+### Migrar para React Query `refetchInterval`:
+| Arquivo | Atual | Novo |
+|---|---|---|
+| `JobTestRunner.tsx` | setInterval 5s | refetchInterval: 5000, enabled: isPolling |
+| `AutomatedOnboardingWizard.tsx` | setInterval 10s | refetchInterval: 10000, enabled: isChecking |
+| `OnboardingWizard.tsx` | setInterval (custom) | refetchInterval controlado |
+| `useAgentBuild.ts` | setInterval (poll) | refetchInterval: 5000, enabled: isBuilding |
+| `InstallationHealthCard.tsx` | setInterval | refetchInterval: 60000 |
+| `EnrollmentKeys/index.tsx` | setInterval 60s | refetchInterval: 60000 |
+
+### Manter (são legítimos):
+- `useAuth.tsx` (token refresh 120s) — necessário
+- `useSessionGuard.ts` / `useSessionTimeout.ts` — timers de segurança
+- `useRealTimeCountdown.ts` — UI countdown, não faz fetch
+- `GlobalJobWatcher.tsx` — cleanup local, não faz fetch
+- `storage.ts` — cleanup de cache local
+- `useSessionManager.ts` — activity tracking
+
+---
+
+## Fase 4 — Validação Final
+
+1. `npx tsc --noEmit --skipLibCheck` = 0 erros
+2. Verificar crons inseridos com `SELECT * FROM cron.job WHERE active = true`
+3. Confirmar evidências fluindo para `backup_verifications` e `audit_logs`
+4. Grep final: contagem de `any` reduzida em >50%
+
+---
+
+## Estimativa de Impacto em Custos
+- Crons novos: +2 execuções/mês = ~$0.01/mês
+- Remoção de setInterval: -6 polling loops = redução de reads em tabs inativas
+- Total: **economia líquida estimada de ~$2-5/mês** em DB reads

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,16 +25,11 @@ type HealthStatus = {
 };
 
 export function InstallationHealthCard() {
-  const [data, setData] = useState<HealthRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  const fetchHealth = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
+  const { data = [], isLoading: loading, error: queryError, refetch } = useQuery({
+    queryKey: ['installation-health-summary'],
+    queryFn: async () => {
       const { data: result, error: fetchError } = await (supabase
         .rpc('installation_health_summary') as unknown as Promise<{ 
           data: HealthRow[] | null; 
@@ -42,34 +38,16 @@ export function InstallationHealthCard() {
 
       if (fetchError) {
         logger.error('[InstallationHealthCard] Error fetching health:', fetchError);
-        setError(fetchError.message);
-        toast.error('Erro ao carregar metricas de instalacao', {
-          description: fetchError.message
-        });
-      } else {
-        setData(result || []);
-        setLastUpdate(new Date());
+        throw new Error(fetchError.message);
       }
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Erro desconhecido';
-      logger.error('[InstallationHealthCard] Exception:', err);
-      setError(errorMsg);
-      toast.error('Erro ao carregar metricas', { description: errorMsg });
-    } finally {
-      setLoading(false);
-    }
-  };
+      setLastUpdate(new Date());
+      return result || [];
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    fetchHealth();
-
-    // Auto-refresh a cada 5min (COST-OPT: 60s → 5min)
-    const interval = setInterval(() => {
-      fetchHealth();
-    }, 300_000);
-
-    return () => clearInterval(interval);
-  }, []);
+  const error = queryError ? (queryError as Error).message : null;
 
   const getStatus = (successRate: number): HealthStatus => {
     if (successRate >= 95) {
