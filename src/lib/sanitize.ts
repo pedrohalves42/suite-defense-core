@@ -99,7 +99,7 @@ export function sanitizeForLog(obj: unknown, depth: number = 0): unknown {
 /**
  * Sanitize an error for safe logging
  */
-export function sanitizeError(error: unknown): any {
+export function sanitizeError(error: unknown): Record<string, unknown> | string {
   if (error instanceof Error) {
     return {
       name: error.name,

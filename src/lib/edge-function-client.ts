@@ -20,9 +20,9 @@ export class EdgeFunctionError extends Error {
  * FASE 2: Helper unificado para chamadas Edge Functions
  * Garante headers de autenticacao corretos e tratamento de erros padronizado
  */
-export async function callEdgeFunction<T = any>(
+export async function callEdgeFunction<T = unknown>(
   functionName: string,
-  payload?: any,
+  payload?: Record<string, unknown>,
   method: 'GET' | 'POST' = 'POST'
 ): Promise<T> {
   const requestId = crypto.randomUUID();
