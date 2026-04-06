@@ -122,9 +122,9 @@ export default function TestComplianceGenerator() {
           idx === i ? { 
             ...r, 
             status: "success", 
-            audit_id: result.audit_id || result.payload?.audit_id || "",
-            sha256: result.payload?.sha256 || result.sha256 || "",
-            hmac_signature: result.payload?.hmac_signature || result.hmac_signature || "",
+            audit_id: (result as Record<string, unknown>).audit_id || ((result as Record<string, unknown>).payload as Record<string, unknown>)?.audit_id || "",
+            sha256: ((result as Record<string, unknown>).payload as Record<string, unknown>)?.sha256 || (result as Record<string, unknown>).sha256 || "",
+            hmac_signature: ((result as Record<string, unknown>).payload as Record<string, unknown>)?.hmac_signature || (result as Record<string, unknown>).hmac_signature || "",
           } : r
         ));
       } catch (error) {

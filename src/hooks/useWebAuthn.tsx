@@ -125,7 +125,7 @@ export const useWebAuthn = () => {
 
   const listKeys = useCallback(async (): Promise<WebAuthnCredential[]> => {
     try {
-      const data = await callEdgeFunction('fido2-register', {
+      const data = await callEdgeFunction<WebAuthnCredential[]>('fido2-register', {
         action: 'keys',
       });
       return data || [];

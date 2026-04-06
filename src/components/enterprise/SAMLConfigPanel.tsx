@@ -77,7 +77,7 @@ export function SAMLConfigPanel({ tenantId }: SAMLConfigPanelProps) {
   const handleTestLogin = async () => {
     setLoading(true);
     try {
-      const data = await callEdgeFunction('saml-sso', { action: 'login', tenantId });
+      const data = await callEdgeFunction<{ redirect_url?: string }>('saml-sso', { action: 'login', tenantId });
       if (data.redirect_url) {
         window.location.href = data.redirect_url;
       }
