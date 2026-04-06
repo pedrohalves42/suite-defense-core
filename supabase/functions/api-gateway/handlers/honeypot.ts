@@ -109,7 +109,7 @@ export async function handleRevertAgentHoneypot(
   const userId = ctx?.userId;
 
   // === KILL SWITCH ===
-  const honeypotEnabled = await isFeatureEnabled(supabase, 'HONEYPOT_ENABLED', tenantId);
+  const honeypotEnabled = await isKillSwitchEnabled(supabase, 'HONEYPOT_ENABLED', tenantId);
   if (!honeypotEnabled) return errRes('Honeypot feature is currently disabled', 503);
 
   // === STEP-UP AUTH ===

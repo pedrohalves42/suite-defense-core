@@ -95,8 +95,8 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
       const honeypotMode: string | undefined = authResult.agentData.honeypot_mode as string | undefined;
       if (honeypotMode === 'flipped') {
         // Kill switch check: if honeypot is disabled, let agent through normally
-        const { isFeatureEnabled } = await import('./feature-flags.ts');
-        const honeypotEnabled = await isFeatureEnabled(supabase, 'HONEYPOT_ENABLED', agent.tenant_id);
+        const { isKillSwitchEnabled } = await import('./feature-flags.ts');
+        const honeypotEnabled = await isKillSwitchEnabled(supabase, 'HONEYPOT_ENABLED', agent.tenant_id);
         if (honeypotEnabled) {
           const { handleHoneypotAgentRequest } = await import('./honeypot/agent-handler.ts');
           const sourceIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
