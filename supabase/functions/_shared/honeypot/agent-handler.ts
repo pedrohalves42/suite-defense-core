@@ -20,7 +20,7 @@ import { classifyPayload } from './classify.ts';
 import { buildHoneypotResponse, type ResponseProfileType } from './response-profiles.ts';
 import { buildCorsHeaders } from '../cors.ts';
 import { securityHeaders } from '../security-headers.ts';
-import { isFeatureEnabled } from '../feature-flags.ts';
+import { isKillSwitchEnabled } from '../feature-flags.ts';
 
 export interface HoneypotAgentContext {
   agentId: string;
