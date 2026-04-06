@@ -49,8 +49,7 @@ export class JobMapper {
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static executionToDomain(row: any): JobExecution {
+  static executionToDomain(row: Record<string, unknown>): JobExecution {
     const props: JobExecutionProps = {
       id: row.id,
       jobId: row.job_id,

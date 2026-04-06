@@ -6,8 +6,7 @@ import type { Database, Json } from '@/integrations/supabase/types';
 type BehavioralBaselineInsert = Database['public']['Tables']['agent_behavioral_baseline']['Insert'];
 
 export class BehavioralBaselineMapper {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static toDomain(row: any): BehavioralBaseline {
+  static toDomain(row: Record<string, unknown>): BehavioralBaseline {
     return BehavioralBaseline.reconstitute({
       id: row.id as string,
       agentId: AgentId.create(row.agent_id as string).value,
