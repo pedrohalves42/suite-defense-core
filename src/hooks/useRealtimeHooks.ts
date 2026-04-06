@@ -73,17 +73,11 @@ export function useRealtimeAlerts(tenantId: string | undefined, opts?: { activeO
     queryKey: ['rt-alerts', tenantId, activeOnly],
     queryFn: async (): Promise<SystemAlert[]> => {
       if (!tenantId) return [];
-      // TS2589: system_alerts has excessive FK relationships causing infinite type depth.
-      // Cast to simpler table type to avoid TS2589, then cast result back.
-      const from = supabase.from as (table: string) => ReturnType<typeof supabase.from<'active_sessions'>>;
-      const builder = from('system_alerts')
-        .select('id, alert_type, severity, title, description, is_active, created_at, resolved_at');
-      
-      let q = (builder as Record<string, CallableFunction>).eq('tenant_id', tenantId);
-      if (activeOnly) q = q.eq('is_active', true);
-      const { data, error } = await q.order('created_at', { ascending: false }).limit(100);
+      // TS2589: system_alerts has excessive FK relationships causing infinite type recursion.
+      // Workaround: use postgrest-js directly to avoid deep type instantiation.
+      const { data, error } = await fetchAlerts(tenantId, activeOnly);
       if (error) throw error;
-      return (data || []) as unknown as SystemAlert[];
+      return (data || []) as SystemAlert[];
     },
     realtimeTable: 'system_alerts',
     realtimeFilter: `tenant_id=eq.${tenantId}`,
