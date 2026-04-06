@@ -109,7 +109,11 @@ export default function TestComplianceGenerator() {
     for (let i = 0; i < REPORT_TEMPLATES.length; i++) {
       const reportConfig = REPORT_TEMPLATES[i];
       try {
-        const result = await callEdgeFunction("ops-gateway", {
+        interface ComplianceResult {
+          audit_id?: string; sha256?: string; hmac_signature?: string;
+          payload?: { audit_id?: string; sha256?: string; hmac_signature?: string };
+        }
+        const result = await callEdgeFunction<ComplianceResult>("ops-gateway", {
           action: 'report:compliance',
           payload: {
             tenant_id: tenant.id,
@@ -121,10 +125,10 @@ export default function TestComplianceGenerator() {
         setReports(prev => prev.map((r, idx) => 
           idx === i ? { 
             ...r, 
-            status: "success", 
-            audit_id: (result as Record<string, unknown>).audit_id || ((result as Record<string, unknown>).payload as Record<string, unknown>)?.audit_id || "",
-            sha256: ((result as Record<string, unknown>).payload as Record<string, unknown>)?.sha256 || (result as Record<string, unknown>).sha256 || "",
-            hmac_signature: ((result as Record<string, unknown>).payload as Record<string, unknown>)?.hmac_signature || (result as Record<string, unknown>).hmac_signature || "",
+            status: "success" as const, 
+            audit_id: result.audit_id || result.payload?.audit_id || "",
+            sha256: result.payload?.sha256 || result.sha256 || "",
+            hmac_signature: result.payload?.hmac_signature || result.hmac_signature || "",
           } : r
         ));
       } catch (error) {
