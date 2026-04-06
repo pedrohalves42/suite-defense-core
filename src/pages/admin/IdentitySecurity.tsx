@@ -70,8 +70,8 @@ export default function IdentitySecurity() {
     mutationFn: async () => {
       return await callGateway('security', 'check-credential-leaks', { tenant_id: tenant!.id });
     },
-    onSuccess: (data: any) => {
-      toast.success(`Verificação concluída: ${data?.leaks_found ?? 0} vazamentos encontrados`);
+    onSuccess: (data: Record<string, unknown>) => {
+      toast.success(`Verificação concluída: ${(data?.leaks_found as number) ?? 0} vazamentos encontrados`);
       queryClient.invalidateQueries({ queryKey: ["credential-leaks"] });
     },
     onError: () => toast.error("Erro ao verificar credenciais"),
