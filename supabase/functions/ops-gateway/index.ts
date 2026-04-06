@@ -284,6 +284,8 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'sync:sync-cve-database': handleSyncCveDatabase,
   'sync:mitre-sync': handleMitreSync,
   'check:rate-limit-check': handleRateLimitCheck,
+  // ── SOC 2 CC6.3: Periodic Access Review ──
+  'check:access-review': handleAccessReview,
 };
 
 const ALL_VALID_ACTIONS = new Set([
