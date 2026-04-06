@@ -302,7 +302,7 @@ export function renderGuaranteesSection(ctx: RenderCtx) {
     head: [['Controle', 'Implementação', 'Status']], body: guarantees,
     theme: 'striped', headStyles: { fillColor: C.brand, fontSize: 8 }, bodyStyles: { fontSize: 7.5 },
     columnStyles: { 0: { fontStyle: 'bold' } },
-    didParseCell: (hookData: any) => {
+    didParseCell: (hookData: { section: string; column: { index: number }; cell: { raw: unknown; styles: Record<string, unknown> } }) => {
       if (hookData.section === 'body' && hookData.column.index === 2) {
         const val = hookData.cell.raw as string;
         if (val.startsWith('✓')) hookData.cell.styles.textColor = C.green;

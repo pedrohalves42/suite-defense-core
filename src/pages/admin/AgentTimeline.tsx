@@ -92,7 +92,7 @@ function forceUpdateSummary(data: Record<string, unknown> | undefined): string {
   return 'Atualização forçada aplicada';
 }
 
-function stateChangeSummary(data: any | undefined): string {
+function stateChangeSummary(data: Record<string, unknown> | undefined): string {
   if (!data) return '';
   const from = data.old_status || data.from_state;
   const to = data.new_status || data.to_state;

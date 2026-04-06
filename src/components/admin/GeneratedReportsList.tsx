@@ -194,8 +194,8 @@ export function GeneratedReportsList() {
     if (data.software_inventory && data.software_inventory.length > 0) {
       csvContent += "INVENTÁRIO DE SOFTWARE\n";
       csvContent += "Nome,Versão,Fornecedor,Risco\n";
-      data.software_inventory.forEach((sw: any) => {
-        csvContent += `"${sw.name || ''}","${sw.version || ''}","${sw.vendor || ''}","${sw.risk_level || ''}"\n`;
+      const swList = data.software_inventory as Array<Record<string, unknown>>;
+      swList.forEach((sw) => {
       });
       csvContent += "\n";
     }
