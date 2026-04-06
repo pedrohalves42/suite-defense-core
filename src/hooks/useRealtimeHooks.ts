@@ -12,6 +12,21 @@ interface SystemAlert {
   resolved_at: string | null;
 }
 
+// TS2589 workaround: system_alerts causes infinite type depth in Supabase SDK due to excessive FK relationships.
+// Extracting query to a helper with explicit return type breaks the deep type chain.
+async function fetchAlerts(tenantId: string, activeOnly: boolean) {
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/system_alerts?select=id,alert_type,severity,title,description,is_active,created_at,resolved_at&tenant_id=eq.${tenantId}${activeOnly ? '&is_active=eq.true' : ''}&order=created_at.desc&limit=100`;
+  const res = await fetch(url, {
+    headers: {
+      'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+    },
+  });
+  if (!res.ok) return { data: null, error: new Error(`${res.status} ${res.statusText}`) };
+  const data = await res.json();
+  return { data: data as SystemAlert[], error: null };
+}
+
 /**
  * Realtime-powered hook for agents list.
  * Subscribes to postgres_changes on public.agents filtered by tenant_id.
