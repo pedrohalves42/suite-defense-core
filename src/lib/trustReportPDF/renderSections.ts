@@ -270,7 +270,7 @@ export function renderCoverageGatesSection(ctx: RenderCtx) {
       g.count > 0 ? `${g.count}` : '—',
     ]),
     theme: 'striped', headStyles: { fillColor: C.brand, fontSize: 8 }, bodyStyles: { fontSize: 8 },
-    didParseCell: (hookData: any) => {
+    didParseCell: (hookData: { section: string; column: { index: number }; cell: { raw: unknown; styles: Record<string, unknown> } }) => {
       if (hookData.section === 'body' && hookData.column.index === 1) {
         const val = hookData.cell.raw as string;
         hookData.cell.styles.textColor = val.startsWith('✓') ? C.green : C.red;
