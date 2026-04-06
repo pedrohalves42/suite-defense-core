@@ -23,8 +23,8 @@ interface GeneratedReport {
   title: string;
   risk_score: number | null;
   risk_level: string | null;
-  statistics: Record<string, unknown>;
-  report_data: Record<string, unknown>;
+  statistics: Record<string, unknown> | null;
+  report_data: Record<string, unknown> | null;
   status: string;
   triggered_by: string;
   created_at: string;
