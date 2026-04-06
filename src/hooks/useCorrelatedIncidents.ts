@@ -91,7 +91,7 @@ export function useUpdateIncidentStatus() {
   return useMutation({
     mutationFn: async ({ incidentId, status, notes }: { incidentId: string; status: string; notes?: string }) => {
       if (!activeTenant?.id) throw new Error('Tenant not found');
-      const update: any = { status, updated_at: new Date().toISOString() };
+      const update: Record<string, string> = { status, updated_at: new Date().toISOString() };
       if (status === 'resolved') {
         update.resolved_at = new Date().toISOString();
         update.resolution_notes = notes || '';

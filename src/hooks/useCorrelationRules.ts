@@ -73,7 +73,7 @@ export function useCreateCorrelationRule() {
       if (!activeTenant?.id) throw new Error('No active tenant');
       const { error } = await supabase
         .from('correlation_rules')
-        .insert({ ...rule, tenant_id: activeTenant.id } as any);
+        .insert({ ...rule, tenant_id: activeTenant.id } as Omit<CorrelationRule, 'id' | 'risk_score' | 'match_count' | 'false_positive_count' | 'created_at' | 'updated_at'> & { tenant_id: string });
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['correlation-rules'] }),
@@ -89,7 +89,7 @@ export function useUpdateCorrelationRuleMode() {
       if (!activeTenant?.id) throw new Error('No active tenant');
       const { error } = await supabase
         .from('correlation_rules')
-        .update({ mode, updated_at: new Date().toISOString() } as any)
+        .update({ mode, updated_at: new Date().toISOString() } as Partial<CorrelationRule>)
         .eq('id', ruleId)
         .eq('tenant_id', activeTenant.id);
       if (error) throw error;
@@ -134,7 +134,7 @@ export function useMarkCorrelationFalsePositive() {
         .update({
           is_false_positive: true,
           reviewed_at: new Date().toISOString(),
-        } as any)
+        } as Partial<CorrelationResult>)
         .eq('id', resultId)
         .eq('tenant_id', activeTenant.id);
       if (error) throw error;
@@ -154,7 +154,7 @@ export function useUpdateDetectionRuleMode() {
       if (!activeTenant?.id) throw new Error('No active tenant');
       const { error } = await supabase
         .from('detection_rules')
-        .update({ mode, updated_at: new Date().toISOString() } as any)
+        .update({ mode, updated_at: new Date().toISOString() } as Record<string, unknown>)
         .eq('id', ruleId)
         .or(`tenant_id.eq.${activeTenant.id},tenant_id.is.null`);
       if (error) throw error;
@@ -179,14 +179,15 @@ export function useDetectionRuleFeedback() {
         .or(`tenant_id.eq.${activeTenant.id},tenant_id.is.null`)
         .single();
       if (fetchErr) throw fetchErr;
-      const newVal = ((current as any)?.[col] ?? 0) + 1;
+      const currentRecord = current as Record<string, unknown> | null;
+      const newVal = (Number(currentRecord?.[col]) || 0) + 1;
       const { error } = await supabase
         .from('detection_rules')
         .update({
           [col]: newVal,
           last_triggered_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        } as any)
+        } as Record<string, unknown>)
         .eq('id', ruleId)
         .or(`tenant_id.eq.${activeTenant.id},tenant_id.is.null`);
       if (error) throw error;

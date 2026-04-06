@@ -1,6 +1,32 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useRealtimeQuery } from './useRealtimeQuery';
 
+interface SystemAlert {
+  id: string;
+  alert_type: string;
+  severity: string;
+  title: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+// TS2589 workaround: system_alerts causes infinite type depth in Supabase SDK due to excessive FK relationships.
+// Extracting query to a helper with explicit return type breaks the deep type chain.
+async function fetchAlerts(tenantId: string, activeOnly: boolean) {
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/system_alerts?select=id,alert_type,severity,title,description,is_active,created_at,resolved_at&tenant_id=eq.${tenantId}${activeOnly ? '&is_active=eq.true' : ''}&order=created_at.desc&limit=100`;
+  const res = await fetch(url, {
+    headers: {
+      'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+    },
+  });
+  if (!res.ok) return { data: null, error: new Error(`${res.status} ${res.statusText}`) };
+  const data = await res.json();
+  return { data: data as SystemAlert[], error: null };
+}
+
 /**
  * Realtime-powered hook for agents list.
  * Subscribes to postgres_changes on public.agents filtered by tenant_id.
@@ -60,17 +86,13 @@ export function useRealtimeAlerts(tenantId: string | undefined, opts?: { activeO
   const activeOnly = opts?.activeOnly ?? true;
   return useRealtimeQuery({
     queryKey: ['rt-alerts', tenantId, activeOnly],
-    queryFn: async () => {
+    queryFn: async (): Promise<SystemAlert[]> => {
       if (!tenantId) return [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let q: any = supabase
-        .from('system_alerts')
-        .select('id, alert_type, severity, title, description, is_active, created_at, resolved_at')
-        .eq('tenant_id', tenantId);
-      if (activeOnly) q = q.eq('is_active', true);
-      const { data, error } = await q.order('created_at', { ascending: false }).limit(100);
+      // TS2589: system_alerts has excessive FK relationships causing infinite type recursion.
+      // Workaround: use postgrest-js directly to avoid deep type instantiation.
+      const { data, error } = await fetchAlerts(tenantId, activeOnly);
       if (error) throw error;
-      return data || [];
+      return (data || []) as SystemAlert[];
     },
     realtimeTable: 'system_alerts',
     realtimeFilter: `tenant_id=eq.${tenantId}`,

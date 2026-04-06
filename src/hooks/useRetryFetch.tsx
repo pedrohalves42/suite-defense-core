@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 interface RetryOptions {
   maxRetries?: number;
   initialDelay?: number;
-  onRetry?: (attempt: number, error: any) => void;
+  onRetry?: (attempt: number, error: unknown) => void;
   shouldRetry?: (error: Record<string, unknown>) => boolean;
 }
 
@@ -28,7 +28,7 @@ export function useRetryFetch() {
       shouldRetry = () => true,
     } = options;
 
-    let lastError: any;
+    let lastError: unknown;
     setRetryCount(0);
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -59,9 +59,10 @@ export function useRetryFetch() {
           }
 
           // Show toast only on network errors
-          const isNetworkError = error.message?.includes('Failed to fetch') || 
-                                error.message?.includes('Network request failed') ||
-                                error.name === 'TypeError';
+          const err = error instanceof Error ? error : new Error(String(error));
+          const isNetworkError = err.message?.includes('Failed to fetch') || 
+                                err.message?.includes('Network request failed') ||
+                                err.name === 'TypeError';
 
           if (isNetworkError) {
             toast.info(`Tentativa ${attempt + 1}/${maxRetries} falhou. Tentando novamente em ${delay/1000}s...`, {
