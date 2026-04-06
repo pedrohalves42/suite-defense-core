@@ -1,4 +1,4 @@
-import { format as fnsFormat } from 'date-fns';
+import { format as fnsFormat, type Locale } from 'date-fns';
 import { format as formatTz, toZonedTime } from 'date-fns-tz';
 import { ptBR } from 'date-fns/locale';
 import { formatDistanceToNow as fnsFormatDistanceToNow } from 'date-fns';

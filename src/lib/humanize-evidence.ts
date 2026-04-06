@@ -329,7 +329,7 @@ export function humanizeEvidence(evidence: unknown): HumanizedEvidence[] {
 /**
  * Get a summary string from evidence (for compact views)
  */
-export function getEvidenceSummary(evidence: Record<string, unknown>): string {
+export function getEvidenceSummary(evidence: unknown): string {
   const items = humanizeEvidence(evidence);
   if (items.length === 0) return '';
   
