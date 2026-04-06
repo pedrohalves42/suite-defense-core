@@ -129,6 +129,7 @@ import {
 import { handleSyncCveDatabase } from './handlers/sync-cve.ts';
 import { handleMitreSync } from './handlers/sync-mitre.ts';
 import { handleRateLimitCheck } from './handlers/rate-limit.ts';
+import { handleAccessReview } from './handlers/access-review.ts';
 
 // Inlined handlers — notify (Phase 3A)
 import {
