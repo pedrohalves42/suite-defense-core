@@ -74,7 +74,7 @@ export default function ShadowITDiscovery() {
     },
   });
 
-  const filtered = catalog.filter((app: any) => {
+  const filtered = catalog.filter((app: Record<string, unknown>) => {
     const matchSearch = !search || app.app_name.toLowerCase().includes(search.toLowerCase());
     const matchRisk = filterRisk === "all" || app.risk_level === filterRisk;
     return matchSearch && matchRisk;
