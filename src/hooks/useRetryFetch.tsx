@@ -28,7 +28,7 @@ export function useRetryFetch() {
       shouldRetry = () => true,
     } = options;
 
-    let lastError: any;
+    let lastError: unknown;
     setRetryCount(0);
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
