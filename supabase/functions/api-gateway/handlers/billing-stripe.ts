@@ -350,8 +350,7 @@ async function getPlanConfig(supabase: SB, planName: string): Promise<{ basePric
 
 async function getAllAddonPriceIds(supabase: SB): Promise<string[]> {
   const { data } = await supabase.from('stripe_plan_mapping').select('stripe_price_id').eq('plan_type', 'addon');
-  // deno-lint-ignore no-explicit-any
-  return data?.map((m: any) => m.stripe_price_id) || [];
+  return data?.map((m: StripePlanMapping) => m.stripe_price_id) || [];
 }
 
 export async function handleManageSubscription(supabase: SB, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext) {
