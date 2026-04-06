@@ -18,8 +18,7 @@ export interface AutomationRule {
     duration_minutes?: number;
   };
   action_type: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  action_config: any;
+  action_config: Record<string, unknown>;
   target_scope: string;
   cooldown_minutes: number;
   last_triggered_at: string | null;
