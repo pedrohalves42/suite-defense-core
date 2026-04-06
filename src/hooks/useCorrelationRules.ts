@@ -89,7 +89,7 @@ export function useUpdateCorrelationRuleMode() {
       if (!activeTenant?.id) throw new Error('No active tenant');
       const { error } = await supabase
         .from('correlation_rules')
-        .update({ mode, updated_at: new Date().toISOString() } as any)
+        .update({ mode, updated_at: new Date().toISOString() } as Partial<CorrelationRule>)
         .eq('id', ruleId)
         .eq('tenant_id', activeTenant.id);
       if (error) throw error;
