@@ -201,7 +201,7 @@ export function useAgentMonitoring() {
       });
       
       fetchDashboardData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error resolving alert group', error);
       toast({
         title: 'Erro ao resolver alertas',

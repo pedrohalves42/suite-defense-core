@@ -10,7 +10,7 @@ interface TestResult {
   status: 'pending' | 'running' | 'success' | 'error';
   message: string;
   timestamp: string;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 export type { TestResult };

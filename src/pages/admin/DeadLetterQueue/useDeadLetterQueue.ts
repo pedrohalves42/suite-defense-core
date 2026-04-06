@@ -23,8 +23,7 @@ export interface DLQEntry {
   resolution_notes: string | null;
   resolved_at: string | null;
   resolved_by: string | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  metadata: any | null;
+  metadata: Record<string, unknown> | null;
 }
 
 export function useDeadLetterQueue() {
