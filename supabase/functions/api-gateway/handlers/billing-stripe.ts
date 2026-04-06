@@ -119,8 +119,13 @@ export async function handleCheckSubscription(supabase: SB, requestId: string, _
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false }).limit(1).maybeSingle();
 
-  // deno-lint-ignore no-explicit-any
-  const typedSub = subscription as any;
+  interface SubscriptionWithPlan {
+    stripe_subscription_id: string | null; stripe_customer_id: string | null;
+    device_quantity: number | null; addon_devices: number | null; is_legacy: boolean | null;
+    status: string | null; trial_end: string | null; current_period_end: string | null;
+    plan_id: string | null; subscription_plans: { name: string; stripe_price_id: string; max_devices: number | null } | null;
+  }
+  const typedSub = subscription as SubscriptionWithPlan | null;
 
   const getBaseDevices = (planName: string): number => {
     const map: Record<string, number> = {
