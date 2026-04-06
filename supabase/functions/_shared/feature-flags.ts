@@ -9,8 +9,8 @@
  * SECURITY: Kill switches default to FAIL-CLOSED (defaultOnError: false).
  * Regular feature flags default to FAIL-OPEN (defaultOnError: true).
  */
-
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { logger } from './logger.ts';
 
 export interface FeatureFlagOptions {
   /**

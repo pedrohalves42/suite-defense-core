@@ -10,6 +10,7 @@
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { hashIp } from './sanitize.ts';
+import { logger } from '../logger.ts';
 
 export interface HoneypotRateLimitConfig {
   maxRequests: number;
