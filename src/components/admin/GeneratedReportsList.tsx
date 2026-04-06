@@ -23,8 +23,10 @@ interface GeneratedReport {
   title: string;
   risk_score: number | null;
   risk_level: string | null;
-  statistics: Record<string, unknown> | null;
-  report_data: Record<string, unknown> | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  statistics: Record<string, any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  report_data: Record<string, any>;
   status: string;
   triggered_by: string;
   created_at: string;
