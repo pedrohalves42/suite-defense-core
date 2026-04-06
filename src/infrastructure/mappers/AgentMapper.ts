@@ -8,7 +8,8 @@ type AgentInsert = Database['public']['Tables']['agents']['Insert'];
  * Maps between Supabase DB rows and Agent domain entities.
  */
 export class AgentMapper {
-  static toDomain(row: Record<string, unknown>): Agent {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static toDomain(row: Record<string, any>): Agent {
     const props: AgentProps = {
       id: row.id,
       tenantId: row.tenant_id,

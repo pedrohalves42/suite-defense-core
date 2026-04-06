@@ -5,9 +5,10 @@ import { TenantId } from '../../../../domain/value-objects/TenantId';
  * Maps between AutomationRule domain entity and Supabase database rows.
  */
 export class AutomationRuleMapper {
-  static toDomain(row: Record<string, unknown>): AutomationRule {
-    const conditions = (row.trigger_conditions || {}) as Record<string, unknown>;
-    const actionConfig = (row.action_config || {}) as Record<string, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static toDomain(row: Record<string, any>): AutomationRule {
+    const conditions = row.trigger_conditions || {};
+    const actionConfig = row.action_config || {};
 
     return AutomationRule.reconstitute({
       id: row.id,

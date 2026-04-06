@@ -50,7 +50,8 @@ export class JobMapper {
     };
   }
 
-  static executionToDomain(row: Record<string, unknown>): JobExecution {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static executionToDomain(row: Record<string, any>): JobExecution {
     const props: JobExecutionProps = {
       id: row.id,
       jobId: row.job_id,
