@@ -205,7 +205,7 @@ export function useAgentMonitoring() {
       logger.error('Error resolving alert group', error);
       toast({
         title: 'Erro ao resolver alertas',
-        description: error?.message || 'Falha ao resolver alertas. Verifique se está logado.',
+        description: error instanceof Error ? error.message : 'Falha ao resolver alertas. Verifique se está logado.',
         variant: 'destructive',
       });
     }
