@@ -105,10 +105,14 @@ export function useDataExport() {
         case 'agents': {
           const { data: agentsRaw } = await supabase.rpc('get_agents_list', { p_tenant_id: tenant.id, p_include_archived: true });
           const agentsList = (agentsRaw as unknown as unknown[]) || [];
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const agentsSorted = dateFilter ? agentsList.filter((a: any) => a.enrolled_at >= dateFilter) : agentsList;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          data = agentsSorted.map((a: any) => ({
+          const agentsSorted = dateFilter
+            ? agentsList.filter((a) => {
+                const rec = a as Record<string, unknown>;
+                return rec.enrolled_at && String(rec.enrolled_at) >= dateFilter;
+              })
+            : agentsList;
+          data = agentsSorted.map((a) => {
+            const rec = a as Record<string, unknown>;
             'Nome do Agente': a.agent_name, 'Status': a.status,
             'Data de Registro': formatBrazilDateTime(String(a.enrolled_at), 'datetime'),
             'Ultimo Heartbeat': a.last_heartbeat ? formatBrazilDateTime(String(a.last_heartbeat), 'datetime') : 'Nunca',
