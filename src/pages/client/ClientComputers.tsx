@@ -238,7 +238,7 @@ export const ClientComputers = () => {
 
       {agents && agents.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {agents.map((agent: Record<string, unknown>, index: number) => {
+          {agents.map((agent, index: number) => {
             const online = isOnline(agent.last_heartbeat);
             const metrics = agent.metrics;
 

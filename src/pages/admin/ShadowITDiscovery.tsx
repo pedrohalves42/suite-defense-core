@@ -165,7 +165,7 @@ export default function ShadowITDiscovery() {
                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Nenhuma aplicação encontrada. Clique em "Classificar com IA" para iniciar.
                 </TableCell></TableRow>
-              ) : filtered.map((app: Record<string, unknown>) => {
+              ) : filtered.map((app) => {
                 const Icon = categoryIcons[app.app_category] || Search;
                 return (
                   <TableRow key={app.id}>
