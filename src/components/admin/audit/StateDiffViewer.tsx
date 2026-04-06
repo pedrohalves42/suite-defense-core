@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils';
 import { ArrowRight, Minus, Plus, Equal } from 'lucide-react';
 
 interface StateDiffViewerProps {
-  stateBefore: any | null;
-  stateAfter: any | null;
+  stateBefore: Record<string, unknown> | null;
+  stateAfter: Record<string, unknown> | null;
   compact?: boolean;
 }
 

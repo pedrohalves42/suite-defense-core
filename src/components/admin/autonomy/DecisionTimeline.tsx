@@ -11,7 +11,7 @@ interface DecisionTimelineItem {
   id: string;
   rule_code: string;
   action: string;
-  evidence: any;
+  evidence: Record<string, unknown>;
   executed_actions: string[];
   created_at: string;
   agent_id: string | null;

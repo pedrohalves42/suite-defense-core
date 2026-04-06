@@ -128,7 +128,7 @@ ${JSON.stringify(insight.evidence || {}, null, 2)}
 export function explainEffectiveness(
   status: EffectivenessStatus,
   insightType: string,
-  evidence?: any,
+  evidence?: Record<string, unknown>,
   reason?: string
 ): EffectivenessExplanation {
   const baseExplanations: Record<EffectivenessStatus, { badge_label: string; badge_variant: EffectivenessExplanation['badge_variant']; base_text: string }> = {

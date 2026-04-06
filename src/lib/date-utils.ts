@@ -25,7 +25,7 @@ export function format(date: Date | string | number, formatStr: string, options?
 /**
  * Drop-in replacement for date-fns `formatDistanceToNow()` using Brasília timezone.
  */
-export function formatDistanceToNow(date: Date | string | number, options?: { addSuffix?: boolean; locale?: any }): string {
+export function formatDistanceToNow(date: Date | string | number, options?: { addSuffix?: boolean; locale?: Locale }): string {
   const d = typeof date === 'string' ? new Date(date) : typeof date === 'number' ? new Date(date) : date;
   if (isNaN(d.getTime())) return '-';
   return fnsFormatDistanceToNow(d, { 
