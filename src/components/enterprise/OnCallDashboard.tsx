@@ -54,7 +54,6 @@ export function OnCallDashboard() {
 
   useEffect(() => {
     loadData();
-    return () => clearInterval(interval);
   }, [loadData]);
 
   const handleAcknowledge = async (alert: OnCallAlert) => {
