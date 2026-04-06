@@ -204,9 +204,10 @@ export function humanizeEvidence(evidence: unknown): HumanizedEvidence[] {
   }
 
   const items: (HumanizedEvidence & { priority: number })[] = [];
+  const ev = evidence as Record<string, unknown>;
   
   // First, check if there's agent-specific data in evidence_pack
-  const evidencePack = evidence.evidence_pack as Array<Record<string, unknown>> | undefined;
+  const evidencePack = ev.evidence_pack as Array<Record<string, unknown>> | undefined;
   
   // If evidence_pack exists, parse its actual structure
   // Real structure: [{"value": 10.84, "data_point": "Uso Médio de CPU"}, {"value": {"cpu": 93, "disk": 51}, "data_point": "Agente com Problema: DESKTOP-X"}]
