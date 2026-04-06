@@ -8,12 +8,38 @@ import type { HandlerContext } from './admin.ts';
 
 type SB = ReturnType<typeof createClient>;
 
-// deno-lint-ignore no-explicit-any
-async function getStripe(): Promise<{ stripe: any; Stripe: any }> {
+/** Minimal Stripe types — avoids `any` for dynamically imported SDK */
+interface StripeInvoice {
+  id: string; number: string; amount_due: number; amount_paid: number;
+  currency: string; status: string; created: number; due_date: number | null;
+  hosted_invoice_url: string | null; invoice_pdf: string | null;
+}
+interface StripeSubscriptionItem {
+  id: string; price: { id: string }; quantity: number;
+}
+interface StripeSubscription {
+  id: string; status: string; trial_end: number | null;
+  current_period_end: number; items: { data: StripeSubscriptionItem[] };
+}
+interface StripeInstance {
+  invoices: { list(params: Record<string, unknown>): Promise<{ data: StripeInvoice[] }> };
+  billingPortal: { sessions: { create(params: Record<string, unknown>): Promise<{ url: string }> } };
+  customers: { list(params: Record<string, unknown>): Promise<{ data: Array<{ id: string }> }>; create(params: Record<string, unknown>): Promise<{ id: string }> };
+  checkout: { sessions: { create(params: Record<string, unknown>): Promise<{ id: string; url: string }> } };
+  subscriptions: {
+    retrieve(id: string): Promise<StripeSubscription>;
+    update(id: string, params: Record<string, unknown>): Promise<StripeSubscription>;
+    cancel(id: string, params?: Record<string, unknown>): Promise<StripeSubscription>;
+  };
+}
+interface StripePlanMapping { plan_type: string; stripe_price_id: string; base_devices: number }
+interface TenantFeature { feature_key: string; enabled: boolean; quota_limit: number | null; quota_used: number | null }
+
+async function getStripe(): Promise<{ stripe: StripeInstance; Stripe: unknown }> {
   const { default: Stripe } = await import('https://esm.sh/stripe@18.5.0');
   const key = Deno.env.get('STRIPE_SECRET_KEY');
   if (!key) throw new Error('STRIPE_SECRET_KEY is not set');
-  return { stripe: new Stripe(key, { apiVersion: '2025-08-27.basil' }), Stripe };
+  return { stripe: new Stripe(key, { apiVersion: '2025-08-27.basil' }) as StripeInstance, Stripe };
 }
 
 // ── list-invoices ───────────────────────────────────────────────────────
