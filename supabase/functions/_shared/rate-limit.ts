@@ -42,7 +42,7 @@ let ttlEvictions = 0;
 let rpcCalls = 0;
 let rpcErrors = 0;
 let lastMetricsEmitAt = 0;
-const METRICS_EMIT_INTERVAL_MS = 60_000; // Emit metrics at most once per minute
+const METRICS_EMIT_INTERVAL_MS = 300_000; // Emit metrics at most once per 5 minutes
 
 function cacheKey(identifier: string, endpoint: string): string {
   return `${identifier}::${endpoint}`;
