@@ -7,9 +7,6 @@ const ALLOWED_ORIGINS = [
   'https://www.cybershield.com.br',
   'https://cybershield-audit.lovable.app',
   'https://id-preview--affc1ab5-463f-41f7-ae33-f788e864f6ee.lovable.app',
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'http://localhost:8080',
 ];
 
 /**
@@ -22,7 +19,7 @@ function isAllowedOrigin(origin: string | null): boolean {
   if (/^https:\/\/[a-z0-9._-]+\.lovable\.app$/.test(origin)) return true;
   if (/^https:\/\/[a-z0-9._-]+\.lovableproject\.com$/.test(origin)) return true;
   if (/^https:\/\/[a-z0-9._-]+\.lovable\.dev$/.test(origin)) return true;
-  if (origin.startsWith('http://localhost:')) return true;
+  if (typeof Deno !== 'undefined' && Deno.env.get('ENVIRONMENT') === 'development' && origin.startsWith('http://localhost:')) return true;
   return false;
 }
 
