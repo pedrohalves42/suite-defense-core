@@ -179,14 +179,15 @@ export function useDetectionRuleFeedback() {
         .or(`tenant_id.eq.${activeTenant.id},tenant_id.is.null`)
         .single();
       if (fetchErr) throw fetchErr;
-      const newVal = ((current as any)?.[col] ?? 0) + 1;
+      const currentRecord = current as Record<string, unknown> | null;
+      const newVal = (Number(currentRecord?.[col]) || 0) + 1;
       const { error } = await supabase
         .from('detection_rules')
         .update({
           [col]: newVal,
           last_triggered_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        } as any)
+        } as Record<string, unknown>)
         .eq('id', ruleId)
         .or(`tenant_id.eq.${activeTenant.id},tenant_id.is.null`);
       if (error) throw error;

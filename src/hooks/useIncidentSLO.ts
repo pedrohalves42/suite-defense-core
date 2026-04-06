@@ -167,10 +167,10 @@ export const useIncidentSLOSummary = () => {
         alert: states.filter((s: Record<string, unknown>) => s.status === 'alert').length,
         ok: states.filter((s: Record<string, unknown>) => s.status === 'ok').length,
         avgBurnRate1h: states.length > 0
-          ? states.reduce((sum: number, s: any) => sum + (s.burn_rate_1h || 0), 0) / states.length
+          ? states.reduce((sum: number, s: Record<string, unknown>) => sum + (Number(s.burn_rate_1h) || 0), 0) / states.length
           : 0,
         avgBudgetConsumed: states.length > 0
-          ? states.reduce((sum: number, s: any) => sum + (s.budget_consumed || 0), 0) / states.length
+          ? states.reduce((sum: number, s: Record<string, unknown>) => sum + (Number(s.budget_consumed) || 0), 0) / states.length
           : 0
       };
     },

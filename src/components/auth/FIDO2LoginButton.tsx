@@ -58,7 +58,7 @@ export function FIDO2LoginButton({ email, onSuccess, disabled }: FIDO2LoginButto
       const publicKey: PublicKeyCredentialRequestOptions = {
         challenge: base64UrlToBuffer(options.challenge),
         rpId: options.rpId,
-        allowCredentials: options.allowCredentials?.map((cred: any) => ({
+        allowCredentials: options.allowCredentials?.map((cred: { id: string; type: string; transports?: string[] }) => ({
           id: base64UrlToBuffer(cred.id as string),
           type: cred.type as PublicKeyCredentialType,
           transports: cred.transports as AuthenticatorTransport[],

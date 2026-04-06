@@ -9,7 +9,7 @@ interface TenantFeature {
   enabled: boolean;
   quota_limit: number | null;
   quota_used: number;
-  metadata: any;
+  metadata: Record<string, unknown> | null;
 }
 
 export const useTenantFeatures = () => {
