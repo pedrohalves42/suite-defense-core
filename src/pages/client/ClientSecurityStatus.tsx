@@ -361,7 +361,7 @@ export const ClientSecurityStatus = () => {
             <CardContent>
               {data?.antivirus && data.antivirus.length > 0 ? (
                 <div className="space-y-2">
-                  {data.antivirus.map((av: any, index: number) => (
+                  {data.antivirus.map((av: Record<string, unknown>, index: number) => (
                     <motion.div 
                       key={av.id}
                       initial={{ opacity: 0, x: -10 }}
