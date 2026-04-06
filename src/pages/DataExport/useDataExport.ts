@@ -97,8 +97,7 @@ export function useDataExport() {
     }
     setIsExporting(true);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let data: any[] = [];
+      let data: Record<string, unknown>[] = [];
       let filename = '';
       const dateFilter = dateRange === 'all' ? null : subDays(new Date(), parseInt(dateRange)).toISOString();
 
