@@ -88,16 +88,16 @@ export const ClientComputers = () => {
 
       if (error) throw error;
       const agentsData = ((rawData as unknown as unknown[]) || [])
-        .sort((a, b) => {
-          const aHb = String((a as Record<string, string>).last_heartbeat || '');
-          const bHb = String((b as Record<string, string>).last_heartbeat || '');
+        .sort((a: any, b: any) => {
+          const aHb = a.last_heartbeat || '';
+          const bHb = b.last_heartbeat || '';
           return bHb.localeCompare(aHb);
         });
 
       if (error) throw error;
 
       // Fetch latest metrics for each agent
-      const agentIds = agentsData?.map((a: Record<string, unknown>) => a.id as string) || [];
+      const agentIds = agentsData?.map((a: any) => a.id as string) || [];
       
       if (agentIds.length === 0) return [];
 
@@ -115,13 +115,10 @@ export const ClientComputers = () => {
         }
       });
 
-      return agentsData?.map((agent) => {
-        const a = agent as Record<string, unknown>;
-        return {
-          ...a,
-          metrics: latestMetrics[String(a.id)] || null
-        };
-      }) || [];
+      return agentsData?.map((agent: any) => ({
+        ...agent,
+        metrics: latestMetrics[agent.id] || null
+      })) || [];
     },
     enabled: !!tenant?.id,
     refetchInterval: false,
