@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 interface RetryOptions {
   maxRetries?: number;
   initialDelay?: number;
-  onRetry?: (attempt: number, error: any) => void;
+  onRetry?: (attempt: number, error: unknown) => void;
   shouldRetry?: (error: Record<string, unknown>) => boolean;
 }
 
