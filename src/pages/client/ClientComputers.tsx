@@ -88,7 +88,7 @@ export const ClientComputers = () => {
 
       if (error) throw error;
       const agentsData = ((rawData as unknown as unknown[]) || [])
-        .sort((a: any, b: any) => {
+        .sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
           const aHb = a.last_heartbeat || '';
           const bHb = b.last_heartbeat || '';
           return bHb.localeCompare(aHb);
