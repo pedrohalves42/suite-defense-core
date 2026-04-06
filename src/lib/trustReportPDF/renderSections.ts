@@ -7,10 +7,8 @@ import { COLORS as C } from './types';
 import { addLogoToPDF } from '@/lib/pdfLogoHelper';
 
 interface RenderCtx {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  doc: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  autoTable: (...args: any[]) => void;
+  doc: InstanceType<typeof import('jspdf').jsPDF>;
+  autoTable: (...args: unknown[]) => void;
   y: number;
   W: number;
   H: number;
