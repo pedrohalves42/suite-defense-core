@@ -113,11 +113,13 @@ export function useDataExport() {
             : agentsList;
           data = agentsSorted.map((a) => {
             const rec = a as Record<string, unknown>;
-            'Nome do Agente': a.agent_name, 'Status': a.status,
-            'Data de Registro': formatBrazilDateTime(String(a.enrolled_at), 'datetime'),
-            'Ultimo Heartbeat': a.last_heartbeat ? formatBrazilDateTime(String(a.last_heartbeat), 'datetime') : 'Nunca',
-            'Tenant ID': a.tenant_id,
-          }));
+            return {
+              'Nome do Agente': String(rec.agent_name ?? ''), 'Status': String(rec.status ?? ''),
+              'Data de Registro': formatBrazilDateTime(String(rec.enrolled_at ?? ''), 'datetime'),
+              'Ultimo Heartbeat': rec.last_heartbeat ? formatBrazilDateTime(String(rec.last_heartbeat), 'datetime') : 'Nunca',
+              'Tenant ID': String(rec.tenant_id ?? ''),
+            };
+          });
           filename = `agentes_${formatBrazilDateTime(new Date(), 'filename')}`;
           break;
         }
