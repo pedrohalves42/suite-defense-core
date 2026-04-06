@@ -7,9 +7,6 @@ const ALLOWED_ORIGINS = [
   'https://www.cybershield.com.br',
   'https://cybershield-audit.lovable.app',
   'https://id-preview--affc1ab5-463f-41f7-ae33-f788e864f6ee.lovable.app',
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'http://localhost:8080',
 ];
 
 /**
