@@ -453,8 +453,7 @@ export async function handleManageSubscription(supabase: SB, requestId: string, 
       if (!planConfig) throw new Error(`Cannot add devices to plan: ${currentPlan}`);
 
       const stripeSub = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id);
-      // deno-lint-ignore no-explicit-any
-      const existingAddon = stripeSub.items.data.find((item: any) => item.price.id === planConfig.addonPriceId);
+      const existingAddon = stripeSub.items.data.find((item: StripeSubscriptionItem) => item.price.id === planConfig.addonPriceId);
 
       const updated = existingAddon
         ? await stripe.subscriptions.update(subscription.stripe_subscription_id, {
