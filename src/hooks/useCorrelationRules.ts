@@ -134,7 +134,7 @@ export function useMarkCorrelationFalsePositive() {
         .update({
           is_false_positive: true,
           reviewed_at: new Date().toISOString(),
-        } as any)
+        } as Partial<CorrelationResult>)
         .eq('id', resultId)
         .eq('tenant_id', activeTenant.id);
       if (error) throw error;
