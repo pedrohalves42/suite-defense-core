@@ -42,8 +42,7 @@ export function useDataExport() {
     enabled: !!tenant?.id,
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const exportToCSV = (data: any[], filename: string) => {
+  const exportToCSV = (data: Record<string, unknown>[], filename: string) => {
     if (data.length === 0) return;
     const headers = Object.keys(data[0]);
     const csvContent = [
