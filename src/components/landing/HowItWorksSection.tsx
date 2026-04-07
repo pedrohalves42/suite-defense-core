@@ -1,6 +1,7 @@
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 import { motion } from "framer-motion";
+import { HowItWorksDecorations } from "./shared/AnimatedDecorations";
 
 export function HowItWorksSection() {
   const { howItWorks } = useLandingContent();
