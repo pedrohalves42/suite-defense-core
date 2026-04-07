@@ -11,6 +11,8 @@ import type { BuildProgressState, ExeBuildStatus } from '../types';
 const MAX_RETRIES = 2;
 
 export function useAgentBuild(agentName: string, lastEnrollmentKey: string | null, isNameValid: boolean) {
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { retryFetch } = useRetryFetch();
   const [exeBuildStatus, setExeBuildStatus] = useState<ExeBuildStatus>('idle');
   const [exeBuildId, setExeBuildId] = useState<string | null>(null);
