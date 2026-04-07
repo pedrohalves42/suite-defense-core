@@ -22,3 +22,31 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# ============================================
+# Environment Variables & Secrets
+# ============================================
+.env
+.env.local
+.env.*.local
+.env.test
+.env.test.local
+.env.production.local
+
+# ============================================
+# Sensitive Files
+# ============================================
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.jks
+secrets.json
+credentials.json
+
+# ============================================
+# IDE & OS (Additional)
+# ============================================
+.env.development.local
+*.secret
