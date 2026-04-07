@@ -4,28 +4,28 @@ import { cn } from "@/lib/utils";
 
 const floatAnimation = {
   y: [0, -12, 0],
-  transition: { duration: 4, repeat: Infinity, ease: "easeInOut" }
+  transition: { duration: 4, repeat: Infinity, ease: "easeInOut" as const }
 };
 
 const floatSlowAnimation = {
   y: [0, -8, 0],
-  transition: { duration: 6, repeat: Infinity, ease: "easeInOut" }
+  transition: { duration: 6, repeat: Infinity, ease: "easeInOut" as const }
 };
 
 const pulseAnimation = {
   scale: [1, 1.08, 1],
   opacity: [0.15, 0.25, 0.15],
-  transition: { duration: 3, repeat: Infinity, ease: "easeInOut" }
+  transition: { duration: 3, repeat: Infinity, ease: "easeInOut" as const }
 };
 
 const rotateAnimation = {
   rotate: [0, 360],
-  transition: { duration: 20, repeat: Infinity, ease: "linear" }
+  transition: { duration: 20, repeat: Infinity, ease: "linear" as const }
 };
 
 const rotateSlow = {
   rotate: [0, 360],
-  transition: { duration: 40, repeat: Infinity, ease: "linear" }
+  transition: { duration: 40, repeat: Infinity, ease: "linear" as const }
 };
 
 interface FloatingIconProps {
