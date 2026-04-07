@@ -43,6 +43,7 @@ export const securityItems: MenuItem[] = [
 export const managementItems: MenuItem[] = [
   { icon: Shield, label: 'Regras', to: '/admin/security-policies' },
   { icon: Crown, label: 'Equipe', to: '/admin/members' },
+  { icon: CreditCard, label: 'Plano e Assinatura', to: '/admin/plan-upgrade' },
   { icon: FileBarChart, label: 'Relatórios', to: '/admin/reports' },
   { icon: Bell, label: 'Avisos', to: '/admin/notification-channels' },
   { icon: Settings, label: 'Configurações', to: '/admin/tenant' },
