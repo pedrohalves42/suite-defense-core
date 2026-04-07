@@ -6,11 +6,6 @@ import { Link } from "react-router-dom";
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { motion } from "framer-motion";
 import { HeroDecorations } from "./shared/AnimatedDecorations";
-import heroBanner from "@/assets/cybershield-hero-banner.png";
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { useLandingContent } from "@/hooks/useLandingContent";
-import { motion } from "framer-motion";
 
 export function HeroSection() {
   const { hero } = useLandingContent();
