@@ -46,15 +46,16 @@ export function FloatingIcon({ icon: Icon, className, size = 24, animation = "fl
     rotateSlow: rotateSlow,
   };
 
-  const anim = { ...animations[animation] };
-  if (anim.transition) {
-    anim.transition = { ...anim.transition, delay };
-  }
+  const base = animations[animation];
+  const animateProps = {
+    ...base,
+    transition: { ...base.transition, delay },
+  };
 
   return (
     <motion.div
       className={cn("absolute pointer-events-none", color, className)}
-      animate={anim}
+      animate={animateProps}
     >
       <Icon size={size} />
     </motion.div>
