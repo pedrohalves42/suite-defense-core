@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { FeatureCard } from "./shared/FeatureCard";
 import { motion } from "framer-motion";
+import { PainPointsDecorations } from "./shared/AnimatedDecorations";
 
 export function PainPointsSection() {
   const { painPoints } = useLandingContent();
@@ -14,6 +15,7 @@ export function PainPointsSection() {
       <div className="absolute inset-0 bg-gradient-to-b from-background via-destructive/[0.04] to-background" />
       {/* Subtle red side glow */}
       <div className="absolute top-1/2 -left-32 w-[300px] h-[300px] bg-destructive/5 rounded-full blur-[100px]" />
+      <PainPointsDecorations />
       
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-16 items-center">

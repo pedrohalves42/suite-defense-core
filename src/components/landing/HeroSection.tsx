@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { motion } from "framer-motion";
+import { HeroDecorations } from "./shared/AnimatedDecorations";
 
 export function HeroSection() {
   const { hero } = useLandingContent();
@@ -23,6 +24,7 @@ export function HeroSection() {
       {/* Green security glow — "protection active" feeling */}
       <div className="absolute top-1/4 right-1/4 w-[500px] h-[500px] bg-cta-positive/8 rounded-full blur-[150px]" />
       <div className="absolute bottom-1/4 left-0 w-[400px] h-[400px] bg-info/5 rounded-full blur-[120px]" />
+      <HeroDecorations />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 w-full">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
