@@ -239,6 +239,19 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
     }
   };
 
+  // Keep refs in sync for stable callbacks
+  handleBuildExeRef.current = handleBuildExe;
+  githubActionsUrlRef.current = githubActionsUrl;
+
+  // Auto-retry: when retryCount increments (1..MAX_RETRIES), schedule a retry after 30s
+  useEffect(() => {
+    if (retryCount === 0 || retryCount > MAX_RETRIES) return;
+    const retryTimeout = setTimeout(() => {
+      handleBuildExeRef.current?.();
+    }, 30000);
+    return () => clearTimeout(retryTimeout);
+  }, [retryCount]);
+
   const refreshBuildStatus = async () => {
     if (!exeBuildId) return;
     try {
