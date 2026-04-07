@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { motion } from "framer-motion";
+import { CTADecorations } from "./shared/AnimatedDecorations";
 
 export function CTASection() {
   const { ctaFinal } = useLandingContent();
