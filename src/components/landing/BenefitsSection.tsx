@@ -1,6 +1,7 @@
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 import { motion } from "framer-motion";
+import { BenefitsDecorations } from "./shared/AnimatedDecorations";
 
 export function BenefitsSection() {
   const { benefits } = useLandingContent();
