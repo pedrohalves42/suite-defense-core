@@ -15,9 +15,18 @@ export function useRealTimeCountdown(expiresAt: string | null): CountdownResult 
 
   useEffect(() => {
     if (!expiresAt) return;
+
+    // Stop ticking once expired to avoid unnecessary re-renders
+    const expiryTime = new Date(expiresAt).getTime();
+    if (Date.now() >= expiryTime) return;
     
     const interval = setInterval(() => {
-      setNow(new Date());
+      const current = new Date();
+      setNow(current);
+      // Auto-stop once expired
+      if (current.getTime() >= expiryTime) {
+        clearInterval(interval);
+      }
     }, 1000);
     
     return () => clearInterval(interval);
