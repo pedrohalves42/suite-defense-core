@@ -1,5 +1,6 @@
 /**
  * create-checkout - Stripe Checkout session for subscription upgrade
+ * V4: Resolves plan_name from stripe_plan_mapping for webhook metadata
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import Stripe from 'https://esm.sh/stripe@18.5.0';
@@ -13,7 +14,8 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return handleCorsPreflightRequest();
 
   try {
-    const supabase = createClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_ANON_KEY'));
+    const supabaseAdmin = createClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'));
+    const supabaseAnon = createClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_ANON_KEY'));
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Not authenticated' }), {
@@ -22,7 +24,7 @@ Deno.serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: userError } = await supabaseAnon.auth.getUser(token);
     if (userError || !user?.email) {
       return new Response(JSON.stringify({ error: 'User not authenticated' }), {
         status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
@@ -36,6 +38,17 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
       });
     }
+
+    // Resolve plan_name and base_devices from stripe_plan_mapping
+    const { data: planMapping } = await supabaseAdmin
+      .from('stripe_plan_mapping')
+      .select('logical_plan, base_devices')
+      .eq('stripe_price_id', priceId)
+      .eq('plan_type', 'base')
+      .maybeSingle();
+
+    const planName = planMapping?.logical_plan || 'unknown';
+    const maxDevices = planMapping?.base_devices || 10;
 
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
       apiVersion: '2025-08-27.basil',
@@ -55,10 +68,15 @@ Deno.serve(async (req) => {
       mode: 'subscription',
       success_url: `${origin}/admin/subscription?success=true`,
       cancel_url: `${origin}/admin/subscription?canceled=true`,
-      metadata: { tenant_id: tenantId, user_id: user.id },
+      metadata: {
+        tenant_id: tenantId,
+        user_id: user.id,
+        plan_name: planName,
+        max_devices: String(maxDevices),
+      },
     });
 
-    logger.info('[CREATE-CHECKOUT] Session created', { sessionId: session.id, tenantId });
+    logger.info('[CREATE-CHECKOUT] Session created', { sessionId: session.id, tenantId, planName });
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
