@@ -157,23 +157,7 @@ export async function verifyHmacSignature(
     };
   }
 
-  // ── 1. Replay protection ──────────────────────────────────
-  const { data: usedSignature } = await supabase
-    .from('hmac_signatures')
-    .select('id')
-    .eq('signature', signature)
-    .order('used_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (usedSignature) {
-    return {
-      valid: false,
-      errorCode: 'AUTH_REPLAY_DETECTED',
-      errorMessage: 'Assinatura ja utilizada (replay attack detectado)',
-      transient: false,
-    };
-  }
+  // ── 1. Replay protection (deferred to atomic insert on match) ──
 
   // ── 2. Read body once ─────────────────────────────────────
   let body = '';
@@ -266,16 +250,33 @@ export async function verifyHmacSignature(
   // Determine fast-path: if cache exists, try ONLY cached combo first
   // This reduces worst-case from 16 crypto ops to 1 for known agents
   const onMatch = async (keyName: string, variant: PayloadVariant): Promise<HmacVerificationResult> => {
-    // Store replay protection
-    const { error: insertError } = await supabase.from('hmac_signatures').insert({
-      signature,
-      agent_name: agentName,
+    // Atomic replay protection: check + insert in one DB call (eliminates TOCTOU)
+    const { data: recorded, error: rpcError } = await supabase.rpc('hmac_check_and_record', {
+      p_signature: signature,
+      p_agent_name: agentName,
     });
-    if (insertError) {
-      logger.error(`[HMAC] CRITICAL: Failed to store signature for agent ${agentName}`, {
-        error: insertError.message,
-        code: insertError.code,
+
+    if (rpcError) {
+      logger.error(`[HMAC] CRITICAL: Atomic replay check failed for agent ${agentName}`, {
+        error: rpcError.message,
+        code: rpcError.code,
       });
+      // Fail-closed: reject if we can't guarantee uniqueness
+      return {
+        valid: false,
+        errorCode: 'AUTH_REPLAY_CHECK_FAILED',
+        errorMessage: 'Replay protection check failed',
+        transient: true,
+      };
+    }
+
+    if (recorded === false) {
+      return {
+        valid: false,
+        errorCode: 'AUTH_REPLAY_DETECTED',
+        errorMessage: 'Assinatura ja utilizada (replay attack detectado)',
+        transient: false,
+      };
     }
 
     // Update format cache (fire-and-forget)
