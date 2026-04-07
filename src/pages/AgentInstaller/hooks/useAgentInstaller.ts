@@ -36,14 +36,15 @@ export function useAgentInstaller() {
   useEffect(() => {
     const interval = setInterval(() => {
       const state = enrollmentCircuitBreaker.getState();
-      const wasOpen = circuitBreakerOpen;
       const isNowOpen = state === CircuitState.OPEN;
-      setCircuitBreakerOpen(isNowOpen);
-      if (!wasOpen && isNowOpen) logger.warn('Circuit breaker ABERTO');
-      else if (wasOpen && !isNowOpen) logger.info('Circuit breaker FECHADO');
-    }, 1000);
+      setCircuitBreakerOpen((prev) => {
+        if (!prev && isNowOpen) logger.warn('Circuit breaker ABERTO');
+        else if (prev && !isNowOpen) logger.info('Circuit breaker FECHADO');
+        return isNowOpen;
+      });
+    }, 10000);
     return () => clearInterval(interval);
-  }, [circuitBreakerOpen, enrollmentCircuitBreaker]);
+  }, [enrollmentCircuitBreaker]);
 
   // Compose sub-hooks
   const config = useAgentConfig();
