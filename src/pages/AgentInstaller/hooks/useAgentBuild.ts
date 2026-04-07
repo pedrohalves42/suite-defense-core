@@ -126,7 +126,10 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
 
   const handleBuildStatusChange = useCallback((status: BuildStatus) => {
     logger.info('[Realtime] Build status changed', status);
-    if (status.github_run_url && !githubActionsUrl) setGithubActionsUrl(status.github_run_url);
+    if (status.github_run_url && !githubActionsUrlRef.current) {
+      githubActionsUrlRef.current = status.github_run_url;
+      setGithubActionsUrl(status.github_run_url);
+    }
 
     if (status.build_status === 'completed') {
       setExeBuildStatus('completed');
@@ -142,7 +145,6 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
       setRetryCount((prev) => {
         if (prev < MAX_RETRIES) {
           toast.warning('⚠️ Build falhou', { description: `Tentando novamente (${prev + 1}/${MAX_RETRIES}) em 30s...`, duration: 5000 });
-          // NOTE: retry is deferred; handleBuildExe will be called after state update
           return prev + 1;
         } else {
           setExeBuildStatus('failed');
@@ -151,7 +153,7 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
         }
       });
     }
-  }, [githubActionsUrl]);
+  }, []);
 
   const { fetchStatus: fetchBuildStatus, cleanup: cleanupRealtime } = useBuildRealtime({
     buildId: exeBuildId,
