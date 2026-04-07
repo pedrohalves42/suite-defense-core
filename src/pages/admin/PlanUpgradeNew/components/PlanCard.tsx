@@ -37,8 +37,8 @@ export function PlanCard({ plan, details, isCurrent, billingPeriod, isCheckoutPe
         <div className={`w-10 h-10 rounded-lg ${details.bgColor} flex items-center justify-center mb-2`}>
           <Icon className={`h-5 w-5 ${details.color}`} />
         </div>
-        <CardTitle className="text-xl capitalize">
-          {plan.name === 'starter_compliance' ? 'Starter Compliance' : plan.name}
+        <CardTitle className="text-xl">
+          {plan.name === 'starter_compliance' ? 'Starter Compliance' : plan.name === 'business' ? 'Business Completo' : plan.name === 'enterprise' ? 'Enterprise' : plan.name}
         </CardTitle>
         <CardDescription className="text-xs">{details.description}</CardDescription>
         <div className="mt-2">
