@@ -13,6 +13,8 @@ const MAX_RETRIES = 2;
 export function useAgentBuild(agentName: string, lastEnrollmentKey: string | null, isNameValid: boolean) {
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const githubActionsUrlRef = useRef<string | null>(null);
+  const handleBuildExeRef = useRef<() => Promise<void>>();
   const { retryFetch } = useRetryFetch();
   const [exeBuildStatus, setExeBuildStatus] = useState<ExeBuildStatus>('idle');
   const [exeBuildId, setExeBuildId] = useState<string | null>(null);
@@ -124,7 +126,10 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
 
   const handleBuildStatusChange = useCallback((status: BuildStatus) => {
     logger.info('[Realtime] Build status changed', status);
-    if (status.github_run_url && !githubActionsUrl) setGithubActionsUrl(status.github_run_url);
+    if (status.github_run_url && !githubActionsUrlRef.current) {
+      githubActionsUrlRef.current = status.github_run_url;
+      setGithubActionsUrl(status.github_run_url);
+    }
 
     if (status.build_status === 'completed') {
       setExeBuildStatus('completed');
@@ -140,7 +145,6 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
       setRetryCount((prev) => {
         if (prev < MAX_RETRIES) {
           toast.warning('⚠️ Build falhou', { description: `Tentando novamente (${prev + 1}/${MAX_RETRIES}) em 30s...`, duration: 5000 });
-          // NOTE: retry is deferred; handleBuildExe will be called after state update
           return prev + 1;
         } else {
           setExeBuildStatus('failed');
@@ -149,7 +153,7 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
         }
       });
     }
-  }, [githubActionsUrl]);
+  }, []);
 
   const { fetchStatus: fetchBuildStatus, cleanup: cleanupRealtime } = useBuildRealtime({
     buildId: exeBuildId,
@@ -234,6 +238,19 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
       toast.error(`Erro ao gerar EXE: ${err.message || 'Erro desconhecido'}`);
     }
   };
+
+  // Keep refs in sync for stable callbacks
+  handleBuildExeRef.current = handleBuildExe;
+  githubActionsUrlRef.current = githubActionsUrl;
+
+  // Auto-retry: when retryCount increments (1..MAX_RETRIES), schedule a retry after 30s
+  useEffect(() => {
+    if (retryCount === 0 || retryCount > MAX_RETRIES) return;
+    const retryTimeout = setTimeout(() => {
+      handleBuildExeRef.current?.();
+    }, 30000);
+    return () => clearTimeout(retryTimeout);
+  }, [retryCount]);
 
   const refreshBuildStatus = async () => {
     if (!exeBuildId) return;
