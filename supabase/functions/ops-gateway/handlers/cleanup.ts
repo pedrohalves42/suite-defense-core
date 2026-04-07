@@ -163,7 +163,7 @@ export async function handleCleanupStuckJobs(supabase: SB, requestId: string, _p
   }
 
   let zombieCleaned = { total: 0 };
-  try { const { data } = await supabase.rpc('cleanup_zombie_executions'); if (data) zombieCleaned = data as { total: number }; } catch (_) {}
+  try { const { data } = await supabase.rpc('cleanup_zombie_executions'); if (data) zombieCleaned = data as { total: number }; } catch (e) { logger.warn('[cleanup] zombie cleanup RPC failed', e instanceof Error ? e.message : e); }
 
   const { data: expiredJobs } = await supabase.from('jobs').select('id').in('status', ['queued', 'delivered', 'pending']).lt('expires_at', now);
   let expiredCount = 0;
