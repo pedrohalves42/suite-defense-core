@@ -71,7 +71,7 @@ SELECT cron.schedule(
   $$
   SELECT net.http_post(
     url := 'https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/check-tenant-abuse',
-    headers := '{"Content-Type": "application/json", "Authorization": "Bearer ***REMOVED***"}'::jsonb,
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer <REDACTED_JWT_TOKEN>"}'::jsonb,
     body := '{"source": "cron"}'::jsonb
   ) AS request_id;
   $$

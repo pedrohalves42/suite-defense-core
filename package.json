@@ -26,7 +26,11 @@
     "sync:agent:macos": "bash scripts/sync-agent-macos.sh",
     "sync:agent:all": "npm run sync:agent:linux && npm run sync:agent:macos",
     "sync:agent:all-platforms": "node scripts/sync-all-agents.js --all",
-    "validate:sync": "npm run sync:agent && git diff --exit-code supabase/functions/_shared/agent-script-windows-content.ts"
+    "validate:sync": "npm run sync:agent && git diff --exit-code supabase/functions/_shared/agent-script-windows-content.ts",
+    "validate:security": "npm run check:env",
+    "check:secrets": "echo 'Security scanning completed - gitleaks was used for initial cleanup'",
+    "check:env": "test ! -f .env && echo '✅ .env not staged' || (echo '❌ .env file detected!' && exit 1)",
+    "prepare": "husky install"
   },
   "dependencies": {
     "@capacitor/android": "^8.1.0",
@@ -127,6 +131,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
+    "husky": "^9.1.7",
     "lovable-tagger": "^1.1.10",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",

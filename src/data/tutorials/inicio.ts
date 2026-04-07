@@ -38,18 +38,18 @@ export const tutorials_inicio: Tutorial[] = [
         title: "Gerar chave de enrollment",
         content: "Antes de instalar agentes, gere uma Enrollment Key: vá em Instalador de Agentes → Chaves de Enrollment → 'Nova Chave'. Defina: nome descritivo (ex: 'Deploy Inicial - Mar/2026'), limite de usos (opcional — 0 = ilimitado) e validade (opcional — padrão: nunca expira). A chave é exibida uma única vez — copie e armazene com segurança.",
         warning: "A Enrollment Key vincula agentes ao seu tenant. Se vazar, qualquer pessoa pode registrar agentes falsos na sua conta. Trate como uma senha: não envie por e-mail em texto plano, use cofre de senhas ou variáveis de ambiente.",
-        code: "# Exemplo de Enrollment Key gerada:\n# ***REMOVED***iJ7kL8mN9oP0qR1sT2uV\n# Guarde em local seguro!",
+        code: "# Exemplo de Enrollment Key gerada:\n# YOUR_ENROLLMENT_KEY_HERE\n# Guarde em local seguro!",
       },
       {
         title: "Baixar e instalar o agente (Windows)",
         content: "Em 'Instalador de Agentes', selecione Windows, clique em 'Baixar Instalador (.exe)'. No endpoint-alvo: clique com botão direito no arquivo → 'Executar como Administrador'. O instalador solicita a Enrollment Key — cole a chave gerada. Aguarde a barra de progresso completar (~2 minutos). Um ícone de escudo aparecerá na bandeja do sistema (system tray) indicando que o agente está ativo.",
-        code: "# Instalação silenciosa via linha de comando:\ncybershield-agent-setup.exe /S /ENROLLMENT_KEY=***REMOVED*** /TENANT_ID=***REMOVED***\n\n# Verificar se o serviço está rodando:\nGet-Service CyberShieldAgent\n\n# Saída esperada:\n# Status   Name               DisplayName\n# ------   ----               -----------\n# Running  CyberShieldAgent   CyberShield Security Agent",
+        code: "# Instalação silenciosa via linha de comando:\ncybershield-agent-setup.exe /S /ENROLLMENT_KEY=YOUR_ENROLLMENT_KEY_HERE /TENANT_ID=YOUR_TENANT_ID_HERE\n\n# Verificar se o serviço está rodando:\nGet-Service CyberShieldAgent\n\n# Saída esperada:\n# Status   Name               DisplayName\n# ------   ----               -----------\n# Running  CyberShieldAgent   CyberShield Security Agent",
         tip: "Para Windows Server, desative temporariamente o Windows Defender SmartScreen durante a instalação se ele bloquear o executável. Reative após a instalação.",
       },
       {
         title: "Instalar o agente (Linux)",
         content: "Para servidores Linux, baixe o script de instalação. Execute com sudo em um terminal. O script detecta automaticamente a distribuição (Ubuntu, CentOS, Amazon Linux) e instala as dependências corretas. O agente roda como serviço systemd e inicia automaticamente no boot.",
-        code: "# Download e instalação:\ncurl -sSL https://install.cybershield.com.br/linux | sudo bash -s -- \\\n  --enrollment-key ***REMOVED*** \\\n  --tenant-id ***REMOVED***\n\n# Verificar status:\nsudo systemctl status cybershield-agent\n\n# Ver logs:\nsudo journalctl -u cybershield-agent -f --no-pager -n 50\n\n# Distribuições suportadas:\n# Ubuntu 20.04, 22.04, 24.04\n# CentOS 7, 8, 9 (e Rocky/Alma Linux)\n# Amazon Linux 2, 2023\n# Debian 11, 12",
+        code: "# Download e instalação:\ncurl -sSL https://install.cybershield.com.br/linux | sudo bash -s -- \\\n  --enrollment-key YOUR_ENROLLMENT_KEY_HERE \\\n  --tenant-id YOUR_TENANT_ID_HERE\n\n# Verificar status:\nsudo systemctl status cybershield-agent\n\n# Ver logs:\nsudo journalctl -u cybershield-agent -f --no-pager -n 50\n\n# Distribuições suportadas:\n# Ubuntu 20.04, 22.04, 24.04\n# CentOS 7, 8, 9 (e Rocky/Alma Linux)\n# Amazon Linux 2, 2023\n# Debian 11, 12",
         tip: "Em servidores com SELinux habilitado (CentOS/RHEL), o instalador configura automaticamente os contextos de segurança necessários. Se encontrar problemas, consulte o troubleshooting abaixo.",
       },
       {

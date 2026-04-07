@@ -5,9 +5,9 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$ServerUrl   = "https://iavbnmduxpxhwubqrzzn.supabase.co",
   [Parameter(Mandatory = $true)]
-  [string]$AgentToken  = "***REMOVED***",
+  [string]$AgentToken  = "d96f6c22-e04f-47a8-b40e-be908d1732c1",
   [Parameter(Mandatory = $true)]
-  [string]$HmacSecret  = "***REMOVED***",
+  [string]$HmacSecret  = "add846c502c63546ba27de98bb8c1c2e0da372f7ab864941e14837c0a6178117",
   [Parameter(Mandatory = $true)]
   [string]$AgentName   = "correcao-de-ordem-de-funcao-de-teste-v322"
 )
@@ -1112,7 +1112,7 @@ try {
     
     $headers = @{
         "Content-Type" = "application/json"
-        "apikey" = "***REMOVED***"
+        "apikey" = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhdmJubWR1eHB4aHd1YnFyenpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4NzkzMzIsImV4cCI6MjA3NTQ1NTMzMn0.79Bg6lX-ArhDGLeaUN7MPgChv4FQNJ_KcjdMa5IerWk"
     }
     
     Write-InstallerLog "Enviando telemetria para: $telemetryUrl" "DEBUG"
