@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../logger', () => ({
   logger: { debug: vi.fn(), info: vi.fn(), error: vi.fn() },
@@ -48,5 +48,22 @@ describe('storage', () => {
     const { storage } = await import('../storage');
     localStorage.setItem('bad', 'not json');
     expect(storage.get('bad')).toBeNull();
+  });
+
+  it('startStorageCleanup returns teardown function', async () => {
+    const { startStorageCleanup } = await import('../storage');
+    const teardown = startStorageCleanup(60000);
+    expect(typeof teardown).toBe('function');
+    teardown(); // should not throw
+  });
+
+  it('teardown stops the interval', async () => {
+    const { startStorageCleanup, storage } = await import('../storage');
+    const spy = vi.spyOn(storage, 'clearExpired');
+    const teardown = startStorageCleanup(50);
+    teardown();
+    await new Promise(r => setTimeout(r, 100));
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 });

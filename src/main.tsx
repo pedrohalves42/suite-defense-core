@@ -6,8 +6,12 @@ import { ThemeProvider } from "next-themes";
 import { HelmetProvider } from "react-helmet-async";
 import { ActiveTenantProvider } from "./hooks/useActiveTenant";
 import App from "./App.tsx";
+import { startStorageCleanup } from "./lib/storage";
 import "./i18n";
 import "./index.css";
+
+// Start localStorage cleanup with teardown support
+startStorageCleanup();
 
 // Unconditionally purge legacy PWA artifacts (all environments)
 if (typeof window !== "undefined") {
