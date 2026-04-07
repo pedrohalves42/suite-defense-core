@@ -79,7 +79,7 @@ export const storage = {
         if (!raw) continue;
 
         try {
-          const item: StorageItem<any> = JSON.parse(raw);
+          const item: StorageItem<unknown> = JSON.parse(raw);
           if (item.expiresAt && Date.now() > item.expiresAt) {
             localStorage.removeItem(key);
             cleared++;
@@ -98,5 +98,23 @@ export const storage = {
   },
 };
 
-// Auto-cleanup expirados a cada 5 minutos
-setInterval(() => storage.clearExpired(), 5 * 60 * 1000);
+/**
+ * Inicia o cleanup periodico de itens expirados.
+ * Retorna função de teardown para parar o timer.
+ * Deve ser chamado uma vez no bootstrap da aplicação (ex: main.tsx ou useEffect no App).
+ */
+let cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
+
+export function startStorageCleanup(intervalMs = 5 * 60 * 1000): () => void {
+  if (cleanupIntervalId !== null) {
+    clearInterval(cleanupIntervalId);
+  }
+  cleanupIntervalId = setInterval(() => storage.clearExpired(), intervalMs);
+
+  return () => {
+    if (cleanupIntervalId !== null) {
+      clearInterval(cleanupIntervalId);
+      cleanupIntervalId = null;
+    }
+  };
+}
