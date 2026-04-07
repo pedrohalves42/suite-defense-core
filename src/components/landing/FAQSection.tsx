@@ -2,6 +2,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 import { motion } from "framer-motion";
+import { FAQDecorations } from "./shared/AnimatedDecorations";
 
 export function FAQSection() {
   const { faq } = useLandingContent();
