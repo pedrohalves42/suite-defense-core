@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Shield, Monitor, Users, CalendarDays } from 'lucide-react';
 import { formatBrazilDateTime } from '@/lib/date-utils';
@@ -27,11 +27,11 @@ export function CurrentPlanCard({ subscription }: CurrentPlanCardProps) {
             </div>
             <div>
               <CardTitle className="text-lg">Plano Atual: {subscription.plan_name.toUpperCase()}</CardTitle>
-              <CardDescription>
+              <div className="text-xs text-muted-foreground">
                 Status: <Badge variant={subscription.status === 'active' ? 'default' : 'secondary'} className="ml-1 text-xs">
                   {subscription.status === 'trialing' ? 'Em teste' : subscription.status === 'active' ? 'Ativo' : subscription.status}
                 </Badge>
-              </CardDescription>
+              </div>
             </div>
           </div>
         </div>
