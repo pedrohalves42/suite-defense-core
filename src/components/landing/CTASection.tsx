@@ -14,6 +14,7 @@ export function CTASection() {
       <div className="absolute inset-0 bg-gradient-to-br from-[hsl(220,18%,10%)] via-[hsl(160,12%,10%)] to-[hsl(220,18%,10%)]" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-cta-positive/12 rounded-full blur-[150px]" />
       <div className="absolute bottom-0 right-0 w-[400px] h-[300px] bg-info/5 rounded-full blur-[120px]" />
+      <CTADecorations />
       
       <motion.div 
         className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center"

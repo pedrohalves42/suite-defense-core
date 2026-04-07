@@ -10,6 +10,7 @@ export function OfferFormSection() {
   return (
     <section id="contato" className="py-24 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-info/[0.02] to-cta-positive/[0.02]" />
+      <OfferFormDecorations />
       
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-16 items-start">

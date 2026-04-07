@@ -10,6 +10,7 @@ export function FAQSection() {
   return (
     <section id="faq" className="py-24 relative">
       <div className="absolute inset-0 bg-gradient-to-b from-muted/30 via-background to-background" />
+      <FAQDecorations />
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader 
           title={faq.title}
