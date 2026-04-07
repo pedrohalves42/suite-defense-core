@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
@@ -11,6 +11,8 @@ import type { BuildProgressState, ExeBuildStatus } from '../types';
 const MAX_RETRIES = 2;
 
 export function useAgentBuild(agentName: string, lastEnrollmentKey: string | null, isNameValid: boolean) {
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { retryFetch } = useRetryFetch();
   const [exeBuildStatus, setExeBuildStatus] = useState<ExeBuildStatus>('idle');
   const [exeBuildId, setExeBuildId] = useState<string | null>(null);
@@ -136,17 +138,33 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
     onError: () => { startPollingFallback(); },
   });
 
+  const clearPollingFallback = useCallback(() => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current);
+      pollingTimeoutRef.current = null;
+    }
+  }, []);
+
   const startPollingFallback = useCallback(() => {
     if (!exeBuildId || exeBuildStatus !== 'building') return;
-    const pollInterval = setInterval(async () => {
+    clearPollingFallback();
+    pollingIntervalRef.current = setInterval(async () => {
       const status = await fetchBuildStatus();
       if (status) {
         handleBuildStatusChange(status);
-        if (status.build_status === 'completed' || status.build_status === 'failed') clearInterval(pollInterval);
+        if (status.build_status === 'completed' || status.build_status === 'failed') clearPollingFallback();
       }
     }, 10000);
-    setTimeout(() => clearInterval(pollInterval), 300000);
-  }, [exeBuildId, exeBuildStatus, fetchBuildStatus, handleBuildStatusChange]);
+    pollingTimeoutRef.current = setTimeout(() => clearPollingFallback(), 300000);
+  }, [exeBuildId, exeBuildStatus, fetchBuildStatus, handleBuildStatusChange, clearPollingFallback]);
+
+  useEffect(() => {
+    return () => clearPollingFallback();
+  }, [clearPollingFallback]);
 
   const handleBuildExe = async () => {
     if (!isNameValid || !lastEnrollmentKey) { toast.error('Gere credenciais primeiro'); return; }
