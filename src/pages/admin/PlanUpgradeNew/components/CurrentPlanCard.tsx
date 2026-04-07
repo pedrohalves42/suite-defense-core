@@ -27,11 +27,11 @@ export function CurrentPlanCard({ subscription }: CurrentPlanCardProps) {
             </div>
             <div>
               <CardTitle className="text-lg">Plano Atual: {subscription.plan_name.toUpperCase()}</CardTitle>
-              <CardDescription>
+              <div className="text-xs text-muted-foreground">
                 Status: <Badge variant={subscription.status === 'active' ? 'default' : 'secondary'} className="ml-1 text-xs">
                   {subscription.status === 'trialing' ? 'Em teste' : subscription.status === 'active' ? 'Ativo' : subscription.status}
                 </Badge>
-              </CardDescription>
+              </div>
             </div>
           </div>
         </div>

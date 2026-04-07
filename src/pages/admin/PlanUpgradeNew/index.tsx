@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Zap, AlertTriangle } from 'lucide-react';
 import { PLAN_CONFIG } from '@/constants/plans';
@@ -9,6 +9,7 @@ import { PlanCard } from './components/PlanCard';
 import { CurrentPlanCard } from './components/CurrentPlanCard';
 import { PLAN_DETAILS, PLAN_ORDER } from './types';
 import type { Plan } from './types';
+import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 
 export default function PlanUpgradeNew() {
   const {
@@ -19,6 +20,7 @@ export default function PlanUpgradeNew() {
     createCheckout, setupStripeProducts,
     currentPlanName, isSubscribed, needsSetup,
   } = usePlanUpgrade();
+  const { isSuperAdmin } = useSuperAdmin();
 
   if (loadingTimedOut) {
     return (
@@ -72,7 +74,7 @@ export default function PlanUpgradeNew() {
 
   return (
     <div className="space-y-6">
-      {needsSetup && (
+      {needsSetup && isSuperAdmin && (
         <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
@@ -108,7 +110,7 @@ export default function PlanUpgradeNew() {
 
       {isSubscribed && subscription && <CurrentPlanCard subscription={subscription} />}
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {orderedPlans.map((plan) => {
           const details = PLAN_DETAILS[plan.name];
           if (!details) return null;
@@ -129,13 +131,13 @@ export default function PlanUpgradeNew() {
       <Card className="bg-gradient-to-r from-green-500/5 to-green-500/10 border-green-500/20">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">💰 Economize com pacotes pré-pagos</CardTitle>
-          <CardDescription>
+          <div className="text-xs text-muted-foreground">
             <ul className="space-y-1 mt-2 text-sm">
               <li>• <strong>6 meses:</strong> 4% de desconto</li>
               <li>• <strong>12 meses:</strong> 8% de desconto ⭐ Mais popular</li>
               <li>• <strong>24 meses:</strong> 16% de desconto 💎 Melhor valor</li>
             </ul>
-          </CardDescription>
+          </div>
         </CardHeader>
       </Card>
 
