@@ -157,23 +157,7 @@ export async function verifyHmacSignature(
     };
   }
 
-  // ── 1. Replay protection ──────────────────────────────────
-  const { data: usedSignature } = await supabase
-    .from('hmac_signatures')
-    .select('id')
-    .eq('signature', signature)
-    .order('used_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (usedSignature) {
-    return {
-      valid: false,
-      errorCode: 'AUTH_REPLAY_DETECTED',
-      errorMessage: 'Assinatura ja utilizada (replay attack detectado)',
-      transient: false,
-    };
-  }
+  // ── 1. Replay protection (deferred to atomic insert on match) ──
 
   // ── 2. Read body once ─────────────────────────────────────
   let body = '';
