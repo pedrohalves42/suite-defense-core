@@ -13,6 +13,8 @@ const MAX_RETRIES = 2;
 export function useAgentBuild(agentName: string, lastEnrollmentKey: string | null, isNameValid: boolean) {
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const githubActionsUrlRef = useRef<string | null>(null);
+  const handleBuildExeRef = useRef<() => Promise<void>>();
   const { retryFetch } = useRetryFetch();
   const [exeBuildStatus, setExeBuildStatus] = useState<ExeBuildStatus>('idle');
   const [exeBuildId, setExeBuildId] = useState<string | null>(null);
