@@ -89,15 +89,29 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
       toast.success('[OK]  EXE Pronto para Download!', { description: 'Seu instalador esta pronto', duration: 30000 });
 
       let flash = true;
+      let cleaned = false;
       const titleInterval = setInterval(() => {
         document.title = flash ? '[OK]  EXE Pronto! | CyberShield' : 'CyberShield Agent Installer';
         flash = !flash;
       }, 1000);
-      const stopFlashing = () => { clearInterval(titleInterval); document.title = 'CyberShield Agent Installer'; document.removeEventListener('visibilitychange', stopFlashing); };
-      const flashTimeout = setTimeout(stopFlashing, 10000);
-      document.addEventListener('visibilitychange', stopFlashing);
 
-      return () => { clearInterval(titleInterval); clearTimeout(flashTimeout); document.removeEventListener('visibilitychange', stopFlashing); document.title = 'CyberShield Agent Installer'; };
+      const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        clearInterval(titleInterval);
+        clearTimeout(flashTimeout);
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+        document.title = 'CyberShield Agent Installer';
+      };
+
+      const onVisibilityChange = () => {
+        if (!document.hidden) cleanup();
+      };
+
+      const flashTimeout = setTimeout(cleanup, 10000);
+      document.addEventListener('visibilitychange', onVisibilityChange);
+
+      return cleanup;
     }
   }, [exeBuildStatus, exeDownloadUrl, agentName, exeBuildId]);
 
