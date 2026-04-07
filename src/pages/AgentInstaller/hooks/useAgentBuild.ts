@@ -123,16 +123,19 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
       toast.success(`✅ EXE gerado em ${status.build_duration_seconds || 0}s!`, { description: 'Clique em Download para baixar' });
     } else if (status.build_status === 'failed') {
       storage.remove('current-build');
-      if (retryCount < MAX_RETRIES) {
-        toast.warning('⚠️ Build falhou', { description: `Tentando novamente (${retryCount + 1}/${MAX_RETRIES}) em 30s...`, duration: 5000 });
-        setTimeout(() => { setRetryCount(prev => prev + 1); handleBuildExe(); }, 30000);
-      } else {
-        setExeBuildStatus('failed');
-        toast.error(`Falha: ${status.error_message || 'Erro desconhecido'} após múltiplas tentativas`);
-        setRetryCount(0);
-      }
+      setRetryCount((prev) => {
+        if (prev < MAX_RETRIES) {
+          toast.warning('⚠️ Build falhou', { description: `Tentando novamente (${prev + 1}/${MAX_RETRIES}) em 30s...`, duration: 5000 });
+          // NOTE: retry is deferred; handleBuildExe will be called after state update
+          return prev + 1;
+        } else {
+          setExeBuildStatus('failed');
+          toast.error(`Falha: ${status.error_message || 'Erro desconhecido'} após múltiplas tentativas`);
+          return 0;
+        }
+      });
     }
-  }, [githubActionsUrl, retryCount]);
+  }, [githubActionsUrl]);
 
   const { fetchStatus: fetchBuildStatus, cleanup: cleanupRealtime } = useBuildRealtime({
     buildId: exeBuildId,
