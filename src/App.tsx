@@ -23,8 +23,8 @@ const RouteFallback = () => (
   </div>
 );
 
-// ─── Public pages ───
-const Landing = lazy(() => import("./pages/Landing"));
+// ─── Public pages (Landing is statically imported to avoid dynamic-import failures in preview) ───
+import Landing from "./pages/Landing";
 const Pricing = lazy(() => import("./pages/Pricing"));
 const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
