@@ -86,16 +86,18 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
         };
       }
 
+      toast.success('[OK]  EXE Pronto para Download!', { description: 'Seu instalador esta pronto', duration: 30000 });
+
       let flash = true;
       const titleInterval = setInterval(() => {
         document.title = flash ? '[OK]  EXE Pronto! | CyberShield' : 'CyberShield Agent Installer';
         flash = !flash;
       }, 1000);
       const stopFlashing = () => { clearInterval(titleInterval); document.title = 'CyberShield Agent Installer'; document.removeEventListener('visibilitychange', stopFlashing); };
-      setTimeout(stopFlashing, 10000);
+      const flashTimeout = setTimeout(stopFlashing, 10000);
       document.addEventListener('visibilitychange', stopFlashing);
 
-      toast.success('[OK]  EXE Pronto para Download!', { description: 'Seu instalador esta pronto', duration: 30000 });
+      return () => { clearInterval(titleInterval); clearTimeout(flashTimeout); document.removeEventListener('visibilitychange', stopFlashing); document.title = 'CyberShield Agent Installer'; };
     }
   }, [exeBuildStatus, exeDownloadUrl, agentName, exeBuildId]);
 
