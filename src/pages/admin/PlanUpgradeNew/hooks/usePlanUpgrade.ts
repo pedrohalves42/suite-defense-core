@@ -32,7 +32,7 @@ export function usePlanUpgrade() {
       logger.debug('Fetching subscription plans');
       const { data, error } = await supabase
         .from('subscription_plans')
-        .select('id, name, max_users, max_agents, max_scans_per_month, price_per_device')
+        .select('id, name, max_users, max_agents, max_scans_per_month, price_per_device, max_devices, stripe_price_id, trial_days')
         .order('price_per_device', { ascending: true });
       if (error) { logger.error('Failed to fetch plans', error); throw error; }
       logger.debug('Plans fetched successfully', { count: data?.length });
