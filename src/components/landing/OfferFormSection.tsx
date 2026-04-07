@@ -2,6 +2,7 @@ import { CheckCircle, ArrowRight } from "lucide-react";
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { ContactForm } from "@/components/ContactForm";
 import { motion } from "framer-motion";
+import { OfferFormDecorations } from "./shared/AnimatedDecorations";
 
 export function OfferFormSection() {
   const { offer } = useLandingContent();
