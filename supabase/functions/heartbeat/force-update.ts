@@ -14,19 +14,27 @@ import type { AgentContext, AgentUpdate } from './types.ts'
 
 const MIN_FORCE_UPDATE_VERSION = '4.5.0'
 const MAX_DELIVERY_ATTEMPTS = 50
+const AUTO_REMEDIATION_COOLDOWN_MS = 60 * 60 * 1000
+const AUTO_REMEDIATION_OVERRIDE_WINDOW_MS = 15 * 60 * 1000
+const AUTO_REMEDIATION_STATES = new Set(['SAFE_MODE', 'DEGRADED', 'INITIALIZING'])
 
 interface ForceUpdateResult {
-  /** If a force-update response should be sent */
   handled: boolean;
-  /** Pre-built Response for the agent (only set if handled=true) */
   response?: Response;
 }
 
-/**
- * Process force-update logic for a heartbeat.
- * Returns { handled: true, response } if a force-update response should be sent,
- * or { handled: false } to fall through to normal heartbeat response.
- */
+interface ForceUpdateDeliveryOptions {
+  omitPayloadSignature?: boolean;
+  overrideSafeMode?: boolean;
+  overrideSafeModeExpiresAt?: string | null;
+}
+
+interface AutoRemediationResult extends ForceUpdateDeliveryOptions {
+  version: string;
+  reason: string;
+  forceUpdateAt: string;
+}
+
 export async function processForceUpdate(
   supabase: SupabaseClient,
   agent: AgentContext,
@@ -36,92 +44,131 @@ export async function processForceUpdate(
   origin: string | null,
   supabaseUrl: string,
 ): Promise<ForceUpdateResult> {
-  // Self-heal: recover missing force_update_version from latest release
-  let effectiveForceVersion = agent.force_update_version
-  let effectiveForceReason = agent.force_update_reason
+  let workingAgent: AgentContext = { ...agent }
+  let effectiveForceVersion = workingAgent.force_update_version
+  let effectiveForceReason = workingAgent.force_update_reason
+  let deliveryOptions: ForceUpdateDeliveryOptions = {}
 
-  if (!effectiveForceVersion && agent.force_update_at) {
-    const healed = await selfHealForceVersion(supabase, agent, platform, agentVersionFromPayload || updateData.agent_version)
-    if (!healed) return { handled: false } // Cleared stale flag
+  if (!effectiveForceVersion && workingAgent.force_update_at) {
+    const healed = await selfHealForceVersion(supabase, workingAgent, platform, agentVersionFromPayload || updateData.agent_version)
+    if (!healed) return { handled: false }
     effectiveForceVersion = healed.version
     effectiveForceReason = healed.reason
+    workingAgent = {
+      ...workingAgent,
+      force_update_version: healed.version,
+      force_update_reason: healed.reason,
+    }
+  }
+
+  if (!effectiveForceVersion) {
+    const autoRemediation = await maybeAutoArmSameVersionRemediation(
+      supabase,
+      workingAgent,
+      updateData,
+      agentVersionFromPayload || updateData.agent_version,
+      platform,
+    )
+
+    if (autoRemediation) {
+      effectiveForceVersion = autoRemediation.version
+      effectiveForceReason = autoRemediation.reason
+      deliveryOptions = {
+        omitPayloadSignature: autoRemediation.omitPayloadSignature,
+        overrideSafeMode: autoRemediation.overrideSafeMode,
+        overrideSafeModeExpiresAt: autoRemediation.overrideSafeModeExpiresAt,
+      }
+      workingAgent = {
+        ...workingAgent,
+        force_update_version: autoRemediation.version,
+        force_update_reason: autoRemediation.reason,
+        force_update_at: autoRemediation.forceUpdateAt,
+        force_update_override_safe_mode: autoRemediation.overrideSafeMode ?? workingAgent.force_update_override_safe_mode,
+        force_update_override_safe_mode_expires_at: autoRemediation.overrideSafeModeExpiresAt ?? workingAgent.force_update_override_safe_mode_expires_at,
+      }
+    }
   }
 
   if (!effectiveForceVersion) return { handled: false }
 
-  // Guard: agent version too old for force_update
   const agentNorm = normalizeVersion(agentVersionFromPayload || updateData.agent_version)
   const minNorm = normalizeVersion(MIN_FORCE_UPDATE_VERSION)
 
   if (agentNorm && minNorm && agentNorm < minNorm) {
     logger.warn('Agent version too old for force_update, clearing flag', {
-      agentName: agent.agent_name, agentVersion: agentNorm,
-      minRequired: MIN_FORCE_UPDATE_VERSION, targetVersion: effectiveForceVersion,
+      agentName: workingAgent.agent_name,
+      agentVersion: agentNorm,
+      minRequired: MIN_FORCE_UPDATE_VERSION,
+      targetVersion: effectiveForceVersion,
     })
-    await clearForceUpdateFlag(supabase, agent.id, 'auto_cleared_version_too_old')
+    await clearForceUpdateFlag(supabase, workingAgent.id, 'auto_cleared_version_too_old')
     return { handled: false }
   }
 
-  // Guard: stale same-version trigger (already applied)
   const currentVersion = agentVersionFromPayload || updateData.agent_version
   const currentNorm = normalizeVersion(currentVersion)
   const targetNorm = normalizeVersion(effectiveForceVersion)
   const sameVersionReported = !!currentNorm && !!targetNorm && currentNorm === targetNorm
 
-  const forceTriggeredAtMs = agent.force_update_at ? new Date(agent.force_update_at).getTime() : null
-  const lastAppliedMs = agent.last_forced_update_applied ? new Date(agent.last_forced_update_applied).getTime() : null
+  const forceTriggeredAtMs = workingAgent.force_update_at ? new Date(workingAgent.force_update_at).getTime() : null
+  const lastAppliedMs = workingAgent.last_forced_update_applied ? new Date(workingAgent.last_forced_update_applied).getTime() : null
   const staleSameVersionTrigger = sameVersionReported && lastAppliedMs !== null &&
     (forceTriggeredAtMs === null || forceTriggeredAtMs <= lastAppliedMs)
 
   if (staleSameVersionTrigger) {
     logger.warn('Stale same-version force_update detected after confirmed apply, clearing flag', {
-      agentName: agent.agent_name, version: currentVersion,
-      forceTriggeredAt: agent.force_update_at, lastForcedUpdateApplied: agent.last_forced_update_applied,
+      agentName: workingAgent.agent_name,
+      version: currentVersion,
+      forceTriggeredAt: workingAgent.force_update_at,
+      lastForcedUpdateApplied: workingAgent.last_forced_update_applied,
     })
-    await clearForceUpdateFlag(supabase, agent.id, 'auto_cleared_already_applied')
+    await clearForceUpdateFlag(supabase, workingAgent.id, 'auto_cleared_already_applied')
     return { handled: false }
   }
 
   if (sameVersionReported) {
     logger.warn('Agent reports target version but force_update remains pending', {
-      agentName: agent.agent_name, version: currentVersion,
+      agentName: workingAgent.agent_name,
+      version: currentVersion,
       targetVersion: effectiveForceVersion,
     })
   }
 
-  // Guard: too many deliveries (agent doesn't support force_update)
-  if (agent.force_update_delivered_count >= MAX_DELIVERY_ATTEMPTS) {
+  if (workingAgent.force_update_delivered_count >= MAX_DELIVERY_ATTEMPTS) {
     logger.warn('Agent does not support force_update after max deliveries, clearing flag', {
-      agentName: agent.agent_name, targetVersion: effectiveForceVersion,
-      deliveredCount: agent.force_update_delivered_count,
+      agentName: workingAgent.agent_name,
+      targetVersion: effectiveForceVersion,
+      deliveredCount: workingAgent.force_update_delivered_count,
     })
-    await clearForceUpdateFlag(supabase, agent.id, null)
+    await clearForceUpdateFlag(supabase, workingAgent.id, null)
     return { handled: false }
   }
 
-  // Increment delivery count
-  const deliveryAttempt = agent.force_update_delivered_count + 1
+  const deliveryAttempt = workingAgent.force_update_delivered_count + 1
   const now = new Date().toISOString()
   await supabase
     .from('agents')
     .update({
       force_update_delivered_count: deliveryAttempt,
-      force_update_first_delivered_at: agent.force_update_first_delivered_at || now,
+      force_update_first_delivered_at: workingAgent.force_update_first_delivered_at || now,
     })
-    .eq('id', agent.id)
+    .eq('id', workingAgent.id)
 
-  // Fetch release
   const response = await buildForceUpdateResponse(
-    supabase, agent, effectiveForceVersion, effectiveForceReason,
-    platform, origin, supabaseUrl, deliveryAttempt, currentVersion,
+    supabase,
+    workingAgent,
+    effectiveForceVersion,
+    effectiveForceReason,
+    platform,
+    origin,
+    supabaseUrl,
+    deliveryAttempt,
+    currentVersion,
+    deliveryOptions,
   )
 
-  return response
-    ? { handled: true, response }
-    : { handled: false }
+  return response ? { handled: true, response } : { handled: false }
 }
-
-// ─── Private helpers ────────────────────────────────────────
 
 export async function selfHealForceVersion(
   supabase: SupabaseClient,
@@ -141,10 +188,11 @@ export async function selfHealForceVersion(
 
   if (!latestRelease?.version) return null
 
-  // If recovered version matches current → clear stale flag
   if (currentVersion && normalizeVersion(currentVersion) === normalizeVersion(latestRelease.version)) {
     logger.warn('Self-heal recovered version matches current agent version, clearing stale flag', {
-      agentName: agent.agent_name, currentVersion, recoveredVersion: latestRelease.version,
+      agentName: agent.agent_name,
+      currentVersion,
+      recoveredVersion: latestRelease.version,
     })
     await clearForceUpdateFlag(supabase, agent.id, 'auto_cleared_version_matched_on_recovery')
     return null
@@ -156,10 +204,97 @@ export async function selfHealForceVersion(
     .eq('id', agent.id)
 
   logger.warn('Recovered missing force_update_version from latest active release', {
-    agentName: agent.agent_name, targetVersion: latestRelease.version, platform,
+    agentName: agent.agent_name,
+    targetVersion: latestRelease.version,
+    platform,
   })
 
   return { version: latestRelease.version, reason }
+}
+
+export async function maybeAutoArmSameVersionRemediation(
+  supabase: SupabaseClient,
+  agent: AgentContext,
+  updateData: AgentUpdate,
+  currentVersion: string | undefined,
+  platform: string,
+): Promise<AutoRemediationResult | null> {
+  if (platform !== 'windows' || !currentVersion) return null
+
+  const agentState = updateData.state || agent.state || null
+  if (!agentState || !AUTO_REMEDIATION_STATES.has(agentState)) return null
+
+  const currentNorm = normalizeVersion(currentVersion)
+  const minNorm = normalizeVersion(MIN_FORCE_UPDATE_VERSION)
+  if (!currentNorm || !minNorm || currentNorm < minNorm) return null
+
+  const lastAppliedMs = agent.last_forced_update_applied
+    ? new Date(agent.last_forced_update_applied).getTime()
+    : null
+  if (lastAppliedMs !== null && Date.now() - lastAppliedMs < AUTO_REMEDIATION_COOLDOWN_MS) {
+    logger.info('Skipping same-version TOCTOU auto-remediation during cooldown', {
+      agentName: agent.agent_name,
+      currentVersion,
+      agentState,
+      lastForcedUpdateApplied: agent.last_forced_update_applied,
+    })
+    return null
+  }
+
+  const { data: latestRelease } = await supabase
+    .from('agent_releases')
+    .select('version')
+    .eq('platform', platform)
+    .eq('channel', 'stable')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!latestRelease?.version) return null
+
+  const latestNorm = normalizeVersion(latestRelease.version)
+  if (!latestNorm || latestNorm !== currentNorm) return null
+
+  const forceUpdateAt = new Date().toISOString()
+  const overrideSafeModeExpiresAt = new Date(Date.now() + AUTO_REMEDIATION_OVERRIDE_WINDOW_MS).toISOString()
+  const reason = 'Auto-remediation: re-deliver patched script to recover TOCTOU loop'
+
+  const { error } = await supabase
+    .from('agents')
+    .update({
+      force_update_version: latestRelease.version,
+      force_update_reason: reason,
+      force_update_at: forceUpdateAt,
+      force_update_override_safe_mode: true,
+      force_update_override_safe_mode_expires_at: overrideSafeModeExpiresAt,
+    })
+    .eq('id', agent.id)
+
+  if (error) {
+    logger.warn('Failed to arm same-version TOCTOU auto-remediation', {
+      agentName: agent.agent_name,
+      currentVersion,
+      error: error.message,
+    })
+    return null
+  }
+
+  logger.warn('Auto-armed same-version force_update for TOCTOU remediation', {
+    agentName: agent.agent_name,
+    currentVersion,
+    targetVersion: latestRelease.version,
+    agentState,
+  })
+
+  return {
+    version: latestRelease.version,
+    reason,
+    forceUpdateAt,
+    overrideSafeMode: true,
+    overrideSafeModeExpiresAt,
+    omitPayloadSignature: true,
+  }
 }
 
 async function clearForceUpdateFlag(
@@ -190,14 +325,17 @@ async function buildForceUpdateResponse(
   supabaseUrl: string,
   deliveryAttempt: number,
   currentVersion: string | undefined,
+  options: ForceUpdateDeliveryOptions = {},
 ): Promise<Response | null> {
   logger.info('Force update detected for agent', {
-    agentName: agent.agent_name, targetVersion, deliveryAttempt,
+    agentName: agent.agent_name,
+    targetVersion,
+    deliveryAttempt,
   })
 
   const { data: release } = await supabase
     .from('agent_releases')
-    .select('id, version, script_content, sha256, signature_base64, signed_at')
+    .select('id, version, script_content, sha256, signature_base64, signed_at, signed_by')
     .eq('version', targetVersion)
     .eq('platform', platform)
     .eq('is_active', true)
@@ -205,12 +343,13 @@ async function buildForceUpdateResponse(
 
   if (!release) {
     logger.warn('Force update version not found in agent_releases', {
-      agentName: agent.agent_name, targetVersion, platform,
+      agentName: agent.agent_name,
+      targetVersion,
+      platform,
     })
     return null
   }
 
-  // Unified pipeline: decode → hotfix → reject HTML → normalize → SHA-256 → base64
   const prepared = await prepareAgentScriptContent({
     supabase,
     releaseId: release.id,
@@ -223,25 +362,26 @@ async function buildForceUpdateResponse(
 
   if (!prepared) {
     logger.error('Force update script invalid after preparation', {
-      agentName: agent.agent_name, targetVersion,
+      agentName: agent.agent_name,
+      targetVersion,
     })
     return null
   }
 
-  // SAFETY: Version header validation
   const headerMatch = prepared.content.match(/CyberShield\s+Agent\s*[-?]\s*\w+\s+v?([\d]+\.[\d]+)/i)
   const scriptMajor = headerMatch?.[1] || ''
   const targetMajor = normalizeVersion(targetVersion)?.split('.').slice(0, 2).join('.') || ''
 
   if (headerMatch && scriptMajor !== targetMajor) {
     logger.error('Script version mismatch! DB content does not match target version', {
-      agentName: agent.agent_name, scriptHeader: scriptMajor, targetVersion,
+      agentName: agent.agent_name,
+      scriptHeader: scriptMajor,
+      targetVersion,
       hint: 'Use upload-release-content to fix the script_content in agent_releases',
     })
     return null
   }
 
-  // Re-sign if hotfix changed content (eliminates stale signature warnings)
   const resignResult = await resignIfNeeded({
     sha256: prepared.sha256,
     originalSignature: release.signature_base64,
@@ -250,18 +390,25 @@ async function buildForceUpdateResponse(
     contentChanged: prepared.changed,
     logContext: { agentName: agent.agent_name, targetVersion, scope: 'heartbeat/force-update' },
   })
-  const signatureBase64 = resignResult.signatureBase64
-  const signedAt = resignResult.signedAt
 
-  const overrideSafeMode = !!(agent.force_update_override_safe_mode &&
-    (!agent.force_update_override_safe_mode_expires_at ||
-      new Date(agent.force_update_override_safe_mode_expires_at) > new Date()))
+  const signatureBase64 = options.omitPayloadSignature ? null : resignResult.signatureBase64
+  const signedAt = options.omitPayloadSignature ? null : resignResult.signedAt
+  const overrideSafeMode = options.overrideSafeMode ?? !!(
+    agent.force_update_override_safe_mode &&
+    (!options.overrideSafeModeExpiresAt
+      ? !agent.force_update_override_safe_mode_expires_at || new Date(agent.force_update_override_safe_mode_expires_at) > new Date()
+      : new Date(options.overrideSafeModeExpiresAt) > new Date())
+  )
 
   logger.info('Sending force update via heartbeat response', {
-    agentName: agent.agent_name, targetVersion: release.version, platform,
-    deliveryAttempt, hasSignature: !!signatureBase64,
+    agentName: agent.agent_name,
+    targetVersion: release.version,
+    platform,
+    deliveryAttempt,
+    hasSignature: !!signatureBase64,
+    omitPayloadSignature: !!options.omitPayloadSignature,
     skipFirewallRemediation: agent.skip_firewall_remediation,
-    sha256: prepared.sha256.substring(0, 16) + '...',
+    sha256: `${prepared.sha256.substring(0, 16)}...`,
   })
 
   return new Response(
