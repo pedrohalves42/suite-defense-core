@@ -3,29 +3,27 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 
-// Guard: check required env vars BEFORE any Supabase module executes
+// Import i18n early — it's independent of backend
+import("./i18n");
+
+// Check if backend env vars are available
 const _supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const _supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const hasBackend = Boolean(_supabaseUrl && _supabaseKey);
 
-if (!_supabaseUrl || !_supabaseKey) {
-  const root = document.getElementById("root");
-  if (root) {
-    root.innerHTML = `
-      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0a0a0f;color:#e2e8f0;font-family:system-ui,sans-serif;padding:2rem;text-align:center">
-        <div style="max-width:480px">
-          <div style="font-size:3rem;margin-bottom:1rem">🛡️</div>
-          <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:.75rem;color:#f8fafc">CyberShield</h1>
-          <p style="font-size:1rem;line-height:1.6;color:#94a3b8;margin-bottom:1.5rem">
-            Configuração incompleta — variáveis de ambiente do backend não encontradas.
-          </p>
-          <p style="font-size:.85rem;color:#64748b">
-            Contate o administrador do sistema ou republique a aplicação com as variáveis configuradas.
-          </p>
-        </div>
-      </div>`;
-  }
-  // Stop execution — do NOT import App or Supabase modules
+if (!hasBackend) {
+  // ── PUBLIC-ONLY MODE ──
+  // Backend env vars are missing. Render a minimal public shell so the
+  // institutional site (landing, pricing, terms, etc.) remains accessible.
+  import("./PublicApp").then(({ default: PublicApp }) => {
+    createRoot(document.getElementById("root")!).render(
+      <React.StrictMode>
+        <PublicApp />
+      </React.StrictMode>
+    );
+  });
 } else {
+  // ── FULL APP MODE ──
   // Only import heavy modules AFTER env vars are confirmed
   Promise.all([
     import("@tanstack/react-query"),
@@ -34,7 +32,6 @@ if (!_supabaseUrl || !_supabaseKey) {
     import("./hooks/useActiveTenant"),
     import("./App.tsx"),
     import("./lib/storage"),
-    import("./i18n"),
   ]).then(
     ([
       { QueryClient, QueryClientProvider },

@@ -3,8 +3,19 @@
  * Logs to console in development and persists errors/warnings to backend in production
  * Enhanced with sanitization to prevent sensitive data leaks (INV-003)
  */
-import { supabase } from '@/integrations/supabase/client';
 import { sanitizeForLog, sanitizeError } from '@/lib/sanitize';
+
+// Lazy-load supabase client to avoid crashing when env vars are missing
+let _supabasePromise: Promise<typeof import('@/integrations/supabase/client')> | null = null;
+function getSupabase() {
+  if (!_supabasePromise) {
+    const url = import.meta.env.VITE_SUPABASE_URL;
+    const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !key) return null;
+    _supabasePromise = import('@/integrations/supabase/client');
+  }
+  return _supabasePromise;
+}
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -20,9 +31,16 @@ const MAX_BUFFER_SIZE = 20;
 async function flushLogs() {
   if (LOG_BUFFER.length === 0) return;
 
+  const sbPromise = getSupabase();
+  if (!sbPromise) {
+    LOG_BUFFER.length = 0;
+    return;
+  }
+
   const entries = LOG_BUFFER.splice(0, MAX_BUFFER_SIZE);
 
   try {
+    const { supabase } = await sbPromise;
     await supabase.functions.invoke('ops-gateway', {
       body: {
         action: 'sync:log-domain-event',
