@@ -313,7 +313,7 @@ export function hotfixToctouCallerExit(ctx: HotfixContext): void {
   ) {
     // The outer caller in the main loop still exits when Test-RuntimeIntegrity returns $false.
     // Replace the entire if-block with a self-heal + degraded mode.
-    const outerPattern = /if\s*\(\s*-not\s+\(Test-RuntimeIntegrity\)\s*\)\s*\{[^}]*TOCTOU VIOLATION DETECTED[^}]*\[Environment\]::Exit\(\d+\)[^}]*\}/gs;
+    const outerPattern = /if\s*\(\s*-not\s+\(Test-RuntimeIntegrity\)\s*\)\s*\{[\s\S]*?TOCTOU VIOLATION DETECTED[\s\S]*?\[Environment\]::Exit\(\d+\)\s*\}/gm;
     
     if (outerPattern.test(ctx.content)) {
       outerPattern.lastIndex = 0;
