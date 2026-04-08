@@ -17,6 +17,8 @@ const Privacidade = lazy(() => import("./pages/Privacidade"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const Tutorials = lazy(() => import("./pages/Tutorials"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const Login = lazy(() => import("./pages/Login"));
+const Signup = lazy(() => import("./pages/Signup"));
 
 const Fallback = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
@@ -39,8 +41,8 @@ export default function PublicApp() {
                   <Route path="/privacy" element={<Privacidade />} />
                   <Route path="/privacidade" element={<Privacidade />} />
                   <Route path="/tutorials" element={<Tutorials />} />
-                  <Route path="/login" element={<Navigate to="/" replace />} />
-                  <Route path="/signup" element={<Navigate to="/" replace />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />
                   <Route path="/dashboard" element={<Navigate to="/" replace />} />
                   <Route path="/admin/*" element={<Navigate to="/" replace />} />
                   <Route path="*" element={<NotFound />} />
