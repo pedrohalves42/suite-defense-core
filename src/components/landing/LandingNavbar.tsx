@@ -32,7 +32,7 @@ export function LandingNavbar() {
           <img src={cybershieldLogo} alt="CyberShield" className="h-8 w-8 object-contain" />
           <span className={cn(
             "font-bold text-lg transition-colors",
-            scrolled ? "text-foreground" : "text-primary-foreground"
+            scrolled ? "text-foreground" : "text-white"
           )}>CyberShield</span>
         </div>
 
