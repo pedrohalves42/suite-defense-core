@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Globe } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
