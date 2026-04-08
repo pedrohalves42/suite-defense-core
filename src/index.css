@@ -37,7 +37,7 @@
     --secondary-foreground: 220 20% 10%;
     
     --muted: 220 14% 94%;
-    --muted-foreground: 220 8% 46%;    /* #6B7280 */
+    --muted-foreground: 220 10% 38%;    /* #555E6E — darker for better readability */
     
     /* Warm Gold — Accent (use sparingly) */
     --accent: 40 52% 48%;              /* #B8963E */
