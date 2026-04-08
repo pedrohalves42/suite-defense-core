@@ -62,17 +62,17 @@
     --info: 217 55% 55%;               /* #3B82F6 */
     --info-foreground: 0 0% 98%;
     
-    --border: 220 13% 91%;             /* #E5E7EB */
-    --input: 220 13% 91%;
+    --border: 220 13% 87%;             /* #D9DCE2 — slightly darker for better definition */
+    --input: 220 13% 87%;
     --ring: 220 12% 12%;
     
     --radius: 0.625rem;
     
-    /* Elevation */
-    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.03);
-    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.03);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.03);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.03);
+    /* Elevation — stronger shadows for light mode */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
   }
   
   .dark {
