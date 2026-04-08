@@ -27,29 +27,31 @@ const Fallback = () => (
 export default function PublicApp() {
   return (
     <HelmetProvider>
-      <ErrorBoundary>
-        <TooltipProvider>
-          <BrowserRouter>
-            <Suspense fallback={<Fallback />}>
-              <Routes>
-                <Route path="/" element={<Landing />} />
-                <Route path="/pricing" element={<Pricing />} />
-                <Route path="/terms" element={<Terms />} />
-                <Route path="/privacy" element={<Privacidade />} />
-                <Route path="/privacidade" element={<Privacidade />} />
-                <Route path="/tutorials" element={<Tutorials />} />
-                <Route path="/login" element={<Navigate to="/" replace />} />
-                <Route path="/signup" element={<Navigate to="/" replace />} />
-                <Route path="/dashboard" element={<Navigate to="/" replace />} />
-                <Route path="/admin/*" element={<Navigate to="/" replace />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-            <CookieConsent />
-          </BrowserRouter>
-          <Toaster />
-        </TooltipProvider>
-      </ErrorBoundary>
+      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+        <ErrorBoundary>
+          <TooltipProvider>
+            <BrowserRouter>
+              <Suspense fallback={<Fallback />}>
+                <Routes>
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/pricing" element={<Pricing />} />
+                  <Route path="/terms" element={<Terms />} />
+                  <Route path="/privacy" element={<Privacidade />} />
+                  <Route path="/privacidade" element={<Privacidade />} />
+                  <Route path="/tutorials" element={<Tutorials />} />
+                  <Route path="/login" element={<Navigate to="/" replace />} />
+                  <Route path="/signup" element={<Navigate to="/" replace />} />
+                  <Route path="/dashboard" element={<Navigate to="/" replace />} />
+                  <Route path="/admin/*" element={<Navigate to="/" replace />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+              <CookieConsent />
+            </BrowserRouter>
+            <Toaster />
+          </TooltipProvider>
+        </ErrorBoundary>
+      </ThemeProvider>
     </HelmetProvider>
   );
 }
