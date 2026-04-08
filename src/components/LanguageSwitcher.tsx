@@ -14,7 +14,7 @@ const languages = [
   { code: 'es', label: 'Español', flag: '🇪🇸' },
 ] as const;
 
-export const LanguageSwitcher = ({ variant = 'icon' }: { variant?: 'icon' | 'full' }) => {
+export const LanguageSwitcher = ({ variant = 'icon', className }: { variant?: 'icon' | 'full'; className?: string }) => {
   const { i18n } = useTranslation();
 
   const currentLang = languages.find(l => l.code === i18n.language) || languages[0];
@@ -22,7 +22,7 @@ export const LanguageSwitcher = ({ variant = 'icon' }: { variant?: 'icon' | 'ful
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size={variant === 'icon' ? 'icon' : 'sm'} className="gap-2">
+        <Button variant="ghost" size={variant === 'icon' ? 'icon' : 'sm'} className={cn("gap-2", className)}>
           <Globe className="h-4 w-4" />
           {variant === 'full' && <span>{currentLang.flag} {currentLang.label}</span>}
         </Button>
