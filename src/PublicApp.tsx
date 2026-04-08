@@ -4,6 +4,7 @@
  */
 import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CookieConsent } from "./components/CookieConsent";
@@ -24,29 +25,31 @@ const Fallback = () => (
 
 export default function PublicApp() {
   return (
-    <ErrorBoundary>
-      <TooltipProvider>
-        <BrowserRouter>
-          <Suspense fallback={<Fallback />}>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/privacy" element={<Privacidade />} />
-              <Route path="/privacidade" element={<Privacidade />} />
-              <Route path="/tutorials" element={<Tutorials />} />
-              {/* All auth/protected routes redirect to landing */}
-              <Route path="/login" element={<Navigate to="/" replace />} />
-              <Route path="/signup" element={<Navigate to="/" replace />} />
-              <Route path="/dashboard" element={<Navigate to="/" replace />} />
-              <Route path="/admin/*" element={<Navigate to="/" replace />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-          <CookieConsent />
-        </BrowserRouter>
-        <Toaster />
-      </TooltipProvider>
-    </ErrorBoundary>
+    <HelmetProvider>
+      <ErrorBoundary>
+        <TooltipProvider>
+          <BrowserRouter>
+            <Suspense fallback={<Fallback />}>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/privacy" element={<Privacidade />} />
+                <Route path="/privacidade" element={<Privacidade />} />
+                <Route path="/tutorials" element={<Tutorials />} />
+                <Route path="/login" element={<Navigate to="/" replace />} />
+                <Route path="/signup" element={<Navigate to="/" replace />} />
+                <Route path="/dashboard" element={<Navigate to="/" replace />} />
+                <Route path="/admin/*" element={<Navigate to="/" replace />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+            <CookieConsent />
+          </BrowserRouter>
+          <Toaster />
+        </TooltipProvider>
+      </ErrorBoundary>
+    </HelmetProvider>
   );
 }
+
