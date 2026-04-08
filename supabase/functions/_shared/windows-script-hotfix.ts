@@ -34,7 +34,8 @@ import {
 // TOCTOU integrity
 import {
   hotfixToctouSelfheal, hotfixToctouRuntimeSelfheal, hotfixHeartbeatSha256Sync,
-  hotfixToctouDualHash, hotfixPreloggerRepair, hotfixEd25519HashCacheFailOpen
+  hotfixToctouDualHash, hotfixPreloggerRepair, hotfixEd25519HashCacheFailOpen,
+  hotfixToctouCallerExit
 } from './hotfix/toctou-integrity.ts';
 
 // Firewall skip
