@@ -88,6 +88,17 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   // PATCH #2: Add isSyncing state to block queries until JWT is updated
   const [isSyncing, setIsSyncing] = useState(true);
 
+  const sessionTenantId =
+    user?.app_metadata && typeof user.app_metadata.active_tenant_id === 'string'
+      ? user.app_metadata.active_tenant_id
+      : null;
+
+  const preferredTenantId = activeTenantId ?? sessionTenantId;
+
+  useEffect(() => {
+    setActiveTenantId(null);
+  }, [user?.id]);
+
   // Fetch all tenants for the user
   // PATCH #4: Expose isFetched for ProtectedRoute to prevent premature redirects
   const { data: userTenantRoles = [], isLoading, isFetched } = useQuery({
@@ -135,15 +146,14 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   const activeTenant = useMemo(() => {
     if (tenants.length === 0) return null;
     
-    // If we have a programmatically set active tenant ID, find it
-    if (activeTenantId) {
-      const found = tenants.find(t => t.id === activeTenantId);
+    if (preferredTenantId) {
+      const found = tenants.find(t => t.id === preferredTenantId);
       if (found) return found;
     }
     
-    // Default to first tenant
+    // Default to first tenant only when session has no active tenant yet
     return tenants[0];
-  }, [tenants, activeTenantId]);
+  }, [tenants, preferredTenantId]);
 
   // CORREÇÃO: Calcular role baseada no tenant ATIVO
   const activeRole = useMemo((): AppRole | null => {
@@ -202,18 +212,15 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   }, [activeTenant?.id, user?.id]);
 
   const setActiveTenant = useCallback(async (tenant: Tenant) => {
-    const previousTenantId = activeTenantId;
+    const previousTenantId = preferredTenantId;
     
     if (previousTenantId === tenant.id) {
-      // No change needed
       return;
     }
 
-    // Block UI while switching
     setIsSyncing(true);
     
     try {
-      // 1. Call edge function to update app_metadata
       const result = await callGateway('admin', 'set-active-tenant', { tenant_id: tenant.id });
       const error = result && typeof result === 'object' && 'error' in result ? result : null;
 
@@ -225,16 +232,12 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      // 2. Refresh session to get new JWT with updated active_tenant_id
       const { error: refreshError } = await supabase.auth.refreshSession();
       if (refreshError) {
         logger.warn('[setActiveTenant] Session refresh warning');
       }
 
-      // 3. Update local state AFTER JWT is confirmed updated
       setActiveTenantId(tenant.id);
-
-      // 4. Clear all cached queries so they refetch with new tenant context
       queryClient.clear();
       queryClient.invalidateQueries();
 
@@ -249,7 +252,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsSyncing(false);
     }
-  }, [activeTenantId, queryClient]);
+  }, [preferredTenantId, queryClient]);
 
   return (
     <ActiveTenantContext.Provider 
