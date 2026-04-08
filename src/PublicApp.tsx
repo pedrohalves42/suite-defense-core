@@ -39,8 +39,8 @@ export default function PublicApp() {
                   <Route path="/privacy" element={<Privacidade />} />
                   <Route path="/privacidade" element={<Privacidade />} />
                   <Route path="/tutorials" element={<Tutorials />} />
-                  <Route path="/login" element={<Navigate to="/" replace />} />
-                  <Route path="/signup" element={<Navigate to="/" replace />} />
+                  <Route path="/login" element={<LoginFallback />} />
+                  <Route path="/signup" element={<LoginFallback />} />
                   <Route path="/dashboard" element={<Navigate to="/" replace />} />
                   <Route path="/admin/*" element={<Navigate to="/" replace />} />
                   <Route path="*" element={<NotFound />} />
