@@ -38,7 +38,14 @@ export function LandingNavbar() {
 
         {/* Right: trust signal + login + CTA */}
         <div className="flex items-center gap-3">
-          <LanguageSwitcher />
+          <LanguageSwitcher 
+            className={cn(
+              "h-8 w-8 transition-colors",
+              scrolled 
+                ? "text-foreground hover:bg-muted" 
+                : "text-white/80 hover:bg-white/10 hover:text-white"
+            )}
+          />
           <ThemeToggle 
             variant="ghost" 
             size="icon" 
