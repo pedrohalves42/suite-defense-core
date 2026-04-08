@@ -10,6 +10,29 @@ import { startStorageCleanup } from "./lib/storage";
 import "./i18n";
 import "./index.css";
 
+// Guard: check required env vars BEFORE any Supabase module executes
+const _supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const _supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+if (!_supabaseUrl || !_supabaseKey) {
+  const root = document.getElementById("root");
+  if (root) {
+    root.innerHTML = `
+      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0a0a0f;color:#e2e8f0;font-family:system-ui,sans-serif;padding:2rem;text-align:center">
+        <div style="max-width:480px">
+          <div style="font-size:3rem;margin-bottom:1rem">🛡️</div>
+          <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:.75rem;color:#f8fafc">CyberShield</h1>
+          <p style="font-size:1rem;line-height:1.6;color:#94a3b8;margin-bottom:1.5rem">
+            Configuração incompleta — variáveis de ambiente do backend não encontradas.
+          </p>
+          <p style="font-size:.85rem;color:#64748b">
+            Contate o administrador do sistema ou republique a aplicação com as variáveis configuradas.
+          </p>
+        </div>
+      </div>`;
+  }
+  throw new Error("Missing required env vars: VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY");
+}
+
 // Start localStorage cleanup with teardown support
 startStorageCleanup();
 
