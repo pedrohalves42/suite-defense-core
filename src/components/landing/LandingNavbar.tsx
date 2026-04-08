@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LogIn } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 /**
  * Minimal landing page navbar — logo left, trust + login + CTA right
@@ -38,6 +39,16 @@ export function LandingNavbar() {
         {/* Right: trust signal + login + CTA */}
         <div className="flex items-center gap-3">
           <LanguageSwitcher />
+          <ThemeToggle 
+            variant="ghost" 
+            size="icon" 
+            className={cn(
+              "h-8 w-8 transition-colors",
+              scrolled 
+                ? "text-foreground hover:bg-muted" 
+                : "text-white/80 hover:bg-white/10 hover:text-white"
+            )}
+          />
           <span className={cn(
             "hidden sm:inline text-sm transition-colors",
             scrolled ? "text-muted-foreground" : "text-white/60"
