@@ -136,8 +136,12 @@ export async function handleClassifyShadowIt(
 export async function handleClearFailedLogins(
   supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
 ): Promise<unknown> {
-  const ipAddress = payload.ip_address as string;
-  if (!ipAddress) return { __status: 400, error: 'ip_address required' };
+  const ipAddress = (payload.ip_address as string)
+    || ctx?.req?.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || ctx?.req?.headers.get('x-real-ip')
+    || 'unknown';
+
+  if (!ipAddress || ipAddress === 'unknown') return { __status: 400, error: 'ip_address required' };
 
   await supabase.from('failed_login_attempts').delete().eq('ip_address', ipAddress);
   await supabase.from('ip_blocklist').delete().eq('ip_address', ipAddress);
