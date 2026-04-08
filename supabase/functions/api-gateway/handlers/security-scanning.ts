@@ -139,9 +139,12 @@ export async function handleClearFailedLogins(
   const ipAddress = (payload.ip_address as string)
     || ctx?.req?.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     || ctx?.req?.headers.get('x-real-ip')
-    || 'unknown';
+    || null;
 
-  if (!ipAddress || ipAddress === 'unknown') return { __status: 400, error: 'ip_address required' };
+  // If no IP can be determined, return success silently — this is a best-effort cleanup
+  if (!ipAddress) {
+    return { success: true, skipped: true, reason: 'ip_not_available' };
+  }
 
   await supabase.from('failed_login_attempts').delete().eq('ip_address', ipAddress);
   await supabase.from('ip_blocklist').delete().eq('ip_address', ipAddress);
