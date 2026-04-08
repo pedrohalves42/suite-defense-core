@@ -17,6 +17,8 @@ const Privacidade = lazy(() => import("./pages/Privacidade"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const Tutorials = lazy(() => import("./pages/Tutorials"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const Login = lazy(() => import("./pages/Login"));
+const Signup = lazy(() => import("./pages/Signup"));
 
 const Fallback = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
