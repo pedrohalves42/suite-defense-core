@@ -3,13 +3,8 @@ import { normalizeForWindows } from './hexagonal/update-decision-service.ts';
 import { logger } from './logger.ts';
 import { applyWindowsScriptHotfix } from './windows-script-hotfix.ts';
 
-interface PersistableSupabaseLike {
-  from: (table: string) => {
-    update: (values: Record<string, unknown>) => {
-      eq: (column: string, value: string) => Promise<{ error?: { message?: string } | null }>;
-    };
-  };
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type PersistableSupabaseLike = any;
 
 export interface PreparedAgentScript {
   content: string;
