@@ -3,16 +3,15 @@
  * Only exposes static/public routes that don't depend on Supabase.
  * IMPORTANT: Do NOT import any page/component that imports the Supabase client.
  */
-import { Suspense, lazy } from "react";
+import { Component, ErrorInfo, ReactNode, Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CookieConsent } from "./components/CookieConsent";
-import { ErrorBoundary } from "./components/ErrorBoundary";
-import Landing from "./pages/Landing";
 
+const Landing = lazy(() => import("./pages/Landing"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Privacidade = lazy(() => import("./pages/Privacidade"));
 const Pricing = lazy(() => import("./pages/Pricing"));
@@ -51,11 +50,92 @@ function BackendUnavailable() {
   );
 }
 
+interface PublicErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface PublicErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class PublicErrorBoundary extends Component<
+  PublicErrorBoundaryProps,
+  PublicErrorBoundaryState
+> {
+  public state: PublicErrorBoundaryState = {
+    hasError: false,
+    error: null,
+  };
+
+  public static getDerivedStateFromError(error: Error): PublicErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("[PublicErrorBoundary] CRASH:", error);
+    console.error("[PublicErrorBoundary] Stack:", error.stack);
+    console.error("[PublicErrorBoundary] Component stack:", errorInfo.componentStack);
+  }
+
+  public render() {
+    if (!this.state.hasError) {
+      return this.props.children;
+    }
+
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="max-w-md w-full text-center space-y-6 rounded-xl border border-border bg-card p-6 text-card-foreground shadow-sm">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-foreground">Algo deu errado</h1>
+            <p className="text-sm text-muted-foreground">
+              Você pode recarregar a página ou voltar ao início.
+            </p>
+          </div>
+
+          {this.state.error && (
+            <div className="max-h-48 overflow-auto rounded-lg bg-muted p-4 text-left">
+              <p className="break-all text-xs font-mono text-muted-foreground">
+                {this.state.error.toString()}
+              </p>
+              {this.state.error.stack && (
+                <pre className="mt-2 whitespace-pre-wrap break-all text-[10px] font-mono text-muted-foreground/80">
+                  {this.state.error.stack}
+                </pre>
+              )}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="inline-flex flex-1 items-center justify-center rounded-md border border-border bg-background px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              Recarregar
+            </button>
+            <a
+              href="/"
+              className="inline-flex flex-1 items-center justify-center rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Voltar ao início
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+}
+
 export default function PublicApp() {
   return (
     <HelmetProvider>
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-        <ErrorBoundary>
+        <PublicErrorBoundary>
           <TooltipProvider>
             <BrowserRouter>
               <Suspense fallback={<Fallback />}>
@@ -77,7 +157,7 @@ export default function PublicApp() {
             </BrowserRouter>
             <Toaster />
           </TooltipProvider>
-        </ErrorBoundary>
+        </PublicErrorBoundary>
       </ThemeProvider>
     </HelmetProvider>
   );

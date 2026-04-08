@@ -7,7 +7,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import logoImage from '@/assets/logo-cybshield-new.png';
 import { z } from "zod";
-import { logger } from "@/lib/logger";
 import { useTranslation } from "react-i18next";
 
 function useContactFormSchema() {
@@ -107,7 +106,7 @@ export const ContactForm = () => {
         message: "",
       });
     } catch (error) {
-      logger.error("Error submitting contact form", error);
+      console.error("[ContactForm] submit failed", error);
       
       const errMsg = error instanceof Error ? error.message : '';
       if (errMsg.includes('429') || errMsg.includes('Rate limit')) {
