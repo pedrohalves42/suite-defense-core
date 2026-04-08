@@ -32,13 +32,20 @@ export function LandingNavbar() {
           <img src={cybershieldLogo} alt="CyberShield" className="h-8 w-8 object-contain" />
           <span className={cn(
             "font-bold text-lg transition-colors",
-            scrolled ? "text-foreground" : "text-primary-foreground"
+            scrolled ? "text-foreground" : "text-white"
           )}>CyberShield</span>
         </div>
 
         {/* Right: trust signal + login + CTA */}
         <div className="flex items-center gap-3">
-          <LanguageSwitcher />
+          <LanguageSwitcher 
+            className={cn(
+              "h-8 w-8 transition-colors",
+              scrolled 
+                ? "text-foreground hover:bg-muted" 
+                : "text-white/80 hover:bg-white/10 hover:text-white"
+            )}
+          />
           <ThemeToggle 
             variant="ghost" 
             size="icon" 
