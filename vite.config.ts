@@ -13,6 +13,10 @@ function resolveSupabaseBuildConfig(mode: string) {
   const projectIdFromUrl = env.VITE_SUPABASE_URL?.match(
     /^https:\/\/([^.]+)\.supabase\.co\/?$/
   )?.[1];
+  const publishableKey =
+    env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    env.VITE_SUPABASE_ANON_KEY ||
+    FALLBACK_SUPABASE_PUBLISHABLE_KEY;
 
   const projectId =
     env.VITE_SUPABASE_PROJECT_ID ||
@@ -22,9 +26,7 @@ function resolveSupabaseBuildConfig(mode: string) {
   return {
     projectId,
     url: env.VITE_SUPABASE_URL || `https://${projectId}.supabase.co`,
-    publishableKey:
-      env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-      FALLBACK_SUPABASE_PUBLISHABLE_KEY,
+    publishableKey,
   };
 }
 
