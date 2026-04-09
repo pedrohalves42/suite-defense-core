@@ -41,6 +41,7 @@ export function useSOC2ControlStatuses() {
       }
       return Object.fromEntries(latest);
     },
+    staleTime: 300_000, // 5 min cache
     enabled: !!tenant?.id,
   });
 }
