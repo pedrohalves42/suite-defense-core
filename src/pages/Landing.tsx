@@ -58,6 +58,7 @@ const Landing = () => {
         jsonLd={LANDING_JSON_LD}
       />
       <div className="min-h-screen bg-background">
+        <LandingNavbar />
         <Suspense fallback={null}>
           <WhatsAppButton />
         </Suspense>
