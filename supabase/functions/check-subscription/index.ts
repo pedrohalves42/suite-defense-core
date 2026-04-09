@@ -28,7 +28,7 @@ serveTenant<CheckSubBody>(async (req, ctx) => {
     });
   }
 
-  const stripe = new Stripe(stripeKey, { apiVersion: '2025-08-27.basil' });
+  const stripe = new Stripe(stripeKey, { apiVersion: '2025-08-27.basil', httpClient: Stripe.createFetchHttpClient(), timeout: 10_000 });
 
   // Find Stripe customer
   const customers = await stripe.customers.list({ email: user.email, limit: 1 });
