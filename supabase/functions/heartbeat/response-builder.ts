@@ -122,6 +122,9 @@ export async function buildNormalResponse(
     }
   }
 
+  // Derive Ed25519 public key for agent-side verification (cached, zero DB cost)
+  const ed25519PublicKey = await getEd25519PublicKeyBase64()
+
   return new Response(
     JSON.stringify({
       ok: true,
@@ -137,6 +140,7 @@ export async function buildNormalResponse(
       poll_interval_seconds: _getPollInterval(updateData.state || agent.state),
       skip_firewall_remediation: agent.skip_firewall_remediation || false,
       enable_eventlog: true,
+      ed25519_public_key: ed25519PublicKey,
       aggregation: null,
       jobs: [],
     }),
