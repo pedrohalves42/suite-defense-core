@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 interface HoneypotStats {
@@ -29,7 +30,39 @@ interface HoneypotHourlyStat {
   recon_count: number;
 }
 
+/**
+ * Realtime subscription that invalidates honeypot queries on new interactions.
+ * Replaces 30s/60s polling with event-driven updates (FinOps: ~0 req overhead).
+ */
+function useHoneypotRealtime() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('honeypot-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'honeypot_interactions',
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['honeypot-interactions-recent'] });
+          queryClient.invalidateQueries({ queryKey: ['honeypot-stats'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+}
+
 export function useHoneypotStats(tenantId?: string) {
+  useHoneypotRealtime();
+
   return useQuery({
     queryKey: ['honeypot-stats', tenantId],
     queryFn: async () => {
@@ -45,7 +78,8 @@ export function useHoneypotStats(tenantId?: string) {
         modes: {},
       };
     },
-    refetchInterval: 60_000, // Refresh every minute
+    staleTime: 5 * 60 * 1000, // 5 min — Realtime handles freshness
+    refetchInterval: false,
   });
 }
 
@@ -61,7 +95,8 @@ export function useHoneypotRecentInteractions(limit = 50) {
       if (error) throw error;
       return (data as unknown as HoneypotInteraction[]) ?? [];
     },
-    refetchInterval: 30_000,
+    staleTime: 5 * 60 * 1000, // 5 min — Realtime handles freshness
+    refetchInterval: false,
   });
 }
 
@@ -75,10 +110,11 @@ export function useHoneypotHourlyStats(days = 7) {
         .select('hour_start, interaction_count, malicious_count, suspicious_count, benign_count, recon_count')
         .gte('hour_start', cutoff)
         .order('hour_start', { ascending: true })
-        .limit(168); // 7 days * 24 hours
+        .limit(168);
       if (error) throw error;
       return (data as unknown as HoneypotHourlyStat[]) ?? [];
     },
-    refetchInterval: 300_000, // Every 5 min
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: false, // Hourly stats don't need frequent refresh
   });
 }
