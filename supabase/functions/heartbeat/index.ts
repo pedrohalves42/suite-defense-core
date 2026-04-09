@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
 
     // ── 4. Rate limiting ────────────────────────────────────
     const rateLimitResult = await checkRateLimit(supabase, agent.agent_name, 'heartbeat', {
-      maxRequests: 6, windowMinutes: 5, blockMinutes: 2,
+      maxRequests: 10, windowMinutes: 10, blockMinutes: 2,
     })
     if (!rateLimitResult.allowed) {
       return new Response(

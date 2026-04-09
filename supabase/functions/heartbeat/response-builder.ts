@@ -152,7 +152,7 @@ export async function buildNormalResponse(
  */
 function _getHeartbeatInterval(agentState: string | null | undefined): number {
   const degradedStates = ['SAFE_MODE', 'DEGRADED', 'INITIALIZING']
-  if (agentState && degradedStates.includes(agentState)) return 30
+  if (agentState && degradedStates.includes(agentState)) return 60
   return 120
 }
 
