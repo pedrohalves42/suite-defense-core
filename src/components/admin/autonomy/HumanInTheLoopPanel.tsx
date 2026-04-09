@@ -44,7 +44,7 @@ function usePendingCriticalApprovals() {
 
       const { data, error } = await supabase
         .from('v_pending_critical_approvals' )
-        .select('*')
+        .select('id, tenant_id, action_type, action_payload, status, required_approvers, current_approvers, expires_at, created_at, playbook_execution_id, playbook_name, severity, risk_score, trigger_source, agent_name, hostname')
         .order('created_at', { ascending: false })
         .limit(20);
 

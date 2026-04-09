@@ -14,7 +14,7 @@ export function useRolloutPolicies() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('agent_update_policies')
-        .select('*')
+        .select('id, platform, target_version, rollout_percentage, enabled, notes, created_at, updated_at')
         .order('platform');
       if (error) throw error;
       return data as RolloutPolicy[];

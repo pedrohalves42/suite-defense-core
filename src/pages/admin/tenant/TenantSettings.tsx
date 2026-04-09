@@ -66,7 +66,7 @@ export default function TenantSettings() {
       if (!tenant?.id) return 0;
       const { count, error } = await supabase
         .from("user_roles")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
         .eq("tenant_id", tenant.id);
       if (error) throw error;
       return count ?? 0;
@@ -83,7 +83,7 @@ export default function TenantSettings() {
       
       const { data, error } = await supabase
         .from("tenant_settings")
-        .select("*")
+        .select("id, tenant_id, enable_notifications, enable_audit_logs, enable_data_export, max_agents, max_users, alert_email, alert_webhook_url")
         .eq("tenant_id", tenant.id)
         .maybeSingle();
 
