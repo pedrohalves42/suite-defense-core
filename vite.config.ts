@@ -64,6 +64,8 @@ export default defineConfig(({ mode }) => {
       include: ['jspdf', 'jspdf-autotable'],
     },
     build: {
+      target: 'es2020',
+      cssCodeSplit: false,
       rollupOptions: {
         output: {
           manualChunks: {
