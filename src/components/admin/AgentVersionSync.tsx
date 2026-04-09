@@ -187,9 +187,9 @@ export function AgentVersionSync({
       const result = await callGateway<{ commands: { powershell_oneliner: string }; outdated_agents: { id: string; name: string; current_version: string; force_update_delivered_count: number }[]; latest_version: string }>('agent', 'force-reinstall-fleet', { tenant_id: tenant.id });
 
       setNuclearCommands({
-        powershell_oneliner: result.commands.powershell_oneliner,
-        outdated_agents: result.outdated_agents,
-        latest_version: result.latest_version
+        powershell_oneliner: result?.commands?.powershell_oneliner ?? '',
+        outdated_agents: result?.outdated_agents ?? [],
+        latest_version: result?.latest_version ?? ''
       });
       toast.success('Comandos de reinstalação gerados!');
     } catch (error) {

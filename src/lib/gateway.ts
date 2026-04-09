@@ -37,5 +37,5 @@ export async function callGateway<T = Record<string, unknown>>(
   });
 
   if (error) throw error;
-  return data as T;
+  return (data ?? {}) as T;
 }
