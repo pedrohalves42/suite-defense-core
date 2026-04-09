@@ -37,7 +37,7 @@ export default function ShadowITDiscovery() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("shadow_it_catalog")
-        .select("*")
+        .select("id, tenant_id, app_name, app_category, risk_level, risk_score, agents_count, last_seen_at, updated_at")
         .eq("tenant_id", tenant!.id)
         .order("risk_score", { ascending: false });
       if (error) throw error;

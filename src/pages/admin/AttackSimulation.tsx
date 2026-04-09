@@ -30,7 +30,7 @@ export default function AttackSimulation() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("attack_simulations")
-        .select("*")
+        .select("id, tenant_id, simulation_type, status, total_agents, detected_count, detection_rate, created_at")
         .eq("tenant_id", tenant!.id)
         .order("created_at", { ascending: false })
         .limit(20);
