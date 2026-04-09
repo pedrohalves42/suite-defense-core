@@ -189,6 +189,7 @@ _service_health_check() {
     local results='[]' checked=0
     while IFS= read -r svc; do
         [[ -z "$svc" ]] && continue
+        [[ "$svc" =~ ^[a-zA-Z0-9._@:-]+$ ]] || { log "WARN" "[HANDLER] Invalid service name in health check: $svc"; continue; }
         local status="unknown"
         systemctl is-active "$svc" &>/dev/null && status="running" || status="stopped"
         results=$(echo "$results" | jq --arg n "$svc" --arg s "$status" '. + [{"name":$n,"status":$s}]')
