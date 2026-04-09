@@ -44,7 +44,7 @@ export function DriftDashboard() {
       if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('drift_events')
-        .select('*')
+        .select('id, severity, category, description, drift_score, detected_at, resolved_at, current_value, expected_value')
         .eq('tenant_id', tenant.id)
         .order('detected_at', { ascending: false })
         .limit(50);

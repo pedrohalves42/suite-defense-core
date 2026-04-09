@@ -15,7 +15,7 @@ export default function SecurityBenchmark() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("compliance_benchmarks")
-        .select("*")
+        .select("id, period_month, avg_score, median_score, max_score, min_score, tenant_count")
         .order("period_month", { ascending: false })
         .limit(12);
       if (error) throw error;

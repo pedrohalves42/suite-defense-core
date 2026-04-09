@@ -52,7 +52,7 @@ export function useSecurityDashboard() {
       if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('security_logs')
-        .select('*')
+        .select('id, created_at, ip_address, endpoint, attack_type, severity, blocked, details, user_agent')
         .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false })
         .limit(100);
@@ -72,9 +72,9 @@ export function useSecurityDashboard() {
       const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
       const [totalResult, criticalResult, blockedResult, uniqueIpsResult] = await Promise.all([
-        supabase.from('security_logs').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('created_at', last24h),
-        supabase.from('security_logs').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id).eq('severity', 'critical').gte('created_at', last24h),
-        supabase.from('security_logs').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id).eq('blocked', true).gte('created_at', last24h),
+        supabase.from('security_logs').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).gte('created_at', last24h),
+        supabase.from('security_logs').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).eq('severity', 'critical').gte('created_at', last24h),
+        supabase.from('security_logs').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).eq('blocked', true).gte('created_at', last24h),
         supabase.from('security_logs').select('ip_address').eq('tenant_id', tenant.id).gte('created_at', last24h),
       ]);
 
@@ -97,7 +97,7 @@ export function useSecurityDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ip_blocklist')
-        .select('*')
+        .select('id, ip_address, blocked_until, reason, created_at')
         .gte('blocked_until', new Date().toISOString())
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -115,7 +115,7 @@ export function useSecurityDashboard() {
       const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from('failed_login_attempts')
-        .select('*')
+        .select('id, ip_address, email, created_at, user_agent')
         .gte('created_at', last24h)
         .order('created_at', { ascending: false })
         .limit(50);

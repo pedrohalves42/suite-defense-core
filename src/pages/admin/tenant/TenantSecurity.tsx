@@ -19,7 +19,7 @@ export default function TenantSecurity() {
       
       const { data, error } = await supabase
         .from("audit_logs")
-        .select("*")
+        .select("id, action, success, resource_type, ip_address, created_at")
         .eq("tenant_id", tenant.id)
         .order("created_at", { ascending: false })
         .limit(50);

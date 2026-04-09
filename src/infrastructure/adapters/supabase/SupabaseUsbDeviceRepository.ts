@@ -15,7 +15,7 @@ export class SupabaseUsbDeviceRepository implements UsbDeviceRepository {
   async findByAgent(agentId: AgentId): Promise<UsbDevice[]> {
     const { data, error } = await supabase
       .from('agent_usb_devices')
-      .select('*')
+      .select('id, agent_id, tenant_id, device_id, vendor_id, product_id, serial_number, device_name, device_type, is_blocked, block_reason, first_seen, last_seen, collected_at, created_at')
       .eq('agent_id', agentId.toString())
       .order('last_seen', { ascending: false });
 
@@ -26,7 +26,7 @@ export class SupabaseUsbDeviceRepository implements UsbDeviceRepository {
   async findBlockedByTenant(tenantId: TenantId): Promise<UsbDevice[]> {
     const { data, error } = await supabase
       .from('agent_usb_devices')
-      .select('*')
+      .select('id, agent_id, tenant_id, device_id, vendor_id, product_id, serial_number, device_name, device_type, is_blocked, block_reason, first_seen, last_seen, collected_at, created_at')
       .eq('tenant_id', tenantId.toString())
       .eq('is_blocked', true);
 
@@ -37,7 +37,7 @@ export class SupabaseUsbDeviceRepository implements UsbDeviceRepository {
   async findByDeviceId(agentId: AgentId, deviceId: string): Promise<UsbDevice | null> {
     const { data, error } = await supabase
       .from('agent_usb_devices')
-      .select('*')
+      .select('id, agent_id, tenant_id, device_id, vendor_id, product_id, serial_number, device_name, device_type, is_blocked, block_reason, first_seen, last_seen, collected_at, created_at')
       .eq('agent_id', agentId.toString())
       .eq('device_id', deviceId)
       .maybeSingle();

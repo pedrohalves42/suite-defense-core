@@ -71,7 +71,7 @@ export function useCronHealthDashboard() {
     queryFn: async (): Promise<CronHealthRecord[]> => {
       const { data, error } = await supabase
         .from('cron_health')
-        .select('*')
+        .select('id, cron_name, last_success_at, last_failure_at, last_error, consecutive_failures, total_runs, total_failures, avg_duration_ms, last_duration_ms, updated_at')
         .order('consecutive_failures', { ascending: false });
 
       if (error) {

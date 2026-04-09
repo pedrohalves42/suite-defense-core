@@ -14,7 +14,7 @@ export default function RansomwareIncident() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("system_alerts")
-        .select("*")
+        .select("id, tenant_id, title, severity, status, alert_type, created_at")
         .eq("tenant_id", tenant!.id)
         .ilike("alert_type", "%ransomware%")
         .order("created_at", { ascending: false })
@@ -44,7 +44,7 @@ export default function RansomwareIncident() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("system_alerts")
-        .select("*")
+        .select("id, tenant_id, title, severity, status, alert_type, created_at")
         .eq("tenant_id", tenant!.id)
         .ilike("alert_type", "%ransomware%")
         .order("created_at", { ascending: false })

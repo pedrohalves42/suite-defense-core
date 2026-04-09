@@ -22,7 +22,7 @@ export class SupabaseCertificateRepository implements CertificateRepository {
   async findByAgent(agentId: AgentId): Promise<Certificate[]> {
     const { data, error } = await supabase
       .from('agent_certificates')
-      .select('*')
+      .select('id, agent_id, tenant_id, cert_store, subject, issuer, thumbprint, serial_number, valid_from, valid_until, key_usage, is_self_signed, collected_at, created_at')
       .eq('agent_id', agentId.toString())
       .order('valid_until', { ascending: true });
 
@@ -36,7 +36,7 @@ export class SupabaseCertificateRepository implements CertificateRepository {
 
     const { data, error } = await supabase
       .from('agent_certificates')
-      .select('*')
+      .select('id, agent_id, tenant_id, cert_store, subject, issuer, thumbprint, serial_number, valid_from, valid_until, key_usage, is_self_signed, collected_at, created_at')
       .eq('tenant_id', tenantId.toString())
       .lte('valid_until', cutoff.toISOString())
       .gte('valid_until', new Date().toISOString())

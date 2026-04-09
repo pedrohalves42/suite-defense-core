@@ -11,7 +11,7 @@ export function RollbackEventsDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('agent_rollback_events')
-        .select('*')
+        .select('id, agent_id, agent_name, from_version, to_version, rollback_count, safe_mode_triggered, reason, created_at')
         .order('created_at', { ascending: false })
         .limit(50);
       if (error) throw error;

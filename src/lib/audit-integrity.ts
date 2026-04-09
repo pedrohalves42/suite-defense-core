@@ -80,7 +80,7 @@ export async function exportAuditLogsWithIntegrity(
   // Fetch logs
   const { data: logs, error } = await supabase
     .from('audit_logs')
-    .select('*')
+    .select('id, created_at, user_id, tenant_id, action, resource_type, resource_id, details, success, ip_address, user_agent, request_id, state_before, state_after, integrity_hash, previous_log_hash')
     .eq('tenant_id', tenantId)
     .gte('created_at', startDate.toISOString())
     .lte('created_at', endDate.toISOString())

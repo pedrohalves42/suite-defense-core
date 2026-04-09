@@ -66,7 +66,7 @@ export default function TenantSettings() {
       if (!tenant?.id) return 0;
       const { count, error } = await supabase
         .from("user_roles")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
         .eq("tenant_id", tenant.id);
       if (error) throw error;
       return count ?? 0;
@@ -83,7 +83,7 @@ export default function TenantSettings() {
       
       const { data, error } = await supabase
         .from("tenant_settings")
-        .select("*")
+        .select("id, tenant_id, alert_email, alert_webhook_url, alert_threshold_virus_positive, alert_threshold_failed_jobs, alert_threshold_offline_agents, virustotal_enabled, stripe_enabled, enable_email_alerts, enable_webhook_alerts, enable_auto_quarantine, created_at, updated_at, business_hours, dns_local_filter_enabled, enable_dry_run_mode, force_human_review_critical")
         .eq("tenant_id", tenant.id)
         .maybeSingle();
 
@@ -95,11 +95,9 @@ export default function TenantSettings() {
           .from("tenant_settings")
           .insert({
             tenant_id: tenant.id,
-            enable_notifications: true,
-            enable_audit_logs: true,
-            enable_data_export: false,
-            max_agents: 5,
-            max_users: 3,
+            enable_email_alerts: true,
+            enable_webhook_alerts: false,
+            enable_auto_quarantine: false,
           })
           .select()
           .single();

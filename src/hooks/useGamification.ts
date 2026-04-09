@@ -94,7 +94,7 @@ export function useGamification() {
 
       const { data, error } = await supabase
         .from('user_gamification')
-        .select('*')
+        .select('id, user_id, tenant_id, xp, level, level_title, current_streak, best_streak, last_streak_date, badges_unlocked')
         .eq('user_id', userId)
         .eq('tenant_id', tenantId)
         .maybeSingle();
@@ -131,7 +131,7 @@ export function useGamification() {
         // Check existing XP events — if any exist, skip (profile was reset, not new)
         const { count: existingEvents } = await supabase
           .from('xp_events')
-          .select('*', { count: 'exact', head: true })
+          .select('id', { count: 'exact', head: true })
           .eq('user_id', userId)
           .eq('tenant_id', tenantId);
 
@@ -145,7 +145,7 @@ export function useGamification() {
         // Count resolved alerts
         const { count: resolvedAlerts } = await supabase
           .from('system_alerts')
-          .select('*', { count: 'exact', head: true })
+          .select('id', { count: 'exact', head: true })
           .eq('tenant_id', tenantId)
           .in('status', ['resolved', 'closed']);
 
@@ -222,7 +222,7 @@ export function useGamification() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('xp_events')
-        .select('*')
+        .select('id, user_id, tenant_id, action, xp_earned, description, created_at')
         .eq('user_id', userId!)
         .eq('tenant_id', tenantId!)
         .order('created_at', { ascending: false })

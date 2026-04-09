@@ -15,7 +15,7 @@ export class SupabaseBehavioralBaselineRepository implements BehavioralBaselineR
   async findActiveByAgent(agentId: AgentId): Promise<BehavioralBaseline[]> {
     const { data, error } = await supabase
       .from('agent_behavioral_baseline')
-      .select('*')
+      .select('id, agent_id, tenant_id, baseline_type, baseline_data, mean_value, std_deviation, threshold_multiplier, baseline_period_start, baseline_period_end, is_active, last_updated, created_at')
       .eq('agent_id', agentId.toString())
       .eq('is_active', true);
 
@@ -26,7 +26,7 @@ export class SupabaseBehavioralBaselineRepository implements BehavioralBaselineR
   async findByAgentAndType(agentId: AgentId, type: BaselineType): Promise<BehavioralBaseline | null> {
     const { data, error } = await supabase
       .from('agent_behavioral_baseline')
-      .select('*')
+      .select('id, agent_id, tenant_id, baseline_type, baseline_data, mean_value, std_deviation, threshold_multiplier, baseline_period_start, baseline_period_end, is_active, last_updated, created_at')
       .eq('agent_id', agentId.toString())
       .eq('baseline_type', type)
       .eq('is_active', true)

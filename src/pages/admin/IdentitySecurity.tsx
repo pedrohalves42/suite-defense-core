@@ -28,7 +28,7 @@ export default function IdentitySecurity() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("credential_leaks")
-        .select("*")
+        .select("id, tenant_id, email, breach_name, breach_source, severity, data_types_exposed, status, detected_at, resolved_at")
         .eq("tenant_id", tenant!.id)
         .order("detected_at", { ascending: false });
       if (error) throw error;
@@ -42,7 +42,7 @@ export default function IdentitySecurity() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("credential_monitors")
-        .select("*")
+        .select("id, tenant_id, email_domain, monitoring_enabled")
         .eq("tenant_id", tenant!.id);
       if (error) throw error;
       return data;

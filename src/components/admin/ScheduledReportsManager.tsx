@@ -73,7 +73,7 @@ export function ScheduledReportsManager() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("scheduled_reports")
-        .select("*")
+        .select("id, tenant_id, name, report_type, is_active, created_at, day_of_week, hour, recipients")
         .order("created_at", { ascending: false });
 
       if (error) throw error;

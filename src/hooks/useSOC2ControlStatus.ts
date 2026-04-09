@@ -26,7 +26,7 @@ export function useSOC2ControlStatuses() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('soc2_control_status')
-        .select('*')
+        .select('id, control_id, status, notes, filled_by, filled_at, auto_filled, tenant_id')
         .eq('tenant_id', tenant!.id)
         .order('filled_at', { ascending: false });
 

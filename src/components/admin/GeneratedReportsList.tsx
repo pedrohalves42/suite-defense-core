@@ -107,7 +107,7 @@ export function GeneratedReportsList() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("generated_reports")
-        .select("*")
+        .select("id, tenant_id, agent_id, agent_name, report_type, title, risk_score, risk_level, statistics, report_data, status, triggered_by, created_at, expires_at, sales_status, commercial_priority, next_action, commercial_summary, contacted_at, follow_up_at")
         .order("created_at", { ascending: false })
         .limit(50);
 

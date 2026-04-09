@@ -18,7 +18,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findById(id: string): Promise<Job | null> {
     const { data, error } = await this.client
       .from(JOBS_TABLE)
-      .select('*')
+      .select('id, agent_id, tenant_id, type, payload, priority, execution_time_seconds, status, retry_count, delivery_attempts, delivered_at, started_at, completed_at, output, error_message')
       .eq('id', id)
       .maybeSingle();
 
@@ -31,7 +31,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findPendingByAgent(agentId: AgentId): Promise<Job[]> {
     const { data, error } = await this.client
       .from(JOBS_TABLE)
-      .select('*')
+      .select('id, agent_id, tenant_id, type, payload, priority, execution_time_seconds, status, retry_count, delivery_attempts, delivered_at, started_at, completed_at, output, error_message')
       .eq('agent_id', agentId.value)
       .in('status', ['pending', 'queued', 'delivered'])
       .order('priority', { ascending: false })
@@ -44,7 +44,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findByTenantAndStatus(tenantId: TenantId, status: JobStatus): Promise<Job[]> {
     const { data, error } = await this.client
       .from(JOBS_TABLE)
-      .select('*')
+      .select('id, agent_id, tenant_id, type, payload, priority, execution_time_seconds, status, retry_count, delivery_attempts, delivered_at, started_at, completed_at, output, error_message')
       .eq('tenant_id', tenantId.value)
       .eq('status', status)
       .order('created_at', { ascending: false });
@@ -56,7 +56,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findExpiredJobs(now: Date): Promise<Job[]> {
     const { data, error } = await this.client
       .from(JOBS_TABLE)
-      .select('*')
+      .select('id, agent_id, tenant_id, type, payload, priority, execution_time_seconds, status, retry_count, delivery_attempts, delivered_at, started_at, completed_at, output, error_message, expires_at')
       .in('status', ['pending', 'queued', 'delivered', 'running'])
       .lt('expires_at', now.toISOString());
 
@@ -85,7 +85,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findExecutionsByJobId(jobId: string): Promise<JobExecution[]> {
     const { data, error } = await this.client
       .from(EXECUTIONS_TABLE)
-      .select('*')
+      .select('id, job_id, agent_id, tenant_id, execution_index, nonce, payload_hash, started_at, completed_at, exit_code, output_hash, result_signature, signature_verified, execution_time_seconds, created_at')
       .eq('job_id', jobId)
       .order('execution_index', { ascending: true });
 

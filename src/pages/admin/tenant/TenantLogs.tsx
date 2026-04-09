@@ -29,7 +29,7 @@ export default function TenantLogs() {
       // Fetch logs without JOIN
       let query = supabase
         .from("audit_logs")
-        .select("*")
+        .select("id, actor_id, action, resource_type, resource_id, success, details, ip_address, created_at")
         .eq("tenant_id", tenant.id)
         .order("created_at", { ascending: false })
         .limit(pageSize);
