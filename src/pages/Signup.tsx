@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import logoImage from '@/assets/logo-cybshield-new.png';
+import logoImage from '@/assets/logo-cybshield-new.webp';
 import { logger } from '@/lib/logger';
 import { SecurityFooter, BrandSignature } from '@/components/auth/SecurityFooter';
 import { useTranslation } from 'react-i18next';

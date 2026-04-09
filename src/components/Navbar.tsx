@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
-import cybershieldLogo from "@/assets/logo-cybshield-new.png";
+import cybershieldLogo from "@/assets/logo-cybshield-new.webp";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
