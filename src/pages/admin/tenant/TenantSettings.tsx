@@ -95,11 +95,9 @@ export default function TenantSettings() {
           .from("tenant_settings")
           .insert({
             tenant_id: tenant.id,
-            enable_notifications: true,
-            enable_audit_logs: true,
-            enable_data_export: false,
-            max_agents: 5,
-            max_users: 3,
+            enable_email_alerts: true,
+            enable_webhook_alerts: false,
+            enable_auto_quarantine: false,
           })
           .select()
           .single();
