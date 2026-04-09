@@ -11,6 +11,7 @@ import { securityHeaders } from './security-headers.ts';
 import { requireEnv } from './env.ts';
 import { logger, loggerWithContext } from './logger.ts';
 import { timingSafeEqual } from './crypto-utils.ts';
+import { withTimeout } from './timeout.ts';
 
 // Re-export extracted middlewares for backward compatibility
 export { servePublic } from './serve-public.ts';
@@ -56,6 +57,8 @@ export interface ServeOptions {
   methods?: string[];
   skipTenantValidation?: boolean;
   rateLimit?: RateLimitOption;
+  /** Handler timeout in ms. Default: 25000 (25s). Set 0 to disable. */
+  handlerTimeoutMs?: number;
 }
 
 type TenantHandler<T = unknown> = (req: Request, ctx: TenantContext<T>) => Promise<Response | Record<string, unknown> | unknown>;
@@ -103,12 +106,13 @@ async function verifyUserTenantAccess(supabase: SupabaseClient, userId: string, 
 // ═══ Main Middleware ═════════════════════════════════════════════════════════
 
 export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: ServeOptions) {
-  const {
+    const {
     tenantSource = 'auto',
     allowFallback = true,
     methods = ['POST'],
     skipTenantValidation = false,
     rateLimit: rateLimitConfig,
+    handlerTimeoutMs = 25_000,
   } = options || {};
 
   Deno.serve(async (req: Request) => {
@@ -246,7 +250,13 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
         req,
       };
 
-      const result = await handler(req, ctx);
+      const executeHandler = () => handler(req, ctx);
+      const result = handlerTimeoutMs > 0
+        ? await withTimeout(executeHandler, {
+            timeoutMs: handlerTimeoutMs,
+            timeoutMessage: `Handler timeout after ${handlerTimeoutMs}ms`,
+          })
+        : await executeHandler();
 
       const responseTime = `${Date.now() - startTime}ms`;
       
@@ -262,9 +272,11 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
 
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Internal server error';
+      const isTimeout = msg.includes('Handler timeout');
+      const status = isTimeout ? 504 : 500;
       const log = loggerWithContext({ requestId, tenantId: tenantId ?? undefined });
-      log.error(`[serveTenant] Error`, { message: msg });
-      return errorResponse(msg, 500, requestId, origin);
+      log.error(`[serveTenant] ${isTimeout ? 'Timeout' : 'Error'}`, { message: msg });
+      return errorResponse(msg, status, requestId, origin);
     }
   });
 }
