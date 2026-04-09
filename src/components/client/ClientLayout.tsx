@@ -19,7 +19,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { supabase } from '@/integrations/supabase/client';
 import { useClientAccess } from '@/hooks/useClientAccess';
 import { useState } from 'react';
-import logoImage from '@/assets/logo-cybshield-new.png';
+import logoImage from '@/assets/logo-cybshield-new.webp';
 
 const menuItems = [
   { icon: ShieldCheck, labelKey: 'client.myProtection', path: '/client/protection' },

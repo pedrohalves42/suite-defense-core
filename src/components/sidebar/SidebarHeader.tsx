@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { AppModeBadge } from '@/components/layout/AppModeBadge';
-import logoImage from '@/assets/logo-cybshield-new.png';
+import logoImage from '@/assets/logo-cybshield-new.webp';
 
 interface SidebarHeaderProps {
   isCollapsed: boolean;

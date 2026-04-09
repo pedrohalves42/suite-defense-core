@@ -8,7 +8,7 @@ import { SessionVerifiedScreen } from '@/components/auth/SessionVerifiedScreen';
 import { LoginPasswordForm } from '@/components/auth/LoginPasswordForm';
 import { LoginMagicLinkForm } from '@/components/auth/LoginMagicLinkForm';
 import { useLoginFlow } from '@/components/auth/useLoginFlow';
-import logoImage from '@/assets/logo-cybshield-new.png';
+import logoImage from '@/assets/logo-cybshield-new.webp';
 
 export default function Login() {
   const { t } = useTranslation();
