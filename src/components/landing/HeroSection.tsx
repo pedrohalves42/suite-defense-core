@@ -1,6 +1,6 @@
 import { ArrowRight, CheckCircle } from "lucide-react";
-import cybershieldLogo from "@/assets/logo-cybshield-new.png";
-import heroBanner from "@/assets/cybershield-hero-banner.png";
+import cybershieldLogo from "@/assets/logo-cybshield-new.webp";
+import heroBanner from "@/assets/cybershield-hero-banner.webp";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useLandingContent } from "@/hooks/useLandingContent";
@@ -114,6 +114,11 @@ export function HeroSection() {
                 src={heroBanner} 
                 alt="CyberShield - Segurança Operacional" 
                 className="w-full rounded-2xl shadow-2xl shadow-cta-positive/20 border border-white/10"
+                width={1200}
+                height={800}
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
               />
               <div className="absolute -bottom-6 -left-6 right-12 space-y-3">
                 {hero.stats.slice(0, 2).map((stat, index) => (
