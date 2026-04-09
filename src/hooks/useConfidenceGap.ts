@@ -60,6 +60,8 @@ export function useConfidenceGapHistory() {
       if (error) throw error;
       return data as ConfidenceGap[];
     },
+    staleTime: 300_000, // 5 min cache
+
     enabled: !loading && !!activeTenant?.id, // ADR-030 CRIT-01
   });
 }
@@ -102,6 +104,8 @@ export function useConfidenceGapTrend() {
         is_improving: row.is_improving,
       })) as ConfidenceGapTrend[];
     },
+    staleTime: 300_000, // 5 min cache
+
     enabled: !loading && !!activeTenant?.id, // ADR-030 CRIT-01
   });
 }
@@ -125,6 +129,8 @@ export function useLatestConfidenceGap() {
       if (error) throw error;
       return data as ConfidenceGap | null;
     },
+    staleTime: 300_000, // 5 min cache
+
     enabled: !loading && !!activeTenant?.id, // ADR-030 CRIT-01
   });
 }

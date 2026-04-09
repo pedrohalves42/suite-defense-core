@@ -107,6 +107,8 @@ export function useAuditById(auditId: string | null) {
       if (error) throw error;
       return data as SystemAudit | null;
     },
+    staleTime: 300_000, // 5 min cache
+
     enabled: !!auditId,
   });
 }

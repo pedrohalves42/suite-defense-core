@@ -20,6 +20,8 @@ export const useItsmIntegrations = () => {
       if (error) throw error;
       return data || [];
     },
+    staleTime: 300_000, // 5 min cache
+
     enabled: !!tenant?.id,
   });
 
@@ -36,6 +38,8 @@ export const useItsmIntegrations = () => {
       if (error) throw error;
       return data || [];
     },
+    staleTime: 300_000, // 5 min cache
+
     enabled: !!tenant?.id,
   });
 

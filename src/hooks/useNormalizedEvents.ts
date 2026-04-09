@@ -93,6 +93,7 @@ export function useRetentionConfig() {
       if (error) throw error;
       return data || [];
     },
+    staleTime: 300_000, // 5 min cache
     enabled: !loading && !!activeTenant?.id,
   });
 }
@@ -118,6 +119,7 @@ export function useEventSummaries(options?: { agentId?: string; category?: strin
       if (error) throw error;
       return data || [];
     },
+    staleTime: 300_000, // 5 min cache
     enabled: !loading && !!activeTenant?.id,
   });
 }

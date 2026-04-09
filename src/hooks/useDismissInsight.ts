@@ -74,6 +74,8 @@ export function useDismissInsight() {
         evidence,
         decision_source: 'human',
         decision_type: 'dismissal',
+        staleTime: 300_000, // 5 min cache
+
       });
 
       return { success: true, insightId };

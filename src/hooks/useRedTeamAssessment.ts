@@ -69,6 +69,7 @@ export function useRedTeamHistory() {
       if (error) throw error;
       return (data || []) as unknown as RedTeamAssessment[];
     },
+    staleTime: 300_000, // 5 min cache
     enabled: !loading && !!activeTenant?.id,
   });
 }
@@ -87,6 +88,7 @@ export function useRedTeamById(id: string | null) {
       if (error) throw error;
       return data as unknown as RedTeamAssessment | null;
     },
+    staleTime: 300_000, // 5 min cache
     enabled: !!id,
   });
 }
@@ -109,6 +111,7 @@ export function useLatestRedTeam() {
       if (error) throw error;
       return data as unknown as RedTeamAssessment | null;
     },
+    staleTime: 300_000, // 5 min cache
     enabled: !loading && !!activeTenant?.id,
   });
 }

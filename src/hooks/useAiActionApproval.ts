@@ -79,6 +79,8 @@ export function useApproveAiAction() {
         evidence,
         decision_source: 'human',
         decision_type: 'approval',
+        staleTime: 300_000, // 5 min cache
+
       });
 
       // 5. Now execute the action via edge function

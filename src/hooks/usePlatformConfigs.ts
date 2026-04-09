@@ -19,6 +19,7 @@ export const usePlatformConfigs = () => {
       if (error) throw error;
       return data || [];
     },
+    staleTime: 300_000, // 5 min cache
     enabled: !!tenant?.id,
   });
 
@@ -42,6 +43,7 @@ export const usePlatformConfigs = () => {
       }
       return counts;
     },
+    staleTime: 300_000, // 5 min cache
     enabled: !!tenant?.id,
   });
 

@@ -53,6 +53,7 @@ export function useGovernanceReports() {
       if (error) throw error;
       return data as GovernanceReport[];
     },
+    staleTime: 300_000, // 5 min cache
     enabled: !!tenant?.id,
   });
 }
@@ -71,6 +72,7 @@ export function useWeeklyMetrics(weekStart?: string) {
       if (error) throw error;
       return data as unknown as WeeklyMetrics;
     },
+    staleTime: 300_000, // 5 min cache
     enabled: !!tenant?.id,
   });
 }

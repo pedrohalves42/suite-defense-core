@@ -230,6 +230,7 @@ export function useGamification() {
       if (error) throw error;
       return data;
     },
+    staleTime: 300_000, // 5 min cache
     enabled: !!userId && !!tenantId,
   });
 
@@ -257,6 +258,7 @@ export function useGamification() {
         full_name: profileMap.get(entry.user_id) || 'Usuário',
       })) as LeaderboardEntry[];
     },
+    staleTime: 300_000, // 5 min cache
     enabled: !!tenantId,
   });
 
@@ -272,6 +274,7 @@ export function useGamification() {
       if (error) throw error;
       return data;
     },
+    staleTime: 300_000, // 5 min cache
     enabled: !!tenantId,
   });
 

@@ -66,6 +66,7 @@ export function useIncidentTimelines(status?: string) {
       if (error) throw error;
       return (data || []) as unknown as IncidentTimeline[];
     },
+    staleTime: 300_000, // 5 min cache
     enabled: !!tenant?.id,
   });
 }
@@ -84,6 +85,7 @@ export function useIncidentTimeline(incidentId: string) {
       if (!data) return null;
       return data as unknown as IncidentTimeline;
     },
+    staleTime: 300_000, // 5 min cache
     enabled: !!incidentId,
   });
 }

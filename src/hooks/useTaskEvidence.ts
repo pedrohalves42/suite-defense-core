@@ -32,6 +32,7 @@ export function useTaskEvidence(taskId: string | null) {
       if (error) throw error;
       return data as TaskEvidence[];
     },
+    staleTime: 300_000, // 5 min cache
     enabled: !!taskId,
   });
 }

@@ -98,6 +98,7 @@ export function useSOC2Readiness() {
 
       return readinessData;
     },
+    staleTime: 300_000, // 5 min cache
     enabled: !!tenant?.id,
   });
 }

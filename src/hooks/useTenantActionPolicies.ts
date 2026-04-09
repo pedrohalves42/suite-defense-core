@@ -30,6 +30,8 @@ export function useTenantActionPolicies() {
       if (error) throw error;
       return data as TenantActionPolicy[];
     },
+    staleTime: 300_000, // 5 min cache
+
     enabled: !loading && !!activeTenant?.id,  // ADR-029 CRIT-04: Guard with loading state
   });
 

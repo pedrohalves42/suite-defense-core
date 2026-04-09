@@ -15,6 +15,8 @@ export function useAgentActions() {
     mutationFn: async (agentId: string) => {
       const { data, error } = await supabase.rpc('remove_agent_throttle', {
         p_agent_id: agentId,
+        staleTime: 300_000, // 5 min cache
+
       });
       if (error) throw error;
       return data as unknown as { success: boolean; previous_interval?: number };
