@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import cybershieldLogo from "@/assets/logo-cybshield-new.webp";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LogIn } from "lucide-react";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { ThemeToggle } from "@/components/ThemeToggle";
+
+// Lazy load non-critical navbar widgets to reduce initial JS
+const LanguageSwitcher = lazy(() => import("@/components/LanguageSwitcher").then(m => ({ default: m.LanguageSwitcher })));
+const ThemeToggle = lazy(() => import("@/components/ThemeToggle").then(m => ({ default: m.ThemeToggle })));
 
 /**
  * Minimal landing page navbar — logo left, trust + login + CTA right
@@ -15,7 +17,7 @@ export function LandingNavbar() {
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -29,7 +31,7 @@ export function LandingNavbar() {
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <img src={cybershieldLogo} alt="CyberShield" className="h-8 w-8 object-contain" />
+          <img src={cybershieldLogo} alt="CyberShield" className="h-8 w-8 object-contain" width={32} height={32} />
           <span className={cn(
             "font-bold text-lg transition-colors",
             scrolled ? "text-foreground" : "text-white"
@@ -38,24 +40,26 @@ export function LandingNavbar() {
 
         {/* Right: trust signal + login + CTA */}
         <div className="flex items-center gap-3">
-          <LanguageSwitcher 
-            className={cn(
-              "h-8 w-8 transition-colors",
-              scrolled 
-                ? "text-foreground hover:bg-muted" 
-                : "text-white/80 hover:bg-white/10 hover:text-white"
-            )}
-          />
-          <ThemeToggle 
-            variant="ghost" 
-            size="icon" 
-            className={cn(
-              "h-8 w-8 transition-colors",
-              scrolled 
-                ? "text-foreground hover:bg-muted" 
-                : "text-white/80 hover:bg-white/10 hover:text-white"
-            )}
-          />
+          <Suspense fallback={null}>
+            <LanguageSwitcher 
+              className={cn(
+                "h-8 w-8 transition-colors",
+                scrolled 
+                  ? "text-foreground hover:bg-muted" 
+                  : "text-white/80 hover:bg-white/10 hover:text-white"
+              )}
+            />
+            <ThemeToggle 
+              variant="ghost" 
+              size="icon" 
+              className={cn(
+                "h-8 w-8 transition-colors",
+                scrolled 
+                  ? "text-foreground hover:bg-muted" 
+                  : "text-white/80 hover:bg-white/10 hover:text-white"
+              )}
+            />
+          </Suspense>
           <span className={cn(
             "hidden sm:inline text-sm transition-colors",
             scrolled ? "text-muted-foreground" : "text-white/60"
