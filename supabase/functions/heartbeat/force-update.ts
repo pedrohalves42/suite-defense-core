@@ -440,7 +440,7 @@ async function buildForceUpdateResponse(
         new_version: release.version,
         old_version: currentVersion || 'unknown',
       },
-      heartbeat_interval_seconds: 30,
+      heartbeat_interval_seconds: 60,
       poll_interval_seconds: 30,
       enable_eventlog: true,
       aggregation: null,
