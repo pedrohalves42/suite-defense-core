@@ -1,22 +1,25 @@
+import { lazy, Suspense } from "react";
 import { SEOHead } from "@/components/SEOHead";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
-import { PainPointsSection } from "@/components/landing/PainPointsSection";
-import { ValuePropSection } from "@/components/landing/ValuePropSection";
-import { HowItWorksSection } from "@/components/landing/HowItWorksSection";
-import { AssessmentSection } from "@/components/landing/AssessmentSection";
-import { BenefitsSection } from "@/components/landing/BenefitsSection";
-import { FeaturesSection } from "@/components/landing/FeaturesSection";
-import { DifferentiatorsSection } from "@/components/landing/DifferentiatorsSection";
-import { TargetAudienceSection } from "@/components/landing/TargetAudienceSection";
-import { TrustProofSection } from "@/components/landing/TrustProofSection";
-import { ComparisonSection } from "@/components/landing/ComparisonSection";
-import { ProductPreviewSection } from "@/components/landing/ProductPreviewSection";
-import { PricingSection } from "@/components/landing/PricingSection";
-import { OfferFormSection } from "@/components/landing/OfferFormSection";
-import { FAQSection } from "@/components/landing/FAQSection";
-import { CTASection } from "@/components/landing/CTASection";
+
+// Below-the-fold sections — lazy loaded to reduce initial bundle
+const PainPointsSection = lazy(() => import("@/components/landing/PainPointsSection").then(m => ({ default: m.PainPointsSection })));
+const ValuePropSection = lazy(() => import("@/components/landing/ValuePropSection").then(m => ({ default: m.ValuePropSection })));
+const HowItWorksSection = lazy(() => import("@/components/landing/HowItWorksSection").then(m => ({ default: m.HowItWorksSection })));
+const AssessmentSection = lazy(() => import("@/components/landing/AssessmentSection").then(m => ({ default: m.AssessmentSection })));
+const BenefitsSection = lazy(() => import("@/components/landing/BenefitsSection").then(m => ({ default: m.BenefitsSection })));
+const FeaturesSection = lazy(() => import("@/components/landing/FeaturesSection").then(m => ({ default: m.FeaturesSection })));
+const DifferentiatorsSection = lazy(() => import("@/components/landing/DifferentiatorsSection").then(m => ({ default: m.DifferentiatorsSection })));
+const TargetAudienceSection = lazy(() => import("@/components/landing/TargetAudienceSection").then(m => ({ default: m.TargetAudienceSection })));
+const TrustProofSection = lazy(() => import("@/components/landing/TrustProofSection").then(m => ({ default: m.TrustProofSection })));
+const ComparisonSection = lazy(() => import("@/components/landing/ComparisonSection").then(m => ({ default: m.ComparisonSection })));
+const ProductPreviewSection = lazy(() => import("@/components/landing/ProductPreviewSection").then(m => ({ default: m.ProductPreviewSection })));
+const PricingSection = lazy(() => import("@/components/landing/PricingSection").then(m => ({ default: m.PricingSection })));
+const OfferFormSection = lazy(() => import("@/components/landing/OfferFormSection").then(m => ({ default: m.OfferFormSection })));
+const FAQSection = lazy(() => import("@/components/landing/FAQSection").then(m => ({ default: m.FAQSection })));
+const CTASection = lazy(() => import("@/components/landing/CTASection").then(m => ({ default: m.CTASection })));
 
 const LANDING_JSON_LD = {
   "@context": "https://schema.org",
@@ -60,7 +63,7 @@ const Landing = () => {
           {/* 1. Hero */}
           <HeroSection />
           
-          <>
+          <Suspense fallback={null}>
             {/* 2. Dor do mercado */}
             <PainPointsSection />
             {/* 3. Proposta de valor */}
@@ -91,7 +94,7 @@ const Landing = () => {
             <FAQSection />
             {/* 14. CTA final */}
             <CTASection />
-          </>
+          </Suspense>
         </main>
 
         {/* Footer */}

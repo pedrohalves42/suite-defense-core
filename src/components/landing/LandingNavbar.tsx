@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import cybershieldLogo from "@/assets/logo-cybshield-new.png";
+import cybershieldLogo from "@/assets/logo-cybshield-new.webp";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LogIn } from "lucide-react";
