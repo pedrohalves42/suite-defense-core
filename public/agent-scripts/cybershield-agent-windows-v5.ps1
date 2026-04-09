@@ -1130,7 +1130,7 @@ function Invoke-SecureRequest {
             $errorMsg = $_.Exception.Message
             
             # Classify error as transient or permanent
-            $isTransient = $errorMsg -match "timeout|connection|network|503|502|504|429"
+            $isTransient = $errorMsg -match "timeout|connection|network|503|502|504|429|401|Unauthorized"
             
             if ($retryCount -lt $MaxRetries -and $isTransient) {
                 # Backoff exponencial: 1s, 2s, 4s, 8s, 16s... max 60s
