@@ -43,6 +43,8 @@ export const useSiemExport = () => {
       if (error) throw error;
       return data as SiemExportConfig[];
     },
+    staleTime: 300_000, // 5 min cache
+
     enabled: !!tenant?.id,
   });
 
@@ -59,6 +61,8 @@ export const useSiemExport = () => {
       if (error) throw error;
       return data as SiemExportHistoryEntry[];
     },
+    staleTime: 300_000, // 5 min cache
+
     enabled: !!tenant?.id,
   });
 
