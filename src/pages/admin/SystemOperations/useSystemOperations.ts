@@ -69,7 +69,7 @@ export function useSystemOperations() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('v_stuck_jobs_report')
-        .select('id, agent_id, agent_name, type, status, tenant_id, created_at, delivered_at, minutes_stuck, stuck_reason')
+        .select('id, agent_name, type, status, tenant_id, created_at, delivered_at, minutes_stuck, stuck_reason')
         .order('minutes_stuck', { ascending: false })
         .limit(20);
       if (error) throw error;
