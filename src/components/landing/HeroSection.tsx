@@ -4,15 +4,17 @@ import heroBanner from "@/assets/cybershield-hero-banner.webp";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useLandingContent } from "@/hooks/useLandingContent";
-import { motion } from "framer-motion";
-import { HeroDecorations } from "./shared/AnimatedDecorations";
+import { lazy, Suspense } from "react";
+
+// Lazy load decorations — they are purely visual and not needed for FCP/LCP
+const HeroDecorations = lazy(() => import("./shared/AnimatedDecorations").then(m => ({ default: m.HeroDecorations })));
 
 export function HeroSection() {
   const { hero } = useLandingContent();
 
   return (
     <section id="inicio" className="relative min-h-[90vh] flex items-center overflow-hidden" aria-labelledby="hero-heading">
-      {/* Deep blue-green gradient — trust + security + authority */}
+      {/* Deep blue-green gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-[hsl(220,20%,10%)] via-[hsl(200,18%,12%)] to-[hsl(160,15%,10%)]" />
       
       {/* Subtle grid pattern */}
@@ -21,27 +23,26 @@ export function HeroSection() {
         backgroundSize: '40px 40px'
       }} />
 
-      {/* Green security glow — "protection active" feeling */}
+      {/* Green security glow */}
       <div className="absolute top-1/4 right-1/4 w-[500px] h-[500px] bg-cta-positive/8 rounded-full blur-[150px]" />
       <div className="absolute bottom-1/4 left-0 w-[400px] h-[400px] bg-info/5 rounded-full blur-[120px]" />
-      <HeroDecorations />
+      
+      {/* Decorations — deferred so they don't block FCP */}
+      <Suspense fallback={null}>
+        <HeroDecorations />
+      </Suspense>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 w-full">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
-          {/* Left: Text content */}
-          <motion.div 
-            className="space-y-8"
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-          >
-            {/* Badge — green for trust */}
+          {/* Left: Text content — CSS animations instead of framer-motion */}
+          <div className="space-y-8 animate-fade-in-left">
+            {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cta-positive/15 border border-cta-positive/25 backdrop-blur-sm">
-              <img src={cybershieldLogo} alt="" className="w-5 h-5 object-contain" aria-hidden="true" />
+              <img src={cybershieldLogo} alt="" className="w-5 h-5 object-contain" aria-hidden="true" width={20} height={20} />
               <span className="text-sm font-medium text-cta-positive">{hero.badge}</span>
             </div>
 
-            {/* Title — white for clarity, green highlight for key phrase */}
+            {/* Title */}
             <h1 id="hero-heading" className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1]">
               <span className="text-white">
                 {hero.title1}
@@ -56,25 +57,23 @@ export function HeroSection() {
               <strong className="text-white font-semibold">{hero.descriptionBold}</strong>
             </p>
 
-            {/* Benefits — green checkmarks = "already solved" */}
+            {/* Benefits */}
             {hero.benefits && (
               <ul className="space-y-3" aria-label="Beneficios principais">
                 {hero.benefits.map((benefit, index) => (
-                  <motion.li
+                  <li
                     key={index}
-                    className="flex items-center gap-3 text-white/80"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.3 + index * 0.1 }}
+                    className="flex items-center gap-3 text-white/80 animate-fade-in-left"
+                    style={{ animationDelay: `${0.3 + index * 0.1}s` }}
                   >
                     <CheckCircle className="w-5 h-5 text-cta-positive flex-shrink-0" aria-hidden="true" />
                     <span className="text-sm md:text-base">{benefit}</span>
-                  </motion.li>
+                  </li>
                 ))}
               </ul>
             )}
 
-            {/* CTA — green = safe action, outline = secondary path */}
+            {/* CTA */}
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <Button 
                 asChild 
@@ -100,15 +99,10 @@ export function HeroSection() {
             </div>
 
             <p className="text-sm text-white/40">{hero.reassurance}</p>
-          </motion.div>
+          </div>
 
-          {/* Right: Stats + visual */}
-          <motion.div 
-            className="hidden lg:block"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-          >
+          {/* Right: Stats + visual — only rendered on desktop (lg+) */}
+          <div className="hidden lg:block animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
             <div className="relative">
               <img 
                 src={heroBanner} 
@@ -122,22 +116,20 @@ export function HeroSection() {
               />
               <div className="absolute -bottom-6 -left-6 right-12 space-y-3">
                 {hero.stats.slice(0, 2).map((stat, index) => (
-                  <motion.div
+                  <div
                     key={index}
-                    className="p-4 rounded-xl bg-background/80 border border-white/10 backdrop-blur-md shadow-lg"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5 + index * 0.15 }}
+                    className="p-4 rounded-xl bg-background/80 border border-white/10 backdrop-blur-md shadow-lg animate-fade-in-left"
+                    style={{ animationDelay: `${0.5 + index * 0.15}s` }}
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">{stat.label}</span>
                       <span className="text-xl font-bold text-cta-positive">{stat.value}</span>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
 
