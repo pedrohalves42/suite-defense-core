@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -26,12 +27,12 @@ export function HoneypotDashboard() {
   const { data: interactions, isLoading: interactionsLoading } = useHoneypotRecentInteractions(30);
   const { data: hourlyStats } = useHoneypotHourlyStats(7);
 
-  const chartData = (hourlyStats ?? []).map((h) => ({
+  const chartData = useMemo(() => (hourlyStats ?? []).map((h) => ({
     time: new Date(h.hour_start).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
     total: h.interaction_count,
     malicious: h.malicious_count,
     suspicious: h.suspicious_count,
-  }));
+  })), [hourlyStats]);
 
   return (
     <div className="space-y-6">
