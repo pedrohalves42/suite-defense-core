@@ -52,6 +52,7 @@ _kill_process_handler() {
     pname=$(echo "$job" | jq -r '.payload.process_name // empty' 2>/dev/null)
     force=$(echo "$job" | jq -r '.payload.force // false' 2>/dev/null)
     [[ -z "$pname" ]] && { echo '{"success":false,"error":"Missing process_name"}'; return; }
+    [[ "$pname" =~ ^[a-zA-Z0-9._-]+$ ]] || { echo '{"success":false,"error":"INVALID_PROCESS_NAME: illegal characters"}'; return; }
 
     local norm
     norm=$(echo "$pname" | tr '[:upper:]' '[:lower:]')
@@ -77,6 +78,7 @@ _stop_service_handler() {
     local svc
     svc=$(echo "$job" | jq -r '.payload.service_name // empty' 2>/dev/null)
     [[ -z "$svc" ]] && { echo '{"success":false,"error":"Missing service_name"}'; return; }
+    [[ "$svc" =~ ^[a-zA-Z0-9._@:-]+$ ]] || { echo '{"success":false,"error":"INVALID_SERVICE_NAME: illegal characters"}'; return; }
     # macOS uses launchctl
     launchctl unload "/Library/LaunchDaemons/$svc.plist" 2>/dev/null && echo '{"success":true,"service":"'"$svc"'","status":"unloaded"}' || echo '{"success":false,"error":"Failed to unload"}'
 }
@@ -86,6 +88,7 @@ _restart_service_handler() {
     local svc
     svc=$(echo "$job" | jq -r '.payload.service_name // empty' 2>/dev/null)
     [[ -z "$svc" ]] && { echo '{"success":false,"error":"Missing service_name"}'; return; }
+    [[ "$svc" =~ ^[a-zA-Z0-9._@:-]+$ ]] || { echo '{"success":false,"error":"INVALID_SERVICE_NAME: illegal characters"}'; return; }
     launchctl unload "/Library/LaunchDaemons/$svc.plist" 2>/dev/null
     launchctl load "/Library/LaunchDaemons/$svc.plist" 2>/dev/null
     echo '{"success":true,"service":"'"$svc"'","status":"reloaded"}'
@@ -177,6 +180,7 @@ _service_health_check() {
     local results='[]' checked=0
     while IFS= read -r svc; do
         [[ -z "$svc" ]] && continue
+        [[ "$svc" =~ ^[a-zA-Z0-9._@:-]+$ ]] || { log "WARN" "[HANDLER] Invalid service name in health check: $svc"; continue; }
         local status="unknown"
         if launchctl list "$svc" &>/dev/null; then
             status="running"
@@ -194,6 +198,7 @@ _disable_service_handler() {
     local svc
     svc=$(echo "$job" | jq -r '.payload.service_name // empty' 2>/dev/null)
     [[ -z "$svc" ]] && { echo '{"success":false,"error":"Missing service_name"}'; return; }
+    [[ "$svc" =~ ^[a-zA-Z0-9._@:-]+$ ]] || { echo '{"success":false,"error":"INVALID_SERVICE_NAME: illegal characters"}'; return; }
     echo "$PROTECTED_SERVICES" | grep -qw "$svc" && { echo '{"success":false,"error":"SECURITY_BLOCK","blocked":true}'; return; }
     launchctl bootout system "/Library/LaunchDaemons/$svc.plist" 2>/dev/null
     echo '{"success":true,"service":"'"$svc"'","status":"disabled"}'
