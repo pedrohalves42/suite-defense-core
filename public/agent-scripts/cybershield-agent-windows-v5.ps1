@@ -923,9 +923,21 @@ function Test-RuntimeIntegrity {
 # v5.0.13: HARDCODED Ed25519 PUBLIC KEY for hash signature verification
 # This key corresponds to the ED25519_PRIVATE_KEY secret on the backend.
 # Changing this requires coordinated key rotation.
-$Global:Ed25519PublicKeyBase64 = $null  # Set via Set-Ed25519PublicKey or env var
+$Global:Ed25519PublicKeyBase64 = $null  # Set via heartbeat, env var, or persisted file
 if ($env:CYBERSHIELD_ED25519_PUBKEY) {
     $Global:Ed25519PublicKeyBase64 = $env:CYBERSHIELD_ED25519_PUBKEY
+}
+# v5.0.16: Load persisted key from previous heartbeat (offline resilience)
+if (-not $Global:Ed25519PublicKeyBase64) {
+    $persistedKeyPath = Join-Path $Global:BaseDir "ed25519_pubkey"
+    if (Test-Path $persistedKeyPath) {
+        try {
+            $Global:Ed25519PublicKeyBase64 = (Get-Content $persistedKeyPath -Raw -Encoding UTF8 -ErrorAction Stop).Trim()
+            Write-Log "[CRYPTO] Loaded persisted Ed25519 public key from $persistedKeyPath" "INFO"
+        } catch {
+            Write-Log "[CRYPTO] Failed to load persisted Ed25519 key: $($_.Exception.Message)" "WARN"
+        }
+    }
 }
 
 function Test-Ed25519HashSignature {
@@ -5664,6 +5676,27 @@ function Send-Heartbeat {
                                     "0" | Set-Content -Path $configFile -Force -ErrorAction SilentlyContinue
                                 }
                             } catch { }
+                        }
+                    }
+
+                    # ============================================
+                    # v5.0.16: ED25519 PUBLIC KEY FROM SERVER
+                    # Exits audit-only mode by setting the verification key
+                    # ============================================
+                    $ed25519PubKeyProp = $response.PSObject.Properties['ed25519_public_key']
+                    if ($ed25519PubKeyProp -and $ed25519PubKeyProp.Value) {
+                        $serverPubKey = [string]$ed25519PubKeyProp.Value
+                        if ($serverPubKey -ne $Global:Ed25519PublicKeyBase64) {
+                            $Global:Ed25519PublicKeyBase64 = $serverPubKey
+                            Write-Log "[CRYPTO] Ed25519 public key received from server - verification ENABLED (fingerprint: $($serverPubKey.Substring(0,16))...)" "SUCCESS"
+                            # Persist for offline resilience
+                            try {
+                                $keyFile = Join-Path $Global:BaseDir "ed25519_pubkey"
+                                $serverPubKey | Set-Content -Path $keyFile -Force -Encoding UTF8 -ErrorAction SilentlyContinue
+                                Write-Log "[CRYPTO] Ed25519 public key persisted to $keyFile" "DEBUG"
+                            } catch {
+                                Write-Log "[CRYPTO] Failed to persist Ed25519 key: $($_.Exception.Message)" "WARN"
+                            }
                         }
                     }
 
