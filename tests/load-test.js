@@ -3,6 +3,11 @@
  * 
  * Execute: k6 run tests/load-test.js
  * 
+ * Variáveis de ambiente necessárias:
+ *   BASE_URL          - URL base das edge functions (default: supabase URL)
+ *   SUPABASE_ANON_KEY - Chave anon do projeto
+ *   HMAC_SECRET_HEX   - Segredo HMAC hex de 64 chars para assinaturas válidas
+ * 
  * Scenarios:
  * - Smoke Test: 1 VU por 30s (validação básica)
  * - Average Load: 50 VUs por 5min (carga média)
@@ -13,6 +18,7 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Rate, Trend, Counter } from 'k6/metrics';
+import { crypto } from 'k6/experimental/webcrypto';
 
 // Custom Metrics
 const errorRate = new Rate('errors');
@@ -24,6 +30,7 @@ const apiCalls = new Counter('api_calls');
 // Configuration
 const BASE_URL = __ENV.BASE_URL || 'https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1';
 const ANON_KEY = __ENV.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhdmJubWR1eHB4aHd1YnFyenpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4NzkzMzIsImV4cCI6MjA3NTQ1NTMzMn0.79Bg6lX-ArhDGLeaUN7MPgChv4FQNJ_KcjdMa5IerWk';
+const HMAC_SECRET_HEX = __ENV.HMAC_SECRET_HEX || 'a'.repeat(64); // 64-char hex fallback for local testing
 
 export const options = {
   scenarios: {
@@ -46,7 +53,7 @@ export const options = {
       exec: 'averageLoad',
     },
     
-    // 3. Stress Test - Aumento gradual até 500 agents
+    // 3. Stress Test - Aumento gradual até 500 agentes
     stress: {
       executor: 'ramping-vus',
       startVUs: 0,
@@ -93,40 +100,77 @@ export const options = {
   },
 };
 
+// Helper: Convert hex string to byte array
+function hexToBytes(hex) {
+  const bytes = [];
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes.push(parseInt(hex.substr(i, 2), 16));
+  }
+  return new Uint8Array(bytes);
+}
+
+// Helper: Convert ArrayBuffer to lowercase hex string
+function bufferToHex(buffer) {
+  return Array.from(new Uint8Array(buffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// Helper: Generate real HMAC-SHA256 signature (aligned with backend protocol)
+async function generateHmacSignature(body, hmacSecretHex) {
+  const timestamp = Date.now().toString();
+  const nonce = crypto.randomUUID();
+  const payload = `${timestamp}:${nonce}:${body}`;
+
+  const keyBytes = hexToBytes(hmacSecretHex);
+  const key = await crypto.subtle.importKey(
+    'raw',
+    keyBytes.buffer,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const encoder = new TextEncoder();
+  const signatureBuffer = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
+  const signature = bufferToHex(signatureBuffer);
+
+  return { signature, timestamp, nonce };
+}
+
 // Test Data
 const agents = [];
 for (let i = 0; i < 1000; i++) {
   agents.push({
     agent_name: `agent-${String(i).padStart(4, '0')}`,
     agent_token: `token-${Math.random().toString(36).substring(7)}`,
-    hmac_secret: `hmac-${Math.random().toString(36).substring(7)}`,
   });
 }
 
-// Helper: Generate HMAC signature (simplified for testing)
-function generateSignature() {
-  return Math.random().toString(36).substring(7);
-}
-
 // 1. Smoke Test - Validação básica
-export function smokeTest() {
+export async function smokeTest() {
   const agent = agents[0];
   
-  // Test: Health check (heartbeat)
+  const body = JSON.stringify({
+    agent_name: agent.agent_name,
+    os_type: 'Windows',
+    os_version: '10.0.19045',
+    hostname: 'TEST-MACHINE',
+  });
+
+  const hmac = await generateHmacSignature(body, HMAC_SECRET_HEX);
+  
   const heartbeatRes = http.post(
     `${BASE_URL}/heartbeat`,
-    JSON.stringify({
-      agent_name: agent.agent_name,
-      os_type: 'Windows',
-      os_version: '10.0.19045',
-      hostname: 'TEST-MACHINE',
-    }),
+    body,
     {
       headers: {
         'Content-Type': 'application/json',
         'apikey': ANON_KEY,
         'Authorization': `Bearer ${agent.agent_token}`,
-        'x-hmac-signature': generateSignature(),
+        'x-hmac-signature': hmac.signature,
+        'x-hmac-timestamp': hmac.timestamp,
+        'x-hmac-nonce': hmac.nonce,
       },
     }
   );
@@ -143,25 +187,31 @@ export function smokeTest() {
   sleep(1);
 }
 
-// 2. Average Load - Simula carga média de 50 agents
-export function averageLoad() {
+// 2. Average Load - Simula carga média de 50 agentes
+export async function averageLoad() {
   const agent = agents[Math.floor(Math.random() * 50)];
   
   // Heartbeat
+  const heartbeatBody = JSON.stringify({
+    agent_name: agent.agent_name,
+    os_type: 'Windows',
+    os_version: '10.0.19045',
+    hostname: `AGENT-${agent.agent_name}`,
+  });
+
+  const hmac1 = await generateHmacSignature(heartbeatBody, HMAC_SECRET_HEX);
+  
   const heartbeatRes = http.post(
     `${BASE_URL}/heartbeat`,
-    JSON.stringify({
-      agent_name: agent.agent_name,
-      os_type: 'Windows',
-      os_version: '10.0.19045',
-      hostname: `AGENT-${agent.agent_name}`,
-    }),
+    heartbeatBody,
     {
       headers: {
         'Content-Type': 'application/json',
         'apikey': ANON_KEY,
         'Authorization': `Bearer ${agent.agent_token}`,
-        'x-hmac-signature': generateSignature(),
+        'x-hmac-signature': hmac1.signature,
+        'x-hmac-timestamp': hmac1.timestamp,
+        'x-hmac-nonce': hmac1.nonce,
       },
     }
   );
@@ -174,15 +224,20 @@ export function averageLoad() {
   apiCalls.add(1);
   
   // Poll jobs
+  const pollBody = JSON.stringify({ agent_name: agent.agent_name });
+  const hmac2 = await generateHmacSignature(pollBody, HMAC_SECRET_HEX);
+
   const jobsRes = http.post(
     `${BASE_URL}/poll-jobs`,
-    JSON.stringify({ agent_name: agent.agent_name }),
+    pollBody,
     {
       headers: {
         'Content-Type': 'application/json',
         'apikey': ANON_KEY,
         'Authorization': `Bearer ${agent.agent_token}`,
-        'x-hmac-signature': generateSignature(),
+        'x-hmac-signature': hmac2.signature,
+        'x-hmac-timestamp': hmac2.timestamp,
+        'x-hmac-nonce': hmac2.nonce,
       },
     }
   );
@@ -197,24 +252,30 @@ export function averageLoad() {
   sleep(Math.random() * 3 + 2); // 2-5s between requests
 }
 
-// 3. Stress Test - Aumenta gradualmente até 500 agents
-export function stressTest() {
+// 3. Stress Test - Aumenta gradualmente até 500 agentes
+export async function stressTest() {
   const agent = agents[Math.floor(Math.random() * 500)];
   
+  const body = JSON.stringify({
+    agent_name: agent.agent_name,
+    os_type: 'Linux',
+    os_version: 'Ubuntu 22.04',
+    hostname: `SERVER-${agent.agent_name}`,
+  });
+
+  const hmac = await generateHmacSignature(body, HMAC_SECRET_HEX);
+
   const heartbeatRes = http.post(
     `${BASE_URL}/heartbeat`,
-    JSON.stringify({
-      agent_name: agent.agent_name,
-      os_type: 'Linux',
-      os_version: 'Ubuntu 22.04',
-      hostname: `SERVER-${agent.agent_name}`,
-    }),
+    body,
     {
       headers: {
         'Content-Type': 'application/json',
         'apikey': ANON_KEY,
         'Authorization': `Bearer ${agent.agent_token}`,
-        'x-hmac-signature': generateSignature(),
+        'x-hmac-signature': hmac.signature,
+        'x-hmac-timestamp': hmac.timestamp,
+        'x-hmac-nonce': hmac.nonce,
       },
       timeout: '10s',
     }
@@ -231,24 +292,30 @@ export function stressTest() {
   sleep(Math.random() * 2 + 1); // 1-3s
 }
 
-// 4. Spike Test - Pico súbito de 1000 agents
-export function spikeTest() {
+// 4. Spike Test - Pico súbito de 1000 agentes
+export async function spikeTest() {
   const agent = agents[Math.floor(Math.random() * 1000)];
   
+  const body = JSON.stringify({
+    agent_name: agent.agent_name,
+    os_type: 'Windows',
+    os_version: '11.0.22000',
+    hostname: `SPIKE-${agent.agent_name}`,
+  });
+
+  const hmac = await generateHmacSignature(body, HMAC_SECRET_HEX);
+
   const heartbeatRes = http.post(
     `${BASE_URL}/heartbeat`,
-    JSON.stringify({
-      agent_name: agent.agent_name,
-      os_type: 'Windows',
-      os_version: '11.0.22000',
-      hostname: `SPIKE-${agent.agent_name}`,
-    }),
+    body,
     {
       headers: {
         'Content-Type': 'application/json',
         'apikey': ANON_KEY,
         'Authorization': `Bearer ${agent.agent_token}`,
-        'x-hmac-signature': generateSignature(),
+        'x-hmac-signature': hmac.signature,
+        'x-hmac-timestamp': hmac.timestamp,
+        'x-hmac-nonce': hmac.nonce,
       },
       timeout: '15s',
     }
@@ -274,7 +341,6 @@ export function handleSummary(data) {
 
 function textSummary(data, config) {
   const indent = config.indent || '';
-  const enableColors = config.enableColors || false;
   
   let summary = '\n';
   summary += `${indent}========================================\n`;
