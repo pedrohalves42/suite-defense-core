@@ -16,7 +16,7 @@ export class SupabaseAgentUpdateRepository implements AgentUpdateRepository {
   async findById(id: string): Promise<AgentUpdate | null> {
     const { data, error } = await this.client
       .from(TABLE)
-      .select('*')
+      .select('id, agent_id, package_id, status, download_started_at, download_completed_at, apply_started_at, apply_completed_at, error_message, rollback_reason, created_at, updated_at')
       .eq('id', id)
       .maybeSingle();
 
@@ -30,7 +30,7 @@ export class SupabaseAgentUpdateRepository implements AgentUpdateRepository {
     // Find the most recent non-terminal update for this agent
     const { data, error } = await this.client
       .from(TABLE)
-      .select('*')
+      .select('id, agent_id, package_id, status, download_started_at, download_completed_at, apply_started_at, apply_completed_at, error_message, rollback_reason, created_at, updated_at')
       .eq('agent_id', agentId.value)
       .not('status', 'in', `(${TERMINAL_STATUSES.join(',')})`)
       .order('created_at', { ascending: false })

@@ -12,7 +12,7 @@ export class SupabaseUpdatePackageRepository implements UpdatePackageRepository 
   async findById(id: UpdatePackageId): Promise<UpdatePackage | null> {
     const { data, error } = await supabase
       .from('update_packages')
-      .select('*')
+      .select('id, version, platform, channel, checksum, script_content, size, release_notes, is_active, signature_base64, signed_at, signed_by, min_version, max_version, created_at')
       .eq('id', id.value)
       .maybeSingle();
 
@@ -23,7 +23,7 @@ export class SupabaseUpdatePackageRepository implements UpdatePackageRepository 
   async findLatestActive(platform: Platform, channel: UpdateChannel): Promise<UpdatePackage | null> {
     const { data, error } = await supabase
       .from('update_packages')
-      .select('*')
+      .select('id, version, platform, channel, checksum, script_content, size, release_notes, is_active, signature_base64, signed_at, signed_by, min_version, max_version, created_at')
       .eq('platform', platform)
       .eq('channel', channel)
       .eq('is_active', true)
