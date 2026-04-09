@@ -52,7 +52,7 @@ export function useCorrelationRules() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('correlation_rules')
-        .select('*')
+        .select('id, tenant_id, rule_name, description, condition_a_event_type, condition_b_event_type, window_minutes, severity, mitre_technique_id, mitre_tactic, mode, is_enabled, risk_score, match_count, false_positive_count, created_at, updated_at')
         .eq('tenant_id', activeTenant!.id)
         .order('created_at', { ascending: false })
         .limit(200);
@@ -108,7 +108,7 @@ export function useCorrelationResults(ruleId?: string) {
     queryFn: async () => {
       let query = supabase
         .from('correlation_results')
-        .select('*')
+        .select('id, tenant_id, correlation_rule_id, agent_id, event_a_time, event_b_time, event_a_summary, event_b_summary, severity, is_false_positive, reviewed_at, reviewed_by, created_at')
         .eq('tenant_id', activeTenant!.id)
         .order('created_at', { ascending: false })
         .limit(200);
