@@ -7,6 +7,7 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { logger } from '../_shared/logger.ts';
+import { withTimeout } from '../_shared/timeout.ts';
 import {
   handleCheckoutCompleted,
   handleSubscriptionUpdate,
@@ -30,6 +31,7 @@ Deno.serve(async (request) => {
   const traceId = request.headers.get('X-Trace-ID') || request.headers.get('X-Request-ID') || crypto.randomUUID();
 
   try {
+    return await withTimeout(async () => {
     const body = await request.text();
     const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
     if (!webhookSecret) {
@@ -64,8 +66,10 @@ Deno.serve(async (request) => {
     }
 
     return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" }, status: 200 });
+    }, { timeoutMs: 25_000, timeoutMessage: 'Webhook processing timeout' });
   } catch (err) {
-    logger.error("[STRIPE-WEBHOOK] Error:", err);
-    return new Response(JSON.stringify({ error: `Webhook error: ${err instanceof Error ? err.message : 'Unknown'}`, traceId }), { status: 400 });
+    const isTimeout = err instanceof Error && err.message === 'Webhook processing timeout';
+    logger.error(`[STRIPE-WEBHOOK] ${isTimeout ? 'Timeout' : 'Error'}:`, err);
+    return new Response(JSON.stringify({ error: isTimeout ? 'Timeout' : `Webhook error: ${err instanceof Error ? err.message : 'Unknown'}`, traceId }), { status: isTimeout ? 504 : 400 });
   }
 });

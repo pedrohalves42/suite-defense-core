@@ -17,6 +17,7 @@ import { hashToken, getTokenPrefix } from '../_shared/token-hash.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { validateEnrollmentKey } from './key-validator.ts';
 import { handleReEnrollment, createNewAgent } from './agent-handler.ts';
+import { withTimeout } from '../_shared/timeout.ts';
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -30,6 +31,7 @@ Deno.serve(async (req) => {
   logger.info(`[${requestId}] Starting enrollment request`);
 
   try {
+    return await withTimeout(async () => {
     const supabase = createClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'));
 
     // Rate limiting
@@ -112,7 +114,12 @@ Deno.serve(async (req) => {
 
     logger.success(`[${requestId}] Agent enrolled successfully`);
     return new Response(JSON.stringify({ agentToken, hmacSecret, expiresAt: expiresAt.toISOString(), requestId }), { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
+    }, { timeoutMs: 25_000, timeoutMessage: 'Enrollment request timeout' });
   } catch (error) {
+    if (error instanceof Error && error.message === 'Enrollment request timeout') {
+      logger.error(`[${requestId}] Enrollment timed out after ${Date.now() - startTime}ms`);
+      return new Response(JSON.stringify({ error: 'Request timeout', code: 'TIMEOUT', requestId }), { status: 504, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
+    }
     logger.error(`[${requestId}] Enrollment failed after ${Date.now() - startTime}ms`, error);
     return handleException(error, requestId, 'enroll-agent');
   }
