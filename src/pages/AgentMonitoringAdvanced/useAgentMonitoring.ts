@@ -28,9 +28,9 @@ export function useAgentMonitoring() {
 
       const data = await callGateway<{ summary: DashboardSummary; agents: AgentMetrics[]; recent_alerts: SystemAlert[] }>('agent', 'get-agent-dashboard-data', { tenant_id: tenant.id });
 
-      setSummary(data.summary);
-      setAgents(data.agents);
-      setAlerts(data.recent_alerts);
+      setSummary(data.summary ?? null);
+      setAgents(data.agents ?? []);
+      setAlerts(data.recent_alerts ?? []);
       
       if (showToast) {
         toast({
