@@ -109,7 +109,7 @@ if (!hasBackend) {
     import("next-themes"),
     import("react-helmet-async"),
     import("./hooks/useActiveTenant"),
-    import("./App.tsx"),
+    import("./App"),
     import("./lib/storage"),
   ]).then(
     ([
