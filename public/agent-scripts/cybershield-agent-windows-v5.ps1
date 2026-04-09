@@ -5668,6 +5668,27 @@ function Send-Heartbeat {
                     }
 
                     # ============================================
+                    # v5.0.16: ED25519 PUBLIC KEY FROM SERVER
+                    # Exits audit-only mode by setting the verification key
+                    # ============================================
+                    $ed25519PubKeyProp = $response.PSObject.Properties['ed25519_public_key']
+                    if ($ed25519PubKeyProp -and $ed25519PubKeyProp.Value) {
+                        $serverPubKey = [string]$ed25519PubKeyProp.Value
+                        if ($serverPubKey -ne $Global:Ed25519PublicKeyBase64) {
+                            $Global:Ed25519PublicKeyBase64 = $serverPubKey
+                            Write-Log "[CRYPTO] Ed25519 public key received from server - verification ENABLED (fingerprint: $($serverPubKey.Substring(0,16))...)" "SUCCESS"
+                            # Persist for offline resilience
+                            try {
+                                $keyFile = Join-Path $Global:BaseDir "ed25519_pubkey"
+                                $serverPubKey | Set-Content -Path $keyFile -Force -Encoding UTF8 -ErrorAction SilentlyContinue
+                                Write-Log "[CRYPTO] Ed25519 public key persisted to $keyFile" "DEBUG"
+                            } catch {
+                                Write-Log "[CRYPTO] Failed to persist Ed25519 key: $($_.Exception.Message)" "WARN"
+                            }
+                        }
+                    }
+
+                    # ============================================
                     # COST-OPT-V6: PROCESS JOBS FROM HEARTBEAT RESPONSE
                     # Jobs are now piggybacked on heartbeat to eliminate poll-jobs calls
                     # ============================================
