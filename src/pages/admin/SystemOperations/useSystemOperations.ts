@@ -55,7 +55,7 @@ export function useSystemOperations() {
     queryFn: async () => {
       const { data, error } = await (supabase)
         .from('v_system_operations_summary')
-        .select('*')
+        .select('tenant_id, tenant_name, total_agents, online_agents, offline_agents, jobs_24h, jobs_completed_24h, jobs_failed_24h, open_alerts')
         .single();
       if (error) throw error;
       return data as unknown as OperationsSummary;
@@ -69,7 +69,7 @@ export function useSystemOperations() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('v_stuck_jobs_report')
-        .select('*')
+        .select('id, agent_id, agent_name, type, status, tenant_id, created_at, delivered_at, minutes_stuck, stuck_reason')
         .order('minutes_stuck', { ascending: false })
         .limit(20);
       if (error) throw error;
@@ -84,7 +84,7 @@ export function useSystemOperations() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('v_edge_function_stats')
-        .select('*')
+        .select('function_name, total_calls, successful_calls, failed_calls, avg_latency_ms, p50_latency_ms, p95_latency_ms, p99_latency_ms, min_latency_ms, max_latency_ms, first_call, last_call')
         .order('total_calls', { ascending: false })
         .limit(15);
       if (error) throw error;

@@ -16,7 +16,7 @@ export class SupabaseAgentRepository implements AgentRepository {
   async findById(id: AgentId): Promise<Agent | null> {
     const { data, error } = await this.client
       .from(TABLE)
-      .select('*')
+      .select('id, tenant_id, agent_name, hostname, os_type, status, agent_version, last_heartbeat, light_mode_config')
       .eq('id', id.value)
       .maybeSingle();
 
@@ -29,7 +29,7 @@ export class SupabaseAgentRepository implements AgentRepository {
   async findByNameAndTenant(name: string, tenantId: TenantId): Promise<Agent | null> {
     const { data, error } = await this.client
       .from(TABLE)
-      .select('*')
+      .select('id, tenant_id, agent_name, hostname, os_type, status, agent_version, last_heartbeat, light_mode_config')
       .eq('agent_name', name)
       .eq('tenant_id', tenantId.value)
       .maybeSingle();
@@ -43,7 +43,7 @@ export class SupabaseAgentRepository implements AgentRepository {
   async findActiveByTenant(tenantId: TenantId): Promise<Agent[]> {
     const { data, error } = await this.client
       .from(TABLE)
-      .select('*')
+      .select('id, tenant_id, agent_name, hostname, os_type, status, agent_version, last_heartbeat, light_mode_config')
       .eq('tenant_id', tenantId.value)
       .eq('status', 'active');
 
@@ -54,7 +54,7 @@ export class SupabaseAgentRepository implements AgentRepository {
   async findOfflineAgents(thresholdDate: Date): Promise<Agent[]> {
     const { data, error } = await this.client
       .from(TABLE)
-      .select('*')
+      .select('id, tenant_id, agent_name, hostname, os_type, status, agent_version, last_heartbeat, light_mode_config')
       .eq('status', 'active')
       .lt('last_seen', thresholdDate.toISOString());
 

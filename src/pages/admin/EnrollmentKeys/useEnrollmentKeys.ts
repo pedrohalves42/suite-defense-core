@@ -68,9 +68,9 @@ export function useEnrollmentKeys() {
     queryKey: ['enrollment-keys-stats'],
     queryFn: async () => {
       const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
-      const { data: allKeys } = await supabase.from('enrollment_keys_safe').select('*');
-      const { data: recentKeys } = await supabase.from('enrollment_keys_safe').select('*').gte('created_at', thirtyDaysAgo);
-      const { data: usedKeys } = await supabase.from('enrollment_keys_safe').select('*').not('used_at', 'is', null).gte('used_at', thirtyDaysAgo);
+      const { data: allKeys } = await supabase.from('enrollment_keys_safe').select('id, is_active, current_uses, created_at, used_at');
+      const { data: recentKeys } = await supabase.from('enrollment_keys_safe').select('id, created_at').gte('created_at', thirtyDaysAgo);
+      const { data: usedKeys } = await supabase.from('enrollment_keys_safe').select('id, used_at').not('used_at', 'is', null).gte('used_at', thirtyDaysAgo);
 
       const activeCount = allKeys?.filter(k => k.is_active).length || 0;
       const recentCount = recentKeys?.length || 0;

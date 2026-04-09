@@ -30,7 +30,7 @@ export const IntegrityScoreCard = () => {
     try {
       const { data, error } = await supabase
         .from('v_integrity_score')
-        .select('*')
+        .select('supply_chain_score, job_integrity_score, failed_jobs_score, global_integrity_score')
         .maybeSingle();
 
       if (error) throw error;

@@ -22,7 +22,7 @@ export class SupabaseFileIntegrityRepository implements FileIntegrityRepository 
   async findByAgent(agentId: AgentId): Promise<FileIntegrityCheck[]> {
     const { data, error } = await supabase
       .from('agent_file_integrity')
-      .select('*')
+      .select('id, agent_id, tenant_id, file_path, expected_hash, actual_hash, integrity_status, scan_type, severity, file_size, modified_at, collected_at, created_at')
       .eq('agent_id', agentId.toString())
       .order('collected_at', { ascending: false })
       .limit(100);
@@ -34,7 +34,7 @@ export class SupabaseFileIntegrityRepository implements FileIntegrityRepository 
   async findViolationsByTenant(tenantId: TenantId): Promise<FileIntegrityCheck[]> {
     const { data, error } = await supabase
       .from('agent_file_integrity')
-      .select('*')
+      .select('id, agent_id, tenant_id, file_path, expected_hash, actual_hash, integrity_status, scan_type, severity, file_size, modified_at, collected_at, created_at')
       .eq('tenant_id', tenantId.toString())
       .neq('integrity_status', 'valid')
       .order('collected_at', { ascending: false })

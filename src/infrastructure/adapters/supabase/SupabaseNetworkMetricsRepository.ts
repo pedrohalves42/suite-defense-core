@@ -21,7 +21,7 @@ export class SupabaseNetworkMetricsRepository implements NetworkMetricsRepositor
   async findLatestByAgent(agentId: AgentId): Promise<NetworkMetrics[]> {
     const { data, error } = await supabase
       .from('agent_network_metrics')
-      .select('*')
+      .select('id, agent_id, tenant_id, interface_name, bytes_sent, bytes_received, packets_sent, packets_received, errors_sent, errors_received, connections_active, connections_listening, collected_at, created_at')
       .eq('agent_id', agentId.toString())
       .order('collected_at', { ascending: false })
       .limit(50);

@@ -15,7 +15,7 @@ export function RolloutTelemetryDashboard() {
     queryFn: async () => {
       let query = supabase
         .from('agent_update_decisions')
-        .select('*')
+        .select('id, agent_id, agent_name, platform, current_version, target_version, bucket_value, rollout_percentage, decision, reason, created_at')
         .order('created_at', { ascending: false })
         .limit(100);
       if (selectedDecision !== 'all') query = query.eq('decision', selectedDecision);

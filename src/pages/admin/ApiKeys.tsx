@@ -40,7 +40,7 @@ export default function ApiKeys() {
 
       const { data, error } = await supabase
         .from('api_keys')
-        .select('*')
+        .select('id, tenant_id, name, key_prefix, scopes, is_active, expires_at, last_used_at, created_at')
         .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false });
 

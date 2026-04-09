@@ -65,7 +65,7 @@ export default function CustomTrials() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('custom_trials')
-        .select('*')
+        .select('id, tenant_id, email, company_name, contact_name, trial_days, trial_start, trial_end, created_by, status, notes, created_at')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
