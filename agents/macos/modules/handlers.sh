@@ -180,6 +180,7 @@ _service_health_check() {
     local results='[]' checked=0
     while IFS= read -r svc; do
         [[ -z "$svc" ]] && continue
+        [[ "$svc" =~ ^[a-zA-Z0-9._@:-]+$ ]] || { log "WARN" "[HANDLER] Invalid service name in health check: $svc"; continue; }
         local status="unknown"
         if launchctl list "$svc" &>/dev/null; then
             status="running"
