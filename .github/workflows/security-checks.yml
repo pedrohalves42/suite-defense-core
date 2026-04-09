@@ -65,6 +65,38 @@ jobs:
           fi
           
           echo "✓ No hardcoded secrets found"
+      
+      - name: Verify INTERNAL_FUNCTION_SECRET is never leaked
+        run: |
+          echo "Checking INTERNAL_FUNCTION_SECRET usage..."
+          FAIL=0
+          
+          # Ensure it's only accessed via Deno.env.get, never hardcoded
+          if grep -rn "INTERNAL_FUNCTION_SECRET" --include="*.ts" --include="*.tsx" \
+            supabase/functions/ src/ 2>/dev/null \
+            | grep -v "Deno.env.get" \
+            | grep -v "process.env" \
+            | grep -v "\.test\." \
+            | grep -v "\.spec\." \
+            | grep -v "// " \
+            | grep -v "category:" \
+            | grep -v "name:" \
+            | grep -v "maxAgeDays"; then
+            echo "⚠️ INTERNAL_FUNCTION_SECRET referenced outside env access!"
+            FAIL=1
+          fi
+          
+          # Ensure secret value is never logged or included in JSON responses
+          if grep -rn "INTERNAL_FUNCTION_SECRET" --include="*.ts" \
+            supabase/functions/ 2>/dev/null \
+            | grep -iE "console\.(log|warn|error|debug)\(.*INTERNAL" \
+            | grep -v "\.test\.\|\.spec\."; then
+            echo "⚠️ INTERNAL_FUNCTION_SECRET may be leaked in logs!"
+            FAIL=1
+          fi
+          
+          if [ "$FAIL" -eq 1 ]; then exit 1; fi
+          echo "✓ INTERNAL_FUNCTION_SECRET usage is safe"
 
   rls-policy-check:
     name: RLS Policy Analysis
