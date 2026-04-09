@@ -127,58 +127,87 @@ npx playwright show-report
 
 ## Testes Implementados
 
-### 1. Geração de Credenciais
+A suíte E2E possui **14 cenários principais** + 1 teste de validação standalone:
+
+### Windows Agent Installation E2E (14 testes)
+
+#### 1. Geração de Credenciais
 - Login como admin
 - Geração de token e chave HMAC
 - Validação de enrollment key
 
-### 2. Validação de Estrutura do Script
+#### 2. Validação de Estrutura do Script
 - Verifica presença de componentes essenciais
 - Valida formato e sintaxe PowerShell
 - Confirma variáveis de configuração
 
-### 3. Validação de Privilégios Administrativos
+#### 3. Validação de Privilégios Administrativos
 - Verifica checagem de permissões
 - Valida mensagens de erro para não-admin
 - Confirma saída com exit code 1
 
-### 4. Criação de Diretórios e Arquivos
+#### 4. Criação de Diretórios e Arquivos
 - Valida criação de C:\CyberShield
 - Verifica pasta de logs
 - Confirma salvamento do script do agente
 
-### 5. Configuração de Tarefa Agendada
+#### 5. Configuração de Tarefa Agendada
 - Valida registro da tarefa "CyberShieldAgent"
 - Verifica execução como SYSTEM
 - Confirma trigger de inicialização
 - Valida parâmetros da tarefa
 
-### 6. Teste de Conectividade
+#### 6. Teste de Conectividade
 - Verifica chamada ao endpoint /heartbeat
 - Valida headers de autenticação
 - Confirma timeout configurado
 
-### 7. Tratamento de Erros
+#### 7. Tratamento de Erros
 - Valida try-catch blocks
 - Verifica mensagens de erro detalhadas
 - Confirma diagnóstico completo
 - Valida stack trace
 
-### 8. Mensagens de Progresso
+#### 8. Mensagens de Progresso
 - Verifica indicadores [0/5] até [5/5]
 - Valida mensagem de sucesso
 - Confirma próximos passos
 - Verifica instruções de logs
 
-### 9. Geração de Script para Teste Manual
+#### 9. Geração de Script para Teste Manual
 - Salva script em `tests/generated/`
 - Permite teste manual em ambiente Windows real
 - Facilita debugging de problemas específicos
 
-### 10. Compatibilidade Windows Server
+#### 10. Compatibilidade Windows Server
 - Valida ausência de comandos incompatíveis
 - Verifica uso de comandos compatíveis
 - Confirma suporte a Server 2012+
+
+#### 11. Parameter Validation
+- Verifica presença de `param()` com `Mandatory=$true`
+- Valida validação de formato de `$AgentToken`, `$HmacSecret`, `$ServerUrl`
+
+#### 12. Retry Logic
+- Verifica lógica de retry em `Send-Heartbeat`
+- Valida backoff exponencial ou linear entre tentativas
+- Confirma número máximo de retentativas
+
+#### 13. System Health Test
+- Verifica presença de `Test-SystemHealth`
+- Valida retry em testes de conectividade
+- Confirma diagnóstico de saúde do sistema
+
+#### 14. Error Logging
+- Valida níveis de log (`[ERROR]`, `[INFO]`, `[WARNING]`)
+- Verifica gravação de logs em arquivo
+- Confirma rastreabilidade de erros
+
+### Agent Script Validation (1 teste standalone)
+
+- Valida script versionado do agente Windows (`cybershield-agent-windows-v5.ps1`)
+- Verifica parâmetros obrigatórios, funções principais e formato HMAC
+- Confirma compatibilidade com Windows Server 2012+
 
 ## Teste Manual em Windows
 
@@ -358,13 +387,16 @@ jobs:
 ## Métricas de Teste
 
 Os testes validam:
-- ✅ 10 cenários de teste principais
-- ✅ 50+ asserções individuais
+- ✅ 14 cenários de teste principais + 1 validação standalone
+- ✅ 70+ asserções individuais
 - ✅ Compatibilidade com 8+ versões de OS
 - ✅ Geração de script para teste manual
 - ✅ Validação de segurança (privilégios admin)
 - ✅ Teste de conectividade de rede
 - ✅ Tratamento de erros completo
+- ✅ Parameter validation e retry logic
+- ✅ System health checks
+- ✅ Error logging estruturado
 
 ## Próximos Passos
 

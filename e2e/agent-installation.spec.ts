@@ -8,6 +8,29 @@ import * as path from 'path';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://iavbnmduxpxhwubqrzzn.supabase.co';
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhdmJubWR1eHB4aHd1YnFyenpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4NzkzMzIsImV4cCI6MjA3NTQ1NTMzMn0.79Bg6lX-ArhDGLeaUN7MPgChv4FQNJ_KcjdMa5IerWk';
 
+/**
+ * Resolve the versioned agent script path dynamically.
+ * Searches public/agent-scripts/ for the latest Windows script,
+ * falling back to the legacy unversioned path.
+ */
+function resolveAgentScriptPath(): string {
+  const searchDir = path.join(process.cwd(), 'public', 'agent-scripts');
+
+  if (fs.existsSync(searchDir)) {
+    const files = fs.readdirSync(searchDir)
+      .filter(f => f.startsWith('cybershield-agent-windows') && f.endsWith('.ps1'))
+      .sort()
+      .reverse(); // latest version first
+
+    if (files.length > 0) {
+      return path.join(searchDir, files[0]);
+    }
+  }
+
+  // Legacy fallback
+  return path.join(process.cwd(), 'agent-scripts', 'cybershield-agent-windows.ps1');
+}
+
 test.describe('Windows Agent Installation E2E', () => {
   let authToken: string;
   let installScript: string;
@@ -371,15 +394,18 @@ test.describe('Windows Agent Installation E2E', () => {
 
 test.describe('Agent Script Validation', () => {
   test('Validar script standalone do agente', async () => {
-    // Ler script do agente Windows
-    const agentScriptPath = path.join(process.cwd(), 'agent-scripts', 'cybershield-agent-windows.ps1');
+    const agentScriptPath = resolveAgentScriptPath();
     
     if (!fs.existsSync(agentScriptPath)) {
-      console.warn(`⚠ Script nao encontrado: ${agentScriptPath}`);
-      test.skip();
-      return;
+      throw new Error(
+        `Script do agente não encontrado. Caminhos verificados:\n` +
+        `  - public/agent-scripts/cybershield-agent-windows-v*.ps1\n` +
+        `  - agent-scripts/cybershield-agent-windows.ps1\n` +
+        `Certifique-se de que o script está no repositório.`
+      );
     }
 
+    console.log(`✓ Script encontrado: ${agentScriptPath}`);
     const agentScript = fs.readFileSync(agentScriptPath, 'utf8');
 
     // Validar parametros obrigatorios

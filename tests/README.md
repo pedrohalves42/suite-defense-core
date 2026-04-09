@@ -6,7 +6,7 @@ Conjunto completo de testes para validação de instalação e testes de carga d
 
 ### 1. Windows Installation Test (`windows-installation-test.ps1`)
 
-Valida completamente a instalação e funcionamento de um agent Windows.
+Valida completamente a instalação e funcionamento de um agente Windows.
 
 **O que testa:**
 - ✅ Pré-requisitos (PowerShell, Admin, Network)
@@ -77,11 +77,11 @@ Tests Passed: 7 / 7 (100%)
 
 ### 2. Load Test (`load-test.ps1`)
 
-Testa a escalabilidade do sistema simulando múltiplos agents e operações simultâneas.
+Testa a escalabilidade do sistema simulando múltiplos agentes e operações simultâneas.
 
 **O que testa:**
-- ✅ Enrollment em massa (10+ agents)
-- ✅ Heartbeat storm (todos agents simultaneamente)
+- ✅ Enrollment em massa (10+ agentes)
+- ✅ Heartbeat storm (todos agentes simultaneamente)
 - ✅ Job polling storm
 - ✅ Carga sustentada (60 segundos)
 - ✅ Métricas de performance (throughput, latência, taxa de erro)
@@ -103,8 +103,8 @@ cd tests
 **Parâmetros:**
 - `ServerUrl` (obrigatório): URL do servidor Supabase
 - `EnrollmentKey` (obrigatório): Chave de enrollment válida
-- `NumAgents` (opcional): Número de agents a criar (padrão: 10)
-- `NumJobsPerAgent` (opcional): Número de jobs por agent (padrão: 10)
+- `NumAgents` (opcional): Número de agentes a criar (padrão: 10)
+- `NumJobsPerAgent` (opcional): Número de jobs por agente (padrão: 10)
 - `ConcurrentRequests` (opcional): Requisições simultâneas (padrão: 5)
 
 **Exemplo de saída:**
@@ -131,7 +131,7 @@ Enrollment Summary:
   - Enrolled: 10 / 10
   - Failed: 0
   - Duration: 2.45s
-  - Rate: 4.08 agents/s
+  - Rate: 4.08 agentes/s
 
 [...]
 
@@ -139,7 +139,7 @@ Enrollment Summary:
 ║                   FINAL STATISTICS                        ║
 ╚═══════════════════════════════════════════════════════════╝
 
-Agents:
+Agentes:
   - Enrolled: 10 / 10
   - Failed Enrollments: 0
 
@@ -170,7 +170,7 @@ Performance:
 
 **PASSED (✓):**
 - Todos os testes passaram
-- Agent está pronto para produção
+- Agente está pronto para produção
 - Pode prosseguir com deployment
 
 **FAILED (✗):**
@@ -189,12 +189,12 @@ Performance:
 **PASSED (✓):**
 - Success rate ≥ 95%
 - Response time médio < 2s
-- 90%+ dos agents enrollados
+- 90%+ dos agentes enrollados
 
 **NEEDS IMPROVEMENT (⚠):**
 - Success rate < 95%
 - Response time médio > 2s
-- Muitos agents falharam no enrollment
+- Muitos agentes falharam no enrollment
 
 ---
 
@@ -252,7 +252,7 @@ nslookup seu-server.supabase.co
 
 **Windows Installation Test:**
 - Logs aparecem no console em tempo real
-- Logs também salvos em `C:\CyberShield\logs\agent.log` (se agent foi instalado)
+- Logs também salvos em `C:\CyberShield\logs\agent.log` (se agente foi instalado)
 
 **Load Test:**
 - Todos os resultados aparecem no console
@@ -282,7 +282,7 @@ nslookup seu-server.supabase.co
    - Configure expiração adequada (ex: 1 hora)
    - Max uses: ilimitado para testes de carga
 
-2. **Verifique quota de agents**
+2. **Verifique quota de agentes**
    - Dashboard → Admin → Tenant Features
    - Aumente max_agents se necessário
 
@@ -293,9 +293,9 @@ nslookup seu-server.supabase.co
 
 ### Após executar testes
 
-1. **Limpe agents de teste**
+1. **Limpe agentes de teste**
    - Dashboard → Agents
-   - Delete agents com prefixo `test-agent-` ou `load-test-agent-`
+   - Delete agentes com prefixo `test-agent-` ou `load-test-agent-`
 
 2. **Revogue chave de enrollment**
    - Dashboard → Admin → Enrollment Keys
@@ -317,7 +317,7 @@ nslookup seu-server.supabase.co
 - Success Rate: > 98%
 - Average Response Time: < 300ms
 
-**Load Test (10 agents):**
+**Load Test (10 agentes):**
 - Total Duration: ~75 segundos
 - Success Rate: > 99%
 - Average Response Time: < 200ms
@@ -325,7 +325,7 @@ nslookup seu-server.supabase.co
 
 ### Hardware Potente (16GB+ RAM, 8+ cores)
 
-**Load Test (50 agents):**
+**Load Test (50 agentes):**
 - Total Duration: ~3 minutos
 - Success Rate: > 99%
 - Average Response Time: < 150ms
@@ -333,7 +333,7 @@ nslookup seu-server.supabase.co
 
 ### Limites Conhecidos
 
-- **Rate Limiting**: 60 req/min por agent (ajustável)
+- **Rate Limiting**: 60 req/min por agente (ajustável)
 - **Supabase Free Tier**: Limitações de throughput
 - **Network**: Latência varia conforme localização
 
@@ -354,5 +354,5 @@ Se os testes falharem consistentemente:
 
 ---
 
-**Última atualização**: 2025-11-10  
-**Versão**: 2.0.0
+**Última atualização**: 2026-04-09  
+**Versão**: 2.1.0
