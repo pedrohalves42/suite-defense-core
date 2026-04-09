@@ -22,6 +22,15 @@ export default defineConfig(({ mode }) => ({
     include: ['jspdf', 'jspdf-autotable'],
   },
   build: {
+    target: 'es2020',
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'],
+      },
+    },
     rollupOptions: {
       output: {
         manualChunks: {

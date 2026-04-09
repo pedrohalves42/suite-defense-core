@@ -1,8 +1,10 @@
 import { lazy, Suspense } from "react";
 import { SEOHead } from "@/components/SEOHead";
-import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
+
+// Lazy load non-critical above-fold elements
+const WhatsAppButton = lazy(() => import("@/components/WhatsAppButton").then(m => ({ default: m.WhatsAppButton })));
 
 // Below-the-fold sections — lazy loaded to reduce initial bundle
 const PainPointsSection = lazy(() => import("@/components/landing/PainPointsSection").then(m => ({ default: m.PainPointsSection })));
@@ -57,7 +59,9 @@ const Landing = () => {
       />
       <div className="min-h-screen bg-background">
         <LandingNavbar />
-        <WhatsAppButton />
+        <Suspense fallback={null}>
+          <WhatsAppButton />
+        </Suspense>
 
         <main>
           {/* 1. Hero */}
