@@ -923,9 +923,21 @@ function Test-RuntimeIntegrity {
 # v5.0.13: HARDCODED Ed25519 PUBLIC KEY for hash signature verification
 # This key corresponds to the ED25519_PRIVATE_KEY secret on the backend.
 # Changing this requires coordinated key rotation.
-$Global:Ed25519PublicKeyBase64 = $null  # Set via Set-Ed25519PublicKey or env var
+$Global:Ed25519PublicKeyBase64 = $null  # Set via heartbeat, env var, or persisted file
 if ($env:CYBERSHIELD_ED25519_PUBKEY) {
     $Global:Ed25519PublicKeyBase64 = $env:CYBERSHIELD_ED25519_PUBKEY
+}
+# v5.0.16: Load persisted key from previous heartbeat (offline resilience)
+if (-not $Global:Ed25519PublicKeyBase64) {
+    $persistedKeyPath = Join-Path $Global:BaseDir "ed25519_pubkey"
+    if (Test-Path $persistedKeyPath) {
+        try {
+            $Global:Ed25519PublicKeyBase64 = (Get-Content $persistedKeyPath -Raw -Encoding UTF8 -ErrorAction Stop).Trim()
+            Write-Log "[CRYPTO] Loaded persisted Ed25519 public key from $persistedKeyPath" "INFO"
+        } catch {
+            Write-Log "[CRYPTO] Failed to load persisted Ed25519 key: $($_.Exception.Message)" "WARN"
+        }
+    }
 }
 
 function Test-Ed25519HashSignature {
