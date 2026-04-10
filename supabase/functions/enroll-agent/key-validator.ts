@@ -42,7 +42,7 @@ export async function validateEnrollmentKey(
 
   const { data: keyData, error: keyError } = await supabase
     .from('enrollment_keys')
-    .select('*')
+    .select('id, key_hash, name, tenant_id, is_active, max_uses, current_uses, expires_at, created_at, created_by')
     .eq('key_hash', enrollmentKeyHash)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
