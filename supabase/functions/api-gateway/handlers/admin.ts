@@ -395,7 +395,7 @@ export async function handleGetRateLimitStats(supabase: SB, requestId: string, p
   const hoursBack = parsed.data.hours_back;
   const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000).toISOString();
 
-  const { data: rateLimits, error } = await supabase.from('rate_limits').select('*').gte('window_start', cutoffTime).order('window_start', { ascending: false });
+  const { data: rateLimits, error } = await supabase.from('rate_limits').select('id, identifier, endpoint, request_count, window_start, blocked_until').gte('window_start', cutoffTime).order('window_start', { ascending: false });
   if (error) throw error;
 
   const endpointStats = new Map<string, { endpoint: string; total_requests: number; unique_identifiers: Set<string>; blocked_count: number }>();

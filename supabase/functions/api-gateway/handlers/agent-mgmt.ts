@@ -79,7 +79,7 @@ export async function handleGetAgentTimeline(
   if (agentError || !agent) return { error: 'Agent not found or access denied', __status: 404 };
 
   const { data: events, error } = await supabase
-    .from('agent_timeline_events').select('*').eq('agent_id', agentId)
+    .from('agent_timeline_events').select('id, agent_id, event_type, event_time, description, severity, metadata').eq('agent_id', agentId)
     .order('event_time', { ascending: false }).limit(200);
   if (error) return { error: 'Failed to fetch timeline', __status: 500 };
 

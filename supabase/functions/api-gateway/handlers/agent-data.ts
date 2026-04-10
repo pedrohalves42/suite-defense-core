@@ -21,7 +21,7 @@ export async function handleGetSoftwareInventory(
   if (agentError || !agent) return { __status: 404, error: 'Agent not found or access denied' };
 
   const { data: inventory, error: inventoryError } = await supabase.from('software_inventory')
-    .select('*').eq('agent_id', agentId).order('name', { ascending: true });
+    .select('id, agent_id, name, version, publisher, install_date, last_seen_at, tenant_id').eq('agent_id', agentId).order('name', { ascending: true });
   if (inventoryError) return { __status: 500, error: 'Failed to fetch inventory' };
 
   return { success: true, agent_id: agentId, agent_name: agent.agent_name, items: inventory || [] };
