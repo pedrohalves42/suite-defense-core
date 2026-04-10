@@ -67,6 +67,17 @@ function Import-PersistedState {
             Write-Log "Failed to load persisted state: $($_.Exception.Message)" "WARN"
         }
     }
+
+    # Load persisted Ed25519 public key for offline verification
+    $ed25519Path = "$script:BaseDir\ed25519_pubkey"
+    if ((Test-Path $ed25519Path) -and -not $Global:Ed25519PublicKeyBase64) {
+        try {
+            $Global:Ed25519PublicKeyBase64 = (Get-Content $ed25519Path -Raw -Encoding UTF8).Trim()
+            Write-Log "[CRYPTO] Ed25519 public key loaded from persisted file" "INFO"
+        } catch {
+            Write-Log "[CRYPTO] Failed to load persisted Ed25519 key: $($_.Exception.Message)" "WARN"
+        }
+    }
 }
 
 function Export-PersistedState {
