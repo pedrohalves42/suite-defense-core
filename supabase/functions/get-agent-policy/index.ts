@@ -25,7 +25,7 @@ serveAgent(async (_req, ctx) => {
   // Get tenant settings
   const { data: tenantSettings } = await supabase
     .from('tenant_settings')
-    .select('*')
+    .select('tenant_id, setting_key, setting_value')
     .eq('tenant_id', tenantId)
     .single();
 

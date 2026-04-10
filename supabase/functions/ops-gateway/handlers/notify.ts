@@ -130,8 +130,8 @@ export async function handleNotifyWebhook(supabase: SB, requestId: string, paylo
   if (!tenant_id) return { error: 'tenant_id is required' };
 
   const [{ data: webhookConfigs }, { data: channels }] = await Promise.all([
-    supabase.from('webhook_configs').select('*').eq('tenant_id', tenant_id).eq('is_active', true),
-    supabase.from('notification_channels').select('*').eq('tenant_id', tenant_id).eq('channel_type', 'webhook').eq('is_active', true),
+    supabase.from('webhook_configs').select('id, name, url, secret, headers, tenant_id, is_active').eq('tenant_id', tenant_id).eq('is_active', true),
+    supabase.from('notification_channels').select('id, name, channel_type, config, tenant_id, is_active').eq('tenant_id', tenant_id).eq('channel_type', 'webhook').eq('is_active', true),
   ]);
 
   const allWebhooks: Array<{ name: string; url: string; secret?: string; headers?: Record<string, string> }> = [];

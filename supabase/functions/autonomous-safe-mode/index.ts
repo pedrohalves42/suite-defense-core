@@ -62,7 +62,7 @@ serveInternal(async (_req, ctx) => {
 
   const { data: rules, error: rulesError } = await supabase
     .from('decision_rules')
-    .select('*')
+    .select('id, code, name, description, is_enabled, severity, conditions, actions')
     .eq('is_enabled', true)
     .order('code');
 

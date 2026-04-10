@@ -44,7 +44,7 @@ export async function handleAnalyzeUrl(
   // Check cache (24h TTL)
   const { data: cached } = await supabase
     .from('url_reputation')
-    .select('*')
+    .select('id, url, domain, reputation, risk_score, categories, scan_results, created_at, tenant_id')
     .eq('url', normalizedUrl)
     .eq('tenant_id', tenantId)
     .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())

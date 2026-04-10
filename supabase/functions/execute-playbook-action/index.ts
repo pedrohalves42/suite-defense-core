@@ -67,7 +67,7 @@ serveTenant(async (req, ctx) => {
   // Fetch execution with tenant filter
   const { data: execution, error: execError } = await supabase
     .from('playbook_executions')
-    .select('*')
+    .select('id, playbook_id, tenant_id, agent_id, trigger_source, trigger_context, status, actions_taken, triggered_at, started_at, completed_at')
     .eq('id', execution_id)
     .eq('tenant_id', tenantId)
     .single();

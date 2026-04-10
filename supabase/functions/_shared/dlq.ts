@@ -211,7 +211,7 @@ export async function getDLQEntriesForRetry(
 ): Promise<Record<string, unknown>[]> {
   const { data, error } = await supabase
     .from('failed_jobs_dlq')
-    .select('*')
+    .select('id, original_job_id, original_job_type, original_payload, tenant_id, agent_id, error_message, retry_count, max_retries, next_retry_at, status, priority, created_at')
     .eq('status', 'pending')
     .lte('next_retry_at', new Date().toISOString())
     .order('next_retry_at', { ascending: true })

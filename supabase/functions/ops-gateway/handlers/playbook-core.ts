@@ -54,7 +54,7 @@ export async function handleExecutePlaybook(supabase: SupabaseClient, requestId:
   if (!parsed.success) return { __status: 400, error: 'Invalid input', details: parsed.error.flatten().fieldErrors };
 
   const { playbook_id, trigger_data } = parsed.data;
-  const { data: playbook, error: pbError } = await supabase.from('playbooks').select('*').eq('id', playbook_id).eq('tenant_id', trigger_data.tenant_id).eq('is_enabled', true).single();
+  const { data: playbook, error: pbError } = await supabase.from('playbooks').select('id, name, tenant_id, description, trigger_type, trigger_config, actions, is_enabled, cooldown_seconds, last_triggered_at').eq('id', playbook_id).eq('tenant_id', trigger_data.tenant_id).eq('is_enabled', true).single();
   if (pbError || !playbook) return { __status: 404, error: 'Playbook not found or inactive' };
 
   logger.info('[execute-playbook] Starting execution', { requestId, playbookId: playbook_id, playbookName: playbook.name });
@@ -168,7 +168,7 @@ export async function handleRollbackByDecisionEvent(supabase: SupabaseClient, re
   const { data: userRole } = await supabase.from('user_roles').select('role').eq('user_id', userId).in('role', ['admin', 'super_admin']).limit(1).maybeSingle();
   if (!userRole) return { __status: 403, error: 'Forbidden: Only admins can rollback decisions' };
 
-  const { data: event, error } = await supabase.from('decision_events').select('*').eq('id', decision_event_id).eq('tenant_id', tenantId).single();
+  const { data: event, error } = await supabase.from('decision_events').select('id, tenant_id, rule_code, decision_source, decision_type, action, evidence, actions_executed, created_at').eq('id', decision_event_id).eq('tenant_id', tenantId).single();
   if (error || !event) return { __status: 404, error: 'Decision event not found' };
 
   if (event.decision_type !== 'alert_resolution') return { __status: 400, error: 'Rollback not supported for this decision type', decision_type: event.decision_type, supported_types: ['alert_resolution'] };
@@ -224,7 +224,7 @@ export async function handleRollbackRemediation(supabase: SupabaseClient, reques
   if (adminRoles.length === 0) return { __status: 403, error: 'Admin role required for rollback' };
 
   const userTenantIds = adminRoles.map(r => r.tenant_id);
-  const { data: action, error: fetchErr } = await supabase.from('auto_remediation_actions').select('*').eq('id', action_id).in('tenant_id', userTenantIds).single();
+  const { data: action, error: fetchErr } = await supabase.from('auto_remediation_actions').select('id, tenant_id, agent_id, action_type, status, trigger_details, created_at').eq('id', action_id).in('tenant_id', userTenantIds).single();
   if (fetchErr || !action) return { __status: 404, error: 'Remediation action not found' };
 
   if (action.status !== 'success' && action.status !== 'executing') return { __status: 409, error: `Cannot rollback action in status: ${action.status}` };

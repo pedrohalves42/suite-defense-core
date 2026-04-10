@@ -94,7 +94,7 @@ export async function handleSliCollector(supabase: SB, requestId: string, payloa
   }
 
   // ═══ DASHBOARD (default) ═══
-  const { data: recentMetrics } = await supabase.from('sli_metrics_hourly').select('*').eq('tenant_id', tenantId).order('hour', { ascending: false }).limit(168);
+  const { data: recentMetrics } = await supabase.from('sli_metrics_hourly').select('id, tenant_id, hour, metric_name, metric_value, target_value, is_within_slo').eq('tenant_id', tenantId).order('hour', { ascending: false }).limit(168);
   return { recentMetrics: recentMetrics || [], timestamp: new Date().toISOString() };
 }
 
@@ -117,7 +117,7 @@ export async function handleAnalyzeConfidenceGapTrend(supabase: SB, _requestId: 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
     const { data: gapHistory, error: gapError } = await supabase
-      .from('audit_confidence_gaps').select('*')
+      .from('audit_confidence_gaps').select('id, tenant_id, confidence_gap, dimension_gaps, calculated_at')
       .eq('tenant_id', tenant.id).gte('calculated_at', thirtyDaysAgo)
       .order('calculated_at', { ascending: false });
 

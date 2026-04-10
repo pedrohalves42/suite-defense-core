@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
 
       const { data: config, error: cfgErr } = await supabase
         .from('saml_configs')
-        .select('*')
+        .select('id, tenant_id, entity_id, sso_url, certificate, enabled, attribute_mapping, created_at')
         .eq('tenant_id', tenantId)
         .eq('enabled', true)
         .single()

@@ -32,7 +32,7 @@ export const handleFetchNvdCves: InlinedHandler = async (supabase, requestId, pa
   // Check cache first
   if (!forceRefresh && keyword) {
     const { data: cachedCVEs, error: cacheError } = await supabase
-      .from('cve_database').select('*')
+      .from('cve_database').select('cve_id, description, cvss_score, severity, affected_products, published_date, cached_at, references')
       .ilike('affected_products', `%${keyword}%`)
       .gte('cached_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
       .order('cvss_score', { ascending: false }).limit(100);
@@ -155,7 +155,7 @@ export const handleCorrelateEdrEvents: InlinedHandler = async (supabase, request
   const lookbackMinutes = Math.min(Math.max((payload.lookback_minutes as number) || 60, 1), 1440);
   const since = new Date(Date.now() - lookbackMinutes * 60 * 1000).toISOString();
 
-  const { data: rules } = await supabase.from('correlation_rules').select('*').eq('is_enabled', true);
+  const { data: rules } = await supabase.from('correlation_rules').select('id, name, tenant_id, event_types, conditions, time_window_seconds, min_occurrences, severity, is_enabled').eq('is_enabled', true);
   if (!rules?.length) return { message: 'No active correlation rules' };
 
   const ruleTenantIds = [...new Set(rules.map(r => r.tenant_id).filter(Boolean))] as string[];
@@ -277,7 +277,7 @@ export const handleEvaluateEdrDetections: InlinedHandler = async (supabase, requ
   const lookbackMinutes = Math.min(Math.max((payload.lookback_minutes as number) || 15, 1), 1440);
   const since = new Date(Date.now() - lookbackMinutes * 60 * 1000).toISOString();
 
-  const { data: rules, error: rulesErr } = await supabase.from('detection_rules').select('*').eq('is_enabled', true);
+  const { data: rules, error: rulesErr } = await supabase.from('detection_rules').select('id, name, tenant_id, event_type, conditions, severity, is_enabled, action_type').eq('is_enabled', true);
   if (rulesErr || !rules?.length) return { message: 'No active rules', error: rulesErr?.message };
 
   const stats = { evaluated: 0, detections: 0 };
@@ -302,7 +302,7 @@ export const handleEvaluateEdrDetections: InlinedHandler = async (supabase, requ
 
       let offset = 0; let hasMore = true;
       while (hasMore) {
-        const { data: events } = await supabase.from(table).select('*').eq('tenant_id', tenantId).gte('event_time', since).eq('is_suspicious', false).range(offset, offset + BATCH_SIZE - 1).order('event_time', { ascending: true });
+        const { data: events } = await supabase.from(table).select('id, tenant_id, agent_id, event_type, event_time, event_data, is_suspicious, severity').eq('tenant_id', tenantId).gte('event_time', since).eq('is_suspicious', false).range(offset, offset + BATCH_SIZE - 1).order('event_time', { ascending: true });
         if (!events?.length) { hasMore = false; break; }
         stats.evaluated += events.length;
         if (events.length < BATCH_SIZE) hasMore = false;

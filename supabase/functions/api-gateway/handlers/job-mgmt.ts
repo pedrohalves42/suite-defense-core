@@ -166,7 +166,7 @@ export async function handleCreateJob(
     if (!newJobId) {
       return { __status: 409, error: { code: 'JOB_ALREADY_EXISTS', message: `Ja existe um job ativo do tipo '${type}' para o agente '${agentName}'.` } };
     }
-    const { data: fetchedJob, error: fetchError } = await supabase.from('jobs').select('*').eq('id', newJobId).single();
+    const { data: fetchedJob, error: fetchError } = await supabase.from('jobs').select('id, agent_id, agent_name, tenant_id, type, status, payload, created_at, expires_at, scheduled_at, is_recurring, recurrence_pattern').eq('id', newJobId).single();
     if (fetchError) throw fetchError;
     job = fetchedJob;
   } else {

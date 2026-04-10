@@ -23,7 +23,7 @@ export class SupabaseAICacheAdapter implements AICachePort {
     try {
       let query = this.client
         .from('ai_response_cache')
-        .select('*')
+        .select('id, prompt_hash, task_category, response_content, provider, model, tokens_used, cost_usd, hit_count, created_at, expires_at')
         .eq('prompt_hash', promptHash)
         .eq('task_category', taskCategory)
         .gt('expires_at', new Date().toISOString())

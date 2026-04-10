@@ -140,7 +140,7 @@ export async function evaluateForTenant(
 ): Promise<{ evaluated: number; triggered: number; blocked: number; decisions: number; risk_score?: number }> {
   const { data: rules } = await supabase
     .from('automation_rules')
-    .select('*')
+    .select('id, name, tenant_id, condition_type, condition_config, action_type, action_config, is_active, priority, cooldown_seconds, last_triggered_at')
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
     .order('priority', { ascending: true });
@@ -188,7 +188,7 @@ export async function evaluateForTenant(
 
   const { data: metrics } = await supabase
     .from('agent_system_metrics_partitioned')
-    .select('*')
+    .select('agent_id, agent_name, cpu_usage, memory_usage, disk_usage, collected_at, tenant_id')
     .in('agent_id', agentIds)
     .order('collected_at', { ascending: false });
 

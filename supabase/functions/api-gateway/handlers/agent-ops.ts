@@ -60,7 +60,7 @@ export async function handleTokenRotate(
     const { agentId, token: agentToken, hmacSecret } = payload as Record<string, string>;
     if (!agentId || !agentToken) return { valid: false, error: 'agentId and token required' };
     const tokenHash = await hashTokenLocal(agentToken);
-    let query = supabase.from('agent_tokens').select('*').eq('agent_id', agentId).eq('token_hash', tokenHash);
+    let query = supabase.from('agent_tokens').select('id, agent_id, token_hash, hmac_secret_hash, is_revoked, expires_at, last_used_at, created_at').eq('agent_id', agentId).eq('token_hash', tokenHash);
     if (hmacSecret) { const hmacHash = await hashTokenLocal(hmacSecret); query = query.eq('hmac_secret_hash', hmacHash); }
     const { data: storedToken, error } = await query.single();
     if (error || !storedToken) return { valid: false, error: 'Invalid token' };

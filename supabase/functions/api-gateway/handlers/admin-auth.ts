@@ -21,7 +21,7 @@ export async function handleAcceptInvite(
   }
 
   const { data: invite, error: inviteError } = await supabase
-    .from('invites').select('*')
+    .from('invites').select('id, token, email, role, tenant_id, invited_by, status, expires_at, created_at')
     .eq('token', token).eq('status', 'pending')
     .order('created_at', { ascending: false }).limit(1).maybeSingle();
 

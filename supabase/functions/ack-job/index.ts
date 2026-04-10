@@ -45,7 +45,7 @@ serveAgent(async (req, ctx) => {
   // Fetch job to validate
   const { data: existingJob, error: fetchError } = await supabase
     .from('jobs')
-    .select('*')
+    .select('id, agent_id, agent_name, tenant_id, type, status, payload, created_at, expires_at')
     .eq('id', validatedJobId)
     .order('created_at', { ascending: false })
     .limit(1)

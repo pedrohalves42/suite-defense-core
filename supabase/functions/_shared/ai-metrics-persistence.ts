@@ -126,7 +126,7 @@ export async function getAIMetricsSummary(tenantId?: string, hoursBack = 24): Pr
     
     let query = supabase
       .from('ai_inference_metrics')
-      .select('*')
+      .select('function_name, model, latency_ms, success, tokens_total, created_at')
       .gte('created_at', cutoffDate.toISOString())
       .order('created_at', { ascending: false });
     

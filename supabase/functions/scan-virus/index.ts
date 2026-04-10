@@ -75,7 +75,7 @@ serveAgent(async (_req, ctx) => {
   }
 
   // Check cached scan
-  const { data: existingScan } = await supabase.from('virus_scans').select('*').eq('file_hash', fileHash).gte('scanned_at', new Date(Date.now() - 86400000).toISOString()).order('scanned_at', { ascending: false }).limit(1).maybeSingle();
+  const { data: existingScan } = await supabase.from('virus_scans').select('id, file_hash, is_malicious, positives, total_scans, virustotal_permalink, scanned_at').eq('file_hash', fileHash).gte('scanned_at', new Date(Date.now() - 86400000).toISOString()).order('scanned_at', { ascending: false }).limit(1).maybeSingle();
 
   if (existingScan) {
     return { cached: true, isMalicious: existingScan.is_malicious, positives: existingScan.positives, totalScans: existingScan.total_scans, permalink: existingScan.virustotal_permalink, scannedAt: existingScan.scanned_at };

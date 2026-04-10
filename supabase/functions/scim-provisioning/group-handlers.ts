@@ -31,7 +31,7 @@ export async function createGroup(
 export async function getGroup(supabase: SupabaseClient, tenantId: string, groupId: string): Promise<Response> {
   const { data: group, error } = await supabase
     .from('scim_groups')
-    .select('*')
+    .select('id, display_name, tenant_id, created_at, updated_at')
     .eq('id', groupId)
     .eq('tenant_id', tenantId)
     .maybeSingle();

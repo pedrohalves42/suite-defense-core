@@ -84,7 +84,7 @@ export async function handleThreatIntelligenceLookup(
   const normalizedTarget = target.trim().toLowerCase();
 
   if (!skip_cache) {
-    const { data: cached } = await supabase.from('threat_intelligence_cache').select('*')
+    const { data: cached } = await supabase.from('threat_intelligence_cache').select('id, target, target_type, reputation, risk_score, sources, cached_at, expires_at, tenant_id')
       .eq('target', normalizedTarget).eq('target_type', targetType).eq('tenant_id', tenantId)
       .gt('expires_at', new Date().toISOString()).single();
     if (cached) return { target: cached.target, target_type: cached.target_type, reputation: cached.reputation, risk_score: cached.risk_score, sources: cached.sources, cached: true, cached_at: cached.cached_at };

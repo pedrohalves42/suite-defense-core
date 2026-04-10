@@ -263,7 +263,7 @@ export async function handleRollbackRemediation(
 
   const userTenantIds = adminRoles.map(r => r.tenant_id);
   const { data: action, error: fetchErr } = await supabase
-    .from('auto_remediation_actions').select('*').eq('id', action_id).in('tenant_id', userTenantIds).single();
+    .from('auto_remediation_actions').select('id, tenant_id, agent_id, agent_name, action_type, status, trigger_details, created_at').eq('id', action_id).in('tenant_id', userTenantIds).single();
   if (fetchErr || !action) return { __status: 404, error: 'Remediation action not found' };
   if (action.status !== 'success' && action.status !== 'executing') return { __status: 409, error: `Cannot rollback action in status: ${action.status}` };
 
