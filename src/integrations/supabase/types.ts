@@ -50407,8 +50407,8 @@ export type Database = {
         Returns: number
       }
       drop_old_telemetry_partitions: {
-        Args: { p_retention_days?: number }
-        Returns: number
+        Args: { retention_days?: number }
+        Returns: undefined
       }
       ensure_partition_rls: { Args: never; Returns: undefined }
       ensure_tenant_features: {
