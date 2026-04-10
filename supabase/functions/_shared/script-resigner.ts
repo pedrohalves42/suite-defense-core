@@ -26,7 +26,7 @@ export interface ResignResult {
 }
 
 interface SigningStrategy {
-  envName: 'ED25519_PRIVATE_KEY' | 'ECDSA_PRIVATE_KEY';
+  envName: 'ED25519_PRIVATE_KEY' | 'ECDSA_PRIVATE_KEY' | 'RSA_PRIVATE_KEY';
   importParams: EcKeyImportParams | Algorithm;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   signParams: any;
