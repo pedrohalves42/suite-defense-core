@@ -49,6 +49,13 @@ const SIGNING_STRATEGIES: SigningStrategy[] = [
     signedBy: 'hotfix-resigner-ecdsa',
     label: 'ECDSA-P256',
   },
+  {
+    envName: 'RSA_PRIVATE_KEY',
+    importParams: { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    signParams: 'RSASSA-PKCS1-v1_5',
+    signedBy: 'hotfix-resigner-rsa2048',
+    label: 'RSA-2048',
+  },
 ];
 
 /**
