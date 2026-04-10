@@ -7,7 +7,7 @@ serveAgent(async (_req, ctx) => {
   // Get light mode config for this agent
   const { data: config } = await supabase
     .from('agent_light_mode_configs')
-    .select('*')
+    .select('id, agent_id, light_mode_active, collection_interval_seconds, skip_process_collection, skip_network_collection, compress_payloads, aggregation_config, created_at, updated_at')
     .eq('agent_id', agentId)
     .maybeSingle();
 
