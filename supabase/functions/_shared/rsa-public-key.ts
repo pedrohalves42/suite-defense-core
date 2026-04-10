@@ -21,10 +21,28 @@ let cachedPrivateKey: CryptoKey | null = null
 function getRawPrivateKeyBase64(): string | null {
   const raw = Deno.env.get('RSA_PRIVATE_KEY')
   if (!raw) return null
-  return raw
-    .replace(/-----BEGIN PRIVATE KEY-----/g, '')
-    .replace(/-----END PRIVATE KEY-----/g, '')
+
+  // Strip PEM headers/whitespace if present
+  let cleaned = raw
+    .replace(/-----BEGIN (RSA )?PRIVATE KEY-----/g, '')
+    .replace(/-----END (RSA )?PRIVATE KEY-----/g, '')
     .replace(/\s/g, '')
+
+  // Detect double-encoding: if decoding base64 yields PEM text, decode again
+  try {
+    const decoded = atob(cleaned)
+    if (decoded.includes('BEGIN') && decoded.includes('PRIVATE KEY')) {
+      logger.info('[RSA] Detected double-encoded PEM, unwrapping')
+      cleaned = decoded
+        .replace(/-----BEGIN (RSA )?PRIVATE KEY-----/g, '')
+        .replace(/-----END (RSA )?PRIVATE KEY-----/g, '')
+        .replace(/\s/g, '')
+    }
+  } catch {
+    // Not double-encoded, proceed normally
+  }
+
+  return cleaned
 }
 
 /**
