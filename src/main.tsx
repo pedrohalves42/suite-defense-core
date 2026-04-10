@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 
 // Import i18n early — it's independent of backend
-import("./i18n");
+import "./i18n";
 
 // Check if backend env vars are available
 const _supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
