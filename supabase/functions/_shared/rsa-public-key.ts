@@ -72,6 +72,8 @@ async function importPrivateKey(): Promise<CryptoKey | null> {
   } catch (err) {
     logger.warn('[RSA] RSA_PRIVATE_KEY is invalid PKCS8 — RSA fallback disabled this cold start', {
       error: (err as Error).message,
+      keyLenChars: cleanBase64.length,
+      keyPrefix: cleanBase64.substring(0, 8),
     })
     derivationFailed = true
     return null
