@@ -78,6 +78,17 @@ function Import-PersistedState {
             Write-Log "[CRYPTO] Failed to load persisted Ed25519 key: $($_.Exception.Message)" "WARN"
         }
     }
+
+    # Load persisted RSA-2048 public key for offline verification (.NET 4.x fallback)
+    $rsaPath = "$script:BaseDir\rsa_pubkey"
+    if ((Test-Path $rsaPath) -and -not $Global:RsaPublicKeyBase64) {
+        try {
+            $Global:RsaPublicKeyBase64 = (Get-Content $rsaPath -Raw -Encoding UTF8).Trim()
+            Write-Log "[CRYPTO] RSA-2048 public key loaded from persisted file" "INFO"
+        } catch {
+            Write-Log "[CRYPTO] Failed to load persisted RSA key: $($_.Exception.Message)" "WARN"
+        }
+    }
 }
 
 function Export-PersistedState {
