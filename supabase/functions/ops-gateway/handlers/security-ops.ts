@@ -93,7 +93,7 @@ export async function handleApplySecurityPatch(
   const { cve_id, agent_ids, patch_method = 'automatic' } = payload as { cve_id: string; agent_ids?: string[]; patch_method?: string };
   if (!cve_id) return { __status: 400, error: 'cve_id required' };
 
-  const { data: cve, error: cveError } = await supabase.from('cve_database').select('*').eq('cve_id', cve_id).maybeSingle();
+  const { data: cve, error: cveError } = await supabase.from('cve_database').select('cve_id, description, cvss_score, severity, affected_products, published_date, references, remediation_guidance').eq('cve_id', cve_id).maybeSingle();
   if (cveError || !cve) return { __status: 404, error: `CVE ${cve_id} not found` };
 
   let agentsQuery = supabase.from('vuln_findings').select('agent_id, agent_name, tenant_id').eq('cve_id', cve_id).eq('status', 'open');
@@ -220,7 +220,7 @@ export async function handleSecurityAlertDispatcher(
   const oneHourAgo = new Date(now.getTime() - 3600000);
   const tenMinutesAgo = new Date(now.getTime() - 600000);
 
-  const { data: rateLimitData } = await supabase.from('rate_limits').select('*').gte('window_start', oneHourAgo.toISOString()).not('blocked_until', 'is', null);
+  const { data: rateLimitData } = await supabase.from('rate_limits').select('id, identifier, window_start, request_count, blocked_until').gte('window_start', oneHourAgo.toISOString()).not('blocked_until', 'is', null);
   const rateLimitBreaches = rateLimitData?.length || 0;
   const { data: replayData } = await supabase.rpc('get_replay_attempts', { hours_back: 1 });
   const replayAttempts = replayData?.[0]?.attempt_count || 0;
@@ -228,8 +228,8 @@ export async function handleSecurityAlertDispatcher(
   const ipCounts: Record<string, number> = {};
   failedLoginData?.forEach((a: Record<string, unknown>) => { const ip = a.ip_address as string; ipCounts[ip] = (ipCounts[ip] || 0) + 1; });
   const failedLoginSpikes = Object.entries(ipCounts).filter(([, count]) => count >= 5).length;
-  const { data: blockedIpData } = await supabase.from('ip_blocklist').select('*').gte('blocked_until', now.toISOString());
-  const { data: securityEventsData } = await supabase.from('security_logs').select('*').gte('created_at', oneHourAgo.toISOString()).in('severity', ['high', 'critical']);
+  const { data: blockedIpData } = await supabase.from('ip_blocklist').select('id, ip_address, reason, blocked_until').gte('blocked_until', now.toISOString());
+  const { data: securityEventsData } = await supabase.from('security_logs').select('id, event_type, severity, message, created_at').gte('created_at', oneHourAgo.toISOString()).in('severity', ['high', 'critical']);
   const criticalEvents = securityEventsData?.length || 0;
 
   const metrics = { rate_limit_breaches: rateLimitBreaches, replay_attempts: replayAttempts, failed_logins: failedLoginSpikes, blocked_ips: blockedIpData?.length || 0, critical_events: criticalEvents };
@@ -241,7 +241,7 @@ export async function handleSecurityAlertDispatcher(
   if (criticalEvents > 10) { alerts.push(`High critical events: ${criticalEvents}`); await createSystemAlert(supabase, 'critical_event_spike', 'critical', `${criticalEvents} critical security events`); }
 
   try {
-    const { data: silentJobs, error: sjError } = await supabase.from('v_cron_silence').select('*');
+    const { data: silentJobs, error: sjError } = await supabase.from('v_cron_silence').select('job_key, silence_duration, expected_interval, last_executed_at');
     if (!sjError && silentJobs?.length) {
       const criticalSilentJobs = silentJobs.filter((job: Record<string, unknown>) => parseInterval(job.silence_duration as string) > parseInterval(job.expected_interval as string) * 2);
       if (criticalSilentJobs.length > 0) {
