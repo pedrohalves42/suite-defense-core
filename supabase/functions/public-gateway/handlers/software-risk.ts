@@ -82,7 +82,7 @@ export async function handleEvaluateSoftwareRisk(
     return { total_software: 0, vulnerable_count: 0, critical_count: 0, high_count: 0, medium_count: 0, low_count: 0, risk_score: 0, risks: [], evaluated_at: new Date().toISOString() };
   }
 
-  const { data: baselines } = await supabase.from('software_vulnerability_baseline').select('*').eq('is_active', true);
+  const { data: baselines } = await supabase.from('software_vulnerability_baseline').select('id, software_name, min_safe_version, cve_ids, severity, is_active').eq('is_active', true);
   const vulnerabilityBaselines = (baselines as VulnerabilityBaseline[]) || [];
 
   const risks: SoftwareRisk[] = [];

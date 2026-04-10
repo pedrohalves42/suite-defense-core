@@ -58,7 +58,7 @@ export async function scanAgentVulnerabilities(
 
     const { data: cves, error: cveError } = await supabase
       .from('cve_database')
-      .select('*')
+      .select('cve_id, description, cvss_score, severity, affected_products, published_date, references, cpe_matches')
       .or(orFilter)
       .gte('cvss_score', 4.0)
       .order('cvss_score', { ascending: false })

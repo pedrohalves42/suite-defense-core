@@ -54,7 +54,7 @@ export async function checkRolloutPolicy(
 ): Promise<{ policy: Record<string, unknown> | null; blockedResponse: Response | null }> {
   const { data: rolloutPolicy } = await supabase
     .from('agent_update_policies')
-    .select('*')
+    .select('id, platform, enabled, rollout_percentage, canary_percentage, blocked_versions, min_version, max_version')
     .eq('platform', platform)
     .eq('enabled', true)
     .single();

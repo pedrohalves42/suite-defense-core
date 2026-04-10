@@ -132,7 +132,7 @@ export async function handleFido2Authenticate(
 
     const { data: credential, error: credError } = await supabase
       .from('fido2_credentials')
-      .select('*')
+      .select('id, user_id, credential_id, public_key, sign_count, transports, is_revoked, created_at')
       .eq('user_id', user.id)
       .eq('credential_id', authResponse.id)
       .eq('is_revoked', false)
