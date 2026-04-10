@@ -34,6 +34,7 @@ export async function buildNormalResponse(
   let safeScriptSha256: string | null = null
   let scriptHashSignature: string | null = null
   let scriptHashSignedAt: string | null = null
+  let rsaScriptHashSignature: string | null = null
   let forceHashResync = false
 
   try {
@@ -96,6 +97,9 @@ export async function buildNormalResponse(
             safeScriptSha256 = prepared.sha256
             scriptHashSignature = resignResult.signatureBase64
             scriptHashSignedAt = resignResult.signedAt
+
+            // Generate RSA-2048 fallback signature for .NET 4.x agents
+            rsaScriptHashSignature = await signWithRsa(prepared.sha256)
           }
         }
       }
