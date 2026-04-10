@@ -6,11 +6,59 @@
  * compatibility with .NET Framework's RSACryptoServiceProvider.
  * 
  * Cost: zero DB queries — pure in-memory crypto derivation.
+ * Failure caching: derivation is attempted once per cold start;
+ * subsequent calls return null instantly if the first attempt failed.
  */
 
 import { logger } from './logger.ts'
 
 let cachedPublicKeyBase64: string | null = null
+/** true = derivation was attempted and failed; skip future attempts this cold start */
+let derivationFailed = false
+/** Cached imported private key for signing (avoids double import per request) */
+let cachedPrivateKey: CryptoKey | null = null
+
+function getRawPrivateKeyBase64(): string | null {
+  const raw = Deno.env.get('RSA_PRIVATE_KEY')
+  if (!raw) return null
+  return raw
+    .replace(/-----BEGIN PRIVATE KEY-----/g, '')
+    .replace(/-----END PRIVATE KEY-----/g, '')
+    .replace(/\s/g, '')
+}
+
+/**
+ * Import the RSA private key from env. Caches result for the cold start lifetime.
+ * Returns null and sets derivationFailed on any error.
+ */
+async function importPrivateKey(): Promise<CryptoKey | null> {
+  if (cachedPrivateKey) return cachedPrivateKey
+  if (derivationFailed) return null
+
+  const cleanBase64 = getRawPrivateKeyBase64()
+  if (!cleanBase64) {
+    derivationFailed = true
+    return null
+  }
+
+  try {
+    const privateKeyBytes = Uint8Array.from(atob(cleanBase64), c => c.charCodeAt(0))
+    cachedPrivateKey = await crypto.subtle.importKey(
+      'pkcs8',
+      privateKeyBytes.buffer,
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      true,
+      ['sign'],
+    )
+    return cachedPrivateKey
+  } catch (err) {
+    logger.warn('[RSA] RSA_PRIVATE_KEY is invalid PKCS8 — RSA fallback disabled this cold start', {
+      error: (err as Error).message,
+    })
+    derivationFailed = true
+    return null
+  }
+}
 
 /**
  * Derive the RSA-2048 public key (SPKI, Base64) from the private key secret.
@@ -19,38 +67,18 @@ let cachedPublicKeyBase64: string | null = null
  */
 export async function getRsaPublicKeyBase64(): Promise<string | null> {
   if (cachedPublicKeyBase64 !== null) return cachedPublicKeyBase64
+  if (derivationFailed) return null
 
-  const privateKeyBase64 = Deno.env.get('RSA_PRIVATE_KEY')
-  if (!privateKeyBase64) {
-    logger.warn('[RSA] RSA_PRIVATE_KEY secret not configured — RSA fallback unavailable')
-    return null
-  }
+  const privateKey = await importPrivateKey()
+  if (!privateKey) return null
 
   try {
-    const cleanBase64 = privateKeyBase64
-      .replace(/-----BEGIN PRIVATE KEY-----/g, '')
-      .replace(/-----END PRIVATE KEY-----/g, '')
-      .replace(/\s/g, '')
-
-    const privateKeyBytes = Uint8Array.from(atob(cleanBase64), c => c.charCodeAt(0))
-
-    // Import as RSA private key (PKCS8) — RSASSA-PKCS1-v1_5 for .NET 4.x compat
-    const privateKey = await crypto.subtle.importKey(
-      'pkcs8',
-      privateKeyBytes.buffer,
-      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-      true, // extractable — needed to derive public key
-      ['sign'],
-    )
-
-    // Export as JWK to extract public components (n, e)
     const jwk = await crypto.subtle.exportKey('jwk', privateKey)
     if (!jwk.n || !jwk.e) {
-      logger.error('[RSA] Private key JWK missing "n" or "e" (public components)')
+      derivationFailed = true
       return null
     }
 
-    // Import as public key using n + e
     const publicKey = await crypto.subtle.importKey(
       'jwk',
       { kty: jwk.kty, n: jwk.n, e: jwk.e, alg: 'RS256' },
@@ -59,7 +87,6 @@ export async function getRsaPublicKeyBase64(): Promise<string | null> {
       ['verify'],
     )
 
-    // Export as SPKI and encode to Base64
     const spkiBytes = await crypto.subtle.exportKey('spki', publicKey)
     const spkiBase64 = btoa(String.fromCharCode(...new Uint8Array(spkiBytes)))
 
@@ -70,9 +97,8 @@ export async function getRsaPublicKeyBase64(): Promise<string | null> {
 
     return cachedPublicKeyBase64
   } catch (err) {
-    logger.error('[RSA] Failed to derive public key from private key', {
-      error: (err as Error).message,
-    })
+    logger.warn('[RSA] Failed to derive public key', { error: (err as Error).message })
+    derivationFailed = true
     return null
   }
 }
@@ -80,27 +106,15 @@ export async function getRsaPublicKeyBase64(): Promise<string | null> {
 /**
  * Sign content with RSA-2048 (RSASSA-PKCS1-v1_5 + SHA-256).
  * Returns Base64-encoded signature or null if key is unavailable.
+ * Reuses the cached private key from importPrivateKey() — no double import.
  */
 export async function signWithRsa(content: string): Promise<string | null> {
-  const privateKeyBase64 = Deno.env.get('RSA_PRIVATE_KEY')
-  if (!privateKeyBase64) return null
+  if (derivationFailed) return null
+
+  const privateKey = await importPrivateKey()
+  if (!privateKey) return null
 
   try {
-    const cleanBase64 = privateKeyBase64
-      .replace(/-----BEGIN PRIVATE KEY-----/g, '')
-      .replace(/-----END PRIVATE KEY-----/g, '')
-      .replace(/\s/g, '')
-
-    const privateKeyBytes = Uint8Array.from(atob(cleanBase64), c => c.charCodeAt(0))
-
-    const privateKey = await crypto.subtle.importKey(
-      'pkcs8',
-      privateKeyBytes.buffer,
-      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-      false,
-      ['sign'],
-    )
-
     const encoder = new TextEncoder()
     const signatureBuffer = await crypto.subtle.sign(
       'RSASSA-PKCS1-v1_5',
@@ -110,7 +124,8 @@ export async function signWithRsa(content: string): Promise<string | null> {
 
     return btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)))
   } catch (err) {
-    logger.error('[RSA] Failed to sign content', { error: (err as Error).message })
+    logger.warn('[RSA] Failed to sign content', { error: (err as Error).message })
+    derivationFailed = true
     return null
   }
 }
