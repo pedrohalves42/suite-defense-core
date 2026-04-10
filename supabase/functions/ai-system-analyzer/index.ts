@@ -56,11 +56,11 @@ serveInternal(async (_req, ctx) => {
       }
 
       // Fetch data
-      const { data: problematicJobs } = await supabase.from('v_problematic_jobs').select('*').eq('tenant_id', tenant.id).gte('created_at', cutoffDate.toISOString()).limit(100);
-      const { data: installationStats } = await supabase.from('installation_analytics').select('*').eq('tenant_id', tenant.id).gte('created_at', cutoffDate.toISOString()).order('created_at', { ascending: false }).limit(500);
-      const { data: agentMetrics } = await supabase.from('agent_system_metrics_partitioned').select('*').eq('tenant_id', tenant.id).gte('collected_at', cutoffDate.toISOString()).order('collected_at', { ascending: false }).limit(500);
+      const { data: problematicJobs } = await supabase.from('v_problematic_jobs').select('id, job_type, agent_name, tenant_id, status, error_message, created_at, retry_count').eq('tenant_id', tenant.id).gte('created_at', cutoffDate.toISOString()).limit(100);
+      const { data: installationStats } = await supabase.from('installation_analytics').select('id, tenant_id, agent_id, success, error_message, step, duration_ms, created_at').eq('tenant_id', tenant.id).gte('created_at', cutoffDate.toISOString()).order('created_at', { ascending: false }).limit(500);
+      const { data: agentMetrics } = await supabase.from('agent_system_metrics_partitioned').select('agent_id, agent_name, tenant_id, cpu_usage, memory_usage, disk_usage, collected_at').eq('tenant_id', tenant.id).gte('collected_at', cutoffDate.toISOString()).order('collected_at', { ascending: false }).limit(500);
       const enrichedAgentMetrics = (agentMetrics || []).map(metric => ({ ...metric, friendly_name: agentFriendlyNames.get(metric.agent_id) || metric.agent_name || metric.agent_id.slice(0, 8) }));
-      const { data: systemAlerts } = await supabase.from('system_alerts').select('*').eq('tenant_id', tenant.id).gte('created_at', cutoffDate.toISOString()).order('created_at', { ascending: false }).limit(100);
+      const { data: systemAlerts } = await supabase.from('system_alerts').select('id, alert_type, severity, message, resolved, tenant_id, created_at').eq('tenant_id', tenant.id).gte('created_at', cutoffDate.toISOString()).order('created_at', { ascending: false }).limit(100);
       const { data: jobStats } = await supabase.from('jobs').select('status, type, created_at').eq('tenant_id', tenant.id).gte('created_at', cutoffDate.toISOString()).limit(1000);
 
       const analysisData: AnalysisData = {
