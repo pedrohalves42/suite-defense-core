@@ -38,6 +38,22 @@ function Start-HeartbeatLoop {
             $response = Invoke-SecureApi -Endpoint "heartbeat" -Method "POST" -Body $payload
             $script:ConsecutiveFailures = 0
 
+            # Extract Ed25519 public key from heartbeat response (server-driven key distribution)
+            if ($response -and $response.PSObject -and $response.PSObject.Properties['ed25519_public_key'] -and $response.ed25519_public_key) {
+                $newKey = $response.ed25519_public_key
+                if ($newKey -ne $Global:Ed25519PublicKeyBase64) {
+                    $Global:Ed25519PublicKeyBase64 = $newKey
+                    # Persist for offline resilience
+                    try {
+                        $keyPath = "$script:BaseDir\ed25519_pubkey"
+                        $newKey | Out-File -FilePath $keyPath -Encoding UTF8 -Force -NoNewline
+                        Write-Log "[CRYPTO] Ed25519 public key updated from heartbeat and persisted" "INFO"
+                    } catch {
+                        Write-Log "[CRYPTO] Ed25519 key received but failed to persist: $($_.Exception.Message)" "WARN"
+                    }
+                }
+            }
+
             # Process pending jobs via typed dispatcher
             if ($response -and $response.commands) {
                 foreach ($cmd in $response.commands) {
