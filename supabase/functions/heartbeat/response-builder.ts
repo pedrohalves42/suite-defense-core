@@ -6,6 +6,7 @@
 import { prepareAgentScriptContent } from '../_shared/agent-script-preparation.ts'
 import { resignIfNeeded } from '../_shared/script-resigner.ts'
 import { getEd25519PublicKeyBase64 } from '../_shared/ed25519-public-key.ts'
+import { getRsaPublicKeyBase64, signWithRsa } from '../_shared/rsa-public-key.ts'
 import { logger } from '../_shared/logger.ts'
 import { buildCorsHeaders } from '../_shared/cors.ts'
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
@@ -33,6 +34,7 @@ export async function buildNormalResponse(
   let safeScriptSha256: string | null = null
   let scriptHashSignature: string | null = null
   let scriptHashSignedAt: string | null = null
+  let rsaScriptHashSignature: string | null = null
   let forceHashResync = false
 
   try {
@@ -95,6 +97,9 @@ export async function buildNormalResponse(
             safeScriptSha256 = prepared.sha256
             scriptHashSignature = resignResult.signatureBase64
             scriptHashSignedAt = resignResult.signedAt
+
+            // Generate RSA-2048 fallback signature for .NET 4.x agents
+            rsaScriptHashSignature = await signWithRsa(prepared.sha256)
           }
         }
       }
@@ -122,8 +127,9 @@ export async function buildNormalResponse(
     }
   }
 
-  // Derive Ed25519 public key for agent-side verification (cached, zero DB cost)
+  // Derive public keys for agent-side verification (cached, zero DB cost)
   const ed25519PublicKey = await getEd25519PublicKeyBase64()
+  const rsaPublicKey = await getRsaPublicKeyBase64()
 
   return new Response(
     JSON.stringify({
@@ -133,6 +139,7 @@ export async function buildNormalResponse(
       script_sha256: safeScriptSha256,
       script_hash_signature: scriptHashSignature,
       script_hash_signed_at: scriptHashSignedAt,
+      rsa_script_hash_signature: rsaScriptHashSignature,
       expected_sha256: safeScriptSha256,
       signature_timestamp: scriptHashSignedAt,
       force_hash_resync: forceHashResync,
@@ -141,6 +148,7 @@ export async function buildNormalResponse(
       skip_firewall_remediation: agent.skip_firewall_remediation || false,
       enable_eventlog: true,
       ed25519_public_key: ed25519PublicKey,
+      rsa_public_key: rsaPublicKey,
       aggregation: null,
       jobs: [],
     }),

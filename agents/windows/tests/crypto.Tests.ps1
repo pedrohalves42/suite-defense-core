@@ -27,3 +27,27 @@ Describe "Get-PayloadHash" {
         $hash.Length | Should -Be 64
     }
 }
+
+Describe "Test-ScriptSignature" {
+    It "Returns true (fail-open) when no keys are configured" {
+        $Global:Ed25519PublicKeyBase64 = $null
+        $Global:RsaPublicKeyBase64 = $null
+        $result = Test-ScriptSignature -ContentHash "abc123" -Ed25519SignatureBase64 "" -RsaSignatureBase64 ""
+        $result | Should -Be $true
+    }
+
+    It "Returns false when keys exist but no signatures provided" {
+        $Global:Ed25519PublicKeyBase64 = "dummykey"
+        $Global:RsaPublicKeyBase64 = $null
+        $result = Test-ScriptSignature -ContentHash "abc123" -Ed25519SignatureBase64 "" -RsaSignatureBase64 ""
+        $result | Should -Be $false
+        $Global:Ed25519PublicKeyBase64 = $null
+    }
+}
+
+Describe "Test-Ed25519Available" {
+    It "Returns a boolean" {
+        $result = Test-Ed25519Available
+        $result | Should -BeOfType [bool]
+    }
+}
