@@ -127,8 +127,9 @@ export async function buildNormalResponse(
     }
   }
 
-  // Derive Ed25519 public key for agent-side verification (cached, zero DB cost)
+  // Derive public keys for agent-side verification (cached, zero DB cost)
   const ed25519PublicKey = await getEd25519PublicKeyBase64()
+  const rsaPublicKey = await getRsaPublicKeyBase64()
 
   return new Response(
     JSON.stringify({
@@ -138,6 +139,7 @@ export async function buildNormalResponse(
       script_sha256: safeScriptSha256,
       script_hash_signature: scriptHashSignature,
       script_hash_signed_at: scriptHashSignedAt,
+      rsa_script_hash_signature: rsaScriptHashSignature,
       expected_sha256: safeScriptSha256,
       signature_timestamp: scriptHashSignedAt,
       force_hash_resync: forceHashResync,
@@ -146,6 +148,7 @@ export async function buildNormalResponse(
       skip_firewall_remediation: agent.skip_firewall_remediation || false,
       enable_eventlog: true,
       ed25519_public_key: ed25519PublicKey,
+      rsa_public_key: rsaPublicKey,
       aggregation: null,
       jobs: [],
     }),
