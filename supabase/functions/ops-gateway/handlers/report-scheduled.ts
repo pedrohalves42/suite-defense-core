@@ -402,7 +402,7 @@ export async function handleAutoGenerateReport(
   statistics.total_agents = agentCount || 0;
 
   if (reportType === 'full_security' || reportType === 'software_inventory') {
-    const softwareQuery = supabase.from('software_inventory').select('*').eq('tenant_id', tenant_id).order('last_seen_at', { ascending: false }).limit(100);
+    const softwareQuery = supabase.from('software_inventory').select('id, agent_id, name, version, publisher, install_date, last_seen_at, tenant_id').eq('tenant_id', tenant_id).order('last_seen_at', { ascending: false }).limit(100);
     if (agent_id) softwareQuery.eq('agent_id', agent_id);
     const { data: software } = await softwareQuery;
     statistics.total_software = software?.length || 0;
@@ -410,7 +410,7 @@ export async function handleAutoGenerateReport(
   }
 
   if (reportType === 'full_security' || reportType === 'vulnerabilities') {
-    const vulnQuery = supabase.from('vulnerability_findings').select('*').eq('tenant_id', tenant_id).order('detected_at', { ascending: false }).limit(100);
+    const vulnQuery = supabase.from('vulnerability_findings').select('id, agent_id, cve_id, severity, status, software_name, software_version, detected_at, tenant_id').eq('tenant_id', tenant_id).order('detected_at', { ascending: false }).limit(100);
     if (agent_id) vulnQuery.eq('agent_id', agent_id);
     const { data: vulns } = await vulnQuery;
     statistics.total_vulnerabilities = vulns?.length || 0;
@@ -421,7 +421,7 @@ export async function handleAutoGenerateReport(
   }
 
   if (reportType === 'full_security' || reportType === 'antivirus') {
-    const avQuery = supabase.from('antivirus_status').select('*').eq('tenant_id', tenant_id).order('collected_at', { ascending: false }).limit(50);
+    const avQuery = supabase.from('antivirus_status').select('id, agent_id, engine_name, engine_version, definitions_date, real_time_protection, threats_found, collected_at, tenant_id').eq('tenant_id', tenant_id).order('collected_at', { ascending: false }).limit(50);
     if (agent_id) avQuery.eq('agent_id', agent_id);
     const { data: antivirus } = await avQuery;
     statistics.antivirus_engines = antivirus?.length || 0;
@@ -430,7 +430,7 @@ export async function handleAutoGenerateReport(
   }
 
   if (reportType === 'full_security' || reportType === 'web_activity') {
-    const webQuery = supabase.from('agent_web_activity').select('*').eq('tenant_id', tenant_id).order('visited_at', { ascending: false }).limit(100);
+    const webQuery = supabase.from('agent_web_activity').select('id, agent_id, domain, url, title, visited_at, is_blocked, category, tenant_id').eq('tenant_id', tenant_id).order('visited_at', { ascending: false }).limit(100);
     if (agent_id) webQuery.eq('agent_id', agent_id);
     const { data: webActivity } = await webQuery;
     const uniqueDomains = new Set(webActivity?.map((w: Record<string, unknown>) => w.domain) || []);
