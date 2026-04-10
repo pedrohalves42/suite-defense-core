@@ -48,7 +48,7 @@ export async function handleCheckCredentialLeaks(
   }
 
   // Check monitored domains
-  const { data: monitors } = await supabase.from('credential_monitors').select('*').eq('tenant_id', tenantId).eq('monitoring_enabled', true);
+  const { data: monitors } = await supabase.from('credential_monitors').select('id, tenant_id, email_domain, monitoring_enabled, last_checked_at').eq('tenant_id', tenantId).eq('monitoring_enabled', true);
   if (monitors?.length) {
     for (const monitor of monitors) {
       try {
