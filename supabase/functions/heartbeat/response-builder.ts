@@ -161,16 +161,17 @@ export async function buildNormalResponse(
 
 /**
  * Dynamic heartbeat interval based on agent state.
- * ENFORCING (stable) → 120s (v6), degraded states → 60s (faster recovery).
+ * COST-OPT: ENFORCING (stable) → 300s (5 min), degraded states → 120s (faster recovery).
+ * Previous: 120s/60s — reduced invocations by ~60%.
  */
 function _getHeartbeatInterval(agentState: string | null | undefined): number {
   const degradedStates = ['SAFE_MODE', 'DEGRADED', 'INITIALIZING']
-  if (agentState && degradedStates.includes(agentState)) return 60
-  return 120
+  if (agentState && degradedStates.includes(agentState)) return 120
+  return 300
 }
 
 function _getPollInterval(agentState: string | null | undefined): number {
   const degradedStates = ['SAFE_MODE', 'DEGRADED', 'INITIALIZING']
-  if (agentState && degradedStates.includes(agentState)) return 30
-  return 120
+  if (agentState && degradedStates.includes(agentState)) return 60
+  return 300
 }
