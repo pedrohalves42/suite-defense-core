@@ -217,7 +217,7 @@ export async function handleWatchdogNonExecution(supabase: SB, requestId: string
   logger.info(`[${requestId}] Starting watchdog non-execution detection`);
 
   const { data: unhealthyAgents, error: queryError } = await supabase
-    .from('v_agent_execution_health').select('*')
+    .from('v_agent_execution_health').select('agent_id, agent_name, tenant_id, last_job_completed_at, stale_delivered_jobs, pending_jobs, health_status, severity, health_description')
     .neq('health_status', 'healthy').neq('health_status', 'offline').neq('health_status', 'never_connected');
 
   if (queryError) { logger.error(`[${requestId}] Query error: ${queryError.message}`); throw queryError; }

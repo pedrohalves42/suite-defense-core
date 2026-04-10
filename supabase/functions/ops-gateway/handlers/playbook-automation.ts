@@ -332,7 +332,7 @@ export async function handleOncallIntegration(supabase: SupabaseClient, requestI
   }
 
   if (action === 'alerts') {
-    const { data: alerts } = await supabase.from('oncall_alerts').select('*').in('status', ['triggered', 'acknowledged', 'escalated']).order('triggered_at', { ascending: false }).limit(50);
+    const { data: alerts } = await supabase.from('oncall_alerts').select('id, title, severity, status, triggered_at, acknowledged_at, resolved_at, assignee_id, escalation_level, tenant_id').in('status', ['triggered', 'acknowledged', 'escalated']).order('triggered_at', { ascending: false }).limit(50);
     return { alerts: alerts || [] };
   }
 
@@ -415,7 +415,7 @@ export async function handleCreateItsmTicket(supabase: SupabaseClient, requestId
   const userId = ticketBody.user_id || (payload.user_id as string);
   if (!tenantId) return { __status: 400, error: 'tenant_id is required' };
 
-  const { data: integration, error: intErr } = await supabase.from('itsm_integrations').select('*').eq('id', ticketBody.integration_id).eq('tenant_id', tenantId).eq('is_active', true).single();
+  const { data: integration, error: intErr } = await supabase.from('itsm_integrations').select('id, tenant_id, provider, base_url, project_key, default_issue_type, default_priority, credentials_encrypted, is_active').eq('id', ticketBody.integration_id).eq('tenant_id', tenantId).eq('is_active', true).single();
   if (intErr || !integration) return { __status: 404, error: 'Integration not found or inactive' };
 
   let result: { id: string; key: string; url: string };
