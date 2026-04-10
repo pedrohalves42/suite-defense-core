@@ -6,11 +6,15 @@
  * compatibility with .NET Framework's RSACryptoServiceProvider.
  * 
  * Cost: zero DB queries — pure in-memory crypto derivation.
+ * Failure caching: derivation is attempted once per cold start;
+ * subsequent calls return null instantly if the first attempt failed.
  */
 
 import { logger } from './logger.ts'
 
 let cachedPublicKeyBase64: string | null = null
+/** true = derivation was attempted and failed; skip future attempts */
+let derivationFailed = false
 
 /**
  * Derive the RSA-2048 public key (SPKI, Base64) from the private key secret.
@@ -19,10 +23,12 @@ let cachedPublicKeyBase64: string | null = null
  */
 export async function getRsaPublicKeyBase64(): Promise<string | null> {
   if (cachedPublicKeyBase64 !== null) return cachedPublicKeyBase64
+  if (derivationFailed) return null
 
   const privateKeyBase64 = Deno.env.get('RSA_PRIVATE_KEY')
   if (!privateKeyBase64) {
     logger.warn('[RSA] RSA_PRIVATE_KEY secret not configured — RSA fallback unavailable')
+    derivationFailed = true
     return null
   }
 
@@ -47,6 +53,7 @@ export async function getRsaPublicKeyBase64(): Promise<string | null> {
     const jwk = await crypto.subtle.exportKey('jwk', privateKey)
     if (!jwk.n || !jwk.e) {
       logger.error('[RSA] Private key JWK missing "n" or "e" (public components)')
+      derivationFailed = true
       return null
     }
 
@@ -70,9 +77,10 @@ export async function getRsaPublicKeyBase64(): Promise<string | null> {
 
     return cachedPublicKeyBase64
   } catch (err) {
-    logger.error('[RSA] Failed to derive public key from private key', {
+    logger.error('[RSA] Failed to derive public key from private key (will not retry this cold start)', {
       error: (err as Error).message,
     })
+    derivationFailed = true
     return null
   }
 }
@@ -82,6 +90,9 @@ export async function getRsaPublicKeyBase64(): Promise<string | null> {
  * Returns Base64-encoded signature or null if key is unavailable.
  */
 export async function signWithRsa(content: string): Promise<string | null> {
+  // Fast-path: if derivation already failed, skip entirely
+  if (derivationFailed) return null
+
   const privateKeyBase64 = Deno.env.get('RSA_PRIVATE_KEY')
   if (!privateKeyBase64) return null
 
@@ -110,7 +121,8 @@ export async function signWithRsa(content: string): Promise<string | null> {
 
     return btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)))
   } catch (err) {
-    logger.error('[RSA] Failed to sign content', { error: (err as Error).message })
+    logger.error('[RSA] Failed to sign content (will not retry this cold start)', { error: (err as Error).message })
+    derivationFailed = true
     return null
   }
 }
