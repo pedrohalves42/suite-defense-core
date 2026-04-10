@@ -26,7 +26,7 @@ export interface ResignResult {
 }
 
 interface SigningStrategy {
-  envName: 'ED25519_PRIVATE_KEY' | 'ECDSA_PRIVATE_KEY';
+  envName: 'ED25519_PRIVATE_KEY' | 'ECDSA_PRIVATE_KEY' | 'RSA_PRIVATE_KEY';
   importParams: EcKeyImportParams | Algorithm;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   signParams: any;
@@ -48,6 +48,13 @@ const SIGNING_STRATEGIES: SigningStrategy[] = [
     signParams: { name: 'ECDSA', hash: 'SHA-256' },
     signedBy: 'hotfix-resigner-ecdsa',
     label: 'ECDSA-P256',
+  },
+  {
+    envName: 'RSA_PRIVATE_KEY',
+    importParams: { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    signParams: 'RSASSA-PKCS1-v1_5',
+    signedBy: 'hotfix-resigner-rsa2048',
+    label: 'RSA-2048',
   },
 ];
 
