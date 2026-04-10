@@ -38,7 +38,7 @@ export class EdgeDomainEventDispatcher {
   async replayEvents(aggregateId: string, fromDate?: Date): Promise<EdgeDomainEvent[]> {
     let query = this.supabase
       .from('domain_events')
-      .select('*')
+      .select('aggregate_id, aggregate_type, event_type, payload, occurred_on, tenant_id')
       .eq('aggregate_id', aggregateId)
       .order('occurred_on', { ascending: true });
 
