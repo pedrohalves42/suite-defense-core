@@ -280,7 +280,7 @@ export async function handleUnitEconomics(supabase: SB, requestId: string, _payl
     }
   });
 
-  const { data: marketingCosts } = await supabase.from('marketing_costs').select('*');
+  const { data: marketingCosts } = await supabase.from('marketing_costs').select('id, channel, spend_cents, conversions, period_start, period_end');
   const totalSpend = marketingCosts?.reduce((sum: number, cost: Record<string, unknown>) => sum + Number(cost.spend_cents || 0) / 100, 0) || 0;
   const totalConversions = marketingCosts?.reduce((sum: number, cost: Record<string, unknown>) => sum + (Number(cost.conversions) || 0), 0) || 0;
   const cac = totalConversions > 0 ? totalSpend / totalConversions : 0;
@@ -390,7 +390,7 @@ export async function handleSalesPipeline(supabase: SB, requestId: string, paylo
   const subAction = (payload.sub_action as string) || 'list';
 
   if (subAction === 'list') {
-    const { data: deals, error: dealsError } = await supabase.from('sales_pipeline').select('*').order('created_at', { ascending: false });
+    const { data: deals, error: dealsError } = await supabase.from('sales_pipeline').select('id, company_name, contact_name, contact_email, stage, value, probability, expected_close_date, notes, assigned_to, created_at, updated_at').order('created_at', { ascending: false });
     if (dealsError) throw dealsError;
 
     const stages = ['lead', 'qualified', 'demo', 'proposal', 'negotiation', 'won', 'lost'];

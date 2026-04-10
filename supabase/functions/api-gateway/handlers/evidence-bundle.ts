@@ -78,7 +78,7 @@ export async function handleExportEvidenceBundle(
   let totalRecords = 0;
 
   if (options.securityEvents) {
-    let query = supabase.from('security_events').select('*').eq('tenant_id', tenantId).gte('created_at', periodStart).lte('created_at', periodEnd).order('created_at', { ascending: true });
+    let query = supabase.from('security_events').select('id, agent_id, event_type, severity, description, source_ip, destination_ip, created_at, tenant_id').eq('tenant_id', tenantId).gte('created_at', periodStart).lte('created_at', periodEnd).order('created_at', { ascending: true });
     if (agentId) query = query.eq('agent_id', agentId);
     const { data: events } = await query;
     bundle.evidence = { ...(bundle.evidence as object), securityEvents: events || [] };
@@ -94,7 +94,7 @@ export async function handleExportEvidenceBundle(
   }
 
   if (options.signatures) {
-    let query = supabase.from('job_executions').select('*').eq('tenant_id', tenantId).gte('started_at', periodStart).lte('started_at', periodEnd).not('result_signature', 'is', null).order('started_at', { ascending: true });
+    let query = supabase.from('job_executions').select('id, job_id, agent_id, tenant_id, started_at, completed_at, status, result_signature, execution_hash').eq('tenant_id', tenantId).gte('started_at', periodStart).lte('started_at', periodEnd).not('result_signature', 'is', null).order('started_at', { ascending: true });
     if (agentId) query = query.eq('agent_id', agentId);
     const { data: executions } = await query;
     bundle.evidence = { ...(bundle.evidence as object), signedExecutions: executions || [] };
@@ -102,13 +102,13 @@ export async function handleExportEvidenceBundle(
   }
 
   if (options.hashChain && agentId) {
-    const { data: chain } = await supabase.from('agent_execution_chain').select('*').eq('agent_id', agentId).single();
+    const { data: chain } = await supabase.from('agent_execution_chain').select('agent_id, tenant_id, last_execution_hash, last_execution_index, updated_at').eq('agent_id', agentId).single();
     bundle.evidence = { ...(bundle.evidence as object), hashChain: chain || null };
     if (chain) totalRecords += 1;
   }
 
   if (options.riskDecisions) {
-    const { data: decisions } = await supabase.from('risk_decision_log').select('*').eq('tenant_id', tenantId).gte('created_at', periodStart).lte('created_at', periodEnd).order('created_at', { ascending: true });
+    const { data: decisions } = await supabase.from('risk_decision_log').select('id, tenant_id, agent_id, risk_type, risk_score, decision, reason, created_at').eq('tenant_id', tenantId).gte('created_at', periodStart).lte('created_at', periodEnd).order('created_at', { ascending: true });
     bundle.evidence = { ...(bundle.evidence as object), riskDecisions: decisions || [] };
     totalRecords += decisions?.length || 0;
   }
@@ -122,7 +122,7 @@ export async function handleExportEvidenceBundle(
   }
 
   if (options.auditLogs) {
-    const { data: logs } = await supabase.from('audit_logs').select('*').eq('tenant_id', tenantId).gte('created_at', periodStart).lte('created_at', periodEnd).order('created_at', { ascending: true });
+    const { data: logs } = await supabase.from('audit_logs').select('id, user_id, action, resource_type, resource_id, ip_address, created_at, tenant_id').eq('tenant_id', tenantId).gte('created_at', periodStart).lte('created_at', periodEnd).order('created_at', { ascending: true });
     bundle.evidence = { ...(bundle.evidence as object), auditLogs: logs || [] };
     totalRecords += logs?.length || 0;
   }
