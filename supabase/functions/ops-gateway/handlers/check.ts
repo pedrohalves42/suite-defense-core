@@ -189,7 +189,7 @@ export async function handleCronSentinel(supabase: SB, requestId: string, _paylo
   const startTime = Date.now();
   logger.info(`[${requestId}] cron-sentinel started`);
 
-  const { data: silentJobs, error: queryError } = await supabase.from('v_cron_silent_failures').select('*');
+  const { data: silentJobs, error: queryError } = await supabase.from('v_cron_silent_failures').select('job_key, last_executed_at, expected_interval, silence_duration, severity');
   if (queryError) throw queryError;
 
   const allJobs = (silentJobs || []) as SilentJob[];

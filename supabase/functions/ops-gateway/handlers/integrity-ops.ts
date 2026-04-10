@@ -134,7 +134,7 @@ async function collectMetrics(supabase: SupabaseClient, tenantId: string): Promi
 }
 
 async function getBaseline(supabase: SupabaseClient, tenantId: string): Promise<ComplianceMetrics> {
-  const { data: baseline } = await supabase.from('compliance_baselines').select('*').eq('tenant_id', tenantId).maybeSingle();
+  const { data: baseline } = await supabase.from('compliance_baselines').select('tenant_id, rls_coverage, mfa_enforcement, audit_trail_integrity, data_retention_days, encryption_at_rest, encryption_in_transit, backup_frequency_hours, backup_restore_tested_days').eq('tenant_id', tenantId).maybeSingle();
   if (baseline) {
     return { tenantId, rlsCoverage: baseline.rls_coverage, mfaEnforcement: baseline.mfa_enforcement, auditTrailIntegrity: baseline.audit_trail_integrity, dataRetentionDays: baseline.data_retention_days, encryptionAtRest: baseline.encryption_at_rest, encryptionInTransit: baseline.encryption_in_transit, backupFrequencyHours: baseline.backup_frequency_hours, backupTestDays: baseline.backup_restore_tested_days };
   }
@@ -189,10 +189,10 @@ export const handleDriftDetect: InlinedHandler = async (supabase, requestId, pay
 
   // Default: query unresolved drift events
   if (tenantId) {
-    const { data } = await supabase.from('drift_events').select('*').eq('tenant_id', tenantId).order('detected_at', { ascending: false }).limit(100);
+    const { data } = await supabase.from('drift_events').select('id, tenant_id, severity, category, description, drift_score, detected_at, resolved_at').eq('tenant_id', tenantId).order('detected_at', { ascending: false }).limit(100);
     return { data: data || [] };
   }
-  const { data } = await supabase.from('drift_events').select('*').is('resolved_at', null).order('detected_at', { ascending: false }).limit(100);
+  const { data } = await supabase.from('drift_events').select('id, tenant_id, severity, category, description, drift_score, detected_at, resolved_at').is('resolved_at', null).order('detected_at', { ascending: false }).limit(100);
   return { data: data || [] };
 };
 
@@ -213,7 +213,7 @@ export const handleRunRlsTests: InlinedHandler = async (supabase, requestId, _pa
   // Test 1: Verify all tables have RLS enabled
   const { data: tablesWithoutRls, error: test1Error } = await supabase.rpc('get_tables_without_rls');
   if (test1Error) {
-    const { data } = await supabase.from('v_rls_continuous_check').select('*').eq('rls_enabled', false);
+    const { data } = await supabase.from('v_rls_continuous_check').select('table_name, rls_enabled').eq('rls_enabled', false);
     results.push({ test_name: 'all_tables_have_rls', table_name: null, passed: !data || data.length === 0, failure_reason: data && data.length > 0 ? `Tables without RLS: ${data.map((t: Record<string, unknown>) => t.table_name).join(', ')}` : null });
   } else {
     results.push({ test_name: 'all_tables_have_rls', table_name: null, passed: !tablesWithoutRls || tablesWithoutRls.length === 0, failure_reason: tablesWithoutRls && tablesWithoutRls.length > 0 ? `Tables without RLS: ${tablesWithoutRls.map((t: Record<string, unknown>) => t.table_name).join(', ')}` : null });
