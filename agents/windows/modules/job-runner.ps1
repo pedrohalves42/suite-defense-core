@@ -54,6 +54,15 @@ function Start-HeartbeatLoop {
                 }
             }
 
+            # Apply server-driven heartbeat interval (v6 migration: 60s → 120s)
+            if ($response -and $response.PSObject -and $response.PSObject.Properties['heartbeat_interval_seconds']) {
+                $serverInterval = [int]$response.heartbeat_interval_seconds
+                if ($serverInterval -ge 10 -and $serverInterval -ne $script:Config.HeartbeatInterval) {
+                    Write-Log "[HEARTBEAT] Server adjusted interval: $($script:Config.HeartbeatInterval)s -> ${serverInterval}s" "INFO"
+                    $script:Config.HeartbeatInterval = $serverInterval
+                }
+            }
+
             # Process pending jobs via typed dispatcher
             if ($response -and $response.commands) {
                 foreach ($cmd in $response.commands) {
