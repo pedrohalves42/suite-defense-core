@@ -202,6 +202,38 @@ function Invoke-LightVulnScan {
     } catch { Write-Log "[VULN-SCAN] Error: $($_.Exception.Message)" "ERROR"; return @{ status = "failed"; error = $_.Exception.Message } }
 }
 
+function Get-SystemInfo {
+    <#
+    .SYNOPSIS
+        Collects comprehensive system information. Ported from v5.0.15.
+    #>
+    try {
+        $os = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
+        $cs = Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction SilentlyContinue
+        $cpu = Get-CimInstance -ClassName Win32_Processor -ErrorAction SilentlyContinue | Select-Object -First 1
+        $disk = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=3" -ErrorAction SilentlyContinue | Select-Object -First 1
+
+        return @{
+            hostname       = $env:COMPUTERNAME
+            os_name        = $os.Caption
+            os_version     = $os.Version
+            os_build       = $os.BuildNumber
+            architecture   = $os.OSArchitecture
+            total_ram_gb   = [math]::Round($cs.TotalPhysicalMemory / 1GB, 2)
+            cpu_name       = $cpu.Name
+            cpu_cores      = $cpu.NumberOfCores
+            cpu_logical    = $cpu.NumberOfLogicalProcessors
+            disk_total_gb  = if ($disk) { [math]::Round($disk.Size / 1GB, 2) } else { 0 }
+            disk_free_gb   = if ($disk) { [math]::Round($disk.FreeSpace / 1GB, 2) } else { 0 }
+            agent_version  = $Global:AgentVersion
+        }
+    }
+    catch {
+        Write-Log "[SYSINFO] Error: $($_.Exception.Message)" "WARN"
+        return @{ hostname = $env:COMPUTERNAME; agent_version = $Global:AgentVersion; error = $_.Exception.Message }
+    }
+}
+
 function Invoke-ReportJob {
     try { return @{ hostname = $env:COMPUTERNAME; agent_version = $Global:AgentVersion; system_info = Get-SystemInfo; collected_at = (Get-Date).ToString("o") } }
     catch { return @{ error = $_.Exception.Message } }

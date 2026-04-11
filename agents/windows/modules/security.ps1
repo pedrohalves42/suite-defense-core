@@ -449,3 +449,16 @@ function Get-NetworkAnomalyEvents {
 
     return $events
 }
+
+function Test-ProcessInBaseline {
+    <#
+    .SYNOPSIS
+        Check if a process name is in the known baseline.
+        Returns $true if baseline is empty (fail-open) or process is in baseline.
+        Ported from v5.0.15 for v6 parity.
+    #>
+    param([string]$ProcessName)
+
+    if ($Global:ProcessBaselineSet.Count -eq 0) { return $true }  # No baseline = assume OK
+    return $Global:ProcessBaselineSet.Contains($ProcessName)
+}

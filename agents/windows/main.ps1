@@ -73,6 +73,16 @@ $Global:ProtectedServices = @("wininit", "lsass", "services", "smss", "csrss")
 $Global:DiskCleanupThresholdPercent = 90
 $Global:HighCpuThresholdPercent = 90
 
+# Agent cryptographic identity (set during enrollment/key generation)
+$Global:AgentPrivateKey = $null
+$Global:AgentPublicKey = $null
+$Global:AgentRsaKey = $null
+$Global:AgentSigningAlgorithm = $null
+$Global:KeyFingerprint = $null
+
+# Process baseline (HashSet for O(1) lookups)
+$Global:ProcessBaselineSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+
 # ============================================
 # SINGLE-INSTANCE GUARD (mutex)
 # Prevents multiple agent instances from running simultaneously
