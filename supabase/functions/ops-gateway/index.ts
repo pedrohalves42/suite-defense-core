@@ -122,7 +122,7 @@ import {
   handleCleanupStalePlaybooks, handleCleanupOfflineAgentsJobs, handleCleanupStuckBuilds,
   handleCleanupStuckJobs, handleAutoCleanupJobs, handleSecurityCleanup,
   handleCleanupJobs, handleCleanupExpiredEnrollmentKeys, handleCleanupOrphanedData,
-  handleCleanupStaleHoneypots,
+  handleCleanupStaleHoneypots, handleCleanupOldProcessSnapshots,
 } from './handlers/cleanup.ts';
 
 // Inlined handlers — sync-cve, mitre-sync, rate-limit (Phase 4)
@@ -221,6 +221,7 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'cleanup:expired-enrollment-keys': handleCleanupExpiredEnrollmentKeys,
   'cleanup:orphaned-data': handleCleanupOrphanedData,
   'cleanup:stale-honeypots': handleCleanupStaleHoneypots,
+  'cleanup:old-process-snapshots': handleCleanupOldProcessSnapshots,
   // ── notify inlined (Phase 3A) ──
   'notify:email': handleNotifyEmail,
   'notify:telegram': handleNotifyTelegram,
