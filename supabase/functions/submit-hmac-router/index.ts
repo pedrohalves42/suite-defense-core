@@ -1,10 +1,8 @@
 /**
  * submit-hmac-router — Consolidated HMAC-verified agent telemetry submission endpoint
  * 
- * Phase 1: Consolidates submit-antivirus-status, submit-software-inventory,
- * submit-web-activity, submit-vuln-findings into a single edge function.
- * 
- * Phase 2 (future): submit-system-metrics, submit-processes, submit-rollback-event
+ * Phase 1: antivirus-status, software-inventory, web-activity, vuln-findings
+ * Phase 2 (future): system-metrics, processes, rollback-event
  * 
  * Usage: POST /submit-hmac-router
  * Body: { "type": "antivirus-status" | "software-inventory" | "web-activity" | "vuln-findings", ...payload }
@@ -14,10 +12,10 @@ import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
-import { handleAntivirusStatus } from './handlers/antivirus-status.ts';
-import { handleSoftwareInventory } from './handlers/software-inventory.ts';
-import { handleWebActivity } from './handlers/web-activity.ts';
-import { handleVulnFindings } from './handlers/vuln-findings.ts';
+import { handleAntivirusStatus } from '../_shared/submit-handlers/antivirus-status.ts';
+import { handleSoftwareInventory } from '../_shared/submit-handlers/software-inventory.ts';
+import { handleWebActivity } from '../_shared/submit-handlers/web-activity.ts';
+import { handleVulnFindings } from '../_shared/submit-handlers/vuln-findings.ts';
 
 const RouterSchema = z.object({
   type: z.string().min(1).max(50),
