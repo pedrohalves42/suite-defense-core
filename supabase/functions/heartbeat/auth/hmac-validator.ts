@@ -1,16 +1,13 @@
 /**
  * HMAC validation module for heartbeat.
- * Extracts HMAC verification logic into a testable unit.
- * v7.0 HARDENED: All agents require valid HMAC — no legacy fallback.
+ * v7.1 HARDENED: All agents require valid HMAC — no legacy fallback.
+ * Removed isModernAgent (dead code after v7.0 unified enforcement).
  */
 
 import { verifyHmacSignature } from '../../_shared/hmac.ts'
-import { normalizeVersion } from '../../_shared/hexagonal/update-decision-service.ts'
 import { logger } from '../../_shared/logger.ts'
 import { buildCorsHeaders } from '../../_shared/cors.ts'
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
-
-const HMAC_REQUIRED_MIN_VERSION = '5.0.12'
 
 export interface HmacValidationResult {
   /** Whether validation passed */
@@ -22,18 +19,8 @@ export interface HmacValidationResult {
 }
 
 /**
- * Determine if agent version is >= HMAC_REQUIRED_MIN_VERSION.
- * Kept for backward compatibility and tests.
- */
-export function isModernAgent(agentVersion: string | null): boolean {
-  const currentNormV = normalizeVersion(agentVersion || '')
-  const hmacMinNormV = normalizeVersion(HMAC_REQUIRED_MIN_VERSION)
-  return !!(currentNormV && hmacMinNormV && currentNormV >= hmacMinNormV)
-}
-
-/**
  * Validate HMAC signature for a heartbeat request.
- * v7.0: All agents are blocked on missing or invalid HMAC.
+ * All agents are blocked on missing or invalid HMAC.
  */
 export async function validateHeartbeatHmac(
   supabase: SupabaseClient,

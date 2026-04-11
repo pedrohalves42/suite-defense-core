@@ -21,7 +21,6 @@ export interface AuthenticatedAgent {
   lastHeartbeat: string | null;
   status: string | null;
   tokenHash: string;
-  isModernAgent: boolean;
   isLegacyAgent: boolean;
 }
 
@@ -86,9 +85,6 @@ export async function authenticateAndValidateAgent(
 
   const agent: AgentRecord = Array.isArray(token.agents) ? token.agents[0] : token.agents;
   const agentVersionStr = agent.agent_version || '';
-  const currentNormV = normalizeVersion(agentVersionStr);
-  const hmacMinNormV = normalizeVersion(HMAC_REQUIRED_MIN_VERSION);
-  const isModernAgent = !!(currentNormV && hmacMinNormV && currentNormV >= hmacMinNormV);
 
   // Version compatibility detection
   const parseVersion = (v: string): number[] => {
@@ -152,7 +148,6 @@ export async function authenticateAndValidateAgent(
       lastHeartbeat: agent.last_heartbeat || null,
       status: agent.status || null,
       tokenHash,
-      isModernAgent,
       isLegacyAgent,
     },
   };
