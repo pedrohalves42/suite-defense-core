@@ -2,7 +2,7 @@
  * Multi-disk metrics processing and primary disk selection.
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { logger } from '../_shared/logger.ts';
+import { logger } from '../logger.ts';
 
 export interface DiskInfo {
   drive_letter: string;
