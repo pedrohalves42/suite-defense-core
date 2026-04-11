@@ -88,56 +88,68 @@ export async function handleComplianceReport(
   const tenantId = parsed.data.tenant_id;
   logger.info(`[report:compliance][${requestId}] Starting for tenant: ${tenantId}`);
 
-  const { data: tenantRow } = await supabase.from("tenants").select("name").eq("id", tenantId).maybeSingle();
-  const tenantName = tenantRow?.name || "Empresa";
-
   const template = (parsed.data.template ?? parsed.data.template_type) as string;
   const periodStart = parsed.data.period_start ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const periodEnd = parsed.data.period_end ?? new Date().toISOString();
 
-  // Data collection
-  const { count: agentCount } = await supabase.from("agents").select("*", { count: "exact", head: true }).eq("tenant_id", tenantId);
-  const { data: agentsData } = await supabase.from("agents").select("id, agent_name, status, last_heartbeat, agent_version, os_type").eq("tenant_id", tenantId);
+  // ── Parallel data collection: 16 sequential queries → 1 Promise.all ──
+  const [
+    { data: tenantRow },
+    { data: agentsData },
+    { data: vulns },
+    { data: avData },
+    { count: eventCount },
+    { data: securityEvents },
+    { count: auditCount },
+    { data: blockedSites },
+    { count: blockedAccessCount },
+    { data: recentJobs },
+    { count: outdatedSoftwareCount },
+    { data: prevRiskScore },
+  ] = await Promise.all([
+    supabase.from("tenants").select("name").eq("id", tenantId).maybeSingle(),
+    supabase.from("agents").select("id, agent_name, status, last_heartbeat, agent_version, os_type").eq("tenant_id", tenantId),
+    supabase.from("vuln_findings").select("severity, title, cve_id, status").eq("tenant_id", tenantId),
+    supabase.from("antivirus_status").select("real_time_protection, threats_found, definition_status").eq("tenant_id", tenantId),
+    supabase.from("agent_evidence_logs").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).gte("created_at", periodStart),
+    supabase.from("security_events").select("severity, event_type").eq("tenant_id", tenantId).gte("created_at", periodStart),
+    supabase.from("audit_logs").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).gte("created_at", periodStart),
+    supabase.from("blocked_websites").select("id, domain, reason, is_active, created_at").eq("tenant_id", tenantId).eq("is_active", true),
+    supabase.from("agent_web_activity").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("is_blocked", true).gte("visited_at", periodStart),
+    supabase.from("jobs").select("status").eq("tenant_id", tenantId).gte("created_at", periodStart),
+    supabase.from("installed_software").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("needs_update", true),
+    supabase.from("tenant_risk_scores").select("score").eq("tenant_id", tenantId).order("calculated_at", { ascending: false }).limit(1).maybeSingle(),
+  ]);
 
+  const tenantName = tenantRow?.name || "Empresa";
+
+  // Derive counts from fetched data (eliminates redundant count+select pairs)
+  const agentCount = agentsData?.length ?? 0;
   const offlineThreshold = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   const offlineAgents = agentsData?.filter(a => !a.last_heartbeat || a.last_heartbeat < offlineThreshold) ?? [];
   const onlineAgents = agentsData?.filter(a => a.last_heartbeat && a.last_heartbeat >= offlineThreshold) ?? [];
 
-  const { count: vulnCount } = await supabase.from("vuln_findings").select("*", { count: "exact", head: true }).eq("tenant_id", tenantId);
-  const { data: vulns } = await supabase.from("vuln_findings").select("severity, title, cve_id, status").eq("tenant_id", tenantId);
+  const vulnCount = vulns?.length ?? 0;
   const criticalVulns = vulns?.filter(v => v.severity === "critical").length ?? 0;
   const highVulns = vulns?.filter(v => v.severity === "high").length ?? 0;
   const mediumVulns = vulns?.filter(v => v.severity === "medium").length ?? 0;
   const lowVulns = vulns?.filter(v => v.severity === "low").length ?? 0;
   const fixedVulns = vulns?.filter(v => v.status === "fixed" || v.status === "resolved").length ?? 0;
 
-  const { data: avData } = await supabase.from("antivirus_status").select("*").eq("tenant_id", tenantId);
-  const threatsFound = avData?.reduce((sum, a) => sum + (a.threats_found ?? 0), 0) ?? 0;
+  const threatsFound = avData?.reduce((sum: number, a: Record<string, unknown>) => sum + ((a.threats_found as number) ?? 0), 0) ?? 0;
   const agentsWithAV = avData?.length ?? 0;
-  const agentsWithActiveAV = avData?.filter(a => a.real_time_protection === true).length ?? 0;
-  const avOutdated = avData?.filter(a => a.definition_status === "outdated").length ?? 0;
+  const agentsWithActiveAV = avData?.filter((a: Record<string, unknown>) => a.real_time_protection === true).length ?? 0;
+  const avOutdated = avData?.filter((a: Record<string, unknown>) => a.definition_status === "outdated").length ?? 0;
 
-  const { count: eventCount } = await supabase.from("agent_evidence_logs").select("*", { count: "exact", head: true }).eq("tenant_id", tenantId).gte("created_at", periodStart);
-  const { data: securityEvents } = await supabase.from("security_events").select("severity, event_type").eq("tenant_id", tenantId).gte("created_at", periodStart);
   const criticalEvents = securityEvents?.filter(e => e.severity === "critical").length ?? 0;
   const highEvents = securityEvents?.filter(e => e.severity === "high").length ?? 0;
-
-  const { count: auditCount } = await supabase.from("audit_logs").select("*", { count: "exact", head: true }).eq("tenant_id", tenantId).gte("created_at", periodStart);
   const failedLogins = securityEvents?.filter(e => e.event_type === "login_failed" || e.event_type === "auth_failed").length ?? 0;
 
-  const { data: blockedSites } = await supabase.from("blocked_websites").select("*").eq("tenant_id", tenantId).eq("is_active", true);
   const blockedSitesCount = blockedSites?.length ?? 0;
 
-  const { count: blockedAccessCount } = await supabase.from("agent_web_activity").select("*", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("is_blocked", true).gte("visited_at", periodStart);
-
-  const { data: recentJobs } = await supabase.from("jobs").select("status").eq("tenant_id", tenantId).gte("created_at", periodStart);
   const totalJobs = recentJobs?.length ?? 0;
   const failedJobs = recentJobs?.filter(j => j.status === "failed" || j.status === "failed_timeout").length ?? 0;
   const jobSuccessRate = totalJobs > 0 ? Math.round(((totalJobs - failedJobs) / totalJobs) * 100) : 100;
-
-  const { count: outdatedSoftwareCount } = await supabase.from("installed_software").select("*", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("needs_update", true);
-
-  const { data: prevRiskScore } = await supabase.from("tenant_risk_scores").select("score").eq("tenant_id", tenantId).order("calculated_at", { ascending: false }).limit(1).maybeSingle();
 
   // Security score
   let securityScore = 100;
@@ -445,10 +457,10 @@ export async function handleSecurityReport(
     { data: webActivity }, { data: virusScans }, { data: securityEvents }, { data: failedLogins },
     { data: auditLogs }, { data: blockedWebsites }, { data: blockedAttempts }, { data: tenantFeatures },
   ] = await Promise.all([
-    supabase.from('agents').select('id, agent_name, hostname, tenant_id, status, last_seen_at, agent_version, os_version, ip_address').eq('tenant_id', tenantId).eq('status', 'active'),
+    supabase.from('agents').select('id, agent_name, hostname, tenant_id, status, last_heartbeat, agent_version, os_version, ip_address').eq('tenant_id', tenantId).eq('status', 'active'),
     supabase.from('software_inventory').select('id, agent_id, name, version, publisher, install_date, last_seen_at, tenant_id').eq('tenant_id', tenantId).match(agentFilter),
     supabase.from('vuln_findings').select('id, agent_id, agent_name, cve_id, severity, status, software_name, software_version, tenant_id, detected_at').eq('tenant_id', tenantId).match(agentFilter),
-    supabase.from('antivirus_status').select('id, agent_id, engine_name, engine_version, definitions_date, real_time_protection, threats_found, collected_at, tenant_id').eq('tenant_id', tenantId).match(agentFilter),
+    supabase.from('antivirus_status').select('id, agent_id, engine_name, engine_version, definitions_date, real_time_protection, threats_found, collected_at, tenant_id, definition_status').eq('tenant_id', tenantId).match(agentFilter),
     supabase.from('agent_web_activity').select('id, agent_id, domain, url, title, visited_at, is_blocked, category, tenant_id').eq('tenant_id', tenantId).match(agentFilter).order('visited_at', { ascending: false }).limit(100),
     supabase.from('virus_scans').select('id, agent_name, file_hash, file_path, is_malicious, positives, total_scans, scanned_at, tenant_id').eq('tenant_id', tenantId).order('scanned_at', { ascending: false }).limit(50),
     supabase.from('security_events').select('id, agent_id, event_type, severity, description, created_at, tenant_id').eq('tenant_id', tenantId).match(agentFilter).order('created_at', { ascending: false }).limit(100),
