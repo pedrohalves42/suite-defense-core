@@ -101,10 +101,13 @@ async function shouldInsertTelemetry(
   agentId: string,
 ): Promise<boolean> {
   try {
+    // Filter to recent window (2x throttle) to enable partition pruning
+    const pruningCutoff = new Date(Date.now() - TELEMETRY_THROTTLE_MS * 2).toISOString()
     const { data } = await supabase
       .from('agent_system_metrics_partitioned')
       .select('collected_at')
       .eq('agent_id', agentId)
+      .gte('collected_at', pruningCutoff)
       .order('collected_at', { ascending: false })
       .limit(1)
       .maybeSingle()
