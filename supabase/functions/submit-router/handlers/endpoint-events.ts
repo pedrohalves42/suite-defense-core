@@ -1,26 +1,11 @@
 /**
  * Handler: endpoint events submission (EDR telemetry)
- * Inlined processing — NO proxy. Inserts directly into typed tables
- * with buffer fallback.
+ * Inlined processing — NO proxy. Supports v5 and v6 payload formats.
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
 
-// ── Event classification ────────────────────────────────────────────────
-
 type EventCategory = 'process' | 'file' | 'network' | 'registry';
-
-const EVENT_TYPE_MAP: Record<string, EventCategory> = {
-  process_start: 'process', process_stop: 'process', process_inject: 'process',
-  file_create: 'file', file_modify: 'file', file_delete: 'file', file_rename: 'file',
-  connection: 'network', listen: 'network', dns_query: 'network',
-  registry_set: 'registry', registry_create: 'registry', registry_delete: 'registry',
-  registry_snapshot: 'registry',
-};
-
-function classifyEvent(eventType: string): EventCategory {
-  return EVENT_TYPE_MAP[eventType] || 'process';
-}
 
 const TABLE_MAP: Record<EventCategory, string> = {
   process: 'endpoint_process_events',
@@ -31,36 +16,44 @@ const TABLE_MAP: Record<EventCategory, string> = {
 
 const COLUMNS: Record<EventCategory, string[]> = {
   process: [
-    'agent_id', 'tenant_id', 'event_type', 'pid', 'parent_pid', 'process_name',
+    'event_type', 'pid', 'parent_pid', 'process_name',
     'command_line', 'executable_path', 'user_name', 'sha256_hash',
     'parent_process_name', 'parent_command_line', 'mitre_technique_id',
     'mitre_tactic', 'is_suspicious', 'detection_tags', 'event_time',
   ],
   file: [
-    'agent_id', 'tenant_id', 'event_type', 'file_path', 'file_name',
+    'event_type', 'file_path', 'file_name',
     'file_extension', 'file_size', 'sha256_hash', 'old_path',
     'process_name', 'process_pid', 'is_suspicious', 'detection_tags', 'event_time',
   ],
   network: [
-    'agent_id', 'tenant_id', 'event_type', 'protocol', 'local_address',
+    'event_type', 'protocol', 'local_address',
     'local_port', 'remote_address', 'remote_port', 'direction',
     'process_name', 'process_pid', 'bytes_sent', 'bytes_received',
     'domain', 'dns_query_type', 'dns_response', 'is_suspicious',
     'detection_tags', 'geo_country', 'event_time',
   ],
   registry: [
-    'agent_id', 'tenant_id', 'event_type', 'key_path', 'value_name',
+    'event_type', 'key_path', 'value_name',
     'value_data', 'value_type', 'old_value_data', 'process_name',
     'process_pid', 'is_suspicious', 'detection_tags', 'mitre_technique_id',
     'event_time',
   ],
 };
 
+const EVENT_TYPE_MAP: Record<string, EventCategory> = {
+  process_start: 'process', process_stop: 'process', process_inject: 'process',
+  file_create: 'file', file_modify: 'file', file_delete: 'file', file_rename: 'file',
+  connection: 'network', listen: 'network', dns_query: 'network',
+  connection_established: 'network', port_listen: 'network',
+  registry_set: 'registry', registry_create: 'registry', registry_delete: 'registry',
+  registry_snapshot: 'registry', registry_value_set: 'registry', registry_value_delete: 'registry',
+};
+
 function pickColumns(event: Record<string, unknown>, category: EventCategory, agentId: string, tenantId: string): Record<string, unknown> {
   const allowed = COLUMNS[category];
   const row: Record<string, unknown> = { agent_id: agentId, tenant_id: tenantId };
   for (const col of allowed) {
-    if (col === 'agent_id' || col === 'tenant_id') continue;
     if (event[col] !== undefined) row[col] = event[col];
   }
   if (!row.event_time) row.event_time = new Date().toISOString();
@@ -68,8 +61,6 @@ function pickColumns(event: Record<string, unknown>, category: EventCategory, ag
   if (row.detection_tags === undefined) row.detection_tags = [];
   return row;
 }
-
-// ── Exported handler ────────────────────────────────────────────────────
 
 export async function handleEndpointEvents(
   supabase: SupabaseClient,
@@ -79,50 +70,69 @@ export async function handleEndpointEvents(
   requestId: string,
   body: Record<string, unknown>,
 ): Promise<Response | Record<string, unknown>> {
-  logger.info(`[${requestId}] endpoint-events: processing for agent ${agentId}`);
+  const grouped: Record<EventCategory, Record<string, unknown>[]> = {
+    process: [], file: [], network: [], registry: [],
+  };
 
-  // Extract events from various payload formats
-  let events: Record<string, unknown>[];
-  if (Array.isArray(body.events)) {
-    events = body.events as Record<string, unknown>[];
-  } else if (Array.isArray(body)) {
-    events = body as unknown as Record<string, unknown>[];
-  } else if (body.event_type) {
-    events = [body];
-  } else {
-    return new Response(
-      JSON.stringify({ error: 'Invalid payload', details: 'Expected { events: [...] } or event with event_type' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
-    );
+  let totalEvents = 0;
+  let isV5Format = false;
+
+  // v5 format: { process_events: [], network_events: [], ... }
+  const v5Keys: [string, EventCategory][] = [
+    ['process_events', 'process'],
+    ['network_events', 'network'],
+    ['file_events', 'file'],
+    ['registry_events', 'registry'],
+  ];
+
+  for (const [key, category] of v5Keys) {
+    const arr = body[key];
+    if (Array.isArray(arr) && arr.length > 0) {
+      isV5Format = true;
+      for (const event of arr) {
+        if (typeof event === 'object' && event !== null) {
+          grouped[category].push(pickColumns(event as Record<string, unknown>, category, agentId, tenantId));
+          totalEvents++;
+        }
+      }
+    }
   }
 
-  if (events.length === 0) {
+  // v6 format: { events: [{ event_type: "...", ... }] }
+  if (!isV5Format && Array.isArray(body.events)) {
+    for (const event of body.events) {
+      if (typeof event !== 'object' || event === null) continue;
+      const evt = event as Record<string, unknown>;
+      const eventType = evt.event_type as string;
+      if (!eventType) continue;
+      const category = EVENT_TYPE_MAP[eventType] || 'process';
+      grouped[category].push(pickColumns(evt, category, agentId, tenantId));
+      totalEvents++;
+    }
+  }
+
+  // Single event
+  if (!isV5Format && !Array.isArray(body.events) && body.event_type) {
+    const category = EVENT_TYPE_MAP[body.event_type as string] || 'process';
+    grouped[category].push(pickColumns(body, category, agentId, tenantId));
+    totalEvents++;
+  }
+
+  if (totalEvents === 0) {
     return { success: true, received: 0, processed: 0 };
   }
 
-  if (events.length > 500) {
+  if (totalEvents > 1000) {
     return new Response(
-      JSON.stringify({ error: 'Batch too large', max: 500, received: events.length }),
+      JSON.stringify({ error: 'Batch too large', max: 1000 }),
       { status: 400, headers: { 'Content-Type': 'application/json' } },
     );
   }
 
   const now = new Date().toISOString();
   const batchId = (body.batch_id as string) || undefined;
-  const stats = { received: events.length, direct: 0, buffered: 0, errors: 0 };
+  const stats = { received: totalEvents, direct: 0, buffered: 0, errors: 0 };
 
-  // Group by category
-  const grouped: Record<EventCategory, Record<string, unknown>[]> = {
-    process: [], file: [], network: [], registry: [],
-  };
-
-  for (const event of events) {
-    if (!event.event_type) continue;
-    const category = classifyEvent(event.event_type as string);
-    grouped[category].push(pickColumns(event, category, agentId, tenantId));
-  }
-
-  // Parallel batch inserts
   const ops = (Object.entries(grouped) as [EventCategory, Record<string, unknown>[]][])
     .filter(([, rows]) => rows.length > 0)
     .map(async ([category, rows]) => {
@@ -131,7 +141,6 @@ export async function handleEndpointEvents(
       if (error) {
         logger.error(`[${requestId}] Insert ${table}: ${error.message}`);
         stats.errors += rows.length;
-        // Buffer fallback
         const bufferRows = rows.map(row => ({
           agent_id: agentId, tenant_id: tenantId,
           event_category: category, payload: row,

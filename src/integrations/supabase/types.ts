@@ -50947,6 +50947,10 @@ export type Database = {
         Args: { p_action?: string; p_batch_size?: number; p_tenant_id: string }
         Returns: Json
       }
+      process_endpoint_event_buffer: {
+        Args: { batch_limit?: number }
+        Returns: Json
+      }
       process_heartbeat_v2: {
         Args: {
           p_agent_version?: string
