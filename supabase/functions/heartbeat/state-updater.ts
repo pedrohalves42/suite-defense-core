@@ -207,13 +207,8 @@ async function insertProcessData(
     logger.error('PROCESS INSERT FAILED', {
       agentName: agent.agent_name, error: error.message,
     })
-  } else {
-    // Cleanup old snapshots (keep last 48h) — non-blocking
-    supabase
-      .from('agent_processes')
-      .delete()
-      .eq('agent_id', agent.id)
-      .lt('collected_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())
-      .then(() => {})
   }
+  // NOTE: Cleanup of old agent_processes snapshots is handled by the
+  // centralized cron job via ops-gateway cleanup:old-process-snapshots.
+  // Do NOT add inline DELETE here — it causes redundant queries per heartbeat.
 }

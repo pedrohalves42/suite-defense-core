@@ -3,7 +3,8 @@
  * 
  * Includes: telemetry, stale-reports, stale-updates, stale-playbooks,
  * offline-agents-jobs, stuck-builds, stuck-jobs, auto-cleanup-jobs,
- * security, jobs, expired-enrollment-keys, orphaned-data, stale-honeypots
+ * security, jobs, expired-enrollment-keys, orphaned-data, stale-honeypots,
+ * old-process-snapshots
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
