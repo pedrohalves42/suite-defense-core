@@ -3,14 +3,11 @@
  * Extraído de poll-jobs/index.ts para modularização
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { normalizeVersion } from '../_shared/hexagonal/update-decision-service.ts';
 import { AgentTokenSchema } from '../_shared/validation.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { hashToken } from '../_shared/token-hash.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
-
-export const HMAC_REQUIRED_MIN_VERSION = '5.0.12';
 
 export interface AuthenticatedAgent {
   agentId: string;
@@ -21,7 +18,6 @@ export interface AuthenticatedAgent {
   lastHeartbeat: string | null;
   status: string | null;
   tokenHash: string;
-  isModernAgent: boolean;
   isLegacyAgent: boolean;
 }
 
@@ -86,9 +82,6 @@ export async function authenticateAndValidateAgent(
 
   const agent: AgentRecord = Array.isArray(token.agents) ? token.agents[0] : token.agents;
   const agentVersionStr = agent.agent_version || '';
-  const currentNormV = normalizeVersion(agentVersionStr);
-  const hmacMinNormV = normalizeVersion(HMAC_REQUIRED_MIN_VERSION);
-  const isModernAgent = !!(currentNormV && hmacMinNormV && currentNormV >= hmacMinNormV);
 
   // Version compatibility detection
   const parseVersion = (v: string): number[] => {
@@ -152,7 +145,6 @@ export async function authenticateAndValidateAgent(
       lastHeartbeat: agent.last_heartbeat || null,
       status: agent.status || null,
       tokenHash,
-      isModernAgent,
       isLegacyAgent,
     },
   };
