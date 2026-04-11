@@ -304,3 +304,23 @@ export async function handleCleanupStaleHoneypots(supabase: SB, requestId: strin
 
   return { success: true, request_id: requestId, ...results };
 }
+
+// ── old-process-snapshots ───────────────────────────────────────────────
+export async function handleCleanupOldProcessSnapshots(supabase: SB, requestId: string, _payload: Record<string, unknown>) {
+  const RETENTION_HOURS = 48;
+  const cutoff = new Date(Date.now() - RETENTION_HOURS * 60 * 60 * 1000).toISOString();
+
+  const { count, error } = await supabase
+    .from('agent_processes')
+    .delete()
+    .lt('collected_at', cutoff);
+
+  if (error) {
+    logger.error(`[${requestId}] [cleanup:old-process-snapshots] Error:`, error.message);
+    throw new Error(`Failed to cleanup old process snapshots: ${error.message}`);
+  }
+
+  const deleted = count ?? 0;
+  logger.info(`[${requestId}] [cleanup:old-process-snapshots] Deleted ${deleted} rows older than ${RETENTION_HOURS}h`);
+  return { success: true, request_id: requestId, deleted_count: deleted, cutoff };
+}
