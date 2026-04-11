@@ -16,6 +16,16 @@ $script:CircuitBreakerCooldown = 300
 function Start-HeartbeatLoop {
     Write-Log "Starting heartbeat loop (interval: $($script:Config.HeartbeatInterval)s)" "INFO"
 
+    # Proactive key registration during boot (exits audit-only mode)
+    try {
+        $keyRegResult = Register-AgentKey
+        if (-not $keyRegResult) {
+            Write-Log "[BOOT] Key registration deferred - will retry on next restart" "WARN"
+        }
+    } catch {
+        Write-Log "[BOOT] Key registration error (non-fatal): $($_.Exception.Message)" "WARN"
+    }
+
     while ($true) {
         try {
             if ($script:CircuitBreakerOpen) {

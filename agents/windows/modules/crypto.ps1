@@ -214,6 +214,120 @@ function Test-Ed25519Signature {
     }
 }
 
+function Register-AgentKey {
+    <#
+    .SYNOPSIS
+        Proactively registers the agent's ECDSA/Ed25519 public key with the server
+        during boot, exiting degraded audit-only mode.
+        Generates a key pair if none exists, computes SHA-256 fingerprint,
+        and POSTs to register-agent-key endpoint.
+        Idempotent: server returns 200 if key already registered.
+    #>
+
+    # Determine best available algorithm
+    $algorithm = "RSA-2048-SHA256"  # Universal fallback
+    $useEd25519 = Test-Ed25519Available
+    if ($useEd25519) { $algorithm = "Ed25519" }
+
+    $keyDir = "$env:ProgramData\CyberShield"
+    $privateKeyPath = "$keyDir\agent_signing_key.pem"
+    $publicKeyPath = "$keyDir\agent_signing_pubkey.pem"
+    $fingerprintPath = "$keyDir\agent_key_fingerprint"
+
+    try {
+        # --- Generate or load key pair ---
+        $publicKeyBase64 = $null
+
+        if ((Test-Path $publicKeyPath) -and (Test-Path $fingerprintPath)) {
+            # Reuse existing key
+            $publicKeyBase64 = (Get-Content $publicKeyPath -Raw -Encoding UTF8).Trim()
+            $fingerprint = (Get-Content $fingerprintPath -Raw -Encoding UTF8).Trim()
+            Write-Log "[KEY-REG] Loaded existing key pair (algo=$algorithm, fp=$($fingerprint.Substring(0,16))...)" "INFO"
+        }
+        else {
+            Write-Log "[KEY-REG] No existing key pair found - generating new $algorithm key..." "INFO"
+
+            if ($useEd25519) {
+                # .NET 5+ Ed25519
+                $ed = [System.Security.Cryptography.Ed25519]::Create()
+                $pubBytes = $ed.ExportSubjectPublicKeyInfo()
+                $privBytes = $ed.ExportPkcs8PrivateKey()
+                $ed.Dispose()
+                $publicKeyBase64 = [Convert]::ToBase64String($pubBytes)
+                [System.IO.File]::WriteAllBytes($privateKeyPath, $privBytes)
+            }
+            else {
+                # RSA-2048 fallback (.NET 4.x)
+                $rsa = [System.Security.Cryptography.RSA]::Create(2048)
+                $pubBytes = $rsa.ExportSubjectPublicKeyInfo()
+                $privBytes = $rsa.ExportPkcs8PrivateKey()
+                $rsa.Dispose()
+                $publicKeyBase64 = [Convert]::ToBase64String($pubBytes)
+                [System.IO.File]::WriteAllBytes($privateKeyPath, $privBytes)
+            }
+
+            # Persist public key
+            $publicKeyBase64 | Out-File -FilePath $publicKeyPath -Encoding UTF8 -Force -NoNewline
+
+            # Compute SHA-256 fingerprint of raw decoded bytes
+            $decodedBytes = [Convert]::FromBase64String($publicKeyBase64)
+            $sha = [System.Security.Cryptography.SHA256]::Create()
+            $hashBytes = $sha.ComputeHash($decodedBytes)
+            $sha.Dispose()
+            $fingerprint = ($hashBytes | ForEach-Object { $_.ToString("x2") }) -join ""
+
+            # Persist fingerprint
+            $fingerprint | Out-File -FilePath $fingerprintPath -Encoding UTF8 -Force -NoNewline
+
+            # Restrict file permissions (SYSTEM and Admins only)
+            try {
+                $acl = Get-Acl $privateKeyPath
+                $acl.SetAccessRuleProtection($true, $false)
+                $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule("SYSTEM", "FullControl", "Allow")
+                $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule("Administrators", "FullControl", "Allow")
+                $acl.AddAccessRule($systemRule)
+                $acl.AddAccessRule($adminRule)
+                Set-Acl -Path $privateKeyPath -AclObject $acl
+            } catch {
+                Write-Log "[KEY-REG] Warning: could not restrict key file permissions: $($_.Exception.Message)" "WARN"
+            }
+
+            Write-Log "[KEY-REG] Generated $algorithm key pair (fp=$($fingerprint.Substring(0,16))...)" "INFO"
+        }
+
+        # --- Register with server ---
+        $body = @{
+            public_key      = $publicKeyBase64
+            key_fingerprint = $fingerprint
+            algorithm       = $algorithm
+        }
+
+        $result = Invoke-SecureRequest `
+            -Path "/functions/v1/register-agent-key" `
+            -Method "POST" `
+            -Body $body `
+            -MaxRetries 3 `
+            -TimeoutSec 15
+
+        if ($result.Success) {
+            $resp = $result.Content | ConvertFrom-Json
+            if ($resp.success) {
+                $alreadyStr = if ($resp.already_registered) { " (already registered)" } else { "" }
+                Write-Log "[KEY-REG] Key registered successfully${alreadyStr}: key_id=$($resp.key_id), version=$($resp.version)" "SUCCESS"
+                return $true
+            }
+        }
+
+        $errMsg = if ($result.Error) { $result.Error } else { "Unknown error (HTTP $($result.StatusCode))" }
+        Write-Log "[KEY-REG] Registration failed: $errMsg - agent will remain in audit-only mode" "WARN"
+        return $false
+
+    } catch {
+        Write-Log "[KEY-REG] Error during key registration: $($_.Exception.Message)" "ERROR"
+        return $false
+    }
+}
+
 function Test-ScriptSignature {
     <#
     .SYNOPSIS
