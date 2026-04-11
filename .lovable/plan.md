@@ -1,59 +1,129 @@
 
-# Plano: Eliminação de SELECT * → Colunas Explícitas
 
-## Contexto
-52 instâncias de `.select('*')` em 29 arquivos transferem colunas JSONB pesadas desnecessariamente (~2KB extras/linha). Tabelas com maior impacto: `audit_logs` (3 JSONB), `jobs` (2 JSONB), `generated_reports` (2 JSONB), `attack_simulations` (2 JSONB).
+# Plano Completo: Validacao Canary v6, Telemetria, Rate Limit e Rollout da Frota
 
-## Abordagem
-Para cada arquivo: identificar quais colunas são **efetivamente usadas** no componente/hook e substituir `select('*')` por lista explícita. Priorizar tabelas com colunas JSONB.
+## Situacao Atual
 
-## Lotes de Execução (6 batches)
+**pcteste1**: Recebeu o script v6.0.0 e instalou com sucesso (atomic move) em 11/04 as 15:25:36. Porem, o banco ainda mostra `agent_version: v5.0.15` — o agente precisa reiniciar o servico para que o proximo heartbeat reporte v6.0.0.
 
-### Batch 1 — Repositórios de Infraestrutura (7 instâncias)
-Arquivos que mapeiam para tipos definidos em `supabase-tables.ts`:
-1. `src/infrastructure/repositories/SupabaseJobRepository.ts` — 5 selects (jobs, job_executions)
-2. `src/infrastructure/repositories/SupabaseAgentUpdateRepository.ts` — 2 selects
-3. `src/infrastructure/repositories/SupabaseUpdatePackageRepository.ts` — 2 selects
-4. `src/infrastructure/adapters/supabase/SupabaseUpdatePackageRepository.ts` — 2 selects
+**Frota total v5.0.15**: 14 agentes, sendo apenas 2 ativos (PC-Servidor-Planalto e pcteste1). Os demais estao offline.
 
-### Batch 2 — Hooks de Dados (10 instâncias)
-5. `src/hooks/useCorrelationRules.ts` — 2 selects (correlation_rules, correlation_results)
-6. `src/hooks/useGamification.ts` — 2 selects (user_gamification, xp_events)
-7. `src/hooks/useSOC2ControlStatus.ts` — 1 select
-8. `src/hooks/useSecurityEvents.ts` — selects em security_events
-9. `src/hooks/useDetectionRules.ts` — selects em detection_rules
+**Rate limit heartbeat**: Configurado para `maxRequests: 10, windowMinutes: 10, blockMinutes: 2`. O agente v5 faz heartbeat a cada ~35s, gerando ~17 requests/10min — excede o limite de 10 e causa cascatas de 429 seguidas de 401.
 
-### Batch 3 — Páginas Admin (12 instâncias)
-10. `src/pages/admin/SecurityDashboard/useSecurityDashboard.ts` — 2 selects (security_logs, ip_blocklist)
-11. `src/pages/admin/ShadowITDiscovery.tsx` — 1 select
-12. `src/pages/admin/AttackSimulation.tsx` — 1 select
-13. `src/pages/admin/SecurityBenchmark.tsx` — 1 select
-14. `src/pages/admin/IdentitySecurity.tsx` — 2 selects
-15. `src/pages/admin/RansomwareIncident.tsx` — 2 selects
+**Ed25519**: O agente pcteste1 nunca recebeu a chave publica Ed25519 — opera em "audit-only mode" (aceita updates por SHA256 apenas).
 
-### Batch 4 — Páginas Tenant (6 instâncias)
-16. `src/pages/admin/tenant/TenantSecurity.tsx` — 1 select (audit_logs — 3 JSONB!)
-17. `src/pages/admin/tenant/TenantSettings.tsx` — 1 select
-18. `src/pages/admin/tenant/TenantLogs.tsx` — 1 select (audit_logs — 3 JSONB!)
-19. `src/pages/admin/tenant/TenantInvites.tsx` — 1 select
+---
 
-### Batch 5 — Componentes (6 instâncias)
-20. `src/components/admin/ScheduledReportsManager.tsx` — 1 select
-21. `src/components/admin/GeneratedReportsList.tsx` — 1 select (generated_reports — 2 JSONB!)
-22. `src/components/admin/autonomy/HumanInTheLoopPanel.tsx` — 1 select
-23. `src/components/security/TenantClaimAlerts.tsx` — 1 select
+## Fase 1: Confirmar Update no pcteste1
 
-### Batch 6 — Utilitários e Super Admin (4 instâncias)
-24. `src/lib/audit-integrity.ts` — 1 select (audit_logs — 3 JSONB!)
-25. `src/pages/super-admin/RolloutPolicies/useRolloutPolicies.ts` — 1 select
-26. `src/lib/tenantQuery.ts` — exemplo em comentário (apenas doc fix)
+**Objetivo**: Verificar se o agente reiniciou e esta reportando v6.0.0.
 
-## Validação
-- `npx tsc --noEmit` após cada batch para zero erros de tipo
-- Verificar que cada componente continua renderizando os mesmos dados
-- Build final completo
+1. **Consultar o banco** para verificar se `agent_version` do pcteste1 mudou para `v6.0.0`
+2. **Verificar logs do heartbeat** para confirmar que o agente esta enviando heartbeats com a nova versao
+3. **Se o agente NAO reiniciou** (ainda v5.0.15): O update via force_update so aplica no proximo boot do servico. Pode ser necessario aguardar ou enviar um job de `restart-service` via poll-jobs
+4. **Limpar force_update** apos confirmacao: `UPDATE agents SET force_update_version = NULL WHERE id = 'd7c0e8c8...'`
 
-## Impacto Estimado
-- **Redução de tráfego**: ~60% menos dados transferidos em tabelas com JSONB
-- **Economia**: ~2KB/linha × milhares de linhas/dia = GBs/mês de bandwidth economizados
-- **Performance**: Queries mais rápidas (PostgreSQL pode usar index-only scans)
+---
+
+## Fase 2: Corrigir Rate Limit do Heartbeat
+
+**Problema identificado no log**: O agente v5 envia heartbeat a cada ~35s (intervalo padrao). Com rate limit de 10 req/10min, apos o 10o heartbeat (~5min50s), todos os seguintes recebem 429. A re-tentativa gera 401 (token expirado no cache apos rate limit).
+
+**Correcao proposta**: Ajustar o rate limit de `maxRequests: 10, windowMinutes: 10` para `maxRequests: 30, windowMinutes: 10` — acomoda heartbeats a cada 20s sem bloqueio.
+
+**Arquivo**: `supabase/functions/heartbeat/index.ts`, linha 104
+
+```typescript
+// DE:
+{ maxRequests: 10, windowMinutes: 10, blockMinutes: 2 }
+// PARA:
+{ maxRequests: 30, windowMinutes: 10, blockMinutes: 2 }
+```
+
+**Alternativa mais eficiente em custo**: Manter o rate limit agressivo (10/10min) e ajustar o intervalo do heartbeat no servidor para 120s (ja esta sendo enviado na resposta: `poll_interval_seconds: 120`). O agente v6 modular respeita esse intervalo. Nenhuma mudanca de codigo necessaria — basta confirmar que o v6 aplica o intervalo corretamente.
+
+**Decisao recomendada**: Aumentar para `maxRequests: 30` como solucao imediata para agentes v5 legados que ainda nao respeitam o intervalo do servidor, e manter o plano de migracao para v6 que respeita o intervalo dinamico.
+
+---
+
+## Fase 3: Verificar Telemetria nos Routers
+
+**Objetivo**: Confirmar que EDR, processes e demais dados chegam corretamente.
+
+1. **submit-endpoint-events**: Logs ja confirmam ingestao funcionando — `EDR ingested: 1 direct` e `181 direct` para PC-Servidor-Planalto
+2. **submit-router**: Verificar logs para tipos `processes`, `backup-status`, `network-info`
+3. **submit-hmac-router**: Verificar logs para tipos `antivirus`, `system-metrics`, `rollback-event`
+4. **Acao**: Consultar edge function logs de ambos os routers para confirmar que nao ha erros de roteamento ou 401/500
+
+---
+
+## Fase 4: Rollout v6 para Toda a Frota
+
+**Estrategia por prioridade de custo e seguranca**:
+
+### Passo 1 — Confirmar pcteste1 saudavel em v6 (pre-requisito)
+- Aguardar 2-3 ciclos de heartbeat com v6.0.0
+- Confirmar que telemetria EDR continua fluindo
+- Confirmar zero erros novos nos logs
+
+### Passo 2 — Ativar PC-Servidor-Planalto (unico outro agente ativo)
+```sql
+UPDATE agents 
+SET force_update_version = 'v6.0.0',
+    force_update_reason = 'Fleet v5->v6 migration',
+    force_update_at = now(),
+    force_update_delivered_count = 0,
+    force_update_first_delivered_at = NULL
+WHERE agent_name = 'PC-Servidor-Planalto';
+```
+
+### Passo 3 — Ativar agentes offline (receberao o update quando voltarem online)
+```sql
+UPDATE agents 
+SET force_update_version = 'v6.0.0',
+    force_update_reason = 'Fleet v5->v6 migration',
+    force_update_at = now(),
+    force_update_delivered_count = 0,
+    force_update_first_delivered_at = NULL
+WHERE agent_version = 'v5.0.15' 
+  AND force_update_version IS NULL;
+```
+
+### Passo 4 — Aumentar rollout_percentage para 100%
+```sql
+UPDATE agent_update_policies 
+SET rollout_percentage = 100 
+WHERE id = '0a42022f-59db-4ebe-8ead-1bae3d3b1dc0';
+```
+
+---
+
+## Fase 5: Resolver Ed25519 (Seguranca)
+
+O pcteste1 nunca recebeu a chave publica Ed25519. O update foi aceito apenas por SHA256. Para seguranca completa:
+
+1. Verificar se o segredo `ED25519_PRIVATE_KEY` esta configurado nas edge functions
+2. Confirmar que o heartbeat esta retornando `ed25519_public_key` na resposta
+3. Verificar nos logs se "Ed25519 Public key derived successfully" aparece
+4. Se a chave esta sendo enviada mas o agente nao persiste, verificar o hotfix de distribuicao de chaves no script v6
+
+---
+
+## Resumo de Alteracoes de Codigo
+
+| Arquivo | Alteracao |
+|---|---|
+| `supabase/functions/heartbeat/index.ts` L104 | `maxRequests: 10` → `maxRequests: 30` |
+| Migration SQL | force_update_version para agentes restantes |
+| Migration SQL | rollout_percentage → 100% |
+
+---
+
+## Criterios de Sucesso
+
+1. pcteste1 reportando `agent_version: v6.0.0` no banco
+2. Zero erros 429 nos logs do heartbeat apos ajuste de rate limit
+3. Telemetria EDR chegando em submit-endpoint-events sem interrupcao
+4. PC-Servidor-Planalto atualizado para v6.0.0
+5. Ed25519 public key distribuida e persistida no agente
+
