@@ -1,6 +1,6 @@
 /**
  * Handler: backup status submission
- * Extracted from submit-backup-status/index.ts
+ * Batch upsert – single query for all backup rows + single insert for alerts.
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
@@ -17,6 +17,42 @@ interface BackupEntry {
   backup_size_gb?: number;
   error_message?: string;
   details?: Record<string, unknown>;
+}
+
+interface BackupRow {
+  agent_id: string;
+  tenant_id: string;
+  backup_type: string;
+  backup_tool: string | null;
+  status: string;
+  is_enabled: boolean;
+  is_scheduled: boolean;
+  last_backup_at: string | null;
+  next_scheduled_at: string | null;
+  last_check_at: string;
+  backup_target: string | null;
+  backup_size_gb: number | null;
+  backup_age_hours: number | null;
+  error_message: string | null;
+  details: Record<string, unknown>;
+  collected_at: string;
+  updated_at: string;
+}
+
+function computeBackupAge(lastBackupAt?: string): number | null {
+  if (!lastBackupAt) return null;
+  const lastBackup = new Date(lastBackupAt);
+  return Math.round((Date.now() - lastBackup.getTime()) / (1000 * 60 * 60) * 10) / 10;
+}
+
+function computeStatus(backup: BackupEntry, ageHours: number | null): string {
+  if (ageHours !== null) {
+    if (ageHours > 72) return 'critical';
+    if (ageHours > 24) return 'warning';
+    return 'ok';
+  }
+  if (!backup.is_enabled) return 'not_configured';
+  return backup.status || 'unknown';
 }
 
 export async function handleBackupStatus(
@@ -36,53 +72,70 @@ export async function handleBackupStatus(
   }
 
   const now = new Date().toISOString();
-  let upsertedCount = 0;
-  let alertsCreated = 0;
+
+  // --- Phase 1: Build all rows in memory (zero I/O) ---
+  const rows: BackupRow[] = [];
+  const alertRows: Array<{
+    tenant_id: string; agent_id: string;
+    severity: string; category: string;
+    title: string; message: string; acknowledged: boolean;
+  }> = [];
 
   for (const backup of backups) {
-    let backupAgeHours: number | null = null;
-    if (backup.last_backup_at) {
-      const lastBackup = new Date(backup.last_backup_at);
-      backupAgeHours = Math.round((Date.now() - lastBackup.getTime()) / (1000 * 60 * 60) * 10) / 10;
-    }
+    const backupAgeHours = computeBackupAge(backup.last_backup_at);
+    const status = computeStatus(backup, backupAgeHours);
 
-    let computedStatus = backup.status || 'unknown';
-    if (backupAgeHours !== null) {
-      if (backupAgeHours > 72) computedStatus = 'critical';
-      else if (backupAgeHours > 24) computedStatus = 'warning';
-      else computedStatus = 'ok';
-    } else if (!backup.is_enabled) {
-      computedStatus = 'not_configured';
-    }
+    rows.push({
+      agent_id: agentId, tenant_id: tenantId,
+      backup_type: backup.backup_type || 'unknown',
+      backup_tool: backup.backup_tool || null,
+      status,
+      is_enabled: backup.is_enabled ?? false,
+      is_scheduled: backup.is_scheduled ?? false,
+      last_backup_at: backup.last_backup_at || null,
+      next_scheduled_at: backup.next_scheduled_at || null,
+      last_check_at: now,
+      backup_target: backup.backup_target || null,
+      backup_size_gb: backup.backup_size_gb || null,
+      backup_age_hours: backupAgeHours,
+      error_message: backup.error_message || null,
+      details: backup.details || {},
+      collected_at: now, updated_at: now,
+    });
 
-    const { error: upsertError } = await supabase
-      .from('backup_status')
-      .upsert({
-        agent_id: agentId, tenant_id: tenantId,
-        backup_type: backup.backup_type || 'unknown', backup_tool: backup.backup_tool || null,
-        status: computedStatus, is_enabled: backup.is_enabled ?? false,
-        is_scheduled: backup.is_scheduled ?? false,
-        last_backup_at: backup.last_backup_at || null, next_scheduled_at: backup.next_scheduled_at || null,
-        last_check_at: now, backup_target: backup.backup_target || null,
-        backup_size_gb: backup.backup_size_gb || null, backup_age_hours: backupAgeHours,
-        error_message: backup.error_message || null, details: backup.details || {},
-        collected_at: now, updated_at: now,
-      }, { onConflict: 'agent_id,backup_type,backup_tool' });
-
-    if (upsertError) logger.error(`[${requestId}] Upsert error:`, upsertError);
-    else upsertedCount++;
-
-    if (computedStatus === 'critical' || computedStatus === 'not_configured') {
-      const alertMessage = computedStatus === 'critical'
+    if (status === 'critical' || status === 'not_configured') {
+      const alertMessage = status === 'critical'
         ? `Backup atrasado: ${backup.backup_tool || backup.backup_type} - ultimo backup ha ${backupAgeHours}h`
         : `Backup nao configurado: ${backup.backup_tool || backup.backup_type}`;
 
-      const { error: alertError } = await supabase.from('system_alerts').insert({
+      alertRows.push({
         tenant_id: tenantId, agent_id: agentId,
-        severity: computedStatus === 'critical' ? 'high' : 'medium',
-        category: 'backup', title: 'Alerta de Backup', message: alertMessage, acknowledged: false,
+        severity: status === 'critical' ? 'high' : 'medium',
+        category: 'backup', title: 'Alerta de Backup',
+        message: alertMessage, acknowledged: false,
       });
-      if (!alertError) alertsCreated++;
+    }
+  }
+
+  // --- Phase 2: Single batch upsert + single batch insert (max 2 queries) ---
+  const { error: upsertError } = await supabase
+    .from('backup_status')
+    .upsert(rows, { onConflict: 'agent_id,backup_type,backup_tool' });
+
+  const upsertedCount = upsertError ? 0 : rows.length;
+  if (upsertError) {
+    logger.error(`[${requestId}] Batch upsert error:`, upsertError);
+  }
+
+  let alertsCreated = 0;
+  if (alertRows.length > 0) {
+    const { error: alertError } = await supabase
+      .from('system_alerts')
+      .insert(alertRows);
+
+    alertsCreated = alertError ? 0 : alertRows.length;
+    if (alertError) {
+      logger.error(`[${requestId}] Batch alert insert error:`, alertError);
     }
   }
 
