@@ -112,51 +112,30 @@ export async function authenticateAndValidateAgent(
     logger.warn('DIAGNOSTIC: Agent poll-jobs request WITHOUT HMAC headers', { agentName: agent.agent_name, method: req.method });
   }
 
-  if (hasAnyHmacHeader) {
-    const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret, {
-      agentId: token.agent_id,
-      tenantId: agent.tenant_id || undefined,
-      endpoint: 'poll-jobs',
-      ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined,
-    });
-    if (!hmacResult.valid) {
-      if (isModernAgent) {
-        logger.error('SECURITY: HMAC verification FAILED for modern agent poll-jobs - BLOCKED', { agent: agent.agent_name, agentVersion: agentVersionStr, errorCode: hmacResult.errorCode });
-        return {
-          success: false,
-          response: new Response(
-            JSON.stringify({ error: 'HMAC verification failed', code: 'HMAC_INVALID' }),
-            { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-          ),
-        };
-      }
-      // v7.0 HARDENED: All agents blocked on HMAC failure (no legacy fallback)
-      logger.error('SECURITY: HMAC verification FAILED for legacy agent poll-jobs - BLOCKED', { agent: agent.agent_name, agentVersion: agentVersionStr, errorCode: hmacResult.errorCode });
-      return {
-        success: false,
-        response: new Response(
-          JSON.stringify({ error: 'HMAC verification failed', code: 'HMAC_INVALID' }),
-          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-        ),
-      };
-    }
-  } else {
-    if (isModernAgent) {
-      logger.error('SECURITY: Modern agent poll-jobs WITHOUT HMAC headers - BLOCKED', { agent: agent.agent_name, agentVersion: agentVersionStr });
-      return {
-        success: false,
-        response: new Response(
-          JSON.stringify({ error: 'HMAC headers required', code: 'HMAC_MISSING' }),
-          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
-        ),
-      };
-    }
-    // v7.0 HARDENED: All agents require HMAC — no legacy fallback
-    logger.error('SECURITY: Agent poll-jobs WITHOUT HMAC headers - BLOCKED (no legacy fallback)', { agent: agent.agent_name, agentVersion: agentVersionStr });
+  // v7.0 HARDENED: All agents require HMAC — no legacy fallback
+  if (!hasAnyHmacHeader) {
+    logger.error('SECURITY: Agent poll-jobs WITHOUT HMAC headers - BLOCKED', { agent: agent.agent_name, agentVersion: agentVersionStr });
     return {
       success: false,
       response: new Response(
         JSON.stringify({ error: 'HMAC headers required', code: 'HMAC_MISSING' }),
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
+      ),
+    };
+  }
+
+  const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret, {
+    agentId: token.agent_id,
+    tenantId: agent.tenant_id || undefined,
+    endpoint: 'poll-jobs',
+    ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined,
+  });
+  if (!hmacResult.valid) {
+    logger.error('SECURITY: HMAC verification FAILED poll-jobs - BLOCKED', { agent: agent.agent_name, agentVersion: agentVersionStr, errorCode: hmacResult.errorCode });
+    return {
+      success: false,
+      response: new Response(
+        JSON.stringify({ error: 'HMAC verification failed', code: 'HMAC_INVALID' }),
         { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
       ),
     };
