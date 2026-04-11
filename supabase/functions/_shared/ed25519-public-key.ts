@@ -67,6 +67,7 @@ export async function getEd25519PublicKeyBase64(): Promise<string | null> {
 
     if (!jwk.x) {
       logger.error('[ED25519] Private key JWK missing "x" (public component)')
+      derivationFailed = true
       return null
     }
 
