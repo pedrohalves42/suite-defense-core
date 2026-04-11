@@ -23,8 +23,19 @@ function makeUpdate(overrides: Partial<AgentUpdate> = {}): AgentUpdate {
   };
 }
 
+const FAKE_RELEASE = {
+  id: "rel-1",
+  version: "5.0.20",
+  script_content: "echo hello",
+  sha256: "abc123",
+  signature_base64: null,
+  signed_at: null,
+  signed_by: null,
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function makeSupabase(releaseData: any = null, updateError: any = null) {
+  const fullRelease = releaseData ? { ...FAKE_RELEASE, ...releaseData } : null;
   const updates: Array<{ table: string; values: Record<string, unknown> }> = [];
 
   return {
@@ -36,7 +47,7 @@ function makeSupabase(releaseData: any = null, updateError: any = null) {
           eq: () => chain,
           order: () => chain,
           limit: () => chain,
-          maybeSingle: async () => ({ data: releaseData, error: null }),
+          maybeSingle: async () => ({ data: fullRelease, error: null }),
         };
         return chain;
       }
@@ -69,12 +80,14 @@ Deno.test("force-update › selfHealForceVersion returns null when no release", 
   assertEquals(res, null);
 });
 
-Deno.test("force-update › selfHealForceVersion recovers release version", async () => {
+Deno.test("force-update › selfHealForceVersion recovers release version and includes prefetchedRelease", async () => {
   const sb = makeSupabase({ version: "5.0.20" });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const res = await selfHealForceVersion(sb as any, makeAgent(), "windows", undefined);
   assertEquals(typeof res, "object");
   assertEquals(res!.version, "5.0.20");
+  assertEquals(res!.prefetchedRelease.version, "5.0.20");
+  assertEquals(typeof res!.prefetchedRelease.id, "string");
 });
 
 Deno.test("force-update › auto-remediation arms same-version delivery for degraded windows agents", async () => {
@@ -88,6 +101,7 @@ Deno.test("force-update › auto-remediation arms same-version delivery for degr
   assertEquals(res?.version, "5.0.15");
   assertEquals(res?.omitPayloadSignature, true);
   assertEquals(res?.overrideSafeMode, true);
+  assertEquals(typeof res?.prefetchedRelease.id, "string");
   assertEquals(sb.updates.length, 1);
   assertEquals(sb.updates[0].values.force_update_version, "5.0.15");
   assertEquals(sb.updates[0].values.force_update_override_safe_mode, true);
