@@ -2,7 +2,7 @@
  * Handler: antivirus status submission (migrated from submit-antivirus-status)
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { logger } from '../../_shared/logger.ts';
+import { logger } from '../logger.ts';
 
 interface AvItem {
   engine_name: string;

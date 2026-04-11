@@ -2,7 +2,7 @@
  * Handler: software inventory submission (migrated from submit-software-inventory)
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { logger } from '../../_shared/logger.ts';
+import { logger } from '../logger.ts';
 
 interface SoftwareItem {
   name: string;

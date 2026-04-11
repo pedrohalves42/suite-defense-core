@@ -3,7 +3,7 @@
  * Re-uses extracted processors from submit-web-activity/ via _shared path.
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { logger } from '../../_shared/logger.ts';
+import { logger } from '../logger.ts';
 import { loadBlockedPatterns, categorizeDomain, isDomainBlocked } from './web-activity-helpers.ts';
 
 export interface WebActivityItem {
