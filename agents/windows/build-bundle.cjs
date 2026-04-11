@@ -132,8 +132,18 @@ function buildBundle() {
           ? 'Domain'
           : 'Orchestration';
     
-    parts.push(`# ── ${layer}: ${mod} ${'─'.repeat(Math.max(1, 50 - mod.length - layer.length))}`)
-    parts.push(modules[mod].trimEnd());
+    parts.push(`# -- ${layer}: ${mod} ${'='.repeat(Math.max(1, 50 - mod.length - layer.length))}`)
+    // Sanitize non-ASCII in module content (PS 5.1 safety)
+    let modContent = modules[mod].trimEnd();
+    modContent = modContent.replace(/\u2014/g, '--');   // em dash
+    modContent = modContent.replace(/\u2013/g, '-');    // en dash
+    modContent = modContent.replace(/\u2192/g, '->');   // right arrow
+    modContent = modContent.replace(/\u2500/g, '-');    // box drawing
+    modContent = modContent.replace(/[\u0080-\uFFFF]/g, (ch) => {
+      console.warn(`  WARN: Replacing unknown non-ASCII U+${ch.charCodeAt(0).toString(16)} in ${mod}`);
+      return '?';
+    });
+    parts.push(modContent);
     parts.push('');
   }
   
