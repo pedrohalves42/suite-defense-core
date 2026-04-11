@@ -386,3 +386,44 @@ function Test-ScriptSignature {
     Write-Log "[CRYPTO] Signature verification failed — no compatible algorithm available" "ERROR"
     return $false
 }
+
+function Invoke-SignResult {
+    <#
+    .SYNOPSIS
+        Signs job result with agent cryptographic identity (ECDSA/RSA).
+        Ported from v5.0.15 monolith for v6 parity.
+    #>
+    param(
+        [string]$ExecutionId,
+        [string]$JobId,
+        [string]$Status,
+        [string]$OutputHash,
+        [string]$FinishedAt
+    )
+
+    try {
+        if (-not $Global:AgentPrivateKey) {
+            Write-Log "[SIGN] No private key available for signing" "WARN"
+            return $null
+        }
+
+        $algorithm = if ($Global:AgentSigningAlgorithm) { $Global:AgentSigningAlgorithm } else { "unknown" }
+        $message = "$ExecutionId|$JobId|$Status|$OutputHash|$FinishedAt"
+        $messageBytes = [System.Text.Encoding]::UTF8.GetBytes($message)
+
+        if ($algorithm -eq "RSA-2048-CSP" -and $Global:AgentRsaKey) {
+            $sha256 = [System.Security.Cryptography.SHA256]::Create()
+            $hash = $sha256.ComputeHash($messageBytes)
+            $sha256.Dispose()
+            $sigBytes = $Global:AgentRsaKey.SignHash($hash, [System.Security.Cryptography.CryptoConfig]::MapNameToOID("SHA256"))
+            return [Convert]::ToBase64String($sigBytes)
+        }
+
+        Write-Log "[SIGN] Unsupported signing algorithm: $algorithm" "WARN"
+        return $null
+    }
+    catch {
+        Write-Log "[SIGN] Signing failed: $($_.Exception.Message)" "WARN"
+        return $null
+    }
+}
