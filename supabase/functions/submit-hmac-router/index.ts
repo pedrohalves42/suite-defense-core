@@ -2,20 +2,27 @@
  * submit-hmac-router — Consolidated HMAC-verified agent telemetry submission endpoint
  * 
  * Phase 1: antivirus-status, software-inventory, web-activity, vuln-findings
- * Phase 2 (future): system-metrics, processes, rollback-event
+ * Phase 2: system-metrics, rollback-event
+ * 
+ * NOTE: submit-processes is in submit-router (non-HMAC) because legacy agents
+ * do not send HMAC headers for process submissions.
  * 
  * Usage: POST /submit-hmac-router
- * Body: { "type": "antivirus-status" | "software-inventory" | "web-activity" | "vuln-findings", ...payload }
+ * Body: { "type": "<handler-type>", ...payload }
  * Headers: X-Agent-Token, X-HMAC-Signature, X-Timestamp
  */
 import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
+// Phase 1 handlers
 import { handleAntivirusStatus } from '../_shared/submit-handlers/antivirus-status.ts';
 import { handleSoftwareInventory } from '../_shared/submit-handlers/software-inventory.ts';
 import { handleWebActivity } from '../_shared/submit-handlers/web-activity.ts';
 import { handleVulnFindings } from '../_shared/submit-handlers/vuln-findings.ts';
+// Phase 2 handlers (HMAC-verified)
+import { handleSystemMetrics } from '../_shared/submit-handlers/system-metrics.ts';
+import { handleRollbackEvent } from '../_shared/submit-handlers/rollback-event.ts';
 
 const RouterSchema = z.object({
   type: z.string().min(1).max(50),
@@ -28,9 +35,11 @@ type SubmitHandler = (
   tenantId: string,
   requestId: string,
   body: Record<string, unknown>,
+  agentData?: Record<string, unknown>,
 ) => Promise<Response | Record<string, unknown>>;
 
 const HANDLERS: Record<string, SubmitHandler> = {
+  // Phase 1
   'antivirus-status':     handleAntivirusStatus,
   'antivirus_status':     handleAntivirusStatus,
   'software-inventory':   handleSoftwareInventory,
@@ -39,10 +48,15 @@ const HANDLERS: Record<string, SubmitHandler> = {
   'web_activity':         handleWebActivity,
   'vuln-findings':        handleVulnFindings,
   'vuln_findings':        handleVulnFindings,
+  // Phase 2
+  'system-metrics':       handleSystemMetrics,
+  'system_metrics':       handleSystemMetrics,
+  'rollback-event':       handleRollbackEvent,
+  'rollback_event':       handleRollbackEvent,
 };
 
 serveAgent(async (_req, ctx) => {
-  const { supabase, agentId, agentName, tenantId, requestId, body } = ctx;
+  const { supabase, agentId, agentName, tenantId, requestId, body, agentData } = ctx;
 
   const parsed = RouterSchema.safeParse(body);
   if (!parsed.success) {
@@ -72,7 +86,7 @@ serveAgent(async (_req, ctx) => {
 
   logger.info(`[${requestId}] submit-hmac-router: type=${type} agent=${agentId}`);
 
-  const result = await handler(supabase, agentId, agentName || '', tenantId, requestId, payload);
+  const result = await handler(supabase, agentId, agentName || '', tenantId, requestId, payload, agentData);
   if (result instanceof Response) return result;
   return new Response(JSON.stringify(result), {
     status: 200,
@@ -80,5 +94,6 @@ serveAgent(async (_req, ctx) => {
   });
 }, {
   hmacVerify: true,
-  rateLimit: { endpoint: 'submit-hmac-router', maxRequests: 120, windowMinutes: 60, blockMinutes: 10 },
+  extraAgentFields: ['agent_version'],
+  rateLimit: { endpoint: 'submit-hmac-router', maxRequests: 180, windowMinutes: 60, blockMinutes: 10 },
 });
