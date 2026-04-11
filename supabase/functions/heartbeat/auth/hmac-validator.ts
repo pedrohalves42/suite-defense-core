@@ -1,7 +1,7 @@
 /**
  * HMAC validation module for heartbeat.
  * Extracts HMAC verification logic into a testable unit.
- * Maintains Deno.serve() raw body access at caller level.
+ * v7.0 HARDENED: All agents require valid HMAC — no legacy fallback.
  */
 
 import { verifyHmacSignature } from '../../_shared/hmac.ts'
@@ -13,7 +13,7 @@ import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0
 const HMAC_REQUIRED_MIN_VERSION = '5.0.12'
 
 export interface HmacValidationResult {
-  /** Whether validation passed (or was skipped for legacy) */
+  /** Whether validation passed */
   ok: boolean;
   /** Raw body text for further parsing */
   rawBody: string;
@@ -22,7 +22,8 @@ export interface HmacValidationResult {
 }
 
 /**
- * Determine if agent version requires HMAC enforcement.
+ * Determine if agent version is >= HMAC_REQUIRED_MIN_VERSION.
+ * Kept for backward compatibility and tests.
  */
 export function isModernAgent(agentVersion: string | null): boolean {
   const currentNormV = normalizeVersion(agentVersion || '')
@@ -32,8 +33,7 @@ export function isModernAgent(agentVersion: string | null): boolean {
 
 /**
  * Validate HMAC signature for a heartbeat request.
- * Handles version-gated enforcement: modern agents are blocked on failure,
- * legacy agents are accepted with warnings.
+ * v7.0: All agents are blocked on missing or invalid HMAC.
  */
 export async function validateHeartbeatHmac(
   supabase: SupabaseClient,
@@ -43,7 +43,6 @@ export async function validateHeartbeatHmac(
   agentVersion: string | null,
   origin: string | null,
 ): Promise<HmacValidationResult> {
-  const modern = isModernAgent(agentVersion)
   const hasHmacHeaders = !!(
     req.headers.get('X-HMAC-Signature') ||
     req.headers.get('X-Timestamp') ||
@@ -51,44 +50,9 @@ export async function validateHeartbeatHmac(
   )
   const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
 
-  // Case 1: HMAC headers present → verify
-  if (hasHmacHeaders) {
-    const hmacResult = await verifyHmacSignature(supabase, req, agentName, hmacSecret)
-
-    if (!hmacResult.valid) {
-      if (modern) {
-        logger.error('SECURITY: HMAC verification FAILED for modern agent - BLOCKED', {
-          agentName, agentVersion, errorCode: hmacResult.errorCode, ip,
-        })
-        return {
-          ok: false,
-          rawBody: '',
-          errorResponse: new Response(
-            JSON.stringify({ error: 'HMAC verification failed', code: 'HMAC_INVALID' }),
-            { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
-          ),
-        }
-      }
-      // v7.0 HARDENED: All agents blocked on HMAC failure (no legacy fallback)
-      logger.error('SECURITY: HMAC verification FAILED for legacy agent - BLOCKED (no fallback)', {
-        agentName, agentVersion, errorCode: hmacResult.errorCode, ip,
-      })
-      return {
-        ok: false,
-        rawBody: '',
-        errorResponse: new Response(
-          JSON.stringify({ error: 'HMAC verification failed', code: 'HMAC_INVALID' }),
-          { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
-        ),
-      }
-    }
-
-    return { ok: true, rawBody: hmacResult.rawBody || '' }
-  }
-
-  // Case 2: No HMAC headers
-  if (modern) {
-    logger.error('SECURITY: Modern agent sent heartbeat WITHOUT HMAC headers - BLOCKED', {
+  // No HMAC headers → reject immediately
+  if (!hasHmacHeaders) {
+    logger.error('SECURITY: Agent heartbeat WITHOUT HMAC headers - BLOCKED', {
       agentName, agentVersion, ip,
     })
     return {
@@ -101,16 +65,22 @@ export async function validateHeartbeatHmac(
     }
   }
 
-  // v7.0 HARDENED: All agents require HMAC — no legacy fallback
-  logger.error('SECURITY: Agent sent heartbeat WITHOUT HMAC headers - BLOCKED (no legacy fallback)', {
-    agentName, agentVersion, ip,
-  })
-  return {
-    ok: false,
-    rawBody: '',
-    errorResponse: new Response(
-      JSON.stringify({ error: 'HMAC headers required', code: 'HMAC_MISSING' }),
-      { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
-    ),
+  // Verify HMAC signature
+  const hmacResult = await verifyHmacSignature(supabase, req, agentName, hmacSecret)
+
+  if (!hmacResult.valid) {
+    logger.error('SECURITY: HMAC verification FAILED - BLOCKED', {
+      agentName, agentVersion, errorCode: hmacResult.errorCode, ip,
+    })
+    return {
+      ok: false,
+      rawBody: '',
+      errorResponse: new Response(
+        JSON.stringify({ error: 'HMAC verification failed', code: 'HMAC_INVALID' }),
+        { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
+      ),
+    }
   }
+
+  return { ok: true, rawBody: hmacResult.rawBody || '' }
 }
