@@ -63,11 +63,36 @@ const EVENT_TYPE_MAP: Record<string, EventCategory> = {
   registry_snapshot: 'registry', registry_value_set: 'registry', registry_value_delete: 'registry',
 };
 
+// v5 agents use different field names — map them to schema columns
+const V5_FIELD_MAP: Record<string, string> = {
+  pid: 'process_pid',
+  parent_pid: 'parent_pid', // same in process table
+  src_address: 'local_address',
+  dst_address: 'remote_address',
+  src_port: 'local_port',
+  dst_port: 'remote_port',
+};
+
+function normalizeEvent(event: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(event)) {
+    const mapped = V5_FIELD_MAP[key];
+    if (mapped && out[mapped] === undefined) {
+      out[mapped] = value;
+    }
+    if (out[key] === undefined) {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
 function pickColumns(event: Record<string, unknown>, category: EventCategory, agentId: string, tenantId: string): Record<string, unknown> {
+  const normalized = normalizeEvent(event);
   const allowed = COLUMNS[category];
   const row: Record<string, unknown> = { agent_id: agentId, tenant_id: tenantId };
   for (const col of allowed) {
-    if (event[col] !== undefined) row[col] = event[col];
+    if (normalized[col] !== undefined) row[col] = normalized[col];
   }
   if (!row.event_time) row.event_time = new Date().toISOString();
   if (row.is_suspicious === undefined) row.is_suspicious = false;
