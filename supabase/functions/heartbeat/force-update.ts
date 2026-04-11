@@ -2,6 +2,9 @@
  * Force-update logic module for heartbeat.
  * Handles all force_update decision-making, self-healing, delivery, and cleanup.
  * Uses the canonical prepareAgentScriptContent pipeline.
+ * 
+ * Optimized: latest-release SELECT is done once in selfHeal / autoArm
+ * and reused in buildForceUpdateResponse (eliminates duplicate query).
  */
 
 import { normalizeVersion } from '../_shared/hexagonal/update-decision-service.ts'
@@ -18,6 +21,19 @@ const AUTO_REMEDIATION_COOLDOWN_MS = 60 * 60 * 1000
 const AUTO_REMEDIATION_OVERRIDE_WINDOW_MS = 15 * 60 * 1000
 const AUTO_REMEDIATION_STATES = new Set(['SAFE_MODE', 'INITIALIZING'])
 
+/** Columns needed from agent_releases for delivery */
+const RELEASE_SELECT = 'id, version, script_content, sha256, signature_base64, signed_at, signed_by'
+
+interface ReleaseRow {
+  id: string;
+  version: string;
+  script_content: string;
+  sha256: string | null;
+  signature_base64: string | null;
+  signed_at: string | null;
+  signed_by: string | null;
+}
+
 interface ForceUpdateResult {
   handled: boolean;
   response?: Response;
@@ -33,6 +49,15 @@ interface AutoRemediationResult extends ForceUpdateDeliveryOptions {
   version: string;
   reason: string;
   forceUpdateAt: string;
+  /** Pre-fetched release row to avoid duplicate query in buildForceUpdateResponse */
+  prefetchedRelease: ReleaseRow;
+}
+
+interface SelfHealResult {
+  version: string;
+  reason: string;
+  /** Pre-fetched release row */
+  prefetchedRelease: ReleaseRow;
 }
 
 export async function processForceUpdate(
@@ -48,12 +73,14 @@ export async function processForceUpdate(
   let effectiveForceVersion = workingAgent.force_update_version
   let effectiveForceReason = workingAgent.force_update_reason
   let deliveryOptions: ForceUpdateDeliveryOptions = {}
+  let prefetchedRelease: ReleaseRow | null = null
 
   if (!effectiveForceVersion && workingAgent.force_update_at) {
     const healed = await selfHealForceVersion(supabase, workingAgent, platform, agentVersionFromPayload || updateData.agent_version)
     if (!healed) return { handled: false }
     effectiveForceVersion = healed.version
     effectiveForceReason = healed.reason
+    prefetchedRelease = healed.prefetchedRelease
     workingAgent = {
       ...workingAgent,
       force_update_version: healed.version,
@@ -73,6 +100,7 @@ export async function processForceUpdate(
     if (autoRemediation) {
       effectiveForceVersion = autoRemediation.version
       effectiveForceReason = autoRemediation.reason
+      prefetchedRelease = autoRemediation.prefetchedRelease
       deliveryOptions = {
         omitPayloadSignature: autoRemediation.omitPayloadSignature,
         overrideSafeMode: autoRemediation.overrideSafeMode,
@@ -165,9 +193,31 @@ export async function processForceUpdate(
     deliveryAttempt,
     currentVersion,
     deliveryOptions,
+    prefetchedRelease,
   )
 
   return response ? { handled: true, response } : { handled: false }
+}
+
+/**
+ * Fetch the latest active release for a platform.
+ * Returns full release row to be reused downstream (eliminates duplicate query).
+ */
+async function fetchLatestRelease(
+  supabase: SupabaseClient,
+  platform: string,
+): Promise<ReleaseRow | null> {
+  const { data } = await supabase
+    .from('agent_releases')
+    .select(RELEASE_SELECT)
+    .eq('platform', platform)
+    .eq('channel', 'stable')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  return data as ReleaseRow | null
 }
 
 export async function selfHealForceVersion(
@@ -175,16 +225,8 @@ export async function selfHealForceVersion(
   agent: AgentContext,
   platform: string,
   currentVersion: string | undefined,
-): Promise<{ version: string; reason: string } | null> {
-  const { data: latestRelease } = await supabase
-    .from('agent_releases')
-    .select('version')
-    .eq('platform', platform)
-    .eq('channel', 'stable')
-    .eq('is_active', true)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+): Promise<SelfHealResult | null> {
+  const latestRelease = await fetchLatestRelease(supabase, platform)
 
   if (!latestRelease?.version) return null
 
@@ -209,7 +251,7 @@ export async function selfHealForceVersion(
     platform,
   })
 
-  return { version: latestRelease.version, reason }
+  return { version: latestRelease.version, reason, prefetchedRelease: latestRelease }
 }
 
 export async function maybeAutoArmSameVersionRemediation(
@@ -241,15 +283,7 @@ export async function maybeAutoArmSameVersionRemediation(
     return null
   }
 
-  const { data: latestRelease } = await supabase
-    .from('agent_releases')
-    .select('version')
-    .eq('platform', platform)
-    .eq('channel', 'stable')
-    .eq('is_active', true)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  const latestRelease = await fetchLatestRelease(supabase, platform)
 
   if (!latestRelease?.version) return null
 
@@ -294,6 +328,7 @@ export async function maybeAutoArmSameVersionRemediation(
     overrideSafeMode: true,
     overrideSafeModeExpiresAt,
     omitPayloadSignature: true,
+    prefetchedRelease: latestRelease,
   }
 }
 
@@ -326,6 +361,7 @@ async function buildForceUpdateResponse(
   deliveryAttempt: number,
   currentVersion: string | undefined,
   options: ForceUpdateDeliveryOptions = {},
+  prefetchedRelease: ReleaseRow | null = null,
 ): Promise<Response | null> {
   logger.info('Force update detected for agent', {
     agentName: agent.agent_name,
@@ -333,13 +369,18 @@ async function buildForceUpdateResponse(
     deliveryAttempt,
   })
 
-  const { data: release } = await supabase
-    .from('agent_releases')
-    .select('id, version, script_content, sha256, signature_base64, signed_at, signed_by')
-    .eq('version', targetVersion)
-    .eq('platform', platform)
-    .eq('is_active', true)
-    .single()
+  // Reuse prefetched release if version matches; otherwise fetch (e.g. explicit force_update_version set by admin)
+  let release = prefetchedRelease
+  if (!release || release.version !== targetVersion) {
+    const { data } = await supabase
+      .from('agent_releases')
+      .select(RELEASE_SELECT)
+      .eq('version', targetVersion)
+      .eq('platform', platform)
+      .eq('is_active', true)
+      .single()
+    release = data as ReleaseRow | null
+  }
 
   if (!release) {
     logger.warn('Force update version not found in agent_releases', {
