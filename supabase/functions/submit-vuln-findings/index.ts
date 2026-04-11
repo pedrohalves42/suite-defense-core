@@ -1,59 +1,30 @@
 /**
- * submit-vuln-findings — Migrated to serveAgent middleware with HMAC verification.
+ * submit-vuln-findings — PROXY STUB
+ * Forwards to submit-hmac-router with type: "vuln-findings"
+ * Kept for backward compatibility with agents using the legacy URL.
  */
 import { serveAgent } from '../_shared/serve-tenant.ts';
-import { logger } from '../_shared/logger.ts';
-import { z } from 'https://esm.sh/zod@3.23.8';
-
-const VulnFindingSchema = z.object({
-  severity: z.enum(['low', 'medium', 'high', 'critical']),
-  check_key: z.string().min(1).max(255),
-  title: z.string().min(1).max(500),
-  description: z.string().max(2000).optional(),
-  remediation: z.string().max(2000).optional(),
-});
-
-const SubmitVulnSchema = z.object({
-  agent_id: z.string().uuid(),
-  findings: z.array(VulnFindingSchema).max(500),
-});
 
 serveAgent(async (_req, ctx) => {
-  const { supabase, agentName, tenantId, body } = ctx;
+  const body = ctx.body as Record<string, unknown>;
+  body.type = 'vuln-findings';
 
-  const parsed = SubmitVulnSchema.safeParse(body);
-  if (!parsed.success) {
-    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-  }
-  const payload = parsed.data;
+  const url = `${Deno.env.get('SUPABASE_URL')}/functions/v1/submit-hmac-router`;
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+      'X-Agent-Token': ctx.req.headers.get('X-Agent-Token') || '',
+      'X-HMAC-Signature': ctx.req.headers.get('X-HMAC-Signature') || '',
+      'X-Timestamp': ctx.req.headers.get('X-Timestamp') || '',
+      'X-Trace-ID': ctx.requestId,
+    },
+    body: ctx.rawBody || JSON.stringify(body),
+  });
 
-  if (!payload.findings.length) {
-    return { success: true, upserted: 0 };
-  }
-
-  logger.info(`Storing ${payload.findings.length} vuln findings for agent ${agentName}`);
-
-  for (const finding of payload.findings) {
-    const { error: upsertError } = await supabase
-      .from('vuln_findings')
-      .upsert({
-        tenant_id: tenantId,
-        agent_id: payload.agent_id,
-        severity: finding.severity,
-        check_key: finding.check_key,
-        title: finding.title,
-        description: finding.description || null,
-        remediation: finding.remediation || null,
-        last_seen_at: new Date().toISOString(),
-      }, { onConflict: 'agent_id,check_key' });
-
-    if (upsertError) {
-      logger.error(`Failed to upsert finding ${finding.check_key}`, upsertError);
-    }
-  }
-
-  return { success: true, upserted: payload.findings.length };
-}, {
-  hmacVerify: true,
-  rateLimit: { endpoint: 'submit-vuln-findings', maxRequests: 10, windowMinutes: 60, blockMinutes: 10 },
-});
+  return new Response(await resp.text(), {
+    status: resp.status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}, { hmacVerify: false });

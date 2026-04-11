@@ -1,55 +1,30 @@
 /**
- * submit-software-inventory — Migrated to serveAgent middleware with HMAC verification.
+ * submit-software-inventory — PROXY STUB
+ * Forwards to submit-hmac-router with type: "software-inventory"
+ * Kept for backward compatibility with agents using the legacy URL.
  */
 import { serveAgent } from '../_shared/serve-tenant.ts';
-import { logger } from '../_shared/logger.ts';
-import { SoftwareItem, deduplicateInventory, persistInventory } from './inventory-processor.ts';
-import { z } from 'https://esm.sh/zod@3.23.8';
-
-const SoftwareItemSchema = z.object({
-  name: z.string().max(500).optional(),
-  version: z.string().max(100).optional(),
-  publisher: z.string().max(500).optional(),
-  install_date: z.string().max(50).optional(),
-  install_location: z.string().max(1024).optional(),
-  size_bytes: z.number().min(0).optional(),
-}).passthrough();
-
-const SubmitInventorySchema = z.object({
-  agent_id: z.string().uuid(),
-  items: z.array(SoftwareItemSchema).max(5000),
-});
 
 serveAgent(async (_req, ctx) => {
-  const { supabase, agentName, tenantId, body } = ctx;
+  const body = ctx.body as Record<string, unknown>;
+  body.type = 'software-inventory';
 
-  const parsed = SubmitInventorySchema.safeParse(body);
-  if (!parsed.success) {
-    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-  }
-  const payload = parsed.data as { agent_id: string; items: SoftwareItem[] };
+  const url = `${Deno.env.get('SUPABASE_URL')}/functions/v1/submit-hmac-router`;
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+      'X-Agent-Token': ctx.req.headers.get('X-Agent-Token') || '',
+      'X-HMAC-Signature': ctx.req.headers.get('X-HMAC-Signature') || '',
+      'X-Timestamp': ctx.req.headers.get('X-Timestamp') || '',
+      'X-Trace-ID': ctx.requestId,
+    },
+    body: ctx.rawBody || JSON.stringify(body),
+  });
 
-  if (!payload.items.length) {
-    return { success: true, inserted: 0 };
-  }
-
-  logger.info(`Storing ${payload.items.length} software items for agent ${agentName}`);
-
-  const uniqueItems = deduplicateInventory(payload.items);
-  logger.info(`Deduplicated: ${payload.items.length} -> ${uniqueItems.length} unique items`);
-
-  if (uniqueItems.length === 0) {
-    return { success: true, inserted: 0, deduplicated_from: payload.items.length };
-  }
-
-  const result = await persistInventory(supabase, payload.agent_id, tenantId, uniqueItems);
-
-  if (!result.success) {
-    return new Response(JSON.stringify({ error: 'Failed to store inventory' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
-  }
-
-  return { success: true, inserted: result.count, deduplicated_from: payload.items.length };
-}, {
-  hmacVerify: true,
-  rateLimit: { endpoint: 'submit-software-inventory', maxRequests: 60, windowMinutes: 60, blockMinutes: 10 },
-});
+  return new Response(await resp.text(), {
+    status: resp.status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}, { hmacVerify: false });
