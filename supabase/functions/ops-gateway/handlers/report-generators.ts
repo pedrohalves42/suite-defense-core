@@ -457,10 +457,10 @@ export async function handleSecurityReport(
     { data: webActivity }, { data: virusScans }, { data: securityEvents }, { data: failedLogins },
     { data: auditLogs }, { data: blockedWebsites }, { data: blockedAttempts }, { data: tenantFeatures },
   ] = await Promise.all([
-    supabase.from('agents').select('id, agent_name, hostname, tenant_id, status, last_seen_at, agent_version, os_version, ip_address').eq('tenant_id', tenantId).eq('status', 'active'),
+    supabase.from('agents').select('id, agent_name, hostname, tenant_id, status, last_heartbeat, agent_version, os_version, ip_address').eq('tenant_id', tenantId).eq('status', 'active'),
     supabase.from('software_inventory').select('id, agent_id, name, version, publisher, install_date, last_seen_at, tenant_id').eq('tenant_id', tenantId).match(agentFilter),
     supabase.from('vuln_findings').select('id, agent_id, agent_name, cve_id, severity, status, software_name, software_version, tenant_id, detected_at').eq('tenant_id', tenantId).match(agentFilter),
-    supabase.from('antivirus_status').select('id, agent_id, engine_name, engine_version, definitions_date, real_time_protection, threats_found, collected_at, tenant_id').eq('tenant_id', tenantId).match(agentFilter),
+    supabase.from('antivirus_status').select('id, agent_id, engine_name, engine_version, definitions_date, real_time_protection, threats_found, collected_at, tenant_id, definition_status').eq('tenant_id', tenantId).match(agentFilter),
     supabase.from('agent_web_activity').select('id, agent_id, domain, url, title, visited_at, is_blocked, category, tenant_id').eq('tenant_id', tenantId).match(agentFilter).order('visited_at', { ascending: false }).limit(100),
     supabase.from('virus_scans').select('id, agent_name, file_hash, file_path, is_malicious, positives, total_scans, scanned_at, tenant_id').eq('tenant_id', tenantId).order('scanned_at', { ascending: false }).limit(50),
     supabase.from('security_events').select('id, agent_id, event_type, severity, description, created_at, tenant_id').eq('tenant_id', tenantId).match(agentFilter).order('created_at', { ascending: false }).limit(100),
