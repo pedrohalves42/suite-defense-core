@@ -23,11 +23,15 @@ export function useAgentSystemMetrics(agentId: string | undefined) {
     queryFn: async () => {
       if (!agentId) return null;
       
+      // PERF: Date filter enables partition pruning on partitioned table
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      
       const { data, error } = await supabase
         .from('agent_system_metrics_partitioned')
         .select('agent_id, cpu_usage_percent, memory_usage_percent, disk_usage_percent, uptime_seconds')
         .eq('agent_id', agentId)
-        .eq('tenant_id', activeTenant!.id) // P0 CRIT-02: Explicit tenant filter
+        .eq('tenant_id', activeTenant!.id)
+        .gte('collected_at', since)
         .order('collected_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -55,12 +59,16 @@ export function useAgentsSystemMetrics(agentIds: string[]) {
     queryFn: async () => {
       if (agentIds.length === 0) return {};
       
-      // Get the latest metrics for each agent using a subquery approach
+      // PERF: Date filter enables partition pruning on partitioned table
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      
+      // Get the latest metrics for each agent
       const { data, error } = await supabase
         .from('agent_system_metrics_partitioned')
         .select('agent_id, cpu_usage_percent, memory_usage_percent, disk_usage_percent, uptime_seconds, collected_at')
-        .eq('tenant_id', activeTenant!.id) // P0 CRIT-02: Explicit tenant filter
+        .eq('tenant_id', activeTenant!.id)
         .in('agent_id', agentIds)
+        .gte('collected_at', since)
         .order('collected_at', { ascending: false });
       
       if (error) throw error;

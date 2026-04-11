@@ -91,11 +91,14 @@ export function useAgentManagement() {
       if (!tenant?.id || !agents) return {};
       const agentIds = agents.map(a => a.id);
       if (agentIds.length === 0) return {};
+      // PERF: Date filter enables partition pruning on partitioned table
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from('agent_system_metrics_partitioned')
         .select('agent_id, cpu_usage_percent, memory_usage_percent, disk_usage_percent, collected_at')
         .eq('tenant_id', tenant.id)
         .in('agent_id', agentIds)
+        .gte('collected_at', since)
         .order('collected_at', { ascending: false });
       if (error) { logger.error('Error fetching agent metrics', { error }); return {}; }
       const metricsMap: Record<string, AgentMetrics> = {};
