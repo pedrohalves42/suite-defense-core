@@ -92,7 +92,9 @@ export async function getEd25519PublicKeyBase64(): Promise<string | null> {
   } catch (err) {
     logger.error('[ED25519] Failed to derive public key from private key', {
       error: (err as Error).message,
+      keyPrefix: privateKeyBase64.substring(0, 8),
     })
+    derivationFailed = true
     return null
   }
 }
