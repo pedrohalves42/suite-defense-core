@@ -44,6 +44,9 @@ import {
   hotfixUpgradeFlagPath, hotfixUpgradeGuardFileCheck, hotfixSkipFwGuard, hotfixSkipFwInit
 } from './hotfix/firewall-skip.ts';
 
+// Key distribution
+import { hotfixKeyDistribution } from './hotfix/feature-key-distribution.ts';
+
 // Feature additions
 import {
   hotfixFailopenUnsigned, hotfixFailopenSig, hotfixAclSid,
@@ -116,7 +119,10 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
   hotfixSkipFwGuard(ctx);
   hotfixSkipFwInit(ctx);
 
-  // 7. Feature additions
+  // 7. Key distribution (must run before feature additions that depend on keys)
+  hotfixKeyDistribution(ctx);
+
+  // 8. Feature additions
   hotfixFailopenUnsigned(ctx);
   hotfixFailopenSig(ctx);
   hotfixAclSid(ctx);

@@ -338,6 +338,10 @@ verify_jwt = true
 [functions.process-agent-updates]
 verify_jwt = false
 
+# === Legacy EDR Telemetry Stub (v5.x compatibility) ===
+[functions.submit-endpoint-events]
+verify_jwt = false
+
 # === Security Features v3.10.0 ===
 [functions.submit-software-inventory]
 verify_jwt = false
