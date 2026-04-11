@@ -10,7 +10,10 @@
 param(
     [string]$AgentToken,
     [string]$HmacSecret,
-    [string]$ApiEndpoint
+    [Alias('ServerUrl')]
+    [string]$ApiEndpoint,
+    [string]$AgentName,
+    [int]$PollInterval
 )
 
 Set-StrictMode -Version Latest
@@ -23,7 +26,7 @@ $ErrorActionPreference = "Stop"
 $Global:UpdateInProgress = $false
 $Global:BootScriptHash = $null
 $Global:CurrentState = "INITIALIZING"
-$Global:AgentName = $env:CYBERSHIELD_AGENT_NAME
+$Global:AgentName = if ($AgentName) { $AgentName } else { $env:CYBERSHIELD_AGENT_NAME }
 $Global:AgentVersion = "6.0.0"
 $Global:AgentToken = $null
 $Global:HmacSecret = $null
@@ -31,7 +34,8 @@ $Global:ServerUrl = $null
 $Global:CachedHmacKey = $null
 $Global:TlsPinnedThumbprint = $null
 $Global:ConsecutivePollErrors = 0
-$Global:JobPollIntervalSeconds = 30
+$Global:JobPollIntervalSeconds = if ($PollInterval -ge 10) { $PollInterval } else { 30 }
+$Global:RestartRequested = $false
 $Global:LoopTimestamp = $null
 $Global:StatePath = "$env:ProgramData\CyberShield\data\agent_state.json"
 $Global:DnsBlocklistPath = "$env:ProgramData\CyberShield\data\dns_blocklist.json"
@@ -82,6 +86,10 @@ $Global:KeyFingerprint = $null
 
 # Process baseline (HashSet for O(1) lookups)
 $Global:ProcessBaselineSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+
+if ($AgentName) {
+    $env:CYBERSHIELD_AGENT_NAME = $AgentName
+}
 
 # ============================================
 # SINGLE-INSTANCE GUARD (mutex)

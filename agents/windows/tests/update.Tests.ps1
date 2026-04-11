@@ -2,13 +2,34 @@ BeforeAll {
     function Write-Log { param([string]$Message, [string]$Level) }
     function Invoke-SecureApi { param([string]$Endpoint, [string]$Method, [hashtable]$Body) return $null }
     function Export-PersistedState { }
+    function Start-Process {
+        param(
+            [string]$FilePath,
+            [object[]]$ArgumentList,
+            [string]$WindowStyle
+        )
+
+        $script:StartedProcesses += [pscustomobject]@{
+            FilePath = $FilePath
+            ArgumentList = @($ArgumentList)
+            WindowStyle = $WindowStyle
+        }
+
+        return $null
+    }
     
+    $script:StartedProcesses = @()
     $script:Config = @{
-        AgentId    = "test-agent-id"
-        ScriptPath = "$env:TEMP\CyberShield\test-update\agent.ps1"
-        BackupPath = "$env:TEMP\CyberShield\test-update\agent.ps1.bak"
+        AgentId     = "test-agent-id"
+        ScriptPath  = "$env:TEMP\CyberShield\test-update\agent.ps1"
+        BackupPath  = "$env:TEMP\CyberShield\test-update\agent.ps1.bak"
+        AgentToken  = "test-agent-token"
+        HmacSecret  = "test-hmac-secret"
+        ApiEndpoint = "https://api.example.com"
     }
     $script:TempDir = "$env:TEMP\CyberShield\test-update-tmp"
+    $Global:AgentName = "pcteste1"
+    $Global:JobPollIntervalSeconds = 120
     
     foreach ($d in @("$env:TEMP\CyberShield\test-update", $script:TempDir)) {
         if (-not (Test-Path $d)) { New-Item -ItemType Directory -Path $d -Force | Out-Null }
@@ -39,6 +60,25 @@ Describe "Install-AgentUpdate" {
         $nonAscii.Count | Should -BeGreaterThan 0
         
         Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+    }
+
+    It "Builds a detached restart helper with legacy-compatible arguments" {
+        $script:StartedProcesses = @()
+
+        $result = Request-AgentRestart -DelaySeconds 5
+
+        $result | Should -BeTrue
+        $script:StartedProcesses.Count | Should -Be 1
+        $script:StartedProcesses[0].FilePath | Should -Be "PowerShell.exe"
+
+        $encodedIndex = [Array]::IndexOf([string[]]$script:StartedProcesses[0].ArgumentList, "-EncodedCommand")
+        $encodedIndex | Should -BeGreaterThan -1
+
+        $encodedCommand = $script:StartedProcesses[0].ArgumentList[$encodedIndex + 1]
+        $decoded = [System.Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($encodedCommand))
+
+        $decoded | Should -BeLike "*Start-ScheduledTask -TaskName `$taskName*"
+        $decoded | Should -BeLike "*& `$scriptPath -AgentToken `$agentToken -HmacSecret `$hmacSecret -ApiEndpoint `$apiEndpoint -AgentName `$agentName -PollInterval `$pollInterval*"
     }
 }
 

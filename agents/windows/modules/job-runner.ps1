@@ -101,6 +101,10 @@ function Start-HeartbeatLoop {
             # Check for updates
             if ($response -and $response.PSObject -and $response.PSObject.Properties['update_available'] -and $response.update_available) {
                 Invoke-CheckForUpdate
+                if ($Global:RestartRequested) {
+                    Write-Log "Update restart requested - exiting heartbeat loop" "INFO"
+                    break
+                }
             }
         }
         catch {
