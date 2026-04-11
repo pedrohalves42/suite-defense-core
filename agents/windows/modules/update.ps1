@@ -39,6 +39,79 @@ function Test-AgentVersion {
     }
 }
 
+function ConvertTo-PowerShellLiteral {
+    param(
+        [AllowNull()]
+        [string]$Value
+    )
+
+    if ($null -eq $Value) {
+        return "''"
+    }
+
+    return "'" + $Value.Replace("'", "''") + "'"
+}
+
+function New-EncodedPowerShellCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Command
+    )
+
+    $bytes = [System.Text.Encoding]::Unicode.GetBytes($Command)
+    return [Convert]::ToBase64String($bytes)
+}
+
+function Request-AgentRestart {
+    param(
+        [int]$DelaySeconds = 3
+    )
+
+    try {
+        $helperScript = @"
+`$taskName = 'CyberShield Agent'
+`$scriptPath = $(ConvertTo-PowerShellLiteral -Value $script:Config.ScriptPath)
+`$agentToken = $(ConvertTo-PowerShellLiteral -Value $script:Config.AgentToken)
+`$hmacSecret = $(ConvertTo-PowerShellLiteral -Value $script:Config.HmacSecret)
+`$apiEndpoint = $(ConvertTo-PowerShellLiteral -Value $script:Config.ApiEndpoint)
+`$agentName = $(ConvertTo-PowerShellLiteral -Value $Global:AgentName)
+`$pollInterval = $([int]$Global:JobPollIntervalSeconds)
+
+Start-Sleep -Seconds $DelaySeconds
+
+try {
+    if (Get-Command Get-ScheduledTask -ErrorAction SilentlyContinue) {
+        `$task = Get-ScheduledTask -TaskName `$taskName -ErrorAction SilentlyContinue
+        if (`$task) {
+            Start-ScheduledTask -TaskName `$taskName -ErrorAction Stop
+            exit 0
+        }
+    }
+} catch {
+}
+
+& `$scriptPath -AgentToken `$agentToken -HmacSecret `$hmacSecret -ApiEndpoint `$apiEndpoint -AgentName `$agentName -PollInterval `$pollInterval
+"@
+
+        $encodedCommand = New-EncodedPowerShellCommand -Command $helperScript
+
+        Start-Process -FilePath "PowerShell.exe" -ArgumentList @(
+            "-NoProfile",
+            "-NonInteractive",
+            "-WindowStyle", "Hidden",
+            "-ExecutionPolicy", "Bypass",
+            "-EncodedCommand", $encodedCommand
+        ) -WindowStyle Hidden | Out-Null
+
+        Write-Log "Detached restart helper launched" "INFO"
+        return $true
+    }
+    catch {
+        Write-Log "Failed to launch detached restart helper: $($_.Exception.Message)" "ERROR"
+        return $false
+    }
+}
+
 function Invoke-CheckForUpdate {
     <#
     .SYNOPSIS
@@ -66,10 +139,12 @@ function Invoke-CheckForUpdate {
             if ($updated) {
                 Write-Log "Update applied to v$($response.version) - restarting agent" "INFO"
                 Export-PersistedState
-                # Trigger restart via scheduled task
-                Stop-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
-                Start-Sleep -Seconds 2
-                Start-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
+                if (Request-AgentRestart) {
+                    $Global:RestartRequested = $true
+                    return
+                }
+
+                Write-Log "Update applied, but restart helper could not be launched - manual restart required" "ERROR"
             }
         }
     }
