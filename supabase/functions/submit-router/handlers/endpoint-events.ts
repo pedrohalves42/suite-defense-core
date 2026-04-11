@@ -1,18 +1,76 @@
 /**
  * Handler: endpoint events submission (EDR telemetry)
- * Extracted from submit-endpoint-events/index.ts
- * 
- * NOTE: This is a large handler (~300 lines) with MITRE ATT&CK detection rules.
- * For the router version, it proxies to the original function to avoid code duplication.
- * Future: inline the handler once the original function is removed.
+ * Inlined processing — NO proxy. Inserts directly into typed tables
+ * with buffer fallback.
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
-import { fetchWithTimeout, TIMEOUT_TIERS } from '../../_shared/fetch-with-timeout.ts';
 
-// This handler proxies to the original submit-endpoint-events function
-// because it contains complex detection logic (15 MITRE rules, buffer pattern)
-// that should not be duplicated.
+// ── Event classification ────────────────────────────────────────────────
+
+type EventCategory = 'process' | 'file' | 'network' | 'registry';
+
+const EVENT_TYPE_MAP: Record<string, EventCategory> = {
+  process_start: 'process', process_stop: 'process', process_inject: 'process',
+  file_create: 'file', file_modify: 'file', file_delete: 'file', file_rename: 'file',
+  connection: 'network', listen: 'network', dns_query: 'network',
+  registry_set: 'registry', registry_create: 'registry', registry_delete: 'registry',
+  registry_snapshot: 'registry',
+};
+
+function classifyEvent(eventType: string): EventCategory {
+  return EVENT_TYPE_MAP[eventType] || 'process';
+}
+
+const TABLE_MAP: Record<EventCategory, string> = {
+  process: 'endpoint_process_events',
+  file: 'endpoint_file_events',
+  network: 'endpoint_network_events',
+  registry: 'endpoint_registry_events',
+};
+
+const COLUMNS: Record<EventCategory, string[]> = {
+  process: [
+    'agent_id', 'tenant_id', 'event_type', 'pid', 'parent_pid', 'process_name',
+    'command_line', 'executable_path', 'user_name', 'sha256_hash',
+    'parent_process_name', 'parent_command_line', 'mitre_technique_id',
+    'mitre_tactic', 'is_suspicious', 'detection_tags', 'event_time',
+  ],
+  file: [
+    'agent_id', 'tenant_id', 'event_type', 'file_path', 'file_name',
+    'file_extension', 'file_size', 'sha256_hash', 'old_path',
+    'process_name', 'process_pid', 'is_suspicious', 'detection_tags', 'event_time',
+  ],
+  network: [
+    'agent_id', 'tenant_id', 'event_type', 'protocol', 'local_address',
+    'local_port', 'remote_address', 'remote_port', 'direction',
+    'process_name', 'process_pid', 'bytes_sent', 'bytes_received',
+    'domain', 'dns_query_type', 'dns_response', 'is_suspicious',
+    'detection_tags', 'geo_country', 'event_time',
+  ],
+  registry: [
+    'agent_id', 'tenant_id', 'event_type', 'key_path', 'value_name',
+    'value_data', 'value_type', 'old_value_data', 'process_name',
+    'process_pid', 'is_suspicious', 'detection_tags', 'mitre_technique_id',
+    'event_time',
+  ],
+};
+
+function pickColumns(event: Record<string, unknown>, category: EventCategory, agentId: string, tenantId: string): Record<string, unknown> {
+  const allowed = COLUMNS[category];
+  const row: Record<string, unknown> = { agent_id: agentId, tenant_id: tenantId };
+  for (const col of allowed) {
+    if (col === 'agent_id' || col === 'tenant_id') continue;
+    if (event[col] !== undefined) row[col] = event[col];
+  }
+  if (!row.event_time) row.event_time = new Date().toISOString();
+  if (row.is_suspicious === undefined) row.is_suspicious = false;
+  if (row.detection_tags === undefined) row.detection_tags = [];
+  return row;
+}
+
+// ── Exported handler ────────────────────────────────────────────────────
+
 export async function handleEndpointEvents(
   supabase: SupabaseClient,
   agentId: string,
@@ -21,27 +79,81 @@ export async function handleEndpointEvents(
   requestId: string,
   body: Record<string, unknown>,
 ): Promise<Response | Record<string, unknown>> {
-  logger.info(`[${requestId}] submit-router: endpoint-events proxied for agent ${agentId}`);
+  logger.info(`[${requestId}] endpoint-events: processing for agent ${agentId}`);
 
-  // Proxy to original function via internal invocation
-  const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-  const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET') || '';
-
-  const response = await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/submit-endpoint-events`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Internal-Secret': INTERNAL_SECRET,
-      'X-Request-ID': requestId,
-    },
-    timeoutMs: TIMEOUT_TIERS.INTERNAL,
-    body: JSON.stringify({ ...body, _router_agent_id: agentId, _router_tenant_id: tenantId }),
-  });
-
-  const result = await response.text();
-  try {
-    return JSON.parse(result);
-  } catch {
-    return { success: response.ok, raw: result };
+  // Extract events from various payload formats
+  let events: Record<string, unknown>[];
+  if (Array.isArray(body.events)) {
+    events = body.events as Record<string, unknown>[];
+  } else if (Array.isArray(body)) {
+    events = body as unknown as Record<string, unknown>[];
+  } else if (body.event_type) {
+    events = [body];
+  } else {
+    return new Response(
+      JSON.stringify({ error: 'Invalid payload', details: 'Expected { events: [...] } or event with event_type' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
   }
+
+  if (events.length === 0) {
+    return { success: true, received: 0, processed: 0 };
+  }
+
+  if (events.length > 500) {
+    return new Response(
+      JSON.stringify({ error: 'Batch too large', max: 500, received: events.length }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  const now = new Date().toISOString();
+  const batchId = (body.batch_id as string) || undefined;
+  const stats = { received: events.length, direct: 0, buffered: 0, errors: 0 };
+
+  // Group by category
+  const grouped: Record<EventCategory, Record<string, unknown>[]> = {
+    process: [], file: [], network: [], registry: [],
+  };
+
+  for (const event of events) {
+    if (!event.event_type) continue;
+    const category = classifyEvent(event.event_type as string);
+    grouped[category].push(pickColumns(event, category, agentId, tenantId));
+  }
+
+  // Parallel batch inserts
+  const ops = (Object.entries(grouped) as [EventCategory, Record<string, unknown>[]][])
+    .filter(([, rows]) => rows.length > 0)
+    .map(async ([category, rows]) => {
+      const table = TABLE_MAP[category];
+      const { error } = await supabase.from(table).insert(rows);
+      if (error) {
+        logger.error(`[${requestId}] Insert ${table}: ${error.message}`);
+        stats.errors += rows.length;
+        // Buffer fallback
+        const bufferRows = rows.map(row => ({
+          agent_id: agentId, tenant_id: tenantId,
+          event_category: category, payload: row,
+          batch_id: batchId || null, received_at: now,
+        }));
+        const { error: bufErr } = await supabase.from('endpoint_event_buffer').insert(bufferRows);
+        if (!bufErr) { stats.buffered += rows.length; stats.errors -= rows.length; }
+        else logger.error(`[${requestId}] Buffer fallback failed: ${bufErr.message}`);
+      } else {
+        stats.direct += rows.length;
+      }
+    });
+
+  await Promise.all(ops);
+
+  logger.info(`[${requestId}] EDR: ${stats.direct} direct, ${stats.buffered} buffered, ${stats.errors} err (agent=${agentId})`);
+
+  return {
+    success: stats.errors === 0,
+    received: stats.received,
+    processed: stats.direct + stats.buffered,
+    buffered: stats.buffered,
+    errors: stats.errors,
+  };
 }
