@@ -142,12 +142,9 @@ Deno.serve(async (req) => {
       return secureErrorResponse('Failed to save process data', 500);
     }
 
-    // Cleanup old snapshots (keep last 7 days)
-    await supabase
-      .from('agent_processes')
-      .delete()
-      .eq('agent_id', agentId)
-      .lt('collected_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+    // NOTE: Cleanup of old agent_processes snapshots is handled by the
+    // centralized cron job via ops-gateway cleanup:old-process-snapshots.
+    // Do NOT add inline DELETE here — it causes redundant per-request queries.
 
     // ?? Bloco A: Create alert if suspicious processes detected ??
     if (suspiciousProcesses.length > 0) {
