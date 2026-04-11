@@ -2,16 +2,14 @@
  * submit-router -- Consolidated agent telemetry submission endpoint
  * 
  * Consolidates non-HMAC submit-* functions that use serveAgent middleware.
- * HMAC functions (submit-antivirus-status, submit-software-inventory, submit-system-metrics,
- * submit-web-activity, submit-vuln-findings, submit-rollback-event, submit-processes) 
- * remain standalone per MIGRATION_GUIDE.md (raw body required for HMAC verification).
+ * HMAC functions use submit-hmac-router instead.
  * 
  * Usage: POST /submit-router
  * Body: { "type": "backup-status" | "data-exposure" | "endpoint-events" | "network-info" | 
- *         "process-lineage" | "ransomware-indicator" | "agent-evidence", ...payload }
+ *         "process-lineage" | "ransomware-indicator" | "agent-evidence" | "processes", ...payload }
  * Headers: X-Agent-Token
  * 
- * Auth: Agent token (X-Agent-Token via serveAgent)
+ * Auth: Agent token (X-Agent-Token via serveAgent, no HMAC required)
  */
 
 import { serveAgent } from '../_shared/serve-tenant.ts';
@@ -26,6 +24,8 @@ import { handleNetworkInfo } from './handlers/network-info.ts';
 import { handleProcessLineage } from './handlers/process-lineage.ts';
 import { handleRansomwareIndicator } from './handlers/ransomware-indicator.ts';
 import { handleAgentEvidence } from './handlers/agent-evidence.ts';
+// Migrated from standalone submit-processes (non-HMAC)
+import { handleProcesses } from '../_shared/submit-handlers/processes.ts';
 
 const SubmitRouterSchema = z.object({
   type: z.string().min(1).max(50),
@@ -55,6 +55,7 @@ const HANDLERS: Record<string, SubmitHandler> = {
   'ransomware_indicator': handleRansomwareIndicator,
   'agent-evidence':       handleAgentEvidence,
   'agent_evidence':       handleAgentEvidence,
+  'processes':            handleProcesses,
 };
 
 serveAgent(async (_req, ctx) => {
