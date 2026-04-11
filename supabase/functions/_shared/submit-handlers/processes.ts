@@ -1,6 +1,7 @@
 /**
  * Handler: process snapshot submission (migrated from submit-processes)
- * Bug fix: L131 used undefined `payload` variable → now uses `data` from parsed result.
+ * Bug fix: original L131 used undefined `payload` variable → now uses destructured fields.
+ * Auth: Token-only (no HMAC) — lives in submit-router, not submit-hmac-router.
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../logger.ts';
@@ -95,8 +96,7 @@ export async function handleProcesses(
   if (insertError) {
     logger.error(`[${requestId}] Error inserting process data`, insertError);
     return new Response(JSON.stringify({ error: 'Failed to save process data' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }
 

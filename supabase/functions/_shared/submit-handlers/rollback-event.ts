@@ -66,12 +66,10 @@ export async function handleRollbackEvent(
   if (insertError) {
     logger.error(`[${requestId}] Failed to insert rollback event`, { error: insertError.message });
     return new Response(JSON.stringify({ error: 'Failed to store rollback event' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  // Create system alert if safe mode triggered
   if (safeMode) {
     await supabase.from('system_alerts').insert({
       tenant_id: tenantId,

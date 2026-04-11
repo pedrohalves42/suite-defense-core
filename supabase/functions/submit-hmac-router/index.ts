@@ -2,7 +2,10 @@
  * submit-hmac-router — Consolidated HMAC-verified agent telemetry submission endpoint
  * 
  * Phase 1: antivirus-status, software-inventory, web-activity, vuln-findings
- * Phase 2: system-metrics, processes, rollback-event
+ * Phase 2: system-metrics, rollback-event
+ * 
+ * NOTE: submit-processes is in submit-router (non-HMAC) because legacy agents
+ * do not send HMAC headers for process submissions.
  * 
  * Usage: POST /submit-hmac-router
  * Body: { "type": "<handler-type>", ...payload }
@@ -17,9 +20,8 @@ import { handleAntivirusStatus } from '../_shared/submit-handlers/antivirus-stat
 import { handleSoftwareInventory } from '../_shared/submit-handlers/software-inventory.ts';
 import { handleWebActivity } from '../_shared/submit-handlers/web-activity.ts';
 import { handleVulnFindings } from '../_shared/submit-handlers/vuln-findings.ts';
-// Phase 2 handlers
+// Phase 2 handlers (HMAC-verified)
 import { handleSystemMetrics } from '../_shared/submit-handlers/system-metrics.ts';
-import { handleProcesses } from '../_shared/submit-handlers/processes.ts';
 import { handleRollbackEvent } from '../_shared/submit-handlers/rollback-event.ts';
 
 const RouterSchema = z.object({
@@ -49,7 +51,6 @@ const HANDLERS: Record<string, SubmitHandler> = {
   // Phase 2
   'system-metrics':       handleSystemMetrics,
   'system_metrics':       handleSystemMetrics,
-  'processes':            handleProcesses,
   'rollback-event':       handleRollbackEvent,
   'rollback_event':       handleRollbackEvent,
 };

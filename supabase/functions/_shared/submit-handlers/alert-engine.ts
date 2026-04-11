@@ -28,7 +28,6 @@ export async function generateAlerts(
 ): Promise<number> {
   const alerts: Record<string, unknown>[] = [];
 
-  // Fetch existing alerts for cooldown check
   const { data: existingAlerts } = await supabase
     .from('system_alerts')
     .select('alert_type, created_at, resolved')
@@ -44,7 +43,6 @@ export async function generateAlerts(
     );
   };
 
-  // CPU: 98%
   if (metrics.cpu_usage_percent && metrics.cpu_usage_percent > 98 && !hasRecentAlert('high_cpu')) {
     alerts.push({
       tenant_id: agent.tenant_id, agent_id: agent.id, alert_type: 'high_cpu', severity: 'critical',
@@ -54,7 +52,6 @@ export async function generateAlerts(
     });
   }
 
-  // Memory: 90%
   if (metrics.memory_usage_percent && metrics.memory_usage_percent > 90 && !hasRecentAlert('high_memory')) {
     alerts.push({
       tenant_id: agent.tenant_id, agent_id: agent.id, alert_type: 'high_memory', severity: 'high',
@@ -64,7 +61,6 @@ export async function generateAlerts(
     });
   }
 
-  // Disk: 97%
   if (metrics.disk_usage_percent && metrics.disk_usage_percent > 97 && !hasRecentAlert('high_disk')) {
     alerts.push({
       tenant_id: agent.tenant_id, agent_id: agent.id, alert_type: 'high_disk', severity: 'critical',
@@ -74,7 +70,6 @@ export async function generateAlerts(
     });
   }
 
-  // Memory Warning: 85-90%
   if (metrics.memory_usage_percent && metrics.memory_usage_percent > 85 && metrics.memory_usage_percent <= 90 && !hasRecentAlert('memory_warning')) {
     alerts.push({
       tenant_id: agent.tenant_id, agent_id: agent.id, alert_type: 'memory_warning', severity: 'medium',
@@ -118,7 +113,6 @@ export async function autoResolveAlerts(
 
   if (alertsToResolve.length > 0) {
     const now = new Date().toISOString();
-    // ADR-029: Critical alerts require human resolution
     const { error: resolveError, count: resolvedCount } = await supabase
       .from('system_alerts')
       .update({

@@ -40,7 +40,7 @@ export async function evaluateLightMode(
 
     const { data: existingConfig } = await supabase
       .from('agent_light_mode_configs')
-      .select('id, agent_id, is_active, collection_interval_seconds, skip_process_collection, skip_network_collection')
+      .select('id, agent_id, is_active, collection_interval_seconds, skip_process_collection, skip_network_collection, expires_at')
       .eq('agent_id', agentId)
       .maybeSingle();
 
