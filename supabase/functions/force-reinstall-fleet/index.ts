@@ -36,8 +36,7 @@ serveTenant(async (req, ctx) => {
     );
   }
 
-  // === ACTION: generate-key ===
-  if (action === 'generate-key') {
+  const createEnrollmentKey = async (maxUses: number, description: string) => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     const segments = [];
     for (let i = 0; i < 4; i++) {
@@ -49,11 +48,10 @@ serveTenant(async (req, ctx) => {
       }
       segments.push(segment);
     }
-    const plaintextKey = segments.join('-');
 
+    const plaintextKey = segments.join('-');
     const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(plaintextKey));
     const keyHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
     const { data: keyData, error: insertError } = await supabase
@@ -62,14 +60,37 @@ serveTenant(async (req, ctx) => {
         key_hash: keyHash,
         created_by: userId,
         expires_at: expiresAt,
-        max_uses: 100,
-        description: `Fallback key generated via force-reinstall-fleet`,
+        max_uses: Math.max(maxUses, 1),
+        current_uses: 0,
+        is_active: true,
+        description,
         tenant_id: tenantId,
       })
-      .select()
+      .select('id, expires_at, max_uses')
       .maybeSingle();
 
     if (insertError) throw insertError;
+
+    return { plaintextKey, expiresAt, keyData };
+  };
+
+  const buildNuclearReinstallCommand = (plaintextKey: string) => (
+    `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; ` +
+    `$h=$env:COMPUTERNAME; ` +
+    `Get-ScheduledTask -TaskName '*CyberShield*' -ErrorAction SilentlyContinue | ForEach-Object { Stop-ScheduledTask $_.TaskName -ErrorAction SilentlyContinue; Unregister-ScheduledTask $_.TaskName -Confirm:$false -ErrorAction SilentlyContinue }; ` +
+    `Remove-Item 'C:\\CyberShield' -Recurse -Force -ErrorAction SilentlyContinue; ` +
+    `$t=Join-Path $env:TEMP "cs-$(Get-Random).ps1"; ` +
+    `irm "${supabaseUrl}/functions/v1/serve-installer/${plaintextKey}?hostname=$h&os_type=windows" -OutFile $t -UseBasicParsing; ` +
+    `& $t; ` +
+    `Remove-Item $t -Force -ErrorAction SilentlyContinue`
+  );
+
+  // === ACTION: generate-key ===
+  if (action === 'generate-key') {
+    const { plaintextKey, expiresAt, keyData } = await createEnrollmentKey(
+      100,
+      'Fallback key generated via force-reinstall-fleet'
+    );
 
     logger.info('[force-reinstall-fleet] Enrollment key generated', {
       tenantId, userId, keyId: keyData?.id, requestId
@@ -83,27 +104,11 @@ serveTenant(async (req, ctx) => {
       expires_at: expiresAt,
       max_uses: 100,
       warning: 'ANOTE ESTA CHAVE! Ela nao pode ser recuperada depois (armazenada apenas como hash).',
-      nuclear_reinstall_command: `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $h=$env:COMPUTERNAME; Get-ScheduledTask -TaskName '*CyberShield*' -ErrorAction SilentlyContinue | ForEach-Object { Stop-ScheduledTask $_.TaskName -ErrorAction SilentlyContinue; Unregister-ScheduledTask $_.TaskName -Confirm:$false -ErrorAction SilentlyContinue }; Remove-Item 'C:\\CyberShield' -Recurse -Force -ErrorAction SilentlyContinue; $t=Join-Path $env:TEMP "cs-$(Get-Random).ps1"; irm "${supabaseUrl}/functions/v1/serve-installer/${plaintextKey}?hostname=$h&os_type=windows" -OutFile $t -UseBasicParsing; & $t; Remove-Item $t -Force -ErrorAction SilentlyContinue`
+      nuclear_reinstall_command: buildNuclearReinstallCommand(plaintextKey)
     };
   }
 
   // === DEFAULT ACTION: fleet reinstall commands ===
-  const { data: enrollmentKey } = await supabase
-    .from('enrollment_keys')
-    .select('key')
-    .eq('tenant_id', tenantId)
-    .eq('is_active', true)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!enrollmentKey) {
-    return new Response(
-      JSON.stringify({ error: 'No active enrollment key found for this tenant. Create one first.' }),
-      { status: 404, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
   let query = supabase
     .from('agents')
     .select('id, agent_name, agent_version, status, last_heartbeat, force_update_version, force_update_delivered_count')
@@ -130,10 +135,16 @@ serveTenant(async (req, ctx) => {
   const latestVersion = latestRelease?.version || 'unknown';
   const outdatedAgents = agents?.filter(a => a.agent_version !== latestVersion) || [];
 
-  const serverUrl = supabaseUrl;
-  const ek = enrollmentKey.key;
+  const targetCount = Math.max(outdatedAgents.length, 1);
+  const { plaintextKey, expiresAt, keyData } = await createEnrollmentKey(
+    targetCount,
+    `Auto-generated nuke-reinstall key for ${targetCount} agent(s)`
+  );
 
-  const singleCommand = `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $ek="${ek}"; $h=$env:COMPUTERNAME; Get-ScheduledTask -TaskName '*CyberShield*' -ErrorAction SilentlyContinue | ForEach-Object { Stop-ScheduledTask $_.TaskName -ErrorAction SilentlyContinue; Unregister-ScheduledTask $_.TaskName -Confirm:$false -ErrorAction SilentlyContinue }; Remove-Item 'C:\\CyberShield' -Recurse -Force -ErrorAction SilentlyContinue; $t=Join-Path $env:TEMP "cs-$(Get-Random).ps1"; irm "${serverUrl}/functions/v1/serve-installer/$ek?hostname=$h&os_type=windows" -UseBasicParsing -OutFile $t; & $t; Remove-Item $t -Force -ErrorAction SilentlyContinue`;
+  const serverUrl = supabaseUrl;
+  const ek = plaintextKey;
+
+  const singleCommand = buildNuclearReinstallCommand(ek);
 
   const batchScript = `@echo off
 REM CyberShield Fleet Nuclear Reinstall - Generated ${new Date().toISOString()}
@@ -188,11 +199,14 @@ if ($task) {
 `;
 
   logger.info('[force-reinstall-fleet] Commands generated', {
-    tenantId, userId, outdatedCount: outdatedAgents.length, targetVersion: latestVersion, requestId
+    tenantId, userId, outdatedCount: outdatedAgents.length, targetVersion: latestVersion, requestId, keyId: keyData?.id
   });
 
   return {
     ok: true,
+    enrollment_key: ek,
+    key_id: keyData?.id,
+    expires_at: expiresAt,
     latest_version: latestVersion,
     total_agents: agents?.length || 0,
     outdated_agents: outdatedAgents.map(a => ({
