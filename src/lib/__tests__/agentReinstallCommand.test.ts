@@ -28,8 +28,15 @@ describe('agentReinstallCommand', () => {
   it('uses secure file storage for tokens', () => {
     const cmd = buildAgentReinstallCommand(params);
     expect(cmd).toContain('secrets');
-    expect(cmd).toContain('agent.token');
-    expect(cmd).toContain('hmac.secret');
+    expect(cmd).toContain('agent_token');
+    expect(cmd).toContain('hmac_secret');
+  });
+
+  it('accepts the bundled v6 agent script markers', () => {
+    const cmd = buildAgentReinstallCommand(params);
+    expect(cmd).toContain('function\\s+Initialize-Config');
+    expect(cmd).toContain('function\\s+Main');
+    expect(cmd).toContain('Start-HeartbeatLoop');
   });
 
   it('does NOT include tokens in task arguments', () => {
