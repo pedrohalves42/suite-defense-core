@@ -14,6 +14,7 @@ import { CookieConsent } from "./components/CookieConsent";
 const Landing = lazy(() => import("./pages/Landing"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Privacidade = lazy(() => import("./pages/Privacidade"));
+const Security = lazy(() => import("./pages/Security"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const Tutorials = lazy(() => import("./pages/Tutorials"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -145,6 +146,7 @@ export default function PublicApp() {
                   <Route path="/terms" element={<Terms />} />
                   <Route path="/privacy" element={<Privacidade />} />
                   <Route path="/privacidade" element={<Privacidade />} />
+                  <Route path="/security" element={<Security />} />
                   <Route path="/tutorials" element={<Tutorials />} />
                   <Route path="/login" element={<BackendUnavailable />} />
                   <Route path="/signup" element={<BackendUnavailable />} />
