@@ -37,6 +37,7 @@ const CheckoutSuccess = lazy(() => import("./pages/CheckoutSuccess"));
 const CheckoutCancel = lazy(() => import("./pages/CheckoutCancel"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Privacidade = lazy(() => import("./pages/Privacidade"));
+const Security = lazy(() => import("./pages/Security"));
 const VerificarLaudo = lazy(() => import("./pages/VerificarLaudo"));
 const ApprovePage = lazy(() => import("./pages/ApprovePage"));
 const TestComplianceGenerator = lazy(() => import("./pages/TestComplianceGenerator"));
@@ -176,6 +177,7 @@ const App = () => (
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacidade />} />
             <Route path="/privacidade" element={<Privacidade />} />
+            <Route path="/security" element={<Security />} />
             <Route path="/verificar/:laudoId" element={<VerificarLaudo />} />
             <Route path="/verificar-laudo" element={<VerificarLaudo />} />
             <Route path="/approve" element={<ApprovePage />} />
