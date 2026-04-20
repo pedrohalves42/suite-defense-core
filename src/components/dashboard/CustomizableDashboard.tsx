@@ -66,7 +66,7 @@ export function CustomizableDashboard({ widgets, storageKey = "dashboard-layout"
 
   const [isLocked, setIsLocked] = useState(true);
 
-  const handleLayoutChange = useCallback((_: Layout, allLayouts: ResponsiveLayouts) => {
+  const handleLayoutChange = useCallback((_: Layout[], allLayouts: ResponsiveLayouts) => {
     setLayouts(allLayouts);
     try {
       localStorage.setItem(storageKey, JSON.stringify(allLayouts));
