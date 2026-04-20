@@ -1,6 +1,8 @@
 import { useState, useCallback, useMemo } from "react";
-import { ResponsiveReactGridLayout, WidthProvider } from "react-grid-layout/legacy";
-import type { Layout, LayoutItem, ResponsiveLayouts } from "react-grid-layout/legacy";
+import { Responsive as ResponsiveReactGridLayout, WidthProvider } from "react-grid-layout";
+import type { Layout } from "react-grid-layout";
+type LayoutItem = Layout;
+type ResponsiveLayouts = { [breakpoint: string]: Layout[] };
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,7 +66,7 @@ export function CustomizableDashboard({ widgets, storageKey = "dashboard-layout"
 
   const [isLocked, setIsLocked] = useState(true);
 
-  const handleLayoutChange = useCallback((_: Layout, allLayouts: ResponsiveLayouts) => {
+  const handleLayoutChange = useCallback((_: Layout[], allLayouts: ResponsiveLayouts) => {
     setLayouts(allLayouts);
     try {
       localStorage.setItem(storageKey, JSON.stringify(allLayouts));
