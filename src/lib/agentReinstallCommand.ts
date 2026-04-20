@@ -82,7 +82,11 @@ export function buildAgentReinstallCommand({
     '  $cfg = @{ ApiEndpoint=$effectiveServerUrl; ServerUrl=$effectiveServerUrl; AgentToken=$agentToken; HmacSecret=$hmacSecret; AgentName=$agentName };',
     '  $cfg | ConvertTo-Json | Set-Content -Path "$dir\\config.json" -Encoding UTF8 -Force;',
     // v5.0.15-hardening: Scheduled Task WITHOUT tokens on CLI (agent reads from secrets files)
-    "  $taskArgStr = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File \"' + $scriptPath + '\" -ServerUrl \"' + $effectiveServerUrl + '\" -AgentName \"' + $agentName + '\"';",
+    "  [Environment]::SetEnvironmentVariable('CYBERSHIELD_AGENT_NAME', $agentName, 'Machine');",
+    "  $env:CYBERSHIELD_AGENT_NAME = $agentName;",
+    "  [Environment]::SetEnvironmentVariable('CYBERSHIELD_API_ENDPOINT', $effectiveServerUrl, 'Machine');",
+    "  $env:CYBERSHIELD_API_ENDPOINT = $effectiveServerUrl;",
+    "  $taskArgStr = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File \"' + $scriptPath + '\" -ApiEndpoint \"' + $effectiveServerUrl + '\"';",
     "  $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $taskArgStr;",
     '  $trigger1 = New-ScheduledTaskTrigger -AtStartup;',
     '  $trigger2 = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 365);',
