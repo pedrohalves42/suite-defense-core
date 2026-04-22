@@ -18,7 +18,7 @@ export const TopBar = ({ isMobile, sidebarCollapsed, onMobileMenuClick }: TopBar
     )}>
       <div className="flex items-center gap-3">
         {isMobile && (
-          <Button variant="ghost" size="icon" onClick={onMobileMenuClick} className="h-9 w-9">
+          <Button variant="ghost" size="icon" onClick={onMobileMenuClick} className="h-9 w-9" aria-label="Abrir menu">
             <Menu className="h-5 w-5" />
           </Button>
         )}
@@ -29,7 +29,7 @@ export const TopBar = ({ isMobile, sidebarCollapsed, onMobileMenuClick }: TopBar
       </div>
 
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="h-9 w-9 relative">
+        <Button variant="ghost" size="icon" className="h-9 w-9 relative" aria-label="Notificações">
           <Bell className="h-4 w-4" />
         </Button>
       </div>

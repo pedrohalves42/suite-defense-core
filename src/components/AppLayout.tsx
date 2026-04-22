@@ -41,7 +41,7 @@ export const AppLayout = () => {
 
   return (
     <SimpleModeProvider>
-      <div className="min-h-screen bg-background relative">
+      <div className="min-h-screen bg-background relative selection:bg-cta-positive/20 selection:text-cta-positive-foreground">
         {/* Enterprise background pattern */}
         <div 
           className="fixed inset-0 pointer-events-none"
@@ -60,7 +60,11 @@ export const AppLayout = () => {
           <ConnectivityIndicator />
           
           {/* Desktop sidebar - hidden on mobile */}
-          {!isMobile && <AppSidebar />}
+          {!isMobile && (
+            <nav aria-label="Navegação principal">
+              <AppSidebar />
+            </nav>
+          )}
 
           {/* Mobile sidebar sheet */}
           {isMobile && (
