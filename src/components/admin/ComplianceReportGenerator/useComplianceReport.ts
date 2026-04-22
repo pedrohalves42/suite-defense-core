@@ -1,45 +1,24 @@
 import { useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { fetchComplianceReport } from "./reportService";
+import { resolveErrorMessage } from "./errorMessages";
 import type { ComplianceTemplate, ComplianceReportPayload } from "./types";
 
+/**
+ * UI orchestrator hook for the Compliance Report screen.
+ *
+ * Responsibilities (only):
+ *   - Hold local UI state (selected template, loading, payload).
+ *   - Trigger the report service and surface success/error toasts.
+ *
+ * Side concerns (transport, error mapping, date math) live in dedicated
+ * modules so this hook stays small and easy to test.
+ */
 export function useComplianceReport() {
   const [selectedTemplate, setSelectedTemplate] = useState<ComplianceTemplate>("LGPD");
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportPayload, setReportPayload] = useState<ComplianceReportPayload | null>(null);
-
-  const fetchComplianceReport = useCallback(async (template: ComplianceTemplate): Promise<ComplianceReportPayload> => {
-    const { data: session } = await supabase.auth.getSession();
-    if (!session?.session?.access_token) {
-      throw new Error("Não autenticado");
-    }
-
-    const periodEnd = new Date().toISOString();
-    const periodStart = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-
-    const { data, error } = await supabase.functions.invoke("ops-gateway", {
-      body: {
-        action: 'report:compliance',
-        payload: {
-          template,
-          period_start: periodStart,
-          period_end: periodEnd,
-        },
-      },
-    });
-
-    if (error) {
-      logger.error("Edge function error:", error);
-      throw new Error(error.message || "Erro ao gerar relatório");
-    }
-
-    if (!data?.success || !data?.payload) {
-      throw new Error(data?.error || "Payload inválido");
-    }
-
-    return data.payload as ComplianceReportPayload;
-  }, []);
 
   const handleGenerateReport = useCallback(async () => {
     setIsGenerating(true);
@@ -49,21 +28,11 @@ export function useComplianceReport() {
       toast.success(`Relatório ${selectedTemplate} gerado com sucesso!`);
     } catch (error) {
       logger.error("Error generating compliance report:", error);
-      const errorMessage = (error as Error)?.message || "Erro desconhecido";
-
-      if (errorMessage.includes('NO_TENANT') || errorMessage.includes('não está associado') || errorMessage.includes('User not associated')) {
-        toast.error("Você não está associado a nenhum tenant. Contate o administrador.");
-      } else if (errorMessage.includes('Edge Function') || errorMessage.includes('Failed to fetch')) {
-        toast.error("Erro ao conectar com o servidor. Tente novamente.");
-      } else if (errorMessage.includes('Não autenticado')) {
-        toast.error("Sessão expirada. Faça login novamente.");
-      } else {
-        toast.error(`Erro ao gerar relatório: ${errorMessage}`);
-      }
+      toast.error(resolveErrorMessage(error));
     } finally {
       setIsGenerating(false);
     }
-  }, [selectedTemplate, fetchComplianceReport]);
+  }, [selectedTemplate]);
 
   return {
     selectedTemplate,
