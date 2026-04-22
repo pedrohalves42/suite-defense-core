@@ -131,23 +131,23 @@ vi.mock('sonner', () => ({
 vi.mock('@/assets/logo-cybshield-new.png', () => ({ default: '' }));
 
 // Mock framer-motion
-vi.mock('framer-motion', () => ({
-  motion: new Proxy({}, {
-    get: (_target, prop) => {
-      // Return a forwardRef component for any HTML element
-      const { forwardRef } = require('react');
-      return forwardRef((props: any, ref: any) => {
-        const { initial, animate, exit, variants, whileHover, whileTap, whileInView, transition, layout, layoutId, ...rest } = props;
-        const tag = String(prop);
-        const React = require('react');
-        return React.createElement(tag, { ...rest, ref });
-      });
-    },
-  }),
-  AnimatePresence: ({ children }: any) => children,
-  useAnimation: () => ({ start: vi.fn(), stop: vi.fn() }),
-  useInView: () => true,
-  useMotionValue: () => ({ get: () => 0, set: vi.fn() }),
-  useTransform: () => ({ get: () => 0 }),
-  useSpring: () => ({ get: () => 0 }),
-}));
+vi.mock('framer-motion', async () => {
+  const React = await import('react');
+  return {
+    motion: new Proxy({}, {
+      get: (_target, prop) => {
+        return React.forwardRef((props: any, ref: any) => {
+          const { initial, animate, exit, variants, whileHover, whileTap, whileInView, transition, layout, layoutId, ...rest } = props;
+          const tag = String(prop);
+          return React.createElement(tag, { ...rest, ref });
+        });
+      },
+    }),
+    AnimatePresence: ({ children }: any) => children,
+    useAnimation: () => ({ start: vi.fn(), stop: vi.fn() }),
+    useInView: () => true,
+    useMotionValue: () => ({ get: () => 0, set: vi.fn() }),
+    useTransform: () => ({ get: () => 0 }),
+    useSpring: () => ({ get: () => 0 }),
+  };
+});

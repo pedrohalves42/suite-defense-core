@@ -8,7 +8,8 @@ describe('utils', () => {
     });
 
     it('handles conditional classes', () => {
-      expect(cn('a', false && 'b', 'c')).toBe('a c');
+      const condition = false as boolean;
+      expect(cn('a', condition && 'b', 'c')).toBe('a c');
     });
 
     it('merges tailwind conflicts', () => {
