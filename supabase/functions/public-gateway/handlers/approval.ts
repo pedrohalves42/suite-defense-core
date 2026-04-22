@@ -4,6 +4,7 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { checkRateLimit } from '../../_shared/rate-limit.ts';
 import { logger } from '../../_shared/logger.ts';
+import { escapeHtml } from '../../_shared/html-escape.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
 const ApprovalTokenSchema = z.object({ token: z.string().min(10).max(512) });
@@ -98,12 +99,30 @@ function generateHtmlResponse(result: ApprovalResult): Response {
   const title = isSuccess ? 'Aprovacao Concluida' : 'Erro na Aprovacao';
   const bgColor = isSuccess ? '#22c55e' : '#ef4444';
 
+  // SECURITY: All interpolated values are HTML-escaped to prevent reflected XSS
+  // via approval messages or status text (OWASP A03: Injection). bgColor is
+  // restricted to a static allow-list, never user-controlled.
+  const safeBgColor = isSuccess ? '#22c55e' : '#ef4444';
+  const safeTitle = escapeHtml(title);
+  const safeIcon = escapeHtml(icon);
+  const safeMessage = escapeHtml(result.message);
+  const safeBadgeLabel = escapeHtml(isSuccess ? 'Aprovado' : 'Erro');
+
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title} - CyberShield</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.card{background:#fff;border-radius:16px;padding:40px;max-width:500px;width:100%;text-align:center;box-shadow:0 25px 50px -12px rgba(0,0,0,.25)}.icon{font-size:64px;margin-bottom:20px}.status-badge{display:inline-block;padding:8px 16px;border-radius:20px;font-size:12px;font-weight:600;text-transform:uppercase;background:${bgColor};color:#fff;margin-bottom:20px}h1{color:#1e293b;font-size:24px;margin-bottom:16px}.message{color:#64748b;font-size:16px;line-height:1.6;margin-bottom:24px}.btn{display:inline-block;padding:12px 24px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:8px;font-weight:500}.footer{margin-top:24px;color:#94a3b8;font-size:12px}</style></head>
-<body><div class="card"><div class="icon">${icon}</div><span class="status-badge">${isSuccess ? 'Aprovado' : 'Erro'}</span><h1>${title}</h1><p class="message">${result.message}</p><a href="/" class="btn">Ir para o Dashboard</a><p class="footer">CyberShield Security Platform</p></div>
-<script>let s=5;const c=setInterval(()=>{if(--s<=0){clearInterval(c);window.location.href='/'}},1000)</script></body></html>`;
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${safeTitle} - CyberShield</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.card{background:#fff;border-radius:16px;padding:40px;max-width:500px;width:100%;text-align:center;box-shadow:0 25px 50px -12px rgba(0,0,0,.25)}.icon{font-size:64px;margin-bottom:20px}.status-badge{display:inline-block;padding:8px 16px;border-radius:20px;font-size:12px;font-weight:600;text-transform:uppercase;background:${safeBgColor};color:#fff;margin-bottom:20px}h1{color:#1e293b;font-size:24px;margin-bottom:16px}.message{color:#64748b;font-size:16px;line-height:1.6;margin-bottom:24px}.btn{display:inline-block;padding:12px 24px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:8px;font-weight:500}.footer{margin-top:24px;color:#94a3b8;font-size:12px}</style></head>
+<body><div class="card"><div class="icon">${safeIcon}</div><span class="status-badge">${safeBadgeLabel}</span><h1>${safeTitle}</h1><p class="message">${safeMessage}</p><a href="/" class="btn">Ir para o Dashboard</a><p class="footer">CyberShield Security Platform</p></div>
+<script>let s=5;const c=setInterval(function(){if(--s<=0){clearInterval(c);window.location.assign('/')}},1000)</script></body></html>`;
 
-  return new Response(html, { status: statusCode, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  return new Response(html, {
+    status: statusCode,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      // Defense-in-depth: even if escaping ever fails, CSP blocks inline injection.
+      'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'no-referrer',
+    },
+  });
 }

@@ -185,7 +185,8 @@ Write-Host "View full logs: Get-Content $logFile -Tail 50 -Wait" -ForegroundColo
             />
             {!enrollmentKey && (
               <Button variant="outline" size="sm" asChild>
-                <a href="/settings?tab=enrollment" target="_blank">
+                {/* SECURITY: rel="noopener noreferrer" prevents reverse-tabnabbing. */}
+                <a href="/settings?tab=enrollment" target="_blank" rel="noopener noreferrer">
                   Generate Key
                 </a>
               </Button>
@@ -335,7 +336,7 @@ Write-Host "View full logs: Get-Content $logFile -Tail 50 -Wait" -ForegroundColo
             Documentação completa disponível
           </div>
           <Button variant="outline" size="sm" asChild>
-            <a href="/docs/AGENT_MASS_REINSTALL_V412.md" target="_blank" className="flex items-center gap-1">
+            <a href="/docs/AGENT_MASS_REINSTALL_V412.md" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
               <Download className="h-3 w-3" />
               Ver Documentação
             </a>

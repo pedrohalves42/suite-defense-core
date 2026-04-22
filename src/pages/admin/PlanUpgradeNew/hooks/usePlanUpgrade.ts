@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useTenant } from '@/hooks/useTenant';
 import { logger } from '@/lib/logger';
+import { safeNavigate, isSafeRedirectUrl } from '@/lib/url-safety';
 import { PERIOD_CONFIG, type BillingPeriod } from '@/components/admin/BillingPeriodSelector';
 import type { Plan } from '../types';
 
@@ -46,9 +47,18 @@ export function usePlanUpgrade() {
     },
     onSuccess: (data) => {
       if (data.url) {
+        // SECURITY: Validate against allow-list (Stripe / same-origin) before
+        // navigating away. Mitigates open-redirect via compromised checkout endpoint.
+        if (!safeNavigate(data.url)) {
+          toast({
+            title: 'Redirecionamento bloqueado',
+            description: 'O destino do checkout não está na lista de domínios confiáveis.',
+            variant: 'destructive',
+          });
+          return;
+        }
         const periodLabel = PERIOD_CONFIG[billingPeriod].label;
         toast({ title: 'Redirecionando para o checkout', description: `Plano ${periodLabel} selecionado. Você será redirecionado para completar o pagamento.` });
-        window.location.href = data.url;
       }
     },
     onError: (error: Error) => { toast({ title: 'Erro ao criar checkout', description: error.message, variant: 'destructive' }); },
@@ -71,8 +81,18 @@ export function usePlanUpgrade() {
     },
     onSuccess: (data) => {
       if (data.url) {
+        // SECURITY: Same allow-list applies to portal links opened in a new tab.
+        if (!isSafeRedirectUrl(data.url)) {
+          toast({
+            title: 'Link bloqueado',
+            description: 'O portal de cobrança retornou um destino não confiável.',
+            variant: 'destructive',
+          });
+          return;
+        }
         toast({ title: 'Redirecionando para o portal', description: 'Você será redirecionado para gerenciar sua assinatura.' });
-        window.open(data.url, '_blank');
+        // noopener,noreferrer prevents reverse-tabnabbing on the new tab.
+        window.open(data.url, '_blank', 'noopener,noreferrer');
       } else if (data.trial) {
         toast({ title: 'Período de Avaliação', description: data.error || 'Você está em período de avaliação. O portal estará disponível após escolher um plano.' });
       } else if (data.free) {

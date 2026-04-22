@@ -79,7 +79,11 @@ export function SAMLConfigPanel({ tenantId }: SAMLConfigPanelProps) {
     try {
       const data = await callEdgeFunction<{ redirect_url?: string }>('saml-sso', { action: 'login', tenantId });
       if (data.redirect_url) {
-        window.location.href = data.redirect_url;
+        // SECURITY: Validate redirect target against allow-list (OWASP A01: Open Redirect).
+        const { safeNavigate } = await import('@/lib/url-safety');
+        if (!safeNavigate(data.redirect_url)) {
+          toast.error('Destino de redirecionamento não confiável foi bloqueado.');
+        }
       }
     } catch (e) {
       toast.error(e.message || 'Falha ao iniciar login');
