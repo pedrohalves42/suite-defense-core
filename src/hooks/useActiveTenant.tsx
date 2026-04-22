@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, createContext, useContext, ReactNode, useMemo } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext, ReactNode, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { callGateway } from '@/lib/gateway';
