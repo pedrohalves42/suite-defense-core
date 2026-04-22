@@ -95,7 +95,7 @@ function MetricCardsComponent({
 
   return (
     <div 
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" 
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4" 
       role="region" 
       aria-label="Métricas principais do sistema"
     >
@@ -105,7 +105,7 @@ function MetricCardsComponent({
           <Card 
             key={card.title}
             className={cn(
-              "relative overflow-hidden transition-all duration-300 hover:shadow-xl group focus-ring border-border/50",
+              "relative overflow-hidden transition-all duration-300 hover:shadow-xl group focus-ring border-border/50 cursor-pointer",
               card.borderClass
             )}
             onClick={() => navigate(card.route)}
@@ -114,28 +114,27 @@ function MetricCardsComponent({
             aria-label={`${card.title}: ${card.value}. ${card.subtitle}`}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(card.route); } }}
           >
-            {/* Subtle background glow on hover */}
             <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true" />
             
-            <CardHeader className="pb-2 relative">
-              <CardTitle className="text-[11px] font-bold uppercase tracking-wider flex items-center justify-between text-muted-foreground/80">
-                <span className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-primary/5 text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300">
-                    <Icon className="h-4 w-4" aria-hidden="true" />
+            <CardHeader className="pb-2 relative px-4 sm:px-6 pt-4 sm:pt-6">
+              <CardTitle className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider flex items-center justify-between text-muted-foreground/80 gap-2">
+                <span className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                  <div className="p-1 sm:p-1.5 rounded-lg bg-primary/5 text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300 flex-shrink-0">
+                    <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
                   </div>
-                  {card.title}
+                  <span className="truncate">{card.title}</span>
                 </span>
-                <ArrowRight className="h-3.5 w-3.5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-primary" aria-hidden="true" />
+                <ArrowRight className="h-3 w-3 sm:h-3.5 sm:w-3.5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-primary flex-shrink-0" aria-hidden="true" />
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0 relative">
-              <div className={cn("text-2xl font-black tracking-tight transition-colors duration-300", card.valueClass || "text-foreground")}>
+            <CardContent className="pt-0 relative px-4 sm:px-6 pb-4 sm:pb-6">
+              <div className={cn("text-xl sm:text-2xl font-black tracking-tight transition-colors duration-300 break-words", card.valueClass || "text-foreground")}>
                 {card.value}
               </div>
-              <p className={cn("text-xs font-semibold mt-1 flex items-center gap-1.5", card.subtitleClass)}>
-                {card.subtitle}
+              <p className={cn("text-[11px] sm:text-xs font-semibold mt-1 flex items-center gap-1.5", card.subtitleClass)}>
+                <span className="truncate">{card.subtitle}</span>
               </p>
-              {card.trend && <div className="mt-3 pt-3 border-t border-border/40">{card.trend}</div>}
+              {card.trend && <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-border/40">{card.trend}</div>}
             </CardContent>
           </Card>
         );
