@@ -84,7 +84,7 @@ export function useRealtimeQuery<T>({
         channelRef.current = null;
       }
     };
-  }, [realtimeTable, realtimeFilter, enabled, queryClient, ...queryKey]);
+  }, [realtimeTable, realtimeFilter, enabled, queryClient, JSON.stringify(queryKey), JSON.stringify(realtimeEvents)]);
 
   // COST-OPT-V9: No polling at all. Realtime handles updates, manual refetch for the rest.
   return useQuery({
