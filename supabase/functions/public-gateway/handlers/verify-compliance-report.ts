@@ -6,6 +6,7 @@ import { logger } from '../../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { requireEnv } from '../../_shared/env.ts';
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { timingSafeEqual } from '../../_shared/crypto-utils.ts';
 
 const VerifySchema = z.object({
   audit_id: z.string().min(1, 'audit_id is required'),
@@ -97,8 +98,10 @@ export async function handleVerifyComplianceReport(
   const calculatedSha256 = await generateSHA256(payloadForHash);
   const calculatedHmac = await generateHMAC(payloadForHash, hmacSecret);
 
-  const sha256Match = calculatedSha256 === typedReport.sha256;
-  const hmacValid = calculatedHmac === typedReport.hmac_signature;
+  const [sha256Match, hmacValid] = await Promise.all([
+    timingSafeEqual(calculatedSha256, typedReport.sha256),
+    timingSafeEqual(calculatedHmac, typedReport.hmac_signature),
+  ]);
   const isIntegrityValid = sha256Match && hmacValid;
   const isExpired = typedReport.expires_at ? new Date(typedReport.expires_at) < new Date() : false;
 

@@ -6,6 +6,7 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
+import { validateCallerTenant } from '../../_shared/validate-caller-tenant.ts';
 
 // ===================== SHARED CRYPTO =====================
 
@@ -78,7 +79,7 @@ const ComplianceReportSchema = z.object({
 }).refine(d => d.template || d.template_type, { message: 'template or template_type is required' });
 
 export async function handleComplianceReport(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>
+  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>, req?: Request
 ): Promise<unknown> {
   const parsed = ComplianceReportSchema.safeParse(payload);
   if (!parsed.success) {
@@ -86,6 +87,23 @@ export async function handleComplianceReport(
   }
 
   const tenantId = parsed.data.tenant_id;
+
+  if (req) {
+    const callerValidation = await validateCallerTenant(req, supabase, tenantId);
+    if (!callerValidation.authorized) {
+      logger.warn(`[report:compliance][${requestId}] Unauthorized tenant access attempt`, {
+        tenantId,
+        userId: callerValidation.userId ?? null,
+        reason: callerValidation.error,
+      });
+      return {
+        success: false,
+        error: callerValidation.error ?? 'Access denied',
+        __status: callerValidation.statusCode ?? 403,
+      };
+    }
+  }
+
   logger.info(`[report:compliance][${requestId}] Starting for tenant: ${tenantId}`);
 
   const template = (parsed.data.template ?? parsed.data.template_type) as string;

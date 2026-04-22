@@ -20,13 +20,18 @@ async function ensureAuthenticated(): Promise<void> {
 
 export async function fetchComplianceReport(
   template: ComplianceTemplate,
+  tenantId: string,
 ): Promise<ComplianceReportPayload> {
   await ensureAuthenticated();
+
+  if (!tenantId) {
+    throw new Error("Tenant não selecionado");
+  }
 
   const { data, error } = await supabase.functions.invoke("ops-gateway", {
     body: {
       action: "report:compliance",
-      payload: { template, ...buildPeriodRange(30) },
+      payload: { template, tenant_id: tenantId, ...buildPeriodRange(30) },
     },
   });
 
