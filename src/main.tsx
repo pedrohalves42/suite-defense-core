@@ -90,20 +90,46 @@ const installBootstrapRecoveryHandlers = () => {
 clearLegacyPWAArtifacts();
 installBootstrapRecoveryHandlers();
 
+const renderBootstrapError = (error: unknown) => {
+  console.error("[Bootstrap] Critical failure:", error);
+  const root = document.getElementById("root");
+  if (root) {
+    root.innerHTML = `
+      <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #0a0a0a; color: #fff; font-family: system-ui, sans-serif; padding: 20px; text-align: center;">
+        <div style="max-width: 400px; width: 100%;">
+          <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+          <h1 style="font-size: 20px; margin-bottom: 12px; font-weight: 600;">Falha na Inicialização</h1>
+          <p style="font-size: 14px; color: #a1a1aa; margin-bottom: 24px; line-height: 1.5;">
+            Ocorreu um erro ao carregar os componentes básicos do sistema. Isso pode ser um problema temporário de conexão.
+          </p>
+          <button onclick="window.location.reload()" style="background: #fff; color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: opacity 0.2s;">
+            Tentar Novamente
+          </button>
+          <div style="margin-top: 24px; font-size: 10px; color: #3f3f46; font-family: monospace; word-break: break-all; opacity: 0.5;">
+            ${String(error)}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+};
+
 if (!hasBackend) {
   // ── PUBLIC-ONLY MODE ──
-  // Backend env vars are missing. Render a minimal public shell so the
-  // institutional site (landing, pricing, terms, etc.) remains accessible.
-  import("./PublicApp").then(({ default: PublicApp }) => {
-    createRoot(document.getElementById("root")!).render(
-      <React.StrictMode>
-        <PublicApp />
-      </React.StrictMode>
-    );
-  });
+  import("./PublicApp")
+    .then(({ default: PublicApp }) => {
+      const rootElement = document.getElementById("root");
+      if (!rootElement) return;
+      
+      createRoot(rootElement).render(
+        <React.StrictMode>
+          <PublicApp />
+        </React.StrictMode>
+      );
+    })
+    .catch(renderBootstrapError);
 } else {
   // ── FULL APP MODE ──
-  // Only import heavy modules AFTER env vars are confirmed
   Promise.all([
     import("@tanstack/react-query"),
     import("next-themes"),
@@ -111,50 +137,53 @@ if (!hasBackend) {
     import("./hooks/useActiveTenant"),
     import("./App"),
     import("./lib/storage"),
-  ]).then(
-    ([
-      { QueryClient, QueryClientProvider },
-      { ThemeProvider },
-      { HelmetProvider },
-      { ActiveTenantProvider },
-      { default: App },
-      { startStorageCleanup },
-    ]) => {
-      // Start localStorage cleanup with teardown support
-      startStorageCleanup();
+  ])
+    .then(
+      ([
+        { QueryClient, QueryClientProvider },
+        { ThemeProvider },
+        { HelmetProvider },
+        { ActiveTenantProvider },
+        { default: App },
+        { startStorageCleanup },
+      ]) => {
+        startStorageCleanup();
 
-      // QueryClient with optimized cache configuration (APEX optimization)
-      const queryClient = new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: 10 * 60 * 1000,
-            gcTime: 15 * 60 * 1000,
-            refetchOnWindowFocus: true,
-            refetchOnReconnect: true,
-            retry: 1,
+        const queryClient = new QueryClient({
+          defaultOptions: {
+            queries: {
+              staleTime: 10 * 60 * 1000,
+              gcTime: 15 * 60 * 1000,
+              refetchOnWindowFocus: true,
+              refetchOnReconnect: true,
+              retry: 1,
+            },
           },
-        },
-      });
+        });
 
-      createRoot(document.getElementById("root")!).render(
-        <React.StrictMode>
-          <HelmetProvider>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="dark"
-              enableSystem
-              storageKey="intelligence-theme"
-              disableTransitionOnChange
-            >
-              <QueryClientProvider client={queryClient}>
-                <ActiveTenantProvider>
-                  <App />
-                </ActiveTenantProvider>
-              </QueryClientProvider>
-            </ThemeProvider>
-          </HelmetProvider>
-        </React.StrictMode>
-      );
-    }
-  );
+        const rootElement = document.getElementById("root");
+        if (!rootElement) return;
+
+        createRoot(rootElement).render(
+          <React.StrictMode>
+            <HelmetProvider>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="dark"
+                enableSystem
+                storageKey="intelligence-theme"
+                disableTransitionOnChange
+              >
+                <QueryClientProvider client={queryClient}>
+                  <ActiveTenantProvider>
+                    <App />
+                  </ActiveTenantProvider>
+                </QueryClientProvider>
+              </ThemeProvider>
+            </HelmetProvider>
+          </React.StrictMode>
+        );
+      }
+    )
+    .catch(renderBootstrapError);
 }
