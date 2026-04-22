@@ -192,12 +192,21 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
   const handleBuildExe = async () => {
     if (!isNameValid || !lastEnrollmentKey) { toast.error('Gere credenciais primeiro'); return; }
 
+    // BUG FIX: We were resetting in-memory build state but leaving the
+    // previous `current-build` entry in storage. On the next mount the
+    // recovery effect would resurrect a stale build_id that no longer
+    // matches the current attempt, surfacing a phantom "recovering build"
+    // toast and a wrong realtime channel subscription. Clear it up-front.
+    storage.remove('current-build');
+    clearPollingFallback();
+
     setExeBuildStatus('building');
     setExeBuildId(null);
     setExeDownloadUrl(null);
     setExeSha256(null);
     setExeFileSize(null);
     setGithubActionsUrl(null);
+    githubActionsUrlRef.current = null;
     toast.info('🔧 Iniciando build do EXE...');
 
     try {

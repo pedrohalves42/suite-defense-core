@@ -36,12 +36,21 @@ export function useAgentConfig() {
 
     const abortController = new AbortController();
     let isMounted = true;
+    // BUG FIX: The inner fetch AbortController was previously created inside
+    // the timer and never linked to unmount. If the component unmounted after
+    // the request fired, the network call would keep running (wasted work +
+    // potential setState-after-unmount risk). Lift it to this scope so the
+    // outer cleanup can abort it deterministically.
+    let innerController: AbortController | null = null;
+    let innerTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
     const timer = setTimeout(async () => {
       if (!isMounted) return;
       setIsCheckingName(true);
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      innerController = new AbortController();
+      const controller = innerController;
+      innerTimeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = innerTimeoutId;
 
       const checkNameWithRetry = async (retries = 2): Promise<void> => {
         try {
@@ -82,7 +91,13 @@ export function useAgentConfig() {
       await checkNameWithRetry();
     }, 800);
 
-    return () => { isMounted = false; abortController.abort(); clearTimeout(timer); };
+    return () => {
+      isMounted = false;
+      abortController.abort();
+      clearTimeout(timer);
+      if (innerTimeoutId) clearTimeout(innerTimeoutId);
+      innerController?.abort();
+    };
   }, [agentName]);
 
   const isNameValid = agentName.length >= 3 && agentName.length <= 50 && !/[^a-zA-Z0-9\-_]/.test(agentName) && !agentNameError.startsWith('[ERROR] ');
