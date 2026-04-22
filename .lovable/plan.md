@@ -1,60 +1,108 @@
 
 
-# Correção: `check-tenant-abuse` quebrado em produção
+# Plano: Backlog de Hardening — 4 Frentes
 
-## Diagnóstico (causa raiz confirmada)
+## Visão geral
 
-Logs da edge function (últimos 5 min):
+Quatro frentes independentes, executáveis em paralelo, sem mudanças de comportamento funcional. Total estimado: ~1 commit por frente, baixo risco.
+
+---
+
+## 🔴 Frente 1 — RLS `USING(true)` em escritas (tenant bypass)
+
+### Início — diagnóstico
+Identificar as 2 policies já reportadas pela auditoria. Vou rodar:
+```sql
+SELECT schemaname, tablename, policyname, cmd, qual, with_check
+FROM pg_policies
+WHERE schemaname='public'
+  AND cmd IN ('INSERT','UPDATE','DELETE')
+  AND (qual = 'true' OR with_check = 'true');
 ```
-code: "42703"  → column tenants.status does not exist
-```
 
-A função em `supabase/functions/check-tenant-abuse/index.ts` faz:
+### Meio — migration
+Para cada policy encontrada, substituir `USING(true)` / `WITH CHECK(true)` por:
+```sql
+USING (tenant_id = public.get_active_tenant_id())
+WITH CHECK (tenant_id = public.get_active_tenant_id())
+```
+Quando a tabela exigir privilégio admin, somar `AND public.has_role(auth.uid(),'super_admin'::app_role)`.
+
+### Fim — verificação
+- `supabase--linter` sem novos warnings.
+- `pg_policies` mostra `qual` parametrizado em `tenant_id`.
+- Smoke test via `read_query`: insert cross-tenant deve ser rejeitado.
+
+---
+
+## 🟠 Frente 2 — Cobertura Zod nas 8 edge functions submit
+
+### Início — listar
+Inventário das 8 funções pendentes (já mapeadas: `submit-antivirus-status`, `submit-system-metrics`, +6). Vou rodar `ci/validate-zod-coverage.sh` para confirmar o conjunto exato.
+
+### Meio — adicionar schemas
+Para cada função, no topo do `index.ts`:
 ```ts
-.from('tenants').select('id, name').eq('status', 'active')
+import { z } from 'zod';
+const BodySchema = z.object({ /* campos atuais */ });
+const parsed = BodySchema.safeParse(await req.json());
+if (!parsed.success) return jsonError(400, parsed.error.flatten());
 ```
+Reutilizar tipos compartilhados de `_shared/schemas/` quando existir. Manter campos opcionais como `.optional()` para não quebrar agentes em campo.
 
-Mas a tabela `public.tenants` **não tem coluna `status`**. A coluna real para estado do inquilino é `suspension_status` (valores observados em produção: `active`). Resultado: a query falha com 500, **nenhum tenant é verificado, nenhum alerta de abuso é gerado** desde que o schema mudou.
+### Fim — verificação
+- `ci/validate-zod-coverage.sh` retorna 0.
+- `supabase--deploy_edge_functions` em todas as 8 com sucesso.
+- Curl de smoke (payload válido → 200; payload inválido → 400 com erro estruturado).
 
-## Fim (estado desejado)
+---
 
-- `check-tenant-abuse` executa com sucesso pelo cron interno.
-- Todos os 16 tenants ativos são varridos a cada execução.
-- Alertas de abuso voltam a popular `system_alerts`.
-- Log estruturado mostra `tenants_checked: 16` em vez de erro 42703.
+## 🟠 Frente 3 — 5 erros de lint (bloqueia merge)
 
-## Meio (mudanças)
+### Início — localizados pela auditoria
+1. `src/pages/__tests__/page-mocks.ts` — `require()` proibido (×N)
+2. `src/pages/admin/CronHealthDashboard/useCronHealthDashboard.ts` — `require()` proibido
+3. `src/lib/__tests__/utils.test.ts` — constant binary expression
 
-### Arquivo único: `supabase/functions/check-tenant-abuse/index.ts`
+### Meio — correções pontuais
+- Trocar `require('x')` por `import x from 'x'` (estático) ou `await import('x')` (dinâmico) conforme contexto.
+- No `utils.test.ts`, ajustar a expressão constante para refletir a intenção real do teste (provavelmente uma comparação que virou tautologia).
 
-Trocar o filtro de `status` para `suspension_status`:
+### Fim — verificação
+- `bun lint` (ou `npm run lint`) com 0 erros.
+- Vitest dos arquivos tocados continua verde.
 
-```diff
-- .from('tenants')
-- .select('id, name')
-- .eq('status', 'active');
-+ .from('tenants')
-+ .select('id, name')
-+ .eq('suspension_status', 'active');
+---
+
+## 🟡 Frente 4 — `search_path` mutable + bucket público
+
+### Início — identificar
+- Função sinalizada pelo linter sem `SET search_path = public`.
+- Bucket público no storage (consultar `storage.buckets WHERE public=true`).
+
+### Meio — migration
+```sql
+ALTER FUNCTION public.<nome>(<args>)
+  SET search_path = public;
 ```
+Para o bucket: se for asset legítimamente público (ex: avatares de marca), documentar e ignorar via `manage_security_finding`. Caso contrário:
+```sql
+UPDATE storage.buckets SET public = false WHERE id = '<bucket>';
+```
+e adicionar policy de leitura autenticada.
 
-Nenhuma outra alteração na função — o restante (jobs/hour, failed_login_attempts, agents over limit, persistência em `system_alerts`) já está correto e referencia colunas válidas.
+### Fim — verificação
+- `supabase--linter` sem o warning de search_path.
+- `security--get_scan_results` confirma resolução do bucket (ou ignore documentado).
 
-## Início → execução
+---
 
-1. Aplicar o patch acima em `supabase/functions/check-tenant-abuse/index.ts`.
-2. Deploy da função (`supabase--deploy_edge_functions` com `["check-tenant-abuse"]`).
-3. Validação em produção:
-   - Invocar via `supabase--curl_edge_functions` com header de cron, esperar `200` e `tenants_checked: 16`.
-   - Conferir `supabase--edge_function_logs` para confirmar ausência de `42703` e presença de `check-tenant-abuse completed`.
-4. Verificar `system_alerts` (somente leitura) para confirmar que novos alertas, se houver, foram inseridos com sucesso.
+## Ordem de execução recomendada
 
-## Riscos / rollback
+1. **Frente 3** (lint) — desbloqueia CI imediatamente, baixo risco.
+2. **Frente 1** (RLS) — risco de segurança mais alto, isolado em 1 migration.
+3. **Frente 2** (Zod) — 8 deploys independentes, paralelos.
+4. **Frente 4** (search_path/bucket) — finaliza warnings residuais.
 
-- Risco: nulo — troca de nome de coluna por outra já existente, schema idêntico do ponto de vista da função.
-- Rollback: reverter o diff de uma linha caso surja regressão (improvável).
-
-## Follow-up sugerido (fora deste escopo)
-
-Adicionar este filtro de coluna ao gate `scripts/check-tenant-queries.sh` ou a um teste Deno mínimo (`index.test.ts`) para que uma futura renomeação de `suspension_status` quebre o CI antes de chegar à produção.
+Cada frente entrega um diff coeso e revisável. Aprovação pode ser por frente ou em bloco — me diga como prefere.
 
