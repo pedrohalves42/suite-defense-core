@@ -39,13 +39,7 @@ export class HmacCryptoAdapter implements CryptoPort {
   }
 
   async encrypt(data: string, key: string): Promise<string> {
-    const cryptoKey = await crypto.subtle.importKey(
-      'raw',
-      this.hexToBuffer(key.padEnd(64, '0').slice(0, 64)),
-      { name: 'AES-GCM' },
-      false,
-      ['encrypt']
-    );
+    const cryptoKey = await this.deriveAesKey(key, ['encrypt']);
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const encoded = new TextEncoder().encode(data);
     const encrypted = await crypto.subtle.encrypt(
@@ -62,21 +56,45 @@ export class HmacCryptoAdapter implements CryptoPort {
 
   async decrypt(encryptedData: string, key: string): Promise<string> {
     const combined = new Uint8Array(this.hexToBuffer(encryptedData));
+    if (combined.length < 13) {
+      throw new Error('Invalid ciphertext: too short to contain IV + data');
+    }
     const iv = combined.slice(0, 12);
     const ciphertext = combined.slice(12);
-    const cryptoKey = await crypto.subtle.importKey(
-      'raw',
-      this.hexToBuffer(key.padEnd(64, '0').slice(0, 64)),
-      { name: 'AES-GCM' },
-      false,
-      ['decrypt']
-    );
+    const cryptoKey = await this.deriveAesKey(key, ['decrypt']);
     const decrypted = await crypto.subtle.decrypt(
       { name: 'AES-GCM', iv },
       cryptoKey,
       ciphertext
     );
     return new TextDecoder().decode(decrypted);
+  }
+
+  /**
+   * BUG FIX: Previously the key was treated as hex and padded with '0' chars
+   * up to 64 hex digits, then sliced. That had two failure modes:
+   *   1) Non-hex inputs silently produced an all-zero or partially-zero key
+   *      (parseInt of non-hex returns NaN -> 0), gutting entropy.
+   *   2) Short secrets were extended with deterministic zero bytes instead
+   *      of being properly stretched.
+   * We now derive a real 256-bit AES key by hashing the input with SHA-256,
+   * which accepts any string and always yields full-entropy 32 bytes.
+   */
+  private async deriveAesKey(
+    key: string,
+    usages: KeyUsage[]
+  ): Promise<CryptoKey> {
+    const keyMaterial = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(key)
+    );
+    return crypto.subtle.importKey(
+      'raw',
+      keyMaterial,
+      { name: 'AES-GCM' },
+      false,
+      usages
+    );
   }
 
   private bufferToHex(buffer: ArrayBuffer): string {
