@@ -12,6 +12,11 @@
 
 import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
+
+// Permissive schema — agents in field send heterogeneous payloads (v5/v6/single).
+// Hard-tightening is gated by version migration.
+const EndpointEventsSchema = z.object({}).passthrough();
 
 // ── Table mapping ───────────────────────────────────────────────────────
 
@@ -104,7 +109,14 @@ function pickColumns(event: Record<string, unknown>, category: EventCategory, ag
 
 serveAgent(async (_req, ctx) => {
   const { supabase, agentId, tenantId, requestId, body } = ctx;
-  const payload = body as Record<string, unknown>;
+  const parsed = EndpointEventsSchema.safeParse(body ?? {});
+  if (!parsed.success) {
+    return new Response(
+      JSON.stringify({ error: 'invalid_payload', details: parsed.error.flatten() }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+  const payload = parsed.data as Record<string, unknown>;
 
   // Detect payload format and group events by category
   const grouped: Record<EventCategory, Record<string, unknown>[]> = {

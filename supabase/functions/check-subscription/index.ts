@@ -3,14 +3,22 @@
  * Migrated to serveTenant middleware
  */
 import Stripe from 'https://esm.sh/stripe@18.5.0';
+import { z } from 'https://esm.sh/zod@3.23.8';
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 
-interface CheckSubBody {
-  tenantId?: string;
-}
+const CheckSubBodySchema = z.object({
+  tenantId: z.string().uuid().optional(),
+}).passthrough();
+type CheckSubBody = z.infer<typeof CheckSubBodySchema>;
 
 serveTenant<CheckSubBody>(async (req, ctx) => {
+  const parsed = CheckSubBodySchema.safeParse(ctx.body ?? {});
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'invalid_payload', details: parsed.error.flatten() }), {
+      status: 400, headers: { 'Content-Type': 'application/json' },
+    });
+  }
   const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
   if (!stripeKey) {
     return new Response(JSON.stringify({ error: 'Stripe not configured' }), {
