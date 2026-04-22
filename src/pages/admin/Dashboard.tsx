@@ -132,7 +132,8 @@ export default function Dashboard() {
   }
 
   // Stat cards data
-  const statCards = [
+  // Stat cards data - PERF-FIX: Memoize static-ish data
+  const statCards = useMemo(() => [
     {
       to: '/admin/agent-center',
       icon: Server,
@@ -168,15 +169,15 @@ export default function Dashboard() {
       suffix: t('adminPages.dashboard.pending'),
       valueColor: (insightsCount || 0) > 0 ? 'text-accent' : 'text-success',
     },
-  ];
-
-  // Quick nav items
-  const quickNav = [
+  ], [t, onlineAgents, totalAgents, offlineAgents, metrics?.alerts.active, criticalAlerts, vulnStats?.total, vulnStats?.critical, insightsCount]);
+  
+  // Quick nav items - PERF-FIX: Memoize
+  const quickNav = useMemo(() => [
     { icon: Activity, label: t('adminPages.dashboard.realTime'), to: '/admin/monitoring-advanced', color: 'text-info' },
     { icon: Brain, label: t('adminPages.dashboard.insightsAI'), to: '/admin/ai-insights', color: 'text-accent', badge: insightsCount },
     { icon: BarChart3, label: t('adminPages.dashboard.reports'), to: '/admin/reports', color: 'text-success' },
     { icon: Wrench, label: t('adminPages.dashboard.actionCenter'), to: '/admin/action-center', color: 'text-warning' },
-  ];
+  ], [t, insightsCount]);
 
   return (
     <div className="space-y-5">

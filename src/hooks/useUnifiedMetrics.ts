@@ -250,18 +250,21 @@ export function useUnifiedMetrics() {
     return { emoji: '🔴', title: 'Ação urgente', description: 'Há riscos que podem afetar seu negócio.', variant: 'danger' as const };
   }, [securityScore, data?.alerts.critical]);
 
-  const metrics: UnifiedMetrics | null = data ? {
-    agents,
-    alerts: data.alerts,
-    blocked: data.blocked,
-    evidence: data.evidence,
-    vulnerabilities: data.vulnerabilities,
-    insights: data.insights,
-    securityScore,
-    globalStatus,
-    financial: data.financial,
-    lastUpdate: data.lastUpdate
-  } : null;
+  const metrics: UnifiedMetrics | null = useMemo(() => {
+    if (!data) return null;
+    return {
+      agents,
+      alerts: data.alerts,
+      blocked: data.blocked,
+      evidence: data.evidence,
+      vulnerabilities: data.vulnerabilities,
+      insights: data.insights,
+      securityScore,
+      globalStatus,
+      financial: data.financial,
+      lastUpdate: data.lastUpdate
+    };
+  }, [data, agents, securityScore, globalStatus]);
 
   return {
     metrics,
