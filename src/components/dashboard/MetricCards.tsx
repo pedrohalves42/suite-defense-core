@@ -94,36 +94,48 @@ function MetricCardsComponent({
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4" role="region" aria-label="Métricas principais do sistema">
-      {cards.map((card) => {
+    <div 
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" 
+      role="region" 
+      aria-label="Métricas principais do sistema"
+    >
+      {cards.map((card, index) => {
         const Icon = card.icon;
         return (
           <Card 
             key={card.title}
-            className={cn("bg-gradient-card cursor-pointer hover:border-primary/40 transition-all group", card.borderClass)}
+            className={cn(
+              "relative overflow-hidden transition-all duration-300 hover:shadow-xl group focus-ring border-border/50",
+              card.borderClass
+            )}
             onClick={() => navigate(card.route)}
-            role="button"
+            role="link"
             tabIndex={0}
             aria-label={`${card.title}: ${card.value}. ${card.subtitle}`}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(card.route); } }}
           >
-            <CardHeader className="pb-1 sm:pb-2">
-              <CardTitle className="text-xs font-medium flex items-center justify-between text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
-                  <span className="hidden sm:inline">{card.title}</span>
+            {/* Subtle background glow on hover */}
+            <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true" />
+            
+            <CardHeader className="pb-2 relative">
+              <CardTitle className="text-[11px] font-bold uppercase tracking-wider flex items-center justify-between text-muted-foreground/80">
+                <span className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-primary/5 text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300">
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                  </div>
+                  {card.title}
                 </span>
-                <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-primary" />
+                <ArrowRight className="h-3.5 w-3.5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-primary" aria-hidden="true" />
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
-              <div className={cn("text-lg sm:text-2xl font-bold text-foreground", card.valueClass)}>
+            <CardContent className="pt-0 relative">
+              <div className={cn("text-2xl font-black tracking-tight transition-colors duration-300", card.valueClass || "text-foreground")}>
                 {card.value}
               </div>
-              <p className={cn("text-[10px] sm:text-xs mt-0.5", card.subtitleClass)}>
+              <p className={cn("text-xs font-semibold mt-1 flex items-center gap-1.5", card.subtitleClass)}>
                 {card.subtitle}
               </p>
-              {card.trend && <div className="mt-1">{card.trend}</div>}
+              {card.trend && <div className="mt-3 pt-3 border-t border-border/40">{card.trend}</div>}
             </CardContent>
           </Card>
         );
