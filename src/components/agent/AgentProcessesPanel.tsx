@@ -1,13 +1,4 @@
-/**
- * AgentProcessesPanel - Exibe top processos e anomalias
- * 
- * Mostra:
- * - Top 5 processos por CPU
- * - Top 5 processos por RAM
- * - Processos anômalos detectados
- * - Estatísticas de auto-reparo
- */
-
+import { memo, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
