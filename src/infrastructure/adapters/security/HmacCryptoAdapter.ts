@@ -86,9 +86,15 @@ export class HmacCryptoAdapter implements CryptoPort {
   }
 
   private hexToBuffer(hex: string): ArrayBuffer {
+    // BUG FIX: `String.prototype.substr` is deprecated (legacy). Use `substring`
+    // for forward-compat. Also guards against odd-length hex strings, which
+    // would silently produce a truncated buffer with the previous code.
+    if (hex.length % 2 !== 0) {
+      throw new Error('Invalid hex string: length must be even');
+    }
     const bytes = new Uint8Array(hex.length / 2);
     for (let i = 0; i < hex.length; i += 2) {
-      bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+      bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
     }
     return bytes.buffer;
   }

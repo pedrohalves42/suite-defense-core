@@ -24,12 +24,16 @@ export function useClientOnboarding() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // BUG FIX: `.single()` throws PGRST116 when 0 rows are returned (new users
+      // without roles), sending the flow straight to catch and silently breaking
+      // the onboarding panel. `.maybeSingle()` returns null for 0 rows, which is
+      // the intended behavior for an optional lookup.
       const { data: role } = await supabase
         .from('user_roles')
         .select('tenant_id')
         .eq('user_id', user.id)
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (!role?.tenant_id) return;
 
@@ -40,8 +44,16 @@ export function useClientOnboarding() {
 
       const agentsList = (agents || []) as unknown as RpcAgentRow[];
       setAgentCount(agentsList.length);
-      const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-      setHasOnlineAgent(agentsList.some((a) => a.last_heartbeat && a.last_heartbeat > cutoff));
+      // BUG FIX: Comparing ISO strings lexicographically is fragile (depends on
+      // identical formatting/timezone). Compare numeric timestamps for correctness.
+      const cutoffMs = Date.now() - 30 * 60 * 1000;
+      setHasOnlineAgent(
+        agentsList.some((a) => {
+          if (!a.last_heartbeat) return false;
+          const ts = Date.parse(a.last_heartbeat);
+          return Number.isFinite(ts) && ts > cutoffMs;
+        })
+      );
     } catch (error) {
       logger.error('Error fetching agent stats:', error);
     }
