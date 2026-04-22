@@ -92,6 +92,10 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
 
       let flash = true;
       let cleaned = false;
+      
+      // BUG FIX: The title flashing interval and event listeners must be
+      // scoped within the status check to prevent memory leaks if status
+      // reverts from 'completed' to another state unexpectedly.
       const titleInterval = setInterval(() => {
         document.title = flash ? '[OK]  EXE Pronto! | CyberShield' : 'CyberShield Agent Installer';
         flash = !flash;
@@ -110,10 +114,13 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
         if (!document.hidden) cleanup();
       };
 
-      const flashTimeout = setTimeout(cleanup, 10000);
-      document.addEventListener('visibilitychange', onVisibilityChange);
+      const flashTimeout = setTimeout(cleanup, 15000);
+      document.addEventListener('visibilitychange', onVisibilityChange, { passive: true });
 
       return cleanup;
+    } else if (exeBuildStatus !== 'completed') {
+      // Ensure title is reset if status changes back
+      document.title = 'CyberShield Agent Installer';
     }
   }, [exeBuildStatus, exeDownloadUrl, agentName, exeBuildId]);
 
