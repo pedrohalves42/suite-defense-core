@@ -161,7 +161,12 @@ const ACTION_TO_FUNCTION: Record<string, string> = {
 
 // cleanup and notify are now fully inlined (Phase 3A) — no more router proxy
 
-type InlinedHandler = (supabase: ReturnType<typeof createClient>, requestId: string, payload: Record<string, unknown>) => Promise<unknown>;
+type InlinedHandler = (
+  supabase: ReturnType<typeof createClient>,
+  requestId: string,
+  payload: Record<string, unknown>,
+  req?: Request,
+) => Promise<unknown>;
 
 const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   // ── check inlined (Phase 2C complete: 20 handlers) ──
@@ -358,7 +363,7 @@ Deno.serve(async (req) => {
     if (inlinedHandler) {
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
       logger.info(`[ops-gateway] Inline: ${action}`, { requestId });
-      const result = await inlinedHandler(supabase, requestId, payload);
+      const result = await inlinedHandler(supabase, requestId, payload, req);
       logger.info(`[ops-gateway] ${action} done in ${Date.now() - startedAt}ms`);
       return jsonRes(result, 200, origin);
     }
