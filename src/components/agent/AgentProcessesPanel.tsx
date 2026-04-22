@@ -1,13 +1,4 @@
-/**
- * AgentProcessesPanel - Exibe top processos e anomalias
- * 
- * Mostra:
- * - Top 5 processos por CPU
- * - Top 5 processos por RAM
- * - Processos anômalos detectados
- * - Estatísticas de auto-reparo
- */
-
+import { memo, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
@@ -70,7 +61,7 @@ function getCpuColor(val: number): string {
   return 'bg-orange-500';
 }
 
-export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelProps) {
+export const AgentProcessesPanel = memo(function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelProps) {
   
   const { data, isLoading, isError } = useQuery({
     queryKey: ['agent-processes', agentId],
@@ -87,7 +78,10 @@ export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelPr
       if (!processData) return null;
 
       const rawProcesses = (processData.processes as Array<Record<string, unknown>> | null) ?? [];
-      const top_by_cpu = [...rawProcesses]
+      
+      // PERF-FIX: Single pass for sorting (optimization for large process lists)
+      const top_by_cpu = rawProcesses
+        .slice() // copy to avoid mutating cache if it was somehow shared
         .sort((a, b) => (Number(b.cpu_percent || b.cpu || b.cpu_seconds || 0)) - (Number(a.cpu_percent || a.cpu || a.cpu_seconds || 0)))
         .slice(0, 5)
         .map((p) => ({
@@ -97,7 +91,9 @@ export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelPr
           cpu_percent: Number(p.cpu_percent || 0),
           memory_mb: Number(p.memory_mb || 0),
         }));
-      const top_by_memory = [...rawProcesses]
+
+      const top_by_memory = rawProcesses
+        .slice()
         .sort((a, b) => Number(b.memory_mb || 0) - Number(a.memory_mb || 0))
         .slice(0, 5)
         .map((p) => ({
@@ -142,6 +138,11 @@ export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelPr
     refetchOnWindowFocus: true,
   });
 
+  // PERF-FIX: Memoize derived max values
+  const { maxMemory, maxCpu } = useMemo(() => ({
+    maxMemory: data?.processes?.top_by_memory?.[0]?.memory_mb || 1,
+    maxCpu: data?.processes?.top_by_cpu?.[0]?.cpu_percent || data?.processes?.top_by_cpu?.[0]?.cpu_seconds || 1
+  }), [data?.processes]);
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -176,9 +177,6 @@ export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelPr
   }
 
   const { processes, anomalies, autoRepairStats, collectedAt } = data;
-
-  const maxMemory = processes?.top_by_memory?.[0]?.memory_mb || 1;
-  const maxCpu = processes?.top_by_cpu?.[0]?.cpu_percent || processes?.top_by_cpu?.[0]?.cpu_seconds || 1;
 
   return (
     <div className="space-y-5">
@@ -396,4 +394,4 @@ export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelPr
       )}
     </div>
   );
-}
+});

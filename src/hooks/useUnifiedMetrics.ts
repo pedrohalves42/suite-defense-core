@@ -97,7 +97,9 @@ export interface UnifiedMetrics {
 export function useUnifiedMetrics() {
   const { tenant, loading: tenantLoading } = useTenant();
   const { data: snapshots, isLoading: snapshotsLoading } = useAgentSnapshots();
-  const agentCounts = getAgentStatusCounts(snapshots);
+  
+  // PERF-FIX: Memoize agent status counts
+  const agentCounts = useMemo(() => getAgentStatusCounts(snapshots), [snapshots]);
 
   const { data, isLoading, refetch, isFetched } = useRealtimeQuery<Omit<UnifiedMetrics, 'agents' | 'securityScore' | 'globalStatus'> & { _raw: true }>({
     queryKey: ['unified-metrics', tenant?.id],
@@ -250,18 +252,21 @@ export function useUnifiedMetrics() {
     return { emoji: '🔴', title: 'Ação urgente', description: 'Há riscos que podem afetar seu negócio.', variant: 'danger' as const };
   }, [securityScore, data?.alerts.critical]);
 
-  const metrics: UnifiedMetrics | null = data ? {
-    agents,
-    alerts: data.alerts,
-    blocked: data.blocked,
-    evidence: data.evidence,
-    vulnerabilities: data.vulnerabilities,
-    insights: data.insights,
-    securityScore,
-    globalStatus,
-    financial: data.financial,
-    lastUpdate: data.lastUpdate
-  } : null;
+  const metrics: UnifiedMetrics | null = useMemo(() => {
+    if (!data) return null;
+    return {
+      agents,
+      alerts: data.alerts,
+      blocked: data.blocked,
+      evidence: data.evidence,
+      vulnerabilities: data.vulnerabilities,
+      insights: data.insights,
+      securityScore,
+      globalStatus,
+      financial: data.financial,
+      lastUpdate: data.lastUpdate
+    };
+  }, [data, agents, securityScore, globalStatus]);
 
   return {
     metrics,

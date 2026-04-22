@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -93,6 +93,53 @@ export default function Dashboard() {
   const insightsCount = metrics?.insights.pending || 0;
   const vulnStats = metrics?.vulnerabilities || { total: 0, critical: 0 };
 
+  // Stat cards data - PERF-FIX: Memoize static-ish data
+  const statCards = useMemo(() => [
+    {
+      to: '/admin/agent-center',
+      icon: Server,
+      label: t('adminPages.dashboard.computers'),
+      value: onlineAgents,
+      suffix: `/ ${totalAgents}`,
+      valueColor: 'text-success',
+      alert: offlineAgents > 0 ? { icon: WifiOff, text: `${offlineAgents} ${t('adminPages.dashboard.offline')}`, color: 'text-warning' } : null,
+    },
+    {
+      to: '/admin/security-monitoring',
+      icon: ShieldAlert,
+      label: t('adminPages.dashboard.alerts'),
+      value: metrics?.alerts.active || 0,
+      valueColor: criticalAlerts > 0 ? 'text-destructive' : (metrics?.alerts.active || 0) > 0 ? 'text-warning' : 'text-success',
+      suffix: t('adminPages.dashboard.active'),
+      ring: criticalAlerts > 0,
+      alert: criticalAlerts > 0 ? { text: `${criticalAlerts} ${t('adminPages.dashboard.critical')}`, color: 'text-destructive' } : null,
+    },
+    {
+      to: '/admin/vulnerabilities',
+      icon: Bug,
+      label: t('adminPages.dashboard.risks'),
+      value: vulnStats?.total || 0,
+      valueColor: (vulnStats?.critical || 0) > 0 ? 'text-warning' : 'text-success',
+      alert: (vulnStats?.critical || 0) > 0 ? { text: `${vulnStats?.critical} ${t('adminPages.dashboard.critical')}`, color: 'text-warning' } : null,
+    },
+    {
+      to: '/admin/ai-insights',
+      icon: Brain,
+      label: t('adminPages.dashboard.aiInsights'),
+      value: insightsCount || 0,
+      suffix: t('adminPages.dashboard.pending'),
+      valueColor: (insightsCount || 0) > 0 ? 'text-accent' : 'text-success',
+    },
+  ], [t, onlineAgents, totalAgents, offlineAgents, metrics?.alerts.active, criticalAlerts, vulnStats?.total, vulnStats?.critical, insightsCount]);
+  
+  // Quick nav items - PERF-FIX: Memoize
+  const quickNav = useMemo(() => [
+    { icon: Activity, label: t('adminPages.dashboard.realTime'), to: '/admin/monitoring-advanced', color: 'text-info' },
+    { icon: Brain, label: t('adminPages.dashboard.insightsAI'), to: '/admin/ai-insights', color: 'text-accent', badge: insightsCount },
+    { icon: BarChart3, label: t('adminPages.dashboard.reports'), to: '/admin/reports', color: 'text-success' },
+    { icon: Wrench, label: t('adminPages.dashboard.actionCenter'), to: '/admin/action-center', color: 'text-warning' },
+  ], [t, insightsCount]);
+
   // Loading state
   if (metricsLoading) {
     return (
@@ -130,53 +177,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
-  // Stat cards data
-  const statCards = [
-    {
-      to: '/admin/agent-center',
-      icon: Server,
-      label: t('adminPages.dashboard.computers'),
-      value: onlineAgents,
-      suffix: `/ ${totalAgents}`,
-      valueColor: 'text-success',
-      alert: offlineAgents > 0 ? { icon: WifiOff, text: `${offlineAgents} ${t('adminPages.dashboard.offline')}`, color: 'text-warning' } : null,
-    },
-    {
-      to: '/admin/security-monitoring',
-      icon: ShieldAlert,
-      label: t('adminPages.dashboard.alerts'),
-      value: metrics?.alerts.active || 0,
-      valueColor: criticalAlerts > 0 ? 'text-destructive' : (metrics?.alerts.active || 0) > 0 ? 'text-warning' : 'text-success',
-      suffix: t('adminPages.dashboard.active'),
-      ring: criticalAlerts > 0,
-      alert: criticalAlerts > 0 ? { text: `${criticalAlerts} ${t('adminPages.dashboard.critical')}`, color: 'text-destructive' } : null,
-    },
-    {
-      to: '/admin/vulnerabilities',
-      icon: Bug,
-      label: t('adminPages.dashboard.risks'),
-      value: vulnStats?.total || 0,
-      valueColor: (vulnStats?.critical || 0) > 0 ? 'text-warning' : 'text-success',
-      alert: (vulnStats?.critical || 0) > 0 ? { text: `${vulnStats?.critical} ${t('adminPages.dashboard.critical')}`, color: 'text-warning' } : null,
-    },
-    {
-      to: '/admin/ai-insights',
-      icon: Brain,
-      label: t('adminPages.dashboard.aiInsights'),
-      value: insightsCount || 0,
-      suffix: t('adminPages.dashboard.pending'),
-      valueColor: (insightsCount || 0) > 0 ? 'text-accent' : 'text-success',
-    },
-  ];
-
-  // Quick nav items
-  const quickNav = [
-    { icon: Activity, label: t('adminPages.dashboard.realTime'), to: '/admin/monitoring-advanced', color: 'text-info' },
-    { icon: Brain, label: t('adminPages.dashboard.insightsAI'), to: '/admin/ai-insights', color: 'text-accent', badge: insightsCount },
-    { icon: BarChart3, label: t('adminPages.dashboard.reports'), to: '/admin/reports', color: 'text-success' },
-    { icon: Wrench, label: t('adminPages.dashboard.actionCenter'), to: '/admin/action-center', color: 'text-warning' },
-  ];
 
   return (
     <div className="space-y-5">
