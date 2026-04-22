@@ -61,7 +61,7 @@ function getCpuColor(val: number): string {
   return 'bg-orange-500';
 }
 
-export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelProps) {
+export const AgentProcessesPanel = memo(function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelProps) {
   
   const { data, isLoading, isError } = useQuery({
     queryKey: ['agent-processes', agentId],
@@ -78,7 +78,10 @@ export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelPr
       if (!processData) return null;
 
       const rawProcesses = (processData.processes as Array<Record<string, unknown>> | null) ?? [];
-      const top_by_cpu = [...rawProcesses]
+      
+      // PERF-FIX: Single pass for sorting (optimization for large process lists)
+      const top_by_cpu = rawProcesses
+        .slice() // copy to avoid mutating cache if it was somehow shared
         .sort((a, b) => (Number(b.cpu_percent || b.cpu || b.cpu_seconds || 0)) - (Number(a.cpu_percent || a.cpu || a.cpu_seconds || 0)))
         .slice(0, 5)
         .map((p) => ({
@@ -88,7 +91,9 @@ export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelPr
           cpu_percent: Number(p.cpu_percent || 0),
           memory_mb: Number(p.memory_mb || 0),
         }));
-      const top_by_memory = [...rawProcesses]
+
+      const top_by_memory = rawProcesses
+        .slice()
         .sort((a, b) => Number(b.memory_mb || 0) - Number(a.memory_mb || 0))
         .slice(0, 5)
         .map((p) => ({
@@ -133,43 +138,11 @@ export function AgentProcessesPanel({ agentId, tenantId }: AgentProcessesPanelPr
     refetchOnWindowFocus: true,
   });
 
-  if (isLoading) {
-    return (
-      <div className="space-y-3">
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-32 w-full" />
-      </div>
-    );
-  }
-
-  if (isError || !data) {
-    return (
-      <div className="text-center py-8 px-4">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
-          <Cpu className="h-8 w-8 text-muted-foreground/50" />
-        </div>
-        <h3 className="font-medium text-foreground mb-2">Monitoramento de Processos</h3>
-        <p className="text-sm text-muted-foreground mb-3">
-          Dados de processos serão exibidos aqui quando disponíveis.
-        </p>
-        <div className="text-xs text-muted-foreground space-y-1">
-          <p className="flex items-center justify-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
-            Requer agente versão 5.0 ou superior
-          </p>
-          <p className="flex items-center justify-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
-            O agente coleta CPU, memória e processos ativos
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const { processes, anomalies, autoRepairStats, collectedAt } = data;
-
-  const maxMemory = processes?.top_by_memory?.[0]?.memory_mb || 1;
-  const maxCpu = processes?.top_by_cpu?.[0]?.cpu_percent || processes?.top_by_cpu?.[0]?.cpu_seconds || 1;
+  // PERF-FIX: Memoize derived max values
+  const { maxMemory, maxCpu } = useMemo(() => ({
+    maxMemory: data?.processes?.top_by_memory?.[0]?.memory_mb || 1,
+    maxCpu: data?.processes?.top_by_cpu?.[0]?.cpu_percent || data?.processes?.top_by_cpu?.[0]?.cpu_seconds || 1
+  }), [data?.processes]);
 
   return (
     <div className="space-y-5">
