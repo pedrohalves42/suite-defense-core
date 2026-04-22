@@ -143,6 +143,40 @@ export const AgentProcessesPanel = memo(function AgentProcessesPanel({ agentId, 
     maxMemory: data?.processes?.top_by_memory?.[0]?.memory_mb || 1,
     maxCpu: data?.processes?.top_by_cpu?.[0]?.cpu_percent || data?.processes?.top_by_cpu?.[0]?.cpu_seconds || 1
   }), [data?.processes]);
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="text-center py-8 px-4">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
+          <Cpu className="h-8 w-8 text-muted-foreground/50" />
+        </div>
+        <h3 className="font-medium text-foreground mb-2">Monitoramento de Processos</h3>
+        <p className="text-sm text-muted-foreground mb-3">
+          Dados de processos serão exibidos aqui quando disponíveis.
+        </p>
+        <div className="text-xs text-muted-foreground space-y-1">
+          <p className="flex items-center justify-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
+            Requer agente versão 5.0 ou superior
+          </p>
+          <p className="flex items-center justify-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
+            O agente coleta CPU, memória e processos ativos
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const { processes, anomalies, autoRepairStats, collectedAt } = data;
 
   return (
     <div className="space-y-5">
