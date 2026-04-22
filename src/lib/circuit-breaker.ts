@@ -76,18 +76,23 @@ export class CircuitBreaker {
   }
 
   private onFailure(): void {
-    this.failureCount++;
-    
+    // BUG FIX: When failing from HALF_OPEN we must NOT carry the previous
+    // failureCount forward; otherwise a single failed probe can leave the
+    // breaker poised to OPEN immediately on the next CLOSED cycle. Reset
+    // the counter on the HALF_OPEN -> OPEN transition explicitly.
     if (this.state === CircuitState.HALF_OPEN) {
       this.state = CircuitState.OPEN;
       this.nextAttempt = Date.now() + this.options.timeout;
       this.successCount = 0;
+      this.failureCount = 0;
       logger.warn('Circuit breaker opened from HALF_OPEN', {
         circuit: this.options.name,
         nextAttempt: new Date(this.nextAttempt).toISOString(),
       });
       return;
     }
+
+    this.failureCount++;
 
     if (this.failureCount >= this.options.failureThreshold) {
       this.state = CircuitState.OPEN;
