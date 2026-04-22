@@ -15,23 +15,22 @@ import { logger } from '@/lib/logger';
 export const useSessionManager = () => {
   const { user } = useAuth();
   const sessionIdRef = useRef<string | null>(null);
+  const userIdRef = useRef<string | null>(null);
   const activityIntervalRef = useRef<ReturnType<typeof setInterval>>();
+
+  // Keep userIdRef in sync to allow cleanup even after logout
+  useEffect(() => {
+    if (user?.id) {
+      userIdRef.current = user.id;
+    }
+  }, [user?.id]);
 
   const logSessionStart = useCallback(async () => {
     if (!user) return null;
 
     try {
-      // Get client info
       const userAgent = navigator.userAgent;
-      
-      // Try to get IP from a simple service (fallback to 'unknown')
-      let ipAddress = 'unknown';
-      try {
-        // In production, IP would come from edge function headers
-        ipAddress = window.location.hostname;
-      } catch {
-        // Ignore IP fetch errors
-      }
+      const ipAddress = window.location.hostname;
 
       const { data: sessionId, error } = await supabase.rpc('log_session_start', {
         _ip_address: ipAddress,
@@ -57,35 +56,32 @@ export const useSessionManager = () => {
 
   const updateActivity = useCallback(async () => {
     const sessionId = sessionIdRef.current;
-    
     if (!sessionId || !user) return;
 
     try {
       await supabase.rpc('update_session_activity', { 
         _session_id: sessionId 
       });
-      
       logger.debug('[SessionManager] Activity updated', { sessionId });
     } catch (err) {
-      // Non-critical error, just log
       logger.debug('[SessionManager] Failed to update activity', { error: err });
     }
   }, [user]);
 
   const endSession = useCallback(async () => {
     const sessionId = sessionIdRef.current;
+    const userId = userIdRef.current;
     
-    if (sessionId) {
+    if (sessionId && userId) {
       try {
-        // V-4003 FIX: Use RPC or add user_id filter to prevent cross-user session deletion
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        if (currentUser) {
-          await supabase
-            .from('active_sessions')
-            .delete()
-            .eq('id', sessionId)
-            .eq('user_id', currentUser.id); // V-4003: Only delete own sessions
-        }
+        // BUG FIX: Use the captured userIdRef instead of auth.getUser()
+        // because auth.getUser() returns null if called AFTER signOut(),
+        // preventing the session from being deleted in the database.
+        await supabase
+          .from('active_sessions')
+          .delete()
+          .eq('id', sessionId)
+          .eq('user_id', userId);
           
         logger.info('[SessionManager] Session ended', { sessionId });
       } catch (err) {
@@ -94,28 +90,23 @@ export const useSessionManager = () => {
     }
 
     sessionIdRef.current = null;
+    // Don't clear userIdRef here as it's used for cleanup
   }, []);
 
   useEffect(() => {
     if (user) {
-      // Check if we already have a session
       if (sessionIdRef.current) {
-        // Update activity for existing session
         updateActivity();
       } else {
-        // Start new session
         logSessionStart();
       }
       
-      // Update activity every 5 minutes
       activityIntervalRef.current = setInterval(updateActivity, 5 * 60 * 1000);
       
-      // Activity listeners for immediate updates on interaction
       const events = ['mousedown', 'keydown'];
       let lastUpdate = Date.now();
       
       const handleActivity = () => {
-        // Throttle updates to max once per minute
         if (Date.now() - lastUpdate > 60000) {
           lastUpdate = Date.now();
           updateActivity();
@@ -131,11 +122,10 @@ export const useSessionManager = () => {
           clearInterval(activityIntervalRef.current);
         }
         events.forEach(event => 
-          document.removeEventListener(event, handleActivity)
+          document.removeEventListener(event, handleActivity, { capture: false })
         );
       };
     } else {
-      // User logged out - end session
       endSession();
     }
   }, [user, logSessionStart, updateActivity, endSession]);
