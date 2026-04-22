@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { fetchComplianceReport } from "./reportService";
 import { resolveErrorMessage } from "./errorMessages";
 import type { ComplianceTemplate, ComplianceReportPayload } from "./types";
+import { useActiveTenant } from "@/hooks/useActiveTenant";
 
 /**
  * UI orchestrator hook for the Compliance Report screen.
@@ -16,14 +17,20 @@ import type { ComplianceTemplate, ComplianceReportPayload } from "./types";
  * modules so this hook stays small and easy to test.
  */
 export function useComplianceReport() {
+  const { activeTenant } = useActiveTenant();
   const [selectedTemplate, setSelectedTemplate] = useState<ComplianceTemplate>("LGPD");
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportPayload, setReportPayload] = useState<ComplianceReportPayload | null>(null);
 
   const handleGenerateReport = useCallback(async () => {
+    if (!activeTenant?.id) {
+      toast.error("Selecione um tenant antes de gerar o relatório");
+      return;
+    }
+
     setIsGenerating(true);
     try {
-      const payload = await fetchComplianceReport(selectedTemplate);
+      const payload = await fetchComplianceReport(selectedTemplate, activeTenant.id);
       setReportPayload(payload);
       toast.success(`Relatório ${selectedTemplate} gerado com sucesso!`);
     } catch (error) {
@@ -32,7 +39,7 @@ export function useComplianceReport() {
     } finally {
       setIsGenerating(false);
     }
-  }, [selectedTemplate]);
+  }, [activeTenant?.id, selectedTemplate]);
 
   return {
     selectedTemplate,
