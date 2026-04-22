@@ -112,11 +112,18 @@ export const useSessionTimeout = () => {
     // Activity event listeners
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
     
-    // Debounce activity reset to avoid excessive updates
-    let activityDebounce: ReturnType<typeof setTimeout>;
+    // BUG FIX: Ensure the timer doesn't run if no user is present
+    // and correctly cleanup debounced activity reset.
+    let activityDebounce: ReturnType<typeof setTimeout> | null = null;
+    
     const handleActivity = () => {
-      clearTimeout(activityDebounce);
-      activityDebounce = setTimeout(resetTimer, 1000);
+      if (activityDebounce) {
+        clearTimeout(activityDebounce);
+      }
+      activityDebounce = setTimeout(() => {
+        resetTimer();
+        activityDebounce = null;
+      }, 1000);
     };
 
     events.forEach(event => 
@@ -124,19 +131,23 @@ export const useSessionTimeout = () => {
     );
 
     // Check timeout every 2 minutes (COST-OPT: 30s → 120s)
-    timeoutRef.current = setInterval(checkTimeout, 120_000);
+    timeoutRef.current = setInterval(() => {
+      if (user) checkTimeout();
+    }, 120_000);
 
     // Initial activity timestamp
     resetTimer();
 
     return () => {
       events.forEach(event => 
-        document.removeEventListener(event, handleActivity)
+        document.removeEventListener(event, handleActivity, { capture: false })
       );
       if (timeoutRef.current) {
         clearInterval(timeoutRef.current);
       }
-      clearTimeout(activityDebounce);
+      if (activityDebounce) {
+        clearTimeout(activityDebounce);
+      }
     };
   }, [user, resetTimer, checkTimeout, getTimeoutMinutes]);
 

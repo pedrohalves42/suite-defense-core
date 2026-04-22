@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, createContext, useContext, ReactNode, useMemo } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext, ReactNode, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { callGateway } from '@/lib/gateway';
@@ -84,6 +84,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   // localStorage is only used for UX persistence AFTER JWT validation
   // The actual tenant_id source of truth is always the JWT/backend
   const [activeTenantId, setActiveTenantId] = useState<string | null>(null);
+  const syncInProgressRef = useRef<string | null>(null);
   
   // PATCH #2: Add isSyncing state to block queries until JWT is updated
   const [isSyncing, setIsSyncing] = useState(true);
@@ -175,34 +176,36 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // Check if JWT already has correct active_tenant_id
-    // This avoids unnecessary sync calls on page reload
+    // BUG FIX: Prevent race conditions by checking if a sync for THIS tenant
+    // is already in progress. This avoids overlapping calls if activeTenant
+    // changes rapidly before the previous sync finishes.
+    if (syncInProgressRef.current === activeTenant.id) {
+      return;
+    }
+
     const checkJWTAndSync = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const currentJWTTenantId = session?.user?.app_metadata?.active_tenant_id;
         
-        // If JWT already has correct tenant, skip sync
         if (currentJWTTenantId === activeTenant.id) {
           logger.debug('[useActiveTenant] JWT already synced, skipping backend call');
           setIsSyncing(false);
           return;
         }
         
-        // Sync needed - but don't block UI
+        syncInProgressRef.current = activeTenant.id;
         logger.debug('[useActiveTenant] Syncing tenant to backend...');
-        syncActiveTenantToBackend(activeTenant.id)
-          .then(async (synced) => {
-            if (synced) {
-              await supabase.auth.refreshSession();
-              logger.debug('[useActiveTenant] Session refreshed after sync');
-            }
-          })
-          .finally(() => {
-            setIsSyncing(false);
-          });
+        
+        const synced = await syncActiveTenantToBackend(activeTenant.id);
+        if (synced) {
+          await supabase.auth.refreshSession();
+          logger.debug('[useActiveTenant] Session refreshed after sync');
+        }
       } catch (err) {
         logger.warn('[useActiveTenant] JWT check failed');
+      } finally {
+        syncInProgressRef.current = null;
         setIsSyncing(false);
       }
     };
