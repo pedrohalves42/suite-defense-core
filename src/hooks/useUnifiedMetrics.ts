@@ -97,7 +97,9 @@ export interface UnifiedMetrics {
 export function useUnifiedMetrics() {
   const { tenant, loading: tenantLoading } = useTenant();
   const { data: snapshots, isLoading: snapshotsLoading } = useAgentSnapshots();
-  const agentCounts = getAgentStatusCounts(snapshots);
+  
+  // PERF-FIX: Memoize agent status counts
+  const agentCounts = useMemo(() => getAgentStatusCounts(snapshots), [snapshots]);
 
   const { data, isLoading, refetch, isFetched } = useRealtimeQuery<Omit<UnifiedMetrics, 'agents' | 'securityScore' | 'globalStatus'> & { _raw: true }>({
     queryKey: ['unified-metrics', tenant?.id],

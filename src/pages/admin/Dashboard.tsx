@@ -93,45 +93,6 @@ export default function Dashboard() {
   const insightsCount = metrics?.insights.pending || 0;
   const vulnStats = metrics?.vulnerabilities || { total: 0, critical: 0 };
 
-  // Loading state
-  if (metricsLoading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-24 w-full" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Skeleton className="h-48" />
-          <Skeleton className="h-48" />
-        </div>
-      </div>
-    );
-  }
-
-  // Simple mode
-  if (isSimple) {
-    return (
-      <div className="space-y-6">
-        <div className="page-header-enterprise">
-          <h1>{t('adminPages.dashboard.myProtection')}</h1>
-          <p>{t('adminPages.dashboard.securityStatus')}</p>
-        </div>
-        <SimpleDashboard 
-          globalStatus={globalStatus}
-          stats={{ totalAgents, onlineAgents, offlineAgents, criticalAlerts }}
-          isLoading={metricsLoading}
-          tenantId={tenant?.id}
-        />
-      </div>
-    );
-  }
-
-  // Stat cards data
   // Stat cards data - PERF-FIX: Memoize static-ish data
   const statCards = useMemo(() => [
     {
@@ -178,6 +139,44 @@ export default function Dashboard() {
     { icon: BarChart3, label: t('adminPages.dashboard.reports'), to: '/admin/reports', color: 'text-success' },
     { icon: Wrench, label: t('adminPages.dashboard.actionCenter'), to: '/admin/action-center', color: 'text-warning' },
   ], [t, insightsCount]);
+
+  // Loading state
+  if (metricsLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-24 w-full" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Skeleton className="h-48" />
+          <Skeleton className="h-48" />
+        </div>
+      </div>
+    );
+  }
+
+  // Simple mode
+  if (isSimple) {
+    return (
+      <div className="space-y-6">
+        <div className="page-header-enterprise">
+          <h1>{t('adminPages.dashboard.myProtection')}</h1>
+          <p>{t('adminPages.dashboard.securityStatus')}</p>
+        </div>
+        <SimpleDashboard 
+          globalStatus={globalStatus}
+          stats={{ totalAgents, onlineAgents, offlineAgents, criticalAlerts }}
+          isLoading={metricsLoading}
+          tenantId={tenant?.id}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
