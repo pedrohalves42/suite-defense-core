@@ -43,7 +43,7 @@ export function HeroSection() {
             </div>
 
             {/* Title */}
-            <h1 id="hero-heading" className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1]">
+            <h1 id="hero-heading" className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] text-balance">
               <span className="text-white">
                 {hero.title1}
               </span>
@@ -52,7 +52,7 @@ export function HeroSection() {
             </h1>
 
             {/* Description */}
-            <p className="text-lg text-white/70 max-w-xl leading-relaxed">
+            <p className="text-lg text-white/70 max-w-xl leading-relaxed text-pretty">
               {hero.description}
               <strong className="text-white font-semibold">{hero.descriptionBold}</strong>
             </p>
