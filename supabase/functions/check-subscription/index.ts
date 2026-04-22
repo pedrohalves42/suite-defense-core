@@ -67,7 +67,7 @@ serveTenant<CheckSubBody>(async (req, ctx) => {
   }
 
   // Sync to tenant_subscriptions using ctx.tenantId (resolved by middleware)
-  const tenantId = ctx.body?.tenantId || ctx.tenantId;
+  const tenantId = parsed.data.tenantId || ctx.tenantId;
   if (tenantId) {
     const { data: plan } = await ctx.supabase
       .from('subscription_plans')
