@@ -1,0 +1,1 @@
+ALTER FUNCTION public.validate_drift_severity() SET search_path = public;
