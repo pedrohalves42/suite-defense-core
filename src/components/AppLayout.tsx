@@ -41,7 +41,7 @@ export const AppLayout = () => {
 
   return (
     <SimpleModeProvider>
-      <div className="min-h-screen bg-background relative">
+      <div className="min-h-screen bg-background relative selection:bg-cta-positive/20 selection:text-cta-positive-foreground">
         {/* Enterprise background pattern */}
         <div 
           className="fixed inset-0 pointer-events-none"
@@ -60,12 +60,16 @@ export const AppLayout = () => {
           <ConnectivityIndicator />
           
           {/* Desktop sidebar - hidden on mobile */}
-          {!isMobile && <AppSidebar />}
+          {!isMobile && (
+            <nav aria-label="Navegação principal">
+              <AppSidebar />
+            </nav>
+          )}
 
           {/* Mobile sidebar sheet */}
           {isMobile && (
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetContent side="left" className="p-0 w-[300px] max-w-[85vw] bg-[hsl(224_25%_6%)] border-r-0 [&>button:last-child]:hidden">
+              <SheetContent side="left" className="p-0 w-[300px] max-w-[85vw] bg-[hsl(224_25%_6%)] border-r-0 [&>button:last-child]:hidden" aria-label="Menu lateral">
                 <AppSidebar mobile onNavigate={() => setMobileMenuOpen(false)} />
               </SheetContent>
             </Sheet>
@@ -75,17 +79,23 @@ export const AppLayout = () => {
             'transition-all duration-300',
             isMobile ? 'pl-0' : (collapsed ? 'pl-[calc(4rem+16px)]' : 'pl-[calc(14rem+16px)]')
           )}>
-            <TopBar isMobile={isMobile} sidebarCollapsed={collapsed} onMobileMenuClick={() => setMobileMenuOpen(true)} />
+            <TopBar 
+              isMobile={isMobile} 
+              sidebarCollapsed={collapsed} 
+              onMobileMenuClick={() => setMobileMenuOpen(true)} 
+            />
             <div className="pt-14">
               <GlobalKillSwitchBanner />
             </div>
             <main className={cn(
               "p-4 md:p-6 relative z-0",
               isMobile && "pb-24"
-            )}>
+            )} id="main-content">
               <div className="max-w-7xl mx-auto">
                 {isMobile && <PushNotificationBanner />}
-                <Breadcrumbs />
+                <nav aria-label="Caminho de navegação">
+                  <Breadcrumbs />
+                </nav>
                 <Outlet />
               </div>
             </main>
@@ -93,7 +103,9 @@ export const AppLayout = () => {
 
           {/* Mobile bottom navigation */}
           {isMobile && (
-            <MobileBottomNav onMenuClick={() => setMobileMenuOpen(true)} />
+            <nav aria-label="Navegação móvel inferior">
+              <MobileBottomNav onMenuClick={() => setMobileMenuOpen(true)} />
+            </nav>
           )}
 
           {/* Command Palette */}
