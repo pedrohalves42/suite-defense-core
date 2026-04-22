@@ -163,11 +163,15 @@
 @layer utilities {
   /* === Transitions & Interactions === */
   .interactive-hover {
-    @apply transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98];
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg active:translate-y-0 active:scale-[0.98];
   }
 
   .glass-effect {
-    @apply backdrop-blur-md bg-white/5 border border-white/10;
+    @apply backdrop-blur-md bg-white/5 border border-white/10 shadow-xl;
+  }
+
+  .glass-card {
+    @apply backdrop-blur-xl bg-card/60 border border-border/50 shadow-2xl;
   }
 
   .text-balance {
@@ -176,6 +180,11 @@
 
   .text-pretty {
     text-wrap: pretty;
+  }
+
+  /* === Focus States === */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-shadow;
   }
 
   /* === Safe Area for PWA === */

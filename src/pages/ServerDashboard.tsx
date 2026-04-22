@@ -55,40 +55,48 @@ const ServerDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-3 sm:p-6">
-      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+    <div className="min-h-screen bg-background p-3 sm:p-6 lg:p-8 animate-fade-in">
+      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 sm:p-3 bg-gradient-cyber rounded-xl border border-primary/20 shadow-glow-primary">
-              <Server className="h-6 w-6 sm:h-8 sm:w-8 text-primary animate-pulse-glow" />
+        <header 
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/40 pb-6"
+          role="banner"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-primary/5 rounded-2xl border border-primary/10 shadow-sm transition-transform hover:scale-105 duration-300">
+              <Server className="h-8 w-8 text-primary" aria-hidden="true" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
                 Painel Principal
               </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                {tenant.name} — Visão global do sistema
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="inline-block w-2 h-2 rounded-full bg-success animate-pulse" />
+                <p className="text-sm font-medium text-muted-foreground">
+                  {tenant.name} <span className="mx-1 text-muted-foreground/40">•</span> Visão global em tempo real
+                </p>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <NotificationBell />
             {isAdmin && (
-              <DashboardPDFReport
-                agents={agents}
-                jobs={jobs}
-                tenantName={tenant.name}
-                onlinePercentage={onlinePercentage}
-                successRate={successRate}
-                offlineCount={offlineCount}
-                failedJobs={failedJobs}
-                alerts={alerts}
-                systemState={systemState}
-              />
+              <div className="transition-transform hover:scale-105 active:scale-95">
+                <DashboardPDFReport
+                  agents={agents}
+                  jobs={jobs}
+                  tenantName={tenant.name}
+                  onlinePercentage={onlinePercentage}
+                  successRate={successRate}
+                  offlineCount={offlineCount}
+                  failedJobs={failedJobs}
+                  alerts={alerts}
+                  systemState={systemState}
+                />
+              </div>
             )}
           </div>
-        </div>
+        </header>
 
         {/* Layer 1: Global Status */}
         <DashboardErrorBoundary section="Status Global">

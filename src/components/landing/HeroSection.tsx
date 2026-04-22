@@ -37,68 +37,75 @@ export function HeroSection() {
           {/* Left: Text content — CSS animations instead of framer-motion */}
           <div className="space-y-8 animate-fade-in-left">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cta-positive/15 border border-cta-positive/25 backdrop-blur-sm">
+            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-cta-positive/10 border border-cta-positive/20 backdrop-blur-md shadow-sm animate-pulse-subtle">
               <img src={cybershieldLogo} alt="" className="w-5 h-5 object-contain" aria-hidden="true" width={20} height={20} />
-              <span className="text-sm font-medium text-cta-positive">{hero.badge}</span>
+              <span className="text-xs md:text-sm font-bold tracking-wide uppercase text-cta-positive">{hero.badge}</span>
             </div>
 
             {/* Title */}
-            <h1 id="hero-heading" className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] text-balance">
-              <span className="text-white">
+            <h1 id="hero-heading" className="text-4xl md:text-5xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] text-balance">
+              <span className="text-white drop-shadow-sm">
                 {hero.title1}
               </span>
               <br />
-              <span className="bg-gradient-to-r from-cta-positive to-[hsl(152,69%,47%)] bg-clip-text text-transparent">{hero.title2}</span>
+              <span className="bg-gradient-to-r from-cta-positive via-emerald-400 to-shield-active bg-clip-text text-transparent animate-gradient-x">
+                {hero.title2}
+              </span>
             </h1>
 
             {/* Description */}
-            <p className="text-lg text-white/70 max-w-xl leading-relaxed text-pretty">
+            <p className="text-lg md:text-xl text-white/70 max-w-xl leading-relaxed text-pretty font-medium">
               {hero.description}
-              <strong className="text-white font-semibold">{hero.descriptionBold}</strong>
+              <strong className="text-white font-bold ml-1 border-b-2 border-cta-positive/30 pb-0.5">{hero.descriptionBold}</strong>
             </p>
 
             {/* Benefits */}
             {hero.benefits && (
-              <ul className="space-y-3" aria-label="Beneficios principais">
+              <ul className="grid sm:grid-cols-1 gap-3.5 pt-2" aria-label="Benefícios principais">
                 {hero.benefits.map((benefit, index) => (
                   <li
                     key={index}
-                    className="flex items-center gap-3 text-white/80 animate-fade-in-left"
-                    style={{ animationDelay: `${0.3 + index * 0.1}s` }}
+                    className="flex items-center gap-3.5 text-white/85 group animate-fade-in-left"
+                    style={{ animationDelay: `${0.4 + index * 0.1}s` }}
                   >
-                    <CheckCircle className="w-5 h-5 text-cta-positive flex-shrink-0" aria-hidden="true" />
-                    <span className="text-sm md:text-base">{benefit}</span>
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-cta-positive/20 flex items-center justify-center group-hover:bg-cta-positive/30 transition-colors duration-300">
+                      <CheckCircle className="w-4 h-4 text-cta-positive" aria-hidden="true" />
+                    </div>
+                    <span className="text-sm md:text-base font-medium leading-tight group-hover:text-white transition-colors duration-300">{benefit}</span>
                   </li>
                 ))}
               </ul>
             )}
 
             {/* CTA */}
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+            <div className="flex flex-col sm:flex-row items-center gap-5 pt-6">
               <Button 
                 asChild 
                 size="lg" 
                 variant="cta"
-                className="text-lg h-14 px-8 font-semibold shadow-lg shadow-cta-positive/25"
+                className="w-full sm:w-auto text-lg h-16 px-10 font-bold rounded-full shadow-2xl shadow-cta-positive/30 hover:shadow-cta-positive/50 transition-all duration-300 interactive-hover"
               >
-                <Link to="/signup" aria-label="Descobrir se minha empresa está vulnerável">
+                <Link to="/signup" aria-label="Descobrir se minha empresa está vulnerável - Começar agora">
                   {hero.ctaButton}
-                  <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" />
+                  <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
                 </Link>
               </Button>
               <Button 
                 asChild 
                 size="lg" 
                 variant="outline"
-                className="text-lg h-14 px-8 border-white/20 text-white hover:bg-white/10 hover:text-white"
+                className="w-full sm:w-auto text-lg h-16 px-10 border-white/20 text-white rounded-full bg-white/5 backdrop-blur-sm hover:bg-white/10 hover:border-white/40 transition-all duration-300 focus-ring"
               >
-                <a href="#mini-diagnostico" aria-label="Agendar diagnóstico gratuito">
-                  {hero.ctaSecondary || "Agendar diagnóstico gratuito de 15 min"}
+                <a href="#mini-diagnostico" aria-label="Agendar diagnóstico gratuito de 15 minutos">
+                  {hero.ctaSecondary || "Agendar diagnóstico gratuito"}
                 </a>
               </Button>
             </div>
 
-            <p className="text-sm text-white/40">{hero.reassurance}</p>
+            <p className="text-xs md:text-sm text-white/40 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-cta-positive animate-pulse" />
+              {hero.reassurance}
+            </p>
           </div>
 
           {/* Right: Stats + visual — only rendered on desktop (lg+) */}
