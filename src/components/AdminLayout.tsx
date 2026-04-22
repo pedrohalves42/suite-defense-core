@@ -32,12 +32,12 @@ export const AdminLayout = () => {
         variant: "destructive"
       });
     }
-  }, [user, isAdmin, loading, toast]);
+  }, [user, isAdmin, loading, toast, t]);
 
   if (loading || setupLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4" role="status" aria-live="polite">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" aria-hidden="true"></div>
         <p className="text-muted-foreground">{t('adminPages.layout.checkingPermissions')}</p>
       </div>
     );
@@ -48,15 +48,20 @@ export const AdminLayout = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto" role="region" aria-label="Painel administrativo">
       {/* First Time Setup Wizard */}
       <FirstTimeSetupWizard />
       
       {/* Tenant Setup Wizard - shows when tenant needs initial configuration */}
       <TenantSetupWizard open={needsSetup} />
 
-      <OutdatedAgentsBanner />
-      <Outlet />
+      <header>
+        <OutdatedAgentsBanner />
+      </header>
+      
+      <section>
+        <Outlet />
+      </section>
     </div>
   );
 };
