@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Monitor, Apple, Terminal } from "lucide-react";
@@ -38,18 +38,23 @@ export function AgentRolloutSimulator({ policies }: AgentRolloutSimulatorProps) 
     return ((hashArray[0] << 8) | hashArray[1]) % 100;
   };
 
-  // Calculate buckets on mount
-  useState(() => {
-    if (agents) {
-      Promise.all(
-        agents.map(async (agent) => ({ id: agent.id, bucket: await calculateBucket(agent.id) }))
-      ).then((results) => {
-        const bucketsMap: Record<string, number> = {};
-        results.forEach((r) => { bucketsMap[r.id] = r.bucket; });
-        setBuckets(bucketsMap);
-      });
-    }
-  });
+  // BUG FIX: useState(() => {...}) was being misused as a side-effect runner.
+  // React treats that callback as a lazy state initializer (runs once, ignored after).
+  // Switched to useEffect so buckets recompute when `agents` changes,
+  // and added a `cancelled` guard to avoid setting state after unmount.
+  useEffect(() => {
+    if (!agents) return;
+    let cancelled = false;
+    Promise.all(
+      agents.map(async (agent) => ({ id: agent.id, bucket: await calculateBucket(agent.id) }))
+    ).then((results) => {
+      if (cancelled) return;
+      const bucketsMap: Record<string, number> = {};
+      results.forEach((r) => { bucketsMap[r.id] = r.bucket; });
+      setBuckets(bucketsMap);
+    });
+    return () => { cancelled = true; };
+  }, [agents]);
 
   const getAgentsInRollout = (platform: string) => {
     const policy = policies.find(p => p.platform === platform && p.enabled);
