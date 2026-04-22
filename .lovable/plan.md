@@ -1,57 +1,60 @@
 
 
-# Auditoria de erros ocultos — varredura completa
+# Correção: `check-tenant-abuse` quebrado em produção
 
-Para responder com precisão "o que falta resolver", preciso executar uma varredura sistemática em 6 camadas do projeto. Como estou em modo somente-leitura, este é o plano que executarei assim que aprovado.
+## Diagnóstico (causa raiz confirmada)
 
-## Escopo da auditoria
+Logs da edge function (últimos 5 min):
+```
+code: "42703"  → column tenants.status does not exist
+```
 
-### 1. Erros de compilação TypeScript
-- Rodar `tsc --noEmit` para listar todos os erros de tipo silenciados
-- Verificar imports quebrados, módulos faltantes, tipos incompatíveis
-- Foco em arquivos recentemente alterados (`agentReinstallCommand.ts`, `CustomizableDashboard.tsx`)
+A função em `supabase/functions/check-tenant-abuse/index.ts` faz:
+```ts
+.from('tenants').select('id, name').eq('status', 'active')
+```
 
-### 2. Erros de lint / qualidade de código
-- Rodar ESLint com a config do projeto (`config/eslint.config.js`)
-- Identificar `any` fora de mappers, `@ts-ignore`, `dangerouslySetInnerHTML`, `console.log` em edge functions — violações dos padrões core do projeto
+Mas a tabela `public.tenants` **não tem coluna `status`**. A coluna real para estado do inquilino é `suspension_status` (valores observados em produção: `active`). Resultado: a query falha com 500, **nenhum tenant é verificado, nenhum alerta de abuso é gerado** desde que o schema mudou.
 
-### 3. Erros de runtime no frontend
-- Inspecionar console logs do preview (já vi: só auth INITIAL_SESSION, sem erros aparentes)
-- Inspecionar runtime errors knowledge file
-- Checar dev-server.log em `/tmp/dev-server-logs/dev-server.log` para warnings de Vite/HMR
+## Fim (estado desejado)
 
-### 4. Erros do backend (Supabase)
-- Rodar `supabase--linter` (RLS, search_path, security definer)
-- Rodar `security--run_security_scan` (findings de segurança pendentes)
-- Consultar `postgres_logs` recentes (últimas 24h) para erros SQL
-- Consultar `function_edge_logs` para 5xx em edge functions
+- `check-tenant-abuse` executa com sucesso pelo cron interno.
+- Todos os 16 tenants ativos são varridos a cada execução.
+- Alertas de abuso voltam a popular `system_alerts`.
+- Log estruturado mostra `tenants_checked: 16` em vez de erro 42703.
 
-### 5. Testes quebrados
-- Rodar suíte de testes unitários (vitest)
-- Rodar testes de edge functions (deno test)
-- Listar testes pulados (`.skip`) ou marcados como TODO
+## Meio (mudanças)
 
-### 6. Gates de CI
-- Rodar `ci/validate-zod-coverage.sh` (cobertura Zod em edge functions)
-- Rodar `ci/security_gate.sh` (invariantes críticas)
-- Rodar `ci/validate-middleware.sh`
-- Verificar asserts SQL em `tools/tests/assert_*.sql`
+### Arquivo único: `supabase/functions/check-tenant-abuse/index.ts`
 
-## Entrega
+Trocar o filtro de `status` para `suspension_status`:
 
-Relatório consolidado agrupado por severidade:
+```diff
+- .from('tenants')
+- .select('id, name')
+- .eq('status', 'active');
++ .from('tenants')
++ .select('id, name')
++ .eq('suspension_status', 'active');
+```
 
-| Camada | Crítico | Alto | Médio | Baixo |
-|--------|---------|------|-------|-------|
-| TypeScript | … | … | … | … |
-| Lint | … | … | … | … |
-| Runtime | … | … | … | … |
-| Backend/RLS | … | … | … | … |
-| Testes | … | … | … | … |
-| CI gates | … | … | … | … |
+Nenhuma outra alteração na função — o restante (jobs/hour, failed_login_attempts, agents over limit, persistência em `system_alerts`) já está correto e referencia colunas válidas.
 
-Para cada item: arquivo, linha, descrição curta e ação recomendada. Sem aplicar correções nesta passada — só diagnóstico. Em seguida você decide o que priorizar.
+## Início → execução
 
-## Tempo estimado
-3–5 minutos de varredura paralela.
+1. Aplicar o patch acima em `supabase/functions/check-tenant-abuse/index.ts`.
+2. Deploy da função (`supabase--deploy_edge_functions` com `["check-tenant-abuse"]`).
+3. Validação em produção:
+   - Invocar via `supabase--curl_edge_functions` com header de cron, esperar `200` e `tenants_checked: 16`.
+   - Conferir `supabase--edge_function_logs` para confirmar ausência de `42703` e presença de `check-tenant-abuse completed`.
+4. Verificar `system_alerts` (somente leitura) para confirmar que novos alertas, se houver, foram inseridos com sucesso.
+
+## Riscos / rollback
+
+- Risco: nulo — troca de nome de coluna por outra já existente, schema idêntico do ponto de vista da função.
+- Rollback: reverter o diff de uma linha caso surja regressão (improvável).
+
+## Follow-up sugerido (fora deste escopo)
+
+Adicionar este filtro de coluna ao gate `scripts/check-tenant-queries.sh` ou a um teste Deno mínimo (`index.test.ts`) para que uma futura renomeação de `suspension_status` quebre o CI antes de chegar à produção.
 
