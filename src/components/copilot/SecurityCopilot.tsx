@@ -104,11 +104,21 @@ const CopilotMarkdown = ({ content }: { content: string }) => {
             </blockquote>
           ),
           hr: () => <hr className="border-border/50 my-2" />,
-          a: ({ href, children }) => (
-            <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:text-primary/80">
-              {children}
-            </a>
-          ),
+          a: ({ href, children }) => {
+            // SECURITY: AI-generated markdown can include arbitrary hrefs.
+            // Block javascript:/data:/vbscript: schemes (OWASP A03: XSS via href).
+            const isSafe =
+              typeof href === 'string' &&
+              /^(https?:|mailto:|tel:|#|\/)/i.test(href.trim());
+            if (!isSafe) {
+              return <span className="text-muted-foreground underline decoration-dotted">{children}</span>;
+            }
+            return (
+              <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:text-primary/80">
+                {children}
+              </a>
+            );
+          },
         }}
       >
         {content}
