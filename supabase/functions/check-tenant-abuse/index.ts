@@ -19,7 +19,7 @@ serveInternal(async (_req, ctx) => {
   const { data: tenants, error: tenantErr } = await supabase
     .from('tenants')
     .select('id, name')
-    .eq('status', 'active');
+    .eq('suspension_status', 'active');
 
   if (tenantErr) {
     logger.error(`[${requestId}] Failed to fetch tenants`, tenantErr);
