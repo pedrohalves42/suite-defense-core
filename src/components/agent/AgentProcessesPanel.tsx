@@ -360,4 +360,4 @@ export const AgentProcessesPanel = memo(function AgentProcessesPanel({ agentId, 
       )}
     </div>
   );
-}
+});
