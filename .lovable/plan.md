@@ -1,56 +1,73 @@
 
 
-# Status atual das 4 frentes
+# Plano: 3 findings residuais de RLS
 
-Já executei as 4 frentes na rodada anterior. Resumo do estado real após verificação:
+## Diagnóstico (confirmado via `pg_policies`)
 
-## ✅ Frente 3 — Lint (CONCLUÍDA)
-- `src/pages/__tests__/page-mocks.ts` → `require()` substituído por imports.
-- `src/pages/admin/CronHealthDashboard/useCronHealthDashboard.ts` → idem.
-- `src/lib/__tests__/utils.test.ts` → expressão constante corrigida.
-- **Status:** 0 erros de lint.
+### 🔴 1. `notification_deliveries` — JWT bypass real
+Policy `Tenant isolation for notification_deliveries` filtra por:
+```sql
+tenant_id = (current_setting('request.jwt.claims')::jsonb ->> 'active_tenant_id')::uuid
+```
+**Risco:** `request.jwt.claims` reflete o JWT bruto do cliente. Como `active_tenant_id` é claim top-level (não está em `app_metadata`), um atacante pode forjar/alterar essa claim ao emitir um JWT customizado, lendo notificações de qualquer tenant. O padrão correto do projeto é `get_active_tenant_id()` (lê de `profiles`, server-side, não-falsificável).
 
-## ✅ Frente 2 — Zod coverage (CONCLUÍDA)
-- Criado `_shared/schemas/agent-submit.ts` com `validateAgentBody()`.
-- 8 funções atualizadas: `submit-antivirus-status`, `submit-system-metrics`, `submit-rollback-event`, `submit-software-inventory`, `submit-vuln-findings`, `submit-web-activity`, `submit-endpoint-events`, `check-subscription`.
-- Deploy bem-sucedido em todas.
-- **Status:** `ci/validate-zod-coverage.sh` deve retornar 0.
+### 🟡 2. `agent_system_metrics_2026_05` — papel errado
+Policy `service_role_all` está atribuída ao role `public` com filtro `auth.role()='service_role'`. Funciona, mas viola o padrão do projeto (todas as outras partições usam `TO service_role`). Risco baixo — o filtro previne execução real por não-service_role —, mas inconsistente e dificulta auditoria/CI.
 
-## ✅ Frente 1 — RLS USING(true) (VERIFICADA, sem ação necessária)
-- Auditoria via `pg_policies` confirmou: as policies com `USING(true)` / `WITH CHECK(true)` em escritas estão **restritas ao `service_role`**, não a `public`/`authenticated`.
-- Sem risco real de tenant bypass — service_role já bypassa RLS por design.
-- **Status:** falso positivo do gate genérico; documentar exceção.
+### 🟡 3. `failed_login_attempts` — block policies sobrepostas
+Coexistem policies `PERMISSIVE`:
+- `Block all modifications ... INSERT WITH CHECK (false)` + `failed_login_attempts_insert_active_tenant ... WITH CHECK (tenant_id = ...)`
+- Mesmo padrão para UPDATE e DELETE.
 
-## ✅ Frente 4 — search_path + bucket (CONCLUÍDA)
-- Migration aplicada: `ALTER FUNCTION public.validate_drift_severity() SET search_path = public;`
-- Bucket `agent-scripts` confirmado como público intencional (serve scripts de instalação).
-- **Status:** warning resolvido; bucket documentado como intencional.
+**Comportamento Postgres:** policies `PERMISSIVE` são unidas por `OR`. A policy de bloqueio (`false`) é silenciosamente ignorada — qualquer linha aceita pela policy de tenant passa. As "block policies" deveriam ser `RESTRICTIVE` (aplicadas como `AND`) para ter efeito real, OU devem ser removidas se a intenção sempre foi permitir o tenant-scoped CRUD.
 
 ---
 
-# O que ainda falta fechar formalmente
+## Mudanças (1 migration única)
 
-Três ações curtas de **fechamento/documentação**, sem mudança de código:
+### Fix 1 — `notification_deliveries`
+```sql
+DROP POLICY "Tenant isolation for notification_deliveries" ON public.notification_deliveries;
 
-### Ação 1 — Validar gates rodando agora
-- Rodar `ci/validate-zod-coverage.sh` → confirmar exit 0.
-- Rodar `bun lint` (ou equivalente) → confirmar 0 erros.
-- Rodar `supabase--linter` → confirmar ausência do warning de `search_path`.
+CREATE POLICY "notification_deliveries_tenant_isolation"
+ON public.notification_deliveries
+FOR ALL
+TO authenticated
+USING (tenant_id = public.get_active_tenant_id() OR public.is_current_super_admin())
+WITH CHECK (tenant_id = public.get_active_tenant_id() OR public.is_current_super_admin());
+```
 
-### Ação 2 — Marcar findings como resolvidos no scanner
-Via `security--manage_security_finding`:
-- `mark_as_fixed` para o finding de `validate_drift_severity` search_path.
-- `ignore` para o finding do bucket `agent-scripts` com motivo: "Bucket público intencional — serve scripts de instalação assinados (HMAC) consumidos por agentes pré-enrollment, conforme padrão de integridade do instalador v6.0."
-- `ignore` (ou `mark_as_fixed` conforme contexto) para o finding genérico de `USING(true)` com motivo: "Policies restritas a `service_role`, que bypassa RLS por design; sem exposição a roles públicos/autenticados."
+### Fix 2 — `agent_system_metrics_2026_05`
+```sql
+DROP POLICY "service_role_all" ON public.agent_system_metrics_2026_05;
 
-### Ação 3 — Smoke test em produção
-- `curl` em 1 das 8 funções com Zod novo: payload válido → 200; payload vazio `{}` → 200 (passthrough); payload `null` → 400 estruturado.
-- Confirma que o schema permissivo não quebrou agentes em campo.
+CREATE POLICY "service_role_all"
+ON public.agent_system_metrics_2026_05
+FOR ALL
+TO service_role
+USING (true)
+WITH CHECK (true);
+```
+
+### Fix 3 — `failed_login_attempts`
+Remover as 3 block policies inertes (são no-op por serem PERMISSIVE com `false`), mantendo apenas as 4 policies tenant-scoped já existentes:
+```sql
+DROP POLICY "Block all modifications to failed_login_attempts_v206" ON public.failed_login_attempts;
+DROP POLICY "Block updates to failed_login_attempts_v206" ON public.failed_login_attempts;
+DROP POLICY "Block deletes to failed_login_attempts_v206" ON public.failed_login_attempts;
+```
+*(Alternativa rejeitada: recriar como `RESTRICTIVE false` bloquearia todo CRUD authenticated, quebrando o fluxo legítimo do tenant. As policies tenant-scoped já cobrem o controle de acesso correto.)*
 
 ---
 
-# Entrega esperada
-Após executar as 3 ações: relatório curto confirmando 0 warnings, 0 findings abertos relevantes, e CI verde nos 3 gates (lint, zod, supabase linter).
+## Verificação (pós-migration)
 
-Sem mudanças de código nesta rodada — só validação e fechamento formal.
+1. `pg_policies` → confirmar que `notification_deliveries` usa `get_active_tenant_id()`, `agent_system_metrics_2026_05` está `TO service_role`, e `failed_login_attempts` tem exatamente 4 policies (SELECT/INSERT/UPDATE/DELETE tenant-scoped).
+2. `supabase--linter` → 0 novos warnings.
+3. Smoke (`read_query` com SET ROLE authenticated simulado): leitura cross-tenant em `notification_deliveries` retorna 0 linhas.
+4. `security--manage_security_finding` → `mark_as_fixed` para os 3 findings.
+
+## Risco / rollback
+- **Risco:** baixo. `notification_deliveries` ganha controle mais estrito (super_admin preservado). `agent_system_metrics_2026_05` mantém comportamento idêntico (service_role já bypassava de todo jeito). `failed_login_attempts` perde policies que já eram no-op.
+- **Rollback:** reverter migration recria as policies antigas em <1min.
 
