@@ -1,22 +1,25 @@
 
-### Plano de Auditoria Técnica: Qualidade, Lógica e Performance Extrema
+### Diagnóstico: Página de Preview Indisponível
 
-Este plano detalha a estratégia para transformar o sistema em uma aplicação de alta fidelidade técnica, eliminando bugs de lógica e otimizando o consumo de recursos (CPU/RAM) conforme as instruções do usuário.
+A URL de preview do Lovable está retornando indisponibilidade. Isso geralmente ocorre por uma das seguintes causas, **não relacionadas a falhas no código** da aplicação:
 
-#### 1. Auditoria de Lógica e Correção de Bugs (Fase de Estabilidade)
-*   **Identificação de Race Conditions**: Analisar ganchos (hooks) de subscrição em tempo real para garantir que atualizações de estado não ocorram em componentes desmontados ou com dados obsoletos (*stale closures*).
-*   **Consistência de Isolamento (Tenancy)**: Verificar todas as mutações (UPSERT/UPDATE) para garantir a inclusão obrigatória do `tenant_id`, prevenindo vazamento de dados entre clientes (ex: `src/pages/Quarantine.tsx`).
-*   **Tratamento de Erros e Casos de Borda**: Revisar componentes que dependem de dados externos para incluir validações defensivas contra `null`/`undefined`, evitando falhas de renderização em cascata.
+#### Causas Prováveis
 
-#### 2. Profiling e Diagnóstico de Performance (Fase de Gargalos)
-*   **Mapeamento de Re-renders**: Utilizar o *React Profiler* para detectar componentes que sofrem de pressão no Virtual DOM devido a objetos de dependência instáveis (ex: uso de `JSON.stringify` em arrays de dependência em `useRealtimeQuery`).
-*   **Análise de Payload**: Identificar queries que utilizam `select('*')` em tabelas volumosas e substituir por projeções específicas, reduzindo o consumo de banda e o tempo de parsing de JSON no cliente.
+1. **Sandbox em Reinicialização**: O servidor de desenvolvimento (Vite) que serve o preview pode ter parado após um período de inatividade ou após uma edição recente. Qualquer nova interação no chat reinicia o sandbox automaticamente.
+2. **Token de Acesso Expirado**: O parâmetro `__lovable_token` na URL tem validade limitada. Se o link foi compartilhado ou aberto após muito tempo, o token pode ter expirado, retornando 401/403.
+3. **Build com Erro**: Se uma edição recente introduziu um erro de build (TypeScript/Vite), o preview falha em renderizar até que o código seja corrigido.
+4. **Capacidade Temporária da Infraestrutura**: O serviço de preview do Lovable pode estar com instabilidade momentânea.
 
-#### 3. Otimização de Algoritmos e Eficiência de Recursos
-*   **Refatoração O(n) em Agregações**: Substituir sequências de `.filter().length` repetitivas por loops de passagem única (*single-pass accumulation*) em ganchos de estatísticas (ex: `useInsightFeedback.ts`).
-*   **Memoização Estratégica**: Aplicar `useMemo` em transformações de dados de dashboards e `useCallback` em manipuladores de eventos passados para componentes pesados para evitar quebras de `React.memo`.
-*   **Gestão de Memória (RAM)**: Otimizar o ciclo de vida de canais do Supabase Realtime, garantindo que recursos sejam liberados imediatamente ao fechar abas ou navegar entre páginas.
+#### Plano de Ação Recomendado
 
-#### 4. Validação e Entrega de Resultados
-*   **Esquema de Resposta Estruturado**: Para cada problema detectado, entregar o diagnóstico, a análise da causa raiz, a correção exata em TypeScript e a justificativa técnica.
-*   **Benchmarking de Carga**: Validar que a interface permanece fluida (>60 FPS) mesmo durante picos de atualização de telemetria ou em listas com centenas de itens.
+1. **Recarregar o Preview**: Atualizar a página dentro do editor Lovable (não usar o link externo com token). O sandbox reinicia automaticamente.
+2. **Verificar Build**: Confirmar que não há erros de TypeScript pendentes da última auditoria executada (correções em `useInsightFeedback.ts` e `Quarantine.tsx`).
+3. **Inspecionar Logs**: Caso o problema persista, consultar `/tmp/dev-server-logs/dev-server.log` para identificar falhas de bootstrap do Vite.
+4. **Republicar (se aplicável)**: Se o link era da versão publicada (`cybershield-audit.lovable.app`), clicar em **Publish → Update** para sincronizar a última versão estável.
+
+#### Próximos Passos Sugeridos
+
+- Aguardar 30-60 segundos e recarregar o preview no editor.
+- Caso o erro persista, posso inspecionar os logs do dev-server e validar a integridade do build atual.
+
+Nenhuma alteração de código é necessária neste momento — trata-se de um evento de infraestrutura/sessão, não de bug funcional.
