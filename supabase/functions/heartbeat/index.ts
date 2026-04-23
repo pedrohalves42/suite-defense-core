@@ -39,7 +39,7 @@ const HEARTBEAT_EXTRA_FIELDS = [
   'force_update_version', 'force_update_reason', 'force_update_at',
   'force_update_override_safe_mode', 'force_update_override_safe_mode_expires_at',
   'force_update_delivered_count', 'force_update_first_delivered_at',
-  'last_forced_update_applied',
+  'last_forced_update_applied', 'last_telemetry_at',
 ]
 
 Deno.serve(async (req) => {
@@ -78,6 +78,7 @@ Deno.serve(async (req) => {
       force_update_delivered_count: (authResult.agentData.force_update_delivered_count as number) || 0,
       force_update_first_delivered_at: (authResult.agentData.force_update_first_delivered_at as string | null) || null,
       last_forced_update_applied: (authResult.agentData.last_forced_update_applied as string | null) || null,
+      last_telemetry_at: (authResult.agentData.last_telemetry_at as string | null) || null,
     }
 
     // ── 2. HMAC validation ──────────────────────────────────

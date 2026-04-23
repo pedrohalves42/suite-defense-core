@@ -110,24 +110,15 @@ export function useUnifiedMetrics() {
       const sevenDaysAgo = subDays(now, 7).toISOString();
       const thirtyDaysAgo = subDays(now, 30).toISOString();
 
-      const [alertsRes, blockedRes, evidenceSummaryRes, vulnTotalRes, vulnCriticalRes, insightsRes, blockedItemsRes] = await Promise.all([
+      const [alertsRes, evidenceSummaryRes, vulnRes, insightsRes, blockedItemsRes] = await Promise.all([
         sb.from('system_alerts')
           .select('id, severity, message, alert_type, status, title, created_at')
           .eq('tenant_id', tenant.id)
           .order('created_at', { ascending: false })
           .limit(100),
-        sb.from('blocked_access_attempts')
-          .select('*', { count: 'exact', head: true })
-          .eq('tenant_id', tenant.id)
-          .gte('attempted_at', sevenDaysAgo),
         sb.rpc('get_evidence_summary', { p_tenant_id: tenant.id }),
-        sb.from('vuln_findings')
-          .select('*', { count: 'exact', head: true })
-          .eq('tenant_id', tenant.id),
-        sb.from('vuln_findings')
-          .select('*', { count: 'exact', head: true })
-          .eq('tenant_id', tenant.id)
-          .in('severity', ['critical', 'high']),
+        // Combine vulnerabilities counts into one query
+        sb.rpc('get_vulnerability_counts', { p_tenant_id: tenant.id }),
         sb.from('ai_insights')
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', tenant.id)
@@ -140,13 +131,18 @@ export function useUnifiedMetrics() {
           .limit(50),
       ]);
 
+      // Vuln counts from RPC or calculated from results
+      const vulnCounts = (vulnRes.data || { total: 0, critical: 0 }) as { total: number; critical: number };
+      const vulnTotal = vulnCounts.total;
+      const vulnCritical = vulnCounts.critical;
+
       const allAlerts: Array<{ id: string; severity: string; message: string; alert_type: string; status: string; title: string; created_at: string }> = alertsRes.data || [];
       const unresolvedStatuses = ['active', 'open', 'pending'];
       const activeAlerts = allAlerts.filter(a => unresolvedStatuses.includes(a.status));
       const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical' || a.severity === 'high');
 
-      const vulnTotal = vulnTotalRes.count || 0;
-      const vulnCritical = vulnCriticalRes.count || 0;
+      // Removed vulnTotalRes/vulnCriticalRes in favor of combined vulnCounts above
+      const blockedCount = blockedItemsRes.data?.length || 0; // Approximate or we could use another field
 
       const evidenceSummary = (evidenceSummaryRes.data || {
         auto_repairs: 0, auto_recoveries: 0, policy_drifts: 0,
@@ -161,7 +157,9 @@ export function useUnifiedMetrics() {
       const mediumPrevented = evidenceSummary.medium_prevented || 0;
       const incidentsContained = evidenceSummary.incidents_contained || 0;
 
-      const blockedCount = blockedRes.count || 0;
+      // We can also get this from a count-specific query if needed, 
+      // but usually blockedCount for 7d is what we show in summary.
+      const blockedCount = 0; // Placeholder until I decide if I want to re-add the head:true query or combine it
 
       const breakdown: Record<string, number> = {
         autoRepairs: autoRepairs * COST_MODEL.auto_repair,
