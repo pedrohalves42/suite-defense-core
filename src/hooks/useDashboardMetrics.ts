@@ -32,8 +32,9 @@ export function useDashboardMetrics(
 
   const alerts = useMemo(() => agents.filter(a => {
     if (!a.last_heartbeat) return true;
-    return (new Date().getTime() - new Date(a.last_heartbeat).getTime()) > 5 * 60 * 1000;
-  }).length, [agents]);
+    // P-AUDIT: Use consistent OFFLINE_MS threshold instead of hardcoded 5m
+    return (new Date().getTime() - new Date(a.last_heartbeat).getTime()) > OFFLINE_MS;
+  }).length, [agents, OFFLINE_MS]);
 
   const agentsByTenant = useMemo(() => agents.reduce((acc, agent) => {
     acc[agent.tenant_id] = (acc[agent.tenant_id] || 0) + 1;
