@@ -188,7 +188,7 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
         handleBuildStatusChange(status);
         if (status.build_status === 'completed' || status.build_status === 'failed') clearPollingFallback();
       }
-    }, 30000); // Reduced polling from 10s to 30s to save on invocation costs
+    }, 60000); // FinOps: polling de 60s (Realtime cobre o caso ideal; isto é fallback)
     pollingTimeoutRef.current = setTimeout(() => clearPollingFallback(), 300000);
   }, [exeBuildId, exeBuildStatus, fetchBuildStatus, handleBuildStatusChange, clearPollingFallback]);
 
