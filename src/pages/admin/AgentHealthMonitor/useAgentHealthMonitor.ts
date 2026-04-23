@@ -49,7 +49,9 @@ export function useAgentHealthMonitor() {
         const agentName = payload.new.agent_name;
         setLiveHeartbeats(prev => prev + 1);
         setRecentHeartbeats(prev => [agentName, ...prev.slice(0, 4)]);
-        queryClient.invalidateQueries({ queryKey: ['agent-health', tenant.id] });
+        // REMOVED: Invalidation on every heartbeat to save costs
+        // The UI will update when the query naturally refetches or via manual refresh
+        // queryClient.invalidateQueries({ queryKey: ['agent-health', tenant.id] });
         toast.success(`✓ ${agentName} conectado`, { duration: 2000 });
       })
       .subscribe();
