@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
@@ -39,10 +39,12 @@ export function useJobLiveMonitor(maxJobs: number) {
     refetchOnWindowFocus: true,
   });
 
-  const jobs = useCallback(() => {
+  // PERF: Memoização O(n) com Map para deduplicação em tempo constante.
+  // Antes: a função era recriada por render e percorrida múltiplas vezes em `summary`.
+  const jobs = useMemo(() => {
     const jobMap = new Map<string, LiveJob>();
-    initialJobs.forEach(job => jobMap.set(job.id, job));
-    realtimeJobs.forEach(job => jobMap.set(job.id, job));
+    for (const job of initialJobs) jobMap.set(job.id, job);
+    for (const job of realtimeJobs) jobMap.set(job.id, job);
     return Array.from(jobMap.values())
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, maxJobs);
@@ -64,15 +66,24 @@ export function useJobLiveMonitor(maxJobs: number) {
       })
       .subscribe();
     channelRef.current = channel;
-    return () => { channel.unsubscribe(); };
+    return () => {
+      // PERF/MEMORY: removeChannel garante cleanup completo no client Supabase.
+      supabase.removeChannel(channel);
+      channelRef.current = null;
+    };
   }, [tenant?.id, maxJobs]);
 
-  const summary = {
-    running: jobs().filter(j => j.status === 'delivered').length,
-    pending: jobs().filter(j => j.status === 'queued').length,
-    completed: jobs().filter(j => j.status === 'completed').length,
-    failed: jobs().filter(j => j.status === 'failed').length,
-  };
+  // PERF: single-pass O(n) ao invés de 4× filter() chamados a cada render.
+  const summary = useMemo(() => {
+    const acc = { running: 0, pending: 0, completed: 0, failed: 0 };
+    for (const j of jobs) {
+      if (j.status === 'delivered') acc.running++;
+      else if (j.status === 'queued') acc.pending++;
+      else if (j.status === 'completed') acc.completed++;
+      else if (j.status === 'failed') acc.failed++;
+    }
+    return acc;
+  }, [jobs]);
 
   return { jobs, summary, refetch };
 }
