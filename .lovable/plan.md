@@ -1,25 +1,30 @@
 
-### Diagnóstico: Página de Preview Indisponível
+### Diagnóstico e Plano de Auditoria Técnica
 
-A URL de preview do Lovable está retornando indisponibilidade. Isso geralmente ocorre por uma das seguintes causas, **não relacionadas a falhas no código** da aplicação:
+Este plano aborda falhas críticas de performance e lógica detectadas na exploração do código.
 
-#### Causas Prováveis
+#### 1. Correção de Falhas de Lógica e Bugs
+*   **Problema: Tempestade de Requisições na Busca (`Quarantine.tsx`)**
+    *   **Causa Raiz**: O estado `searchTerm` está diretamente vinculado à `queryKey` do React Query. Cada caractere digitado dispara uma nova requisição assíncrona, congestionando a rede e o thread principal.
+    *   **Correção**: Implementar um `useDebounce` de 300ms para a variável de busca antes de passá-la para o hook `useQuery`.
+*   **Problema: Instabilidade em Subscrições Realtime (`useRealtimeQuery.ts`)**
+    *   **Causa Raiz**: O uso de `JSON.stringify` no array de dependências do `useEffect` força o React a serializar objetos complexos em cada ciclo de renderização, gerando desperdício de CPU.
+    *   **Correção**: Utilizar referências estáveis para as chaves ou implementar uma comparação profunda customizada que evite a serialização repetitiva de strings.
+*   **Problema: Race Condition no Contexto de Tenant (`useAgentSystemMetrics.ts`)**
+    *   **Causa Raiz**: Embora existam checks, alguns hooks podem disparar chamadas antes que o `activeTenant` esteja completamente hidratado pelo provedor de sessão.
+    *   **Correção**: Reforçar a lógica de `enabled` no React Query para garantir que nenhuma query seja disparada se `loading` for verdadeiro ou `activeTenant` nulo.
 
-1. **Sandbox em Reinicialização**: O servidor de desenvolvimento (Vite) que serve o preview pode ter parado após um período de inatividade ou após uma edição recente. Qualquer nova interação no chat reinicia o sandbox automaticamente.
-2. **Token de Acesso Expirado**: O parâmetro `__lovable_token` na URL tem validade limitada. Se o link foi compartilhado ou aberto após muito tempo, o token pode ter expirado, retornando 401/403.
-3. **Build com Erro**: Se uma edição recente introduziu um erro de build (TypeScript/Vite), o preview falha em renderizar até que o código seja corrigido.
-4. **Capacidade Temporária da Infraestrutura**: O serviço de preview do Lovable pode estar com instabilidade momentânea.
+#### 2. Otimização de Performance (CPU/RAM)
+*   **Virtualização de Interface (DOM RAM Optimization)**:
+    *   **Gargalo**: Páginas como `Quarantine.tsx` renderizam centenas de linhas de tabela simultaneamente.
+    *   **Solução**: Implementar `react-window` para renderização virtual, mantendo apenas os itens visíveis no DOM. Isso reduz o uso de RAM em até 80% em listas grandes.
+*   **Otimização de Algoritmos de Métricas (`useDashboardMetrics.ts`)**:
+    *   **Gargalo**: Múltiplas criações de `new Date()` dentro de loops O(n) durante o cálculo de status de agentes.
+    *   **Solução**: Pré-processar o timestamp atual fora do loop e utilizar aritmética simples de números em vez de objetos de data para as comparações de heartbeat.
+*   **Redução de Overhead de Re-renderização**:
+    *   **Gargalo**: Componentes de layout globais (Sidebar/Navbar) re-renderizando durante atualizações rápidas de telemetria.
+    *   **Solução**: Aplicar `React.memo` com funções de comparação de propriedades (props) para isolar o layout estático dos fluxos de dados voláteis.
 
-#### Plano de Ação Recomendado
-
-1. **Recarregar o Preview**: Atualizar a página dentro do editor Lovable (não usar o link externo com token). O sandbox reinicia automaticamente.
-2. **Verificar Build**: Confirmar que não há erros de TypeScript pendentes da última auditoria executada (correções em `useInsightFeedback.ts` e `Quarantine.tsx`).
-3. **Inspecionar Logs**: Caso o problema persista, consultar `/tmp/dev-server-logs/dev-server.log` para identificar falhas de bootstrap do Vite.
-4. **Republicar (se aplicável)**: Se o link era da versão publicada (`cybershield-audit.lovable.app`), clicar em **Publish → Update** para sincronizar a última versão estável.
-
-#### Próximos Passos Sugeridos
-
-- Aguardar 30-60 segundos e recarregar o preview no editor.
-- Caso o erro persista, posso inspecionar os logs do dev-server e validar a integridade do build atual.
-
-Nenhuma alteração de código é necessária neste momento — trata-se de um evento de infraestrutura/sessão, não de bug funcional.
+#### 3. Eficiência de Dados e Rede
+*   **Estratégia de Column Pruning**: Revisar queries Supabase para selecionar apenas as colunas consumidas pela UI (ex: remover payloads de metadados brutos em listagens de resumo).
+*   **Otimização de Cache**: Configurar `staleTime` diferenciado: 15min para dados estruturais (tenants/permissões) e 10s para telemetria, evitando sobrecarga desnecessária no banco de dados.
