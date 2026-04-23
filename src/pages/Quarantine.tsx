@@ -181,7 +181,7 @@ export default function Quarantine() {
         />
         <SummaryStatCard
           icon={Trash2}
-          value={statusCounts.deleted
+          value={statusCounts.deleted}
           label={t('quarantinePage.deleted')}
           accent="muted"
         />
