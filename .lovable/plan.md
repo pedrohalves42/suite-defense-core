@@ -1,23 +1,39 @@
 
-### Plano de Otimização de Performance e Eficiência de Recursos
+### Plano de Auditoria Técnica e Otimização de Performance
 
-Este plano detalha as etapas para transformar o sistema em uma aplicação de alta performance, focando em redução de carga computacional e economia de custos operacionais.
+Este plano detalha o processo de análise e refinamento do sistema para garantir segurança, estabilidade e eficiência máxima de recursos.
 
-#### 1. Diagnóstico e Profiling (Fase de Identificação)
-*   **Análise de Re-renders**: Utilizar o *React Profiler* para identificar componentes na `src/components/dashboard` e `src/pages/AgentMonitoring` que renderizam desnecessariamente em cada atualização de heartbeat.
-*   **Detecção de Memory Leaks**: Auditar `src/hooks/useRealtimeHooks.ts` e subscrições do Supabase para garantir o *cleanup* rigoroso de canais quando os componentes são desmontados.
-*   **Monitoramento de Bundle Size**: Analisar o impacto de bibliotecas pesadas e implementar *Lazy Loading* (React.lazy) em rotas administrativas e modais complexos (ex: `VendorRiskRegistry`).
+#### 1. Refinamento do Prompt de Auditoria (Execução Imediata)
+*   **Reescrita Profissional**: Transformar o comando original em uma diretiva de engenharia de alta fidelidade, incorporando a persona de Auditor Sênior e o esquema de resposta estruturado (Diagnóstico, Causa Raiz, Correção, Justificativa).
 
-#### 2. Otimização de Algoritmos e Dados (Frontend)
-*   **Memoização de Transformações**: Aplicar `useMemo` em `useAgentMonitoring.ts` e `useUnifiedMetrics.ts` para evitar que cálculos de tendências e filtros de arrays (como `historicalScans.filter`) sejam reexecutados sem mudanças nos dados de origem.
-*   **Substituição de Loops O(n²)**: Refatorar verificações de cruzamento de dados (ex: associar agentes a alertas) utilizando `Map` ou `Set` para garantir acesso em tempo constante O(1).
-*   **Virtualização de Listas**: Implementar `react-window` ou `tanstack-virtual` em `InstallationLogsExplorer.tsx` e tabelas de agentes, garantindo que apenas as linhas visíveis sejam renderizadas no DOM.
+#### 2. Auditoria de Lógica e Segurança
+*   **Análise de Race Conditions**: Revisar hooks de subscrição real-time (Supabase) para garantir o cleanup correto de canais e evitar atualizações de estado em componentes desmontados.
+*   **Validação de Integridade de Dados**: Verificar a lógica de filtragem de tenants e permissões em hooks como `useActiveTenant` e `useIsAdmin`.
+*   **Mapeamento de Bugs Silenciosos**: Identificar *stale closures* em callbacks e dependências incorretas em `useEffect`.
 
-#### 3. Refinamento da Camada de Dados (React Query & API)
-*   **Seletores de Query**: Implementar a propriedade `select` nos hooks de `useQuery` para que componentes secundários só re-renderizem se o fragmento específico de dados que consomem for alterado.
-*   **Debouncing de Persistência**: Implementar *debouncing* em inputs de busca e filtros globais para evitar disparos excessivos de requisições ao banco de dados durante a digitação.
-*   **Otimização de Projeções SQL**: Revisar hooks que usam `.select('*')` e substituir por campos específicos, reduzindo o payload JSON e o consumo de banda/CPU de parsing.
+#### 3. Otimização de Performance (CPU/RAM)
+*   **Profiling de Renderização**: Identificar componentes que sofrem de "Virtual DOM pressure" devido a props instáveis ou processamento pesado durante o ciclo de render.
+*   **Refatoração Algorítmica**: Substituir operações custosas (como múltiplos `.filter()` e `.sort()`) por passagens únicas (O(n)) e estruturas de dados otimizadas (Sets/Maps).
+*   **Memoização Estratégica**: Aplicar `useMemo` e `useCallback` em pontos críticos de hooks de dados e listas extensas de agentes/jobs.
+*   **Gestão de Memória**: Auditar listeners globais e timers para prevenir vazamentos de memória em sessões prolongadas.
 
-#### 4. Estabilização e Validação
-*   **Benchmarking de Carga**: Testar o dashboard com simuladores de +1000 agentes para garantir que a interface permanece fluida.
-*   **Métricas Core Web Vitals**: Monitorar LCP (Largest Contentful Paint) e INP (Interaction to Next Paint) após as otimizações para validar a melhoria na percepção do usuário.
+#### 4. Entrega e Validação Técnica
+*   **Implementação de Correções**: Aplicar os patches de código seguindo as melhores práticas de TypeScript e Clean Code.
+*   **Relatório de Impacto**: Documentar a redução estimada no consumo de recursos e a melhoria na latência percebida pelo usuário.
+
+---
+
+**Prompt Reescrito:**
+
+Como Engenheiro de Software Sênior e Auditor de Segurança, realize uma auditoria técnica rigorosa no código fornecido. Sua análise deve focar em:
+
+1. **Auditoria de Bugs e Lógica**: Identifique falhas de segurança em fluxos de autenticação/autorização, race conditions em subscrições real-time, erros de estado em hooks complexos e inconsistências na manipulação de dados assíncronos.
+2. **Otimização de Performance**: Analise o custo computacional de renders, identifique vazamentos de memória (memory leaks) em listeners, otimize a complexidade de algoritmos de processamento de dados e implemente memoização estratégica onde houver redundância.
+
+Para cada falha ou gargalo detectado, você deve obrigatoriamente fornecer:
+- **Diagnóstico Técnico**: Descrição clara e precisa do problema.
+- **Análise da Causa Raiz**: Explicação técnica do motivo do erro ou da ineficiência.
+- **Correção Exata**: Código revisado, tipado e pronto para implementação.
+- **Justificativa e Validação**: Explicação de como a correção resolve o problema e melhora a estabilidade ou performance do sistema (CPU/RAM).
+
+Retorne os resultados de forma estruturada, priorizando a estabilidade e a escalabilidade do sistema.
