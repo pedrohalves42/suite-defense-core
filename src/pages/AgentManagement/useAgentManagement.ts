@@ -205,14 +205,30 @@ export function useAgentManagement() {
 
   const cleanupGhostAgentsMutation = useMutation({
     mutationFn: async () => {
+      if (!tenant?.id) throw new Error('No tenant selected');
+      
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data: agentsToDelete, error: findError } = await supabase
-        .from('agents').select('id, agent_name').eq('tenant_id', tenant?.id).is('last_heartbeat', null).lt('enrolled_at', twentyFourHoursAgo);
+        .from('agents')
+        .select('id, agent_name')
+        .eq('tenant_id', tenant.id)
+        .is('last_heartbeat', null)
+        .lt('enrolled_at', twentyFourHoursAgo);
+        
       if (findError) throw findError;
       if (!agentsToDelete || agentsToDelete.length === 0) return { count: 0 };
+      
       const agentIds = agentsToDelete.map(a => a.id);
-      await supabase.from('agent_tokens').delete().in('agent_id', agentIds).eq('tenant_id', tenant!.id);
-      const { error: deleteError } = await supabase.from('agents').delete().in('id', agentIds).eq('tenant_id', tenant!.id);
+      await supabase.from('agent_tokens')
+        .delete()
+        .in('agent_id', agentIds)
+        .eq('tenant_id', tenant.id);
+        
+      const { error: deleteError } = await supabase.from('agents')
+        .delete()
+        .in('id', agentIds)
+        .eq('tenant_id', tenant.id);
+        
       if (deleteError) throw deleteError;
       return { count: agentsToDelete.length };
     },

@@ -3,7 +3,6 @@ import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { usePageVisibility } from './usePageVisibility';
 import { logger } from '@/lib/logger';
-import { stableStringify } from '@/lib/utils';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface UseRealtimeQueryOptions<T> {
@@ -51,8 +50,7 @@ export function useRealtimeQuery<T>({
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   // PERF: Memoize stringified deps once per key/event change instead of every render
-  // Using stableStringify for robust hashing of complex keys
-  const queryKeyHash = useMemo(() => stableStringify(queryKey), [queryKey]);
+  const queryKeyHash = useMemo(() => JSON.stringify(queryKey), [queryKey]);
   const eventsHash = useMemo(() => realtimeEvents.join(','), [realtimeEvents]);
 
   // Keep latest values in refs so the effect doesn't re-subscribe on every render
