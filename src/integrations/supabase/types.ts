@@ -7110,6 +7110,7 @@ export type Database = {
           last_heartbeat: string | null
           last_honeypot_interaction_at: string | null
           last_honeypot_state_change_at: string | null
+          last_telemetry_at: string | null
           offline_detected_at: string | null
           offline_reason: string | null
           os_type: string | null
@@ -7174,6 +7175,7 @@ export type Database = {
           last_heartbeat?: string | null
           last_honeypot_interaction_at?: string | null
           last_honeypot_state_change_at?: string | null
+          last_telemetry_at?: string | null
           offline_detected_at?: string | null
           offline_reason?: string | null
           os_type?: string | null
@@ -7238,6 +7240,7 @@ export type Database = {
           last_heartbeat?: string | null
           last_honeypot_interaction_at?: string | null
           last_honeypot_state_change_at?: string | null
+          last_telemetry_at?: string | null
           offline_detected_at?: string | null
           offline_reason?: string | null
           os_type?: string | null
@@ -50797,6 +50800,7 @@ export type Database = {
           version: number
         }[]
       }
+      get_vulnerability_counts: { Args: { p_tenant_id: string }; Returns: Json }
       get_zombie_threshold_minutes: {
         Args: { p_job_type: string }
         Returns: number
