@@ -29,8 +29,10 @@ export default function VirusScans() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  const debouncedSearch = useDebounce(searchTerm, 300);
+
   const { data: scans, isLoading } = useQuery({
-    queryKey: ['virus-scans', tenant?.id, page, agentFilter, statusFilter, searchTerm, startDate, endDate],
+    queryKey: ['virus-scans', tenant?.id, page, agentFilter, statusFilter, debouncedSearch, startDate, endDate],
     queryFn: async () => {
       if (!tenant?.id) return { data: [], count: 0 };
       
@@ -51,15 +53,15 @@ export default function VirusScans() {
         query = query.eq('is_malicious', false);
       }
 
-      if (searchTerm) {
-        query = query.or(`file_path.ilike.%${searchTerm}%,file_hash.ilike.%${searchTerm}%`);
+      if (debouncedSearch) {
+        query = query.or(`file_path.ilike.%${debouncedSearch}%,file_hash.ilike.%${debouncedSearch}%`);
       }
 
-      if (startDate) {
+      if (startDate && !isNaN(Date.parse(startDate))) {
         query = query.gte('scanned_at', new Date(startDate).toISOString());
       }
 
-      if (endDate) {
+      if (endDate && !isNaN(Date.parse(endDate))) {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
         query = query.lte('scanned_at', end.toISOString());
