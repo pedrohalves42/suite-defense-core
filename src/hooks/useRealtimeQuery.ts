@@ -50,7 +50,7 @@ export function useRealtimeQuery<T>({
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   // PERF: Memoize stringified deps once per key/event change instead of every render
-  const queryKeyHash = useMemo(() => queryKey.join('|'), [queryKey]);
+  const queryKeyHash = useMemo(() => JSON.stringify(queryKey), [queryKey]);
   const eventsHash = useMemo(() => realtimeEvents.join(','), [realtimeEvents]);
 
   // Keep latest values in refs so the effect doesn't re-subscribe on every render
