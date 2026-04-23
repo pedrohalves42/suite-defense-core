@@ -40,9 +40,10 @@ export function useTodayRiskDelta() {
     queryFn: async () => {
       if (!tenant?.id) return null;
 
+      // FinOps: projeção mínima — somente campos usados pelo dashboard executivo
       const { data, error } = await supabase
         .from('risk_delta_snapshots')
-        .select('id, tenant_id, snapshot_date, risk_score_start, risk_score_end, delta, threats_blocked, incidents_prevented, actions_executed, actions_pending_approval, estimated_cost_avoided, executive_summary, key_events, created_at')
+        .select('id, snapshot_date, delta, threats_blocked, incidents_prevented, estimated_cost_avoided, executive_summary')
         .eq('tenant_id', tenant.id)
         .eq('snapshot_date', today)
         .maybeSingle();
@@ -51,7 +52,7 @@ export function useTodayRiskDelta() {
       return data as RiskDeltaSnapshot | null;
     },
     enabled: !!tenant?.id,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 15 * 60 * 1000, // 15 minutos (era 5 min)
   });
 }
 
