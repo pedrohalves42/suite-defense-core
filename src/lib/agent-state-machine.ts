@@ -121,8 +121,10 @@ export const STATE_TRANSITIONS: Record<AgentState, AgentState[]> = {
 
 import { AGENT_STATUS_THRESHOLDS } from './agent-status-constants';
 
-// Usa threshold centralizado
+// Usa thresholds centralizados para consistência absoluta
 const OFFLINE_THRESHOLD_MINUTES = AGENT_STATUS_THRESHOLDS.OFFLINE_MIN_MINUTES;
+const WARNING_THRESHOLD_MINUTES = AGENT_STATUS_THRESHOLDS.WARNING_MAX_MINUTES;
+const UPDATE_WINDOW_MINUTES = 45; // Aumentado para 45min para evitar falsos "offline" durante builds lentos
 
 /**
  * Deriva o estado formal do agente a partir dos dados do banco
@@ -138,7 +140,18 @@ export function deriveAgentState(agent: Partial<Agent>): AgentState {
     return 'safe_mode';
   }
 
-  // 3. Verificar se está offline
+  // 3. Verificar se está em processo de atualização forçada (prioridade sobre offline)
+  if (agent.force_update_version && agent.force_update_at) {
+    const forceUpdateTime = new Date(agent.force_update_at);
+    const minutesSinceForceUpdate = (Date.now() - forceUpdateTime.getTime()) / (1000 * 60);
+    
+    // Se a atualização foi solicitada recentemente, considera "atualizando"
+    if (minutesSinceForceUpdate < UPDATE_WINDOW_MINUTES) {
+      return 'updating';
+    }
+  }
+
+  // 4. Verificar se está offline
   if (agent.last_heartbeat) {
     const lastHeartbeat = new Date(agent.last_heartbeat);
     const minutesSinceHeartbeat = (Date.now() - lastHeartbeat.getTime()) / (1000 * 60);
@@ -146,19 +159,13 @@ export function deriveAgentState(agent: Partial<Agent>): AgentState {
     if (minutesSinceHeartbeat > OFFLINE_THRESHOLD_MINUTES) {
       return 'offline';
     }
+    
+    // Se estiver entre online e offline, mas marcado como degraded no banco
+    if (minutesSinceHeartbeat > WARNING_THRESHOLD_MINUTES || agent.is_throttled) {
+      return 'degraded';
+    }
   } else if (agent.status === 'pending') {
     return 'offline';
-  }
-
-  // 4. Verificar se está em processo de atualização forçada
-  if (agent.force_update_version && agent.force_update_at) {
-    const forceUpdateTime = new Date(agent.force_update_at);
-    const minutesSinceForceUpdate = (Date.now() - forceUpdateTime.getTime()) / (1000 * 60);
-    
-    // Se a atualização foi solicitada há menos de 30 minutos, considera "atualizando"
-    if (minutesSinceForceUpdate < 30) {
-      return 'updating';
-    }
   }
 
   // 5. Verificar throttle (degraded)
