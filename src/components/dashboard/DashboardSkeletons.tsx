@@ -5,7 +5,7 @@ export function MetricCardsSkeleton() {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {Array.from({ length: 4 }).map((_, i) => (
-        <Card key={i} className="bg-gradient-card border-border">
+        <Card key={i} className="bg-card/40 border-border/40 backdrop-blur-sm">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
               <Skeleton className="h-4 w-4 rounded" />

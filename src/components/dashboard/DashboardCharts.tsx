@@ -94,7 +94,7 @@ export function DashboardCharts({ jobs, virusScans, loading }: DashboardChartsPr
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" role="region" aria-label="Gráficos de análise do sistema">
       {/* Jobs Trend */}
-      <Card className="bg-gradient-card border-primary/20">
+      <Card className="bg-gradient-card border-primary/30 shadow-lg hover:shadow-primary/5 transition-all duration-500 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <LineChart className="h-5 w-5 text-primary" />Tendência de Verificações (7 dias)
@@ -124,7 +124,7 @@ export function DashboardCharts({ jobs, virusScans, loading }: DashboardChartsPr
       </Card>
 
       {/* Virus Scans */}
-      <Card className="bg-gradient-card border-accent/20">
+      <Card className="bg-gradient-card border-accent/30 shadow-lg hover:shadow-accent/5 transition-all duration-500 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-accent" />Verificações de Vírus (7 dias)
@@ -154,7 +154,7 @@ export function DashboardCharts({ jobs, virusScans, loading }: DashboardChartsPr
       </Card>
 
       {/* Job Types */}
-      <Card className="bg-gradient-card border-warning/20">
+      <Card className="bg-gradient-card border-warning/30 shadow-lg hover:shadow-warning/5 transition-all duration-500 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <PieChart className="h-5 w-5 text-warning" />Tipos de Tarefas
@@ -194,7 +194,7 @@ export function DashboardCharts({ jobs, virusScans, loading }: DashboardChartsPr
       </Card>
 
       {/* Jobs by Agent */}
-      <Card className="bg-gradient-card border-success/20">
+      <Card className="bg-gradient-card border-success/30 shadow-lg hover:shadow-success/5 transition-all duration-500 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-success" />Tarefas por Computador (Top 10)

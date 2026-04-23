@@ -182,15 +182,14 @@ const ServerDashboard = () => {
           />
         </DashboardErrorBoundary>
 
-        {/* Footer */}
-        <Card className="bg-muted/20 border-dashed border-muted-foreground/20">
-          <CardContent className="py-4 text-center">
-            <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
-              <Info className="h-4 w-4" />
-              Este painel monitora a saúde global do sistema em tempo real (atualiza a cada 10s).
+        <Card className="bg-muted/10 border-dashed border-muted-foreground/30 backdrop-blur-sm hover:border-primary/40 transition-colors">
+          <CardContent className="py-6 sm:py-8 text-center">
+            <p className="text-sm sm:text-base text-muted-foreground flex items-center justify-center gap-2 font-medium">
+              <Info className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              Este painel monitora a saúde global do sistema em tempo real.
             </p>
-            <p className="text-sm text-primary mt-1">
-              Se algo crítico surgir, você será alertado automaticamente.
+            <p className="text-xs sm:text-sm text-primary/80 mt-2 font-semibold">
+              Sincronização ativa • Atualização inteligente a cada 10s
             </p>
           </CardContent>
         </Card>
