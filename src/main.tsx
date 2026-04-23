@@ -152,9 +152,10 @@ if (!hasBackend) {
         const queryClient = new QueryClient({
           defaultOptions: {
             queries: {
-              staleTime: 10 * 60 * 1000,
-              gcTime: 15 * 60 * 1000,
-              refetchOnWindowFocus: true,
+              // FinOps: aumentar staleTime para reduzir refetches automáticos
+              staleTime: 15 * 60 * 1000, // 15 min (era 10 min)
+              gcTime: 30 * 60 * 1000,    // 30 min (era 15 min)
+              refetchOnWindowFocus: false, // FinOps: evitar refetch ao focar a aba
               refetchOnReconnect: true,
               retry: 1,
             },
