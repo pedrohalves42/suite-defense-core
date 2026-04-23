@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { useQueryClient, UseQueryOptions, useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useRef } from 'react';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { usePageVisibility } from './usePageVisibility';
 import { logger } from '@/lib/logger';
@@ -16,7 +16,7 @@ interface UseRealtimeQueryOptions<T> {
   realtimeFilter?: string;
   /** Realtime events to listen to. Default: ['INSERT', 'UPDATE', 'DELETE'] */
   realtimeEvents?: Array<'INSERT' | 'UPDATE' | 'DELETE'>;
-  /** Fallback polling interval when page is visible (ms). Default: 300_000 (5min) */
+  /** Fallback polling interval when page is visible (ms). Default: 1_800_000 (30min) */
   fallbackInterval?: number;
   /** Whether query is enabled */
   enabled?: boolean;
@@ -26,32 +26,44 @@ interface UseRealtimeQueryOptions<T> {
   meta?: Record<string, unknown>;
 }
 
+const DEFAULT_EVENTS: Array<'INSERT' | 'UPDATE' | 'DELETE'> = ['INSERT', 'UPDATE', 'DELETE'];
+
 /**
  * Combines React Query with Supabase Realtime subscriptions.
- * 
+ *
  * When the table has Realtime enabled, invalidates query on changes.
  * Falls back to adaptive polling (paused when tab not visible).
+ *
+ * PERF: Stable dependency hashing avoids JSON.stringify on every render cycle.
  */
 export function useRealtimeQuery<T>({
   queryKey,
   queryFn,
   realtimeTable,
   realtimeFilter,
-  realtimeEvents = ['INSERT', 'UPDATE', 'DELETE'],
-  fallbackInterval = 1_800_000, // COST-OPT-V8: 30 min default
+  realtimeEvents = DEFAULT_EVENTS,
   enabled = true,
-  staleTime = 300_000, // COST-OPT-V8: 5 min stale
+  staleTime = 300_000,
 }: UseRealtimeQueryOptions<T>) {
   const queryClient = useQueryClient();
   const isVisible = usePageVisibility();
   const channelRef = useRef<RealtimeChannel | null>(null);
 
-  // Subscribe to realtime changes
+  // PERF: Memoize stringified deps once per key/event change instead of every render
+  const queryKeyHash = useMemo(() => queryKey.join('|'), [queryKey]);
+  const eventsHash = useMemo(() => realtimeEvents.join(','), [realtimeEvents]);
+
+  // Keep latest values in refs so the effect doesn't re-subscribe on every render
+  const queryKeyRef = useRef(queryKey);
+  const eventsRef = useRef(realtimeEvents);
+  queryKeyRef.current = queryKey;
+  eventsRef.current = realtimeEvents;
+
   useEffect(() => {
     if (!realtimeTable || !enabled || !isVisible) return;
 
-    const channelName = `rt-${realtimeTable}-${realtimeFilter || 'all'}-${queryKey.join('-')}`;
-    
+    const channelName = `rt-${realtimeTable}-${realtimeFilter || 'all'}-${queryKeyHash}`;
+
     const channel = supabase
       .channel(channelName)
       .on(
@@ -63,10 +75,12 @@ export function useRealtimeQuery<T>({
           filter: realtimeFilter,
         },
         (payload) => {
-          const eventType = payload.eventType;
-          if (realtimeEvents.includes(eventType as 'INSERT' | 'UPDATE' | 'DELETE')) {
-            logger.debug(`[useRealtimeQuery] ${realtimeTable} ${eventType}, invalidating`, { queryKey: queryKey[0] });
-            queryClient.invalidateQueries({ queryKey });
+          const eventType = payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE';
+          if (eventsRef.current.includes(eventType)) {
+            logger.debug(`[useRealtimeQuery] ${realtimeTable} ${eventType}, invalidating`, {
+              queryKey: queryKeyRef.current[0],
+            });
+            queryClient.invalidateQueries({ queryKey: queryKeyRef.current });
           }
         }
       )
@@ -84,9 +98,9 @@ export function useRealtimeQuery<T>({
         channelRef.current = null;
       }
     };
-  }, [realtimeTable, realtimeFilter, enabled, queryClient, JSON.stringify(queryKey), JSON.stringify(realtimeEvents)]);
+    // PERF: primitive hashes only — no JSON.stringify on every render
+  }, [realtimeTable, realtimeFilter, enabled, isVisible, queryClient, queryKeyHash, eventsHash]);
 
-  // COST-OPT-V9: No polling at all. Realtime handles updates, manual refetch for the rest.
   return useQuery({
     queryKey,
     queryFn,
@@ -97,3 +111,4 @@ export function useRealtimeQuery<T>({
     refetchOnWindowFocus: true,
   });
 }
+
