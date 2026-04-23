@@ -27,10 +27,14 @@ export default function SecurityBenchmark() {
   const { data: tenantScore } = useQuery({
     queryKey: ["tenant-compliance-score", tenant?.id],
     queryFn: async () => {
-      // Try to get from compliance calculation edge function
-      const { data, error } = await supabase.functions.invoke("api-gateway", {
-        body: { action: "security:calculate-compliance", payload: { tenant_id: tenant!.id } },
-      });
+      // Fetch latest existing snapshot instead of triggering expensive recalculation
+      const { data, error } = await supabase
+        .from("compliance_snapshots")
+        .select("overall_score, grade")
+        .eq("tenant_id", tenant!.id)
+        .order("calculated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
       if (error) return { overall_score: 0, grade: "N/A" };
       return data as { overall_score: number; grade: string };
     },
