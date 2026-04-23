@@ -106,12 +106,17 @@ export function useFeedbackStats() {
       
       if (error) throw error;
       
-      const stats = {
-        total: data.length,
-        useful: data.filter(f => f.feedback_type === 'useful').length,
-        noise: data.filter(f => f.feedback_type === 'noise').length,
-        false_positive: data.filter(f => f.feedback_type === 'false_positive').length,
-      };
+      // PERF: Single-pass O(n) accumulator (was 4x O(n) filter chains)
+      const stats = data.reduce(
+        (acc, f) => {
+          acc.total++;
+          if (f.feedback_type === 'useful') acc.useful++;
+          else if (f.feedback_type === 'noise') acc.noise++;
+          else if (f.feedback_type === 'false_positive') acc.false_positive++;
+          return acc;
+        },
+        { total: 0, useful: 0, noise: 0, false_positive: 0 }
+      );
       
       return stats;
     },
