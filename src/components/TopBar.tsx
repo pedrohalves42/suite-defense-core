@@ -1,4 +1,5 @@
 import { Menu, Bell } from "lucide-react";
+import { memo } from "react";
 import cybershieldLogo from "@/assets/logo-cybshield-new.webp";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -9,43 +10,10 @@ interface TopBarProps {
   onMobileMenuClick: () => void;
 }
 
-export const TopBar = ({ isMobile, sidebarCollapsed, onMobileMenuClick }: TopBarProps) => {
+export const TopBar = memo(({ isMobile, sidebarCollapsed, onMobileMenuClick }: TopBarProps) => {
   return (
-    <header className={cn(
-      "fixed top-0 right-0 z-30 h-14 border-b border-border/40 bg-background/80 backdrop-blur-md flex items-center justify-between px-4",
-      isMobile ? "left-0" : (sidebarCollapsed ? "left-[calc(4rem+16px)]" : "left-[calc(14rem+16px)]"),
-      "transition-all duration-300"
-    )} role="banner">
-      <div className="flex items-center gap-3">
-        {isMobile && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={onMobileMenuClick} 
-            className="h-9 w-9 interactive-hover" 
-            aria-label="Abrir menu lateral"
-            aria-expanded="false"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-        )}
-        <div className="flex items-center gap-2 group cursor-default">
-          <img src={cybershieldLogo} alt="CyberShield" className="h-7 w-7 object-contain transition-transform duration-300 group-hover:rotate-12" />
-          <span className="font-semibold text-sm text-foreground hidden sm:inline tracking-tight">CyberShield</span>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-9 w-9 relative interactive-hover" 
-          aria-label="Ver notificações"
-        >
-          <Bell className="h-4 w-4" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border-2 border-background" aria-hidden="true" />
-        </Button>
-      </div>
-    </header>
+// ... keep existing code
   );
-};
+});
+
+TopBar.displayName = 'TopBar';
