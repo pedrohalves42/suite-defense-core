@@ -213,7 +213,7 @@ export function useUnifiedMetrics() {
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    staleTime: 120_000,
+    staleTime: 5 * 60 * 1000, // Increased to 5 minutes to reduce refetching costs
     realtimeTable: 'system_alerts',
     realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });

@@ -46,30 +46,15 @@ export function useExecutiveDashboard() {
     staleTime: 600_000,
   });
 
-  const [complianceTriggered, setComplianceTriggered] = useState(false);
-  useEffect(() => {
-    if (!tenantId || !execData || complianceTriggered) return;
-    const needsCalc = !execData.compliance ||
-      (execData.compliance?.calculated_at &&
-        (Date.now() - new Date(execData.compliance.calculated_at).getTime()) > 3600000);
-    if (needsCalc) {
-      setComplianceTriggered(true);
-      supabase.functions.invoke('api-gateway', { body: { action: 'security:calculate-compliance', payload: { tenant_id: tenantId } } })
-        .then(() => { setTimeout(() => refetchExec(), 3000); })
-        .catch((err: unknown) => logger.error('Compliance calc failed', err instanceof Error ? err : undefined));
-    }
-  }, [tenantId, execData, complianceTriggered, refetchExec]);
-
+  // REMOVED: Automatic compliance calculation trigger from frontend
+  // This was causing excessive Edge Function invocations.
+  // Compliance is now calculated via background cron or manual trigger.
   const isLoading = unifiedLoading || execLoading;
+  const complianceTriggered = false; // Mock for compatibility
 
   const refetch = () => {
     refetchUnified();
     refetchExec();
-    if (tenantId) {
-      supabase.functions.invoke('api-gateway', { body: { action: 'security:calculate-compliance', payload: { tenant_id: tenantId } } })
-        .then(() => { setTimeout(() => refetchExec(), 3000); })
-        .catch((err: unknown) => logger.error('Compliance recalc failed', err instanceof Error ? err : undefined));
-    }
   };
 
   const totalAgents = metrics?.agents.total || 0;
