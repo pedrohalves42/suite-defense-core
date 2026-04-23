@@ -1,39 +1,22 @@
 
-### Plano de Auditoria Técnica e Otimização de Performance
+### Plano de Auditoria Técnica: Qualidade, Lógica e Performance Extrema
 
-Este plano detalha o processo de análise e refinamento do sistema para garantir segurança, estabilidade e eficiência máxima de recursos.
+Este plano detalha a estratégia para transformar o sistema em uma aplicação de alta fidelidade técnica, eliminando bugs de lógica e otimizando o consumo de recursos (CPU/RAM) conforme as instruções do usuário.
 
-#### 1. Refinamento do Prompt de Auditoria (Execução Imediata)
-*   **Reescrita Profissional**: Transformar o comando original em uma diretiva de engenharia de alta fidelidade, incorporando a persona de Auditor Sênior e o esquema de resposta estruturado (Diagnóstico, Causa Raiz, Correção, Justificativa).
+#### 1. Auditoria de Lógica e Correção de Bugs (Fase de Estabilidade)
+*   **Identificação de Race Conditions**: Analisar ganchos (hooks) de subscrição em tempo real para garantir que atualizações de estado não ocorram em componentes desmontados ou com dados obsoletos (*stale closures*).
+*   **Consistência de Isolamento (Tenancy)**: Verificar todas as mutações (UPSERT/UPDATE) para garantir a inclusão obrigatória do `tenant_id`, prevenindo vazamento de dados entre clientes (ex: `src/pages/Quarantine.tsx`).
+*   **Tratamento de Erros e Casos de Borda**: Revisar componentes que dependem de dados externos para incluir validações defensivas contra `null`/`undefined`, evitando falhas de renderização em cascata.
 
-#### 2. Auditoria de Lógica e Segurança
-*   **Análise de Race Conditions**: Revisar hooks de subscrição real-time (Supabase) para garantir o cleanup correto de canais e evitar atualizações de estado em componentes desmontados.
-*   **Validação de Integridade de Dados**: Verificar a lógica de filtragem de tenants e permissões em hooks como `useActiveTenant` e `useIsAdmin`.
-*   **Mapeamento de Bugs Silenciosos**: Identificar *stale closures* em callbacks e dependências incorretas em `useEffect`.
+#### 2. Profiling e Diagnóstico de Performance (Fase de Gargalos)
+*   **Mapeamento de Re-renders**: Utilizar o *React Profiler* para detectar componentes que sofrem de pressão no Virtual DOM devido a objetos de dependência instáveis (ex: uso de `JSON.stringify` em arrays de dependência em `useRealtimeQuery`).
+*   **Análise de Payload**: Identificar queries que utilizam `select('*')` em tabelas volumosas e substituir por projeções específicas, reduzindo o consumo de banda e o tempo de parsing de JSON no cliente.
 
-#### 3. Otimização de Performance (CPU/RAM)
-*   **Profiling de Renderização**: Identificar componentes que sofrem de "Virtual DOM pressure" devido a props instáveis ou processamento pesado durante o ciclo de render.
-*   **Refatoração Algorítmica**: Substituir operações custosas (como múltiplos `.filter()` e `.sort()`) por passagens únicas (O(n)) e estruturas de dados otimizadas (Sets/Maps).
-*   **Memoização Estratégica**: Aplicar `useMemo` e `useCallback` em pontos críticos de hooks de dados e listas extensas de agentes/jobs.
-*   **Gestão de Memória**: Auditar listeners globais e timers para prevenir vazamentos de memória em sessões prolongadas.
+#### 3. Otimização de Algoritmos e Eficiência de Recursos
+*   **Refatoração O(n) em Agregações**: Substituir sequências de `.filter().length` repetitivas por loops de passagem única (*single-pass accumulation*) em ganchos de estatísticas (ex: `useInsightFeedback.ts`).
+*   **Memoização Estratégica**: Aplicar `useMemo` em transformações de dados de dashboards e `useCallback` em manipuladores de eventos passados para componentes pesados para evitar quebras de `React.memo`.
+*   **Gestão de Memória (RAM)**: Otimizar o ciclo de vida de canais do Supabase Realtime, garantindo que recursos sejam liberados imediatamente ao fechar abas ou navegar entre páginas.
 
-#### 4. Entrega e Validação Técnica
-*   **Implementação de Correções**: Aplicar os patches de código seguindo as melhores práticas de TypeScript e Clean Code.
-*   **Relatório de Impacto**: Documentar a redução estimada no consumo de recursos e a melhoria na latência percebida pelo usuário.
-
----
-
-**Prompt Reescrito:**
-
-Como Engenheiro de Software Sênior e Auditor de Segurança, realize uma auditoria técnica rigorosa no código fornecido. Sua análise deve focar em:
-
-1. **Auditoria de Bugs e Lógica**: Identifique falhas de segurança em fluxos de autenticação/autorização, race conditions em subscrições real-time, erros de estado em hooks complexos e inconsistências na manipulação de dados assíncronos.
-2. **Otimização de Performance**: Analise o custo computacional de renders, identifique vazamentos de memória (memory leaks) em listeners, otimize a complexidade de algoritmos de processamento de dados e implemente memoização estratégica onde houver redundância.
-
-Para cada falha ou gargalo detectado, você deve obrigatoriamente fornecer:
-- **Diagnóstico Técnico**: Descrição clara e precisa do problema.
-- **Análise da Causa Raiz**: Explicação técnica do motivo do erro ou da ineficiência.
-- **Correção Exata**: Código revisado, tipado e pronto para implementação.
-- **Justificativa e Validação**: Explicação de como a correção resolve o problema e melhora a estabilidade ou performance do sistema (CPU/RAM).
-
-Retorne os resultados de forma estruturada, priorizando a estabilidade e a escalabilidade do sistema.
+#### 4. Validação e Entrega de Resultados
+*   **Esquema de Resposta Estruturado**: Para cada problema detectado, entregar o diagnóstico, a análise da causa raiz, a correção exata em TypeScript e a justificativa técnica.
+*   **Benchmarking de Carga**: Validar que a interface permanece fluida (>60 FPS) mesmo durante picos de atualização de telemetria ou em listas com centenas de itens.
