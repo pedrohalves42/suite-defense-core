@@ -24,7 +24,7 @@ export async function updateAgentStatus(
   supabase: SupabaseClient,
   agentId: string,
   agentName: string,
-  updateData: AgentUpdate,
+  updateData: AgentUpdate & { last_telemetry_at?: string },
 ): Promise<void> {
   const { error } = await supabase
     .from('agents')
@@ -46,9 +46,6 @@ export async function updateAgentStatus(
 /**
  * Execute all parallel side-effect operations (metrics, processes, token touch).
  * Fire-and-forget semantics — failures are logged but don't block heartbeat response.
- *
- * COST OPTIMIZATION: Metrics and processes are only inserted if the last insert
- * was more than 5 minutes ago (checked via a single lightweight query).
  */
 export async function executeParallelOps(
   supabase: SupabaseClient,
@@ -68,14 +65,22 @@ export async function executeParallelOps(
     ).then(() => {}),
   )
 
-  // 2. Check if telemetry insert is needed (throttle to 1 per 5 min)
+  // 2. Telemetry processing (metrics + processes)
   const hasTelemetry = (osInfo.system_metrics && typeof osInfo.system_metrics === 'object' && !osInfo.system_metrics.error)
     || (osInfo.processes && typeof osInfo.processes === 'object' && !osInfo.processes.error)
 
   if (hasTelemetry) {
-    const shouldInsert = await shouldInsertTelemetry(supabase, agent.id)
+    // COST-OPT-V10: Use memory-loaded last_telemetry_at from agent context 
+    // instead of querying DB again.
+    const lastInsert = agent.last_telemetry_at ? new Date(agent.last_telemetry_at).getTime() : 0
+    const shouldInsert = (Date.now() - lastInsert) >= TELEMETRY_THROTTLE_MS
 
     if (shouldInsert) {
+      const now = new Date().toISOString()
+      
+      // Update agent's last_telemetry_at in DB (async, but we want it consistent)
+      parallelOps.push(updateAgentStatus(supabase, agent.id, agent.agent_name, { last_telemetry_at: now } as any))
+
       // 2a. System metrics insert
       const systemMetrics = osInfo.system_metrics
       if (systemMetrics && typeof systemMetrics === 'object' && !systemMetrics.error) {
@@ -90,37 +95,6 @@ export async function executeParallelOps(
   }
 
   await Promise.all(parallelOps)
-}
-
-/**
- * Check if enough time has passed since the last telemetry insert for this agent.
- * Uses a single lightweight query to the most recent metrics row.
- */
-async function shouldInsertTelemetry(
-  supabase: SupabaseClient,
-  agentId: string,
-): Promise<boolean> {
-  try {
-    // Filter to recent window (2x throttle) to enable partition pruning
-    const pruningCutoff = new Date(Date.now() - TELEMETRY_THROTTLE_MS * 2).toISOString()
-    const { data } = await supabase
-      .from('agent_system_metrics_partitioned')
-      .select('collected_at')
-      .eq('agent_id', agentId)
-      .gte('collected_at', pruningCutoff)
-      .order('collected_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (!data?.collected_at) return true // No previous data, insert
-
-    const lastInsert = new Date(data.collected_at).getTime()
-    const elapsed = Date.now() - lastInsert
-    return elapsed >= TELEMETRY_THROTTLE_MS
-  } catch {
-    // On error, allow insert to avoid data loss
-    return true
-  }
 }
 
 async function insertSystemMetrics(
@@ -169,7 +143,6 @@ async function insertProcessData(
   processesPayload: NonNullable<OSInfo['processes']>,
   processAnomalies: unknown[] | undefined,
 ): Promise<void> {
-  // Flatten top_by_cpu + top_by_memory into deduplicated array
   const allProcs: Array<Record<string, unknown>> = []
   const seenPids = new Set<number>()
 
@@ -208,7 +181,4 @@ async function insertProcessData(
       agentName: agent.agent_name, error: error.message,
     })
   }
-  // NOTE: Cleanup of old agent_processes snapshots is handled by the
-  // centralized cron job via ops-gateway cleanup:old-process-snapshots.
-  // Do NOT add inline DELETE here — it causes redundant queries per heartbeat.
 }

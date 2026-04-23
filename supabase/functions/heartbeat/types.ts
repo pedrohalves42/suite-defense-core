@@ -67,6 +67,7 @@ export interface AgentContext {
   force_update_delivered_count: number;
   force_update_first_delivered_at: string | null;
   last_forced_update_applied: string | null;
+  last_telemetry_at: string | null;
 }
 
 export interface AgentUpdate {

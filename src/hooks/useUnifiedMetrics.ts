@@ -142,7 +142,7 @@ export function useUnifiedMetrics() {
       const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical' || a.severity === 'high');
 
       // Removed vulnTotalRes/vulnCriticalRes in favor of combined vulnCounts above
-      const blockedCount = blockedItemsRes.data?.length || 0; // Approximate or we could use another field
+      const blockedCount7d = blockedItemsRes.data?.length || 0; // Approximate from items list
 
       const evidenceSummary = (evidenceSummaryRes.data || {
         auto_repairs: 0, auto_recoveries: 0, policy_drifts: 0,
@@ -157,9 +157,8 @@ export function useUnifiedMetrics() {
       const mediumPrevented = evidenceSummary.medium_prevented || 0;
       const incidentsContained = evidenceSummary.incidents_contained || 0;
 
-      // We can also get this from a count-specific query if needed, 
-      // but usually blockedCount for 7d is what we show in summary.
-      const blockedCount = 0; // Placeholder until I decide if I want to re-add the head:true query or combine it
+      // We've moved this to the breakdown directly or can re-query if exact count is critical
+      const totalBlockedCount = blockedCount7d; // Using 7d count for financial modeling in this view
 
       const breakdown: Record<string, number> = {
         autoRepairs: autoRepairs * COST_MODEL.auto_repair,
@@ -167,7 +166,7 @@ export function useUnifiedMetrics() {
         criticalPrevented: criticalPrevented * COST_MODEL.security_event_critical,
         highPrevented: highPrevented * COST_MODEL.security_event_high,
         policyCorrections: policyDrifts * COST_MODEL.policy_drift,
-        blockedAccess: blockedCount * COST_MODEL.blocked_access
+        blockedAccess: totalBlockedCount * COST_MODEL.blocked_access
       };
       const totalCostAvoided = Object.values(breakdown).reduce((a, b) => a + b, 0);
       const hoursOfITSaved = (autoRepairs * 0.5) + (autoRecoveries * 1) + (policyDrifts * 0.25) + (criticalPrevented * 2);
@@ -181,7 +180,7 @@ export function useUnifiedMetrics() {
           items: activeAlerts
         },
         blocked: {
-          last7d: blockedCount,
+          last7d: blockedCount7d,
           items: (blockedItemsRes.data || []) as Array<{ id: string; agent_name: string; domain: string; attempted_at: string; blocked_by: string }>
         },
         evidence: {

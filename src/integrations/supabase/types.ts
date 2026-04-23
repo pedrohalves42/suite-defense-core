@@ -50800,6 +50800,7 @@ export type Database = {
           version: number
         }[]
       }
+      get_vulnerability_counts: { Args: { p_tenant_id: string }; Returns: Json }
       get_zombie_threshold_minutes: {
         Args: { p_job_type: string }
         Returns: number
