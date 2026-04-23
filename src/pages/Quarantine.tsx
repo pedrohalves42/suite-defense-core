@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
+import { useDebounce } from '@/hooks/useDebounce';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -27,17 +28,24 @@ export default function Quarantine() {
   const [actionType, setActionType] = useState<'restore' | 'delete'>('restore');
   const itemsPerPage = 10;
 
+  // PERF: Debounce search input to avoid request storms (300ms)
+  const debouncedSearch = useDebounce(searchTerm, 300);
+
   const queryClient = useQueryClient();
 
   // Fetch quarantined files - filtered by tenant
+  // PERF: Column pruning — only select fields actually rendered in the table
   const { data: quarantinedFiles, isLoading } = useQuery({
-    queryKey: ['quarantined-files', tenant?.id, page, searchTerm, statusFilter],
+    queryKey: ['quarantined-files', tenant?.id, page, debouncedSearch, statusFilter],
     queryFn: async () => {
       if (!tenant?.id) return { data: [], count: 0 };
-      
+
       let query = supabase
         .from('quarantined_files')
-        .select('*, virus_scans(positives, total_scans, virustotal_permalink)', { count: 'exact' })
+        .select(
+          'id, file_path, agent_name, status, quarantined_at, tenant_id, virus_scans(positives, total_scans, virustotal_permalink)',
+          { count: 'exact' }
+        )
         .eq('tenant_id', tenant.id)
         .order('quarantined_at', { ascending: false })
         .range((page - 1) * itemsPerPage, page * itemsPerPage - 1);
@@ -46,15 +54,16 @@ export default function Quarantine() {
         query = query.eq('status', statusFilter);
       }
 
-      if (searchTerm) {
-        query = query.or(`file_path.ilike.%${searchTerm}%,agent_name.ilike.%${searchTerm}%`);
+      if (debouncedSearch) {
+        query = query.or(`file_path.ilike.%${debouncedSearch}%,agent_name.ilike.%${debouncedSearch}%`);
       }
 
       const { data, error, count } = await query;
       if (error) throw error;
       return { data, count };
     },
-    enabled: !!tenant?.id
+    enabled: !!tenant?.id,
+    staleTime: 60_000, // 1 min — quarantine list is not high-frequency telemetry
   });
 
   const restoreMutation = useMutation({
@@ -103,21 +112,22 @@ export default function Quarantine() {
     }
   });
 
-  const handleAction = (file: any, type: 'restore' | 'delete') => {
+  // PERF: Stable callbacks prevent child <Button> nodes from re-rendering on every parent render
+  const handleAction = useCallback((file: any, type: 'restore' | 'delete') => {
     setSelectedFile(file);
     setActionType(type);
     setActionDialogOpen(true);
-  };
+  }, []);
 
-  const confirmAction = () => {
+  const confirmAction = useCallback(() => {
     if (!selectedFile) return;
-    
+
     if (actionType === 'restore') {
       restoreMutation.mutate(selectedFile.id);
     } else {
       deleteMutation.mutate(selectedFile.id);
     }
-  };
+  }, [selectedFile, actionType, restoreMutation, deleteMutation]);
 
   const getStatusBadge = (status: string) => {
     const variants = {
