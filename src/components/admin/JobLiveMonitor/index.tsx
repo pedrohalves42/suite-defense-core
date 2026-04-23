@@ -47,9 +47,9 @@ export function JobLiveMonitor({ className, maxJobs = 10, showSummary = true, co
         <CardContent className="p-0">
           <ScrollArea className="h-[200px]">
             <div className="p-3 space-y-2">
-              {jobs().length === 0 ? (
+              {jobs.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">Nenhuma tarefa recente</p>
-              ) : jobs().map(job => <CompactJobCard key={job.id} job={job} />)}
+              ) : jobs.map(job => <CompactJobCard key={job.id} job={job} />)}
             </div>
           </ScrollArea>
         </CardContent>
@@ -82,13 +82,13 @@ export function JobLiveMonitor({ className, maxJobs = 10, showSummary = true, co
       <CardContent className="p-0">
         <ScrollArea className="h-[400px]">
           <div className="p-4 space-y-3">
-            {jobs().length === 0 ? (
+            {jobs.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Wifi className="h-12 w-12 mx-auto mb-4 opacity-30" />
                 <p className="text-sm">Nenhuma tarefa em andamento</p>
                 <p className="text-xs mt-1">Novas tarefas aparecerão aqui automaticamente</p>
               </div>
-            ) : jobs().map(job => <JobCard key={job.id} job={job} />)}
+            ) : jobs.map(job => <JobCard key={job.id} job={job} />)}
           </div>
         </ScrollArea>
       </CardContent>
