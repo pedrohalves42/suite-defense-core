@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useDebounce } from '@/hooks/useDebounce';
 
 import { isAgentOnline } from '@/lib/agent-status-constants';
 import { logger } from '@/lib/logger';
@@ -27,6 +28,9 @@ export function useAgentManagement() {
   const [processControlOpen, setProcessControlOpen] = useState(false);
   const [generatingGroupReport, setGeneratingGroupReport] = useState(false);
   const [checkingHealthFor, setCheckingHealthFor] = useState<string | null>(null);
+
+  // PERF: Debounce search input to avoid recalculating filtered list and potentially re-fetching
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
   // Fetch latest versions
   const { data: latestVersions } = useQuery<Record<string, string>>({
@@ -152,15 +156,16 @@ export function useAgentManagement() {
   // Filtered agents
   const filteredAgents = useMemo(() => {
     if (!agents) return [];
+    const term = debouncedSearch.toLowerCase();
     return agents.filter(agent => {
-      if (searchTerm && !agent.agent_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-          !agent.hostname?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+      if (term && !agent.agent_name.toLowerCase().includes(term) &&
+          !agent.hostname?.toLowerCase().includes(term)) return false;
       if (statusFilter !== 'all') { if (getAgentStatus(agent) !== statusFilter) return false; }
       if (versionFilter === 'outdated' && !isVersionOutdated(agent)) return false;
       if (versionFilter === 'current' && isVersionOutdated(agent)) return false;
       return true;
     });
-  }, [agents, searchTerm, statusFilter, versionFilter]);
+  }, [agents, debouncedSearch, statusFilter, versionFilter]);
 
   // Stats
   const stats = useMemo<AgentStats>(() => {

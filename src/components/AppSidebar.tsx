@@ -7,7 +7,7 @@ import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { useCriticalInsights } from '@/hooks/useCriticalInsights';
 import { useActionCenterCount } from '@/hooks/useActionCenter';
 import { useFavorites } from '@/hooks/useFavorites';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { bootVariants } from '@/components/sidebar/constants';
 import { SidebarHeader } from '@/components/sidebar/SidebarHeader';
 import { SidebarSearch } from '@/components/sidebar/SidebarSearch';
@@ -19,7 +19,7 @@ interface AppSidebarProps {
   onNavigate?: () => void;
 }
 
-export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
+export const AppSidebar = memo(({ mobile = false, onNavigate }: AppSidebarProps) => {
   const { isAdmin } = useIsAdmin();
   const { isSuperAdmin } = useSuperAdmin();
   const { data: criticalInsightsCount = 0 } = useCriticalInsights();
@@ -126,4 +126,6 @@ export const AppSidebar = ({ mobile = false, onNavigate }: AppSidebarProps) => {
       </motion.aside>
     </TooltipProvider>
   );
-};
+});
+
+AppSidebar.displayName = 'AppSidebar';

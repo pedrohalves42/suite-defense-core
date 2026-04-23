@@ -1,4 +1,5 @@
 import { Menu, Bell } from "lucide-react";
+import { memo } from "react";
 import cybershieldLogo from "@/assets/logo-cybshield-new.webp";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -9,7 +10,7 @@ interface TopBarProps {
   onMobileMenuClick: () => void;
 }
 
-export const TopBar = ({ isMobile, sidebarCollapsed, onMobileMenuClick }: TopBarProps) => {
+export const TopBar = memo(({ isMobile, sidebarCollapsed, onMobileMenuClick }: TopBarProps) => {
   return (
     <header className={cn(
       "fixed top-0 right-0 z-30 h-14 border-b border-border/40 bg-background/80 backdrop-blur-md flex items-center justify-between px-4",
@@ -48,4 +49,6 @@ export const TopBar = ({ isMobile, sidebarCollapsed, onMobileMenuClick }: TopBar
       </div>
     </header>
   );
-};
+});
+
+TopBar.displayName = 'TopBar';
