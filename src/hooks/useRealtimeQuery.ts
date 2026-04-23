@@ -48,7 +48,7 @@ export function useRealtimeQuery<T>({
 
   // Subscribe to realtime changes
   useEffect(() => {
-    if (!realtimeTable || !enabled) return;
+    if (!realtimeTable || !enabled || !isVisible) return;
 
     const channelName = `rt-${realtimeTable}-${realtimeFilter || 'all'}-${queryKey.join('-')}`;
     
