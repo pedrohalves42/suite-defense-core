@@ -22,10 +22,10 @@ export function SystemStatusBanner({
   return (
     <Card 
       className={cn(
-        "relative overflow-hidden transition-all duration-500 shadow-xl border-2",
-        systemState === 'healthy' ? "bg-success/5 border-success/20" :
-        systemState === 'critical' ? "bg-destructive/5 border-destructive/20" :
-        "bg-warning/5 border-warning/20"
+        "relative overflow-hidden transition-all duration-500 shadow-2xl border-2 backdrop-blur-sm",
+        systemState === 'healthy' ? "bg-success/5 border-success/30 shadow-success/10" :
+        systemState === 'critical' ? "bg-destructive/5 border-destructive/30 shadow-destructive/10" :
+        "bg-warning/5 border-warning/30 shadow-warning/10"
       )}
       role="status"
       aria-live="polite"
@@ -42,10 +42,10 @@ export function SystemStatusBanner({
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-8">
           <div className="flex-1 flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
             <div className={cn(
-              "flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg transition-transform hover:scale-110 duration-300 mx-auto sm:mx-0",
-              systemState === 'healthy' ? "bg-success text-white" :
-              systemState === 'critical' ? "bg-destructive text-white shadow-destructive/20" :
-              "bg-warning text-warning-foreground shadow-warning/20"
+              "flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-xl transition-all hover:scale-110 active:scale-95 duration-300 mx-auto sm:mx-0 ring-4 ring-offset-2 ring-offset-background",
+              systemState === 'healthy' ? "bg-success text-white ring-success/20" :
+              systemState === 'critical' ? "bg-destructive text-white shadow-destructive/20 ring-destructive/20" :
+              "bg-warning text-warning-foreground shadow-warning/20 ring-warning/20"
             )}>
               {systemState === 'healthy' ? (
                 <CheckCircle2 className="h-6 w-6 sm:h-8 sm:w-8" aria-hidden="true" />

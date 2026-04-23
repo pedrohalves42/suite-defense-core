@@ -63,7 +63,7 @@ export default function AgentManagement() {
             <RefreshCw className="h-4 w-4 mr-2" /> {t('agentManagementPage.refresh')}
           </Button>
           <Button variant="destructive" size="sm" onClick={() => cleanupGhostAgentsMutation.mutate()} disabled={cleanupGhostAgentsMutation.isPending}>
-            {cleanupGhostAgentsMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash className="h-4 w-4 mr-2" />}
+            {cleanupGhostAgentsMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
             {t('common.delete')}
           </Button>
         </div>

@@ -105,7 +105,7 @@ function MetricCardsComponent({
           <Card 
             key={card.title}
             className={cn(
-              "relative overflow-hidden transition-all duration-300 hover:shadow-xl group focus-ring border-border/50 cursor-pointer",
+              "relative overflow-hidden transition-all duration-500 hover:shadow-2xl group focus-ring border-border/60 cursor-pointer bg-card/40 backdrop-blur-md hover:-translate-y-1.5",
               card.borderClass
             )}
             onClick={() => navigate(card.route)}
