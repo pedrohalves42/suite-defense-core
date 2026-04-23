@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
@@ -139,6 +139,17 @@ export default function Quarantine() {
 
   const totalPages = Math.ceil((quarantinedFiles?.count || 0) / itemsPerPage);
 
+  // PERF: Single-pass O(n) status counters (was 3x .filter() iterations on each render)
+  const statusCounts = useMemo(() => {
+    const acc = { quarantined: 0, restored: 0, deleted: 0 };
+    for (const f of quarantinedFiles?.data ?? []) {
+      if (f.status === 'quarantined') acc.quarantined++;
+      else if (f.status === 'restored') acc.restored++;
+      else if (f.status === 'deleted') acc.deleted++;
+    }
+    return acc;
+  }, [quarantinedFiles?.data]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -158,19 +169,19 @@ export default function Quarantine() {
       <StatsGrid columns={3}>
         <SummaryStatCard
           icon={FileWarning}
-          value={quarantinedFiles?.data?.filter(f => f.status === 'quarantined').length || 0}
+          value={statusCounts.quarantined}
           label={t('quarantinePage.quarantined')}
           accent="destructive"
         />
         <SummaryStatCard
           icon={RotateCcw}
-          value={quarantinedFiles?.data?.filter(f => f.status === 'restored').length || 0}
+          value={statusCounts.restored}
           label={t('quarantinePage.restored')}
           accent="primary"
         />
         <SummaryStatCard
           icon={Trash2}
-          value={quarantinedFiles?.data?.filter(f => f.status === 'deleted').length || 0}
+          value={statusCounts.deleted}
           label={t('quarantinePage.deleted')}
           accent="muted"
         />
