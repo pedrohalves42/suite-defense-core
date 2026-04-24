@@ -120,7 +120,7 @@ export const useAuth = () => {
       clearInterval(tokenCheckInterval);
       clearTimeout(loadingTimeout);
     };
-  }, []);
+  }, [retryCount]);
 
   return { user, loading };
 };
