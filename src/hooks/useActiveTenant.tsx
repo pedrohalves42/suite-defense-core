@@ -86,8 +86,8 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   const [activeTenantId, setActiveTenantId] = useState<string | null>(null);
   const syncInProgressRef = useRef<string | null>(null);
   
-  // PATCH #2: Add isSyncing state to block queries until JWT is updated
-  const [isSyncing, setIsSyncing] = useState(true);
+  // Syncing logic (non-blocking for UI)
+  const isSyncingRef = useRef(false);
 
   const sessionTenantId =
     user?.app_metadata && typeof user.app_metadata.active_tenant_id === 'string'
@@ -167,50 +167,28 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   // V-AUDIT: No longer persist to localStorage (XSS risk).
   // Tenant preference survives via JWT app_metadata.active_tenant_id.
 
-  // PATCH #2 OPTIMIZED: Sync initial tenant to backend
-  // Only sync on FIRST load or when tenant actually changes
-  // Non-blocking: queries can proceed with explicit tenantId while sync happens
   useEffect(() => {
-    if (!activeTenant || !user) {
-      setIsSyncing(false);
-      return;
-    }
-
-    // BUG FIX: Prevent race conditions by checking if a sync for THIS tenant
-    // is already in progress. This avoids overlapping calls if activeTenant
-    // changes rapidly before the previous sync finishes.
-    if (syncInProgressRef.current === activeTenant.id) {
-      return;
-    }
+    if (!activeTenant || !user || isSyncingRef.current) return;
 
     const checkJWTAndSync = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const currentJWTTenantId = session?.user?.app_metadata?.active_tenant_id;
         
-        if (currentJWTTenantId === activeTenant.id) {
-          logger.debug('[useActiveTenant] JWT already synced, skipping backend call');
-          setIsSyncing(false);
-          return;
-        }
+        if (currentJWTTenantId === activeTenant.id) return;
         
-        syncInProgressRef.current = activeTenant.id;
-        logger.debug('[useActiveTenant] Syncing tenant to backend...');
-        
+        isSyncingRef.current = true;
         const synced = await syncActiveTenantToBackend(activeTenant.id);
         if (synced) {
           await supabase.auth.refreshSession();
-          logger.debug('[useActiveTenant] Session refreshed after sync');
         }
       } catch (err) {
-        logger.warn('[useActiveTenant] JWT check failed');
+        logger.warn('[useActiveTenant] JWT sync hint failed');
       } finally {
-        syncInProgressRef.current = null;
-        setIsSyncing(false);
+        isSyncingRef.current = false;
       }
     };
 
-    setIsSyncing(true);
     checkJWTAndSync();
   }, [activeTenant?.id, user?.id]);
 
@@ -221,7 +199,8 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    setIsSyncing(true);
+    // setActiveTenant is already non-blocking relative to provider render
+    isSyncingRef.current = true;
     
     try {
       const result = await callGateway('admin', 'set-active-tenant', { tenant_id: tenant.id });
@@ -255,7 +234,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
         description: 'Erro inesperado. Tente novamente.'
       });
     } finally {
-      setIsSyncing(false);
+      isSyncingRef.current = false;
     }
   }, [preferredTenantId, queryClient]);
 
@@ -266,7 +245,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
         activeTenant, 
         activeRole, // CORREÇÃO: expor role do tenant ativo
         setActiveTenant, 
-        loading: isLoading || isSyncing,
+        loading: isLoading,
         hasMultipleTenants,
         isFetched,
       }}
