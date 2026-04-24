@@ -178,9 +178,11 @@ if (!hasBackend) {
                 disableTransitionOnChange
               >
                 <QueryClientProvider client={queryClient}>
-                  <ActiveTenantProvider>
-                    <App />
-                  </ActiveTenantProvider>
+                  <AuthProvider>
+                    <ActiveTenantProvider>
+                      <App />
+                    </ActiveTenantProvider>
+                  </AuthProvider>
                 </QueryClientProvider>
               </ThemeProvider>
             </HelmetProvider>
