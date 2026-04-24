@@ -49,9 +49,19 @@ describe('agentReinstallCommand', () => {
     }
   });
 
-  it('handles fallback URL', () => {
-    const cmd = buildAgentReinstallCommand({ ...params, fallbackServerUrl: 'https://backup.com' });
-    expect(cmd).toContain('backup.com');
+  it('handles fallback URL when it points to a supabase host', () => {
+    const cmd = buildAgentReinstallCommand({
+      ...params,
+      fallbackServerUrl: 'https://backup.supabase.co',
+    });
+    expect(cmd).toContain('backup.supabase.co');
+  });
+
+  it('uses Invoke-WebRequest with explicit User-Agent (no Invoke-RestMethod)', () => {
+    const cmd = buildAgentReinstallCommand(params);
+    expect(cmd).toContain('Invoke-WebRequest');
+    expect(cmd).toContain('CyberShield-Reinstaller');
+    expect(cmd).not.toContain('Invoke-RestMethod');
   });
 
   it('escapes single quotes in values', () => {
