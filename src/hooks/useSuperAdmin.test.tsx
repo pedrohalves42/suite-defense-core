@@ -40,6 +40,8 @@ describe('useSuperAdmin', () => {
     vi.mocked(useAuth).mockReturnValue({
       user: null,
       loading: false,
+      session: null,
+      signOut: vi.fn(),
     })
 
     const { result } = renderHook(() => useSuperAdmin())
