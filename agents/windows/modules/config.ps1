@@ -10,6 +10,7 @@ $script:TempDir = "$env:TEMP\CyberShield"
 
 $script:Config = @{
     ApiEndpoint       = ""
+    ServerUrl         = "" # Base URL without /functions/v1/
     AgentId           = ""
     TenantId          = ""
     AgentToken        = ""
@@ -39,7 +40,15 @@ function Initialize-Config {
     # Load secrets from files (preferred) or params
     $script:Config.AgentToken = Get-SecretValue -Name "agent_token" -Fallback $AgentToken
     $script:Config.HmacSecret = Get-SecretValue -Name "hmac_secret" -Fallback $HmacSecret
-    $script:Config.ApiEndpoint = if ($ApiEndpoint) { $ApiEndpoint } else { $env:CYBERSHIELD_API_ENDPOINT }
+    
+    # URL Normalization
+    $rawEndpoint = if ($ApiEndpoint) { $ApiEndpoint } else { $env:CYBERSHIELD_API_ENDPOINT }
+    if ($rawEndpoint) {
+        $script:Config.ServerUrl = $rawEndpoint.TrimEnd('/') -replace '/functions/v1$', ''
+        $script:Config.ApiEndpoint = "$($script:Config.ServerUrl)/functions/v1"
+        $Global:ServerUrl = $script:Config.ApiEndpoint # Compat with older modules
+    }
+    
     $script:Config.AgentId = $env:CYBERSHIELD_AGENT_ID
     $script:Config.TenantId = $env:CYBERSHIELD_TENANT_ID
 }
