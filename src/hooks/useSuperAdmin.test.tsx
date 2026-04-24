@@ -40,6 +40,8 @@ describe('useSuperAdmin', () => {
     vi.mocked(useAuth).mockReturnValue({
       user: null,
       loading: false,
+      session: null,
+      signOut: vi.fn() as any,
     })
 
     const { result } = renderHook(() => useSuperAdmin())
@@ -57,6 +59,8 @@ describe('useSuperAdmin', () => {
     vi.mocked(useAuth).mockReturnValue({
       user: mockUser as any,
       loading: false,
+      session: null,
+      signOut: vi.fn() as any,
     })
 
     vi.mocked(supabase.rpc).mockResolvedValueOnce({
@@ -82,6 +86,8 @@ describe('useSuperAdmin', () => {
     vi.mocked(useAuth).mockReturnValue({
       user: mockUser as any,
       loading: false,
+      session: null,
+      signOut: vi.fn() as any,
     })
 
     vi.mocked(supabase.rpc).mockResolvedValueOnce({
@@ -104,6 +110,8 @@ describe('useSuperAdmin', () => {
     vi.mocked(useAuth).mockReturnValue({
       user: mockUser as any,
       loading: false,
+      session: null,
+      signOut: vi.fn() as any,
     })
 
     vi.mocked(supabase.rpc).mockResolvedValueOnce({
@@ -126,6 +134,8 @@ describe('useSuperAdmin', () => {
     vi.mocked(useAuth).mockReturnValue({
       user: null,
       loading: true,
+      session: null,
+      signOut: vi.fn() as any,
     })
 
     const { result } = renderHook(() => useSuperAdmin())
@@ -138,6 +148,8 @@ describe('useSuperAdmin', () => {
     vi.mocked(useAuth).mockReturnValue({
       user: mockUser as any,
       loading: false,
+      session: null,
+      signOut: vi.fn() as any,
     })
 
     vi.mocked(supabase.rpc).mockResolvedValueOnce({
@@ -159,6 +171,8 @@ describe('useSuperAdmin', () => {
     vi.mocked(useAuth).mockReturnValue({
       user: mockUser as any,
       loading: false,
+      session: null,
+      signOut: vi.fn() as any,
     })
 
     // Simulate slow RPC response
@@ -184,6 +198,8 @@ describe('useSuperAdmin', () => {
     mockUseAuth.mockReturnValue({
       user: mockUser as any,
       loading: false,
+      session: null,
+      signOut: vi.fn() as any,
     })
 
     vi.mocked(supabase.rpc).mockResolvedValue({
@@ -202,6 +218,8 @@ describe('useSuperAdmin', () => {
     mockUseAuth.mockReturnValue({
       user: newUser as any,
       loading: false,
+      session: null,
+      signOut: vi.fn() as any,
     })
 
     rerender()

@@ -135,6 +135,7 @@ if (!hasBackend) {
     import("next-themes"),
     import("react-helmet-async"),
     import("./hooks/useActiveTenant"),
+    import("./providers/AuthProvider"),
     import("./App"),
     import("./lib/storage"),
   ])
@@ -144,6 +145,7 @@ if (!hasBackend) {
         { ThemeProvider },
         { HelmetProvider },
         { ActiveTenantProvider },
+        { AuthProvider },
         { default: App },
         { startStorageCleanup },
       ]) => {
@@ -176,9 +178,11 @@ if (!hasBackend) {
                 disableTransitionOnChange
               >
                 <QueryClientProvider client={queryClient}>
-                  <ActiveTenantProvider>
-                    <App />
-                  </ActiveTenantProvider>
+                  <AuthProvider>
+                    <ActiveTenantProvider>
+                      <App />
+                    </ActiveTenantProvider>
+                  </AuthProvider>
                 </QueryClientProvider>
               </ThemeProvider>
             </HelmetProvider>

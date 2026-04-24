@@ -9,6 +9,8 @@ vi.mock('./useAuth', () => ({
   useAuth: () => ({
     user: { id: 'test-user-id', email: 'test@example.com' },
     loading: false,
+    session: null,
+    signOut: vi.fn(),
   }),
 }))
 

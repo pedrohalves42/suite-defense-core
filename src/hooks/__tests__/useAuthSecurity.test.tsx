@@ -48,7 +48,7 @@ vi.mock('@/hooks/useUserRole', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockUseAuth.mockReturnValue({ user: mockUser, loading: false });
+  mockUseAuth.mockReturnValue({ user: mockUser, loading: false, session: null, signOut: vi.fn() });
   mockListFactors.mockResolvedValue({ data: { totp: [] } });
   mockUseUserRole.mockReturnValue({ role: 'admin', isAdmin: true, isSuperAdmin: false, loading: false });
 });
