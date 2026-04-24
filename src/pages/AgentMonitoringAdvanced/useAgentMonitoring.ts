@@ -234,8 +234,8 @@ export function useAgentMonitoring() {
 
   const filteredAgents = useMemo(() => {
     return agents.filter((agent) => {
-      const matchesSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        agent.hostname?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (agent.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (agent.hostname?.toLowerCase() || '').includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'all' || 
         (statusFilter === 'online' && agent.is_online) ||
         (statusFilter === 'offline' && !agent.is_online);
