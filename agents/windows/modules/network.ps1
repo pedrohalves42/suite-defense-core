@@ -41,6 +41,7 @@ function Invoke-SecureRequest {
                 "User-Agent"    = "CyberShield-Agent/$Global:AgentVersion"
                 "X-Agent-Token" = $Global:AgentToken
                 "X-Agent-Name"  = $Global:AgentName
+                "Authorization" = "Bearer $Global:AgentToken" # SSA-009: Compatibility with older auth handlers
             }
             
             # FAIL-CLOSED: HMAC is mandatory for all requests

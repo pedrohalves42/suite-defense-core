@@ -43,13 +43,21 @@ export async function authenticateAgent(
   endpoint: string,
   options?: AuthenticateAgentOptions,
 ): Promise<AgentAuthResult> {
-  const agentToken = req.headers.get('X-Agent-Token');
+  let agentToken = req.headers.get('X-Agent-Token');
+
+  // Fallback to Authorization: Bearer <token>
+  if (!agentToken) {
+    const auth = req.headers.get('Authorization');
+    if (auth?.startsWith('Bearer ')) {
+      agentToken = auth.slice(7);
+    }
+  }
 
   if (!agentToken) {
     return {
       success: false,
       response: new Response(
-        JSON.stringify({ error: 'X-Agent-Token header required' }),
+        JSON.stringify({ error: 'X-Agent-Token header or Authorization: Bearer required' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       ),
     };
