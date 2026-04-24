@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger';
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Proactive token refresh before expiration
   const checkAndRefreshToken = async () => {
@@ -66,31 +67,49 @@ export const useAuth = () => {
       }
     });
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (!isMounted) return;
-      
-      if (error?.message?.includes('issued in the future')) {
-        const match = error.message.match(/(\d+)\s+(\d+)\s+(\d+)/);
-        if (match) {
-          const [_, issued, current, now] = match.map(Number);
-          const skewSeconds = Math.abs(current - now);
-          
-          if (skewSeconds > 60) {
-            toast({
-              title: 'Relogio do Sistema Dessincronizado',
-              description: `Diferenca de ${Math.floor(skewSeconds / 60)} minutos detectada.`,
-              variant: 'destructive',
-              duration: 10000,
-            });
+    const fetchSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (!isMounted) return;
+        
+        if (error) {
+          logger.error('Error fetching session', error);
+          if (retryCount < 2) {
+            setTimeout(() => {
+              setRetryCount(prev => prev + 1);
+            }, 1000 * (retryCount + 1));
+            return;
           }
         }
+        
+        if (error?.message?.includes('issued in the future')) {
+          const match = error.message.match(/(\d+)\s+(\d+)\s+(\d+)/);
+          if (match) {
+            const [_, issued, current, now] = match.map(Number);
+            const skewSeconds = Math.abs(current - now);
+            
+            if (skewSeconds > 60) {
+              toast({
+                title: 'Relógio do Sistema Dessincronizado',
+                description: `Diferença de ${Math.floor(skewSeconds / 60)} minutos detectada.`,
+                variant: 'destructive',
+                duration: 10000,
+              });
+            }
+          }
+        }
+        
+        logger.debug('Initial session retrieved', { hasSession: !!session });
+        setUser(session?.user ?? null);
+        setLoading(false);
+      } catch (err) {
+        logger.error('Unexpected error in useAuth', err);
+        if (isMounted) setLoading(false);
       }
-      
-      logger.debug('Initial session retrieved', { hasSession: !!session });
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    };
+
+    fetchSession();
 
     // Check token expiration every 2 minutes
     const tokenCheckInterval = setInterval(checkAndRefreshToken, 120000);
@@ -101,7 +120,7 @@ export const useAuth = () => {
       clearInterval(tokenCheckInterval);
       clearTimeout(loadingTimeout);
     };
-  }, []);
+  }, [retryCount]);
 
   return { user, loading };
 };
