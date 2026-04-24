@@ -1,5 +1,5 @@
 import { servePublic } from '../_shared/serve-public.ts';
-import { handleGetLatestAgentScript } from '../public-gateway/handlers/latest-agent-script.ts';
+import { handleGetLatestAgentScript } from '../_shared/handlers/latest-agent-script.ts';
 
 servePublic(async (req, ctx) => {
   const url = new URL(req.url);
@@ -8,6 +8,6 @@ servePublic(async (req, ctx) => {
     payload[key] = value;
   }
   
-  // Use the handler directly instead of proxying via fetch
+  // Use the shared handler directly to avoid bundling errors and extra network hops
   return await handleGetLatestAgentScript(ctx.supabase, req, ctx.requestId, payload);
 });
