@@ -183,12 +183,10 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
     };
 
     checkJWTAndSync();
-  }, [activeTenant?.id, user?.id]);
+  }, [activeTenant?.id, user?.id, queryClient]);
 
   const setActiveTenant = useCallback(async (tenant: Tenant) => {
-    const previousTenantId = preferredTenantId;
-    
-    if (previousTenantId === tenant.id) {
+    if (activeTenant?.id === tenant.id) {
       return;
     }
 
