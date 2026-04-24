@@ -34,7 +34,7 @@ import { handleGetReinstallByName } from './handlers/reinstall-by-name.ts';
 
 // Phase 7 Handlers (inlined from standalone servePublic functions)
 import { handleGetDiagnosticScript } from './handlers/diagnostic-script.ts';
-import { handleGetLatestAgentScript } from './handlers/latest-agent-script.ts';
+import { handleGetLatestAgentScript } from '../_shared/handlers/latest-agent-script.ts';
 import { handleServeInstaller } from './handlers/installer.ts';
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
