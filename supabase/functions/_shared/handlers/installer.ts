@@ -3,16 +3,16 @@
  * Generates custom agent installer scripts from enrollment keys.
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { buildCorsHeaders } from '../../_shared/cors.ts';
-import { requireEnv } from '../../_shared/env.ts';
-import { logger } from '../../_shared/logger.ts';
-import { checkRateLimit } from '../../_shared/rate-limit.ts';
-import { withTimeout, createTimeoutResponse } from '../../_shared/timeout.ts';
-import { INSTALLER_VERSION, LAST_UPDATED, getVersionInfo } from '../../_shared/installer-version.ts';
-import { validateNoPlaceholders, validateInstallerScript } from '../../_shared/installer-validation.ts';
-import { resolveAgent } from '../../_shared/installer-agent-resolver.ts';
-import { buildInstallerScript } from '../../_shared/installer-script-builder.ts';
-import { persistInstallerHash, trackDownloadEvent } from '../../_shared/installer-telemetry.ts';
+import { buildCorsHeaders } from '../cors.ts';
+import { requireEnv } from '../env.ts';
+import { logger } from '../logger.ts';
+import { checkRateLimit } from '../rate-limit.ts';
+import { withTimeout, createTimeoutResponse } from '../timeout.ts';
+import { INSTALLER_VERSION, LAST_UPDATED, getVersionInfo } from '../installer-version.ts';
+import { validateNoPlaceholders, validateInstallerScript } from '../installer-validation.ts';
+import { resolveAgent } from '../installer-agent-resolver.ts';
+import { buildInstallerScript } from '../installer-script-builder.ts';
+import { persistInstallerHash, trackDownloadEvent } from '../installer-telemetry.ts';
 
 const SUPABASE_URL = requireEnv('SUPABASE_URL');
 
