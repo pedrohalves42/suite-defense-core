@@ -13,10 +13,19 @@ servePublic(async (req, ctx) => {
     payload[key] = value;
   }
 
-  const gwUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/public-gateway`;
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+  const gwUrl = `${supabaseUrl}/functions/v1/public-gateway`;
+  
+  console.log(`[get-latest-agent-script] Proxying to: ${gwUrl} with action: public:get-latest-agent-script`);
+  
   const resp = await fetchWithTimeout(gwUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Request-ID': ctx.requestId, 'origin': req.headers.get('origin') || '' },
+    headers: { 
+      'Content-Type': 'application/json', 
+      'X-Request-ID': ctx.requestId, 
+      'origin': req.headers.get('origin') || '',
+      'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}` // Ensure we can call our own gateway
+    },
     body: JSON.stringify({ action: 'public:get-latest-agent-script', payload }),
     timeoutMs: TIMEOUT_TIERS.INTERNAL,
   });
