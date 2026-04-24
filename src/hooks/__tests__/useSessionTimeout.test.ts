@@ -22,7 +22,7 @@ vi.mock('@/lib/logger', () => ({
 const mockUser = { id: 'user-1', app_metadata: { is_super_admin: false, tenants: [], active_tenant_id: null } };
 
 vi.mock('@/hooks/useAuth', () => ({
-  useAuth: () => ({ user: mockUser }),
+  useAuth: () => ({ user: mockUser, loading: false, session: null, signOut: vi.fn() as any }),
 }));
 
 import { useSessionTimeout } from '../useSessionTimeout';
