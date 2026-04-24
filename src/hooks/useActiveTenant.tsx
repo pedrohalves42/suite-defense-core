@@ -78,31 +78,20 @@ async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
 }
 
 export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
-  // V-1014 FIX: Never use localStorage as initial state source
-  // localStorage is only used for UX persistence AFTER JWT validation
-  // The actual tenant_id source of truth is always the JWT/backend
   const [activeTenantId, setActiveTenantId] = useState<string | null>(null);
-  const syncInProgressRef = useRef<string | null>(null);
-  
-  // Syncing logic (non-blocking for UI)
   const isSyncingRef = useRef(false);
 
-  const sessionTenantId =
-    user?.app_metadata && typeof user.app_metadata.active_tenant_id === 'string'
-      ? user.app_metadata.active_tenant_id
-      : null;
-
-  const preferredTenantId = activeTenantId ?? sessionTenantId;
-
+  // Sync state between current user and selection
   useEffect(() => {
-    setActiveTenantId(null);
-  }, [user?.id]);
+    if (!authLoading && !user) {
+      setActiveTenantId(null);
+    }
+  }, [user?.id, authLoading]);
 
   // Fetch all tenants for the user
-  // PATCH #4: Expose isFetched for ProtectedRoute to prevent premature redirects
-  const { data: userTenantRoles = [], isLoading, isFetched } = useQuery({
+  const { data: userTenantRoles = [], isLoading: queryLoading, isFetched } = useQuery({
     queryKey: ['user-tenants', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -118,14 +107,12 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) throw error;
       
-      // Filter out any null tenants and deduplicate by tenant_id
       const uniqueTenants = new Map<string, UserTenantRole>();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (data || []).forEach((role: Record<string, unknown>) => {
-        if (role.tenant && !uniqueTenants.has(role.tenant_id as string)) {
-          uniqueTenants.set(role.tenant_id as string, {
-            tenant_id: role.tenant_id as string,
-            role: role.role as string,
+      (data || []).forEach((role: any) => {
+        if (role.tenant && !uniqueTenants.has(role.tenant_id)) {
+          uniqueTenants.set(role.tenant_id, {
+            tenant_id: role.tenant_id,
+            role: role.role,
             tenant: role.tenant as Tenant
           });
         }
@@ -134,27 +121,33 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
       return Array.from(uniqueTenants.values());
     },
     enabled: !!user,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 10 * 60 * 1000,
   });
+
+  const loading = authLoading || queryLoading;
 
   const tenants = userTenantRoles.map(r => r.tenant);
   const hasMultipleTenants = tenants.length > 1;
 
-  // Determine active tenant
-  // V-1014: localStorage is used as a hint for UX preference only,
-  // but the actual selection is validated against server-fetched tenants
-  // V-12004 FIX: Compute activeTenant without calling setState during render
   const activeTenant = useMemo(() => {
     if (tenants.length === 0) return null;
     
-    if (preferredTenantId) {
-      const found = tenants.find(t => t.id === preferredTenantId);
+    // 1. Explicit selection in state
+    if (activeTenantId) {
+      const found = tenants.find(t => t.id === activeTenantId);
+      if (found) return found;
+    }
+
+    // 2. JWT session preference
+    const sessionTenantId = user?.app_metadata?.active_tenant_id;
+    if (sessionTenantId) {
+      const found = tenants.find(t => t.id === sessionTenantId);
       if (found) return found;
     }
     
-    // Default to first tenant only when session has no active tenant yet
+    // 3. Fallback to first
     return tenants[0];
-  }, [tenants, preferredTenantId]);
+  }, [tenants, activeTenantId, user?.app_metadata?.active_tenant_id]);
 
   // CORREÇÃO: Calcular role baseada no tenant ATIVO
   const activeRole = useMemo((): AppRole | null => {
@@ -245,7 +238,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
         activeTenant, 
         activeRole, // CORREÇÃO: expor role do tenant ativo
         setActiveTenant, 
-        loading: isLoading,
+        loading,
         hasMultipleTenants,
         isFetched,
       }}
