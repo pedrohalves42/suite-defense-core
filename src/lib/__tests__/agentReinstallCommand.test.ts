@@ -11,8 +11,12 @@ describe('agentReinstallCommand', () => {
 
   it('generates command string', () => {
     const cmd = buildAgentReinstallCommand(params);
-    expect(cmd).toBeTruthy();
     expect(typeof cmd).toBe('string');
+    expect(cmd.length).toBeGreaterThan(0);
+    // New loader architecture check (v6.2)
+    expect(cmd).toContain('iwr -useb');
+    expect(cmd).toContain('public:get-reinstall-script');
+    expect(cmd).toContain('scriptblock');
   });
 
   it('includes server URL', () => {
@@ -25,53 +29,26 @@ describe('agentReinstallCommand', () => {
     expect(cmd).toContain('PC-001');
   });
 
-  it('uses secure file storage for tokens', () => {
+  it('uses secure parameters passing', () => {
     const cmd = buildAgentReinstallCommand(params);
-    expect(cmd).toContain('secrets');
-    expect(cmd).toContain('agent_token');
-    expect(cmd).toContain('hmac_secret');
-  });
-
-  it('accepts the bundled v6 agent script markers', () => {
-    const cmd = buildAgentReinstallCommand(params);
-    expect(cmd).toContain('function\\s+Initialize-Config');
-    expect(cmd).toContain('function\\s+Main');
-    expect(cmd).toContain('Start-HeartbeatLoop');
-  });
-
-  it('does NOT include tokens in task arguments', () => {
-    const cmd = buildAgentReinstallCommand(params);
-    // The task action arguments should only contain -ServerUrl and -AgentName, not tokens
-    const taskArgMatch = cmd.match(/\$taskArgStr\s*=\s*'([^']*)'/);
-    if (taskArgMatch) {
-      expect(taskArgMatch[1]).not.toContain('AgentToken');
-      expect(taskArgMatch[1]).not.toContain('HMACSecret');
-    }
-  });
-
-  it('handles fallback URL when it points to a supabase host', () => {
-    const cmd = buildAgentReinstallCommand({
-      ...params,
-      fallbackServerUrl: 'https://backup.supabase.co',
-    });
-    expect(cmd).toContain('backup.supabase.co');
-  });
-
-  it('uses Invoke-WebRequest with explicit User-Agent (no Invoke-RestMethod)', () => {
-    const cmd = buildAgentReinstallCommand(params);
-    expect(cmd).toContain('Invoke-WebRequest');
-    expect(cmd).toContain('CyberShield-Reinstaller');
-    expect(cmd).not.toContain('Invoke-RestMethod');
+    // Should pass tokens as variables to the loader
+    expect(cmd).toContain('$t=\'token123\'');
+    expect(cmd).toContain('$s=\'secret456\'');
   });
 
   it('escapes single quotes in values', () => {
-    const cmd = buildAgentReinstallCommand({ ...params, agentName: "PC's Test" });
-    expect(cmd).toContain("PC''s Test");
+    const cmd = buildAgentReinstallCommand({
+      ...params,
+      agentName: "O'Conner",
+    });
+    expect(cmd).toContain("'O''Conner'");
   });
 
-  it('creates scheduled task', () => {
-    const cmd = buildAgentReinstallCommand(params);
-    expect(cmd).toContain('Register-ScheduledTask');
-    expect(cmd).toContain('CyberShieldAgent');
+  it('handles fallback URL', () => {
+    const cmd = buildAgentReinstallCommand({
+      ...params,
+      fallbackServerUrl: 'https://other.supabase.co',
+    });
+    expect(cmd).toContain("'https://other.supabase.co'");
   });
 });
