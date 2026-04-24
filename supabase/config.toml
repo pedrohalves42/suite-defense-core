@@ -739,7 +739,20 @@ verify_jwt = true
 
 # (publish-threat-ioc already defined above at line 746)
 
-# === Admin Functions (missing from config, already use middleware) ===
+# === Public Stub Handlers (Backward Compatibility) ===
+[functions.get-latest-agent-script]
+verify_jwt = false
+
+[functions.get-diagnostic-script]
+verify_jwt = false
+
+[functions.serve-installer]
+verify_jwt = false
+
+[functions.public-gateway]
+verify_jwt = false
+
+# === Admin Functions (already use middleware) ===
 [functions.auto-remediate]
 verify_jwt = true
 
