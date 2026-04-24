@@ -3,8 +3,8 @@
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { checkRateLimit } from '../../_shared/rate-limit.ts';
-import { logger } from '../../_shared/logger.ts';
-import { buildCorsHeaders } from '../../_shared/cors.ts';
+import { logger } from '../logger.ts';
+import { buildCorsHeaders } from '../cors.ts';
 
 const DIAGNOSTIC_SCRIPT = `#Requires -RunAsAdministrator
 # CyberShield Agent Diagnostic Script
