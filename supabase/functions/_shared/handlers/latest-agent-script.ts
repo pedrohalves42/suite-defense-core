@@ -3,10 +3,10 @@
  * Uses the canonical prepareAgentScriptContent pipeline.
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { logger } from '../../_shared/logger.ts';
-import { buildCorsHeaders } from '../../_shared/cors.ts';
-import { prepareAgentScriptContent } from '../../_shared/agent-script-preparation.ts';
-import { resignIfNeeded } from '../../_shared/script-resigner.ts';
+import { logger } from '../logger.ts';
+import { buildCorsHeaders } from '../cors.ts';
+import { prepareAgentScriptContent } from '../agent-script-preparation.ts';
+import { resignIfNeeded } from '../script-resigner.ts';
 
 function normalizeVersion(v: string | null | undefined): string {
   return v?.replace(/^v/i, '').trim() || '';
