@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger';
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Proactive token refresh before expiration
   const checkAndRefreshToken = async () => {
