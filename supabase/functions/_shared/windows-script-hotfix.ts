@@ -47,6 +47,10 @@ import {
 // Key distribution
 import { hotfixKeyDistribution } from './hotfix/feature-key-distribution.ts';
 
+import {
+  hotfixUrlNormalization, hotfixAuthHeaders
+} from './hotfix/connectivity-fixes.ts';
+
 // Feature additions
 import {
   hotfixFailopenUnsigned, hotfixFailopenSig, hotfixAclSid,
@@ -138,6 +142,10 @@ export function applyWindowsScriptHotfix(script: string): WindowsScriptHotfixRes
   hotfixUnifiedPoll(ctx);
   hotfixForceUpdateTaskRetarget(ctx);
   hotfixUsbWhitelistNoise(ctx);
+
+  // 9. Connectivity & Auth (SSA-009/SSA-010)
+  hotfixUrlNormalization(ctx);
+  hotfixAuthHeaders(ctx);
 
   return { content: ctx.content, changed: ctx.content !== script, reasons: ctx.reasons };
 }
