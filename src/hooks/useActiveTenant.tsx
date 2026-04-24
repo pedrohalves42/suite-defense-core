@@ -1,3 +1,4 @@
+// v2: provider rewritten to use AuthProvider context
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
