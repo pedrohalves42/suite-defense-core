@@ -227,7 +227,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       isSyncingRef.current = false;
     }
-  }, [preferredTenantId, queryClient]);
+  }, [activeTenant?.id, queryClient]);
 
   return (
     <ActiveTenantContext.Provider 
