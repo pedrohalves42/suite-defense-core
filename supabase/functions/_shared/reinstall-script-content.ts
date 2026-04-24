@@ -45,25 +45,25 @@ Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction Silen
 }
 
 # 3. Preparacao de diretorios e seguranca
-$dir = "$env:ProgramData\\CyberShield"
-$dataDir = "$dir\\data"
-$secretsDir = "$dir\\secrets"
+$dir = "$env:ProgramData\CyberShield"
+$dataDir = "$dir\data"
+$secretsDir = "$dir\secrets"
 
 @($dir, $dataDir, $secretsDir) | ForEach-Object {
     if (!(Test-Path $_)) { New-Item -ItemType Directory -Path $_ -Force | Out-Null }
 }
 
 # Limpar scripts antigos
-Get-ChildItem "$dir\\cybershield-agent-*.ps1" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+Get-ChildItem "$dir\cybershield-agent-*.ps1" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 
 # Limpar cache de hash (forcar re-validacao)
-@("$dataDir\\expected_script_hash.json", "$dataDir\\expected_script_hash.txt") | ForEach-Object {
+@("$dataDir\expected_script_hash.json", "$dataDir\expected_script_hash.txt") | ForEach-Object {
     if (Test-Path $_) { Remove-Item $_ -Force -ErrorAction SilentlyContinue }
 }
 
 # Aplicar ACLs restritas aos segredos
 try {
-    $acl = New-Object System.Security.AccessControl.DirectorySecurity
+    $acl = Get-Acl -Path $secretsDir
     $acl.SetAccessRuleProtection($true, $false)
     $systemSid = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-18')
     $adminSid = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')
@@ -75,15 +75,18 @@ try {
 }
 
 # 4. Armazenar credenciais
-[System.IO.File]::WriteAllText("$secretsDir\\agent_token", $agentToken)
-[System.IO.File]::WriteAllText("$secretsDir\\hmac_secret", $hmacSecret)
+[System.IO.File]::WriteAllText("$secretsDir\agent_token", $agentToken)
+[System.IO.File]::WriteAllText("$secretsDir\hmac_secret", $hmacSecret)
 Write-Log "Tokens armazenados em seguranca em $secretsDir" "Green"
 
 # 5. Download do script principal com tratamento de borda (Cloudflare)
 $baseUrls = @()
 if ($serverUrl) { $baseUrls += $serverUrl.Trim() }
-if ($fallbackServerUrl -and $fallbackServerUrl -ne $serverUrl -and $fallbackServerUrl -match 'supabase\\.co|/functions/v1') {
-    $baseUrls += $fallbackServerUrl.Trim()
+if ($fallbackServerUrl -and $fallbackServerUrl -ne $serverUrl) {
+    # Allow any valid HTTPS URL as fallback
+    if ($fallbackServerUrl -match '^https://') {
+        $baseUrls += $fallbackServerUrl.Trim()
+    }
 }
 $baseUrls = $baseUrls | Select-Object -Unique
 
@@ -94,7 +97,7 @@ $validateScript = {
     if ($content -match '(?i)<html|<!doctype html|<body|cf-browser-verification|challenge-platform') {
         return @{ Ok=$false; Reason='HTML/Cloudflare challenge detected' }
     }
-    $checks = @('param\\(', 'Initialize-Config', 'Main', 'Start-HeartbeatLoop', 'Invoke-SecureRequest')
+    $checks = @('param\(', 'Initialize-Config', 'Main', 'Start-HeartbeatLoop', 'Invoke-SecureRequest')
     foreach ($c in $checks) {
         if ($content -notmatch $c) { return @{ Ok=$false; Reason="Missing $c" } }
     }
@@ -104,7 +107,7 @@ $validateScript = {
 $scriptContent = $null
 $resolvedUrl = $null
 $headers = @{
-    'User-Agent' = 'CyberShield-Reinstaller/6.2'
+    'User-Agent' = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) CyberShield/6.2'
     'Accept' = 'text/plain, text/x-powershell'
     'Cache-Control' = 'no-cache'
     'Pragma' = 'no-cache'
@@ -138,17 +141,18 @@ if (!$scriptContent) {
 }
 
 # 6. Escrita e registro da tarefa agendada
-$scriptPath = "$dir\\cybershield-agent-$agentName.ps1"
+$scriptPath = "$dir\cybershield-agent-$agentName.ps1"
 [System.IO.File]::WriteAllText($scriptPath, $scriptContent, [System.Text.UTF8Encoding]::new($true))
 
 $effectiveUrl = if ($resolvedUrl) { $resolvedUrl } else { $serverUrl }
 $cfg = @{ ApiEndpoint=$effectiveUrl; ServerUrl=$effectiveUrl; AgentToken=$agentToken; HmacSecret=$hmacSecret; AgentName=$agentName }
-$cfg | ConvertTo-Json | Set-Content -Path "$dir\\config.json" -Encoding UTF8 -Force
+$cfg | ConvertTo-Json | Set-Content -Path "$dir\config.json" -Encoding UTF8 -Force
 
 [Environment]::SetEnvironmentVariable('CYBERSHIELD_AGENT_NAME', $agentName, 'Machine')
 [Environment]::SetEnvironmentVariable('CYBERSHIELD_API_ENDPOINT', $effectiveUrl, 'Machine')
 
-$taskArg = "-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File \`"$scriptPath\`" -ApiEndpoint \`"$effectiveUrl\`""
+# Explicitly pass all credentials to the task argument to avoid bootstrap failures
+$taskArg = "-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File ""$scriptPath"" -ApiEndpoint ""$effectiveUrl"" -AgentToken ""$agentToken"" -HmacSecret ""$hmacSecret"""
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $taskArg
 $trigger1 = New-ScheduledTaskTrigger -AtStartup
 $trigger2 = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 365)
