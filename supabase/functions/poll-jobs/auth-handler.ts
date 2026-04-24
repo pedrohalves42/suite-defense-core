@@ -38,7 +38,16 @@ export async function authenticateAndValidateAgent(
   supabase: SupabaseClient,
   origin: string | null,
 ): Promise<{ success: true; agent: AuthenticatedAgent } | { success: false; response: Response }> {
-  const agentToken = req.headers.get('X-Agent-Token');
+  let agentToken = req.headers.get('X-Agent-Token');
+
+  // SSA-009 Fallback: Support Authorization: Bearer <token> from newer agents
+  if (!agentToken) {
+    const auth = req.headers.get('Authorization');
+    if (auth?.startsWith('Bearer ')) {
+      agentToken = auth.slice(7);
+    }
+  }
+
   if (!agentToken) {
     return {
       success: false,
