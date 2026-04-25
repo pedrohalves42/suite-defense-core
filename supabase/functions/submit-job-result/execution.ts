@@ -150,16 +150,16 @@ export async function finalizeExecution(ctx: SubmitContext): Promise<ExecutionRe
         p_execution_id: execution_id,
         p_agent_id: agent.id,
         p_status: status,
-        p_started_at: started_at || null,
+        p_started_at: started_at || new Date().toISOString(),
         p_finished_at: finished_at || new Date().toISOString(),
-        p_output_hash: outputHash,
-        p_error_message: error_message ? sanitizeErrorMessage(error_message) : null,
-        p_execution_time_seconds: execution_time_seconds || null,
-        p_result_signature: result_signature || null,
+        p_output_hash: outputHash ?? undefined,
+        p_error_message: error_message ? sanitizeErrorMessage(error_message) : undefined,
+        p_execution_time_seconds: execution_time_seconds ?? undefined,
+        p_result_signature: result_signature ?? undefined,
         p_signature_verified: sigResult.verified,
-        p_execution_hash: execution_hash || null,
-        p_previous_execution_hash: previous_execution_hash || null,
-        p_execution_index: execution_index ?? null
+        p_execution_hash: execution_hash ?? undefined,
+        p_previous_execution_hash: previous_execution_hash ?? undefined,
+        p_execution_index: execution_index ?? undefined
       })
     
     if (execError) {
@@ -169,9 +169,9 @@ export async function finalizeExecution(ctx: SubmitContext): Promise<ExecutionRe
         job_id,
         agent: agent.agent_name
       })
-    } else if (execResult?.success) {
+    } else if (execResult && typeof execResult === 'object' && 'success' in execResult && (execResult as any).success) {
       executionFinalized = true
-    } else if (execResult?.error) {
+    } else if (execResult && typeof execResult === 'object' && 'error' in execResult && (execResult as any).error) {
       logger.warn('[submit-job-result] [AUDIT_TRAIL] Execution finalization failed', {
         result: execResult,
         job_id,
@@ -199,16 +199,16 @@ export async function finalizeExecution(ctx: SubmitContext): Promise<ExecutionRe
           p_execution_id: existingExecution.id,
           p_agent_id: agent.id,
           p_status: status,
-          p_started_at: started_at || null,
+          p_started_at: started_at || new Date().toISOString(),
           p_finished_at: finished_at || new Date().toISOString(),
-          p_output_hash: outputHash,
-          p_error_message: error_message ? sanitizeErrorMessage(error_message) : null,
-          p_execution_time_seconds: execution_time_seconds || null,
-          p_result_signature: null,
+          p_output_hash: outputHash ?? undefined,
+          p_error_message: error_message ? sanitizeErrorMessage(error_message) : undefined,
+          p_execution_time_seconds: execution_time_seconds ?? undefined,
+          p_result_signature: undefined,
           p_signature_verified: false
         })
       
-      if (!execError && execResult?.success) {
+      if (!execError && execResult && typeof execResult === 'object' && 'success' in execResult && (execResult as any).success) {
         executionFinalized = true
       }
     } else {
@@ -227,14 +227,14 @@ export async function finalizeExecution(ctx: SubmitContext): Promise<ExecutionRe
           agent_name: agent.agent_name,
           nonce: retroNonce,
           execution_index: 0,
-          payload_hash: ctx.job.payload_hash,
+          payload_hash: ctx.job.payload_hash || 'PENDING',
           claimed_at: new Date().toISOString(),
           started_at: started_at || new Date().toISOString(),
           finished_at: finished_at || new Date().toISOString(),
           status: status,
-          output_hash: outputHash,
-          error_message: error_message ? sanitizeErrorMessage(error_message) : null,
-          execution_time_seconds: execution_time_seconds || null
+          output_hash: outputHash ?? undefined,
+          error_message: error_message ? sanitizeErrorMessage(error_message) : undefined,
+          execution_time_seconds: execution_time_seconds ?? undefined
         })
       
       if (insertError) {

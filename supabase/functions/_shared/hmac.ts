@@ -292,7 +292,7 @@ export async function verifyHmacSignature(
           hit_count: 1,
         },
         { onConflict: 'agent_id' },
-      ).then(({ error }) => {
+      ).then(({ error }: { error: any }) => {
         if (error) logger.warn('[HMAC] Cache update failed', { error: error.message });
       });
     }

@@ -370,7 +370,7 @@ function cspBlobToSpki(cspBlob: Uint8Array): ArrayBuffer {
   const bitStringDer = derTag(0x03, bitString)
   const spki = derSequence(new Uint8Array([...algorithmId, ...bitStringDer]))
   
-  return spki.buffer
+  return spki.buffer as ArrayBuffer
 }
 
 function derTag(tag: number, content: Uint8Array): Uint8Array {

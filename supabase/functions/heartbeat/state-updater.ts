@@ -9,6 +9,7 @@
 
 import { logger } from '../_shared/logger.ts'
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
+import { Database } from '../_shared/database.types.ts'
 import type { AgentContext, AgentUpdate, OSInfo } from './types.ts'
 
 // Re-export types used by callers
@@ -21,7 +22,7 @@ export const TELEMETRY_THROTTLE_MS = 5 * 60 * 1000
  * Update agent heartbeat status in DB.
  */
 export async function updateAgentStatus(
-  supabase: any,
+  supabase: SupabaseClient<Database>,
   agentId: string,
   agentName: string,
   updateData: AgentUpdate & { last_telemetry_at?: string },
@@ -48,7 +49,7 @@ export async function updateAgentStatus(
  * Fire-and-forget semantics — failures are logged but don't block heartbeat response.
  */
 export async function executeParallelOps(
-  supabase: any,
+  supabase: SupabaseClient<Database>,
   agent: AgentContext,
   osInfo: OSInfo,
   shouldInsertTelemetry: boolean,
@@ -90,7 +91,7 @@ export async function executeParallelOps(
 }
 
 async function insertSystemMetrics(
-  supabase: any,
+  supabase: SupabaseClient<Database>,
   agent: AgentContext,
   metrics: NonNullable<OSInfo['system_metrics']>,
 ): Promise<void> {
@@ -130,10 +131,10 @@ async function insertSystemMetrics(
 }
 
 async function insertProcessData(
-  supabase: any,
+  supabase: SupabaseClient<Database>,
   agent: AgentContext,
   processesPayload: NonNullable<OSInfo['processes']>,
-  processAnomalies: unknown[] | undefined,
+  processAnomalies: any[] | undefined,
 ): Promise<void> {
   const allProcs: any[] = []
   const seenPids = new Set<number>()
