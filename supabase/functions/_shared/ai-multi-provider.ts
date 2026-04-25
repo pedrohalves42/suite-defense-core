@@ -99,7 +99,15 @@ async function persistAIMetricsWithProvider(data: {
       }
     );
     await supabase.from('ai_inference_metrics').insert({
-// ... keep existing code
+      function_name: data.function_name, model: data.model, provider: data.provider,
+      latency_ms: data.latency_ms, success: data.success,
+      tokens_total: data.tokens_total || null, tokens_prompt: data.tokens_prompt || null,
+      tokens_completion: data.tokens_completion || null, tenant_id: data.tenant_id || null,
+      used_fallback: data.used_fallback, cost_usd: data.cost_usd || 0,
+      error: data.error || null, created_at: new Date().toISOString(),
+    });
+  } catch (err) { logger.warn('[AI Metrics] Failed to persist:', err); }
+}
 
 // ============ MAIN COMPLETION FUNCTION ============
 
@@ -111,7 +119,7 @@ export async function aiComplete(request: AICompletionRequest): Promise<AIComple
 
   // Cache Lookup
   let cacheUseCase: AICacheUseCase | null = null;
-  let cacheResult: Awaited<ReturnType<AICacheUseCase['lookup']>> | null = null;
+  let cacheResult: any = null;
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
