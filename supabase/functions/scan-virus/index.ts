@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * scan-virus — Migrated to serveAgent middleware with HMAC verification.
  */

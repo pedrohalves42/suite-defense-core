@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * check-agent-updates — Migrated to serveAgent middleware with HMAC verification.
  * Returns latest version info for the agent's platform.

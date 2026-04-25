@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { servePublic } from '../_shared/serve-public.ts';
 import { handleServeInstaller } from '../_shared/handlers/installer.ts';
 

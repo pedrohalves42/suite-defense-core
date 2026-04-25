@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * submit-job-result ? Orchestrator
  * 

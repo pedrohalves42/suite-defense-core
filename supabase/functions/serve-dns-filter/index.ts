@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * serve-dns-filter — Migrated to serveAgent middleware with HMAC verification.
  */

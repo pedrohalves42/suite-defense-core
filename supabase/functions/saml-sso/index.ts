@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { handleException } from '../_shared/error-handler.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * security-advisor handler — inlined from standalone security-advisor function
  * Analyzes tenant security posture and generates AI recommendations

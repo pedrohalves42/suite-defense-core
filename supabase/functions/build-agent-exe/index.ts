@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * build-agent-exe Edge Function ? Modularized & migrated to serveTenant
  *

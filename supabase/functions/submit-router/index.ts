@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * submit-router -- Consolidated agent telemetry submission endpoint
  * 

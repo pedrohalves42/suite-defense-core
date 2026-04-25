@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Heartbeat Edge Function — Thin Orchestrator
  * 

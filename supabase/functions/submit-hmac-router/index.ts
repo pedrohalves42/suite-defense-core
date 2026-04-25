@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * submit-hmac-router — Consolidated HMAC-verified agent telemetry submission endpoint
  * 

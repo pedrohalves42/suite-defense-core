@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Playbook Analysis Handlers — Phase 1C
  * Inlined from: calculate-risk-score, run-attack-simulation

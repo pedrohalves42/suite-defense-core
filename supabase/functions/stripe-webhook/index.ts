@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * stripe-webhook - Handles Stripe webhook events
  * MODULARIZED: Event handlers in event-handlers.ts

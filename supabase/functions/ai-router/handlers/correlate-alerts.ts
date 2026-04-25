@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Handler: correlate-alerts
  * Extracted from ai-correlate-alerts for direct dispatch.

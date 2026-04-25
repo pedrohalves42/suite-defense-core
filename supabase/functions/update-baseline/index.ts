@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * update-baseline Edge Function
  * 

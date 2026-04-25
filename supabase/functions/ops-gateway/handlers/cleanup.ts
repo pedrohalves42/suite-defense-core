@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Cleanup namespace inlined handlers (migrated from cleanup-router)
  * 

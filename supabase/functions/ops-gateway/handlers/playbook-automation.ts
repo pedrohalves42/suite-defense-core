@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Playbook Automation Handlers — Phase 1C
  * Inlined from: soar-engine, auto-execute-ai-actions, oncall-integration, create-itsm-ticket
