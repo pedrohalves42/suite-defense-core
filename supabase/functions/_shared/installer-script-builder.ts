@@ -106,14 +106,24 @@ export async function buildInstallerScript(
     );
   }
 
+  // Securely escape values for PowerShell and Shell templates to prevent injection
+  const escapeValue = (val: string, p: string) => {
+    if (p === 'windows') {
+      // PowerShell escaping: escape single quotes by doubling them
+      return val.replace(/'/g, "''");
+    }
+    // Shell escaping (Linux/macOS): simple escape for single quotes
+    return val.replace(/'/g, "'\\''");
+  };
+
   templateContent = templateContent
-    .replace(/\{\{AGENT_TOKEN\}\}/g, () => agentToken)
-    .replace(/\{\{HMAC_SECRET\}\}/g, () => agentData.hmac_secret)
-    .replace(/\{\{SERVER_URL\}\}/g, () => supabaseUrl)
+    .replace(/\{\{AGENT_TOKEN\}\}/g, () => escapeValue(agentToken, platform))
+    .replace(/\{\{HMAC_SECRET\}\}/g, () => escapeValue(agentData.hmac_secret, platform))
+    .replace(/\{\{SERVER_URL\}\}/g, () => escapeValue(supabaseUrl, platform))
     .replace(/\{\{POLL_INTERVAL\}\}/g, '60')
-    .replace(/\{\{AGENT_HASH\}\}/g, () => agentScriptHash)
-    .replace(/\{\{AGENT_SCRIPT_CONTENT\}\}/g, () => agentScriptContent)
-    .replace(/\{\{AGENT_NAME\}\}/g, () => agentData.agent_name)
+    .replace(/\{\{AGENT_HASH\}\}/g, () => escapeValue(agentScriptHash, platform))
+    .replace(/\{\{AGENT_SCRIPT_CONTENT\}\}/g, () => agentScriptContent) // Content already validated and managed separately
+    .replace(/\{\{AGENT_NAME\}\}/g, () => escapeValue(agentData.agent_name, platform))
     .replace(/\{\{AGENT_VERSION\}\}/g, '3.0.0')
     .replace(/\{\{AGENT_SCRIPT_URL\}\}/g, () => '')
     .replace(/\{\{INSTALLER_VERSION\}\}/g, INSTALLER_VERSION)
