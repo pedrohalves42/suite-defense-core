@@ -152,6 +152,7 @@ export async function handleReEnrollment(
 
 /**
  * Creates a new agent record.
+ * Uses onConflict to handle rare race conditions.
  */
 export async function createNewAgent(
   supabase: SupabaseClient,
@@ -159,15 +160,21 @@ export async function createNewAgent(
   agentName: string,
   hmacSecret: string,
 ): Promise<string> {
-  const { data: newAgent } = await supabase.from('agents').insert({
-    tenant_id: tenantId,
-    agent_name: agentName,
-    hmac_secret: hmacSecret,
-    status: 'active',
-  }).select('id')
-    .order('enrolled_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const { data: newAgent, error } = await supabase.from('agents').upsert(
+    {
+      tenant_id: tenantId,
+      agent_name: agentName,
+      hmac_secret: hmacSecret,
+      status: 'active',
+      agent_state: 'healthy', // Set initial state
+    },
+    { onConflict: 'tenant_id, agent_name' }
+  ).select('id').maybeSingle();
 
-  return newAgent!.id;
+  if (error || !newAgent) {
+    logger.error('Failed to create/upsert agent', { error, agentName, tenantId });
+    throw error || new Error('Failed to create agent record');
+  }
+
+  return newAgent.id;
 }
