@@ -178,10 +178,13 @@ export async function handleGetInstallationPipelineMetrics(supabase: SB, request
 
 interface SilentJob { id: string; tenant_id: string | null; job_name: string; cron_expression: string | null; last_run_at: string | null; next_run_at: string | null; status: string | null; enabled: boolean | null; }
 
-function deriveHealthStatus(job: SilentJob): 'OK' | 'NEVER_RAN' | 'STALE' {
-  if (!job.last_run_at) return 'NEVER_RAN';
+function deriveHealthStatus(job: any): 'OK' | 'NEVER_RAN' | 'STALE' {
+  const lastRunAt = job.last_executed_at || job.last_run_at;
+  if (!lastRunAt) return 'NEVER_RAN';
   if (job.next_run_at) { const nextRun = new Date(job.next_run_at).getTime(); if (nextRun < Date.now() - 10 * 60 * 1000) return 'STALE'; }
-  if (job.status && ['failed', 'error', 'stuck'].includes(job.status.toLowerCase())) return 'STALE';
+  if (job.silence_duration && job.expected_interval) {
+    if (job.silence_duration > job.expected_interval * 1.5) return 'STALE';
+  }
   return 'OK';
 }
 
@@ -206,15 +209,15 @@ export async function handleCronSentinel(supabase: SB, requestId: string, _paylo
   if (existingTask && existingTask.length > 0) return { success: true, message: 'Alert task already exists', existing_task_id: existingTask[0].id, silent_jobs: unhealthyJobs.length };
 
   const { data: runbook } = await supabase.from('runbooks').select('id, title, steps').eq('anomaly_type', 'cron_silent_failure').single();
-  const jobNames = unhealthyJobs.map(j => j.job_name).slice(0, 10).join(', ');
+  const jobNames = unhealthyJobs.map((j: any) => j.job_key || j.job_name).slice(0, 10).join(', ');
   const moreCount = unhealthyJobs.length > 10 ? ` (+${unhealthyJobs.length - 10} more)` : '';
 
   const { data: task, error: taskError } = await supabase.from('tasks').insert({
-    tenant_id: unhealthyJobs[0]?.tenant_id || null, source_type: 'system_alert',
+    tenant_id: (unhealthyJobs[0] as any)?.tenant_id || null, source_type: 'system_alert',
     title: `⚠ Cron Jobs Silent Failure - ${unhealthyJobs.length} jobs`,
     description: `Jobs sem execucao detectados: ${jobNames}${moreCount}. Consulte o Runbook INC-CRON-001.`,
     severity: 'critical', status: 'open', auto_generated: true,
-    metadata: { silent_jobs: unhealthyJobs.map(j => ({ name: j.job_name, status: deriveHealthStatus(j), last_run_at: j.last_run_at, next_run_at: j.next_run_at, cron_expression: j.cron_expression })), runbook_id: runbook?.id || null, runbook_title: runbook?.title || 'INC-CRON-001', detected_at: new Date().toISOString(), sentinel_run_id: requestId }
+    metadata: { silent_jobs: unhealthyJobs.map((j: any) => ({ name: j.job_key || j.job_name, status: deriveHealthStatus(j), last_run_at: j.last_executed_at || j.last_run_at, next_run_at: j.next_run_at, cron_expression: j.cron_expression })), runbook_id: runbook?.id || null, runbook_title: runbook?.title || 'INC-CRON-001', detected_at: new Date().toISOString(), sentinel_run_id: requestId }
   }).select('id').single();
 
   if (taskError) throw taskError;

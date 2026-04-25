@@ -144,7 +144,7 @@ async function insertProcessData(
       allProcs.push({
         pid: p.pid,
         name: p.name,
-        cpu_percent: p.cpu_seconds ?? 0,
+        cpu_percent: p.cpu_percent ?? p.cpu_seconds ?? 0,
         memory_mb: p.memory_mb ?? 0,
         user: p.user ?? '',
         command_line: p.command_line,

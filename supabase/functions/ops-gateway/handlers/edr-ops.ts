@@ -265,7 +265,7 @@ function matchesCondition(event: Record<string, unknown>, condition: { field: st
 }
 
 function evaluateRule(event: Record<string, unknown>, rule: DetectionRule): boolean {
-  const logic = rule.rule_logic;
+  const logic = (rule as any).rule_logic || (rule as any).conditions;
   if (!logic?.field) return false;
   const mainMatch = matchesCondition(event, logic);
   if (!mainMatch) return false;
@@ -277,7 +277,7 @@ export const handleEvaluateEdrDetections: InlinedHandler = async (supabase, requ
   const lookbackMinutes = Math.min(Math.max((payload.lookback_minutes as number) || 15, 1), 1440);
   const since = new Date(Date.now() - lookbackMinutes * 60 * 1000).toISOString();
 
-  const { data: rules, error: rulesErr } = await supabase.from('detection_rules').select('id, name, tenant_id, event_type, conditions, severity, is_enabled, action_type').eq('is_enabled', true);
+  const { data: rules, error: rulesErr } = await supabase.from('detection_rules').select('id, name, tenant_id, event_type, conditions, severity, is_enabled, action_type, mitre_technique_id, mitre_tactic, confidence_base').eq('is_enabled', true);
   if (rulesErr || !rules?.length) return { message: 'No active rules', error: rulesErr?.message };
 
   const stats = { evaluated: 0, detections: 0 };

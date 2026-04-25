@@ -181,6 +181,7 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
         evidence_pack: evidenceArray,
         data_sources,
         reasoning_summary,
+        agent_name: problematicAgents.length === 1 ? problematicAgents[0].agent_name : undefined,
       },
       recommendation: (insight.recommendation as string) || '',
       confidence_score: (insight.confidence_score as number) || confidence,
