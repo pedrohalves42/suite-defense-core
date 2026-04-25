@@ -274,7 +274,7 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
       const msg = error instanceof Error ? error.message : 'Internal server error';
       const isTimeout = msg.includes('Handler timeout');
       const status = isTimeout ? 504 : 500;
-      const log = loggerWithContext({ requestId, tenantId: tenantId ?? undefined });
+      const log = loggerWithContext({ requestId, tenantId: resolvedTenantId ?? undefined });
       log.error(`[serveTenant] ${isTimeout ? 'Timeout' : 'Error'}`, { message: msg });
       return errorResponse(msg, status, requestId, origin);
     }
