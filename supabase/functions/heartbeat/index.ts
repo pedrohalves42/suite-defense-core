@@ -17,7 +17,9 @@
 // Declare EdgeRuntime for Deno/Supabase environment
 declare const EdgeRuntime: { waitUntil?: (promise: Promise<unknown>) => void } | undefined
 
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { createSupabaseClient } from '../_shared/supabase-client.ts'
+import { Database } from '../_shared/database.types.ts'
 import { handleException } from '../_shared/error-handler.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { logger } from '../_shared/logger.ts'

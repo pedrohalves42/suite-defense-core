@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.42.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { Database } from './database.types.ts';
 
 /**

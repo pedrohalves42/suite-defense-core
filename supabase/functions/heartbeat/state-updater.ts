@@ -134,7 +134,7 @@ async function insertProcessData(
   supabase: SupabaseClient<Database>,
   agent: AgentContext,
   processesPayload: NonNullable<OSInfo['processes']>,
-  processAnomalies: unknown[] | undefined,
+  processAnomalies: any[] | undefined,
 ): Promise<void> {
   const allProcs: any[] = []
   const seenPids = new Set<number>()
