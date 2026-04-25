@@ -32,9 +32,13 @@ export const createClientFromRequest = (req: Request) => {
 
 /**
  * Helper to create a service role client (Admin context).
+ * Use this ONLY for privileged operations.
  */
-export const createServiceRoleClient = () => {
+export const getServiceClient = () => {
   const url = Deno.env.get('SUPABASE_URL') ?? '';
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   return createSupabaseClient(url, serviceKey);
 };
+
+// Re-export for convenience
+export { createSupabaseClient as createTypedClient };
