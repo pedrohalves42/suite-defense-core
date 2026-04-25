@@ -1,6 +1,6 @@
 
-import { PaymentGateway } from '../../domain/billing/ports/payment-gateway.port.ts';
-import { Subscription, ChargeResult } from '../../domain/billing/entities.ts';
+import { PaymentGateway } from '../../../domain/billing/ports/payment-gateway.port.ts';
+import { Subscription, ChargeResult } from '../../../domain/billing/entities.ts';
 
 export class ManualPaymentGateway implements PaymentGateway {
   async charge(_subscription: Subscription, amount: number): Promise<ChargeResult> {
