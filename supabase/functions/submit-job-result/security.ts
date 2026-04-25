@@ -278,7 +278,7 @@ export async function checkDuplicateSubmission(ctx: SubmitContext): Promise<Resp
         message: 'Job ja estava concluido',
         job_id: payload.job_id
       }),
-      { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
   
