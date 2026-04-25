@@ -179,32 +179,32 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
       }
 
       // 5. Resolve tenant_id
-      let tenantId: string | null = null;
+      let currentTenantId: string | null = null;
 
       if (tenantSource === 'body' || tenantSource === 'auto') {
         const bodyObj = body as Record<string, unknown> | null;
-        tenantId = (bodyObj?.tenant_id as string) || null;
+        currentTenantId = (bodyObj?.tenant_id as string) || null;
       }
-      if (!tenantId && (tenantSource === 'header' || tenantSource === 'auto')) {
-        tenantId = req.headers.get('x-tenant-id') || null;
+      if (!currentTenantId && (tenantSource === 'header' || tenantSource === 'auto')) {
+        currentTenantId = req.headers.get('x-tenant-id') || null;
       }
 
       // 6. Validate tenant access
       if (!skipTenantValidation) {
         if (isInternal) {
-          if (!tenantId) {
+          if (!currentTenantId) {
             return errorResponse('tenant_id required for internal calls', 400, requestId, origin);
           }
         } else if (userId) {
-          if (tenantId) {
-            const hasAccess = await verifyUserTenantAccess(supabase, userId, tenantId);
+          if (currentTenantId) {
+            const hasAccess = await verifyUserTenantAccess(supabase, userId, currentTenantId);
             if (!hasAccess) {
-              logger.warn(`[SECURITY][${requestId}] User ${userId} denied access to tenant ${tenantId}`);
+              logger.warn(`[SECURITY][${requestId}] User ${userId} denied access to tenant ${currentTenantId}`);
               return errorResponse('Access denied: unauthorized tenant', 403, requestId, origin);
             }
           } else if (allowFallback) {
-            tenantId = await resolveDefaultTenant(supabase, userId);
-            if (!tenantId) {
+            currentTenantId = await resolveDefaultTenant(supabase, userId);
+            if (!currentTenantId) {
               return errorResponse('No tenant associated with user', 403, requestId, origin);
             }
           } else {
@@ -212,15 +212,15 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
           }
         }
       } else {
-        if (!tenantId) {
+        if (!currentTenantId) {
           logger.warn(`[serveTenant][${requestId}] skipTenantValidation=true but no tenant_id provided`);
         }
       }
 
       // 7. Rate limiting (optional)
-      if (rateLimitConfig && tenantId) {
+      if (rateLimitConfig && currentTenantId) {
         const { checkRateLimit } = await import('./rate-limit.ts');
-        const identifier = userId ? `user:${userId}` : `tenant:${tenantId}`;
+        const identifier = userId ? `user:${userId}` : `tenant:${currentTenantId}`;
         const rlResult = await checkRateLimit(supabase, identifier, rateLimitConfig.endpoint, {
           maxRequests: rateLimitConfig.maxRequests ?? 60,
           windowMinutes: rateLimitConfig.windowMinutes ?? 1,
@@ -241,7 +241,7 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
 
       // 8. Build context and call handler
       const ctx: TenantContext<T> = {
-        tenantId: tenantId!,
+        tenantId: currentTenantId!,
         userId,
         isInternal,
         supabase,
