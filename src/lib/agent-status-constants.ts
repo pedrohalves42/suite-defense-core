@@ -84,7 +84,11 @@ export function isAgentOnline(lastHeartbeat: string | null | undefined): boolean
 export function getAgentOnlineStatus(
   agent: { last_heartbeat?: string | null; status?: string; agent_state?: string }
 ): 'online' | 'warning' | 'offline' | 'never_connected' {
-  // 1. Priorizar agent_state do banco
+  // 1. Fallback para cálculo por heartbeat (Real-time connectivity)
+  const hasFreshHeartbeat = agent.last_heartbeat && 
+    (Date.now() - new Date(agent.last_heartbeat).getTime()) / (1000 * 60) <= AGENT_STATUS_THRESHOLDS.ONLINE_MAX_MINUTES;
+
+  // 2. Priorizar agent_state do banco (Specialized states)
   if (agent.agent_state) {
     switch (agent.agent_state) {
       case 'healthy':
@@ -97,6 +101,9 @@ export function getAgentOnlineStatus(
       case 'rollback':
         return 'warning';
       case 'offline':
+        // Se o banco diz offline mas o heartbeat é fresco, mostrar como online
+        if (hasFreshHeartbeat) return 'online';
+        return 'offline';
       case 'error':
       case 'shutdown':
       case 'isolated':
@@ -105,12 +112,12 @@ export function getAgentOnlineStatus(
     }
   }
 
-  // 2. Fallback para cálculo por heartbeat
+  // 3. Fallback final para cálculo por heartbeat
   if (!agent.last_heartbeat) return 'never_connected';
 
+  if (hasFreshHeartbeat) return 'online';
+  
   const minutesSince = (Date.now() - new Date(agent.last_heartbeat).getTime()) / (1000 * 60);
-
-  if (minutesSince <= AGENT_STATUS_THRESHOLDS.ONLINE_MAX_MINUTES) return 'online';
   if (minutesSince <= AGENT_STATUS_THRESHOLDS.OFFLINE_MIN_MINUTES) return 'warning';
   return 'offline';
 }
