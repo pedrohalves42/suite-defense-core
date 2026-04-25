@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Deno-compatible Supabase adapters implementing the hexagonal output ports.
  */

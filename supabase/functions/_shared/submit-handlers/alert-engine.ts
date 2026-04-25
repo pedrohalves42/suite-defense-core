@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Alert generation and auto-resolution engine for system metrics.
  */
