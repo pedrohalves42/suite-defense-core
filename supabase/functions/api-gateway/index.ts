@@ -255,19 +255,18 @@ function decodeJwtContext(req: Request): { userId?: string; tenantId?: string } 
   }
 }
 
-Deno.serve(async (req) => {
-  const origin = req.headers.get('origin');
-  if (req.method === 'OPTIONS') return new Response(null, { headers: buildCorsHeaders(origin) });
-  if (req.method !== 'POST') return jsonRes({ error: 'Method not allowed' }, 405, origin);
+import { servePublic } from '../_shared/serve-public.ts';
 
-  const requestId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
+servePublic(async (req, ctx) => {
+  const { requestId, supabase: supabaseAny, body } = ctx;
+  const traceId = requestId;
+  const origin = req.headers.get('origin');
   const startedAt = Date.now();
 
   try {
     const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
     if (authError) return authError;
 
-    const body = await req.json();
     const parsed = RouterSchema.safeParse(body);
     if (!parsed.success) return jsonRes({ error: 'Invalid request', details: parsed.error.flatten().fieldErrors }, 400, origin);
 
@@ -284,7 +283,7 @@ Deno.serve(async (req) => {
     // Try inlined handler first (no HTTP hop)
     const inlinedHandler = INLINED_HANDLERS[action];
     if (inlinedHandler) {
-      const supabase = createClient<any>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const supabase = supabaseAny; // servePublic provides service_role client
       const jwtCtx = decodeJwtContext(req);
       const handlerCtx: HandlerContext = { req, userId: jwtCtx.userId, tenantId: jwtCtx.tenantId };
       
@@ -305,7 +304,7 @@ Deno.serve(async (req) => {
 
     // Proxy to target function
     const targetFn = ACTION_TO_FUNCTION[action];
-    const url = `${SUPABASE_URL}/functions/v1/${targetFn}`;
+    const url = `${requireEnv('SUPABASE_URL')}/functions/v1/${targetFn}`;
     logger.info(`[api-gateway] Proxy: ${action} → ${targetFn}`, { requestId });
 
     const response = await fetchWithTimeout(url, {
@@ -325,5 +324,11 @@ Deno.serve(async (req) => {
   } catch (err) {
     logger.error('[api-gateway] Error:', err);
     return jsonRes({ error: 'Internal error', message: err instanceof Error ? err.message : 'Unknown', requestId }, 500, origin);
+  }
+}, {
+  rateLimit: {
+    endpoint: 'api-gateway',
+    maxRequests: 200,
+    windowMinutes: 1
   }
 });
