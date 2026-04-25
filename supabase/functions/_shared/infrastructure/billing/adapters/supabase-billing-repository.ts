@@ -1,6 +1,6 @@
 
-import { BillingRepository } from '../../domain/billing/ports/billing-repository.port.ts';
-import { Subscription, BillingPlan } from '../../domain/billing/entities.ts';
+import { BillingRepository } from '../../../domain/billing/ports/billing-repository.port.ts';
+import { Subscription, BillingPlan } from '../../../domain/billing/entities.ts';
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
 export class SupabaseBillingRepository implements BillingRepository {

@@ -1,6 +1,6 @@
 
-import { PaymentGateway } from '../../domain/billing/ports/payment-gateway.port.ts';
-import { Subscription, ChargeResult } from '../../domain/billing/entities.ts';
+import { PaymentGateway } from '../../../domain/billing/ports/payment-gateway.port.ts';
+import { Subscription, ChargeResult } from '../../../domain/billing/entities.ts';
 
 export class TestDoublePaymentGateway implements PaymentGateway {
   public shouldFail = false;
