@@ -1,7 +1,7 @@
 /**
  * Shared types for AI Router handlers.
  */
-import { TenantContext } from '../../_shared/serve-tenant.ts';
+import { TenantContext } from '../_shared/serve-tenant.ts';
 
 /**
  * AI Handler function signature ? receives tenant context and parsed payload.
