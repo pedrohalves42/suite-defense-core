@@ -7,7 +7,7 @@
  *
  * Auth: assertInternalCaller with allowAuthenticatedUsers
  */
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createTypedClient } from '../_shared/supabase-client.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';

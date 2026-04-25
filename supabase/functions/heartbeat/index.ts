@@ -17,7 +17,7 @@
 // Declare EdgeRuntime for Deno/Supabase environment
 declare const EdgeRuntime: { waitUntil?: (promise: Promise<unknown>) => void } | undefined
 
-import { createSupabaseClient } from '../_shared/supabase-client.ts'
+import { createTypedClient } from '../_shared/supabase-client.ts'
 import { logger } from '../_shared/logger.ts'
 import { requireEnv } from '../_shared/env.ts'
 import { serveAgent } from '../_shared/serve-agent.ts'
