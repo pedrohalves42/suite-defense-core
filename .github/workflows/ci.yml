@@ -10,9 +10,9 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
-  # Lint and frontend type check (non-blocking for Edge Functions)
+  # Lint and Type Check
   lint:
-    name: Lint & Frontend Check
+    name: Lint & Type Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,44 +28,8 @@ jobs:
       - name: Run ESLint
         run: bun run lint
       
-      - name: Run Frontend TypeScript check
+      - name: Run TypeScript check
         run: bunx tsc --noEmit
-
-  # Dedicated Edge Function Check (Optional/Non-blocking if it fails on debt)
-  edge-type-check:
-    name: Edge Function Type Check (Strict)
-    runs-on: ubuntu-latest
-    continue-on-error: true # Permite deploy mesmo com débitos técnicos de tipos
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Deno
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-      
-      - name: Check all functions
-        run: |
-          deno check supabase/functions/**/*.ts || echo "⚠️ Alerta: Débitos técnicos de tipos detectados."
-
-  # Build Check (Viability) - This one SHOULD fail on real build errors
-  build-viability:
-    name: Edge Function Build Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Deno
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-          
-      - name: Runtime-compatible bundling check
-        run: |
-          for f in supabase/functions/*/index.ts; do
-            echo "Checking bundling for $f..."
-            deno check --no-check $f || exit 1
-          done
 
   # ASCII Guard Check
   ascii-guard:
@@ -73,29 +37,42 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      
       - name: Install dependencies
         run: bun install --frozen-lockfile
+      
       - name: Run ASCII Guard
         run: bun run ascii:check
 
-  # Unit Tests (Frontend)
+  # Unit Tests
   unit-tests:
-    name: Frontend Unit Tests
+    name: Unit Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      
       - name: Install dependencies
         run: bun install --frozen-lockfile
+      
       - name: Run unit tests
         run: bun run test -- --coverage
+      
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+        continue-on-error: true
 
   # E2E Tests
   e2e-tests:
@@ -104,55 +81,99 @@ jobs:
     needs: [lint, unit-tests]
     steps:
       - uses: actions/checkout@v4
+      
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      
       - name: Install dependencies
         run: bun install --frozen-lockfile
+      
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps chromium
+      
+      - name: Create test env file
+        run: |
+          echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" >> .env.test
+          echo "VITE_SUPABASE_PUBLISHABLE_KEY=${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}" >> .env.test
+      
       - name: Run E2E tests
         run: bunx playwright test --config=config/playwright.config.ts --project=chromium
+      
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
 
-  # Application Build
-  app-build:
-    name: Frontend Build
+  # Build Check
+  build:
+    name: Build
     runs-on: ubuntu-latest
     needs: [lint, unit-tests]
     steps:
       - uses: actions/checkout@v4
+      
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      
       - name: Install dependencies
         run: bun install --frozen-lockfile
+      
       - name: Build application
         run: bun run build
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: dist/
+          retention-days: 7
 
   # Edge Function Integration Tests (Deno)
   edge-function-tests:
-    name: Edge Function Tests
+    name: Edge Function Integration Tests
     runs-on: ubuntu-latest
-    needs: [build-viability]
+    needs: [build]
     steps:
       - uses: actions/checkout@v4
+
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - name: Setup Bun (for parser)
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - name: Run Optimized Edge Tests
+
+      - name: Create .env for tests
+        run: |
+          echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" > .env
+          echo "VITE_SUPABASE_PUBLISHABLE_KEY=${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}" >> .env
+
+      - name: Edge Function Build Viability Check
+        run: |
+          # Viability check: bundle verification without strict typechecking
+          for f in supabase/functions/*/index.ts; do
+            echo "Verifying viability for $f..."
+            deno check $f --no-check || exit 1
+          done
+
+      - name: Edge Function Type Audit (Non-blocking)
+        run: |
+          npm run typecheck:edge:audit || true
+
+      - name: Run Edge Function integration tests (Optimized)
         run: |
           chmod +x scripts/debug-tests.sh
-          ./scripts/debug-tests.sh
+          ./scripts/debug-tests.sh 2>&1 | node scripts/classify-ts-errors.cjs
+
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+
 
   # Security Scan
   security:
@@ -160,20 +181,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
       - name: Run npm audit
         run: bunx npm audit --audit-level=high || true
 
-  # Edge Function Governance
+  # Edge Function Governance Gates
   edge-function-gates:
     name: Edge Function Governance
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate Zod coverage
+        run: bash ci/validate-zod-coverage.sh
+
+      - name: Validate middleware usage
+        run: bash ci/validate-middleware.sh
+
       - name: Run CI quality gate
         run: python3 scripts/ci_quality_gate.py --check-zod --root supabase/functions

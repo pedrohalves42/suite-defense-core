@@ -15,6 +15,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "typecheck:edge": "deno check supabase/functions/**/*.ts",
+    "typecheck:edge:audit": "deno check supabase/functions/**/*.ts 2>&1 | node scripts/classify-ts-errors.cjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

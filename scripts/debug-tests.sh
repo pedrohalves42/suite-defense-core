@@ -1,53 +1,29 @@
 #!/bin/bash
 
-# Script de Teste Otimizado (Modo Debug)
-# Executa testes prioritários com fail-fast e parsing de erros
+# scripts/debug-tests.sh
+# Optimized test runner with fail-fast and priority sorting.
 
-echo "🚀 Iniciando Testes em Modo Debug (Fail-Fast)..."
+echo "🚀 Starting Priority Tests (Fail-Fast)..."
 
-# Se um argumento for passado, usa ele como único teste
-if [ ! -z "$1" ]; then
-  TESTS=("$1")
-  echo "🎯 Executando teste específico: $1"
-else
-  # 1. Testes Prioritários (Admin & Auth)
-  TESTS=(
-    "supabase/functions/__tests__/admin/admin-create-user.test.ts"
-    "supabase/functions/__tests__/auth/"
-  )
-  echo "📦 Testando módulos prioritários: admin-create-user, auth..."
-fi
+# Priority 1: Auth & User Creation
+echo "📦 Testing priority modules: auth, admin..."
 
-FAILED=0
+PRIORITY_TESTS=(
+  "supabase/functions/__tests__/auth/"
+  "supabase/functions/__tests__/admin/admin-create-user.test.ts"
+)
 
-for test_path in "${TESTS[@]}"; do
+for test_path in "${PRIORITY_TESTS[@]}"; do
   if [ -e "$test_path" ]; then
-    echo "🔍 Executando: $test_path"
-    # Captura output e passa pelo parser se falhar
-    OUT=$(deno test --allow-all --fail-fast "$test_path" 2>&1)
-    if [ $? -ne 0 ]; then
-      echo "$OUT" | bun scripts/parse-edge-errors.js
-      FAILED=1
-      break
-    fi
+    echo "🔍 Running: $test_path"
+    deno test --allow-all --fail-fast "$test_path" || { echo "❌ Critical failure in $test_path. Stopping."; exit 1; }
   else
-    echo "⚠️ Caminho não encontrado: $test_path"
+    echo "⚠️ Path not found: $test_path"
   fi
 done
 
-if [ $FAILED -eq 1 ]; then
-  echo "❌ Interrompendo após primeira falha."
-  exit 1
-fi
+# Priority 2: Core Infrastructure
+echo "🏃 Running remaining tests..."
+deno test --allow-all --fail-fast supabase/functions/__tests__/ || { echo "❌ Failure in remaining tests."; exit 1; }
 
-# Se não foi passado argumento, executa o restante
-if [ -z "$1" ]; then
-  echo "🏃 Executando restante dos testes..."
-  OUT=$(deno test --allow-all --fail-fast supabase/functions/__tests__/ 2>&1)
-  if [ $? -ne 0 ]; then
-    echo "$OUT" | bun scripts/parse-edge-errors.js
-    exit 1
-  fi
-fi
-
-echo "✅ Testes concluídos com sucesso!"
+echo "✅ All critical tests passed!"
