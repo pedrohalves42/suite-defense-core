@@ -1,5 +1,5 @@
 import { logger } from './logger.ts';
-import { TIMEOUT_TIERS } from './fetch-with-timeout.ts';
+import { TIMEOUT_TIERS, fetchWithTimeout } from './fetch-with-timeout.ts';
 
 /**
  * Standard HTTP error with status and body
@@ -55,14 +55,15 @@ export async function httpJson<T = any>(
         logger.debug(`[httpJson] Retry attempt ${attempt} for ${url}`);
       }
 
-      const response = await fetch(url, {
+      const response = await fetchWithTimeout(url, {
         ...fetchOptions,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           ...fetchOptions.headers,
         },
-        signal: controller.signal,
+        timeoutMs,
+        signal: fetchOptions.signal, // Se já houver um signal externo, o fetchWithTimeout tenta respeitar
       });
 
       clearTimeout(timeoutId);

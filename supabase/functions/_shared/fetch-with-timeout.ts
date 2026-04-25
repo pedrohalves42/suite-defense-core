@@ -19,7 +19,7 @@ export const TIMEOUT_TIERS = {
   STRIPE: 10_000,
   INTERNAL: 8_000,
   WEBHOOK: 5_000,
-  DEFAULT: 15_000,
+  DEFAULT: 8_000, // ADR-045: Padrão global reduzido para 8s
 } as const;
 
 export async function fetchWithTimeout(
