@@ -18,7 +18,7 @@ const INDICATOR_SEVERITY: Record<string, string> = {
 };
 
 export async function handleRansomwareIndicator(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   agentName: string,
   tenantId: string,

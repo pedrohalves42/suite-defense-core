@@ -30,7 +30,7 @@ interface AccessReviewReport {
 }
 
 export async function handleAccessReview(
-  supabase: SupabaseClient,
+  supabase: any,
   requestId: string,
   payload: Record<string, unknown>,
 ): Promise<unknown> {
@@ -126,7 +126,7 @@ export async function handleAccessReview(
 }
 
 async function insertAuditEvidence(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   requestId: string,
   report: AccessReviewReport,

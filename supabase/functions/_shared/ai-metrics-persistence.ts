@@ -10,7 +10,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
  */
 export async function persistAIMetrics(metrics: AIInferenceMetrics): Promise<void> {
   try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const supabase = createClient<any>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
     const record = {
       function_name: metrics.function_name,
@@ -48,7 +48,7 @@ export async function persistAIMetricsBatch(metricsArray: AIInferenceMetrics[]):
   if (metricsArray.length === 0) return;
   
   try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const supabase = createClient<any>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
     const records = metricsArray.map(metrics => ({
       function_name: metrics.function_name,
@@ -83,7 +83,7 @@ export async function persistAIMetricsBatch(metricsArray: AIInferenceMetrics[]):
  */
 export async function cleanupOldAIMetrics(): Promise<number> {
   try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const supabase = createClient<any>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - 30);
@@ -119,7 +119,7 @@ export async function getAIMetricsSummary(tenantId?: string, hoursBack = 24): Pr
   by_model: Record<string, { calls: number; total_tokens: number }>;
 }> {
   try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const supabase = createClient<any>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
     const cutoffDate = new Date();
     cutoffDate.setHours(cutoffDate.getHours() - hoursBack);

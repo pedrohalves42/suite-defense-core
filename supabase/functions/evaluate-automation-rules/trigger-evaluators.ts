@@ -10,7 +10,7 @@ export interface TriggerCandidate {
 }
 
 export async function evaluateMetricThreshold(
-  supabase: SupabaseClient, rule: Record<string, unknown>, tenantId: string, agents: Array<Record<string, unknown>>, latestMetrics: Map<string, Record<string, unknown>>
+  supabase: any, rule: Record<string, unknown>, tenantId: string, agents: Array<Record<string, unknown>>, latestMetrics: Map<string, Record<string, unknown>>
 
 ): Promise<TriggerCandidate[]> {
   const conditions = rule.trigger_conditions as Record<string, unknown>;
@@ -37,7 +37,7 @@ export async function evaluateMetricThreshold(
 }
 
 export async function evaluateProcessAnomaly(
-  supabase: SupabaseClient, rule: Record<string, unknown>, tenantId: string, agents: Array<Record<string, unknown>>
+  supabase: any, rule: Record<string, unknown>, tenantId: string, agents: Array<Record<string, unknown>>
 ): Promise<TriggerCandidate[]> {
   const conditions = rule.trigger_conditions as Record<string, unknown>;
   const candidates: TriggerCandidate[] = [];
@@ -76,7 +76,7 @@ export async function evaluateProcessAnomaly(
 }
 
 export async function evaluateAgentStatus(
-  supabase: SupabaseClient, rule: Record<string, unknown>, tenantId: string, agents: Array<Record<string, unknown>>
+  supabase: any, rule: Record<string, unknown>, tenantId: string, agents: Array<Record<string, unknown>>
 ): Promise<TriggerCandidate[]> {
   const conditions = rule.trigger_conditions as Record<string, unknown>;
   const candidates: TriggerCandidate[] = [];
@@ -104,7 +104,7 @@ export async function evaluateAgentStatus(
 }
 
 export async function evaluateSecurityCheck(
-  supabase: SupabaseClient, rule: Record<string, unknown>, tenantId: string, agents: Array<Record<string, unknown>>
+  supabase: any, rule: Record<string, unknown>, tenantId: string, agents: Array<Record<string, unknown>>
 ): Promise<TriggerCandidate[]> {
   const conditions = rule.trigger_conditions as Record<string, unknown>;
   const candidates: TriggerCandidate[] = [];

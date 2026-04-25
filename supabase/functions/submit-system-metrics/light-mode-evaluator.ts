@@ -15,7 +15,7 @@ interface LightModeResult {
 const MEDIA_PROCESSES = ['chrome', 'firefox', 'msedge', 'vlc', 'obs64', 'obs', 'teams', 'zoom', 'discord', 'spotify'];
 
 export async function evaluateLightMode(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   agentName: string,
   tenantId: string,

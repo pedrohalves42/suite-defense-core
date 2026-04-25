@@ -26,7 +26,7 @@ interface ExposureFinding {
 }
 
 export async function handleDataExposure(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   agentName: string,
   tenantId: string,

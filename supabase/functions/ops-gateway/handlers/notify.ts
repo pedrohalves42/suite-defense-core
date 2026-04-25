@@ -8,7 +8,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
 import { fetchWithTimeout } from '../../_shared/fetch-with-timeout.ts';
 
-type SB = ReturnType<typeof createClient>;
+type SB = any;
 
 // ── email ───────────────────────────────────────────────────────────────
 const SEVERITY_COLORS: Record<string, string> = { critical: '#dc2626', high: '#ea580c', medium: '#ca8a04', low: '#16a34a', info: '#2563eb' };

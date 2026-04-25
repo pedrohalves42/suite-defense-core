@@ -15,7 +15,7 @@ interface AvItem {
 }
 
 export async function handleAntivirusStatus(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   _agentName: string,
   tenantId: string,

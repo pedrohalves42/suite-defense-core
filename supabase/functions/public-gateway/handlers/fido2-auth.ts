@@ -38,7 +38,7 @@ function base64UrlDecode(base64url: string): Uint8Array {
 }
 
 export async function handleFido2Authenticate(
-  supabase: SupabaseClient,
+  supabase: any,
   _req: Request,
   requestId: string,
   payload: Record<string, unknown>,

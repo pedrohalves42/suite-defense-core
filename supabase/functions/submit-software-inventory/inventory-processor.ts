@@ -54,7 +54,7 @@ export function deduplicateInventory(items: SoftwareItem[]): SoftwareItem[] {
 }
 
 export async function persistInventory(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   tenantId: string,
   uniqueItems: SoftwareItem[],

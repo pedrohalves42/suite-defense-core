@@ -45,7 +45,7 @@ interface ReportData {
 }
 
 export async function handleVerifyComplianceReport(
-  supabase: SupabaseClient,
+  supabase: any,
   req: Request,
   requestId: string,
   payload: Record<string, unknown>,

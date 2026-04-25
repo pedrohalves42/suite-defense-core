@@ -6,7 +6,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
 import { shouldProcessAlertsForTenant } from '../../_shared/business-hours.ts';
 
-type SB = ReturnType<typeof createClient>;
+type SB = any;
 
 // ═══ monitor-thresholds ═══
 export async function handleMonitorThresholds(supabase: SB, requestId: string, _payload: Record<string, unknown>) {

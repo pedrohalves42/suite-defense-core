@@ -22,7 +22,7 @@ function sanitizeEnrollmentKey(value: string | null): string | null {
 
 async function resolveAuth(
   req: Request,
-  adminClient: SupabaseClient,
+  adminClient: any,
   requestId: string,
   origin: string | null,
   payload: Record<string, unknown>,
@@ -57,7 +57,7 @@ async function resolveAuth(
 
   } else if (authHeader) {
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } });
+    const userClient = createClient<any>(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } });
     const { data: { user }, error: authError } = await userClient.auth.getUser();
     if (authError || !user) {
       return { tenantId: null, response: new Response('# ERROR: Invalid JWT token\nWrite-Host "ERROR: Auth failed" -ForegroundColor Red\n', { status: 401, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain; charset=utf-8' } }) };
@@ -208,7 +208,7 @@ Start-Sleep -Seconds 15
 
 // ═══ Main Handler ═══
 export async function handleGetReinstallByName(
-  supabase: SupabaseClient,
+  supabase: any,
   req: Request,
   requestId: string,
   payload: Record<string, unknown>,

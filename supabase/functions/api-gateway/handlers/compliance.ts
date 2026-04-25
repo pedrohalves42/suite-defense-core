@@ -23,7 +23,7 @@ function gradeFromScore(score: number): string {
 }
 
 export async function handleCalculateCompliance(
-  supabase: SupabaseClient,
+  supabase: any,
   requestId: string,
   payload: Record<string, unknown>,
   ctx?: HandlerContext,

@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = requireEnv('SUPABASE_URL')
     const supabaseKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY')
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabase = createClient<any>(supabaseUrl, supabaseKey)
 
     // ── 1. Authenticate agent ───────────────────────────────
     const authResult = await authenticateAgent(supabase, req, 'heartbeat', {

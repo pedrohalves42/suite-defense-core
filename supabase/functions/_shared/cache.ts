@@ -71,7 +71,7 @@ const DEFAULT_TTL = 300;
 // ─── Tier 2: Supabase kv_cache table (cross-invocation) ───
 
 export async function getCached<T>(
-  supabase: SupabaseClient,
+  supabase: any,
   key: string,
   fetcher: () => Promise<T>,
   options: CacheOptions = {}
@@ -118,7 +118,7 @@ export async function getCached<T>(
 }
 
 export async function invalidateCache(
-  supabase: SupabaseClient,
+  supabase: any,
   key: string
 ): Promise<void> {
   memoryCache.delete(key);
@@ -130,7 +130,7 @@ export async function invalidateCache(
 }
 
 export async function invalidateCacheByPrefix(
-  supabase: SupabaseClient,
+  supabase: any,
   prefix: string
 ): Promise<number> {
   for (const key of Array.from(memoryCache.keys())) {
@@ -150,7 +150,7 @@ export async function invalidateCacheByPrefix(
 }
 
 export async function cleanupExpiredCache(
-  supabase: SupabaseClient
+  supabase: any
 ): Promise<number> {
   const { data, error } = await supabase.rpc('cleanup_expired_cache');
   if (error) {
@@ -181,7 +181,7 @@ interface MitreRule {
 }
 
 export async function getTenantConfig(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   options: CacheOptions = {}
 ): Promise<Record<string, unknown> | null> {
@@ -202,14 +202,14 @@ export async function getTenantConfig(
 }
 
 export async function invalidateTenantCache(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string
 ): Promise<number> {
   return invalidateCacheByPrefix(supabase, `tenant:${tenantId}:`);
 }
 
 export async function getAgentsByTenant(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   options: CacheOptions = {}
 ): Promise<AgentSummary[]> {
@@ -230,7 +230,7 @@ export async function getAgentsByTenant(
 }
 
 export async function getDriftScore(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   options: CacheOptions = {}
 ): Promise<{ score: number; severity: string; events: number }> {
@@ -256,7 +256,7 @@ export async function getDriftScore(
 }
 
 export async function getMitreRules(
-  supabase: SupabaseClient,
+  supabase: any,
   tactic?: string,
   options: CacheOptions = {}
 ): Promise<MitreRule[]> {

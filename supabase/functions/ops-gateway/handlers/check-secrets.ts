@@ -64,7 +64,7 @@ interface SecretComplianceStatus {
 }
 
 export async function handleSecretRotationCompliance(
-  supabase: SupabaseClient,
+  supabase: any,
   requestId: string,
   _payload: Record<string, unknown>,
 ): Promise<unknown> {
@@ -164,7 +164,7 @@ export async function handleSecretRotationCompliance(
 // ── Record Rotation Event ───────────────────────────────────────────────────
 
 export async function handleRecordSecretRotation(
-  supabase: SupabaseClient,
+  supabase: any,
   requestId: string,
   payload: Record<string, unknown>,
 ): Promise<unknown> {

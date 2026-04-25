@@ -9,7 +9,7 @@ import { fetchWithTimeout } from '../../_shared/fetch-with-timeout.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import type { HandlerContext } from './admin.ts';
 
-type SB = ReturnType<typeof createClient>;
+type SB = any;
 
 const AnalyzeUrlSchema = z.object({
   url: z.string().min(1).max(2048).url('Invalid URL format'),

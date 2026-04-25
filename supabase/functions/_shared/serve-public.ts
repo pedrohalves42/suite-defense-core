@@ -25,7 +25,7 @@ function errorResponse(message: string, status: number, requestId: string, origi
   );
 }
 
-export type PublicHandler = (req: Request, ctx: { supabase: SupabaseClient; requestId: string; body: unknown }) => Promise<Response | Record<string, unknown> | unknown>;
+export type PublicHandler = (req: Request, ctx: { supabase: any; requestId: string; body: unknown }) => Promise<Response | Record<string, unknown> | unknown>;
 
 export function servePublic(handler: PublicHandler) {
   Deno.serve(async (req: Request) => {
@@ -38,7 +38,7 @@ export function servePublic(handler: PublicHandler) {
     }
 
     try {
-      const supabase = createClient(
+      const supabase = createClient<any>(
         requireEnv('SUPABASE_URL'),
         requireEnv('SUPABASE_SERVICE_ROLE_KEY')
       );

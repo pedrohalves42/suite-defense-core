@@ -20,7 +20,7 @@ interface CertificatePayload {
 const EXPIRY_WARNING_DAYS = 30;
 
 export async function handleCertificates(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   agentName: string,
   tenantId: string,

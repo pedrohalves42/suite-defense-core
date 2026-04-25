@@ -24,7 +24,7 @@ interface AgentInfo {
  * Returns a Response if force update applies, or null to continue normal flow.
  */
 export async function handleForceUpdate(
-  supabase: SupabaseClient,
+  supabase: any,
   agent: AgentInfo,
   platform: string,
   supabaseUrl: string,

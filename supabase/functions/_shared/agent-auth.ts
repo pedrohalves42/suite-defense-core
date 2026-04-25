@@ -38,7 +38,7 @@ export interface AuthenticateAgentOptions {
  * @param options.extraAgentFields - Additional agent columns to fetch (e.g. ['status', 'agent_version'])
  */
 export async function authenticateAgent(
-  supabase: SupabaseClient,
+  supabase: any,
   req: Request,
   endpoint: string,
   options?: AuthenticateAgentOptions,

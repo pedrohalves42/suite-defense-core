@@ -25,7 +25,7 @@ interface SupabaseClient {
 }
 
 export class RunMaintenanceUseCase {
-  constructor(private readonly supabase: SupabaseClient) {}
+  constructor(private readonly supabase: any) {}
 
   async execute(): Promise<MaintenanceResult> {
     const startedAt = Date.now();

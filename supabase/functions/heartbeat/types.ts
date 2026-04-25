@@ -84,7 +84,7 @@ export interface AgentUpdate {
 }
 
 export interface HeartbeatContext {
-  supabase: SupabaseClient;
+  supabase: any;
   agent: AgentContext;
   osInfo: OSInfo;
   updateData: AgentUpdate;

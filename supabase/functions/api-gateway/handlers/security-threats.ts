@@ -7,12 +7,12 @@ import { logger } from '../../_shared/logger.ts';
 import { createAuditLog } from '../../_shared/audit.ts';
 import type { HandlerContext } from './admin.ts';
 
-type SupabaseClient = ReturnType<typeof createClient>;
+type SupabaseClient = any;
 
 // ─── auto-block-threats ─────────────────────────────────────────────────────
 
 export async function handleAutoBlockThreats(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
+  supabase: any, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
 ): Promise<unknown> {
   const tenantId = (payload.tenant_id as string) || ctx?.tenantId;
   const userId = (payload.user_id as string) || ctx?.userId;
@@ -140,7 +140,7 @@ function buildJobPayload(actionType: ActionType, details: Record<string, unknown
 }
 
 export async function handleAutoRemediate(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
+  supabase: any, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
 ): Promise<unknown> {
   const { agent_id, action_type, trigger_source, trigger_details = {}, requires_approval = false } = payload as {
     agent_id: string; action_type: ActionType; trigger_source: string;
@@ -251,7 +251,7 @@ function buildRollbackPayload(actionType: string, details: Record<string, unknow
 }
 
 export async function handleRollbackRemediation(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
+  supabase: any, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
 ): Promise<unknown> {
   const userId = ctx?.userId;
   const { action_id } = payload as { action_id: string };

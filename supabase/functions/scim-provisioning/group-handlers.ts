@@ -5,7 +5,7 @@ import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { SCIM_SCHEMAS, scimHeaders, scimError } from './constants.ts';
 
 export async function createGroup(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   body: Record<string, unknown>,
 ): Promise<Response> {
@@ -28,7 +28,7 @@ export async function createGroup(
   }), { headers: scimHeaders, status: 201 });
 }
 
-export async function getGroup(supabase: SupabaseClient, tenantId: string, groupId: string): Promise<Response> {
+export async function getGroup(supabase: any, tenantId: string, groupId: string): Promise<Response> {
   const { data: group, error } = await supabase
     .from('scim_groups')
     .select('id, display_name, tenant_id, created_at, updated_at')
@@ -61,7 +61,7 @@ export async function getGroup(supabase: SupabaseClient, tenantId: string, group
 }
 
 export async function listGroups(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   params: URLSearchParams,
 ): Promise<Response> {
@@ -93,7 +93,7 @@ export async function listGroups(
 }
 
 export async function updateGroup(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   groupId: string,
   body: Record<string, unknown>,
@@ -109,7 +109,7 @@ export async function updateGroup(
 }
 
 export async function patchGroup(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   groupId: string,
   body: Record<string, unknown>,
@@ -137,7 +137,7 @@ export async function patchGroup(
   return getGroup(supabase, tenantId, groupId);
 }
 
-export async function deleteGroup(supabase: SupabaseClient, tenantId: string, groupId: string): Promise<Response> {
+export async function deleteGroup(supabase: any, tenantId: string, groupId: string): Promise<Response> {
   await supabase.from('scim_groups').delete().eq('id', groupId).eq('tenant_id', tenantId);
   return new Response(null, { headers: scimHeaders, status: 204 });
 }

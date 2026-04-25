@@ -10,7 +10,7 @@ import { logger } from './logger.ts';
  * Get a cached value. Returns null if missing or expired.
  */
 export async function cacheGet<T = unknown>(
-  supabase: SupabaseClient,
+  supabase: any,
   key: string,
 ): Promise<T | null> {
   try {
@@ -37,7 +37,7 @@ export async function cacheGet<T = unknown>(
  * Uses upsert ? overwrites existing keys.
  */
 export async function cacheSet(
-  supabase: SupabaseClient,
+  supabase: any,
   key: string,
   value: unknown,
   ttlSeconds: number,
@@ -60,7 +60,7 @@ export async function cacheSet(
  * Delete a cached key.
  */
 export async function cacheDelete(
-  supabase: SupabaseClient,
+  supabase: any,
   key: string,
 ): Promise<void> {
   await supabase.from('kv_cache').delete().eq('key', key);
@@ -70,7 +70,7 @@ export async function cacheDelete(
  * Get-or-set pattern: returns cached value or calls factory, caches result.
  */
 export async function cacheGetOrSet<T>(
-  supabase: SupabaseClient,
+  supabase: any,
   key: string,
   ttlSeconds: number,
   factory: () => Promise<T>,

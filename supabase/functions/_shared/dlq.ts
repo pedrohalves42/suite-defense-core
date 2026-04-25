@@ -52,7 +52,7 @@ function calculatePriority(jobType: string, errorCount: number): number {
  * P2 Enhancement: Better logging, priority calculation, metadata tracking
  */
 export async function moveToDeadLetterQueue(
-  supabase: SupabaseClient,
+  supabase: any,
   entry: DLQEntry
 ): Promise<DLQResult> {
   const startTime = Date.now();
@@ -177,7 +177,7 @@ export async function moveToDeadLetterQueue(
  * Mark a DLQ entry as resolved
  */
 export async function resolveDLQEntry(
-  supabase: SupabaseClient,
+  supabase: any,
   dlqId: string,
   resolvedBy: string,
   notes?: string
@@ -206,7 +206,7 @@ export async function resolveDLQEntry(
  * P2 Enhancement: Order by priority and next_retry_at
  */
 export async function getDLQEntriesForRetry(
-  supabase: SupabaseClient,
+  supabase: any,
   limit: number = 10
 ): Promise<Record<string, unknown>[]> {
   const { data, error } = await supabase
@@ -230,7 +230,7 @@ export async function getDLQEntriesForRetry(
  * P2: Get DLQ statistics for monitoring
  */
 export async function getDLQStats(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId?: string
 ): Promise<{
   pending: number;

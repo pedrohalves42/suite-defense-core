@@ -69,7 +69,7 @@ export async function requireSuperAdmin(
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseClient = createClient<any>(supabaseUrl, supabaseServiceKey);
 
     // Authenticate user with JWT
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);

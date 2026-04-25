@@ -29,7 +29,7 @@ export interface SignatureVerificationResult {
  * Supports N+N-1 key rotation for zero-downtime key updates
  */
 export async function verifyResultSignature(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   payload: {
     jobId: string

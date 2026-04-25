@@ -8,7 +8,7 @@ import { sha256Hex } from './key-generator.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 
 interface AgentManagerParams {
-  supabase: SupabaseClient;
+  supabase: any;
   requestId: string;
   userId: string;
   tenantId: string;
@@ -120,7 +120,7 @@ export async function resolveOrCreateAgent(params: AgentManagerParams): Promise<
 
 /** Create agent token with hash and prefix */
 export async function createAgentToken(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   agentToken: string,
   requestId: string,
@@ -150,7 +150,7 @@ export async function createAgentToken(
 
 /** Link enrollment key to agent (without plaintext token - SEC-002) */
 export async function linkEnrollmentKey(
-  supabase: SupabaseClient,
+  supabase: any,
   enrollmentKeyHash: string,
   agentId: string,
   agentName: string,

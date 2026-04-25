@@ -15,7 +15,7 @@ interface ApprovalResult {
 }
 
 export async function handleApproveViaToken(
-  supabase: SupabaseClient, req: Request, requestId: string, payload: Record<string, unknown>,
+  supabase: any, req: Request, requestId: string, payload: Record<string, unknown>,
 ): Promise<Response> {
   const startTime = Date.now();
   const clientIp = req.headers.get('cf-connecting-ip') || req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';

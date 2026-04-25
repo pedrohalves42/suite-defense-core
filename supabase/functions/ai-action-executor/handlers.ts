@@ -18,7 +18,7 @@ type ActionResult = Record<string, unknown>;
 export async function executeActionByType(
   actionType: string,
   actionPayload: Record<string, unknown>,
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   insightId: string | null,
   userId: string,

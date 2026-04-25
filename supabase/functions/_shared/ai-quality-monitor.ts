@@ -124,7 +124,7 @@ export async function detectDrift(
   hoursBack = 24,
   baselineHours = 168 // 7 days
 ): Promise<{ drifts: DriftAlert[]; baseline: Record<string, number>; current: Record<string, number> }> {
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const supabase = createClient<any>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   const drifts: DriftAlert[] = [];
   
   const now = new Date();
@@ -291,7 +291,7 @@ export async function createQualityAlert(
   tenantId?: string
 ): Promise<void> {
   try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const supabase = createClient<any>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
     await supabase.from('system_alerts').insert({
       tenant_id: tenantId || null,

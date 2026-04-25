@@ -5,7 +5,7 @@ import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { SCIM_SCHEMAS, scimHeaders, scimError } from './constants.ts';
 
 export async function createUser(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   body: Record<string, unknown>,
 ): Promise<Response> {
@@ -88,7 +88,7 @@ export async function createUser(
   }), { headers: scimHeaders, status: isNew ? 201 : 200 });
 }
 
-export async function getUser(supabase: SupabaseClient, tenantId: string, userId: string): Promise<Response> {
+export async function getUser(supabase: any, tenantId: string, userId: string): Promise<Response> {
   const { data: userRole } = await supabase
     .from('user_roles')
     .select('role')
@@ -123,7 +123,7 @@ export async function getUser(supabase: SupabaseClient, tenantId: string, userId
 }
 
 export async function listUsers(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   params: URLSearchParams,
 ): Promise<Response> {
@@ -179,7 +179,7 @@ export async function listUsers(
 }
 
 export async function updateUser(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   userId: string,
   body: Record<string, unknown>,
@@ -210,7 +210,7 @@ export async function updateUser(
 }
 
 export async function patchUser(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   userId: string,
   body: Record<string, unknown>,
@@ -230,7 +230,7 @@ export async function patchUser(
   return getUser(supabase, tenantId, userId);
 }
 
-export async function deleteUser(supabase: SupabaseClient, tenantId: string, userId: string): Promise<Response> {
+export async function deleteUser(supabase: any, tenantId: string, userId: string): Promise<Response> {
   await supabase.auth.admin.updateUserById(userId, { ban_duration: 'forever' });
   await supabase.from('user_roles').delete().eq('user_id', userId).eq('tenant_id', tenantId);
   await supabase.from('group_members').delete().eq('user_id', userId).eq('tenant_id', tenantId);

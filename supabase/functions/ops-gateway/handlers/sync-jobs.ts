@@ -7,7 +7,7 @@ import { logger, loggerWithContext } from '../../_shared/logger.ts';
 import { getDLQEntriesForRetry, calculateNextRetry } from '../../_shared/dlq.ts';
 import { fetchWithTimeout } from '../../_shared/fetch-with-timeout.ts';
 
-type SB = ReturnType<typeof createClient>;
+type SB = any;
 
 // ── process-failed-jobs ──────────────────────────────────────────────────
 

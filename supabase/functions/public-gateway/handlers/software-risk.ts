@@ -58,7 +58,7 @@ function calculateRiskScore(risks: SoftwareRisk[]): number {
 }
 
 export async function handleEvaluateSoftwareRisk(
-  supabase: SupabaseClient, _req: Request, _requestId: string, payload: Record<string, unknown>,
+  supabase: any, _req: Request, _requestId: string, payload: Record<string, unknown>,
 ): Promise<Response | Record<string, unknown>> {
   const parsed = InputSchema.safeParse(payload);
   if (!parsed.success) {

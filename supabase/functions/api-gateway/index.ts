@@ -118,7 +118,7 @@ const ACTION_TO_FUNCTION: Record<string, string> = {
 };
 
 // ── Inlined handlers (no HTTP hop) ──────────────────────────────────────
-type InlinedHandler = (supabase: ReturnType<typeof createClient>, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext) => Promise<unknown>;
+type InlinedHandler = (supabase: any, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext) => Promise<unknown>;
 
 const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   // billing inlined (Phase 1)
@@ -284,7 +284,7 @@ Deno.serve(async (req) => {
     // Try inlined handler first (no HTTP hop)
     const inlinedHandler = INLINED_HANDLERS[action];
     if (inlinedHandler) {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const supabase = createClient<any>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
       const jwtCtx = decodeJwtContext(req);
       const handlerCtx: HandlerContext = { req, userId: jwtCtx.userId, tenantId: jwtCtx.tenantId };
       

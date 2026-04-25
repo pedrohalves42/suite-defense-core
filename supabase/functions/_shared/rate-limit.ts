@@ -124,7 +124,7 @@ export function getRateLimitCacheStats(): {
  * 4. On RPC error → FAIL CLOSED (block request for safety). Do NOT cache errors.
  */
 export async function checkRateLimit(
-  supabase: SupabaseClient,
+  supabase: any,
   identifier: string,
   endpoint: string,
   config: RateLimitConfig = DEFAULT_CONFIG

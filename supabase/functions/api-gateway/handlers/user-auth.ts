@@ -8,7 +8,7 @@ import { logger } from '../../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import type { HandlerContext } from './admin.ts';
 
-type SB = ReturnType<typeof createClient>;
+type SB = any;
 
 const ChangePasswordSchema = z.object({
   current_password: z.string().min(1, 'Current password is required'),
@@ -64,7 +64,7 @@ export async function handleChangePassword(
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
   const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 
-  const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  const supabaseClient = createClient<any>(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: authHeader } },
   });
 

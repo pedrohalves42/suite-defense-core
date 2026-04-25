@@ -13,7 +13,7 @@ interface VulnFinding {
 }
 
 export async function handleVulnFindings(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   _agentName: string,
   tenantId: string,

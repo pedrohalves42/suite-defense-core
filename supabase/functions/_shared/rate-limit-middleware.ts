@@ -33,7 +33,7 @@ export function extractIdentifier(req: Request, userId?: string | null, tenantId
  * Apply rate limiting to a request. Returns headers and allowed status.
  */
 export async function applyRateLimit(
-  supabase: SupabaseClient,
+  supabase: any,
   req: Request,
   config: RateLimitMiddlewareConfig,
   userId?: string | null,
@@ -72,7 +72,7 @@ export async function applyRateLimit(
  * Adds rate-limit headers to whatever response the caller builds.
  */
 export async function enforceRateLimit(
-  supabase: SupabaseClient,
+  supabase: any,
   req: Request,
   config: RateLimitMiddlewareConfig,
   userId?: string | null,

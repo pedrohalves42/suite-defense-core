@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: buildCorsHeaders(origin), status: 204 })
   }
 
-  const supabase = createClient(
+  const supabase = createClient<any>(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     { auth: { persistSession: false } }

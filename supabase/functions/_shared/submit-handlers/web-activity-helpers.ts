@@ -24,7 +24,7 @@ export function categorizeDomain(domain: string): string {
 }
 
 export async function loadBlockedPatterns(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
 ): Promise<string[]> {
   const { data: blockedSites } = await supabase

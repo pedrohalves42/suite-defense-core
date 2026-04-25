@@ -8,7 +8,7 @@ import { logger } from '../../_shared/logger.ts';
 import { recordMetric } from '../../_shared/apm.ts';
 import { fetchWithTimeout } from '../../_shared/fetch-with-timeout.ts';
 
-type SB = ReturnType<typeof createClient>;
+type SB = any;
 
 // ── sync-blocked-websites ────────────────────────────────────────────────
 

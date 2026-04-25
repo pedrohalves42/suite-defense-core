@@ -5,7 +5,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
 
-type SB = ReturnType<typeof createClient>;
+type SB = any;
 
 // ═══ sli-collector ═══
 const SLI_TARGETS = {

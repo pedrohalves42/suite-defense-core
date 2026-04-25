@@ -8,7 +8,7 @@ import { buildCorsHeaders } from '../_shared/cors.ts';
 import type { PlaybookAction } from './types.ts';
 
 export async function handleSemiAutomaticApproval(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   executionId: string,
   playbook: Record<string, unknown>,

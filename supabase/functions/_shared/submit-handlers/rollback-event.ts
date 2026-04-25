@@ -6,7 +6,7 @@ import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../logger.ts';
 
 export async function handleRollbackEvent(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   agentName: string,
   tenantId: string,

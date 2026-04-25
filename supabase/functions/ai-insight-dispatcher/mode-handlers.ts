@@ -6,7 +6,7 @@ import { buildCorsHeaders } from '../_shared/cors.ts';
 
 const headers = (origin: string | null) => ({ ...buildCorsHeaders(origin), 'Content-Type': 'application/json' });
 
-export async function handleAutoExecute(supabase: SupabaseClient, insight: AIInsight, origin: string | null): Promise<Response> {
+export async function handleAutoExecute(supabase: any, insight: AIInsight, origin: string | null): Promise<Response> {
   const recommendedActions = insight.recommended_actions || [];
   const firstAction = recommendedActions[0] as { action_type?: string } | undefined;
   const actionType = firstAction?.action_type || 'unknown';
@@ -40,7 +40,7 @@ export async function handleAutoExecute(supabase: SupabaseClient, insight: AIIns
   return new Response(JSON.stringify({ success: true, action: 'suggested', reason }), { headers: headers(origin) });
 }
 
-export async function handleAutoWithApproval(supabase: SupabaseClient, insight: AIInsight, origin: string | null): Promise<Response> {
+export async function handleAutoWithApproval(supabase: any, insight: AIInsight, origin: string | null): Promise<Response> {
   const { data: playbook, error: playbookError } = await supabase
     .from('playbooks').select('id').eq('tenant_id', insight.tenant_id).eq('trigger_type', insight.insight_type).eq('is_enabled', true).maybeSingle();
   if (playbookError) logger.error('[ai-insight-dispatcher] Playbook lookup error:', playbookError);

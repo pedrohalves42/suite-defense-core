@@ -11,7 +11,7 @@ import { getTenantIdForUser } from '../../_shared/tenant.ts';
 import { checkRateLimit } from '../../_shared/rate-limit.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
-type SB = ReturnType<typeof createClient>;
+type SB = any;
 
 export interface HandlerContext {
   req: Request;

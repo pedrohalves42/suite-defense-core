@@ -6,7 +6,7 @@ import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-
 import { logger } from '../../_shared/logger.ts';
 import { fetchWithTimeout } from '../../_shared/fetch-with-timeout.ts';
 
-type InlinedHandler = (supabase: ReturnType<typeof createClient>, requestId: string, payload: Record<string, unknown>) => Promise<unknown>;
+type InlinedHandler = (supabase: any, requestId: string, payload: Record<string, unknown>) => Promise<unknown>;
 
 // ── fetch-nvd-cves ─────────────────────────────────────────────────────
 
@@ -119,7 +119,7 @@ export const handleFetchNvdCves: InlinedHandler = async (supabase, requestId, pa
 
 // ── correlate-edr-events ───────────────────────────────────────────────
 
-async function createIncident(supabase: SupabaseClient, tenantId: string, agentId: string, rule: Record<string, unknown>, matchedDets: Array<Record<string, unknown>>, tactics: string[]) {
+async function createIncident(supabase: any, tenantId: string, agentId: string, rule: Record<string, unknown>, matchedDets: Array<Record<string, unknown>>, tactics: string[]) {
   const techniques = [...new Set(matchedDets.map(m => m.mitre_technique_id).filter(Boolean))];
   const firstTime = matchedDets[0].event_time;
   const lastTime = matchedDets[matchedDets.length - 1].event_time;

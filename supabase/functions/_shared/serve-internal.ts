@@ -26,7 +26,7 @@ function errorResponse(message: string, status: number, requestId: string, origi
 }
 
 export interface InternalContext {
-  supabase: SupabaseClient;
+  supabase: any;
   requestId: string;
   body: unknown;
 }
@@ -50,7 +50,7 @@ export function serveInternal(handler: InternalHandler) {
     }
 
     try {
-      const supabase = createClient(
+      const supabase = createClient<any>(
         requireEnv('SUPABASE_URL'),
         requireEnv('SUPABASE_SERVICE_ROLE_KEY')
       );

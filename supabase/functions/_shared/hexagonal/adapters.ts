@@ -32,7 +32,7 @@ const isNewerThan = (a: string, b: string): boolean => {
 
 // ??? VersionQueryAdapter ????????????????????????????????
 export class SupabaseVersionQueryAdapter implements VersionQueryPort {
-  constructor(private readonly client: SupabaseClient) {}
+  constructor(private readonly client: any) {}
 
   async findLatestVersions(): Promise<LatestVersionInfo[]> {
     const { data, error } = await this.client
@@ -86,7 +86,7 @@ export class SupabaseVersionQueryAdapter implements VersionQueryPort {
 
 // ??? UpdateJobAdapter ???????????????????????????????????
 export class SupabaseUpdateJobAdapter implements UpdateJobPort {
-  constructor(private readonly client: SupabaseClient) {}
+  constructor(private readonly client: any) {}
 
   async hasPendingUpdateJob(agentId: string): Promise<boolean> {
     const { data } = await this.client
@@ -151,7 +151,7 @@ export class SupabaseUpdateJobAdapter implements UpdateJobPort {
 
 // ??? ObservabilityAdapter ???????????????????????????????
 export class SupabaseObservabilityAdapter implements ObservabilityPort {
-  constructor(private readonly client: SupabaseClient) {}
+  constructor(private readonly client: any) {}
 
   async logScheduledJobRun(params: {
     jobKey: string;
@@ -196,7 +196,7 @@ export class LoggingEventDispatcherAdapter implements EventDispatcherPort {
  * Composite: logging + persistence in a single adapter.
  */
 export class PersistingEventDispatcherAdapter implements EventDispatcherPort {
-  constructor(private readonly supabase: SupabaseClient) {}
+  constructor(private readonly supabase: any) {}
 
   async dispatch(event: DomainEvent): Promise<void> {
     // Log first (always succeeds)

@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
   const methodError = validateHttpMethod(req, ['POST'])
   if (methodError) return methodError
 
-  const supabase = createClient(
+  const supabase = createClient<any>(
     requireEnv('SUPABASE_URL'),
     requireEnv('SUPABASE_SERVICE_ROLE_KEY')
   )

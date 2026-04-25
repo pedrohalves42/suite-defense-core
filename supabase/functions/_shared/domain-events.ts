@@ -9,7 +9,7 @@ export class EdgeDomainEventDispatcher {
   private supabase;
 
   constructor() {
-    this.supabase = createClient(
+    this.supabase = createClient<any>(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );

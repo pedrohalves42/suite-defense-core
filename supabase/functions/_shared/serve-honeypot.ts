@@ -31,7 +31,7 @@ import { buildHoneypotResponse, type ResponseProfileType } from './honeypot/resp
 import { logger } from './logger.ts';
 
 export interface HoneypotContext {
-  supabase: SupabaseClient;
+  supabase: any;
   requestId: string;
   /** Raw body string (capped at 8 KB) */
   rawBody: string;
@@ -89,7 +89,7 @@ export function serveHoneypot(handler: HoneypotHandler) {
     }
 
     try {
-      const supabase = createClient(
+      const supabase = createClient<any>(
         requireEnv('SUPABASE_URL'),
         requireEnv('SUPABASE_SERVICE_ROLE_KEY'),
       );

@@ -16,7 +16,7 @@ function errRes(error: string, status: number, extra?: Record<string, unknown>) 
 }
 
 export async function handleActivateAgentHoneypot(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   requestId: string,
   payload: Record<string, unknown>,
   ctx?: HandlerContext,
@@ -101,7 +101,7 @@ export async function handleActivateAgentHoneypot(
 }
 
 export async function handleRevertAgentHoneypot(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   requestId: string,
   payload: Record<string, unknown>,
   ctx?: HandlerContext,

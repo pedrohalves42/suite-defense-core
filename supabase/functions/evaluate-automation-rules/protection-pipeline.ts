@@ -12,7 +12,7 @@ interface ProtectionResult {
   idempotencyKey?: string;
 }
 
-async function checkRuleDependencies(supabase: SupabaseClient, ruleId: string, tenantId: string): Promise<ProtectionResult> {
+async function checkRuleDependencies(supabase: any, ruleId: string, tenantId: string): Promise<ProtectionResult> {
   const { data } = await supabase.rpc('check_rule_dependencies', { p_rule_id: ruleId, p_tenant_id: tenantId });
   if (data && data.length > 0) {
     const blocker = data[0];
@@ -21,7 +21,7 @@ async function checkRuleDependencies(supabase: SupabaseClient, ruleId: string, t
   return { allowed: true, decision: 'passed', reason: '' };
 }
 
-async function checkExecutionCooldown(supabase: SupabaseClient, agentId: string, ruleId: string, cooldownMinutes: number): Promise<ProtectionResult> {
+async function checkExecutionCooldown(supabase: any, agentId: string, ruleId: string, cooldownMinutes: number): Promise<ProtectionResult> {
   const { data } = await supabase
     .from('automation_execution_log').select('id')
     .eq('agent_id', agentId).eq('rule_id', ruleId)
@@ -31,7 +31,7 @@ async function checkExecutionCooldown(supabase: SupabaseClient, agentId: string,
   return { allowed: true, decision: 'passed', reason: '' };
 }
 
-async function checkRateLimit(supabase: SupabaseClient, tenantId: string, ruleId: string, maxPerHour: number): Promise<ProtectionResult> {
+async function checkRateLimit(supabase: any, tenantId: string, ruleId: string, maxPerHour: number): Promise<ProtectionResult> {
   const { count } = await supabase
     .from('automation_execution_log').select('id', { count: 'exact', head: true })
     .eq('tenant_id', tenantId).eq('rule_id', ruleId)
@@ -40,7 +40,7 @@ async function checkRateLimit(supabase: SupabaseClient, tenantId: string, ruleId
   return { allowed: true, decision: 'passed', reason: '' };
 }
 
-async function checkCircuitBreaker(supabase: SupabaseClient, rule: Record<string, unknown>): Promise<ProtectionResult> {
+async function checkCircuitBreaker(supabase: any, rule: Record<string, unknown>): Promise<ProtectionResult> {
   const { data } = await supabase.rpc('check_and_update_circuit_breaker', {
     p_rule_id: rule.id,
     p_threshold: rule.circuit_breaker_threshold || 10,
@@ -51,7 +51,7 @@ async function checkCircuitBreaker(supabase: SupabaseClient, rule: Record<string
   return { allowed: true, decision: 'passed', reason: '' };
 }
 
-async function checkBlastRadius(supabase: SupabaseClient, rule: Record<string, unknown>, tenantId: string, totalAgents: number, severity?: string): Promise<ProtectionResult> {
+async function checkBlastRadius(supabase: any, rule: Record<string, unknown>, tenantId: string, totalAgents: number, severity?: string): Promise<ProtectionResult> {
   if (totalAgents === 0) return { allowed: true, decision: 'passed', reason: '' };
   let maxPercent = rule.max_affected_percentage || 30;
   try {
@@ -69,7 +69,7 @@ async function checkBlastRadius(supabase: SupabaseClient, rule: Record<string, u
   return { allowed: true, decision: 'passed', reason: '' };
 }
 
-async function checkIdempotency(supabase: SupabaseClient, idempotencyKey: string): Promise<ProtectionResult> {
+async function checkIdempotency(supabase: any, idempotencyKey: string): Promise<ProtectionResult> {
   const { data } = await supabase
     .from('automation_execution_log').select('id')
     .eq('idempotency_key', idempotencyKey).limit(1);
@@ -77,7 +77,7 @@ async function checkIdempotency(supabase: SupabaseClient, idempotencyKey: string
   return { allowed: true, decision: 'passed', reason: '' };
 }
 
-export async function tryAcquireRuleLock(supabase: SupabaseClient, ruleId: string): Promise<boolean> {
+export async function tryAcquireRuleLock(supabase: any, ruleId: string): Promise<boolean> {
   try {
     const { data } = await supabase.rpc('try_acquire_rule_lock', { p_rule_id: ruleId });
     return data === true;
@@ -89,7 +89,7 @@ export async function tryAcquireRuleLock(supabase: SupabaseClient, ruleId: strin
 }
 
 export async function runProtectionPipeline(
-  supabase: SupabaseClient, rule: Record<string, unknown>, agentId: string, tenantId: string, totalAgents: number, severity?: string
+  supabase: any, rule: Record<string, unknown>, agentId: string, tenantId: string, totalAgents: number, severity?: string
 ): Promise<ProtectionResult> {
   if (rule.mode === 'disabled') return { allowed: false, decision: 'blocked_disabled', reason: 'Rule is disabled' };
 
@@ -119,7 +119,7 @@ export async function runProtectionPipeline(
   return { allowed: true, decision: 'passed', reason: '', idempotencyKey };
 }
 
-export async function logDecision(supabase: SupabaseClient, tenantId: string, rule: Record<string, unknown>, agentId: string | null, decision: string, reason: string, triggerData: Record<string, unknown>, executed: boolean) {
+export async function logDecision(supabase: any, tenantId: string, rule: Record<string, unknown>, agentId: string | null, decision: string, reason: string, triggerData: Record<string, unknown>, executed: boolean) {
   try {
     await supabase.from('automation_decision_log').insert({
       tenant_id: tenantId, rule_id: rule.id, rule_name: rule.name, agent_id: agentId,
@@ -129,7 +129,7 @@ export async function logDecision(supabase: SupabaseClient, tenantId: string, ru
   } catch (e) { logger.warn('[DecisionLog] Failed:', e); }
 }
 
-export async function logExecution(supabase: SupabaseClient, tenantId: string, agentId: string, ruleId: string, actionType: string, success: boolean, idempotencyKey?: string, metadata?: Record<string, unknown>) {
+export async function logExecution(supabase: any, tenantId: string, agentId: string, ruleId: string, actionType: string, success: boolean, idempotencyKey?: string, metadata?: Record<string, unknown>) {
   try {
     await supabase.from('automation_execution_log').insert({
       tenant_id: tenantId, agent_id: agentId, rule_id: ruleId, action_type: actionType, success, idempotency_key: idempotencyKey || null, metadata,
@@ -137,7 +137,7 @@ export async function logExecution(supabase: SupabaseClient, tenantId: string, a
   } catch (e) { logger.warn('[ExecLog] Failed:', e); }
 }
 
-export async function createApprovalRequest(supabase: SupabaseClient, tenantId: string, rule: Record<string, unknown>, agentId: string, triggerData: Record<string, unknown>) {
+export async function createApprovalRequest(supabase: any, tenantId: string, rule: Record<string, unknown>, agentId: string, triggerData: Record<string, unknown>) {
   try {
     await supabase.from('automation_approvals').insert({ tenant_id: tenantId, rule_id: rule.id, agent_id: agentId, trigger_data: triggerData, status: 'pending' });
   } catch (e) { logger.warn('[Approval] Failed:', e); }

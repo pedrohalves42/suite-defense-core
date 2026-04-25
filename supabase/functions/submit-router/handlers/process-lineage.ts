@@ -64,7 +64,7 @@ function detectSuspicious(proc: ProcessEntry): { suspicious: boolean; reasons: s
 }
 
 export async function handleProcessLineage(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   agentName: string,
   tenantId: string,

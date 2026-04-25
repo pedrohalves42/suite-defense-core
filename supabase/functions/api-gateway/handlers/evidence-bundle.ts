@@ -39,7 +39,7 @@ async function hashData(data: string): Promise<string> {
 }
 
 export async function handleExportEvidenceBundle(
-  supabase: SupabaseClient,
+  supabase: any,
   requestId: string,
   payload: Record<string, unknown>,
   ctx?: HandlerContext,

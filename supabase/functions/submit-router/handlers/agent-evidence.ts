@@ -60,7 +60,7 @@ async function normalizeEntry(
 }
 
 export async function handleAgentEvidence(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   agentName: string,
   tenantId: string,

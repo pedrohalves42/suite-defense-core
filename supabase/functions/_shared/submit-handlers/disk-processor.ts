@@ -57,7 +57,7 @@ export function selectPrimaryDisk(
 
 /** Insert individual disk metrics into dedicated table */
 export async function insertDiskMetrics(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   tenantId: string,
   disks: DiskInfo[],

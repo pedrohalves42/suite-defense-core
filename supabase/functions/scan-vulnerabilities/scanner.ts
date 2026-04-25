@@ -16,7 +16,7 @@ import {
 
 /** Scan a single agent's vulnerabilities against CVE database */
 export async function scanAgentVulnerabilities(
-  supabase: SupabaseClient,
+  supabase: any,
   agent_id: string,
   tenant_id: string,
   requestId: string,

@@ -5,7 +5,7 @@ import { logger } from '../_shared/logger.ts';
  * Save an AI-generated Red Team assessment to the database.
  */
 export async function saveAssessment(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   analysisResult: Record<string, unknown>,
   aiModel: string,

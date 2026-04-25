@@ -42,7 +42,7 @@ Deno.serve(async (request) => {
     const event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret, undefined, cryptoProvider);
     logger.info(`[STRIPE-WEBHOOK] Event received: ${event.type}`, { traceId });
 
-    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
+    const supabase = createClient<any>(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
 
     switch (event.type) {
       case "checkout.session.completed":

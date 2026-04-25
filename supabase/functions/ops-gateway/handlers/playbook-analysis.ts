@@ -17,7 +17,7 @@ interface RiskExplanation {
   offline_agents?: string; critical_events?: string; job_failure_rate?: string;
 }
 
-export async function handleCalculateRiskScore(supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>): Promise<unknown> {
+export async function handleCalculateRiskScore(supabase: any, requestId: string, payload: Record<string, unknown>): Promise<unknown> {
   const tenantId = payload.tenant_id as string;
   if (!tenantId) return { __status: 400, error: 'tenant_id is required' };
 
@@ -91,7 +91,7 @@ function getDetectionMethod(type: string) {
   }
 }
 
-export async function handleRunAttackSimulation(supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>): Promise<unknown> {
+export async function handleRunAttackSimulation(supabase: any, requestId: string, payload: Record<string, unknown>): Promise<unknown> {
   const parsed = AttackSimSchema.safeParse(payload);
   if (!parsed.success) return { __status: 400, error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors };
 

@@ -10,7 +10,7 @@ import { requireSuperAdmin } from '../../_shared/require-super-admin.ts';
 import { buildCorsHeaders } from '../../_shared/cors.ts';
 
 export async function handleHealth(
-  supabase: SupabaseClient, req: Request, _requestId: string, _payload: Record<string, unknown>,
+  supabase: any, req: Request, _requestId: string, _payload: Record<string, unknown>,
 ): Promise<Response> {
   const origin = req.headers.get('origin');
   const url = new URL(req.url);

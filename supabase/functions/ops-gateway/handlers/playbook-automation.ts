@@ -42,7 +42,7 @@ const EVENT_TRIGGER_MAP: Record<string, string> = {
   'DET-015': 'c2_communication', 'DET-008': 'suspicious_process',
 };
 
-export async function handleSoarEngine(supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>): Promise<unknown> {
+export async function handleSoarEngine(supabase: any, requestId: string, payload: Record<string, unknown>): Promise<unknown> {
   const rawBody = payload as SOAREvent | { events: SOAREvent[] };
   const events: SOAREvent[] = 'events' in rawBody ? rawBody.events : [rawBody as SOAREvent];
   if (!events.length) return { success: true, actions: 0 };
@@ -143,7 +143,7 @@ function shouldSkipAction(config: Record<string, unknown> | undefined, policy: A
   return null;
 }
 
-async function executeActionItem(supabase: SupabaseClient, action: ActionRecord, requestId: string): Promise<Record<string, unknown> | null> {
+async function executeActionItem(supabase: any, action: ActionRecord, requestId: string): Promise<Record<string, unknown> | null> {
   switch (action.action_type) {
     case 'create_system_alert': {
       const p = action.action_payload;
@@ -173,7 +173,7 @@ async function executeActionItem(supabase: SupabaseClient, action: ActionRecord,
   }
 }
 
-export async function handleAutoExecuteAiActions(supabase: SupabaseClient, requestId: string, _payload: Record<string, unknown>): Promise<unknown> {
+export async function handleAutoExecuteAiActions(supabase: any, requestId: string, _payload: Record<string, unknown>): Promise<unknown> {
   const startTime = Date.now();
   logger.info(`[${requestId}] auto-execute-ai-actions started`);
 
@@ -264,7 +264,7 @@ const OncallSchema = z.object({
   rotation: z.array(z.unknown()).optional(),
 }).passthrough();
 
-export async function handleOncallIntegration(supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>): Promise<unknown> {
+export async function handleOncallIntegration(supabase: any, requestId: string, payload: Record<string, unknown>): Promise<unknown> {
   const PAGERDUTY_API_KEY = Deno.env.get('PAGERDUTY_API_KEY') || '';
   const PAGERDUTY_ROUTING_KEY = Deno.env.get('PAGERDUTY_ROUTING_KEY') || '';
   const PAGERDUTY_SCHEDULE_ID = Deno.env.get('PAGERDUTY_SCHEDULE_ID') || '';
@@ -406,7 +406,7 @@ async function createServiceNowTicket(integration: Record<string, unknown>, tick
   return { id: data.result?.sys_id, key: data.result?.number, url: `${baseUrl}/nav_to.do?uri=incident.do?sys_id=${data.result?.sys_id}` };
 }
 
-export async function handleCreateItsmTicket(supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>): Promise<unknown> {
+export async function handleCreateItsmTicket(supabase: any, requestId: string, payload: Record<string, unknown>): Promise<unknown> {
   const parsed = CreateTicketSchema.safeParse(payload);
   if (!parsed.success) return { __status: 400, error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors };
 

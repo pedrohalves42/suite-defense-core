@@ -8,7 +8,7 @@ export function isLowRiskAction(actionType: string): boolean {
   return LOW_RISK_ACTIONS.includes(actionType);
 }
 
-export async function isActionWhitelisted(supabase: SupabaseClient, actionType: string): Promise<boolean> {
+export async function isActionWhitelisted(supabase: any, actionType: string): Promise<boolean> {
   const { data, error } = await supabase
     .from('ai_action_configs')
     .select('is_enabled')
@@ -19,7 +19,7 @@ export async function isActionWhitelisted(supabase: SupabaseClient, actionType: 
   return !!data;
 }
 
-export async function checkAutoExecutionRateLimit(supabase: SupabaseClient, tenantId: string): Promise<boolean> {
+export async function checkAutoExecutionRateLimit(supabase: any, tenantId: string): Promise<boolean> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const { count, error } = await supabase

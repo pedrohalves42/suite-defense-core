@@ -33,7 +33,7 @@ interface ControlSummary {
 
 // ── Control-to-query mapping (custo-eficiente: agrupa por query) ──
 async function collectEvidenceFromDB(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
 ): Promise<EvidenceItem[]> {
   const evidence: EvidenceItem[] = [];
@@ -270,7 +270,7 @@ function buildSummary(evidence: EvidenceItem[]): Record<string, ControlSummary> 
 
 // ── Save evidence to DB ──
 async function persistEvidence(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   evidence: EvidenceItem[],
 ): Promise<boolean> {

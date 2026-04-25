@@ -5,7 +5,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
 
-type SB = ReturnType<typeof createClient>;
+type SB = any;
 
 const MAX_ALERTS_PER_RUN = 10;
 

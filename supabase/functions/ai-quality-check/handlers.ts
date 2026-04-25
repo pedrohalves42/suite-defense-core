@@ -45,7 +45,7 @@ export async function handleQualityCheck(tenantId: string, origin: string | null
   }), { headers: headers(origin) });
 }
 
-export async function handleDriftAnalysis(supabase: ReturnType<typeof createClient>, origin: string | null): Promise<Response> {
+export async function handleDriftAnalysis(supabase: any, origin: string | null): Promise<Response> {
   const { data: metrics } = await supabase.from('ai_inference_metrics').select('function_name, latency_ms, success, created_at').order('created_at', { ascending: false }).limit(1000);
 
   if (!metrics || metrics.length === 0) {

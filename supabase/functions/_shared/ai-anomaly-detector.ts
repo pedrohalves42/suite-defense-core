@@ -179,7 +179,7 @@ const SKIP_THRESHOLD = 10;
  * Verifica anomalias recentes do mesmo tipo (rate limiting)
  */
 async function checkRecentAnomalies(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   functionName: string,
   anomalyType: string,
@@ -217,7 +217,7 @@ async function checkRecentAnomalies(
  * Registra anomalia no banco de dados
  */
 export async function logAnomaly(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   functionName: string,
   anomaly: AnomalyFlag,
@@ -245,7 +245,7 @@ export async function logAnomaly(
  * Processa todas as anomalias detectadas com rate limiting
  */
 export async function processAnomalies(
-  supabase: SupabaseClient,
+  supabase: any,
   validation: BehaviorValidation,
   context: AIContext,
   additionalContext: Record<string, unknown> = {}

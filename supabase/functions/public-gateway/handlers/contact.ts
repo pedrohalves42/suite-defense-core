@@ -17,7 +17,7 @@ const ContactFormSchema = z.object({
 });
 
 export async function handleSubmitContact(
-  supabase: SupabaseClient, req: Request, requestId: string, payload: Record<string, unknown>,
+  supabase: any, req: Request, requestId: string, payload: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown';
   const userAgent = req.headers.get('user-agent') || 'unknown';

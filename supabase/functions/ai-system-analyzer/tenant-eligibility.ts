@@ -5,7 +5,7 @@ import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 
 export async function checkTenantAIEligibility(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string
 ): Promise<{ eligible: boolean; reason?: string }> {
   const { data: subscription, error: subError } = await supabase
@@ -53,7 +53,7 @@ export async function checkTenantAIEligibility(
 }
 
 export async function incrementAIQuotaUsage(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   insightsCount: number
 ): Promise<void> {

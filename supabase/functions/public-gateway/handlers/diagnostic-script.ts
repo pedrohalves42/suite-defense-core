@@ -303,7 +303,7 @@ Write-Host "============================================================" -Foreg
 `;
 
 export async function handleGetDiagnosticScript(
-  supabase: SupabaseClient,
+  supabase: any,
   req: Request,
   requestId: string,
   _payload: Record<string, unknown>,

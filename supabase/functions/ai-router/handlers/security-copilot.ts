@@ -25,7 +25,7 @@ Guidelines:
 - If you don't have enough data, say so clearly
 - Never fabricate data or metrics`;
 
-async function getTenantContext(supabase: ReturnType<typeof createClient>, tenantId: string) {
+async function getTenantContext(supabase: any, tenantId: string) {
   const [agents, alerts, vulns, insights] = await Promise.all([
     supabase.from('agents').select('id, hostname, status, os_type, agent_version, last_seen_at, health_score')
       .eq('tenant_id', tenantId).neq('status', 'archived').order('last_seen_at', { ascending: false }).limit(20),

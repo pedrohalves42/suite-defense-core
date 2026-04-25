@@ -20,7 +20,7 @@ interface SafeInviteData {
 }
 
 export async function handleValidateInvite(
-  supabase: SupabaseClient,
+  supabase: any,
   _req: Request,
   requestId: string,
   payload: Record<string, unknown>,

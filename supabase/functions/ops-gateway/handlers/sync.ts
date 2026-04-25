@@ -5,7 +5,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
 import { recordMetric } from '../../_shared/apm.ts';
 
-type SB = ReturnType<typeof createClient>;
+type SB = any;
 
 export async function handleResetDailyQuotas(supabase: SB, requestId: string, _payload: Record<string, unknown>) {
   logger.info(`[reset-daily-quotas][${requestId}] Starting daily quota reset`);

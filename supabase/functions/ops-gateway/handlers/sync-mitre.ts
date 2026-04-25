@@ -6,7 +6,7 @@ import { logger } from '../../_shared/logger.ts';
 import { fetchWithTimeout } from '../../_shared/fetch-with-timeout.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
-type SB = ReturnType<typeof createClient>;
+type SB = any;
 
 const MITRE_ENTERPRISE_URL = 'https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json';
 

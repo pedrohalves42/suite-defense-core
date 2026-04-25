@@ -27,7 +27,7 @@ export interface ActionResult {
 }
 
 export interface ActionContext {
-  supabase: SupabaseClient;
+  supabase: any;
   tenantId: string;
   agentId: string | null;
   userId: string;

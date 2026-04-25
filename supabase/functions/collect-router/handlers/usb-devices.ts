@@ -15,7 +15,7 @@ interface UsbDevicePayload {
 }
 
 export async function handleUsbDevices(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   agentName: string,
   tenantId: string,

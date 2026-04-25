@@ -85,7 +85,7 @@ function deduplicateItems(items: PreparedItem[]): PreparedItem[] {
 }
 
 async function persistActivity(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   items: PreparedItem[],
 ): Promise<{ insertedCount: number; updatedCount: number }> {
@@ -152,7 +152,7 @@ async function persistActivity(
 }
 
 export async function handleWebActivity(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   agentName: string,
   tenantId: string,

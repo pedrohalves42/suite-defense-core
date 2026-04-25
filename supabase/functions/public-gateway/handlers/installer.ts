@@ -17,7 +17,7 @@ import { persistInstallerHash, trackDownloadEvent } from '../../_shared/installe
 const SUPABASE_URL = requireEnv('SUPABASE_URL');
 
 export async function handleServeInstaller(
-  supabase: SupabaseClient,
+  supabase: any,
   req: Request,
   requestId: string,
   payload: Record<string, unknown>,

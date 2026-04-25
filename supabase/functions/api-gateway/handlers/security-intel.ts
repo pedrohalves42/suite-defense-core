@@ -7,7 +7,7 @@ import { logger } from '../../_shared/logger.ts';
 import { fetchWithTimeout } from '../../_shared/fetch-with-timeout.ts';
 import type { HandlerContext } from './admin.ts';
 
-type SupabaseClient = ReturnType<typeof createClient>;
+type SupabaseClient = any;
 
 // ─── threat-intelligence-lookup ──────────────────────────────────────────────
 
@@ -73,7 +73,7 @@ async function checkURLhaus(target: string): Promise<{ verdict: string; score: n
 }
 
 export async function handleThreatIntelligenceLookup(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
+  supabase: any, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
 ): Promise<unknown> {
   const tenantId = (payload.tenant_id as string) || ctx?.tenantId;
   const target = payload.target as string;
@@ -137,7 +137,7 @@ export async function handleThreatIntelligenceLookup(
 // ─── build-security-graph ───────────────────────────────────────────────────
 
 export async function handleBuildSecurityGraph(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
+  supabase: any, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
 ): Promise<unknown> {
   const tenantId = (payload.tenant_id as string) || ctx?.tenantId;
   if (!tenantId) return { __status: 400, error: 'tenant_id required' };

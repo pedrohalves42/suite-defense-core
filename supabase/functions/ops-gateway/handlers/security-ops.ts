@@ -9,12 +9,12 @@ import { logger } from '../../_shared/logger.ts';
 import { createAuditLog } from '../../_shared/audit.ts';
 import { healthProbeMiddleware, updateJobHeartbeat, EDGE_VERSION } from '../../_shared/health-probe.ts';
 
-type SupabaseClient = ReturnType<typeof createClient>;
+type SupabaseClient = any;
 
 // ─── auto-quarantine ────────────────────────────────────────────────────────
 
 export async function handleAutoQuarantine(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>,
+  supabase: any, requestId: string, payload: Record<string, unknown>,
 ): Promise<unknown> {
   const { virus_scan_id, agent_name, file_path, file_hash, positives, total_scans } = payload as {
     virus_scan_id: string; agent_name: string; file_path: string; file_hash: string; positives: number; total_scans: number;
@@ -49,7 +49,7 @@ export async function handleAutoQuarantine(
 // ─── quarantine-agent ───────────────────────────────────────────────────────
 
 export async function handleQuarantineAgent(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>,
+  supabase: any, requestId: string, payload: Record<string, unknown>,
 ): Promise<unknown> {
   const { agent_id, quarantine_reason, severity = 'high', duration_hours = 24, restrict_network = true, restrict_processes = true, restrict_file_access = true } = payload as {
     agent_id: string; quarantine_reason: string; severity?: string; duration_hours?: number; restrict_network?: boolean; restrict_processes?: boolean; restrict_file_access?: boolean;
@@ -88,7 +88,7 @@ export async function handleQuarantineAgent(
 // ─── apply-security-patch ───────────────────────────────────────────────────
 
 export async function handleApplySecurityPatch(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>,
+  supabase: any, requestId: string, payload: Record<string, unknown>,
 ): Promise<unknown> {
   const { cve_id, agent_ids, patch_method = 'automatic' } = payload as { cve_id: string; agent_ids?: string[]; patch_method?: string };
   if (!cve_id) return { __status: 400, error: 'cve_id required' };
@@ -117,7 +117,7 @@ export async function handleApplySecurityPatch(
 // ─── detect-blocked-attempts ────────────────────────────────────────────────
 
 export async function handleDetectBlockedAttemptsSecurity(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>,
+  supabase: any, requestId: string, payload: Record<string, unknown>,
 ): Promise<unknown> {
   const startedAt = Date.now();
   const timeoutMs = 20000;
@@ -143,7 +143,7 @@ export async function handleDetectBlockedAttemptsSecurity(
 // ─── security-monitor ───────────────────────────────────────────────────────
 
 export async function handleSecurityMonitor(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>,
+  supabase: any, requestId: string, payload: Record<string, unknown>,
 ): Promise<unknown> {
   const startedAt = Date.now();
   const result = { credential_rotation: { tokens_warning: 0, tokens_expired: 0 }, expiring_keys: { keys_found: 0, notifications_sent: 0 }, duration_ms: 0 };
@@ -203,13 +203,13 @@ function parseInterval(interval: string): number {
   return 0;
 }
 
-async function createSystemAlert(supabase: SupabaseClient, alertType: string, severity: string, message: string) {
+async function createSystemAlert(supabase: any, alertType: string, severity: string, message: string) {
   try { await supabase.from('system_alerts').insert({ alert_type: alertType, severity, message, resolved: false }); }
   catch (error) { logger.error('Failed to create system alert:', error); }
 }
 
 export async function handleSecurityAlertDispatcher(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>,
+  supabase: any, requestId: string, payload: Record<string, unknown>,
 ): Promise<unknown> {
   logger.info(`[${requestId}] Security alert dispatcher started - Edge v${EDGE_VERSION}`);
   const healthCheck = await healthProbeMiddleware(supabase, {});
@@ -261,7 +261,7 @@ export async function handleSecurityAlertDispatcher(
 // ─── integrity-sentinel ─────────────────────────────────────────────────────
 
 export async function handleIntegritySentinel(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>,
+  supabase: any, requestId: string, payload: Record<string, unknown>,
 ): Promise<unknown> {
   const startTime = Date.now();
   const { data: systemMode } = await supabase.rpc('get_system_mode_safe');
@@ -303,7 +303,7 @@ export async function handleIntegritySentinel(
 // ─── populate-security-graph ────────────────────────────────────────────────
 
 export async function handlePopulateSecurityGraph(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>,
+  supabase: any, requestId: string, payload: Record<string, unknown>,
 ): Promise<unknown> {
   const tenant_id = payload.tenant_id as string;
   if (!tenant_id) return { __status: 400, error: 'tenant_id required' };
@@ -372,7 +372,7 @@ export async function handlePopulateSecurityGraph(
 // ─── publish-threat-ioc ─────────────────────────────────────────────────────
 
 export async function handlePublishThreatIoc(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>,
+  supabase: any, requestId: string, payload: Record<string, unknown>,
 ): Promise<unknown> {
   const { iocs, detection_type, source_agent_name } = payload as {
     iocs: Array<{ type: string; value: string; severity: string; tags?: string[]; context?: string; source_agent_id?: string; source_tenant_id?: string; metadata?: Record<string, unknown> }>;

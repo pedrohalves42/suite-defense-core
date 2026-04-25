@@ -40,7 +40,7 @@ import { handleServeInstaller } from '../_shared/handlers/installer.ts';
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
 type PublicHandler = (
-  supabase: SupabaseClient,
+  supabase: any,
   req: Request,
   requestId: string,
   payload: Record<string, unknown>,
@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
   const startedAt = Date.now();
 
   try {
-    const supabase = createClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'));
+    const supabase = createClient<any>(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'));
 
     let action: string;
     let payload: Record<string, unknown> = {};

@@ -25,7 +25,7 @@ export interface AgentCredentials {
  * Validate enrollment key and verify user has access to the tenant.
  */
 export async function validateEnrollment(
-  supabase: SupabaseClient,
+  supabase: any,
   enrollmentKey: string,
   userId: string,
   requestId: string
@@ -71,7 +71,7 @@ export async function validateEnrollment(
  * Fetch agent credentials (name, hmac_secret).
  */
 export async function fetchAgentCredentials(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string
 ): Promise<{ data?: AgentCredentials; error?: string }> {
   const { data: agentData } = await supabase

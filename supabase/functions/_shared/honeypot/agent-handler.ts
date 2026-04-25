@@ -41,7 +41,7 @@ export interface HoneypotAgentContext {
 export async function handleHoneypotAgentRequest(
   req: Request,
   ctx: HoneypotAgentContext,
-  supabase: SupabaseClient,
+  supabase: any,
 ): Promise<Response> {
   const origin = req.headers.get('origin');
   const cors = buildCorsHeaders(origin);

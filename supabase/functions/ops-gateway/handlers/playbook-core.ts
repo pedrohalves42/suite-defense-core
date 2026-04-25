@@ -21,7 +21,7 @@ const PlaybookSchema = z.object({
   }).passthrough(),
 });
 
-async function createAlert(supabase: SupabaseClient, playbook: Record<string, unknown>, triggerData: Record<string, unknown>) {
+async function createAlert(supabase: any, playbook: Record<string, unknown>, triggerData: Record<string, unknown>) {
   const { error } = await supabase.from('system_alerts').insert({
     tenant_id: triggerData.tenant_id,
     agent_id: triggerData.agent_id || null,
@@ -35,7 +35,7 @@ async function createAlert(supabase: SupabaseClient, playbook: Record<string, un
   return { alert_created: true };
 }
 
-async function collectEvidence(supabase: SupabaseClient, triggerData: Record<string, unknown>) {
+async function collectEvidence(supabase: any, triggerData: Record<string, unknown>) {
   if (!triggerData.agent_id) return { skipped: true, reason: 'no_agent_id' };
   const { data: agent } = await supabase.from('agents').select('agent_name, tenant_id').eq('id', triggerData.agent_id).single();
   if (!agent) return { skipped: true, reason: 'agent_not_found' };
@@ -49,7 +49,7 @@ async function collectEvidence(supabase: SupabaseClient, triggerData: Record<str
   return { evidence_job_created: job.id };
 }
 
-export async function handleExecutePlaybook(supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>): Promise<unknown> {
+export async function handleExecutePlaybook(supabase: any, requestId: string, payload: Record<string, unknown>): Promise<unknown> {
   const parsed = PlaybookSchema.safeParse(payload);
   if (!parsed.success) return { __status: 400, error: 'Invalid input', details: parsed.error.flatten().fieldErrors };
 
@@ -86,7 +86,7 @@ export async function handleExecutePlaybook(supabase: SupabaseClient, requestId:
 
 // ── process-playbook-trigger-logs ───────────────────────────────────────
 
-export async function handleProcessPlaybookTriggerLogs(supabase: SupabaseClient, requestId: string, _payload: Record<string, unknown>): Promise<unknown> {
+export async function handleProcessPlaybookTriggerLogs(supabase: any, requestId: string, _payload: Record<string, unknown>): Promise<unknown> {
   const startTime = Date.now();
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
   const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -155,7 +155,7 @@ const RollbackDecisionSchema = z.object({
   user_id: z.string().uuid().optional(),
 });
 
-export async function handleRollbackByDecisionEvent(supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>): Promise<unknown> {
+export async function handleRollbackByDecisionEvent(supabase: any, requestId: string, payload: Record<string, unknown>): Promise<unknown> {
   const parsed = RollbackDecisionSchema.safeParse(payload);
   if (!parsed.success) return { __status: 400, error: 'Invalid input', details: parsed.error.flatten().fieldErrors };
 
@@ -210,7 +210,7 @@ function buildRollbackPayload(actionType: string, details: Record<string, unknow
   }
 }
 
-export async function handleRollbackRemediation(supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>): Promise<unknown> {
+export async function handleRollbackRemediation(supabase: any, requestId: string, payload: Record<string, unknown>): Promise<unknown> {
   const parsed = RollbackRemSchema.safeParse(payload);
   if (!parsed.success) return { __status: 400, error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors };
 
@@ -288,7 +288,7 @@ const DEFAULT_MAPPINGS: Record<string, 'auto' | 'approval'> = {
   data_exfiltration_suspected: 'approval', unauthorized_software: 'approval',
 };
 
-export async function handleResolveActionPolicy(supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>): Promise<unknown> {
+export async function handleResolveActionPolicy(supabase: any, requestId: string, payload: Record<string, unknown>): Promise<unknown> {
   const parsed = ActionPolicySchema.safeParse(payload);
   if (!parsed.success) return { __status: 400, error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors };
 
