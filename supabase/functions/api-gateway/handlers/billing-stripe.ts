@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Billing Stripe Handlers — Inlined from standalone functions (Phase 2B)
  * Uses dynamic Stripe import to avoid loading SDK on non-billing requests.

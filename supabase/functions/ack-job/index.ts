@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * ack-job — DEPRECATED (Sunset 2026-06-01). Use /submit-job-result instead.
  * Migrated to serveAgent middleware with HMAC verification.

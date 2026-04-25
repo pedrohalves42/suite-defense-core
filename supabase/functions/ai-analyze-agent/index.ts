@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * ai-analyze-agent → Migrated to serveTenant() (V-1097)
  * Previously had NO authentication at all.

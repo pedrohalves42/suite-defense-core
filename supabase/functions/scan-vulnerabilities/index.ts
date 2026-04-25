@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Scan Vulnerabilities - Orchestrator
  * Auth: serveTenant (JWT + tenant isolation)

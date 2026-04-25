@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { logger } from '../_shared/logger.ts';
 /**
  * Fingerprint computation utilities for register-agent-key

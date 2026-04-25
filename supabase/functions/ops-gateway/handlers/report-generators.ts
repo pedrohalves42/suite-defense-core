@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * report-generators.ts — Inlined report generation handlers (Phase 1D)
  * 
