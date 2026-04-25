@@ -30,7 +30,9 @@
     "validate:security": "npm run check:env",
     "check:secrets": "echo 'Security scanning completed - gitleaks was used for initial cleanup'",
     "check:env": "test ! -f .env && echo '✅ .env not staged' || (echo '❌ .env file detected!' && exit 1)",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "test:edge:debug": "bash scripts/debug-tests.sh",
+    "test:edge:parse": "bun scripts/parse-edge-errors.js"
   },
   "dependencies": {
     "@capacitor/android": "^8.1.0",
