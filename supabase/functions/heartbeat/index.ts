@@ -28,7 +28,7 @@ import { buildCorsHeaders } from '../_shared/cors.ts'
 
 import { validateHeartbeatHmac } from './auth/hmac-validator.ts'
 import { parseHeartbeatPayload, buildAgentUpdate } from './parser/heartbeat-parser.ts'
-import { updateAgentStatus, executeParallelOps } from './state-updater.ts'
+import { updateAgentStatus, executeParallelOps, TELEMETRY_THROTTLE_MS } from './state-updater.ts'
 import { processForceUpdate } from './force-update.ts'
 import { buildNormalResponse } from './response-builder.ts'
 import type { AgentContext } from './types.ts'
@@ -114,6 +114,13 @@ Deno.serve(async (req) => {
     logger.debug('Heartbeat received', { agentName: agent.agent_name, traceId })
 
     // ── 5. Update agent status (critical path — must complete before response) ──
+    const lastInsert = agent.last_telemetry_at ? new Date(agent.last_telemetry_at).getTime() : 0
+    const shouldInsertTelemetry = (Date.now() - lastInsert) >= TELEMETRY_THROTTLE_MS
+    
+    if (shouldInsertTelemetry) {
+      (updateData as any).last_telemetry_at = new Date().toISOString()
+    }
+
     await updateAgentStatus(supabase, agent.id, agent.agent_name, updateData)
 
     // ── 6. Force-update check (critical path) ───────────────
@@ -132,7 +139,7 @@ Deno.serve(async (req) => {
     // while metrics/processes/token-touch continue processing.
     // This reduces perceived latency from ~2.2s to ~200ms.
     try {
-      const bgWork = executeParallelOps(supabase, agent, osInfo)
+      const bgWork = executeParallelOps(supabase, agent, osInfo, shouldInsertTelemetry)
       if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
         EdgeRuntime.waitUntil(bgWork)
       } else {

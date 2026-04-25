@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { memo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,10 +38,10 @@ function getOsIcon(osType: string | null) {
   return <HardDrive className="h-5 w-5" />;
 }
 
-export function AgentCard({
+export const AgentCard = memo(({
   agent, status, outdated, metrics, installationComplete,
   checkingHealth, onCheckHealth, onDisable, onEnable, onDelete, getTimeSince,
-}: AgentCardProps) {
+}: AgentCardProps) => {
   const { t } = useTranslation();
 
   const borderColor = status === 'online' ? 'border-green-500/30' :
@@ -173,7 +174,7 @@ export function AgentCard({
       </Card>
     </motion.div>
   );
-}
+});
 
 function MetricBar({ icon, label, value }: { icon: React.ReactNode; label: string; value: number | null }) {
   const v = value ?? 0;
