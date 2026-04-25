@@ -150,7 +150,7 @@ export async function handleNotifyWebhook(supabase: SB, requestId: string, paylo
       headers['X-Webhook-Signature'] = `sha256=${Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('')}`;
     }
     try {
-      const response = await fetchWithTimeout(webhook.url, { method: 'POST', headers, body: JSON.stringify(webhookPayload), signal: AbortSignal.timeout(10000) });
+      const response = await fetchWithTimeout(webhook.url, { method: 'POST', headers, body: JSON.stringify(webhookPayload), timeoutMs: 10000 });
       if (response.ok) dispatched++; else { failed++; }
     } catch (_) { failed++; }
   }
