@@ -166,7 +166,8 @@ jobs:
       - name: Edge Function Type Audit (Informational, Non-blocking)
         continue-on-error: true
         run: |
-          deno check supabase/functions/**/*.ts 2>&1 | node scripts/classify-ts-errors.cjs || true
+          # Only forward actual error lines to the classifier; suppress per-file "Check ..." progress noise.
+          deno check supabase/functions/**/*.ts 2>&1 | grep -E "(error:|TS[0-9]+|\[ERROR\])" | node scripts/classify-ts-errors.cjs || true
 
 
       - name: Run Edge Function integration tests (Optimized)
