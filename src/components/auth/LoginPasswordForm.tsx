@@ -52,10 +52,12 @@ export const LoginPasswordForm = ({
             </AlertDescription>
           </Alert>
         )}
-        <div className="space-y-2">
-          <Label htmlFor="email" className="text-foreground font-medium tracking-wide">{t('loginPage.emailOrUsername')}</Label>
+        <div className="space-y-3">
+          <Label htmlFor="email" className="text-white/70 font-bold text-[11px] uppercase tracking-[0.15em] ml-1">
+            {t('loginPage.emailOrUsername')}
+          </Label>
           <div className="relative group">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-cta-positive transition-all duration-500" />
             <Input
               id="email"
               type="text"
@@ -65,14 +67,17 @@ export const LoginPasswordForm = ({
               required
               autoComplete="username"
               maxLength={255}
-              className="pl-10 h-11 border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-300 bg-background/50 backdrop-blur-sm"
+              className="pl-12 h-14 border-white/5 focus:border-cta-positive/30 focus:ring-0 transition-all duration-500 bg-white/[0.02] hover:bg-white/[0.04] text-white rounded-2xl placeholder:text-white/10"
             />
+            <div className="absolute inset-0 rounded-2xl border border-cta-positive/0 group-focus-within:border-cta-positive/20 pointer-events-none transition-all duration-500" />
           </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="password" className="text-foreground font-medium tracking-wide">{t('loginPage.password')}</Label>
+        <div className="space-y-3 pt-2">
+          <Label htmlFor="password" className="text-white/70 font-bold text-[11px] uppercase tracking-[0.15em] ml-1">
+            {t('loginPage.password')}
+          </Label>
           <div className="relative group">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-cta-positive transition-all duration-500" />
             <Input
               id="password"
               type={showPassword ? 'text' : 'password'}
@@ -82,31 +87,32 @@ export const LoginPasswordForm = ({
               required
               autoComplete="current-password"
               maxLength={72}
-              className="pl-10 pr-10 h-11 border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-300 bg-background/50 backdrop-blur-sm"
+              className="pl-12 pr-12 h-14 border-white/5 focus:border-cta-positive/30 focus:ring-0 transition-all duration-500 bg-white/[0.02] hover:bg-white/[0.04] text-white rounded-2xl placeholder:text-white/10"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors duration-300"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-all duration-500"
               tabIndex={-1}
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
+            <div className="absolute inset-0 rounded-2xl border border-cta-positive/0 group-focus-within:border-cta-positive/20 pointer-events-none transition-all duration-500" />
           </div>
         </div>
         {requiresCaptcha && (
-          <div id="captcha-container" className="flex justify-center" />
+          <div id="captcha-container" className="flex justify-center pt-2" />
         )}
       </CardContent>
-      <CardFooter className="flex flex-col space-y-4 pt-6 pb-8">
+      <CardFooter className="flex flex-col space-y-6 px-10 pt-8 pb-0">
         <Button
           type="submit"
-          className="w-full h-12 bg-primary/90 hover:bg-primary text-primary-foreground font-medium shadow-lg shadow-primary/15 hover:shadow-primary/25 transition-all duration-200 tracking-wide"
+          className="w-full h-14 bg-white text-black hover:bg-white/90 font-bold rounded-2xl shadow-[0_10px_25px_rgba(255,255,255,0.1)] hover:shadow-[0_15px_35px_rgba(255,255,255,0.2)] transition-all duration-500 text-sm uppercase tracking-[0.1em]"
           disabled={loading}
         >
           {loading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin opacity-80" />
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               {t('loginPage.verifying')}
             </>
           ) : (
