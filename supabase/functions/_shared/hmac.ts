@@ -469,17 +469,21 @@ interface AuthFailureLogData {
   receivedTimestamp?: number;
 }
 
-const authFailureCache = new Map<string, number>();
+const authFailureCache = new Map<string, { ts: number }>();
 const AUTH_FAILURE_LOG_INTERVAL_MS = 5 * 60 * 1000;
+const MAX_AUTH_FAILURE_CACHE = 1000;
 
 async function logAuthFailure(supabase: any, data: AuthFailureLogData): Promise<void> {
   const cacheKey = `${data.agentId}:${data.errorCode}`;
   const now = Date.now();
-  const lastLogged = authFailureCache.get(cacheKey);
+  const cached = authFailureCache.get(cacheKey);
 
-  if (lastLogged && (now - lastLogged) < AUTH_FAILURE_LOG_INTERVAL_MS) {
+  if (cached && (now - cached.ts) < AUTH_FAILURE_LOG_INTERVAL_MS) {
     return;
   }
+  
+  pruneCache(authFailureCache, MAX_AUTH_FAILURE_CACHE);
+  authFailureCache.set(cacheKey, { ts: now });
 
   try {
     const evidencePayload = JSON.stringify({
