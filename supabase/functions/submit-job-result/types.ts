@@ -2,6 +2,9 @@
  * Shared types for submit-job-result modules
  */
 
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
+import { Database } from '../_shared/database.types.ts'
+
 export interface AuthenticatedAgentInfo {
   id: string;
   agent_name: string;
@@ -44,7 +47,7 @@ export interface SideEffectAccumulator {
 }
 
 export interface SubmitContext {
-  supabase: import('https://esm.sh/@supabase/supabase-js@2.74.0').SupabaseClient;
+  supabase: SupabaseClient<Database>;
   agent: AuthenticatedAgentInfo;
   agentVersion: string;
   job: JobRecord;
@@ -52,4 +55,5 @@ export interface SubmitContext {
   outputData: Record<string, unknown>;
   ipAddress: string;
   sideEffects: SideEffectAccumulator;
+  origin: string | null;
 }

@@ -61,7 +61,7 @@ export async function checkVersionGate(ctx: SubmitContext): Promise<Response | n
         current: ctx.agentVersion,
         message: 'Agent version too old. Please update to continue submitting job results.'
       }),
-      { status: 426, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
+      { status: 426, headers: { ...buildCorsHeaders(ctx.origin), 'Content-Type': 'application/json' } }
     )
   }
   return null
@@ -98,7 +98,7 @@ export async function checkJobOwnership(ctx: SubmitContext): Promise<Response | 
     })
     return new Response(
       JSON.stringify({ error: 'Este job nao pertence ao agente autenticado' }),
-      { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
+      { status: 403, headers: { ...buildCorsHeaders(ctx.origin), 'Content-Type': 'application/json' } }
     )
   }
 
@@ -131,7 +131,7 @@ export async function checkJobOwnership(ctx: SubmitContext): Promise<Response | 
         error: 'Cross-tenant access denied',
         details: 'Job pertence a outra organizacao'
       }),
-      { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
+      { status: 403, headers: { ...buildCorsHeaders(ctx.origin), 'Content-Type': 'application/json' } }
     )
   }
 
@@ -174,7 +174,7 @@ export async function checkExecutionIdRequired(ctx: SubmitContext): Promise<Resp
         error: 'EXECUTION_ID_REQUIRED',
         message: 'Jobs created after 2026-01-19 require execution_id for audit compliance'
       }),
-      { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
+      { status: 400, headers: { ...buildCorsHeaders(ctx.origin), 'Content-Type': 'application/json' } }
     )
   }
   return null

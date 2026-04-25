@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
     // ?? 7. Build context ??
     const outputData = parseOutputData(payload.output)
     const ctx: SubmitContext = {
-      supabase, agent, agentVersion, job: job as JobRecord, payload, outputData, ipAddress,
+      supabase, agent, agentVersion, job: job as JobRecord, payload, outputData, ipAddress, origin,
       sideEffects: { inserted: false, recordCount: 0 },
     }
 
