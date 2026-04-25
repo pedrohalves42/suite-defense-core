@@ -70,7 +70,7 @@ export async function evaluateLightMode(
         return { activated: true, media: detectedMedia, duration: 15 };
       }
     } else if (existingConfig?.is_active) {
-      if (existingConfig.expires_at && new Date() >= new Date(existingConfig.expires_at)) {
+      if ((existingConfig as any).expires_at && new Date() >= new Date((existingConfig as any).expires_at)) {
         await supabase.from('agent_light_mode_configs').update({
           is_active: false,
           activated_at: null,
