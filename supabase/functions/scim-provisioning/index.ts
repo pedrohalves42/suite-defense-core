@@ -2,12 +2,12 @@
  * SCIM 2.0 Provisioning — RFC 7644
  * Suporte a Okta, Azure AD, Google Workspace
  */
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 import { SCIM_SCHEMAS, scimHeaders, scimError, serviceProviderConfig, resourceTypes, schemas } from './constants.ts';
 import * as userHandlers from './user-handlers.ts';
 import * as groupHandlers from './group-handlers.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
+import { servePublic } from '../_shared/serve-public.ts';
 
 const ScimUserSchema = z.object({
   schemas: z.array(z.string().max(256)).max(10).optional(),
@@ -36,32 +36,19 @@ async function parseAndValidateScimBody(req: Request, schema: z.ZodType): Promis
   return { data: parsed.data as Record<string, unknown> };
 }
 
-function getSupabase(): any {
-  const url = Deno.env.get('SUPABASE_URL');
-  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
-  return createClient<any>(url, key, { auth: { persistSession: false } });
-}
-
-async function authenticateTenant(apiKey: string) {
-  const supabase = getSupabase();
+async function authenticateTenant(supabase: any, apiKey: string) {
   const { data, error } = await supabase
     .from('tenants')
     .select('id, name, scim_config')
     .eq('scim_api_key', apiKey)
     .maybeSingle();
   if (error || !data) return null;
-  return { supabase, tenant: data };
+  return data;
 }
 
-Deno.serve(async (req: Request) => {
-  const origin = req.headers.get("origin");
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: scimHeaders, status: 204 });
-  }
-
-  const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
-
+servePublic(async (req, ctx) => {
+  const { requestId, supabase, body: rawBody } = ctx;
+  
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
@@ -69,10 +56,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const apiKey = authHeader.slice(7);
-    const auth = await authenticateTenant(apiKey);
-    if (!auth) return scimError(401, 'Invalid API key');
+    const tenant = await authenticateTenant(supabase, apiKey);
+    if (!tenant) return scimError(401, 'Invalid API key');
 
-    const { supabase, tenant } = auth;
     const url = new URL(req.url);
     const path = url.pathname.replace(/\/+$/, '');
     const method = req.method;
@@ -152,5 +138,11 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     logger.error('[scim-provisioning] Error:', error);
     return scimError(500, error instanceof Error ? error.message : 'Internal server error');
+  }
+}, {
+  rateLimit: {
+    endpoint: 'scim',
+    maxRequests: 100,
+    windowMinutes: 1
   }
 });
