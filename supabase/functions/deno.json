@@ -8,7 +8,9 @@
     "useUnknownInCatchVariables": false,
     "allowJs": true,
     "checkJs": false,
-    "strict": false
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
   },
   "lint": {
     "rules": {
