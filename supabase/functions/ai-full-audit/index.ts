@@ -1,5 +1,5 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { createSupabaseClient } from "../_shared/supabase-client.ts";
 import { AIPromptRegistry, logPromptUsage } from "../_shared/ai-prompt-registry.ts";
 import { safeParseJSON, createFallbackAudit, createFallbackRedTeam } from "../_shared/json-parser.ts";
 import { callAI, type AIMessage } from "../_shared/ai-provider-helper.ts";
