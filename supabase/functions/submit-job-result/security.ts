@@ -231,7 +231,7 @@ export async function checkPayloadTampering(ctx: SubmitContext): Promise<Respons
         error: 'PAYLOAD_TAMPERED',
         message: 'Job payload integrity check failed'
       }),
-      { status: 409, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
+      { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
   
