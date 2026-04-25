@@ -4,6 +4,7 @@
  */
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
+import { Database } from '../_shared/database.types.ts'
 
 export interface OSInfo {
   os_type?: string;
@@ -85,7 +86,7 @@ export interface AgentUpdate {
 }
 
 export interface HeartbeatContext {
-  supabase: any;
+  supabase: SupabaseClient<Database>;
   agent: AgentContext;
   osInfo: OSInfo;
   updateData: AgentUpdate;
