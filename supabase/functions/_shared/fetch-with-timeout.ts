@@ -29,13 +29,16 @@ export async function fetchWithTimeout(
   const { timeoutMs = TIMEOUT_TIERS.DEFAULT, ...fetchOptions } = options;
 
   try {
-    return await fetch(url, {
+    const response = await fetch(url, {
       ...fetchOptions,
       signal: fetchOptions.signal ?? AbortSignal.timeout(timeoutMs),
     });
+    return response;
   } catch (error) {
-    // Convert AbortError / TimeoutError into a structured log + rethrow
     if (error instanceof DOMException && (error.name === 'AbortError' || error.name === 'TimeoutError')) {
+      logger.warn(`[fetchWithTimeout] Request to ${String(url).substring(0, 80)} timed out after ${timeoutMs}ms`);
+    } else if (error instanceof Error && error.name === 'TimeoutError') {
+      // Handle cases where non-DOMException TimeoutError might be thrown in some environments
       logger.warn(`[fetchWithTimeout] Request to ${String(url).substring(0, 80)} timed out after ${timeoutMs}ms`);
     }
     throw error;
