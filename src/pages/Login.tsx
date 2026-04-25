@@ -24,48 +24,59 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black relative overflow-hidden">
-      {/* Background Decorative Elements */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full animate-pulse" />
-        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-accent/10 blur-[120px] rounded-full animate-pulse" />
-        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" />
-      </div>
+    <div className="min-h-screen flex items-center justify-center p-6 bg-background relative overflow-hidden">
+      {/* Strategic Background - Same as HeroSection */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(220,20%,10%)] via-[hsl(200,18%,12%)] to-[hsl(160,15%,10%)] z-0" />
+      
+      {/* Subtle grid pattern */}
+      <div className="absolute inset-0 opacity-[0.03] z-0" style={{
+        backgroundImage: `radial-gradient(circle at 1px 1px, hsl(var(--primary-foreground)) 1px, transparent 0)`,
+        backgroundSize: '40px 40px'
+      }} />
 
-      <Card className="w-full max-w-[480px] border border-white/5 bg-black/40 backdrop-blur-2xl shadow-2xl relative z-10 rounded-2xl overflow-hidden animate-in fade-in zoom-in duration-500">
-        {/* Modern Top Border Gradient */}
-        <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-transparent via-primary to-transparent opacity-50" />
+      {/* Dynamic Security Glows */}
+      <div className="absolute top-1/4 -right-24 w-[500px] h-[500px] bg-cta-positive/10 rounded-full blur-[120px] animate-pulse z-0" />
+      <div className="absolute -bottom-24 -left-24 w-[400px] h-[400px] bg-info/5 rounded-full blur-[100px] z-0" />
+
+      <Card className="w-full max-w-[440px] border border-white/10 bg-[hsl(220,20%,10%)]/60 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10 rounded-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-700 ease-out">
+        {/* Magnet Top Border */}
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cta-positive/50 to-transparent" />
         
-        <CardHeader className="space-y-4 text-center pb-8 pt-10">
-          <div className="flex justify-center mb-2">
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200" />
-              <div className="relative p-5 bg-slate-900/80 rounded-2xl border border-white/10 backdrop-blur-xl">
-                <img src={logoImage} alt="CyberShield" className="h-14 w-14 object-contain" />
+        <CardHeader className="space-y-6 text-center pb-2 pt-12">
+          <Link 
+            to="/" 
+            className="inline-flex justify-center group transition-transform duration-500 hover:scale-110 mb-2"
+          >
+            <div className="relative">
+              <div className="absolute -inset-4 bg-cta-positive/20 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative p-1">
+                <img src={logoImage} alt="CyberShield" className="h-16 w-16 object-contain drop-shadow-[0_0_10px_rgba(5,150,105,0.3)]" />
               </div>
             </div>
-          </div>
+          </Link>
           
-          <div className="space-y-2">
-            <CardTitle className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white to-white/70">
+          <div className="space-y-3">
+            <CardTitle className="text-4xl font-extrabold tracking-tight text-white leading-tight">
               {t('loginPage.title')}
             </CardTitle>
-            <CardDescription className="text-base text-slate-400 font-medium flex items-center justify-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider">
-                <Lock className="h-3.5 w-3.5" />
+            <div className="flex flex-col items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/60 text-[10px] font-bold uppercase tracking-[0.15em]">
+                <Lock className="h-3 w-3 text-cta-positive" />
                 {t('loginPage.enterprise')}
               </span>
-              <span>{t('loginPage.subtitle')}</span>
-            </CardDescription>
+              <CardDescription className="text-base text-white/50 font-medium max-w-[280px] leading-relaxed mx-auto">
+                {t('loginPage.subtitle')}
+              </CardDescription>
+            </div>
           </div>
         </CardHeader>
 
-        <CardContent className="px-8 pb-10">
-          <Tabs defaultValue="password" className="w-full space-y-8">
-            <TabsList className="grid w-full grid-cols-2 h-12 bg-slate-900/50 p-1 border border-white/5 rounded-xl">
+        <CardContent className="px-10 pb-12 pt-8">
+          <Tabs defaultValue="password" className="w-full space-y-10">
+            <TabsList className="grid w-full grid-cols-2 h-14 bg-white/[0.03] p-1.5 border border-white/10 rounded-2xl">
               <TabsTrigger
                 value="password"
-                className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 font-semibold text-sm gap-2"
+                className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-[0_8px_20px_rgba(255,255,255,0.2)] transition-all duration-500 font-bold text-xs uppercase tracking-wider gap-2.5"
                 aria-label={t('loginPage.passwordTab')}
               >
                 <Key className="h-4 w-4" />
@@ -73,7 +84,7 @@ export default function Login() {
               </TabsTrigger>
               <TabsTrigger
                 value="magic"
-                className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 font-semibold text-sm gap-2"
+                className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-[0_8px_20px_rgba(255,255,255,0.2)] transition-all duration-500 font-bold text-xs uppercase tracking-wider gap-2.5"
                 aria-label={t('loginPage.magicTab')}
               >
                 <Mail className="h-4 w-4" />
@@ -81,27 +92,25 @@ export default function Login() {
               </TabsTrigger>
             </TabsList>
 
-            <div className="relative">
-              <TabsContent value="password" className="mt-0 animate-in slide-in-from-left-4 duration-300">
-                <div className="space-y-4">
-                  <LoginPasswordForm
-                    email={flow.email}
-                    setEmail={flow.setEmail}
-                    password={flow.password}
-                    setPassword={flow.setPassword}
-                    showPassword={flow.showPassword}
-                    setShowPassword={flow.setShowPassword}
-                    loading={flow.loading}
-                    socialLoading={flow.socialLoading}
-                    requiresCaptcha={flow.requiresCaptcha}
-                    attemptCount={flow.attemptCount}
-                    onSubmit={flow.handleLogin}
-                    onSocialLogin={flow.handleSocialLogin}
-                  />
-                </div>
+            <div className="relative min-h-[300px]">
+              <TabsContent value="password" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both">
+                <LoginPasswordForm
+                  email={flow.email}
+                  setEmail={flow.setEmail}
+                  password={flow.password}
+                  setPassword={flow.setPassword}
+                  showPassword={flow.showPassword}
+                  setShowPassword={flow.setShowPassword}
+                  loading={flow.loading}
+                  socialLoading={flow.socialLoading}
+                  requiresCaptcha={flow.requiresCaptcha}
+                  attemptCount={flow.attemptCount}
+                  onSubmit={flow.handleLogin}
+                  onSocialLogin={flow.handleSocialLogin}
+                />
               </TabsContent>
 
-              <TabsContent value="magic" className="mt-0 animate-in slide-in-from-right-4 duration-300">
+              <TabsContent value="magic" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both">
                 <LoginMagicLinkForm
                   email={flow.email}
                   setEmail={flow.setEmail}
@@ -113,13 +122,12 @@ export default function Login() {
             </div>
           </Tabs>
 
-          <div className="mt-8 pt-6 border-t border-white/5 text-center">
-            <p className="text-xs text-slate-500">
-              © {new Date().getFullYear()} CyberShield Enterprise. All rights reserved.
-              <br />
-              <span className="inline-block mt-2 opacity-70">
-                Authorized access only. All activities are monitored.
-              </span>
+          <div className="mt-12 pt-8 border-t border-white/5 text-center">
+            <p className="text-[11px] text-white/20 font-medium tracking-widest uppercase">
+              © {new Date().getFullYear()} CyberShield Global Security
+            </p>
+            <p className="mt-3 text-[10px] text-white/10 font-medium italic">
+              Este sistema é monitorado. Acessos não autorizados serão processados.
             </p>
           </div>
         </CardContent>
@@ -133,4 +141,5 @@ export default function Login() {
       />
     </div>
   );
+}
 }
