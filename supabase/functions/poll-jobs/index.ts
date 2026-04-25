@@ -14,43 +14,36 @@ import { buildCorsHeaders } from '../_shared/cors.ts';
 import { authenticateAndValidateAgent } from './auth-handler.ts';
 import { emptyResponse, checkOfflineGuard, checkBacklogLimit, claimAndBuildResponse } from './job-claimer.ts';
 
-Deno.serve(async (req) => {
-  const origin = req.headers.get("origin");
-  if (req.method === 'OPTIONS') return handleCorsPreflightRequest();
-  const methodError = validateHttpMethod(req, ['POST', 'GET']);
-  if (methodError) return methodError;
+import { serveAgent } from '../_shared/serve-agent.ts';
 
-  const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
+serveAgent(async (req, ctx) => {
+  const { requestId, supabase: supabaseAny, agentId, agentName, tenantId, agentData } = ctx;
+  const traceId = requestId;
+  const origin = req.headers.get("origin");
 
   try {
-    const supabase = createClient<any>(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'));
-
-    // Authenticate agent
-    const authResult = await authenticateAndValidateAgent(req, supabase, origin);
-    if (!authResult.success) return authResult.response;
-    const agent = authResult.agent;
-
-    // Rate limiting
-    const rateLimitResult = await checkRateLimit(supabase, agent.agentName, 'poll-jobs', { maxRequests: 3, windowMinutes: 1, blockMinutes: 5 });
-    if (!rateLimitResult.allowed) {
-      return new Response(JSON.stringify({ error: 'Rate limit excedido', resetAt: rateLimitResult.resetAt, traceId }), { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json', 'X-Trace-ID': traceId } });
-    }
-
-    logger.debug('Agent polling', { agentName: agent.agentName, traceId });
+    const supabase = supabaseAny;
 
     // Offline guard (>2h)
-    const offlineGuard = await checkOfflineGuard(supabase, agent, origin);
+    const offlineGuard = await checkOfflineGuard(supabase, { agentId, agentName, tenantId }, origin);
     if (offlineGuard) return offlineGuard;
 
     // Backlog limit check
-    const backlogGuard = await checkBacklogLimit(supabase, agent, origin);
+    const backlogGuard = await checkBacklogLimit(supabase, { agentId, agentName, tenantId }, origin);
     if (backlogGuard) return backlogGuard;
 
     // Claim and deliver jobs
-    logger.info('Fetching jobs for agent', { agentName: agent.agentName, agentId: agent.agentId, traceId });
-    return await claimAndBuildResponse(supabase, agent, origin);
+    logger.info('Fetching jobs for agent', { agentName, agentId, traceId });
+    return await claimAndBuildResponse(supabase, { agentId, agentName, tenantId }, origin);
 
   } catch (error) {
     return handleException(error, traceId, 'poll-jobs');
+  }
+}, {
+  rateLimit: {
+    endpoint: 'poll-jobs',
+    maxRequests: 30, // Relaxed from 3 per min to 30 per min to handle fleet bursts
+    windowMinutes: 1,
+    blockMinutes: 5,
   }
 });
