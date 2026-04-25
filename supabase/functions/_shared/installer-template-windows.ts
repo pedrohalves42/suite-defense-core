@@ -4,13 +4,13 @@ export const WINDOWS_INSTALLER_TEMPLATE = String.raw`#Requires -RunAsAdministrat
 
 param(
   [Parameter(Mandatory = $true)]
-  [string]$ServerUrl   = "{{SERVER_URL}}",
+  [string]$ServerUrl   = '{{SERVER_URL}}',
   [Parameter(Mandatory = $true)]
-  [string]$AgentToken  = "{{AGENT_TOKEN}}",
+  [string]$AgentToken  = '{{AGENT_TOKEN}}',
   [Parameter(Mandatory = $true)]
-  [string]$HmacSecret  = "{{HMAC_SECRET}}",
+  [string]$HmacSecret  = '{{HMAC_SECRET}}',
   [Parameter(Mandatory = $true)]
-  [string]$AgentName   = "{{AGENT_NAME}}"
+  [string]$AgentName   = '{{AGENT_NAME}}'
 )
 
 $ErrorActionPreference = "Stop"

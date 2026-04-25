@@ -110,6 +110,7 @@ export async function buildInstallerScript(
   const escapeValue = (val: string, p: string) => {
     if (p === 'windows') {
       // PowerShell escaping: escape single quotes by doubling them
+      // This is the implementation of [System.Management.Automation.Language.CodeGeneration]::EscapeSingleQuotedStringContent
       return val.replace(/'/g, "''");
     }
     // Shell escaping (Linux/macOS): simple escape for single quotes
