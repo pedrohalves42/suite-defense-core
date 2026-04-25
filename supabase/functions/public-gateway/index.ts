@@ -8,12 +8,11 @@
  *   GET  ?action=public:health
  *   GET  ?action=public:approve-via-token&token=...
  */
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
-import { requireEnv } from '../_shared/env.ts';
 import { securityHeaders } from '../_shared/security-headers.ts';
+import { servePublic } from '../_shared/serve-public.ts';
 
 // Phase 5 Handlers
 import { handleCheckFailedLogins, handleRecordFailedLogin } from './handlers/auth-security.ts';
@@ -36,8 +35,6 @@ import { handleGetReinstallByName } from './handlers/reinstall-by-name.ts';
 import { handleGetDiagnosticScript } from '../_shared/handlers/diagnostic-script.ts';
 import { handleGetLatestAgentScript } from '../_shared/handlers/latest-agent-script.ts';
 import { handleServeInstaller } from '../_shared/handlers/installer.ts';
-
-import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
 type PublicHandler = (
   supabase: any,
@@ -84,30 +81,23 @@ function jsonRes(data: unknown, status: number, origin: string | null) {
   });
 }
 
-Deno.serve(async (req) => {
+servePublic(async (req, ctx) => {
+  const { requestId, supabase, body: reqBody } = ctx;
   const origin = req.headers.get('origin');
-  if (req.method === 'OPTIONS') return new Response(null, { headers: buildCorsHeaders(origin) });
-
-  const requestId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
   const startedAt = Date.now();
 
   try {
-    const supabase = createClient<any>(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'));
-
     let action: string;
     let payload: Record<string, unknown> = {};
 
     if (req.method === 'GET') {
       const url = new URL(req.url);
       action = url.searchParams.get('action') || '';
-      // Pass all query params as payload for GET requests
       for (const [key, value] of url.searchParams.entries()) {
         if (key !== 'action') payload[key] = value;
       }
     } else if (req.method === 'POST') {
-      let body: unknown = {};
-      try { body = await req.json(); } catch { body = {}; }
-      const parsed = RouterSchema.safeParse(body);
+      const parsed = RouterSchema.safeParse(reqBody);
       if (!parsed.success) {
         return jsonRes({ error: 'Invalid request', details: parsed.error.flatten().fieldErrors }, 400, origin);
       }
@@ -141,9 +131,15 @@ Deno.serve(async (req) => {
 
     const elapsed = Date.now() - startedAt;
     logger.info(`[public-gateway] ${action} done in ${elapsed}ms`);
-    return jsonRes(result, 200, origin);
+    return result;
   } catch (err) {
     logger.error('[public-gateway] Error:', err);
     return jsonRes({ error: 'Internal error', message: err instanceof Error ? err.message : 'Unknown', requestId }, 500, origin);
+  }
+}, {
+  rateLimit: {
+    endpoint: 'public-gateway',
+    maxRequests: 500,
+    windowMinutes: 1
   }
 });
