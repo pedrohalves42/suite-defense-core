@@ -72,12 +72,14 @@ export async function authenticateAgent(
     : '';
   const agentSelect = `agent_id, expires_at, agents!inner(${baseFields}${extraFields})`;
   
-  const { data: token, error: tokenError } = await supabase
+  const { data: tokenRaw, error: tokenError } = await supabase
     .from('agent_tokens')
     .select(agentSelect)
     .eq('token_hash', tokenHash)
     .eq('is_active', true)
     .maybeSingle();
+
+  const token = tokenRaw as { agents?: unknown; expires_at?: string | null } | null;
 
   if (tokenError || !token?.agents) {
     logger.warn(`[${endpoint}] Invalid agent token attempt, prefix: ${agentToken.substring(0, 8)}`);

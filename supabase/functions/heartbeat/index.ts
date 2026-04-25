@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     const agent: AgentContext = {
       id: authResult.agent.id,
       agent_name: authResult.agent.agent_name,
-      hmac_secret: authResult.agent.hmac_secret,
+      hmac_secret: (authResult.agent.hmac_secret as string | null) || '',
       tenant_id: authResult.agent.tenant_id,
       status: (authResult.agentData.status as string) || '',
       skip_firewall_remediation: (authResult.agentData.skip_firewall_remediation as boolean) || false,

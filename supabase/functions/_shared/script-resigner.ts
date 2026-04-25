@@ -51,7 +51,7 @@ const SIGNING_STRATEGIES: SigningStrategy[] = [
   },
   {
     envName: 'RSA_PRIVATE_KEY',
-    importParams: { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    importParams: { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' } as RsaHashedImportParams,
     signParams: 'RSASSA-PKCS1-v1_5',
     signedBy: 'hotfix-resigner-rsa2048',
     label: 'RSA-2048',
