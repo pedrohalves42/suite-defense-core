@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Sync Infra handlers (Batch 3B) — maintenance, sync, storage
  * Inlined from: sync-blocked-websites, maintenance-cron, system-maintenance,

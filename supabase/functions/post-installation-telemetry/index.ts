@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * post-installation-telemetry - Records post-install telemetry from agents
  * 

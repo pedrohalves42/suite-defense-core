@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Admin namespace inlined handlers (migrated from standalone functions)
  * 

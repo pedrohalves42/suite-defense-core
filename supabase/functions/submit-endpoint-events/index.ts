@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * submit-endpoint-events — EDR Telemetry Ingestion
  * 

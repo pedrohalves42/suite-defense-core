@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 

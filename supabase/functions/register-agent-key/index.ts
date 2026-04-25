@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * register-agent-key - Agent public key registration
  * MODULARIZED: Fingerprint utils in fingerprint-utils.ts

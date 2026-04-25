@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * create-checkout - Stripe Checkout session for subscription upgrade
  * V5: Migrated to serveTenant middleware

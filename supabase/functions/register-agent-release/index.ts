@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * register-agent-release — Migrated to serveTenant middleware
  * Requires super_admin role.

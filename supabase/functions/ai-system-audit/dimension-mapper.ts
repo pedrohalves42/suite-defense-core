@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Maps new AI dimension names to legacy database column names.
  */

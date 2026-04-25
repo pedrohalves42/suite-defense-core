@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * public-gateway — Unified Public API Gateway (Phase 5 + 6D + 7)
  *

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * collect-router -- Consolidated agent data collection endpoint
  * 

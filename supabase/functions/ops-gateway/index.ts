@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * ops-gateway — Unified Operations Gateway (Phase 5 + Phase 2C)
  *

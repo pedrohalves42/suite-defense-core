@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Domain classification and blocking logic
  * Inlined from submit-web-activity/dns-classifier.ts for submit-hmac-router

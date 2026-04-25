@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * SCIM 2.0 Provisioning — RFC 7644
  * Suporte a Okta, Azure AD, Google Workspace

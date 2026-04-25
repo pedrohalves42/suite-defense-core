@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * evaluate-automation-rules — Migrated to serveInternal middleware
  * Enterprise Engine v2

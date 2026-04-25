@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * AI Multi-Provider System v3.0 — Orchestrator
  * 

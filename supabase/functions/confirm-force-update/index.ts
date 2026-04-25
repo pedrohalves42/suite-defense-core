@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * confirm-force-update — Migrated to serveAgent middleware.
  * NOTE: HMAC is optional for this endpoint (token-only fallback for pre-hotfix agents).

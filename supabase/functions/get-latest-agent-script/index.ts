@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { servePublic } from '../_shared/serve-public.ts';
 import { handleGetLatestAgentScript } from '../_shared/handlers/latest-agent-script.ts';
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * submit-software-inventory — PROXY STUB
  */

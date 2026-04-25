@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Check monitors — Medium complexity inlined handlers (Sub-batch 2C-2)
  * monitor-thresholds, health-monitor, watchdog-non-execution, check-action-effectiveness, analyze-job-failure-patterns

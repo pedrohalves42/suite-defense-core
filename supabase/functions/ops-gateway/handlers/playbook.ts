@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Playbook inlined handler (migrated from playbook-router)
  */

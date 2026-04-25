@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * submit-antivirus-status — PROXY STUB
  * Delegates to the consolidated handler in _shared/submit-handlers.

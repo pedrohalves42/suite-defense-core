@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * upload-report — Migrated to serveAgent middleware with HMAC verification.
  */

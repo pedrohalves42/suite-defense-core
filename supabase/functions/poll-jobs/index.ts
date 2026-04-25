@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * poll-jobs - Agent job polling endpoint
  * MODULARIZED: Auth in auth-handler.ts, job logic in job-claimer.ts

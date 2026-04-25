@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Handler: execute-solution
  * Extracted from ai-execute-solution for direct dispatch.

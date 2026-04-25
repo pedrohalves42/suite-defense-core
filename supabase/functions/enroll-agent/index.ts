@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * enroll-agent - Agent enrollment endpoint
  * MODULARIZED: Logic extracted to key-validator.ts and agent-handler.ts

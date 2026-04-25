@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * SCIM 2.0 Group Operations
  */

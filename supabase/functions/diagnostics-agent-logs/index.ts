@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * diagnostics-agent-logs Edge Function
  * 

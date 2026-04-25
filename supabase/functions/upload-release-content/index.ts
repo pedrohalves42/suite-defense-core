@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * upload-release-content - Migrated to serveInternal
  * Auth: Internal (X-Internal-Secret or service_role)

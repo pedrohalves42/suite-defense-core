@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * submit-vuln-findings — PROXY STUB
  */

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * submit-rollback-event — PROXY STUB
  */

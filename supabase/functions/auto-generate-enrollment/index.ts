@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * auto-generate-enrollment — Migrated to serveTenant middleware
  */

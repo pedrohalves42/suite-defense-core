@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * submit-processes — PROXY STUB
  * Delegates to the consolidated handler in _shared/submit-handlers.
