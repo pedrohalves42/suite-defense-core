@@ -19,35 +19,20 @@ import { validateEnrollmentKey } from './key-validator.ts';
 import { handleReEnrollment, createNewAgent } from './agent-handler.ts';
 import { withTimeout } from '../_shared/timeout.ts';
 
-Deno.serve(async (req) => {
-  const origin = req.headers.get("origin");
-  const requestId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
-  const startTime = Date.now();
+import { servePublic } from '../_shared/serve-public.ts';
 
-  if (req.method === 'OPTIONS') return handleCorsPreflightRequest();
-  const methodError = validateHttpMethod(req, ['POST']);
-  if (methodError) return methodError;
+servePublic(async (req, ctx) => {
+  const { requestId, supabase: supabaseAny, body: rawData } = ctx;
+  const traceId = requestId;
+  const startTime = Date.now();
+  const origin = req.headers.get("origin");
 
   logger.info(`[${requestId}] Starting enrollment request`);
 
   try {
-    return await withTimeout(async () => {
-    const supabase = createClient<any>(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'));
+    const supabase = supabaseAny;
 
-    // Rate limiting
-    const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-    const rateLimitResult = await checkRateLimit(supabase, clientIp, 'enroll-agent', { maxRequests: 5, windowMinutes: 60, blockMinutes: 60 });
-    if (!rateLimitResult.allowed) {
-      return new Response(JSON.stringify({ error: 'Muitas tentativas de enrollment. Tente novamente mais tarde.', resetAt: rateLimitResult.resetAt }), { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
-    }
-
-    // Parse and validate input
-    let rawData;
-    try { rawData = await req.json(); } catch (e) {
-      return handleValidationError('Invalid JSON in request body', { error: e instanceof Error ? e.message : 'Invalid JSON' }, requestId);
-    }
-
-    if (!rawData?.enrollmentKey) {
+    if (!rawData || typeof rawData !== 'object' || !('enrollmentKey' in rawData)) {
       return new Response(JSON.stringify({ error: 'enrollmentKey is required', code: 'MISSING_ENROLLMENT_KEY', requestId }), { status: 400, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
     }
 
@@ -113,14 +98,17 @@ Deno.serve(async (req) => {
     await createAuditLog({ supabase, tenantId: keyData.tenant_id, action: 'agent_enrolled', resourceType: 'agent', resourceId: agentName, details: { tenant_id: keyData.tenant_id, enrollment_key_id: keyData.id, is_new: !existingAgent }, request: req, success: true });
 
     logger.success(`[${requestId}] Agent enrolled successfully`);
-    return new Response(JSON.stringify({ agentToken, hmacSecret, expiresAt: expiresAt.toISOString(), requestId }), { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
-    }, { timeoutMs: 25_000, timeoutMessage: 'Enrollment request timeout' });
+    return { agentToken, hmacSecret, expiresAt: expiresAt.toISOString(), requestId };
+
   } catch (error) {
-    if (error instanceof Error && error.message === 'Enrollment request timeout') {
-      logger.error(`[${requestId}] Enrollment timed out after ${Date.now() - startTime}ms`);
-      return new Response(JSON.stringify({ error: 'Request timeout', code: 'TIMEOUT', requestId }), { status: 504, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
-    }
     logger.error(`[${requestId}] Enrollment failed after ${Date.now() - startTime}ms`, error);
     return handleException(error, requestId, 'enroll-agent');
+  }
+}, {
+  rateLimit: {
+    endpoint: 'enroll-agent',
+    maxRequests: 5,
+    windowMinutes: 60,
+    blockMinutes: 60,
   }
 });
