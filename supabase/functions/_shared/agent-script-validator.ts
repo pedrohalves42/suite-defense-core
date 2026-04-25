@@ -104,9 +104,11 @@ export async function validateAgentScriptOrThrow(): Promise<void> {
 /**
  * Validate agent script content (string-based version for inline validation)
  */
-export function validateAgentScriptContent(scriptContent: string): boolean {
+export function validateAgentScriptContent(scriptContent: string): { valid: boolean; errors?: string[] } {
+  const errors: string[] = [];
   if (!scriptContent || scriptContent.length < 1000) {
-    return false;
+    errors.push('Script content too small or empty');
+    return { valid: false, errors };
   }
   
   const requiredSignatures = [
@@ -119,11 +121,11 @@ export function validateAgentScriptContent(scriptContent: string): boolean {
   
   for (const signature of requiredSignatures) {
     if (!scriptContent.includes(signature)) {
-      return false;
+      errors.push(`Missing signature: ${signature}`);
     }
   }
   
-  return true;
+  return { valid: errors.length === 0, errors };
 }
 
 /**

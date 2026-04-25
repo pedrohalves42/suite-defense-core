@@ -30,7 +30,7 @@ export async function handleSemiAutomaticApproval(
 
   if (!countError && (pendingCount || 0) >= MAX_PENDING_APPROVALS_PER_TENANT) {
     logger.warn(`[SECURITY] Tenant ${tenantId} exceeded pending approval limit (${pendingCount}/${MAX_PENDING_APPROVALS_PER_TENANT})`);
-    await supabase.from('audit_logs').insert({ tenant_id: tenantId, action: 'approval_rate_limit_exceeded', resource_type: 'approval_request', resource_id: executionId, success: false, details: { pending_count: pendingCount, max_allowed: MAX_PENDING_APPROVALS_PER_TENANT, trigger_type, playbook_id: playbook.id, playbook_name: playbook.name, blocked: true } });
+    await supabase.from('audit_logs').insert({ tenant_id: tenantId, action: 'approval_rate_limit_exceeded', resource_type: 'approval_request', resource_id: executionId, success: false, details: { pending_count: pendingCount, max_allowed: MAX_PENDING_APPROVALS_PER_TENANT, trigger_type: triggerType, playbook_id: playbook.id, playbook_name: playbook.name, blocked: true } });
     return new Response(JSON.stringify({ error: 'Too many pending approval requests', message: `Maximum ${MAX_PENDING_APPROVALS_PER_TENANT} pending approvals allowed.`, pending_count: pendingCount, max_allowed: MAX_PENDING_APPROVALS_PER_TENANT }),
       { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
   }
@@ -45,7 +45,7 @@ export async function handleSemiAutomaticApproval(
 
   const { data: approvalRequest, error: approvalError } = await supabase.from('approval_requests').insert({
     tenant_id: tenantId, playbook_execution_id: executionId, action_type: 'execute_playbook',
-    action_payload: { playbook_id: playbook.id, playbook_name: playbook.name, playbook_version: playbook.version, execution_id: executionId, actions: actionsSnapshot.map(a => ({ action_type: a.action_type, label: a.label, risk_level: a.risk_level })), trigger_type, agent_id: agentId, agent_info: agentInfo },
+    action_payload: { playbook_id: playbook.id, playbook_name: playbook.name, playbook_version: playbook.version, execution_id: executionId, actions: actionsSnapshot.map(a => ({ action_type: a.action_type, label: a.label, risk_level: a.risk_level })), trigger_type: triggerType, agent_id: agentId, agent_info: agentInfo },
     requested_by: null, status: 'pending', required_approvers: 1,
     expires_at: expiresAt.toISOString(), approval_token: approvalToken, approval_token_expires_at: tokenExpiresAt.toISOString(),
   }).select('id, approval_token').single();
@@ -67,7 +67,7 @@ export async function handleSemiAutomaticApproval(
       await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/notification-dispatcher`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': INTERNAL_SECRET || '' },
-        body: JSON.stringify({ channel: 'all', alertType: 'playbook_approval_required', severity: playbook.severity === 'critical' ? 'critical' : 'warning', title: `Aprovacao necessaria: ${playbook.name}`, message: `O playbook "${playbook.name}" foi disparado automaticamente e requer aprovacao humana.`, details: { playbook_id: playbook.id, playbook_name: playbook.name, playbook_version: playbook.version, execution_id: executionId, approval_request_id: approvalRequest?.id, trigger_type, agent_id: agentId, agent_info: agentInfo, expires_at: expiresAt.toISOString(), actions: actionsSnapshot.map(a => ({ type: a.action_type, label: a.label, risk: a.risk_level })), approval_url: approvalUrl, approval_token: approvalRequest?.approval_token }, tenantId }),
+        body: JSON.stringify({ channel: 'all', alertType: 'playbook_approval_required', severity: playbook.severity === 'critical' ? 'critical' : 'warning', title: `Aprovacao necessaria: ${playbook.name}`, message: `O playbook "${playbook.name}" foi disparado automaticamente e requer aprovacao humana.`, details: { playbook_id: playbook.id, playbook_name: playbook.name, playbook_version: playbook.version, execution_id: executionId, approval_request_id: approvalRequest?.id, trigger_type: triggerType, agent_id: agentId, agent_info: agentInfo, expires_at: expiresAt.toISOString(), actions: actionsSnapshot.map(a => ({ type: a.action_type, label: a.label, risk: a.risk_level })), approval_url: approvalUrl, approval_token: approvalRequest?.approval_token }, tenantId }),
       });
       logger.info(`[evaluate-playbook-triggers] Email notification sent with one-click approval link`);
     } catch (notifyError) {
