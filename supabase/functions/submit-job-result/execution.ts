@@ -208,7 +208,7 @@ export async function finalizeExecution(ctx: SubmitContext): Promise<ExecutionRe
           p_signature_verified: false
         })
       
-      if (!execError && execResult && typeof execResult === 'object' && (execResult as any).success) {
+      if (!execError && execResult && typeof execResult === 'object' && 'success' in execResult && (execResult as any).success) {
         executionFinalized = true
       }
     } else {
@@ -227,7 +227,7 @@ export async function finalizeExecution(ctx: SubmitContext): Promise<ExecutionRe
           agent_name: agent.agent_name,
           nonce: retroNonce,
           execution_index: 0,
-          payload_hash: ctx.job.payload_hash || undefined,
+          payload_hash: ctx.job.payload_hash || 'PENDING',
           claimed_at: new Date().toISOString(),
           started_at: started_at || new Date().toISOString(),
           finished_at: finished_at || new Date().toISOString(),
