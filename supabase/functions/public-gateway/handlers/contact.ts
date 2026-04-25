@@ -22,9 +22,10 @@ export async function handleSubmitContact(
   const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown';
   const userAgent = req.headers.get('user-agent') || 'unknown';
 
-  const rl = await checkRateLimit(supabase, { key: `contact:${clientIp}`, maxRequests: 5, windowMinutes: 60 });
+  const rl = await checkRateLimit(supabase, `contact:${clientIp}`, 'contact', { maxRequests: 5, windowMinutes: 60 });
   if (!rl.allowed) {
-    return { error: 'Muitas tentativas.', retry_after_minutes: rl.retryAfterMinutes, __status: 429 };
+    const retryAfter = rl.resetAt ? Math.ceil((rl.resetAt.getTime() - Date.now()) / 60000) : 5;
+    return { error: 'Muitas tentativas.', retry_after_minutes: retryAfter, __status: 429 };
   }
 
   const parsed = ContactFormSchema.safeParse(payload);

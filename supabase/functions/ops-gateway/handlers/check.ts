@@ -332,8 +332,7 @@ export async function handleBuildWatchdog(supabase: SB, requestId: string, _payl
     const { data: stuckBuilds, error: queryError } = await supabase
       .from('agent_builds').select('id, github_run_id, created_at')
       .eq('build_status', 'building')
-      .lt('created_at', new Date(Date.now() - 10 * 60 * 1000).toISOString())
-      .returns<StuckBuild[]>();
+      .lt('created_at', new Date(Date.now() - 10 * 60 * 1000).toISOString());
 
     if (queryError) throw queryError;
 

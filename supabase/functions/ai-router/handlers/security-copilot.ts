@@ -110,7 +110,7 @@ export async function handleSecurityCopilot(
       });
     }
     const errText = await response.text();
-    logger.error('AI gateway error:', response.status, errText);
+    logger.error('AI gateway error', { status: response.status, details: errText });
     return new Response(JSON.stringify({ error: 'AI service error' }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
