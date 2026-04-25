@@ -3,11 +3,11 @@
  */
 
 export interface AnalysisData {
-  problematicJobs: Array<Record<string, unknown>>;
-  failurePatterns: Array<Record<string, unknown>>;
-  agentMetrics: Array<Record<string, unknown>>;
-  installationStats: Array<Record<string, unknown>>;
-  systemAlerts: Array<Record<string, unknown>>;
+  problematicJobs: any[];
+  failurePatterns: any[];
+  agentMetrics: any[];
+  installationStats: any[];
+  systemAlerts: any[];
 }
 
 export interface AIInsight {
