@@ -44,7 +44,7 @@ serveAgent(async (req, ctx) => {
 
     // ?? 5. Parse & validate payload ??
     const validation = validateAndParsePayload(rawPayload as Record<string, unknown>);
-    if (!validation.success) return validation.response;
+    if (!validation.success) return (validation as { success: false; response: Response }).response;
     const payload = validation.data;
 
     // ?? 6. Fetch job ??
