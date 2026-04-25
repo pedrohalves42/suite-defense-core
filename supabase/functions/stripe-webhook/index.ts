@@ -5,7 +5,7 @@
  * Auth: Deno.serve (raw body needed for Stripe signature verification)
  */
 import Stripe from "https://esm.sh/stripe@18.5.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { createTypedClient } from "../_shared/supabase-client.ts";
 import { logger } from '../_shared/logger.ts';
 import { withTimeout } from '../_shared/timeout.ts';
 import {
