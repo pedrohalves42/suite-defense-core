@@ -5,6 +5,21 @@
     "strictFunctionTypes": false,
     "strictPropertyInitialization": false,
     "noImplicitThis": false,
-    "useUnknownInCatchVariables": false
+    "useUnknownInCatchVariables": false,
+    "allowJs": true,
+    "checkJs": false,
+    "strict": false
+  },
+  "lint": {
+    "rules": {
+      "exclude": ["no-explicit-any", "no-unused-vars", "require-await"]
+    }
+  },
+  "fmt": {
+    "useTabs": false,
+    "lineWidth": 100,
+    "indentWidth": 2,
+    "singleQuote": true,
+    "proseWrap": "preserve"
   }
 }
