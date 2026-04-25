@@ -11,7 +11,7 @@
  * ZERO TRUST: Side effects run BEFORE job is marked completed.
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
+import { createServiceRoleClient } from '../_shared/supabase-client.ts'
 import { handleException, corsHeaders } from '../_shared/error-handler.ts'
 import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
@@ -36,10 +36,7 @@ Deno.serve(async (req) => {
   const methodError = validateHttpMethod(req, ['POST'])
   if (methodError) return methodError
 
-  const supabase = createClient<any>(
-    requireEnv('SUPABASE_URL'),
-    requireEnv('SUPABASE_SERVICE_ROLE_KEY')
-  )
+  const supabase = createServiceRoleClient()
 
   const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
 
