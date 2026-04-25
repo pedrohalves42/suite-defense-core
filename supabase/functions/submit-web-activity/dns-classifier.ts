@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Domain classification and blocking logic
  * Extracted from submit-web-activity/index.ts

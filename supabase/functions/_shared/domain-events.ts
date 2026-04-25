@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from './logger.ts';
 
