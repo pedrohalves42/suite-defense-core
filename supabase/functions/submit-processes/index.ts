@@ -7,7 +7,7 @@
  * The original submit-processes used raw Deno.serve() with token-only auth.
  * Using serveAgent without hmacVerify preserves this behavior.
  */
-import { serveAgent } from '../_shared/serve-tenant.ts';
+import { serveAgent } from '../_shared/serve-agent.ts';
 import { handleProcesses } from '../_shared/submit-handlers/processes.ts';
 
 serveAgent(async (_req, ctx) => {
