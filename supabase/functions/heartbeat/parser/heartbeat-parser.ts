@@ -56,7 +56,7 @@ export function buildAgentUpdate(
   osInfo: OSInfo,
   currentAgentVersion: string | null,
 ): AgentUpdate {
-  const updateData: AgentUpdate = {
+  const updateData: AgentUpdate & { agent_state?: string } = {
     last_heartbeat: new Date().toISOString(),
     status: 'active',
   }
@@ -69,8 +69,21 @@ export function buildAgentUpdate(
   if (osInfo.hostname) updateData.hostname = osInfo.hostname
 
   // Persist agent state (ENFORCING, SAFE_MODE, DEGRADED, INITIALIZING)
+  // AND synchronize agent_state for UI and backend logic
   if (osInfo.state) {
     updateData.state = osInfo.state
+    // Map to normalized agent_state
+    const stateUpper = osInfo.state.toUpperCase()
+    if (['ENFORCING', 'HEALTHY'].includes(stateUpper)) {
+      updateData.agent_state = 'healthy'
+    } else if (['SAFE_MODE', 'DEGRADED', 'RECOVERY', 'UPDATING', 'ROLLBACK'].includes(stateUpper)) {
+      updateData.agent_state = stateUpper.toLowerCase()
+    } else if (['OFFLINE', 'ERROR', 'SHUTDOWN', 'ISOLATED', 'QUARANTINED'].includes(stateUpper)) {
+      updateData.agent_state = stateUpper.toLowerCase()
+    }
+  } else {
+    // If no state reported but sending heartbeat, it's healthy
+    updateData.agent_state = 'healthy'
   }
 
   // Capturar agent_version do payload (somente quando realmente mudou)
@@ -78,6 +91,7 @@ export function buildAgentUpdate(
     const incomingNorm = normalizeVersion(osInfo.agent_version)
     const currentNorm = normalizeVersion(currentAgentVersion || undefined)
     if (!incomingNorm || !currentNorm || incomingNorm !== currentNorm) {
+      updateData.agent_state = 'healthy' // Clear any offline state on version change/heartbeat
       updateData.agent_version = osInfo.agent_version
     }
   }
