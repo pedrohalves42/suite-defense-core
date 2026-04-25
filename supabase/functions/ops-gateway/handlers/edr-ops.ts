@@ -74,7 +74,7 @@ export const handleFetchNvdCves: InlinedHandler = async (supabase, requestId, pa
     const metrics = cve.metrics as Record<string, unknown[]> | undefined;
     const cvssV31 = (metrics?.cvssMetricV31 as Array<{ cvssData: Record<string, unknown> }>)?.[0]?.cvssData;
     const cvssV30 = (metrics?.cvssMetricV30 as Array<{ cvssData: Record<string, unknown> }>)?.[0]?.cvssData;
-    const cvssV2 = (metrics?.cvssMetricV2 as Array<Record<string, unknown>>)?.[0];
+    const cvssV2 = (metrics?.cvssMetricV2 as any[])?.[0];
 
     let cvss_score: number | null = null, cvss_version = '3.1', cvss_vector: string | null = null, severity = 'UNKNOWN';
     if (cvssV31) { cvss_score = cvssV31.baseScore as number; cvss_version = cvssV31.version as string; cvss_vector = cvssV31.vectorString as string; severity = cvssV31.baseSeverity as string; }
@@ -85,7 +85,7 @@ export const handleFetchNvdCves: InlinedHandler = async (supabase, requestId, pa
     const description = descriptions?.find(d => d.lang === 'en')?.value || descriptions?.[0]?.value || 'No description';
 
     const affected_products: string[] = [];
-    const configurations = cve.configurations as Array<{ nodes: Array<{ cpeMatch: Array<Record<string, unknown>> }> }> | undefined;
+    const configurations = cve.configurations as Array<{ nodes: Array<{ cpeMatch: any[] }> }> | undefined;
     configurations?.forEach(config => config.nodes?.forEach(node => node.cpeMatch?.forEach(match => {
       if (match.vulnerable) {
         const parts = (match.criteria as string).split(':');
@@ -100,7 +100,7 @@ export const handleFetchNvdCves: InlinedHandler = async (supabase, requestId, pa
       cve_id: cve.id as string, description, cvss_score, cvss_version, cvss_vector, severity,
       affected_products, affected_versions: [], cpe_matches: [],
       published_date: cve.published as string, last_modified: cve.lastModified as string,
-      cve_references: ((cve.references as Array<Record<string, unknown>>) || []).map(r => ({ url: r.url, source: r.source, tags: r.tags || [] })),
+      cve_references: ((cve.references as any[]) || []).map(r => ({ url: r.url, source: r.source, tags: r.tags || [] })),
       weaknesses, cached_at: new Date().toISOString(), source: 'nvd', is_active: true,
     };
   });
@@ -119,7 +119,7 @@ export const handleFetchNvdCves: InlinedHandler = async (supabase, requestId, pa
 
 // ── correlate-edr-events ───────────────────────────────────────────────
 
-async function createIncident(supabase: any, tenantId: string, agentId: string, rule: Record<string, unknown>, matchedDets: Array<Record<string, unknown>>, tactics: string[]) {
+async function createIncident(supabase: any, tenantId: string, agentId: string, rule: Record<string, unknown>, matchedDets: any[], tactics: string[]) {
   const techniques = [...new Set(matchedDets.map(m => m.mitre_technique_id).filter(Boolean))];
   const firstTime = matchedDets[0].event_time;
   const lastTime = matchedDets[matchedDets.length - 1].event_time;
@@ -190,7 +190,7 @@ export const handleCorrelateEdrEvents: InlinedHandler = async (supabase, request
 
       for (const rule of tenantRules) {
         const windowMs = rule.time_window_minutes * 60 * 1000;
-        const patterns = rule.event_patterns as Array<Record<string, unknown>>;
+        const patterns = rule.event_patterns as any[];
 
         const distinctTacticsRule = patterns.find((p: Record<string, unknown>) => p.distinct_tactics);
         if (distinctTacticsRule) {
@@ -307,7 +307,7 @@ export const handleEvaluateEdrDetections: InlinedHandler = async (supabase, requ
         stats.evaluated += events.length;
         if (events.length < BATCH_SIZE) hasMore = false;
 
-        const newDetections: Array<Record<string, unknown>> = [];
+        const newDetections: any[] = [];
         const matchedEventIds: string[] = [];
         const eventTagsMap = new Map<string, string[]>();
 

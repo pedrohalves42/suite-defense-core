@@ -33,7 +33,7 @@ function formatSlackPayload(payload: WebhookPayload): Record<string, unknown> {
                 payload.alertType === 'jobs_failed' ? `Jobs Failed` :
                 'CyberShield Alert';
 
-  const blocks: Array<Record<string, unknown>> = [
+  const blocks: any[] = [
     {
       type: "header",
       text: {
@@ -59,7 +59,7 @@ function formatSlackPayload(payload: WebhookPayload): Record<string, unknown> {
 
   // Add data fields
   if (payload.data) {
-    const dataFields: Array<Record<string, unknown>> = [];
+    const dataFields: any[] = [];
     
     if (payload.data.minutesOffline) {
       dataFields.push({

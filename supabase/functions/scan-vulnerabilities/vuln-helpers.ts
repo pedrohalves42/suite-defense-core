@@ -87,7 +87,7 @@ export function compareVersions(v1: number[], v2: number[]): number {
   return 0;
 }
 
-export function isVersionAffected(installedVersion: string, affectedVersions: Array<Record<string, unknown>>): boolean {
+export function isVersionAffected(installedVersion: string, affectedVersions: any[]): boolean {
   if (!affectedVersions || affectedVersions.length === 0) {
     return true;
   }
@@ -143,7 +143,7 @@ export function truncate(text: string, maxLength: number): string {
 
 export function generateRemediation(softwareName: string, cve: Record<string, unknown>): string {
   const baseName = softwareName.split(/[\s\-_]/)[0];
-  const affectedVersions = cve.affected_versions as Array<Record<string, unknown>> | undefined;
+  const affectedVersions = cve.affected_versions as any[] | undefined;
   const latestVersion = affectedVersions?.[0]?.versionEndExcluding;
 
   if (latestVersion) {
@@ -184,8 +184,8 @@ export function scanWithFallback(
   software: SoftwareItem[],
   agent_id: string,
   tenant_id: string
-): Array<Record<string, unknown>> {
-  const vulnerabilities: Array<Record<string, unknown>> = [];
+): any[] {
+  const vulnerabilities: any[] = [];
   const knownVulnerableSoftware = getKnownVulnerabilities();
 
   for (const item of software) {

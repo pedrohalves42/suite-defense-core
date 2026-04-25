@@ -475,8 +475,8 @@ export async function handleAnalyzeJobFailurePatterns(supabase: SB, requestId: s
   const patterns: FailurePattern[] = [];
   let tenantTotalJobs = 0;
   let tenantFailedJobs = 0;
-  const insightsToCreate: Array<Record<string, unknown>> = [];
-  const alertsToCreate: Array<Record<string, unknown>> = [];
+  const insightsToCreate: any[] = [];
+  const alertsToCreate: any[] = [];
 
   for (const [agentId, typeGroups] of agentGroups) {
     for (const [jobType, typeJobs] of typeGroups) {

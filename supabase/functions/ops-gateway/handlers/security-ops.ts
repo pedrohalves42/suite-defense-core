@@ -308,8 +308,8 @@ export async function handlePopulateSecurityGraph(
   const tenant_id = payload.tenant_id as string;
   if (!tenant_id) return { __status: 400, error: 'tenant_id required' };
 
-  const nodes: Array<Record<string, unknown>> = [];
-  const edges: Array<Record<string, unknown>> = [];
+  const nodes: any[] = [];
+  const edges: any[] = [];
   const nodeMap = new Map<string, string>();
 
   function addNode(type: string, value: string, label: string, risk: number, meta: Record<string, unknown> = {}) {
@@ -397,7 +397,7 @@ export async function handlePublishThreatIoc(
 
   const { data: tenants } = await supabase.from('tenants').select('id').eq('is_active', true);
   if (tenants?.length) {
-    const indicatorRows: Array<Record<string, unknown>> = [];
+    const indicatorRows: any[] = [];
     for (const tenant of tenants) {
       for (const ioc of iocs) {
         if (!ioc.value || ioc.value.length < 3) continue;

@@ -21,7 +21,7 @@ export async function scanAgentVulnerabilities(
   tenant_id: string,
   requestId: string,
   options: { keywordLimit?: number; cveLimit?: number; mode?: 'batch' | 'single' } = {}
-): Promise<{ vulnerabilities_found: number; vulnerabilities: Array<Record<string, unknown>> }> {
+): Promise<{ vulnerabilities_found: number; vulnerabilities: any[] }> {
   const keywordLimit = options.keywordLimit ?? (options.mode === 'batch' ? 20 : 30);
   const cveLimit = options.cveLimit ?? (options.mode === 'batch' ? 30 : 50);
 
@@ -48,7 +48,7 @@ export async function scanAgentVulnerabilities(
     });
   }
 
-  const vulnerabilities: Array<Record<string, unknown>> = [];
+  const vulnerabilities: any[] = [];
   const processedCVEs = new Set<string>();
 
   for (const keyword of Array.from(softwareKeywords).slice(0, keywordLimit)) {

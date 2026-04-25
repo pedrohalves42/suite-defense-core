@@ -33,8 +33,8 @@ export const handleCheckAgentIntegrity: InlinedHandler = async (supabase, reques
   logger.info(`[${requestId}] Found ${problematicAgents?.length || 0} agents with potential integrity issues`);
 
   const issues: IntegrityCheckResult[] = [];
-  const alertsToCreate: Array<Record<string, unknown>> = [];
-  const immediateAlertsToSend: Array<Record<string, unknown>> = [];
+  const alertsToCreate: any[] = [];
+  const immediateAlertsToSend: any[] = [];
   const skippedDueToBusinessHours: string[] = [];
   const tenantBusinessHoursCache: Record<string, { shouldProcess: boolean; reason: string }> = {};
 

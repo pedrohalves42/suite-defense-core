@@ -149,8 +149,8 @@ export async function handleBuildSecurityGraph(
     supabase.from('threat_matches').select('*, threat_indicators(indicator_type, indicator_value, severity)').eq('tenant_id', tenantId).limit(100),
   ]);
 
-  const nodeUpserts: Array<Record<string, unknown>> = [];
-  const edgeUpserts: Array<Record<string, unknown>> = [];
+  const nodeUpserts: any[] = [];
+  const edgeUpserts: any[] = [];
   const nodeIds = new Map<string, string>();
 
   const ensureNode = (type: string, value: string, label?: string, riskScore = 0) => {

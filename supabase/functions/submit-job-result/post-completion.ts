@@ -255,7 +255,7 @@ export async function processDnsBlockEvents(ctx: SubmitContext): Promise<void> {
       .eq('tenant_id', agent.tenant_id)
       .eq('is_active', true)
 
-    const attemptsToInsert: Array<Record<string, unknown>> = []
+    const attemptsToInsert: any[] = []
     for (const event of blockedEvents) {
       const domain = ((event as Record<string, unknown>).domain as string || '').toLowerCase().trim()
       if (!domain) continue

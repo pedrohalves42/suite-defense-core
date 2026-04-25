@@ -32,7 +32,7 @@ async function executeAction(
   agentId: string,
   tenantId: string,
   triggerData: Record<string, unknown>,
-  agents: Array<Record<string, unknown>>
+  agents: any[]
 ): Promise<{ status: string; result: Record<string, unknown> }> {
   const actionConfig = rule.action_config as Record<string, unknown>;
 
@@ -200,7 +200,7 @@ export async function evaluateForTenant(
   let totalTriggered = 0;
   let totalBlocked = 0;
   let totalDecisions = 0;
-  const allExecutions: Array<Record<string, unknown>> = [];
+  const allExecutions: any[] = [];
 
   for (const rule of rules) {
     if (isInCooldown(rule)) {

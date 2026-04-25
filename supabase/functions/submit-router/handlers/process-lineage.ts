@@ -79,7 +79,7 @@ export async function handleProcessLineage(
 
   logger.info(`[${requestId}] [submit-process-lineage] Received ${processes.length} processes from ${agentName}`);
   const cappedProcesses = processes.slice(0, 500);
-  const records: Array<Record<string, unknown>> = [];
+  const records: any[] = [];
   let suspiciousCount = 0;
 
   for (const proc of cappedProcesses) {

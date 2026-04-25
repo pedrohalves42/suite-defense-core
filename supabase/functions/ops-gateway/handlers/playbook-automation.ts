@@ -298,7 +298,7 @@ export async function handleOncallIntegration(supabase: any, requestId: string, 
   }
 
   if (action === 'who-is-oncall') {
-    let oncallUsers: Array<Record<string, unknown>> = [];
+    let oncallUsers: any[] = [];
     if (PAGERDUTY_API_KEY && PAGERDUTY_SCHEDULE_ID) {
       try {
         const now = new Date().toISOString();
@@ -314,7 +314,7 @@ export async function handleOncallIntegration(supabase: any, requestId: string, 
     }
     if (oncallUsers.length === 0) {
       const { data: schedules } = await supabase.from('oncall_schedules').select('rotation').order('updated_at', { ascending: false }).limit(1).maybeSingle();
-      if (schedules?.rotation) oncallUsers = Array.isArray(schedules.rotation) ? schedules.rotation as Array<Record<string, unknown>> : [];
+      if (schedules?.rotation) oncallUsers = Array.isArray(schedules.rotation) ? schedules.rotation as any[] : [];
     }
     return { oncall: oncallUsers, timestamp: new Date().toISOString(), source: PAGERDUTY_API_KEY ? 'pagerduty' : 'local' };
   }

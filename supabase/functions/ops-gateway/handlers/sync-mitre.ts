@@ -60,10 +60,10 @@ async function syncMitreRules(supabase: SB) {
   for (let i = 0; i < techniques.length; i += BATCH) {
     const batch = techniques.slice(i, i + BATCH);
     const rows = batch.map((t: Record<string, unknown>) => ({
-      technique_id: (t.external_references as Array<Record<string, unknown>>)?.find(r => r.source_name === 'mitre-attack')?.external_id ?? t.id,
+      technique_id: (t.external_references as any[])?.find(r => r.source_name === 'mitre-attack')?.external_id ?? t.id,
       name: t.name,
       description: ((t.description as string) ?? '').slice(0, 4000),
-      tactic: (t.kill_chain_phases as Array<Record<string, unknown>>)?.[0]?.phase_name ?? 'unknown',
+      tactic: (t.kill_chain_phases as any[])?.[0]?.phase_name ?? 'unknown',
       platform: t.x_mitre_platforms ?? [],
       data_sources: t.x_mitre_data_sources ?? [],
       detection: ((t.x_mitre_detection as string) ?? '').slice(0, 4000),

@@ -13,7 +13,7 @@ export async function processCertificates(ctx: SubmitContext): Promise<void> {
   
   try {
     logger.debug('[submit-job-result] [ZERO_TRUST] Processing certificates BEFORE marking completed...')
-    const certs = (outputData.certificates || outputData.cert_store || []) as Array<Record<string, unknown>>
+    const certs = (outputData.certificates || outputData.cert_store || []) as any[]
     
     if (!Array.isArray(certs) || certs.length === 0) return
     
