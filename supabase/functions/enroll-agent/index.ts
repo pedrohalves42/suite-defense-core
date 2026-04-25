@@ -5,7 +5,7 @@
  * Auth: Deno.serve (raw body needed for HMAC sunset policy checks)
  */
 import { requireEnv } from '../_shared/env.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createTypedClient } from '../_shared/supabase-client.ts';
 import { handleException, handleValidationError } from '../_shared/error-handler.ts';
 import { EnrollAgentSchema } from '../_shared/validation.ts';
 import { createAuditLog } from '../_shared/audit.ts';
