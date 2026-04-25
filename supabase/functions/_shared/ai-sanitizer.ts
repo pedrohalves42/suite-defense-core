@@ -144,11 +144,12 @@ export function sanitizeObjectForAI<T extends Record<string, any>>(
     }
 
     if (Array.isArray(value)) {
-      if (value.length > maxArrayItems) {
-        warnings.push(`Array at ${path} truncated from ${value.length} to ${maxArrayItems} items`);
-        value = value.slice(0, maxArrayItems);
+      let arr = value as unknown[];
+      if (arr.length > maxArrayItems) {
+        warnings.push(`Array at ${path} truncated from ${arr.length} to ${maxArrayItems} items`);
+        arr = arr.slice(0, maxArrayItems);
       }
-      return value.map((item: unknown, idx: number) => sanitizeValue(item, `${path}[${idx}]`));
+      return arr.map((item: unknown, idx: number) => sanitizeValue(item, `${path}[${idx}]`));
     }
 
     if (typeof value === 'object') {
