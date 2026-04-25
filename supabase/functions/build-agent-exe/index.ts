@@ -137,124 +137,23 @@ serveTenant(async (req, ctx) => {
       const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
 
       // Import the installer template from shared module
-      const { WINDOWS_INSTALLER_TEMPLATE: BASE_TEMPLATE } = await import('../_shared/installer-template.ts');
+      const { WINDOWS_INSTALLER_TEMPLATE } = await import('../_shared/installer-template-windows.ts');
+      const { buildInstallerScript } = await import('../_shared/installer-script-builder.ts');
 
-      // Build the full installer template with embedded agent script
-      const FULL_TEMPLATE = `# CyberShield Agent - Windows Installation Script v5.0.15
-# Auto-generated: {{TIMESTAMP}}
-# APEX BUILD - Universal, Robust, Production-Ready
+      const buildResult = await buildInstallerScript(
+        supabase,
+        'windows',
+        'args',
+        { agent_name, hmac_secret: creds.data.hmacSecret },
+        agentToken,
+        SUPABASE_URL,
+        requestId,
+        origin
+      );
 
-#Requires -Version 5.1
-#Requires -RunAsAdministrator
-
-$ErrorActionPreference = "Stop"
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-
-Write-Host "==================================" -ForegroundColor Cyan
-Write-Host "CyberShield Agent Installer v5.0.15" -ForegroundColor Cyan
-Write-Host "==================================" -ForegroundColor Cyan
-Write-Host ""
-
-$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-$isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-
-if (-not $isAdmin) {
-    Write-Host "ERRO: Este script requer privilegios de administrador" -ForegroundColor Red
-    Read-Host "Pressione Enter para sair"
-    exit 1
-}
-
-if ($PSVersionTable.PSVersion.Major -lt 5) {
-    Write-Host "ERRO: PowerShell 5.1+ necessario" -ForegroundColor Red
-    exit 1
-}
-
-$AgentToken = "{{AGENT_TOKEN}}"
-$HmacSecret = "{{HMAC_SECRET}}"
-$ServerUrl = "{{SERVER_URL}}"
-$PollInterval = 60
-
-if ([string]::IsNullOrWhiteSpace($AgentToken) -or $AgentToken -eq "{{AGENT_TOKEN}}") {
-    Write-Host "ERRO: Token nao configurado" -ForegroundColor Red
-    exit 1
-}
-
-$InstallDir = "C:\\\\CyberShield"
-$AgentScript = Join-Path $InstallDir "cybershield-agent.ps1"
-$LogDir = Join-Path $InstallDir "logs"
-$InstallLog = Join-Path $LogDir "install.log"
-
-function Write-InstallLog {
-    param([string]$Message)
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir -Force | Out-Null }
-    "$timestamp - $Message" | Out-File $InstallLog -Append
-    Write-Host $Message
-}
-
-try {
-    Write-InstallLog "[1/8] Criando diretorios..."
-    @($InstallDir, $LogDir) | ForEach-Object { if (-not (Test-Path $_)) { New-Item -ItemType Directory -Path $_ -Force | Out-Null } }
-    
-    Write-InstallLog "[2/8] Configurando rede..."
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
-    Write-InstallLog "[3/8] Testando conectividade..."
-    $healthCheck = $false
-    @("$ServerUrl/functions/v1/heartbeat", "https://www.google.com") | ForEach-Object {
-        if (-not $healthCheck) {
-            try { $r = Invoke-WebRequest -Uri $_ -Method GET -TimeoutSec 10 -UseBasicParsing; if ($r.StatusCode -eq 200) { $healthCheck = $true } } catch {}
-        }
-    }
-
-    Write-InstallLog "[4/8] Salvando script do agente..."
-    $AgentContent = @'
-{{AGENT_SCRIPT_CONTENT}}
-'@
-    Set-Content -Path $AgentScript -Value $AgentContent -Encoding UTF8 -Force
-
-    Write-InstallLog "[5/8] Configurando firewall..."
-    try {
-        Get-NetFirewallRule -DisplayName "CyberShield Agent" -EA SilentlyContinue | Remove-NetFirewallRule -EA SilentlyContinue
-        New-NetFirewallRule -DisplayName "CyberShield Agent" -Direction Outbound -Action Allow -Protocol TCP -RemotePort 443 -Program "powershell.exe" -EA Stop | Out-Null
-    } catch { Write-InstallLog "[WARN] Firewall: $($_.Exception.Message)" }
-
-    Write-InstallLog "[6/8] Criando tarefa agendada..."
-    $taskName = "CyberShield Agent"
-    Get-ScheduledTask -TaskName $taskName -EA SilentlyContinue | Unregister-ScheduledTask -Confirm:$false -EA SilentlyContinue
-    $action = New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File \`"$AgentScript\`" -AgentToken \`"$AgentToken\`" -HmacSecret \`"$HmacSecret\`" -ServerUrl \`"$ServerUrl\`" -AgentName \`"{{AGENT_NAME}}\`" -PollInterval $PollInterval"
-    $trigger = New-ScheduledTaskTrigger -AtStartup
-    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit (New-TimeSpan -Days 365)
-    $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-    Register-ScheduledTask -TaskName $taskName -Description "CyberShield Security Agent" -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null
-
-    Write-InstallLog "[7/8] Iniciando agente..."
-    Start-ScheduledTask -TaskName $taskName
-    Start-Sleep -Seconds 3
-
-    Write-Host "==================================" -ForegroundColor Green
-    Write-Host "INSTALACAO CONCLUIDA!" -ForegroundColor Green
-    Write-Host "==================================" -ForegroundColor Green
-
-    Write-InstallLog "[8/8] Enviando telemetria..."
-    $telBody = @{ agent_name = "{{AGENT_NAME}}"; success = $true; os_version = (Get-WmiObject Win32_OperatingSystem).Caption; installation_time = (Get-Date).ToUniversalTime().ToString("o") } | ConvertTo-Json
-    try { Invoke-RestMethod -Uri "$ServerUrl/functions/v1/post-installation-telemetry" -Method POST -Body $telBody -ContentType "application/json" -TimeoutSec 10 -EA Stop | Out-Null } catch {}
-
-    Start-Sleep -Seconds 10
-} catch {
-    Write-Host "ERRO: $($_.Exception.Message)" -ForegroundColor Red
-    Read-Host "Enter para sair"
-    exit 1
-}
-`;
-
-      const installerContent = FULL_TEMPLATE
-        .replace(/\{\{AGENT_TOKEN\}\}/g, agentToken)
-        .replace(/\{\{HMAC_SECRET\}\}/g, creds.data.hmacSecret)
-        .replace(/\{\{SERVER_URL\}\}/g, SUPABASE_URL)
-        .replace(/\{\{AGENT_SCRIPT_CONTENT\}\}/g, agentScriptContent)
-        .replace(/\{\{AGENT_NAME\}\}/g, agent_name)
-        .replace(/\{\{TIMESTAMP\}\}/g, new Date().toISOString());
+      if (buildResult instanceof Response) return buildResult;
+      const installerContent = buildResult.templateContent;
+      const agentScriptHash = buildResult.agentScriptHash;
 
       // 7. Create build record
       const { data: buildRecord, error: buildError } = await supabase
