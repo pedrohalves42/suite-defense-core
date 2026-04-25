@@ -11,7 +11,7 @@ export async function analyzeWithAI(
   tenantId: string,
   tenantName: string,
   data: AnalysisData,
-  jobStats: Array<Record<string, unknown>>
+  jobStats: any[]
 ): Promise<AIInsight[]> {
   try {
     const failureRate = data.installationStats.length > 0
@@ -192,8 +192,8 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
   }
 }
 
-export async function generateSuggestedActions(insights: Array<Record<string, unknown>>) {
-  const actions: Array<Record<string, unknown>> = [];
+export async function generateSuggestedActions(insights: any[]) {
+  const actions: any[] = [];
 
   for (const insight of insights) {
     if (!['high', 'critical'].includes(insight.severity as string)) continue;

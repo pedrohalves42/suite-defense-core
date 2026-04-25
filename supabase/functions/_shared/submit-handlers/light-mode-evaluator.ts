@@ -33,7 +33,7 @@ export async function evaluateLightMode(
 
     if (!latestProcesses?.processes) return null;
 
-    const processNames = (latestProcesses.processes as Array<Record<string, unknown>>).map((p) => (p.name as string) || '');
+    const processNames = (latestProcesses.processes as any[]).map((p) => (p.name as string) || '');
     const networkMbps = networkBytesTotal / (1024 * 1024);
     const normalizedActive = new Set(processNames.map(n => n.toLowerCase().replace('.exe', '')));
     const detectedMedia = MEDIA_PROCESSES.filter(mp => normalizedActive.has(mp));

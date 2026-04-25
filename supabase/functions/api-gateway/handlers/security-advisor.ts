@@ -63,7 +63,7 @@ export async function handleSecurityAdvisor(
 
   // AI recommendations
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-  let aiTips: Array<Record<string, unknown>> = [];
+  let aiTips: any[] = [];
 
   if (LOVABLE_API_KEY && gaps.length > 0) {
     try {

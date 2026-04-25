@@ -13,7 +13,7 @@ export async function processDiskMetrics(ctx: SubmitContext): Promise<void> {
   
   try {
     logger.debug('[submit-job-result] [ZERO_TRUST] Processing disk metrics BEFORE marking completed...')
-    const drives = (outputData.drives || outputData.disks || outputData.disk_metrics || []) as Array<Record<string, unknown>>
+    const drives = (outputData.drives || outputData.disks || outputData.disk_metrics || []) as any[]
     
     if (!Array.isArray(drives) || drives.length === 0) return
     

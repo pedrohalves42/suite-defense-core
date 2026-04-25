@@ -86,7 +86,7 @@ export async function handleCheckInstallationHealth(supabase: SB, requestId: str
 
 export async function handleCheckProductionHealth(supabase: SB, requestId: string, _payload: Record<string, unknown>) {
   const startedAt = Date.now();
-  const alerts: Array<Record<string, unknown>> = [];
+  const alerts: any[] = [];
   const now = new Date();
   const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -429,7 +429,7 @@ export async function handleCalculateBehavioralBaselines(supabase: SB, requestId
       const processCountValues: number[] = [];
 
       for (const snapshot of processData) {
-        const processes = snapshot.processes as Array<Record<string, unknown>>;
+        const processes = snapshot.processes as any[];
         if (Array.isArray(processes)) {
           const totalCpu = processes.reduce((sum: number, p: { cpu_percent?: number; cpu?: number }) => sum + (Number(p.cpu_percent || p.cpu || 0)), 0);
           cpuValues.push(Math.min(totalCpu, 100));
@@ -576,7 +576,7 @@ export async function handleCheckPendingAgents(supabase: SB, requestId: string, 
     return acc;
   }, {} as Record<string, PendingAgent[]>);
 
-  const notifications: Array<Record<string, unknown>> = [];
+  const notifications: any[] = [];
 
   // Lazy import Resend
   const { Resend } = await import('https://esm.sh/resend@4.0.0');

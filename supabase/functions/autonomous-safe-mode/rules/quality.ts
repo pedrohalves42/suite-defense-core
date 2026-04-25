@@ -274,7 +274,7 @@ export async function processProgressiveDegradationRule(supabase: any, rule: Rul
     .gte('created_at', midpoint.toISOString())
     .limit(2000);
 
-  const calcSuccessRate = (jobs: Array<Record<string, unknown>>) => {
+  const calcSuccessRate = (jobs: any[]) => {
     const agentRates = new Map<string, { success: number; total: number; tenant_id: string }>();
     for (const job of jobs || []) {
       const agentId = job.agent_id as string;

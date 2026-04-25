@@ -14,8 +14,8 @@ export async function processNetworkInfo(ctx: SubmitContext): Promise<void> {
   try {
     logger.debug('[submit-job-result] [ZERO_TRUST] Processing network info BEFORE marking completed...')
     
-    const adapters = (outputData.adapters || []) as Array<Record<string, unknown>>
-    const ipAddresses = (outputData.ip_addresses || []) as Array<Record<string, unknown>>
+    const adapters = (outputData.adapters || []) as any[]
+    const ipAddresses = (outputData.ip_addresses || []) as any[]
     const collectedAt = outputData.collected_at
       ? new Date(String(outputData.collected_at)).toISOString()
       : new Date().toISOString()
@@ -37,7 +37,7 @@ export async function processNetworkInfo(ctx: SubmitContext): Promise<void> {
           status: String(a.Status || a.status || 'up').toLowerCase(),
           ip_address: idx < privateIps.length ? String((privateIps[idx] as Record<string, unknown>).ip) : '',
         }))
-      : (outputData.network_adapters || []) as Array<Record<string, unknown>>
+      : (outputData.network_adapters || []) as any[]
 
     const derivedPublicIp = outputData.public_ip 
       || (publicIps.length > 0 ? String((publicIps[0] as Record<string, unknown>).ip) : null)

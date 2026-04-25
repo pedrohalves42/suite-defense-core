@@ -12,7 +12,7 @@ export async function processAntivirusStatus(ctx: SubmitContext): Promise<void> 
   
   try {
     logger.debug('[submit-job-result] [ZERO_TRUST] Processing antivirus status BEFORE marking completed...')
-    const avProducts = outputData.antivirus_products as Array<Record<string, unknown>>
+    const avProducts = outputData.antivirus_products as any[]
     
     if (!Array.isArray(avProducts) || avProducts.length === 0) return
     

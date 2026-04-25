@@ -362,7 +362,7 @@ const TEMPLATE_INFO: Record<ComplianceTemplate, { name: string; description: str
   SOC2_LITE: { name: 'SOC2-lite', description: 'Trust Services Criteria' },
 };
 
-function calcRiskScore(stats: Record<string, number>, unprotectedPCs: Record<string, number>, failedLogins: Array<Record<string, unknown>>): number {
+function calcRiskScore(stats: Record<string, number>, unprotectedPCs: Record<string, number>, failedLogins: any[]): number {
   let score = 100;
   score -= Math.min(40, (stats.critical_vulnerabilities || 0) * 10);
   score -= Math.min(20, (stats.high_vulnerabilities || 0) * 3);
@@ -387,9 +387,9 @@ function getRiskClassification(score: number): { level: string; color: string; d
 
 async function buildComplianceSections(
   template: ComplianceTemplate,
-  data: { auditLogs: Array<Record<string, unknown>>; securityEvents: Array<Record<string, unknown>>; activePolicies: Array<Record<string, unknown>>; agents: Array<Record<string, unknown>>; failedLogins: Array<Record<string, unknown>>; blockedAttempts: Array<Record<string, unknown>> }
+  data: { auditLogs: any[]; securityEvents: any[]; activePolicies: any[]; agents: any[]; failedLogins: any[]; blockedAttempts: any[] }
 ) {
-  const sections: Array<Record<string, unknown>> = [];
+  const sections: any[] = [];
   switch (template) {
     case 'LGPD': {
       const accessLogs = data.auditLogs.filter(log => (log.action as string)?.includes('access') || (log.action as string)?.includes('view') || (log.action as string)?.includes('read'));
@@ -425,7 +425,7 @@ async function buildComplianceSections(
   return sections;
 }
 
-async function evaluateSecurityInvariants(tenantId: string, dnsFilterEnabled: boolean): Promise<Array<Record<string, unknown>>> {
+async function evaluateSecurityInvariants(tenantId: string, dnsFilterEnabled: boolean): Promise<any[]> {
   const invariants = [
     { id: 'INV-001', name: 'RLS Ativo', description: 'Row Level Security habilitado em todas as tabelas' },
     { id: 'INV-002', name: 'Autenticacao HMAC', description: 'HMAC-SHA256 validado em todas requisicoes de agentes' },
@@ -434,7 +434,7 @@ async function evaluateSecurityInvariants(tenantId: string, dnsFilterEnabled: bo
     { id: 'INV-005', name: 'Fail-Closed', description: 'Sistema falha de forma segura em caso de erro' },
     { id: 'INV-006', name: 'DNS Filter Ativo', description: 'Filtro DNS local operacional quando habilitado' },
   ];
-  const results: Array<Record<string, unknown>> = [];
+  const results: any[] = [];
   const checkedAt = new Date().toISOString();
   for (const inv of invariants) {
     let status: 'PASS' | 'FAIL' | 'UNKNOWN' = 'PASS';
@@ -567,7 +567,7 @@ export async function handleSecurityReport(
   }
 
   // Full JSON (default)
-  const recommendations: Array<Record<string, unknown>> = [];
+  const recommendations: any[] = [];
   if (stats.critical_vulnerabilities > 0) recommendations.push({ priority: 1, category: 'Vulnerabilidades', title: 'Corrigir vulnerabilidades criticas', description: `${stats.critical_vulnerabilities} vulnerabilidade(s) critica(s) detectada(s).` });
   if (unprotectedPCs.no_antivirus > 0) recommendations.push({ priority: 2, category: 'Antivirus', title: 'Instalar antivirus em computadores desprotegidos', description: `${unprotectedPCs.no_antivirus} computador(es) sem protecao.` });
   if (unprotectedPCs.outdated_av > 0) recommendations.push({ priority: 3, category: 'Antivirus', title: 'Atualizar definicoes de antivirus', description: `${unprotectedPCs.outdated_av} computador(es) com antivirus desatualizado.` });
@@ -650,7 +650,7 @@ export async function handleExplainableReport(
   const riskCategories: Record<string, number> = {};
 
   for (const insight of insights || []) {
-    const action = (insight.ai_actions as Array<Record<string, unknown>>)?.[0];
+    const action = (insight.ai_actions as any[])?.[0];
     const hasCustomPolicy = policyMap.has(insight.insight_type);
     const executionMode = policyMap.get(insight.insight_type) || (insight.auto_action_executed ? 'auto' : 'approval');
 

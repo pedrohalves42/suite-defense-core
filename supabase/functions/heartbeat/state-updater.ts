@@ -135,7 +135,7 @@ async function insertProcessData(
   processesPayload: NonNullable<OSInfo['processes']>,
   processAnomalies: unknown[] | undefined,
 ): Promise<void> {
-  const allProcs: Array<Record<string, unknown>> = []
+  const allProcs: any[] = []
   const seenPids = new Set<number>()
 
   for (const p of [...(processesPayload.top_by_cpu || []), ...(processesPayload.top_by_memory || [])]) {

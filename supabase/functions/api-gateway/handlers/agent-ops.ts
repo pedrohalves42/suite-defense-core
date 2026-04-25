@@ -156,7 +156,7 @@ async function getFleetCompliance(supabase: Supabase, tenantId?: string) {
 
   const latest = await latestActiveVersion(supabase);
   const byVersion: Record<string, number> = {};
-  const outdated: Array<Record<string, unknown>> = [];
+  const outdated: any[] = [];
 
   for (const a of agents ?? []) {
     const ver = a.agent_version ?? 'unknown';
@@ -187,7 +187,7 @@ export async function handleAgentVersionManagement(
     const compliance = await getFleetCompliance(supabase, tenantId);
     const latest = compliance.latest_version;
     let scheduled = 0, failed = 0;
-    const details: Array<Record<string, unknown>> = [];
+    const details: any[] = [];
 
     for (const agent of compliance.agents_needing_update) {
       if (dryRun) { details.push({ agent_id: agent.agent_id, version: agent.version, action: 'would_schedule' }); continue; }
