@@ -1,5 +1,5 @@
 
-import { ReportDataRepository } from '../../repositories/report-data.repository.ts';
+import { ReportDataRepository } from '../../../repositories/report-data.repository.ts';
 import { ComplianceScoringService } from '../services/compliance-scoring.service.ts';
 
 export class GenerateComplianceReportUseCase {
