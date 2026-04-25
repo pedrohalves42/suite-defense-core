@@ -64,7 +64,6 @@ serveTenant(async (req, ctx) => {
   const parsed = PromoteSchema.safeParse(ctx.body ?? {});
   const body: Record<string, unknown> = parsed.success ? parsed.data : {};
   const results: Record<string, unknown> = {};
-  const results: Record<string, unknown> = {};
 
   const platforms = [
     { platform: 'windows', file: 'cybershield-agent-windows-v5.ps1' },
