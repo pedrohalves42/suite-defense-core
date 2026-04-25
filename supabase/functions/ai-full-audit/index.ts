@@ -1,5 +1,5 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { createSupabaseClient } from "../_shared/supabase-client.ts";
+import { createTypedClient } from "../_shared/supabase-client.ts";
 import { AIPromptRegistry, logPromptUsage } from "../_shared/ai-prompt-registry.ts";
 import { safeParseJSON, createFallbackAudit, createFallbackRedTeam } from "../_shared/json-parser.ts";
 import { callAI, type AIMessage } from "../_shared/ai-provider-helper.ts";
@@ -23,7 +23,7 @@ serveTenant(async (req, ctx) => {
   if (!isInternal) {
     const authHeader = req.headers.get('Authorization');
     if (authHeader) {
-      userClient = createSupabaseClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_ANON_KEY'), {
+      userClient = createTypedClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_ANON_KEY'), {
         global: { headers: { Authorization: authHeader } },
       });
     }
