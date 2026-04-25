@@ -163,69 +163,105 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
-      <Card className="w-full max-w-[460px] card-enterprise rounded-xl relative z-10 overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-accent" />
-        <CardHeader className="space-y-1 text-center pb-2 pt-8">
-          <div className="flex justify-center mb-4">
-            <div className="p-3 bg-muted/50 rounded-xl border border-border">
-              <img src={logoImage} alt="CyberShield" className="h-10 w-10 object-contain" />
+    <div className="min-h-screen flex items-center justify-center p-6 bg-background relative overflow-hidden">
+      {/* Strategic Background - Consistent with Login & Hero */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(220,20%,10%)] via-[hsl(200,18%,12%)] to-[hsl(160,15%,10%)] z-0" />
+      
+      {/* Subtle grid pattern */}
+      <div className="absolute inset-0 opacity-[0.03] z-0" style={{
+        backgroundImage: `radial-gradient(circle at 1px 1px, hsl(var(--primary-foreground)) 1px, transparent 0)`,
+        backgroundSize: '40px 40px'
+      }} />
+
+      {/* Dynamic Security Glows */}
+      <div className="absolute top-1/4 -left-24 w-[500px] h-[500px] bg-cta-positive/10 rounded-full blur-[120px] animate-pulse z-0" />
+      <div className="absolute -bottom-24 -right-24 w-[400px] h-[400px] bg-info/5 rounded-full blur-[100px] z-0" />
+
+      <Card className="w-full max-w-[460px] border border-white/10 bg-[hsl(220,20%,10%)]/60 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10 rounded-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-700 ease-out">
+        {/* Magnet Top Border */}
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cta-positive/50 to-transparent" />
+        
+        <CardHeader className="space-y-6 text-center pb-2 pt-12">
+          <Link 
+            to="/" 
+            className="inline-flex justify-center group transition-transform duration-500 hover:scale-110 mb-2"
+          >
+            <div className="relative">
+              <div className="absolute -inset-4 bg-cta-positive/20 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative p-1">
+                <img src={logoImage} alt="CyberShield" className="h-16 w-16 object-contain drop-shadow-[0_0_10px_rgba(5,150,105,0.3)]" />
+              </div>
+            </div>
+          </Link>
+          
+          <div className="space-y-3">
+            <CardTitle className="text-4xl font-extrabold tracking-tight text-white leading-tight">
+              {t('signupPage.title')}
+            </CardTitle>
+            <div className="flex flex-col items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/60 text-[10px] font-bold uppercase tracking-[0.15em]">
+                {t('signupPage.subtitle')}
+              </span>
             </div>
           </div>
-          <CardTitle className="text-xl font-semibold tracking-tight text-foreground">
-            {t('signupPage.title')}
-          </CardTitle>
-          <CardDescription className="text-sm text-muted-foreground">
-            {t('signupPage.subtitle')}
-          </CardDescription>
         </CardHeader>
+
         <form onSubmit={handleSignup}>
-          <CardContent className="space-y-4 px-6">
-            <div className="space-y-2">
-              <Label htmlFor="fullName" className="text-xs font-medium text-muted-foreground/80">{t('signupPage.fullName')}</Label>
-              <Input
-                id="fullName"
-                type="text"
-                placeholder={t('signupPage.fullNamePlaceholder')}
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                minLength={2}
-                maxLength={100}
-                className="h-10 bg-background/50 border-border/50 focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
-              />
+          <CardContent className="space-y-6 px-10 pt-8">
+            <div className="space-y-3">
+              <Label htmlFor="fullName" className="text-white/70 font-bold text-[11px] uppercase tracking-[0.15em] ml-1">{t('signupPage.fullName')}</Label>
+              <div className="relative group">
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder={t('signupPage.fullNamePlaceholder')}
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                  minLength={2}
+                  maxLength={100}
+                  className="h-14 border-white/5 focus:border-cta-positive/30 focus:ring-0 transition-all duration-500 bg-white/[0.02] hover:bg-white/[0.04] text-white rounded-2xl placeholder:text-white/10"
+                />
+                <div className="absolute inset-0 rounded-2xl border border-cta-positive/0 group-focus-within:border-cta-positive/20 pointer-events-none transition-all duration-500" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-xs font-medium text-muted-foreground/80">{t('signupPage.email')}</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder={t('signupPage.emailPlaceholder')}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                maxLength={255}
-                className="h-10 bg-background/50 border-border/50 focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
-              />
+            
+            <div className="space-y-3">
+              <Label htmlFor="email" className="text-white/70 font-bold text-[11px] uppercase tracking-[0.15em] ml-1">{t('signupPage.email')}</Label>
+              <div className="relative group">
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder={t('signupPage.emailPlaceholder')}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  maxLength={255}
+                  className="h-14 border-white/5 focus:border-cta-positive/30 focus:ring-0 transition-all duration-500 bg-white/[0.02] hover:bg-white/[0.04] text-white rounded-2xl placeholder:text-white/10"
+                />
+                <div className="absolute inset-0 rounded-2xl border border-cta-positive/0 group-focus-within:border-cta-positive/20 pointer-events-none transition-all duration-500" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="deviceCount" className="text-xs font-medium text-muted-foreground/80">{t('signupPage.deviceCount')}</Label>
+
+            <div className="space-y-3">
+              <Label htmlFor="deviceCount" className="text-white/70 font-bold text-[11px] uppercase tracking-[0.15em] ml-1">{t('signupPage.deviceCount')}</Label>
               <Select value={deviceCount} onValueChange={setDeviceCount}>
-                <SelectTrigger className="h-10 bg-background/50 border-border/50 focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all">
+                <SelectTrigger className="h-14 border-white/5 bg-white/[0.02] hover:bg-white/[0.04] focus:border-cta-positive/30 focus:ring-0 transition-all duration-500 text-white/70 rounded-2xl">
                   <SelectValue placeholder={t('signupPage.selectOption')} />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1-3">{t('signupPage.devices1to3')}</SelectItem>
-                  <SelectItem value="4-10">{t('signupPage.devices4to10')}</SelectItem>
-                  <SelectItem value="11-30">{t('signupPage.devices11to30')}</SelectItem>
-                  <SelectItem value="31-100">{t('signupPage.devices31to100')}</SelectItem>
-                  <SelectItem value="100+">{t('signupPage.devices100plus')}</SelectItem>
+                <SelectContent className="bg-[hsl(220,20%,10%)] border-white/10 text-white rounded-xl backdrop-blur-xl">
+                  <SelectItem value="1-3" className="focus:bg-white/5 focus:text-white">{t('signupPage.devices1to3')}</SelectItem>
+                  <SelectItem value="4-10" className="focus:bg-white/5 focus:text-white">{t('signupPage.devices4to10')}</SelectItem>
+                  <SelectItem value="11-30" className="focus:bg-white/5 focus:text-white">{t('signupPage.devices11to30')}</SelectItem>
+                  <SelectItem value="31-100" className="focus:bg-white/5 focus:text-white">{t('signupPage.devices31to100')}</SelectItem>
+                  <SelectItem value="100+" className="focus:bg-white/5 focus:text-white">{t('signupPage.devices100plus')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-xs font-medium text-muted-foreground/80">{t('signupPage.password')}</Label>
-              <div className="relative">
+
+            <div className="space-y-3">
+              <Label htmlFor="password" className="text-white/70 font-bold text-[11px] uppercase tracking-[0.15em] ml-1">{t('signupPage.password')}</Label>
+              <div className="relative group">
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
@@ -235,90 +271,102 @@ export default function Signup() {
                   required
                   minLength={8}
                   maxLength={72}
-                  className="h-10 pr-10 bg-background/50 border-border/50 focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
+                  className="h-14 pr-12 border-white/5 focus:border-cta-positive/30 focus:ring-0 transition-all duration-500 bg-white/[0.02] hover:bg-white/[0.04] text-white rounded-2xl placeholder:text-white/10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-all duration-500"
                   tabIndex={-1}
                 >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
+                <div className="absolute inset-0 rounded-2xl border border-cta-positive/0 group-focus-within:border-cta-positive/20 pointer-events-none transition-all duration-500" />
               </div>
-              <p className="text-[10px] text-muted-foreground/50 mt-1">
+              <p className="text-[10px] text-white/20 font-medium px-1 italic">
                 {t('signupPage.passwordHint')}
               </p>
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4 px-6 pb-6">
+          <CardFooter className="flex flex-col space-y-6 px-10 pt-8 pb-12">
             <Button 
               type="submit" 
-              className="w-full h-10 bg-primary/90 hover:bg-primary text-primary-foreground font-medium transition-all duration-200" 
+              className="w-full h-14 bg-white text-black hover:bg-white/90 font-bold rounded-2xl shadow-[0_10px_25px_rgba(255,255,255,0.1)] hover:shadow-[0_15px_35px_rgba(255,255,255,0.2)] transition-all duration-500 text-sm uppercase tracking-[0.1em]" 
               disabled={loading}
             >
               {loading ? t('signupPage.creating') : t('signupPage.submit')}
             </Button>
             
-            <div className="relative my-1">
+            <div className="relative my-2 w-full">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border/40" />
+                <span className="w-full border-t border-white/5" />
               </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-card px-3 text-muted-foreground/60">{t('signupPage.orSignUpWith')}</span>
+              <div className="relative flex justify-center text-[10px] font-bold uppercase tracking-[0.2em]">
+                <span className="bg-[#1A1D21] px-4 text-white/20">{t('signupPage.orSignUpWith')}</span>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4 w-full">
               <Button
                 type="button"
                 variant="outline"
-                className="h-10 border-border/50 hover:border-primary/40 hover:bg-primary/5 transition-all duration-200"
+                className="h-14 border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/10 text-white/70 font-bold text-xs uppercase tracking-wider rounded-2xl transition-all duration-500"
                 onClick={() => handleSocialLogin('google')}
                 disabled={loading || socialLoading !== null}
               >
                 {socialLoading === 'google' ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                  </svg>
+                  <div className="flex items-center gap-3">
+                    <svg className="h-4 w-4" viewBox="0 0 24 24">
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    <span>Google</span>
+                  </div>
                 )}
-                Google
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                className="h-10 border-border/50 hover:border-primary/40 hover:bg-primary/5 transition-all duration-200"
+                className="h-14 border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/10 text-white/70 font-bold text-xs uppercase tracking-wider rounded-2xl transition-all duration-500"
                 onClick={() => handleSocialLogin('apple')}
                 disabled={loading || socialLoading !== null}
               >
                 {socialLoading === 'apple' ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-                  </svg>
+                  <div className="flex items-center gap-3">
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                    </svg>
+                    <span>Apple</span>
+                  </div>
                 )}
-                Apple
               </Button>
             </div>
 
-            <p className="text-[10px] text-center text-muted-foreground/50">
+            <p className="text-[10px] text-center text-white/20 font-medium italic">
               {t('signupPage.pricingNote')}
             </p>
-            <div className="text-xs text-center text-muted-foreground/60">
-              {t('signupPage.hasAccount')}{' '}
-              <Link to="/login" className="text-primary/80 hover:text-primary transition-colors">
-                {t('signupPage.signIn')}
-              </Link>
+            
+            <div className="text-[11px] text-center text-white/30 space-y-4 font-medium uppercase tracking-widest pt-4 w-full">
+              <div className="flex items-center justify-center gap-6">
+                <span className="text-white/20">{t('signupPage.hasAccount')}</span>
+                <Link to="/login" className="text-cta-positive/70 hover:text-cta-positive transition-colors duration-300">
+                  {t('signupPage.signIn')}
+                </Link>
+              </div>
+              <div className="pt-6 border-t border-white/5">
+                <Link to="/" className="hover:text-white/60 transition-colors duration-300">
+                  {t('loginPage.backToHome')}
+                </Link>
+              </div>
             </div>
             
             <SecurityFooter />
-            <BrandSignature />
           </CardFooter>
         </form>
       </Card>
