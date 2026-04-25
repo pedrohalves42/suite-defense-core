@@ -148,6 +148,7 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'billing:create-stripe-products': handleCreateStripeProducts,
   'billing:create-stripe-products-extended': handleCreateStripeProductsExtended,
   'billing:stripe-health-check': handleStripeHealthCheck,
+  'billing:charge-subscription': handleChargeSubscription,
   // security inlined
   'security:security-cleanup': handleSecurityCleanup,
   // security inlined — Phase 1A (JWT-compatible)
