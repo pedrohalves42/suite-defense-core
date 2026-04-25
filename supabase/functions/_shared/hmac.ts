@@ -522,7 +522,7 @@ async function logAuthFailure(supabase: any, data: AuthFailureLogData): Promise<
       },
     });
 
-    authFailureCache.set(cacheKey, now);
+    authFailureCache.set(cacheKey, { ts: now });
   } catch (error) {
     logger.warn('[HMAC] Failed to log auth failure (non-blocking)', error);
   }
