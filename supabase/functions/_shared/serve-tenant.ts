@@ -179,7 +179,7 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
       }
 
       // 5. Resolve tenant_id
-      let resolvedTenantId: string | null = null;
+      let tenantId: string | null = null;
 
       if (tenantSource === 'body' || tenantSource === 'auto') {
         const bodyObj = body as Record<string, unknown> | null;
