@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Shield, Lock, ArrowRight, Mail, Key } from 'lucide-react';
 import { Card, CardDescription, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
