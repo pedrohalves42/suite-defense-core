@@ -22,7 +22,7 @@ export async function authenticateApiKey(
     return { success: false, error: 'Invalid API key format' };
   }
 
-  const supabase: SupabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+  const supabase: SupabaseClient = createClient<any>(supabaseUrl, supabaseServiceKey);
 
   try {
     // Hash the API key (in production, use proper hashing)

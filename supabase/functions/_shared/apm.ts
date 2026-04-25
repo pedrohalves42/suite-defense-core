@@ -29,7 +29,7 @@ export async function recordMetric(metric: APMMetric): Promise<void> {
       return;
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient<any>(supabaseUrl, supabaseServiceKey);
 
     const { error } = await supabase
       .from('performance_metrics')

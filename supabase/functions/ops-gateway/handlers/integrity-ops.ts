@@ -237,13 +237,13 @@ export const handleRunRlsTests: InlinedHandler = async (supabase, requestId, _pa
   const anonKey = requireEnv('SUPABASE_ANON_KEY');
   const criticalTables = ['enrollment_keys', 'api_keys', 'agent_signing_keys'];
   for (const table of criticalTables) {
-    const anonClient = createClient(supabaseUrl, anonKey);
+    const anonClient = createClient<any>(supabaseUrl, anonKey);
     const { data, error } = await anonClient.from(table).select('id').limit(1);
     results.push({ test_name: `anon_blocked_${table}`, table_name: table, passed: error !== null || (data?.length === 0), failure_reason: !error && data && data.length > 0 ? `Anonymous access allowed to ${table}` : null });
   }
 
   // Test 5: Verify security_logs is append-only for anon
-  const anonClient2 = createClient(supabaseUrl, anonKey);
+  const anonClient2 = createClient<any>(supabaseUrl, anonKey);
   const { data: sampleLog } = await supabase.from('security_logs').select('id').limit(1).single();
   let deleteBlocked = true;
   let deleteErrorMsg: string | null = null;

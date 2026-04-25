@@ -18,7 +18,7 @@ serveTenant(async (req, ctx) => {
   // Create service client for admin operations
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+  const serviceClient = createClient<any>(supabaseUrl, supabaseServiceKey);
 
   // Health probe check
   const origin = req.headers.get('origin');
@@ -59,7 +59,7 @@ serveTenant(async (req, ctx) => {
 
     // Create user-context client for function invocations
     const authHeader = req.headers.get('Authorization') || '';
-    const userClient = createClient(supabaseUrl, supabaseServiceKey, {
+    const userClient = createClient<any>(supabaseUrl, supabaseServiceKey, {
       global: { headers: { Authorization: authHeader } },
     });
 

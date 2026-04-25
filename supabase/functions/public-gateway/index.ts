@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
   const startedAt = Date.now();
 
   try {
-    const supabase = createClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'));
+    const supabase = createClient<any>(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'));
 
     let action: string;
     let payload: Record<string, unknown> = {};

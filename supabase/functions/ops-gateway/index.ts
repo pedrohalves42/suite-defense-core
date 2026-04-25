@@ -361,7 +361,7 @@ Deno.serve(async (req) => {
     // Try inlined handler
     const inlinedHandler = INLINED_HANDLERS[action];
     if (inlinedHandler) {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const supabase = createClient<any>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
       logger.info(`[ops-gateway] Inline: ${action}`, { requestId });
       const result = await inlinedHandler(supabase, requestId, payload, req);
       logger.info(`[ops-gateway] ${action} done in ${Date.now() - startedAt}ms`);

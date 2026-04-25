@@ -134,7 +134,7 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
     try {
       const supabaseUrl = requireEnv('SUPABASE_URL');
       const serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
-      const supabase = createClient(supabaseUrl, serviceRoleKey);
+      const supabase = createClient<any>(supabaseUrl, serviceRoleKey);
 
       const authHeader = req.headers.get('Authorization');
       const internalSecret = req.headers.get('X-Internal-Secret') || req.headers.get('x-internal-secret');

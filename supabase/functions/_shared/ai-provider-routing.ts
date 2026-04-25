@@ -48,7 +48,7 @@ function getSmartRouter(): SmartRouterUseCase | null {
     const url = Deno.env.get('SUPABASE_URL');
     const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     if (url && key) {
-      const client = createClient(url, key);
+      const client = createClient<any>(url, key);
       smartRouterInstance = new SmartRouterUseCase(new SupabaseSmartRouterAdapter(client));
     }
   } catch (e) { logger.warn('[ai-multi-provider] SmartRouter init failed:', e); }

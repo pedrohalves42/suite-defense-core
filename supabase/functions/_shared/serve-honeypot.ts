@@ -89,7 +89,7 @@ export function serveHoneypot(handler: HoneypotHandler) {
     }
 
     try {
-      const supabase = createClient(
+      const supabase = createClient<any>(
         requireEnv('SUPABASE_URL'),
         requireEnv('SUPABASE_SERVICE_ROLE_KEY'),
       );
