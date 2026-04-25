@@ -1,5 +1,10 @@
 {
   "compilerOptions": {
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictFunctionTypes": false,
+    "strictPropertyInitialization": false,
+    "noImplicitThis": false,
+    "useUnknownInCatchVariables": false
   }
 }
