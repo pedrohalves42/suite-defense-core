@@ -57,7 +57,22 @@ export default tseslint.config(
       
       // Novas regras uteis
       "@typescript-eslint/no-explicit-any": "error",
-      "no-console": ["warn", { allow: ["warn", "error"] }],
+      "no-console": "error",
+      "no-restricted-syntax": [
+        "error",
+        {
+          "selector": "CallExpression[callee.name='fetch']",
+          "message": "Raw fetch() is forbidden. Use httpJson from _shared/http.ts for business logic or fetchWithTimeout for low-level needs."
+        },
+        {
+          "selector": "JSXAttribute[name.name='dangerouslySetInnerHTML']",
+          "message": "dangerouslySetInnerHTML is strictly forbidden for SOC 2 compliance."
+        },
+        {
+          "selector": "CallExpression[callee.name='createClient']",
+          "message": "Use createSupabaseClient/createServiceRoleClient from _shared/supabase-client.ts instead of raw createClient."
+        }
+      ],
       
       // ADR-026: Enforce tenant isolation on multi-tenant tables
       "multitenant/no-supabase-query-without-tenant": "error",
