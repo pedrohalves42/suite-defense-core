@@ -2,7 +2,7 @@
   "compilerOptions": {
     "strict": false,
     "noImplicitAny": false,
-    "strictNullChecks": false,
+    "strictNullChecks": true,
     "noImplicitThis": false,
     "alwaysStrict": false,
     "strictFunctionTypes": false,
