@@ -122,6 +122,7 @@ export async function buildInstallerScript(
     .replace(/\{\{SERVER_URL\}\}/g, () => escapeValue(supabaseUrl, platform))
     .replace(/\{\{POLL_INTERVAL\}\}/g, '60')
     .replace(/\{\{AGENT_HASH\}\}/g, () => escapeValue(agentScriptHash, platform))
+    .replace(/\{\{AGENT_SCRIPT_BASE64\}\}/g, () => prepared.base64Content)
     .replace(/\{\{AGENT_SCRIPT_CONTENT\}\}/g, () => agentScriptContent) // Content already validated and managed separately
     .replace(/\{\{AGENT_NAME\}\}/g, () => escapeValue(agentData.agent_name, platform))
     .replace(/\{\{AGENT_VERSION\}\}/g, '3.0.0')
