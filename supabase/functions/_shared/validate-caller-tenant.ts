@@ -23,7 +23,7 @@ interface CallerValidationResult {
  */
 export async function validateCallerTenant(
   req: Request,
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string
 ): Promise<CallerValidationResult> {
   const internalSecret = req.headers.get('X-Internal-Secret') || req.headers.get('x-internal-secret');

@@ -31,7 +31,7 @@ export interface TenantContext<T = unknown> {
   /** True if call came via service_role or X-Internal-Secret */
   isInternal: boolean;
   /** Supabase client with service_role (for server-side operations) */
-  supabase: SupabaseClient;
+  supabase: any;
   /** Request ID for tracing */
   requestId: string;
   /** Parsed request body (typed via generic, defaults to unknown) */
@@ -82,7 +82,7 @@ function errorResponse(message: string, status: number, requestId: string, origi
   );
 }
 
-async function resolveDefaultTenant(supabase: SupabaseClient, userId: string): Promise<string | null> {
+async function resolveDefaultTenant(supabase: any, userId: string): Promise<string | null> {
   const { data } = await supabase
     .from('user_roles')
     .select('tenant_id')
@@ -92,7 +92,7 @@ async function resolveDefaultTenant(supabase: SupabaseClient, userId: string): P
   return data?.tenant_id || null;
 }
 
-async function verifyUserTenantAccess(supabase: SupabaseClient, userId: string, tenantId: string): Promise<boolean> {
+async function verifyUserTenantAccess(supabase: any, userId: string, tenantId: string): Promise<boolean> {
   const { data } = await supabase
     .from('user_roles')
     .select('tenant_id')

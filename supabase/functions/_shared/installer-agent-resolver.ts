@@ -13,7 +13,7 @@ interface ResolveResult {
 }
 
 export async function resolveAgent(
-  supabaseClient: SupabaseClient,
+  supabaseClient: any,
   enrollmentData: EnrollmentData,
   enrollmentKeyHash: string,
   hostname: string | null,

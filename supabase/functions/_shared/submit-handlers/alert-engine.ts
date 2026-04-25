@@ -22,7 +22,7 @@ const ALERT_COOLDOWN_MINUTES = 60;
 
 /** Generate alerts if metrics exceed thresholds */
 export async function generateAlerts(
-  supabase: SupabaseClient,
+  supabase: any,
   agent: AgentRef,
   metrics: AlertThresholdInput,
 ): Promise<number> {
@@ -95,7 +95,7 @@ export async function generateAlerts(
 
 /** Auto-resolve non-critical alerts when metrics normalize */
 export async function autoResolveAlerts(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   metrics: AlertThresholdInput,
 ): Promise<void> {

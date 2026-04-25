@@ -21,7 +21,7 @@ export const TELEMETRY_THROTTLE_MS = 5 * 60 * 1000
  * Update agent heartbeat status in DB.
  */
 export async function updateAgentStatus(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   agentName: string,
   updateData: AgentUpdate & { last_telemetry_at?: string },
@@ -48,7 +48,7 @@ export async function updateAgentStatus(
  * Fire-and-forget semantics — failures are logged but don't block heartbeat response.
  */
 export async function executeParallelOps(
-  supabase: SupabaseClient,
+  supabase: any,
   agent: AgentContext,
   osInfo: OSInfo,
   shouldInsertTelemetry: boolean,
@@ -90,7 +90,7 @@ export async function executeParallelOps(
 }
 
 async function insertSystemMetrics(
-  supabase: SupabaseClient,
+  supabase: any,
   agent: AgentContext,
   metrics: NonNullable<OSInfo['system_metrics']>,
 ): Promise<void> {
@@ -130,7 +130,7 @@ async function insertSystemMetrics(
 }
 
 async function insertProcessData(
-  supabase: SupabaseClient,
+  supabase: any,
   agent: AgentContext,
   processesPayload: NonNullable<OSInfo['processes']>,
   processAnomalies: unknown[] | undefined,

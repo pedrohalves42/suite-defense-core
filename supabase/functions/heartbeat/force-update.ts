@@ -61,7 +61,7 @@ interface SelfHealResult {
 }
 
 export async function processForceUpdate(
-  supabase: SupabaseClient,
+  supabase: any,
   agent: AgentContext,
   updateData: AgentUpdate,
   agentVersionFromPayload: string | undefined,
@@ -204,7 +204,7 @@ export async function processForceUpdate(
  * Returns full release row to be reused downstream (eliminates duplicate query).
  */
 async function fetchLatestRelease(
-  supabase: SupabaseClient,
+  supabase: any,
   platform: string,
 ): Promise<ReleaseRow | null> {
   const { data } = await supabase
@@ -221,7 +221,7 @@ async function fetchLatestRelease(
 }
 
 export async function selfHealForceVersion(
-  supabase: SupabaseClient,
+  supabase: any,
   agent: AgentContext,
   platform: string,
   currentVersion: string | undefined,
@@ -255,7 +255,7 @@ export async function selfHealForceVersion(
 }
 
 export async function maybeAutoArmSameVersionRemediation(
-  supabase: SupabaseClient,
+  supabase: any,
   agent: AgentContext,
   updateData: AgentUpdate,
   currentVersion: string | undefined,
@@ -333,7 +333,7 @@ export async function maybeAutoArmSameVersionRemediation(
 }
 
 async function clearForceUpdateFlag(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   reason: string | null,
 ): Promise<void> {
@@ -351,7 +351,7 @@ async function clearForceUpdateFlag(
 }
 
 async function buildForceUpdateResponse(
-  supabase: SupabaseClient,
+  supabase: any,
   agent: AgentContext,
   targetVersion: string,
   reason: string | null,

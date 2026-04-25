@@ -26,7 +26,7 @@ function errorResponse(message: string, status: number, requestId: string, origi
 }
 
 export interface InternalContext {
-  supabase: SupabaseClient;
+  supabase: any;
   requestId: string;
   body: unknown;
 }

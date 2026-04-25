@@ -16,7 +16,7 @@ export async function createAuditLog({
   request,
   success = true,
 }: {
-  supabase: SupabaseClient;
+  supabase: any;
   userId?: string;
   tenantId: string;  // ADR-029 HIGH-06: Now required (removed optional)
   action: string;

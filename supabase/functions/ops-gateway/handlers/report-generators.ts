@@ -79,7 +79,7 @@ const ComplianceReportSchema = z.object({
 }).refine(d => d.template || d.template_type, { message: 'template or template_type is required' });
 
 export async function handleComplianceReport(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>, req?: Request
+  supabase: any, requestId: string, payload: Record<string, unknown>, req?: Request
 ): Promise<unknown> {
   const parsed = ComplianceReportSchema.safeParse(payload);
   if (!parsed.success) {
@@ -454,7 +454,7 @@ async function evaluateSecurityInvariants(tenantId: string, dnsFilterEnabled: bo
 }
 
 export async function handleSecurityReport(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>
+  supabase: any, requestId: string, payload: Record<string, unknown>
 ): Promise<unknown> {
   const tenantId = payload.tenant_id as string;
   if (!tenantId) return { error: 'tenant_id is required' };
@@ -614,7 +614,7 @@ function getPolicyApplied(_insightType: string, hasCustomPolicy: boolean, execut
 }
 
 export async function handleExplainableReport(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>
+  supabase: any, requestId: string, payload: Record<string, unknown>
 ): Promise<unknown> {
   const tenantId = payload.tenant_id as string;
   const userId = payload.user_id as string | undefined;

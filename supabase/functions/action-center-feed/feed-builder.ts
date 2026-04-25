@@ -14,7 +14,7 @@ import {
 } from './copy-map.ts';
 
 export async function buildFeed(
-  serviceClient: SupabaseClient,
+  serviceClient: any,
   tenantId: string,
 ): Promise<ActionCenterFeed> {
   // Agent health metrics

@@ -21,7 +21,7 @@ function hexToBytes(hex: string): Uint8Array {
 }
 
 export async function handleValidateHmacSignature(
-  supabase: SupabaseClient,
+  supabase: any,
   req: Request,
   requestId: string,
   payload: Record<string, unknown>,

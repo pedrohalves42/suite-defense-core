@@ -76,7 +76,7 @@ function estimateCostAvoided(data: RiskDelta): number {
 }
 
 export async function handleExecutiveReport(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>
+  supabase: any, requestId: string, payload: Record<string, unknown>
 ): Promise<unknown> {
   const startedAt = Date.now();
   const parsed = ExecReportSchema.safeParse(payload ?? {});
@@ -211,7 +211,7 @@ Gerado automaticamente pelo CyberShield Security Platform
 const FETCH_TIMEOUT_MS = 45000;
 
 export async function handleWeeklyReport(
-  supabase: SupabaseClient, requestId: string, _payload: Record<string, unknown>
+  supabase: any, requestId: string, _payload: Record<string, unknown>
 ): Promise<unknown> {
   const startedAt = Date.now();
 
@@ -378,7 +378,7 @@ function generateCommercialSummary(stats: Record<string, unknown>, riskLevel: st
 }
 
 export async function handleAutoGenerateReport(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>
+  supabase: any, requestId: string, payload: Record<string, unknown>
 ): Promise<unknown> {
   const parsed = ReportPayloadSchema.safeParse(payload);
   if (!parsed.success) return { error: 'Validation failed', issues: parsed.error.flatten().fieldErrors };
@@ -478,7 +478,7 @@ const PLAN_FREQUENCIES: PlanFrequency = {
   pro: 14, business: 14, scale: 7, enterprise: 7,
 };
 
-async function generateTenantReport(supabase: SupabaseClient, tenantId: string, triggerType: string): Promise<void> {
+async function generateTenantReport(supabase: any, tenantId: string, triggerType: string): Promise<void> {
   logger.info(`Generating ${triggerType} report for tenant ${tenantId}`);
 
   const { data: agents } = await supabase.from("agents").select("id, agent_name").eq("tenant_id", tenantId).eq("status", "active");
@@ -557,7 +557,7 @@ async function generateTenantReport(supabase: SupabaseClient, tenantId: string, 
 }
 
 export async function handleScheduledReportGenerator(
-  supabase: SupabaseClient, requestId: string, _payload: Record<string, unknown>
+  supabase: any, requestId: string, _payload: Record<string, unknown>
 ): Promise<unknown> {
   const startedAt = Date.now();
 

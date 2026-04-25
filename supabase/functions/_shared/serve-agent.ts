@@ -33,7 +33,7 @@ export interface AgentContext {
   hmacSecret: string | null;
   /** Extra agent fields fetched via extraAgentFields option */
   agentData: Record<string, unknown>;
-  supabase: SupabaseClient;
+  supabase: any;
   requestId: string;
   body: unknown;
   /** Raw body text (available when hmacVerify is true) */

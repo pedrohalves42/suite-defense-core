@@ -22,7 +22,7 @@ function sanitizeEnrollmentKey(value: string | null): string | null {
 
 async function resolveAuth(
   req: Request,
-  adminClient: SupabaseClient,
+  adminClient: any,
   requestId: string,
   origin: string | null,
   payload: Record<string, unknown>,
@@ -208,7 +208,7 @@ Start-Sleep -Seconds 15
 
 // ═══ Main Handler ═══
 export async function handleGetReinstallByName(
-  supabase: SupabaseClient,
+  supabase: any,
   req: Request,
   requestId: string,
   payload: Record<string, unknown>,

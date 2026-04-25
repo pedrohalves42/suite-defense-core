@@ -21,7 +21,7 @@ function classifyBreachSeverity(dataClasses: string[]): string {
 }
 
 export async function handleCheckCredentialLeaks(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
+  supabase: any, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
 ): Promise<unknown> {
   const tenantId = (payload.tenant_id as string) || ctx?.tenantId;
   if (!tenantId) return { __status: 400, error: 'tenant_id required' };
@@ -124,7 +124,7 @@ function classifyLocally(name: string) {
 }
 
 export async function handleClassifyShadowIt(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
+  supabase: any, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
 ): Promise<unknown> {
   const software_names = payload.software_names as string[];
   if (!software_names?.length) return { __status: 400, error: 'software_names required' };
@@ -134,7 +134,7 @@ export async function handleClassifyShadowIt(
 // ─── clear-failed-logins ────────────────────────────────────────────────────
 
 export async function handleClearFailedLogins(
-  supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
+  supabase: any, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
 ): Promise<unknown> {
   const ipAddress = (payload.ip_address as string)
     || ctx?.req?.headers.get('x-forwarded-for')?.split(',')[0]?.trim()

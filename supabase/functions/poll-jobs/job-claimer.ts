@@ -30,7 +30,7 @@ export function emptyResponse(isLegacyAgent: boolean, origin: string | null): Re
 }
 
 export async function checkOfflineGuard(
-  supabase: SupabaseClient,
+  supabase: any,
   agent: AuthenticatedAgent,
   origin: string | null,
 ): Promise<Response | null> {
@@ -57,7 +57,7 @@ export async function checkOfflineGuard(
 }
 
 export async function checkBacklogLimit(
-  supabase: SupabaseClient,
+  supabase: any,
   agent: AuthenticatedAgent,
   origin: string | null,
 ): Promise<Response | null> {
@@ -75,7 +75,7 @@ export async function checkBacklogLimit(
 }
 
 export async function claimAndBuildResponse(
-  supabase: SupabaseClient,
+  supabase: any,
   agent: AuthenticatedAgent,
   origin: string | null,
 ): Promise<Response> {

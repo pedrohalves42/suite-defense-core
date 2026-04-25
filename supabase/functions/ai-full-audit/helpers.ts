@@ -71,7 +71,7 @@ export function isRateLimited(error?: string): boolean {
 }
 
 export async function logGovernanceEvent(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   auditId: string | null,
   eventType: string,

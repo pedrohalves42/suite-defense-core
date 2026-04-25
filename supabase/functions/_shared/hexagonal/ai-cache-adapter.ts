@@ -13,7 +13,7 @@ import type {
 import { logger } from '../logger.ts';
 
 export class SupabaseAICacheAdapter implements AICachePort {
-  constructor(private readonly client: SupabaseClient) {}
+  constructor(private readonly client: any) {}
 
   async lookup(
     promptHash: string,

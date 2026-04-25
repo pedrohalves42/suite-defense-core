@@ -38,7 +38,7 @@ const SAFE_PROCESSES = new Set([
 ]);
 
 export async function handleProcesses(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   _agentName: string,
   tenantId: string,

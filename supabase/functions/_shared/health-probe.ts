@@ -20,7 +20,7 @@ const CRITICAL_TABLES = ['audit_logs', 'system_alerts', 'agents', 'tenants'];
 let schemaValidationCache: { valid: boolean; timestamp: number } | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-export async function isEmergencyMode(supabase: SupabaseClient): Promise<boolean> {
+export async function isEmergencyMode(supabase: any): Promise<boolean> {
   try {
     const { data, error } = await supabase.rpc('is_emergency_mode');
     if (error) {
@@ -34,7 +34,7 @@ export async function isEmergencyMode(supabase: SupabaseClient): Promise<boolean
   }
 }
 
-export async function getSystemMode(supabase: SupabaseClient): Promise<string> {
+export async function getSystemMode(supabase: any): Promise<string> {
   try {
     const { data, error } = await supabase.rpc('get_system_mode_safe');
     if (error) {
@@ -48,7 +48,7 @@ export async function getSystemMode(supabase: SupabaseClient): Promise<string> {
   }
 }
 
-export async function validateSchema(supabase: SupabaseClient): Promise<{
+export async function validateSchema(supabase: any): Promise<{
   valid: boolean;
   missingTables: string[];
 }> {
@@ -76,7 +76,7 @@ export async function validateSchema(supabase: SupabaseClient): Promise<{
   return { valid, missingTables };
 }
 
-export async function validateSystemReady(supabase: SupabaseClient): Promise<void> {
+export async function validateSystemReady(supabase: any): Promise<void> {
   const emergency = await isEmergencyMode(supabase);
   if (emergency) {
     throw new Error('EMERGENCY_MODE_ACTIVE');
@@ -134,7 +134,7 @@ export function addHealthHeaders(headers: Record<string, string>): Record<string
 }
 
 export async function healthProbeMiddleware(
-  supabase: SupabaseClient,
+  supabase: any,
   corsHeaders: Record<string, string>
 ): Promise<Response | null> {
   const emergency = await isEmergencyMode(supabase);
@@ -151,7 +151,7 @@ export async function healthProbeMiddleware(
 }
 
 export async function updateJobHeartbeat(
-  supabase: SupabaseClient,
+  supabase: any,
   jobKey: string,
   expectedInterval: string = '5 minutes'
 ): Promise<void> {

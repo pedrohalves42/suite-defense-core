@@ -21,7 +21,7 @@ function extractScriptVersion(content: string): string | null {
 }
 
 export async function handleGetLatestAgentScript(
-  supabase: SupabaseClient,
+  supabase: any,
   req: Request,
   requestId: string,
   payload: Record<string, unknown>,

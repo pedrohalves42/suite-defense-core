@@ -5,10 +5,10 @@ import { logger } from '../_shared/logger.ts';
  * Collect raw metrics and latest audit summary for Red Team assessment.
  */
 export async function collectMetrics(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   isInternalCall: boolean,
-  userClient?: SupabaseClient,
+  userClient?: any,
 ) {
   const metricsClient = isInternalCall ? supabase : (userClient || supabase);
   const { data: metrics, error: metricsError } = await metricsClient

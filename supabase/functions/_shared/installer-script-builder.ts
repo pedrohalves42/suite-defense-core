@@ -24,7 +24,7 @@ interface ScriptBuildResult {
 }
 
 export async function buildInstallerScript(
-  supabaseClient: SupabaseClient,
+  supabaseClient: any,
   platform: string,
   mode: 'args' | 'envvars',
   agentData: AgentData,

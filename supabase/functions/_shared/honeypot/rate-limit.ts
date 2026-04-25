@@ -31,7 +31,7 @@ const DEFAULT_CONFIG: HoneypotRateLimitConfig = {
  * Fail-closed: returns false on errors.
  */
 export async function checkHoneypotRateLimit(
-  supabase: SupabaseClient,
+  supabase: any,
   identifier: string,
   config?: Partial<HoneypotRateLimitConfig>,
 ): Promise<boolean> {

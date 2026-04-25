@@ -14,7 +14,7 @@ export interface CachedBuild {
  * Returns the cached build response if valid, or null if a new build is needed.
  */
 export async function checkBuildCache(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   scriptHash: string,
   requestId: string

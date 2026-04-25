@@ -6,7 +6,7 @@ import { REINSTALL_SCRIPT_CONTENT } from '../../_shared/reinstall-script-content
 import { REINSTALL_PRESERVE_SCRIPT_CONTENT } from '../../_shared/reinstall-preserve-script-content.ts';
 
 export async function handleGetReinstallScript(
-  _supabase: SupabaseClient, _req: Request, requestId: string, _payload: Record<string, unknown>,
+  _supabase: any, _req: Request, requestId: string, _payload: Record<string, unknown>,
 ): Promise<Response> {
   return new Response(REINSTALL_SCRIPT_CONTENT, {
     status: 200,
@@ -20,7 +20,7 @@ export async function handleGetReinstallScript(
 }
 
 export async function handleGetReinstallPreserveScript(
-  _supabase: SupabaseClient, _req: Request, requestId: string, _payload: Record<string, unknown>,
+  _supabase: any, _req: Request, requestId: string, _payload: Record<string, unknown>,
 ): Promise<Response> {
   return new Response(REINSTALL_PRESERVE_SCRIPT_CONTENT, {
     status: 200,

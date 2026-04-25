@@ -47,7 +47,7 @@ interface SupabaseClient {
  * Pure use case logic ? authentication is handled by the Edge Function handler.
  */
 export class ProcessHeartbeatUseCase {
-  constructor(private readonly supabase: SupabaseClient) {}
+  constructor(private readonly supabase: any) {}
 
   async execute(command: HeartbeatCommand): Promise<HeartbeatResult> {
     const now = new Date().toISOString();

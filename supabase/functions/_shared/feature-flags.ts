@@ -28,7 +28,7 @@ export interface FeatureFlagOptions {
  * Priority: global disabled (deny) > tenant flag > global enabled > defaultOnError
  */
 export async function isFeatureEnabled(
-  supabase: SupabaseClient,
+  supabase: any,
   flagKey: string,
   tenantId?: string,
   options?: FeatureFlagOptions,
@@ -58,7 +58,7 @@ export async function isFeatureEnabled(
  * If the RPC fails, the feature is DISABLED — preventing destructive actions.
  */
 export async function isKillSwitchEnabled(
-  supabase: SupabaseClient,
+  supabase: any,
   flagKey: string,
   tenantId?: string,
 ): Promise<boolean> {

@@ -6,7 +6,7 @@ import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
 
 export async function handleNetworkInfo(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   _agentName: string,
   tenantId: string,

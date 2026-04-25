@@ -28,7 +28,7 @@ const PROVIDER_MAX_CONTEXT: Record<AIProviderName, number> = {
 };
 
 export class SupabaseSmartRouterAdapter implements SmartRouterPort {
-  constructor(private readonly client: SupabaseClient) {}
+  constructor(private readonly client: any) {}
 
   async fetchProviderMetrics(): Promise<ProviderCapability[]> {
     try {

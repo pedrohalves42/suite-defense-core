@@ -10,7 +10,7 @@ import { logger } from './logger.ts';
  * @returns tenant_id or null if not found
  */
 export async function getTenantIdForUser(
-  supabase: SupabaseClient,
+  supabase: any,
   userId: string
 ): Promise<string | null> {
   const { data, error } = await supabase
@@ -37,7 +37,7 @@ export async function getTenantIdForUser(
  * @returns true if user belongs to tenant, false otherwise
  */
 export async function verifyUserTenant(
-  supabase: SupabaseClient,
+  supabase: any,
   userId: string,
   tenantId: string
 ): Promise<boolean> {
@@ -67,7 +67,7 @@ export async function verifyUserTenant(
  * @returns tenant_id or null if not found/unauthorized
  */
 export async function getValidatedTenantId(
-  supabase: SupabaseClient,
+  supabase: any,
   userId: string,
   requestedTenantId?: string
 ): Promise<string | null> {

@@ -17,7 +17,7 @@ interface AgentHandlerResult {
  * Handles re-enrollment of an existing agent via RPC with cross-tenant validation.
  */
 export async function handleReEnrollment(
-  supabase: SupabaseClient,
+  supabase: any,
   existingAgentId: string,
   agentName: string,
   hmacSecret: string,
@@ -155,7 +155,7 @@ export async function handleReEnrollment(
  * Uses onConflict to handle rare race conditions.
  */
 export async function createNewAgent(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   agentName: string,
   hmacSecret: string,

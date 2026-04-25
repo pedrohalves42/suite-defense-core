@@ -24,7 +24,7 @@ import type { AgentContext, AgentUpdate } from './types.ts'
  * FIX: Returns script_hash_signature for Windows agents that require it.
  */
 export async function buildNormalResponse(
-  supabase: SupabaseClient,
+  supabase: any,
   agent: AgentContext,
   updateData: AgentUpdate,
   agentVersionFromPayload: string | undefined,

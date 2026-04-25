@@ -56,7 +56,7 @@ function computeStatus(backup: BackupEntry, ageHours: number | null): string {
 }
 
 export async function handleBackupStatus(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   _agentName: string,
   tenantId: string,

@@ -35,7 +35,7 @@ interface AgentRecord {
  */
 export async function authenticateAndValidateAgent(
   req: Request,
-  supabase: SupabaseClient,
+  supabase: any,
   origin: string | null,
 ): Promise<{ success: true; agent: AuthenticatedAgent } | { success: false; response: Response }> {
   let agentToken = req.headers.get('X-Agent-Token');

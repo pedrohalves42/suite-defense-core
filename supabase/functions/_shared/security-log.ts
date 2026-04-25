@@ -3,7 +3,7 @@ import { logger } from './logger.ts';
 import { fetchWithTimeout, TIMEOUT_TIERS } from './fetch-with-timeout.ts';
 
 export interface SecurityLogParams {
-  supabase: SupabaseClient;
+  supabase: any;
   tenantId?: string;
   userId?: string;
   ipAddress: string;
@@ -120,7 +120,7 @@ export function extractIpAddress(req: Request): string {
  * Verifica se IP esta em lista de bloqueio (multiplas tentativas)
  */
 export async function checkIpBlocklist(
-  supabase: SupabaseClient,
+  supabase: any,
   ipAddress: string,
   endpoint: string,
   windowMinutes: number = 60

@@ -126,14 +126,14 @@ interface ComplianceMetrics {
 
 interface Deviation { metric: string; expected: unknown; actual: unknown; points: number; }
 
-async function collectMetrics(supabase: SupabaseClient, tenantId: string): Promise<ComplianceMetrics> {
+async function collectMetrics(supabase: any, tenantId: string): Promise<ComplianceMetrics> {
   const { data: admins } = await supabase.from('user_roles').select('user_id').eq('tenant_id', tenantId).in('role', ['admin', 'super_admin']);
   const mfaEnforcement = (admins?.length || 0) > 0;
   const { data: retention } = await supabase.from('retention_policies').select('retention_days').eq('tenant_id', tenantId).eq('enabled', true).maybeSingle();
   return { tenantId, rlsCoverage: 100, mfaEnforcement, auditTrailIntegrity: true, dataRetentionDays: retention?.retention_days ?? 90, encryptionAtRest: true, encryptionInTransit: true, backupFrequencyHours: 24, backupTestDays: 30 };
 }
 
-async function getBaseline(supabase: SupabaseClient, tenantId: string): Promise<ComplianceMetrics> {
+async function getBaseline(supabase: any, tenantId: string): Promise<ComplianceMetrics> {
   const { data: baseline } = await supabase.from('compliance_baselines').select('tenant_id, rls_coverage, mfa_enforcement, audit_trail_integrity, data_retention_days, encryption_at_rest, encryption_in_transit, backup_frequency_hours, backup_restore_tested_days').eq('tenant_id', tenantId).maybeSingle();
   if (baseline) {
     return { tenantId, rlsCoverage: baseline.rls_coverage, mfaEnforcement: baseline.mfa_enforcement, auditTrailIntegrity: baseline.audit_trail_integrity, dataRetentionDays: baseline.data_retention_days, encryptionAtRest: baseline.encryption_at_rest, encryptionInTransit: baseline.encryption_in_transit, backupFrequencyHours: baseline.backup_frequency_hours, backupTestDays: baseline.backup_restore_tested_days };
@@ -157,7 +157,7 @@ function calculateDrift(baseline: ComplianceMetrics, current: ComplianceMetrics)
   return { score, severity, deviations };
 }
 
-async function scanTenant(supabase: SupabaseClient, tenantId: string) {
+async function scanTenant(supabase: any, tenantId: string) {
   const current = await collectMetrics(supabase, tenantId);
   const baseline = await getBaseline(supabase, tenantId);
   const drift = calculateDrift(baseline, current);

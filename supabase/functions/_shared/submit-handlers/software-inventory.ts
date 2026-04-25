@@ -49,7 +49,7 @@ function deduplicateInventory(items: SoftwareItem[]): SoftwareItem[] {
 }
 
 export async function handleSoftwareInventory(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   agentName: string,
   tenantId: string,

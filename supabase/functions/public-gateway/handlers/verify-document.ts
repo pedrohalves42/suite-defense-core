@@ -8,7 +8,7 @@ import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0
 const DocumentNameSchema = z.string().min(1).max(255).regex(/^[a-zA-Z0-9_.\-]+$/);
 
 export async function handleVerifyDocument(
-  supabase: SupabaseClient,
+  supabase: any,
   req: Request,
   requestId: string,
   payload: Record<string, unknown>,

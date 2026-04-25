@@ -27,7 +27,7 @@ interface SystemMetrics {
 }
 
 export async function handleSystemMetrics(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   agentName: string,
   tenantId: string,

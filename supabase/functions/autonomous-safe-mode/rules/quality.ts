@@ -5,7 +5,7 @@
 import { logger } from '../../_shared/logger.ts';
 import type { RuleResult, RuleRecord, SupabaseClient } from '../types.ts';
 
-export async function processSilentFailureDetection(supabase: SupabaseClient, rule: RuleRecord): Promise<RuleResult> {
+export async function processSilentFailureDetection(supabase: any, rule: RuleRecord): Promise<RuleResult> {
   logger.debug('[SILENT_FAILURE_007] Detecting silent job failures');
 
   const { data: failures, error } = await supabase
@@ -116,7 +116,7 @@ export async function processSilentFailureDetection(supabase: SupabaseClient, ru
   return { rule_code: rule.code, processed_count: agents.length, agents };
 }
 
-export async function processSlowJobsRule(supabase: SupabaseClient, rule: RuleRecord): Promise<RuleResult> {
+export async function processSlowJobsRule(supabase: any, rule: RuleRecord): Promise<RuleResult> {
   logger.debug('[JOB_SLOW_008] Detecting systematically slow jobs');
 
   const { data: slowJobs, error } = await supabase.rpc('detect_slow_jobs', {
@@ -181,7 +181,7 @@ export async function processSlowJobsRule(supabase: SupabaseClient, rule: RuleRe
   return { rule_code: rule.code, processed_count: slowJobs?.length || 0, agents: [] };
 }
 
-export async function processIgnoredInsightsRule(supabase: SupabaseClient, rule: RuleRecord): Promise<RuleResult> {
+export async function processIgnoredInsightsRule(supabase: any, rule: RuleRecord): Promise<RuleResult> {
   logger.debug('[INSIGHT_IGNORED_009] Checking ignored critical insights');
 
   const cutoffDate = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
@@ -248,7 +248,7 @@ export async function processIgnoredInsightsRule(supabase: SupabaseClient, rule:
   return { rule_code: rule.code, processed_count: agents.length, agents };
 }
 
-export async function processProgressiveDegradationRule(supabase: SupabaseClient, rule: RuleRecord): Promise<RuleResult> {
+export async function processProgressiveDegradationRule(supabase: any, rule: RuleRecord): Promise<RuleResult> {
   const conditions = rule.definition?.conditions || {
     min_trend_duration_hours: 12,
     degradation_threshold_percent: 20

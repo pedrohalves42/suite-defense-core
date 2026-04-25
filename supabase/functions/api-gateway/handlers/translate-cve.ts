@@ -7,7 +7,7 @@ import { aiSimpleComplete } from '../../_shared/ai-multi-provider.ts';
 import { logger } from '../../_shared/logger.ts';
 
 export async function handleTranslateCve(
-  _supabase: SupabaseClient,
+  _supabase: any,
   requestId: string,
   payload: Record<string, unknown>,
 ): Promise<unknown> {

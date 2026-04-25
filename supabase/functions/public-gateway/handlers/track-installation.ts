@@ -37,7 +37,7 @@ function makeResponse(body: TelemetryResponse, status: number, origin: string | 
 }
 
 export async function handleTrackInstallationEvent(
-  supabase: SupabaseClient,
+  supabase: any,
   req: Request,
   requestId: string,
   payload: Record<string, unknown>,
@@ -82,7 +82,7 @@ export async function handleTrackInstallationEvent(
 // === Agent Token Mode ===
 async function handleAgentTokenMode(
   req: Request,
-  supabase: SupabaseClient,
+  supabase: any,
   event: z.infer<typeof InstallationEventSchema>,
   agentToken: string,
   requestId: string,
@@ -168,7 +168,7 @@ async function handleAgentTokenMode(
 // === Anonymous Mode ===
 async function handleAnonymousMode(
   req: Request,
-  supabase: SupabaseClient,
+  supabase: any,
   event: z.infer<typeof InstallationEventSchema>,
   requestId: string,
   origin: string | null,
@@ -208,7 +208,7 @@ async function handleAnonymousMode(
 // === JWT Mode ===
 async function handleJwtMode(
   req: Request,
-  supabase: SupabaseClient,
+  supabase: any,
   event: z.infer<typeof InstallationEventSchema>,
   token: string,
   requestId: string,

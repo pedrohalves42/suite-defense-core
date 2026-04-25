@@ -87,7 +87,7 @@ function pickColumns(event: Record<string, unknown>, category: EventCategory, ag
 }
 
 export async function handleEndpointEvents(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   _agentName: string,
   tenantId: string,

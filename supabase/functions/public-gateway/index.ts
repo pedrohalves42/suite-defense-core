@@ -40,7 +40,7 @@ import { handleServeInstaller } from '../_shared/handlers/installer.ts';
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
 type PublicHandler = (
-  supabase: SupabaseClient,
+  supabase: any,
   req: Request,
   requestId: string,
   payload: Record<string, unknown>,

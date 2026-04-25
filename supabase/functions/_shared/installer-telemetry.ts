@@ -5,7 +5,7 @@ import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from './logger.ts';
 
 export async function persistInstallerHash(
-  supabaseClient: SupabaseClient,
+  supabaseClient: any,
   templateContent: string,
   enrollmentKey: string,
   requestId: string,
@@ -36,7 +36,7 @@ export async function persistInstallerHash(
 }
 
 export async function trackDownloadEvent(
-  supabaseClient: SupabaseClient,
+  supabaseClient: any,
   tenantId: string,
   agentId: string,
   agentName: string,

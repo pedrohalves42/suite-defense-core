@@ -11,7 +11,7 @@ import type {
 import { logger } from '../logger.ts';
 
 export class SupabaseFeedbackAdapter implements FeedbackAggregationPort {
-  constructor(private readonly client: SupabaseClient) {}
+  constructor(private readonly client: any) {}
 
   async getAggregatedFeedback(
     functionName: string,

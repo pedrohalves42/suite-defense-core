@@ -14,7 +14,7 @@ export async function calculateBucket(agentId: string): Promise<number> {
 
 /** Log rollout decision for telemetry */
 export async function logRolloutDecision(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   agentName: string,
   platform: string,
@@ -43,7 +43,7 @@ export async function logRolloutDecision(
 
 /** Check rollout policy. Returns a Response if agent is outside rollout, null otherwise. */
 export async function checkRolloutPolicy(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   agentName: string,
   agentVersion: string | null,

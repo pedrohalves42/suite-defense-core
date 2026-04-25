@@ -26,7 +26,7 @@ function extractIpAddress(req: Request): string {
 }
 
 export async function handleCheckFailedLogins(
-  supabase: SupabaseClient, req: Request, _requestId: string, _payload: Record<string, unknown>,
+  supabase: any, req: Request, _requestId: string, _payload: Record<string, unknown>,
 ): Promise<Response | Record<string, unknown>> {
   const rawIp = extractIpAddress(req);
   const ipValidation = IpAddressSchema.safeParse(rawIp);
@@ -66,7 +66,7 @@ export async function handleCheckFailedLogins(
 }
 
 export async function handleRecordFailedLogin(
-  supabase: SupabaseClient, req: Request, requestId: string, payload: Record<string, unknown>,
+  supabase: any, req: Request, requestId: string, payload: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   const parsed = RecordFailedLoginSchema.safeParse(payload);
   if (!parsed.success) {

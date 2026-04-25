@@ -27,7 +27,7 @@ import {
 } from './trigger-evaluators.ts';
 
 async function executeAction(
-  supabase: SupabaseClient,
+  supabase: any,
   rule: Record<string, unknown>,
   agentId: string,
   tenantId: string,
@@ -135,7 +135,7 @@ async function executeAction(
 }
 
 export async function evaluateForTenant(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string
 ): Promise<{ evaluated: number; triggered: number; blocked: number; decisions: number; risk_score?: number }> {
   const { data: rules } = await supabase

@@ -127,7 +127,7 @@ async function tryVariant(
 }
 
 export async function verifyHmacSignature(
-  supabase: SupabaseClient,
+  supabase: any,
   request: Request,
   agentName: string,
   hmacSecret: string,
@@ -440,7 +440,7 @@ interface AuthFailureLogData {
 const authFailureCache = new Map<string, number>();
 const AUTH_FAILURE_LOG_INTERVAL_MS = 5 * 60 * 1000;
 
-async function logAuthFailure(supabase: SupabaseClient, data: AuthFailureLogData): Promise<void> {
+async function logAuthFailure(supabase: any, data: AuthFailureLogData): Promise<void> {
   const cacheKey = `${data.agentId}:${data.errorCode}`;
   const now = Date.now();
   const lastLogged = authFailureCache.get(cacheKey);

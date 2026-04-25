@@ -94,7 +94,7 @@ export function deduplicateItems(items: PreparedItem[]): PreparedItem[] {
 }
 
 export async function persistActivity(
-  supabase: SupabaseClient,
+  supabase: any,
   agentId: string,
   items: PreparedItem[],
 ): Promise<{ insertedCount: number; updatedCount: number }> {

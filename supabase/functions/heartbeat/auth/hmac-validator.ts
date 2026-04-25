@@ -23,7 +23,7 @@ export interface HmacValidationResult {
  * All agents are blocked on missing or invalid HMAC.
  */
 export async function validateHeartbeatHmac(
-  supabase: SupabaseClient,
+  supabase: any,
   req: Request,
   agentName: string,
   hmacSecret: string,

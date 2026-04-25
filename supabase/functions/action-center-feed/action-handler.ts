@@ -5,8 +5,8 @@ import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
 
 export async function handleAction(
-  serviceClient: SupabaseClient,
-  userClient: SupabaseClient,
+  serviceClient: any,
+  userClient: any,
   userId: string,
   userEmail: string | undefined,
   tenantId: string,
@@ -168,7 +168,7 @@ export async function handleAction(
   return jsonResponse({ error: 'Unknown action' }, 400);
 }
 
-async function handleAlertExecute(serviceClient: SupabaseClient, userClient: SupabaseClient, userId: string, tenantId: string, itemId: string): Promise<Response> {
+async function handleAlertExecute(serviceClient: any, userClient: any, userId: string, tenantId: string, itemId: string): Promise<Response> {
   const { data: alert, error: alertFetchErr } = await serviceClient
     .from('system_alerts')
     .select('id, alert_type, severity, agent_id, details, title')
@@ -210,7 +210,7 @@ async function handleAlertExecute(serviceClient: SupabaseClient, userClient: Sup
   return jsonResponse({ success: true, remediation_dispatched: !!remediation && !!alert.agent_id, remediation: remediationResult });
 }
 
-async function handleInsightExecute(serviceClient: SupabaseClient, userClient: SupabaseClient, userId: string, tenantId: string, itemId: string): Promise<Response> {
+async function handleInsightExecute(serviceClient: any, userClient: any, userId: string, tenantId: string, itemId: string): Promise<Response> {
   const { data: insight, error: insightError } = await serviceClient
     .from('ai_insights')
     .select('id, tenant_id, agent_id, recommended_actions, insight_type, severity')

@@ -58,7 +58,7 @@ export function buildDeterministicAssessment(metrics: RedTeamMetrics | null) {
 /**
  * Save a deterministic assessment to the database.
  */
-export async function saveDeterministicAssessment(supabase: SupabaseClient, tenantId: string, result: ReturnType<typeof buildDeterministicAssessment>, metrics: Record<string, unknown> | null) {
+export async function saveDeterministicAssessment(supabase: any, tenantId: string, result: ReturnType<typeof buildDeterministicAssessment>, metrics: Record<string, unknown> | null) {
   const { data: savedAssessment } = await supabase
     .from('red_team_assessments')
     .insert({

@@ -16,7 +16,7 @@ interface QuotaCheckResult {
  * @returns QuotaCheckResult indicating if the operation is allowed
  */
 export async function checkQuotaAvailable(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string,
   featureKey: string
 ): Promise<QuotaCheckResult> {

@@ -23,7 +23,7 @@ export function extractClientIP(req: Request): string {
  * If entries exist, the IP must match at least one active, non-expired entry.
  */
 export async function enforceIPAllowlist(
-  supabase: SupabaseClient,
+  supabase: any,
   req: Request,
   tenantId: string,
   userId: string

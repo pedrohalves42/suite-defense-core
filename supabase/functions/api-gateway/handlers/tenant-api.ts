@@ -8,7 +8,7 @@ import type { HandlerContext } from './admin.ts';
 
 // Simplified API key auth for inlined context
 async function authenticateApiKeyInline(
-  supabase: SupabaseClient,
+  supabase: any,
   apiKey: string,
 ): Promise<{ success: boolean; tenantId?: string; apiKeyId?: string; scopes?: string[]; error?: string }> {
   const { data, error } = await supabase
@@ -39,7 +39,7 @@ function hasScope(scopes: string[], required: string): boolean {
 }
 
 export async function handleTenantFeatures(
-  supabase: SupabaseClient,
+  supabase: any,
   requestId: string,
   payload: Record<string, unknown>,
   ctx?: HandlerContext,
@@ -62,7 +62,7 @@ export async function handleTenantFeatures(
 }
 
 export async function handleTenantInfo(
-  supabase: SupabaseClient,
+  supabase: any,
   requestId: string,
   payload: Record<string, unknown>,
   ctx?: HandlerContext,
@@ -85,7 +85,7 @@ export async function handleTenantInfo(
 }
 
 export async function handleTenantStats(
-  supabase: SupabaseClient,
+  supabase: any,
   requestId: string,
   payload: Record<string, unknown>,
   ctx?: HandlerContext,
