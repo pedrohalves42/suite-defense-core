@@ -34,10 +34,24 @@ export const createClientFromRequest = (req: Request) => {
  * Helper to create a service role client (Admin context).
  * Use this ONLY for privileged operations.
  */
-export const getServiceClient = () => {
+/**
+ * Helper to create a service role client (Admin context).
+ * Use this ONLY for privileged operations.
+ * ADR-046: Mandatory 15s timeout for all Supabase queries.
+ */
+export const getServiceClient = (timeoutMs: number = 15_000) => {
   const url = Deno.env.get('SUPABASE_URL') ?? '';
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  return createSupabaseClient(url, serviceKey);
+  return createSupabaseClient(url, serviceKey, {
+    global: {
+      fetch: (url: string, options: any) => {
+        return fetch(url, {
+          ...options,
+          signal: options?.signal ?? AbortSignal.timeout(timeoutMs),
+        });
+      },
+    },
+  });
 };
 
 // Re-export for convenience

@@ -89,7 +89,15 @@ async function persistAIMetricsWithProvider(data: {
   tenant_id?: string; used_fallback: boolean; cost_usd?: number; error?: string;
 }): Promise<void> {
   try {
-    const supabase = createClient<any>(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const supabase = createClient<any>(
+      Deno.env.get('SUPABASE_URL')!, 
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      {
+        global: {
+          fetch: (url: string, options: any) => fetch(url, { ...options, signal: options?.signal ?? AbortSignal.timeout(5000) })
+        }
+      }
+    );
     await supabase.from('ai_inference_metrics').insert({
       function_name: data.function_name, model: data.model, provider: data.provider,
       latency_ms: data.latency_ms, success: data.success,
@@ -111,7 +119,7 @@ export async function aiComplete(request: AICompletionRequest): Promise<AIComple
 
   // Cache Lookup
   let cacheUseCase: AICacheUseCase | null = null;
-  let cacheResult: Awaited<ReturnType<AICacheUseCase['lookup']>> | null = null;
+  let cacheResult: any = null;
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
