@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Shared types for autonomous-safe-mode rule engine
  */

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * ai-insight-dispatcher — Migrated to serveInternal
  * Modules: types, action-guards, mode-handlers

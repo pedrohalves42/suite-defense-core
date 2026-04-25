@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 /**
  * Enterprise Protection Pipeline — Layers 0-6

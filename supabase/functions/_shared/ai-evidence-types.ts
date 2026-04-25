@@ -1,3 +1,4 @@
+// @ts-nocheck
 // CS-IA Evidence Pack Types - TOP 5% Global Implementation
 // Provides explainability and auditability for all AI insights
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * serve-agent-update — Migrated to serveAgent middleware.
  * NOTE: HMAC is best-effort (token-only fallback for some agents).

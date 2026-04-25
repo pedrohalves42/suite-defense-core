@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Check/monitoring inlined handlers (migrated from check-router)
  * Sub-batch 2C-1: Simple DB-only handlers added

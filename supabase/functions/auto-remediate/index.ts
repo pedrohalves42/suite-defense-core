@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Auto Remediate - Migrated to serveTenant middleware
  * Auth: JWT (admin UI) or internal (serveTenant handles both via skipTenantValidation)

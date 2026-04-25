@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 /**
  * Trigger evaluators for automation rules

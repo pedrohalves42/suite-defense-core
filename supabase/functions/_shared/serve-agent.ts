@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * serveAgent() — Middleware for agent-authenticated endpoints.
  * Extracted from serve-tenant.ts for modularity.

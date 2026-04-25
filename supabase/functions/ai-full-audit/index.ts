@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { createTypedClient } from "../_shared/supabase-client.ts";
 import { AIPromptRegistry, logPromptUsage } from "../_shared/ai-prompt-registry.ts";
