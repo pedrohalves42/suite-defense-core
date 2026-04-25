@@ -23,7 +23,7 @@ serveTenant(async (req, ctx) => {
   if (!isInternal) {
     const authHeader = req.headers.get('Authorization');
     if (authHeader) {
-      userClient = createClient<any>(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_ANON_KEY'), {
+      userClient = createSupabaseClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_ANON_KEY'), {
         global: { headers: { Authorization: authHeader } },
       });
     }
