@@ -39,10 +39,10 @@ export async function processNetworkInfo(ctx: SubmitContext): Promise<void> {
         }))
       : (outputData.network_adapters || []) as any[]
 
-    const derivedPublicIp = outputData.public_ip 
-      || (publicIps.length > 0 ? String((publicIps[0] as Record<string, unknown>).ip) : null)
-    const derivedGateway = outputData.gateway_ip 
-      || (privateIps.length > 0 ? String((privateIps[0] as Record<string, unknown>).ip) : null)
+    const derivedPublicIp: string | null = (outputData.public_ip as string | undefined)
+      ?? (publicIps.length > 0 ? String((publicIps[0] as Record<string, unknown>).ip) : null)
+    const derivedGateway: string | null = (outputData.gateway_ip as string | undefined)
+      ?? (privateIps.length > 0 ? String((privateIps[0] as Record<string, unknown>).ip) : null)
 
     const networkRecord = {
       agent_id: job.agent_id,
