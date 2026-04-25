@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "noImplicitThis": false,
+    "alwaysStrict": false,
+    "strictFunctionTypes": false,
+    "strictPropertyInitialization": false,
+    "strictBindCallApply": false,
+    "useUnknownInCatchVariables": false,
+    "lib": ["deno.window", "deno.ns", "esnext", "dom"]
+  }
+}

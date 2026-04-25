@@ -121,7 +121,7 @@ export async function handleProcessLineage(
         })),
         total_processes: records.length, suspicious_count: suspiciousCount,
       },
-    }).catch(e => logger.error(`[${requestId}] Error creating alert:`, e));
+    }).then(undefined, (e: unknown) => logger.error(`[${requestId}] Error creating alert:`, e));
   }
 
   return { success: true, inserted: insertedCount, suspicious_detected: suspiciousCount, total_received: cappedProcesses.length };

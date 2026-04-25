@@ -36,7 +36,7 @@ export async function processCertificates(ctx: SubmitContext): Promise<void> {
       valid_from: cert.valid_from || cert.NotBefore || cert.validFrom || null,
       valid_until: cert.valid_until || cert.NotAfter || cert.validTo || null,
       cert_store: String(cert.store || cert.StoreName || cert.cert_store || 'My'),
-      is_self_signed: cert.is_self_signed ?? (cert.subject === cert.issuer) ?? null,
+      is_self_signed: cert.is_self_signed ?? (cert.subject === cert.issuer ? true : null),
       serial_number: cert.serial_number ? String(cert.serial_number) : (cert.SerialNumber ? String(cert.SerialNumber) : null),
       key_usage: Array.isArray(cert.key_usage) ? cert.key_usage : (cert.EnhancedKeyUsageList ? [String(cert.EnhancedKeyUsageList)] : null),
       collected_at: collectedAt,

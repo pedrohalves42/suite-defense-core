@@ -51,7 +51,7 @@ export async function processNetworkInfo(ctx: SubmitContext): Promise<void> {
       firewall_private: outputData.firewall_private ?? outputData.FirewallPrivate ?? null,
       firewall_public: outputData.firewall_public ?? outputData.FirewallPublic ?? null,
       open_ports: outputData.open_ports || outputData.OpenPorts || [],
-      active_connections: (outputData.active_connections || outputData.ActiveConnections || []).slice(0, 100),
+      active_connections: ((outputData.active_connections || outputData.ActiveConnections || []) as unknown[]).slice(0, 100),
       network_adapters: networkAdapters,
       dns_servers: outputData.dns_servers || outputData.DnsServers || [],
       gateway_ip: derivedGateway,
