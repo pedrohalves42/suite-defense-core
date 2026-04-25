@@ -122,20 +122,18 @@ export const LoginPasswordForm = ({
 
         <SocialLoginButtons loading={loading} socialLoading={socialLoading} onSocialLogin={onSocialLogin} />
 
-        <div className="text-sm text-center text-muted-foreground/60 space-y-2">
-          <div>
-            <Link to="/forgot-password" className="text-primary/80 hover:text-primary font-medium transition-colors duration-200">
+        <div className="text-[11px] text-center text-white/30 space-y-4 font-medium uppercase tracking-widest pt-4">
+          <div className="flex items-center justify-center gap-6">
+            <Link to="/forgot-password" className="hover:text-white transition-colors duration-300">
               {t('loginPage.forgotPassword')}
             </Link>
-          </div>
-          <div>
-            {t('loginPage.noAccount')}{' '}
-            <Link to="/signup" className="text-primary/80 hover:text-primary font-medium transition-colors duration-200">
+            <div className="w-1 h-1 rounded-full bg-white/20" />
+            <Link to="/signup" className="text-cta-positive/70 hover:text-cta-positive transition-colors duration-300">
               {t('loginPage.signUp')}
             </Link>
           </div>
-          <div className="pt-2 border-t border-border/30 mt-2">
-            <Link to="/" className="text-muted-foreground/70 hover:text-primary/80 transition-colors duration-200 text-xs">
+          <div className="pt-6 border-t border-white/5">
+            <Link to="/" className="hover:text-white/60 transition-colors duration-300">
               {t('loginPage.backToHome')}
             </Link>
           </div>
