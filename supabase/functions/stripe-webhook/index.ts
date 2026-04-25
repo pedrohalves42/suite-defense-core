@@ -21,28 +21,34 @@ const cryptoProvider = Stripe.createSubtleCryptoProvider();
 
 logger.info("[STRIPE-WEBHOOK] Function initialized");
 
-Deno.serve(async (request) => {
-  const signature = request.headers.get("Stripe-Signature");
+import { servePublic } from '../_shared/serve-public.ts';
+
+servePublic(async (req, ctx) => {
+  const { requestId, supabase: supabaseAny, rawBody } = ctx;
+  const traceId = requestId;
+  const signature = req.headers.get("Stripe-Signature");
+  
   if (!signature) {
     logger.error("[STRIPE-WEBHOOK] No signature header");
     return new Response("No signature", { status: 400 });
   }
 
-  const traceId = request.headers.get('X-Trace-ID') || request.headers.get('X-Request-ID') || crypto.randomUUID();
+  if (!rawBody) {
+    logger.error("[STRIPE-WEBHOOK] No raw body available");
+    return new Response("No body", { status: 400 });
+  }
 
   try {
-    return await withTimeout(async () => {
-    const body = await request.text();
     const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
     if (!webhookSecret) {
       logger.error("[STRIPE-WEBHOOK] No webhook secret configured", { traceId });
       return new Response("Webhook secret not configured", { status: 500 });
     }
 
-    const event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret, undefined, cryptoProvider);
+    const event = await stripe.webhooks.constructEventAsync(rawBody, signature, webhookSecret, undefined, cryptoProvider);
     logger.info(`[STRIPE-WEBHOOK] Event received: ${event.type}`, { traceId });
 
-    const supabase = createClient<any>(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
+    const supabase = supabaseAny; // servePublic provides service_role client
 
     switch (event.type) {
       case "checkout.session.completed":
@@ -65,11 +71,16 @@ Deno.serve(async (request) => {
         logger.info(`[STRIPE-WEBHOOK] Unhandled event type: ${event.type}`);
     }
 
-    return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" }, status: 200 });
-    }, { timeoutMs: 25_000, timeoutMessage: 'Webhook processing timeout' });
+    return { received: true };
   } catch (err) {
-    const isTimeout = err instanceof Error && err.message === 'Webhook processing timeout';
-    logger.error(`[STRIPE-WEBHOOK] ${isTimeout ? 'Timeout' : 'Error'}:`, err);
-    return new Response(JSON.stringify({ error: isTimeout ? 'Timeout' : `Webhook error: ${err instanceof Error ? err.message : 'Unknown'}`, traceId }), { status: isTimeout ? 504 : 400 });
+    logger.error(`[STRIPE-WEBHOOK] Error:`, err);
+    return new Response(JSON.stringify({ error: `Webhook error: ${err instanceof Error ? err.message : 'Unknown'}`, traceId }), { status: 400 });
+  }
+}, {
+  provideRawBody: true,
+  rateLimit: {
+    endpoint: 'stripe-webhook',
+    maxRequests: 50,
+    windowMinutes: 1
   }
 });
