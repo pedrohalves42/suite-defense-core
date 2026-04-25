@@ -155,15 +155,19 @@ jobs:
 
       - name: Edge Function Build Viability Check
         run: |
-          # Viability check: bundle verification without strict typechecking
+          # Module resolution check only — Edge Runtime does NOT typecheck at deploy.
+          # We verify imports resolve and modules cache successfully.
+          set -e
           for f in supabase/functions/*/index.ts; do
-            echo "Verifying viability for $f..."
-            deno check $f --no-check || exit 1
+            deno cache --quiet "$f" || { echo "❌ Module resolution failed: $f"; exit 1; }
           done
+          echo "✅ All edge function entrypoints have valid module graphs."
 
-      - name: Edge Function Type Audit (Non-blocking)
+      - name: Edge Function Type Audit (Informational, Non-blocking)
+        continue-on-error: true
         run: |
-          npm run typecheck:edge:audit || true
+          deno check supabase/functions/**/*.ts 2>&1 | node scripts/classify-ts-errors.cjs || true
+
 
       - name: Run Edge Function integration tests (Optimized)
         run: |
