@@ -44,6 +44,7 @@ export interface ProcessesPayload {
 export interface ProcessEntry {
   pid?: number;
   name?: string;
+  cpu_percent?: number;
   cpu_seconds?: number;
   memory_mb?: number;
   user?: string;
