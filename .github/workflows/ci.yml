@@ -155,15 +155,21 @@ jobs:
 
       - name: Edge Function Build Viability Check
         run: |
+          # Viability check: bundle verification without strict typechecking
           for f in supabase/functions/*/index.ts; do
-            echo "Checking $f..."
+            echo "Verifying viability for $f..."
             deno check $f --no-check || exit 1
           done
+
+      - name: Edge Function Type Audit (Non-blocking)
+        run: |
+          npm run typecheck:edge:audit || true
 
       - name: Run Edge Function integration tests (Optimized)
         run: |
           chmod +x scripts/debug-tests.sh
-          ./scripts/debug-tests.sh 2>&1 | bun scripts/parse-edge-errors.js
+          ./scripts/debug-tests.sh 2>&1 | node scripts/classify-ts-errors.cjs
+
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}

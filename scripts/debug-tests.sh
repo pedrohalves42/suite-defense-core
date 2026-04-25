@@ -1,30 +1,29 @@
 #!/bin/bash
 
-# Script de Teste Otimizado (Modo Debug)
-# Executa testes seletivos com fail-fast
+# scripts/debug-tests.sh
+# Optimized test runner with fail-fast and priority sorting.
 
-echo "🚀 Iniciando Testes em Modo Debug (Fail-Fast)..."
+echo "🚀 Starting Priority Tests (Fail-Fast)..."
 
-# Prioridade 1: Admin Create User & Auth
-echo "📦 Testando módulos prioritários: admin-create-user, auth..."
+# Priority 1: Auth & User Creation
+echo "📦 Testing priority modules: auth, admin..."
 
-# Supabase Edge Functions tests are usually in __tests__
 PRIORITY_TESTS=(
-  "supabase/functions/__tests__/admin/admin-create-user.test.ts"
   "supabase/functions/__tests__/auth/"
+  "supabase/functions/__tests__/admin/admin-create-user.test.ts"
 )
 
 for test_path in "${PRIORITY_TESTS[@]}"; do
   if [ -e "$test_path" ]; then
-    echo "🔍 Executando: $test_path"
-    deno test --allow-all --fail-fast "$test_path" || { echo "❌ Falha crítica em $test_path. Interrompendo."; exit 1; }
+    echo "🔍 Running: $test_path"
+    deno test --allow-all --fail-fast "$test_path" || { echo "❌ Critical failure in $test_path. Stopping."; exit 1; }
   else
-    echo "⚠️ Caminho não encontrado: $test_path"
+    echo "⚠️ Path not found: $test_path"
   fi
 done
 
-# Restante dos testes
-echo "🏃 Executando restante dos testes..."
-deno test --allow-all --fail-fast supabase/functions/__tests__/ || { echo "❌ Falha no restante dos testes."; exit 1; }
+# Priority 2: Core Infrastructure
+echo "🏃 Running remaining tests..."
+deno test --allow-all --fail-fast supabase/functions/__tests__/ || { echo "❌ Failure in remaining tests."; exit 1; }
 
-echo "✅ Todos os testes críticos passaram!"
+echo "✅ All critical tests passed!"
