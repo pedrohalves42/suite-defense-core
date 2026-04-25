@@ -31,6 +31,9 @@ import {
   handleCreateStripeProductsExtended, handleStripeHealthCheck,
 } from './handlers/billing-stripe.ts';
 import {
+  handleChargeSubscription,
+} from './handlers/billing-v2.ts';
+import {
   handleGetAdminReleases, handleUpdateUserStatus,
   handleUpdateMemberRole, handleRemoveMember,
   handleListUsers, handleListAllUsersAdmin,
