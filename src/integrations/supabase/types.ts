@@ -2646,6 +2646,24 @@ export type Database = {
           },
         ]
       }
+      agent_hmac_signatures: {
+        Row: {
+          agent_name: string
+          created_at: string
+          signature: string
+        }
+        Insert: {
+          agent_name: string
+          created_at?: string
+          signature: string
+        }
+        Update: {
+          agent_name?: string
+          created_at?: string
+          signature?: string
+        }
+        Relationships: []
+      }
       agent_light_mode_configs: {
         Row: {
           activated_at: string | null
@@ -49880,6 +49898,7 @@ export type Database = {
         Returns: Json
       }
       cleanup_expired_cache: { Args: never; Returns: number }
+      cleanup_expired_hmac_signatures: { Args: never; Returns: undefined }
       cleanup_expired_keys: { Args: never; Returns: number }
       cleanup_expired_sessions: { Args: never; Returns: number }
       cleanup_expired_telemetry: { Args: never; Returns: Json }

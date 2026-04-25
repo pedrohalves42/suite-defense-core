@@ -332,9 +332,7 @@ try {
     Write-InstallerLog "Telemetria downloaded falhou (nao critico): $($_.Exception.Message)" "DEBUG"
 }
 
-$AgentScriptContent = @'
-{{AGENT_SCRIPT_CONTENT}}
-'@
+$AgentScriptContent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String("{{AGENT_SCRIPT_BASE64}}"))
 
 $AgentScriptPath = Join-Path $BasePath "cybershield-agent-$AgentName.ps1"
 
