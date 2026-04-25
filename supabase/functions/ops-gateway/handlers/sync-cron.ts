@@ -13,7 +13,7 @@ import {
   ProcessAgentUpdatesUseCase,
 } from '../../_shared/hexagonal/index.ts';
 
-type SB = ReturnType<typeof createClient>;
+type SB = any;
 
 // ═══ sync:process-agent-updates ═══
 export async function handleProcessAgentUpdates(supabase: SB, requestId: string, _payload: Record<string, unknown>) {

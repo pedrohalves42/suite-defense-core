@@ -7,7 +7,7 @@ import { logger } from '../../_shared/logger.ts';
 import { withTimeout } from '../../_shared/timeout.ts';
 import { fetchWithTimeout } from '../../_shared/fetch-with-timeout.ts';
 
-type SB = ReturnType<typeof createClient>;
+type SB = any;
 
 // ═══════════════════════════════════════════════════════════════
 // EXISTING HANDLERS (Phase 2C original)

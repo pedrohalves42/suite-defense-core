@@ -118,7 +118,7 @@ const ACTION_TO_FUNCTION: Record<string, string> = {
 };
 
 // ── Inlined handlers (no HTTP hop) ──────────────────────────────────────
-type InlinedHandler = (supabase: ReturnType<typeof createClient>, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext) => Promise<unknown>;
+type InlinedHandler = (supabase: any, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext) => Promise<unknown>;
 
 const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   // billing inlined (Phase 1)

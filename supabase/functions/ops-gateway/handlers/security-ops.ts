@@ -9,7 +9,7 @@ import { logger } from '../../_shared/logger.ts';
 import { createAuditLog } from '../../_shared/audit.ts';
 import { healthProbeMiddleware, updateJobHeartbeat, EDGE_VERSION } from '../../_shared/health-probe.ts';
 
-type SupabaseClient = ReturnType<typeof createClient>;
+type SupabaseClient = any;
 
 // ─── auto-quarantine ────────────────────────────────────────────────────────
 

@@ -6,7 +6,7 @@ import { logger } from '../../_shared/logger.ts';
 import { fetchWithTimeout } from '../../_shared/fetch-with-timeout.ts';
 import type { HandlerContext } from './admin.ts';
 
-type SB = ReturnType<typeof createClient>;
+type SB = any;
 
 // ── Phase 1 handlers ────────────────────────────────────────────────────
 

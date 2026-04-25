@@ -10,7 +10,7 @@ import { logSecurityEvent, extractIpAddress } from '../../_shared/security-log.t
 import { isFeatureEnabled } from '../../_shared/feature-flags.ts';
 import type { HandlerContext } from './admin.ts';
 
-type SB = ReturnType<typeof createClient>;
+type SB = any;
 
 export async function handleCreateJob(
   supabase: SB, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,

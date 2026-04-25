@@ -7,7 +7,7 @@ import { shouldProcessAlertsForTenant } from '../../_shared/business-hours.ts';
 import { logger } from '../../_shared/logger.ts';
 import { requireEnv } from '../../_shared/env.ts';
 
-type InlinedHandler = (supabase: ReturnType<typeof createClient>, requestId: string, payload: Record<string, unknown>) => Promise<unknown>;
+type InlinedHandler = (supabase: any, requestId: string, payload: Record<string, unknown>) => Promise<unknown>;
 
 // ── check-agent-integrity ──────────────────────────────────────────────
 

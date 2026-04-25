@@ -7,7 +7,7 @@ import { logger } from '../../_shared/logger.ts';
 import { fetchWithTimeout } from '../../_shared/fetch-with-timeout.ts';
 import type { HandlerContext } from './admin.ts';
 
-type SupabaseClient = ReturnType<typeof createClient>;
+type SupabaseClient = any;
 
 // ─── check-credential-leaks ──────────────────────────────────────────────────
 

@@ -6,7 +6,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
 import type { HandlerContext } from './admin.ts';
 
-type Supabase = ReturnType<typeof createClient>;
+type Supabase = any;
 
 // ── get-software-inventory ─────────────────────────────────────────────
 export async function handleGetSoftwareInventory(

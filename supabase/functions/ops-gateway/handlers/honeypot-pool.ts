@@ -15,7 +15,7 @@ const HONEYPOT_NAMES = [
 const DEFAULT_POOL_SIZE = 2;
 
 export async function handleCreateHoneypotPool(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   requestId: string,
   payload: Record<string, unknown>,
 ): Promise<unknown> {

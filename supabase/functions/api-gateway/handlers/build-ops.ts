@@ -4,7 +4,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
 
-type SB = ReturnType<typeof createClient>;
+type SB = any;
 
 /** build-callback: Receives build results from CI/CD pipeline */
 export async function handleBuildCallback(

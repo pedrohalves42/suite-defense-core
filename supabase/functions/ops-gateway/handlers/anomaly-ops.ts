@@ -108,7 +108,7 @@ function detectStatisticalAnomalies(
 }
 
 export async function handleAiBehavioralAnomalyDetector(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   requestId: string,
   payload: Record<string, unknown>,
 ): Promise<unknown> {

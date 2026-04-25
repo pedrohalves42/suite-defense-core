@@ -6,7 +6,7 @@ import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-
 import { logger } from '../../_shared/logger.ts';
 import { fetchWithTimeout } from '../../_shared/fetch-with-timeout.ts';
 
-type InlinedHandler = (supabase: ReturnType<typeof createClient>, requestId: string, payload: Record<string, unknown>) => Promise<unknown>;
+type InlinedHandler = (supabase: any, requestId: string, payload: Record<string, unknown>) => Promise<unknown>;
 
 // ── fetch-nvd-cves ─────────────────────────────────────────────────────
 

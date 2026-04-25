@@ -4,7 +4,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
-type SB = ReturnType<typeof createClient>;
+type SB = any;
 
 const BodySchema = z.object({
   identifier: z.string().min(1).max(500),

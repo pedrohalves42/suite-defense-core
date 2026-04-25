@@ -7,7 +7,7 @@ import { logger } from '../../_shared/logger.ts';
 import { createAuditLog } from '../../_shared/audit.ts';
 import type { HandlerContext } from './admin.ts';
 
-type SupabaseClient = ReturnType<typeof createClient>;
+type SupabaseClient = any;
 
 // ─── auto-block-threats ─────────────────────────────────────────────────────
 

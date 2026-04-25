@@ -8,7 +8,7 @@ import { logger } from '../../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import type { HandlerContext } from './admin.ts';
 
-type SB = ReturnType<typeof createClient>;
+type SB = any;
 
 const ChangePasswordSchema = z.object({
   current_password: z.string().min(1, 'Current password is required'),
