@@ -25,9 +25,29 @@ function errorResponse(message: string, status: number, requestId: string, origi
   );
 }
 
-export type PublicHandler = (req: Request, ctx: { supabase: any; requestId: string; body: unknown }) => Promise<Response | Record<string, unknown> | unknown>;
+export interface PublicContext {
+  supabase: any;
+  requestId: string;
+  body: unknown;
+  /** Raw body as text (if requested) */
+  rawBody?: string;
+}
 
-export function servePublic(handler: PublicHandler) {
+export type PublicHandler = (req: Request, ctx: PublicContext) => Promise<Response | Record<string, unknown> | unknown>;
+
+export interface ServePublicOptions {
+  /** If true, reads request body as text and provides it in ctx.rawBody. Default: false */
+  provideRawBody?: boolean;
+  /** Optional rate limiting config */
+  rateLimit?: {
+    endpoint: string;
+    maxRequests?: number;
+    windowMinutes?: number;
+    blockMinutes?: number;
+  };
+}
+
+export function servePublic(handler: PublicHandler, options?: ServePublicOptions) {
   Deno.serve(async (req: Request) => {
     const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
     const requestId = traceId;
@@ -43,12 +63,49 @@ export function servePublic(handler: PublicHandler) {
         requireEnv('SUPABASE_SERVICE_ROLE_KEY')
       );
 
-      let body: unknown = {};
-      if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
-        try { body = await req.json(); } catch { body = {}; }
+      // Rate limiting (optional)
+      if (options?.rateLimit) {
+        const { checkRateLimit } = await import('./rate-limit.ts');
+        const sourceIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+        const rlResult = await checkRateLimit(supabase, `ip:${sourceIp}`, options.rateLimit.endpoint, {
+          maxRequests: options.rateLimit.maxRequests ?? 100,
+          windowMinutes: options.rateLimit.windowMinutes ?? 1,
+          blockMinutes: options.rateLimit.blockMinutes ?? 5,
+        });
+        if (!rlResult.allowed) {
+          const retryAfter = rlResult.resetAt
+            ? Math.max(1, Math.ceil((rlResult.resetAt.getTime() - Date.now()) / 1000))
+            : 60;
+          return jsonResponse(
+            { error: { message: 'Rate limit exceeded', code: 'RATE_LIMITED' } },
+            429,
+            { 'X-Request-ID': requestId, 'Retry-After': String(retryAfter) },
+            origin,
+          );
+        }
       }
 
-      const result = await handler(req, { supabase, requestId, body });
+      let body: unknown = {};
+      let rawBody: string | undefined;
+
+      if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+        if (options?.provideRawBody) {
+          rawBody = await req.text();
+          try {
+            body = JSON.parse(rawBody);
+          } catch {
+            body = {};
+          }
+        } else {
+          try {
+            body = await req.json();
+          } catch {
+            body = {};
+          }
+        }
+      }
+
+      const result = await handler(req, { supabase, requestId, body, rawBody });
       
       if (result instanceof Response) return result;
       return jsonResponse(result, 200, { 'X-Request-ID': requestId, 'X-Trace-ID': traceId }, origin);
