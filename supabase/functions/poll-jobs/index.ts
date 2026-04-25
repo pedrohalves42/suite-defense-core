@@ -24,17 +24,30 @@ serveAgent(async (req, ctx) => {
   try {
     const supabase = supabaseAny;
 
+    // Use context data to build AuthenticatedAgent if needed by legacy sub-modules
+    const authenticatedAgent = {
+      agentId,
+      agentName,
+      hmacSecret: ctx.hmacSecret || '',
+      agentVersion: (agentData.agent_version as string) || '',
+      tenantId: tenantId || null,
+      lastHeartbeat: (agentData.last_heartbeat as string) || null,
+      status: (agentData.status as string) || null,
+      tokenHash: '', // We don't have the token hash here, but checkOfflineGuard uses it to update agent_tokens
+      isLegacyAgent: false, // Default to false, logic for this is usually in sub-modules
+    };
+
     // Offline guard (>2h)
-    const offlineGuard = await checkOfflineGuard(supabase, { agentId, agentName, tenantId }, origin);
+    const offlineGuard = await checkOfflineGuard(supabase, authenticatedAgent, origin);
     if (offlineGuard) return offlineGuard;
 
     // Backlog limit check
-    const backlogGuard = await checkBacklogLimit(supabase, { agentId, agentName, tenantId }, origin);
+    const backlogGuard = await checkBacklogLimit(supabase, authenticatedAgent, origin);
     if (backlogGuard) return backlogGuard;
 
     // Claim and deliver jobs
     logger.info('Fetching jobs for agent', { agentName, agentId, traceId });
-    return await claimAndBuildResponse(supabase, { agentId, agentName, tenantId }, origin);
+    return await claimAndBuildResponse(supabase, authenticatedAgent, origin);
 
   } catch (error) {
     return handleException(error, traceId, 'poll-jobs');
