@@ -89,17 +89,17 @@ async function persistAIMetricsWithProvider(data: {
   tenant_id?: string; used_fallback: boolean; cost_usd?: number; error?: string;
 }): Promise<void> {
   try {
-    const supabase = createClient<any>(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const supabase = createClient<any>(
+      Deno.env.get('SUPABASE_URL')!, 
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      {
+        global: {
+          fetch: (url: string, options: any) => fetch(url, { ...options, signal: options?.signal ?? AbortSignal.timeout(5000) })
+        }
+      }
+    );
     await supabase.from('ai_inference_metrics').insert({
-      function_name: data.function_name, model: data.model, provider: data.provider,
-      latency_ms: data.latency_ms, success: data.success,
-      tokens_total: data.tokens_total || null, tokens_prompt: data.tokens_prompt || null,
-      tokens_completion: data.tokens_completion || null, tenant_id: data.tenant_id || null,
-      used_fallback: data.used_fallback, cost_usd: data.cost_usd || 0,
-      error: data.error || null, created_at: new Date().toISOString(),
-    });
-  } catch (err) { logger.warn('[AI Metrics] Failed to persist:', err); }
-}
+// ... keep existing code
 
 // ============ MAIN COMPLETION FUNCTION ============
 

@@ -47,7 +47,7 @@ export const getServiceClient = (timeoutMs: number = 15_000) => {
       fetch: (url: string, options: any) => {
         return fetch(url, {
           ...options,
-          signal: options.signal ?? AbortSignal.timeout(timeoutMs),
+          signal: options?.signal ?? AbortSignal.timeout(timeoutMs),
         });
       },
     },
