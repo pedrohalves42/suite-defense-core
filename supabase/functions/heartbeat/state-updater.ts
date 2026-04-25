@@ -14,8 +14,8 @@ import type { AgentContext, AgentUpdate, OSInfo } from './types.ts'
 // Re-export types used by callers
 export type { AgentContext, AgentUpdate, OSInfo }
 
-/** Throttle interval for metrics/process inserts (5 minutes) */
-const TELEMETRY_THROTTLE_MS = 5 * 60 * 1000
+/** Throttle interval for metrics/process/token-touch inserts (5 minutes) */
+export const TELEMETRY_THROTTLE_MS = 5 * 60 * 1000
 
 /**
  * Update agent heartbeat status in DB.
@@ -51,46 +51,37 @@ export async function executeParallelOps(
   supabase: SupabaseClient,
   agent: AgentContext,
   osInfo: OSInfo,
+  shouldInsertTelemetry: boolean,
 ): Promise<void> {
   const parallelOps: Promise<void>[] = []
 
-  // 1. Token last_used_at update (fire-and-forget)
-  parallelOps.push(
-    Promise.resolve(
+  // 1. Telemetry processing (metrics + processes)
+  const hasTelemetry = (osInfo.system_metrics && typeof osInfo.system_metrics === 'object' && !osInfo.system_metrics.error)
+    || (osInfo.processes && typeof osInfo.processes === 'object' && !osInfo.processes.error)
+
+  if (hasTelemetry && shouldInsertTelemetry) {
+    // 1a. Token last_used_at update (throttled to match telemetry)
+    // PERF-FIX: Only touch token timestamp when we are doing heavy telemetry work
+    parallelOps.push(
       supabase
         .from('agent_tokens')
         .update({ last_used_at: new Date().toISOString() })
         .eq('agent_id', agent.id)
         .eq('is_active', true)
-    ).then(() => {}),
-  )
+        .then(({ error }) => {
+          if (error) logger.warn('Token touch failed', { error: error.message })
+        })
+    )
 
-  // 2. Telemetry processing (metrics + processes)
-  const hasTelemetry = (osInfo.system_metrics && typeof osInfo.system_metrics === 'object' && !osInfo.system_metrics.error)
-    || (osInfo.processes && typeof osInfo.processes === 'object' && !osInfo.processes.error)
+    // 1b. System metrics insert
+    const systemMetrics = osInfo.system_metrics
+    if (systemMetrics && typeof systemMetrics === 'object' && !systemMetrics.error) {
+      parallelOps.push(insertSystemMetrics(supabase, agent, systemMetrics))
+    }
 
-  if (hasTelemetry) {
-    // COST-OPT-V10: Use memory-loaded last_telemetry_at from agent context 
-    // instead of querying DB again.
-    const lastInsert = agent.last_telemetry_at ? new Date(agent.last_telemetry_at).getTime() : 0
-    const shouldInsert = (Date.now() - lastInsert) >= TELEMETRY_THROTTLE_MS
-
-    if (shouldInsert) {
-      const now = new Date().toISOString()
-      
-      // Update agent's last_telemetry_at in DB (async, but we want it consistent)
-      parallelOps.push(updateAgentStatus(supabase, agent.id, agent.agent_name, { last_telemetry_at: now } as any))
-
-      // 2a. System metrics insert
-      const systemMetrics = osInfo.system_metrics
-      if (systemMetrics && typeof systemMetrics === 'object' && !systemMetrics.error) {
-        parallelOps.push(insertSystemMetrics(supabase, agent, systemMetrics))
-      }
-
-      // 2b. Process data insert
-      if (osInfo.processes && typeof osInfo.processes === 'object' && !osInfo.processes.error) {
-        parallelOps.push(insertProcessData(supabase, agent, osInfo.processes, osInfo.process_anomalies))
-      }
+    // 1c. Process data insert
+    if (osInfo.processes && typeof osInfo.processes === 'object' && !osInfo.processes.error) {
+      parallelOps.push(insertProcessData(supabase, agent, osInfo.processes, osInfo.process_anomalies))
     }
   }
 
