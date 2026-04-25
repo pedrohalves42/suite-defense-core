@@ -20,6 +20,7 @@ interface StripeSubscriptionItem {
 interface StripeSubscription {
   id: string; status: string; trial_end: number | null;
   current_period_end: number; items: { data: StripeSubscriptionItem[] };
+  metadata?: Record<string, string>;
 }
 interface StripeInstance {
   invoices: { list(params: Record<string, unknown>): Promise<{ data: StripeInvoice[] }> };
@@ -31,6 +32,10 @@ interface StripeInstance {
     update(id: string, params: Record<string, unknown>): Promise<StripeSubscription>;
     cancel(id: string, params?: Record<string, unknown>): Promise<StripeSubscription>;
   };
+  products: { list(params?: Record<string, unknown>): Promise<{ data: any[] }>; create(params: Record<string, unknown>): Promise<any> };
+  prices: { list(params?: Record<string, unknown>): Promise<{ data: any[] }>; create(params: Record<string, unknown>): Promise<any> };
+  coupons: { list(params?: Record<string, unknown>): Promise<{ data: any[] }>; create(params: Record<string, unknown>): Promise<any> };
+  accounts: { retrieve(): Promise<any> };
 }
 interface StripePlanMapping { plan_type: string; stripe_price_id: string; base_devices: number }
 interface TenantFeature { feature_key: string; enabled: boolean; quota_limit: number | null; quota_used: number | null }

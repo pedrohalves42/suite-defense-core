@@ -86,10 +86,11 @@ export async function measureAICall<T>(
 export function extractTokenUsage(response: Record<string, unknown>): { prompt?: number; completion?: number; total?: number } {
   try {
     if (response?.usage) {
+      const usage = response.usage as { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
       return {
-        prompt: response.usage.prompt_tokens,
-        completion: response.usage.completion_tokens,
-        total: response.usage.total_tokens,
+        prompt: usage.prompt_tokens,
+        completion: usage.completion_tokens,
+        total: usage.total_tokens,
       };
     }
   } catch (err) {
