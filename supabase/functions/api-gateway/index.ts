@@ -13,6 +13,7 @@ import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { requireEnv } from '../_shared/env.ts';
 import {
   handleCohortAnalysis, handleResetDailyQuotas,
   handleCheckTenantQuotas, handleCheckTrialExpiration,
