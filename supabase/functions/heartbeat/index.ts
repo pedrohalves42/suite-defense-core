@@ -17,16 +17,10 @@
 // Declare EdgeRuntime for Deno/Supabase environment
 declare const EdgeRuntime: { waitUntil?: (promise: Promise<unknown>) => void } | undefined
 
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { createSupabaseClient } from '../_shared/supabase-client.ts'
-import { Database } from '../_shared/database.types.ts'
-import { handleException } from '../_shared/error-handler.ts'
-import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { logger } from '../_shared/logger.ts'
 import { requireEnv } from '../_shared/env.ts'
-import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
-import { authenticateAgent } from '../_shared/agent-auth.ts'
-import { buildCorsHeaders } from '../_shared/cors.ts'
+import { serveAgent } from '../_shared/serve-agent.ts'
 
 import { validateHeartbeatHmac } from './auth/hmac-validator.ts'
 import { parseHeartbeatPayload, buildAgentUpdate } from './parser/heartbeat-parser.ts'
@@ -44,117 +38,91 @@ const HEARTBEAT_EXTRA_FIELDS = [
   'last_forced_update_applied', 'last_telemetry_at',
 ]
 
-Deno.serve(async (req) => {
+serveAgent(async (req, ctx) => {
+  const { requestId, supabase: supabaseAny, agentData, rawBody, body } = ctx
+  const traceId = requestId
+  const supabase = supabaseAny // serveAgent provides service_role client
   const origin = req.headers.get('origin')
-  const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID()
+  const supabaseUrl = requireEnv('SUPABASE_URL')
 
-  if (req.method === 'OPTIONS') return handleCorsPreflightRequest()
+  // Context construction for internal modules
+  const agent: AgentContext = {
+    id: ctx.agentId,
+    agent_name: ctx.agentName,
+    hmac_secret: ctx.hmacSecret || '',
+    tenant_id: ctx.tenantId,
+    status: (agentData.status as string) || '',
+    skip_firewall_remediation: (agentData.skip_firewall_remediation as boolean) || false,
+    agent_version: (agentData.agent_version as string | null) || null,
+    force_update_version: (agentData.force_update_version as string | null) || null,
+    force_update_reason: (agentData.force_update_reason as string | null) || null,
+    force_update_at: (agentData.force_update_at as string | null) || null,
+    force_update_override_safe_mode: (agentData.force_update_override_safe_mode as boolean) || false,
+    force_update_override_safe_mode_expires_at: (agentData.force_update_override_safe_mode_expires_at as string | null) || null,
+    force_update_delivered_count: (agentData.force_update_delivered_count as number) || 0,
+    force_update_first_delivered_at: (agentData.force_update_first_delivered_at as string | null) || null,
+    last_forced_update_applied: (agentData.last_forced_update_applied as string | null) || null,
+    last_telemetry_at: (agentData.last_telemetry_at as string | null) || null,
+  }
 
-  const methodError = validateHttpMethod(req, ['POST'])
-  if (methodError) return methodError
+  // ── 1. HMAC validation ──────────────────────────────────
+  // Note: serveAgent already has hmacVerify option, but heartbeat uses a custom
+  // version-aware validator (validateHeartbeatHmac) that we keep for legacy compat.
+  const hmacResult = await validateHeartbeatHmac(
+    supabase, req, agent.agent_name, agent.hmac_secret, agent.agent_version, origin,
+  )
+  if (!hmacResult.ok) return hmacResult.errorResponse!
 
+  // ── 2. Parse payload ────────────────────────────────────
+  const osInfo = parseHeartbeatPayload(hmacResult.rawBody)
+  const updateData = buildAgentUpdate(osInfo, agent.agent_version)
+  const platform = updateData.os_type || 'windows'
+
+  logger.debug('Heartbeat received', { agentName: agent.agent_name, traceId })
+
+  // ── 3. Update agent status (critical path) ──────────────
+  const lastInsert = agent.last_telemetry_at ? new Date(agent.last_telemetry_at).getTime() : 0
+  const shouldInsertTelemetry = (Date.now() - lastInsert) >= TELEMETRY_THROTTLE_MS
+  
+  if (shouldInsertTelemetry) {
+    (updateData as any).last_telemetry_at = new Date().toISOString()
+  }
+
+  await updateAgentStatus(supabase, agent.id, agent.agent_name, updateData)
+
+  // ── 4. Force-update check (critical path) ───────────────
+  const forceResult = await processForceUpdate(
+    supabase, agent, updateData, osInfo.agent_version, platform, origin, supabaseUrl,
+  )
+  if (forceResult.handled && forceResult.response) return forceResult.response
+
+  // ── 5. Build response ───────────────────────────────────
+  const response = await buildNormalResponse(
+    supabase, agent, updateData, osInfo.agent_version, platform, origin,
+  )
+
+  // ── 6. COST-OPT: Defer side-effects ─────────────────────
   try {
-    const supabaseUrl = requireEnv('SUPABASE_URL')
-    const supabaseKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY')
-    const supabase = createSupabaseClient(supabaseUrl, supabaseKey)
-
-    // ── 1. Authenticate agent ───────────────────────────────
-    const authResult = await authenticateAgent(supabase, req, 'heartbeat', {
-      extraAgentFields: HEARTBEAT_EXTRA_FIELDS,
+    const bgWork = executeParallelOps(supabase, agent, osInfo, shouldInsertTelemetry)
+    if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+      EdgeRuntime.waitUntil(bgWork)
+    } else {
+      // Fallback if waitUntil is missing
+      bgWork.catch(e => logger.warn('Deferred work failed', { error: e.message }))
+    }
+  } catch (bgErr) {
+    logger.warn('Background ops setup failed', {
+      agentName: agent.agent_name, error: (bgErr as Error).message,
     })
-    if (!authResult.success) return authResult.response
+  }
 
-    const agent: AgentContext = {
-      id: authResult.agent.id,
-      agent_name: authResult.agent.agent_name,
-      hmac_secret: (authResult.agent.hmac_secret as string | null) || '',
-      tenant_id: authResult.agent.tenant_id,
-      status: (authResult.agentData.status as string) || '',
-      skip_firewall_remediation: (authResult.agentData.skip_firewall_remediation as boolean) || false,
-      agent_version: (authResult.agentData.agent_version as string | null) || null,
-      force_update_version: (authResult.agentData.force_update_version as string | null) || null,
-      force_update_reason: (authResult.agentData.force_update_reason as string | null) || null,
-      force_update_at: (authResult.agentData.force_update_at as string | null) || null,
-      force_update_override_safe_mode: (authResult.agentData.force_update_override_safe_mode as boolean) || false,
-      force_update_override_safe_mode_expires_at: (authResult.agentData.force_update_override_safe_mode_expires_at as string | null) || null,
-      force_update_delivered_count: (authResult.agentData.force_update_delivered_count as number) || 0,
-      force_update_first_delivered_at: (authResult.agentData.force_update_first_delivered_at as string | null) || null,
-      last_forced_update_applied: (authResult.agentData.last_forced_update_applied as string | null) || null,
-      last_telemetry_at: (authResult.agentData.last_telemetry_at as string | null) || null,
-    }
-
-    // ── 2. HMAC validation ──────────────────────────────────
-    if (!agent.hmac_secret) {
-      logger.error('CRITICAL SECURITY: Agent without HMAC secret', { agentName: agent.agent_name })
-      return new Response(
-        JSON.stringify({ error: 'HMAC secret not configured for agent' }),
-        { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
-      )
-    }
-
-    const hmacResult = await validateHeartbeatHmac(
-      supabase, req, agent.agent_name, agent.hmac_secret, agent.agent_version, origin,
-    )
-    if (!hmacResult.ok) return hmacResult.errorResponse!
-
-    // ── 3. Parse payload ────────────────────────────────────
-    const osInfo = parseHeartbeatPayload(hmacResult.rawBody)
-    const updateData = buildAgentUpdate(osInfo, agent.agent_version)
-    const platform = updateData.os_type || 'windows'
-
-    // ── 4. Rate limiting ────────────────────────────────────
-    const rateLimitResult = await checkRateLimit(supabase, agent.agent_name, 'heartbeat', {
-      maxRequests: 30, windowMinutes: 10, blockMinutes: 2,
-    })
-    if (!rateLimitResult.allowed) {
-      return new Response(
-        JSON.stringify({ error: 'Rate limit excedido', resetAt: rateLimitResult.resetAt }),
-        { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } },
-      )
-    }
-
-    logger.debug('Heartbeat received', { agentName: agent.agent_name, traceId })
-
-    // ── 5. Update agent status (critical path — must complete before response) ──
-    const lastInsert = agent.last_telemetry_at ? new Date(agent.last_telemetry_at).getTime() : 0
-    const shouldInsertTelemetry = (Date.now() - lastInsert) >= TELEMETRY_THROTTLE_MS
-    
-    if (shouldInsertTelemetry) {
-      (updateData as any).last_telemetry_at = new Date().toISOString()
-    }
-
-    await updateAgentStatus(supabase, agent.id, agent.agent_name, updateData)
-
-    // ── 6. Force-update check (critical path) ───────────────
-    const forceResult = await processForceUpdate(
-      supabase, agent, updateData, osInfo.agent_version, platform, origin, supabaseUrl,
-    )
-    if (forceResult.handled && forceResult.response) return forceResult.response
-
-    // ── 7. Build response FIRST, then defer side-effects ────
-    const response = await buildNormalResponse(
-      supabase, agent, updateData, osInfo.agent_version, platform, origin,
-    )
-
-    // ── 8. COST-OPT: Defer non-critical ops to background ──
-    // EdgeRuntime.waitUntil() lets us return the response immediately
-    // while metrics/processes/token-touch continue processing.
-    // This reduces perceived latency from ~2.2s to ~200ms.
-    try {
-      const bgWork = executeParallelOps(supabase, agent, osInfo, shouldInsertTelemetry)
-      if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
-        EdgeRuntime.waitUntil(bgWork)
-      } else {
-        await bgWork
-      }
-    } catch (bgErr) {
-      logger.warn('Background ops failed (non-critical)', {
-        agentName: agent.agent_name, error: (bgErr as Error).message,
-      })
-    }
-
-    return response
-  } catch (error) {
-    return handleException(error, traceId, 'heartbeat')
+  return response
+}, {
+  extraAgentFields: HEARTBEAT_EXTRA_FIELDS,
+  rateLimit: {
+    endpoint: 'heartbeat',
+    maxRequests: 30,
+    windowMinutes: 10,
+    blockMinutes: 2,
   }
 })

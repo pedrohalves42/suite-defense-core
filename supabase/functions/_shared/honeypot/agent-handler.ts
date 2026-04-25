@@ -88,7 +88,7 @@ export async function handleHoneypotAgentRequest(
       trace_id: ctx.requestId,
       response_profile: profile,
     })
-    .then(({ error }) => {
+    .then(({ error }: { error: any }) => {
       if (error) logger.error(`[honeypot-agent] Insert error`, { message: error.message });
     });
 
