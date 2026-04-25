@@ -5,17 +5,24 @@
 
 echo "🚀 Iniciando Testes em Modo Debug (Fail-Fast)..."
 
-# 1. Testes Prioritários (Admin & Auth)
-PRIORITY_TESTS=(
-  "supabase/functions/__tests__/admin/admin-create-user.test.ts"
-  "supabase/functions/__tests__/auth/"
-)
+# Se um argumento for passado, usa ele como único teste
+if [ ! -z "$1" ]; then
+  TESTS=("$1")
+  echo "🎯 Executando teste específico: $1"
+else
+  # 1. Testes Prioritários (Admin & Auth)
+  TESTS=(
+    "supabase/functions/__tests__/admin/admin-create-user.test.ts"
+    "supabase/functions/__tests__/auth/"
+  )
+  echo "📦 Testando módulos prioritários: admin-create-user, auth..."
+fi
 
 FAILED=0
 
-for test_path in "${PRIORITY_TESTS[@]}"; do
+for test_path in "${TESTS[@]}"; do
   if [ -e "$test_path" ]; then
-    echo "🔍 Executando Prioridade: $test_path"
+    echo "🔍 Executando: $test_path"
     # Captura output e passa pelo parser se falhar
     OUT=$(deno test --allow-all --fail-fast "$test_path" 2>&1)
     if [ $? -ne 0 ]; then
@@ -29,16 +36,18 @@ for test_path in "${PRIORITY_TESTS[@]}"; do
 done
 
 if [ $FAILED -eq 1 ]; then
-  echo "❌ Interrompendo após primeira falha nos testes prioritários."
+  echo "❌ Interrompendo após primeira falha."
   exit 1
 fi
 
-# 2. Restante dos testes se os prioritários passaram
-echo "🏃 Executando restante dos testes..."
-OUT=$(deno test --allow-all --fail-fast supabase/functions/__tests__/ 2>&1)
-if [ $? -ne 0 ]; then
-  echo "$OUT" | bun scripts/parse-edge-errors.js
-  exit 1
+# Se não foi passado argumento, executa o restante
+if [ -z "$1" ]; then
+  echo "🏃 Executando restante dos testes..."
+  OUT=$(deno test --allow-all --fail-fast supabase/functions/__tests__/ 2>&1)
+  if [ $? -ne 0 ]; then
+    echo "$OUT" | bun scripts/parse-edge-errors.js
+    exit 1
+  fi
 fi
 
-echo "✅ Todos os testes críticos passaram!"
+echo "✅ Testes concluídos com sucesso!"
