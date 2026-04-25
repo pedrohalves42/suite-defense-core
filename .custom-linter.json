@@ -1,0 +1,9 @@
+{
+  "rules": {
+    "no-create-client-outside-shared": {
+      "message": "Direct use of createClient() is prohibited. Use getServiceClient() or createTypedClient() from _shared/supabase-client.ts to ensure type safety.",
+      "selector": "CallExpression[callee.name='createClient']",
+      "exclude": ["supabase/functions/_shared/supabase-client.ts", "src/integrations/supabase/client.ts", "e2e/**", "tests/**", "contracts/**", "tools/**"]
+    }
+  }
+}
