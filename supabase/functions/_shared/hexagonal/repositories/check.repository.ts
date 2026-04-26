@@ -190,7 +190,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getCount(table: keyof Tables, filters: any): Promise<number> {
-    let query = this.supabase.from(table).select('*', { count: 'exact', head: true });
+    let query = (this.supabase as any).from(table as string).select('*', { count: 'exact', head: true });
     if (filters.eq) {
       for (const [key, val] of Object.entries(filters.eq)) {
         query = (query as any).eq(key as any, val as any);
@@ -290,7 +290,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   async getBatchCounts(table: keyof Tables, tenantIds: string[], filters: any): Promise<Record<string, number>> {
     if (tenantIds.length === 0) return {};
     
-    const { data, error } = await this.supabase.rpc('get_batch_counts', {
+    const { data, error } = await (this.supabase as any).rpc('get_batch_counts', {
       p_table: table as string,
       p_tenant_ids: tenantIds,
       p_filters: filters
@@ -307,7 +307,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getBusinessHoursBatch(tenantIds: string[]): Promise<Record<string, any>> {
-    const { data, error } = await this.supabase.rpc('get_business_hours_batch', {
+    const { data, error } = await (this.supabase as any).rpc('get_business_hours_batch', {
       p_tenant_ids: tenantIds
     });
     if (error) throw error;
@@ -319,7 +319,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getInstallationHealthBatch(tenantIds: string[]): Promise<any[]> {
-    const { data, error } = await this.supabase.rpc('get_installation_health_batch', {
+    const { data, error } = await (this.supabase as any).rpc('get_installation_health_batch', {
       p_tenant_ids: tenantIds
     });
     if (error) throw error;
@@ -327,7 +327,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getTenantsComplianceScores(): Promise<any[]> {
-    const { data, error } = await this.supabase.rpc('get_tenants_compliance_scores');
+    const { data, error } = await (this.supabase as any).rpc('get_tenants_compliance_scores');
     if (error) throw error;
     return (data as any[]) || [];
   }
