@@ -1,9 +1,22 @@
 // check.repository.ts - Strongly typed repository for ops-checks
+// Note: ops_checks table is not yet in generated database.types.ts,
+// so we cast `from('ops_checks')` to any until the schema is regenerated.
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { Database } from '../../database.types.ts';
 
-export type Check = Database['public']['Tables']['ops_checks']['Row'];
-export type CheckUpdate = Database['public']['Tables']['ops_checks']['Update'];
+export interface Check {
+  id: string;
+  name: string;
+  is_active: boolean;
+  [key: string]: unknown;
+}
+
+export interface CheckUpdate {
+  is_active?: boolean;
+  last_run_at?: string;
+  last_result?: unknown;
+  [key: string]: unknown;
+}
 
 export interface ICheckRepository {
   listActiveChecks(): Promise<Check[]>;
@@ -24,38 +37,40 @@ export interface ICheckRepository {
 export class SupabaseCheckRepository implements ICheckRepository {
   constructor(private readonly supabase: SupabaseClient<Database>) {}
 
+  // Helper: untyped client for tables not yet in generated types
+  private get db(): any {
+    return this.supabase as any;
+  }
+
   async listActiveChecks(): Promise<Check[]> {
-    const { data, error } = await this.supabase
+    const { data, error } = await this.db
       .from('ops_checks')
       .select('*')
       .eq('is_active', true);
-    
     if (error) throw error;
-    return data || [];
+    return (data as Check[]) || [];
   }
 
   async getCheckById(id: string): Promise<Check | null> {
-    const { data, error } = await this.supabase
+    const { data, error } = await this.db
       .from('ops_checks')
       .select('*')
       .eq('id', id)
       .maybeSingle();
-    
     if (error) throw error;
-    return data;
+    return data as Check | null;
   }
 
   async updateCheckStatus(id: string, update: CheckUpdate): Promise<void> {
-    const { error } = await this.supabase
+    const { error } = await this.db
       .from('ops_checks')
       .update(update)
       .eq('id', id);
-    
     if (error) throw error;
   }
 
   async logScheduledJobRun(payload: any): Promise<void> {
-    const { error } = await this.supabase.rpc('log_scheduled_job_run' as any, payload);
+    const { error } = await this.db.rpc('log_scheduled_job_run', payload);
     if (error) throw error;
   }
 
@@ -77,12 +92,12 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async saveCheckResult(checkId: string, result: any): Promise<void> {
-    const { error } = await this.supabase
+    const { error } = await this.db
       .from('ops_checks')
-      .update({ 
+      .update({
         last_run_at: new Date().toISOString(),
-        last_result: result 
-      } as any)
+        last_result: result,
+      })
       .eq('id', checkId);
     if (error) throw error;
   }
@@ -94,15 +109,20 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getAgents(filters?: any): Promise<any[]> {
-    let query = this.supabase.from('agents').select('*');
+    let query: any = this.supabase.from('agents').select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = (query as any).gte(key, val);
+        query = query.gte(key, val);
       }
     }
     if (filters?.neq) {
       for (const [key, val] of Object.entries(filters.neq)) {
-        query = (query as any).neq(key, val);
+        query = query.neq(key, val);
+      }
+    }
+    if (filters?.in) {
+      for (const [key, val] of Object.entries(filters.in)) {
+        query = query.in(key, val);
       }
     }
     const { data, error } = await query;
@@ -111,15 +131,15 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getInstallationAnalytics(filters?: any): Promise<any[]> {
-    let query = this.supabase.from('installation_analytics').select('*');
+    let query: any = this.supabase.from('installation_analytics').select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = (query as any).gte(key, val);
+        query = query.gte(key, val);
       }
     }
     if (filters?.in) {
       for (const [key, val] of Object.entries(filters.in)) {
-        query = (query as any).in(key, val);
+        query = query.in(key, val);
       }
     }
     const { data, error } = await query;
@@ -128,15 +148,15 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getJobs(filters?: any): Promise<any[]> {
-    let query = this.supabase.from('jobs').select('*');
+    let query: any = this.supabase.from('jobs').select('*');
     if (filters?.eq) {
       for (const [key, val] of Object.entries(filters.eq)) {
-        query = (query as any).eq(key, val);
+        query = query.eq(key, val);
       }
     }
     if (filters?.lt) {
       for (const [key, val] of Object.entries(filters.lt)) {
-        query = (query as any).lt(key, val);
+        query = query.lt(key, val);
       }
     }
     const { data, error } = await query;
@@ -145,7 +165,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async rpc(name: string, params?: any): Promise<any> {
-    const { data, error } = await this.supabase.rpc(name as any, params);
+    const { data, error } = await this.db.rpc(name, params);
     if (error) throw error;
     return data;
   }
