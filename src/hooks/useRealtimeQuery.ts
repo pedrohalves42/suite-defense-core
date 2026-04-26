@@ -61,10 +61,43 @@ export function useRealtimeQuery<T>({
         const eventType = payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE';
         
         if (realtimeEvents.includes(eventType)) {
-          logger.debug(`[useRealtimeQuery] ${realtimeTable} ${eventType}, invalidating ${queryKey[0]}`, {
+          logger.debug(`[useRealtimeQuery] ${realtimeTable} ${eventType}, applying optimistic update for ${queryKey[0]}`, {
             instanceId,
           });
-          queryClient.invalidateQueries({ queryKey });
+          
+          if (eventType === 'UPDATE' && payload.new) {
+            queryClient.setQueryData(queryKey, (oldData: any) => {
+              if (!oldData) return oldData;
+              
+              // Handle both single object and array of objects
+              if (Array.isArray(oldData)) {
+                return oldData.map((item: any) => 
+                  item.id === payload.new.id ? { ...item, ...payload.new } : item
+                );
+              }
+              
+              if (oldData.id === payload.new.id) {
+                return { ...oldData, ...payload.new };
+              }
+              
+              return oldData;
+            });
+          } else if (eventType === 'DELETE' && payload.old) {
+            queryClient.setQueryData(queryKey, (oldData: any) => {
+              if (!oldData || !Array.isArray(oldData)) return oldData;
+              return oldData.filter((item: any) => item.id !== payload.old.id);
+            });
+          } else if (eventType === 'INSERT' && payload.new) {
+            queryClient.setQueryData(queryKey, (oldData: any) => {
+              if (!oldData || !Array.isArray(oldData)) return oldData;
+              // Check if already exists to avoid duplicates
+              if (oldData.some((item: any) => item.id === payload.new.id)) return oldData;
+              return [payload.new, ...oldData];
+            });
+          } else {
+            // Fallback for complex filters or data structures
+            queryClient.invalidateQueries({ queryKey });
+          }
         }
       },
       realtimeSchema
