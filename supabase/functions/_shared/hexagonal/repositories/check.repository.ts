@@ -113,20 +113,20 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getAgents(filters?: any): Promise<Tables['agents']['Row'][]> {
-    let query = this.supabase.from('agents').select('*');
+    let query: any = (this.supabase as any).from('agents').select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = query.gte(key as any, val as any);
+        query = query.gte(key, val);
       }
     }
     if (filters?.neq) {
       for (const [key, val] of Object.entries(filters.neq)) {
-        query = query.neq(key as any, val as any);
+        query = query.neq(key, val);
       }
     }
     if (filters?.in) {
       for (const [key, val] of Object.entries(filters.in)) {
-        query = query.in(key as any, val as any);
+        query = query.in(key, val);
       }
     }
     const { data, error } = await query;
@@ -135,15 +135,15 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getInstallationAnalytics(filters?: any): Promise<Tables['installation_analytics']['Row'][]> {
-    let query = this.supabase.from('installation_analytics').select('*');
+    let query: any = (this.supabase as any).from('installation_analytics').select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = query.gte(key as any, val as any);
+        query = query.gte(key, val);
       }
     }
     if (filters?.in) {
       for (const [key, val] of Object.entries(filters.in)) {
-        query = query.in(key as any, val as any);
+        query = query.in(key, val);
       }
     }
     const { data, error } = await query;
@@ -152,15 +152,15 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getJobs(filters?: any): Promise<Tables['jobs']['Row'][]> {
-    let query = this.supabase.from('jobs').select('*');
+    let query: any = (this.supabase as any).from('jobs').select('*');
     if (filters?.eq) {
       for (const [key, val] of Object.entries(filters.eq)) {
-        query = query.eq(key as any, val as any);
+        query = query.eq(key, val);
       }
     }
     if (filters?.lt) {
       for (const [key, val] of Object.entries(filters.lt)) {
-        query = query.lt(key as any, val as any);
+        query = query.lt(key, val);
       }
     }
     const { data, error } = await query;
