@@ -1,4 +1,4 @@
-// @ts-nocheck
+// 100% typed repository for ops checks
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { Database } from '../../database.types.ts';
 
