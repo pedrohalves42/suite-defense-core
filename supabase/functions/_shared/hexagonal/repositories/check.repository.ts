@@ -32,6 +32,9 @@ export interface ICheckRepository {
   getUnhealthyAgents(): Promise<any[]>;
   getStuckAgentLifecycle(): Promise<any[]>;
   getBatchCounts(table: string, tenantIds: string[], filters: any): Promise<Record<string, number>>;
+  getBusinessHoursBatch(tenantIds: string[]): Promise<Record<string, any>>;
+  getInstallationHealthBatch(tenantIds: string[]): Promise<any[]>;
+  getTenantsComplianceScores(): Promise<any[]>;
 }
 
 export class SupabaseCheckRepository implements ICheckRepository {
@@ -295,5 +298,31 @@ export class SupabaseCheckRepository implements ICheckRepository {
     });
     
     return counts;
+  }
+
+  async getBusinessHoursBatch(tenantIds: string[]): Promise<Record<string, any>> {
+    const { data, error } = await this.supabase.rpc('get_business_hours_batch', {
+      p_tenant_ids: tenantIds
+    });
+    if (error) throw error;
+    const result: Record<string, any> = {};
+    (data as any[] || []).forEach(row => {
+      result[row.tenant_id] = row.business_hours;
+    });
+    return result;
+  }
+
+  async getInstallationHealthBatch(tenantIds: string[]): Promise<any[]> {
+    const { data, error } = await this.supabase.rpc('get_installation_health_batch', {
+      p_tenant_ids: tenantIds
+    });
+    if (error) throw error;
+    return data || [];
+  }
+
+  async getTenantsComplianceScores(): Promise<any[]> {
+    const { data, error } = await this.supabase.rpc('get_tenants_compliance_scores');
+    if (error) throw error;
+    return data || [];
   }
 }

@@ -50566,6 +50566,13 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      get_business_hours_batch: {
+        Args: { p_tenant_ids: string[] }
+        Returns: {
+          business_hours: Json
+          tenant_id: string
+        }[]
+      }
       get_cached_value: { Args: { p_key: string }; Returns: Json }
       get_critical_insights_count: {
         Args: { p_tenant_id: string }
@@ -50588,6 +50595,16 @@ export type Database = {
       get_honeypot_stats: {
         Args: { p_hours?: number; p_tenant_id?: string }
         Returns: Json
+      }
+      get_installation_health_batch: {
+        Args: { p_tenant_ids: string[] }
+        Returns: {
+          failed_attempts: number
+          failure_rate_pct: number
+          tenant_id: string
+          threshold: number
+          total_attempts: number
+        }[]
       }
       get_installation_health_status: {
         Args: { p_tenant_id: string }
@@ -50828,6 +50845,14 @@ export type Database = {
         }[]
       }
       get_tenant_mfa_policy: { Args: { _tenant_id: string }; Returns: Json }
+      get_tenants_compliance_scores: {
+        Args: never
+        Returns: {
+          category_scores: Json
+          overall_score: number
+          tenant_id: string
+        }[]
+      }
       get_threat_intel_stats: { Args: { p_tenant_id: string }; Returns: Json }
       get_trace_timeline: {
         Args: { p_trace_id: string }

@@ -10,25 +10,27 @@ export class ComputeComplianceBenchmarksUseCase {
     const periodMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     logger.info(`[${requestId}] ComputeComplianceBenchmarksUseCase: Computing benchmarks for period ${periodMonth}`);
 
-    const { data: tenants } = await (this.checkRepository as any).supabase.from('tenant_subscriptions').select('tenant_id').in('status', ['active', 'trialing']);
-    if (!tenants?.length) return { message: 'No active tenants' };
+    const tenantsCompliance = await this.checkRepository.getTenantsComplianceScores();
+    
+    if (!tenantsCompliance?.length) {
+      logger.info(`[${requestId}] ComputeComplianceBenchmarksUseCase: No compliance data to process`);
+      return { message: 'No compliance data' };
+    }
 
-    const tenantIds = [...new Set(tenants.map((t: any) => t.tenant_id))];
     const scores: number[] = [];
     const categoryScores: Record<string, number[]> = {};
 
-    for (const tenantId of tenantIds) {
-      const score = await this.calculateTenantComplianceScore(tenantId as string);
-      if (score !== null) {
-        scores.push(score.overall);
-        for (const [cat, val] of Object.entries(score.categories)) {
-          if (!categoryScores[cat]) categoryScores[cat] = [];
-          categoryScores[cat].push(val as number);
-        }
+    for (const record of tenantsCompliance) {
+      const overall = parseFloat(record.overall_score);
+      scores.push(overall);
+      
+      const categories = record.category_scores;
+      for (const [cat, val] of Object.entries(categories)) {
+        if (!categoryScores[cat]) categoryScores[cat] = [];
+        categoryScores[cat].push(val as number);
       }
     }
 
-    if (scores.length === 0) return { message: 'No scores computed' };
 
     scores.sort((a, b) => a - b);
     const avg = scores.reduce((s, v) => s + v, 0) / scores.length;
