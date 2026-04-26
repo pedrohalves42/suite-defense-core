@@ -55,20 +55,20 @@ export class HealthMonitorUseCase {
         (async () => {
           const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
           const count = await this.checkRepository.getCount('agents', {
-            eq: { last_heartbeat: 'null' as any },
-            lt: { enrolled_at: cutoff }
+            eq: { last_heartbeat: 'null' as any } as any,
+            lt: { enrolled_at: cutoff } as any
           });
           result.pending_agents.count = count;
         })(),
         (async () => {
           const offlineCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
           const offlineCount = await this.checkRepository.getCount('agents', {
-            eq: { status: 'active' },
-            lt: { last_heartbeat: offlineCutoff }
+            eq: { status: 'active' } as any,
+            lt: { last_heartbeat: offlineCutoff } as any
           });
           result.agent_health.offline = offlineCount;
           const totalActive = await this.checkRepository.getCount('agents', {
-            eq: { status: 'active' }
+            eq: { status: 'active' } as any
           });
           result.agent_health.total_active = totalActive;
         })(),
@@ -95,7 +95,7 @@ export class HealthMonitorUseCase {
         (async () => {
           const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
           const count = await this.checkRepository.getCount('performance_metrics', {
-            gte: { created_at: fiveMinAgo, duration_ms: 2000 }
+            gte: { created_at: fiveMinAgo, duration_ms: 2000 } as any
           });
           result.slow_operations.count = count;
         })(),
