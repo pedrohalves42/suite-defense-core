@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -7,6 +6,7 @@ type EventCallback = (payload: any) => void;
 
 interface Subscription {
   id: string;
+  schema: string;
   table: string;
   filter?: string;
   callback: EventCallback;
@@ -14,7 +14,7 @@ interface Subscription {
 
 /**
  * RealtimeChannelManager handles Supabase Realtime connections centrally.
- * It reuses a single channel per table (and optionally filter) to avoid
+ * It reuses a single channel per table/schema (and optionally filter) to avoid
  * exceeding the maximum number of concurrent connections.
  */
 class RealtimeChannelManager {
@@ -39,20 +39,28 @@ class RealtimeChannelManager {
     id: string,
     table: string,
     filter: string | undefined,
-    callback: EventCallback
+    callback: EventCallback,
+    schema: string = 'public'
   ): void {
-    const channelKey = this.getChannelKey(table, filter);
+    const channelKey = this.getChannelKey(schema, table, filter);
     
     // Track the subscriber
     const currentSubscribers = this.subscribers.get(channelKey) || [];
-    if (currentSubscribers.some(s => s.id === id)) return;
     
-    currentSubscribers.push({ id, table, filter, callback });
+    // Check if this specific instance ID is already registered to avoid duplicates
+    if (currentSubscribers.some(s => s.id === id)) {
+      logger.debug(`[RealtimeChannelManager] ID ${id} already subscribed to ${channelKey}`);
+      return;
+    }
+    
+    currentSubscribers.push({ id, schema, table, filter, callback });
     this.subscribers.set(channelKey, currentSubscribers);
 
     // Create or reuse channel
     if (!this.channels.has(channelKey)) {
-      this.initChannel(channelKey, table, filter);
+      this.initChannel(channelKey, schema, table, filter);
+    } else {
+      logger.debug(`[RealtimeChannelManager] Reusing channel for ${channelKey}. Total subscribers: ${currentSubscribers.length}`);
     }
   }
 
@@ -60,34 +68,38 @@ class RealtimeChannelManager {
    * Unsubscribe from changes. 
    * Removes the channel if no more subscribers are left.
    */
-  public unsubscribe(id: string, table: string, filter?: string): void {
-    const channelKey = this.getChannelKey(table, filter);
+  public unsubscribe(id: string, table: string, filter?: string, schema: string = 'public'): void {
+    const channelKey = this.getChannelKey(schema, table, filter);
     const currentSubscribers = this.subscribers.get(channelKey) || [];
     
     const filteredSubscribers = currentSubscribers.filter(s => s.id !== id);
     
     if (filteredSubscribers.length === 0) {
-      this.cleanupChannel(channelKey);
+      if (currentSubscribers.length > 0) {
+        this.cleanupChannel(channelKey);
+      }
       this.subscribers.delete(channelKey);
     } else {
       this.subscribers.set(channelKey, filteredSubscribers);
+      logger.debug(`[RealtimeChannelManager] Unsubscribed ${id} from ${channelKey}. Remaining: ${filteredSubscribers.length}`);
     }
   }
 
-  private getChannelKey(table: string, filter?: string): string {
-    return `${table}${filter ? `:${filter}` : ''}`;
+  private getChannelKey(schema: string, table: string, filter?: string): string {
+    return `${schema}:${table}${filter ? `:${filter}` : ''}`;
   }
 
-  private initChannel(key: string, table: string, filter?: string): void {
+  private initChannel(key: string, schema: string, table: string, filter?: string): void {
     logger.debug(`[RealtimeChannelManager] Initializing channel for ${key}`);
     
+    // The channel name should be unique to avoid collisions with other subscriptions
     const channel = supabase
       .channel(`central-${key}`)
       .on(
         'postgres_changes',
         {
           event: '*',
-          schema: 'public',
+          schema: schema,
           table: table,
           filter: filter,
         },
@@ -97,9 +109,13 @@ class RealtimeChannelManager {
           subs.forEach(s => s.callback(payload));
         }
       )
-      .subscribe((status) => {
+      .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
           logger.debug(`[RealtimeChannelManager] Channel ${key} subscribed`);
+        } else if (status === 'CHANNEL_ERROR') {
+          logger.error(`[RealtimeChannelManager] Channel ${key} error:`, err);
+        } else if (status === 'TIMED_OUT') {
+          logger.warn(`[RealtimeChannelManager] Channel ${key} timed out`);
         }
       });
 
@@ -109,7 +125,7 @@ class RealtimeChannelManager {
   private cleanupChannel(key: string): void {
     const channel = this.channels.get(key);
     if (channel) {
-      logger.debug(`[RealtimeChannelManager] Removing channel ${key} (no more subscribers)`);
+      logger.info(`[RealtimeChannelManager] Removing channel ${key} (no more subscribers)`);
       supabase.removeChannel(channel);
       this.channels.delete(key);
     }

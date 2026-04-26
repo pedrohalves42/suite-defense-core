@@ -1,9 +1,10 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { getAgentOnlineStatus } from '@/lib/agent-status-constants';
 import { logger } from '@/lib/logger';
+import { realtimeChannelManager } from '@/lib/realtime-manager';
 import { subDays } from 'date-fns';
 import { toast } from 'sonner';
 import type { Agent, Job, UptimeDataPoint, ScansTrendPoint, JobsTrendPoint, GlobalStatus } from './types';
@@ -14,6 +15,7 @@ export function useAgentMonitoring() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const instanceId = useRef(`monitor-${Math.random().toString(36).substring(2, 9)}`).current;
 
   const getAgentCalculatedStatus = (agent: Agent): 'online' | 'warning' | 'offline' | 'never_connected' => {
     return getAgentOnlineStatus(agent as unknown as Parameters<typeof getAgentOnlineStatus>[0]);
@@ -140,13 +142,15 @@ export function useAgentMonitoring() {
   useEffect(() => {
     if (!tenant?.id) return;
 
-    const agentsChannel = supabase
-      .channel(`agents-realtime-${tenant.id}`)
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'agents',
-        filter: `tenant_id=eq.${tenant.id}`,
-      }, (payload) => {
-        logger.debug('Agent change', { payload });
+    logger.debug('[useAgentMonitoring] Setting up realtime subscriptions via manager');
+
+    // Subscribe to Agents
+    realtimeChannelManager.subscribe(
+      `${instanceId}-agents`,
+      'agents',
+      `tenant_id=eq.${tenant.id}`,
+      (payload) => {
+        logger.debug('Agent change via manager', { payload });
         if (payload.eventType === 'INSERT') {
           setAgents(prev => [payload.new as Agent, ...prev]);
         } else if (payload.eventType === 'UPDATE') {
@@ -155,30 +159,31 @@ export function useAgentMonitoring() {
           setAgents(prev => prev.filter(a => a.id !== payload.old.id));
         }
         setLastUpdate(new Date());
-      })
-      .subscribe();
+      }
+    );
 
-    const jobsChannel = supabase
-      .channel(`jobs-realtime-${tenant.id}`)
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'jobs',
-        filter: `tenant_id=eq.${tenant.id}`,
-      }, (payload) => {
-        logger.debug('Job change', { payload });
+    // Subscribe to Jobs
+    realtimeChannelManager.subscribe(
+      `${instanceId}-jobs`,
+      'jobs',
+      `tenant_id=eq.${tenant.id}`,
+      (payload) => {
+        logger.debug('Job change via manager', { payload });
         if (payload.eventType === 'INSERT') {
           setRecentJobs(prev => [payload.new as Job, ...prev].slice(0, 10));
         } else if (payload.eventType === 'UPDATE') {
           setRecentJobs(prev => prev.map(j => j.id === payload.new.id ? payload.new as Job : j));
         }
         setLastUpdate(new Date());
-      })
-      .subscribe();
+      }
+    );
 
     return () => {
-      supabase.removeChannel(agentsChannel);
-      supabase.removeChannel(jobsChannel);
+      logger.debug('[useAgentMonitoring] Cleaning up realtime subscriptions');
+      realtimeChannelManager.unsubscribe(`${instanceId}-agents`, 'agents', `tenant_id=eq.${tenant.id}`);
+      realtimeChannelManager.unsubscribe(`${instanceId}-jobs`, 'jobs', `tenant_id=eq.${tenant.id}`);
     };
-  }, [tenant?.id]);
+  }, [tenant?.id, instanceId]);
 
   // Metrics
   const totalAgents = agents.length;
@@ -231,7 +236,7 @@ export function useAgentMonitoring() {
   const last7Days = getLast7Days();
 
   const scansTrendData: ScansTrendPoint[] = last7Days.map(day => {
-    const dayScans = historicalScans?.filter(s => s.scanned_at.startsWith(day.date)) || [];
+    const dayScans = historicalScans?.filter(s => (s.scanned_at as string).startsWith(day.date)) || [];
     return {
       date: day.label,
       total: dayScans.length,
@@ -241,7 +246,7 @@ export function useAgentMonitoring() {
   });
 
   const jobsTrendData: JobsTrendPoint[] = last7Days.map(day => {
-    const dayJobs = historicalJobs?.filter(j => j.created_at.startsWith(day.date)) || [];
+    const dayJobs = historicalJobs?.filter(j => (j.created_at as string).startsWith(day.date)) || [];
     return {
       date: day.label,
       total: dayJobs.length,

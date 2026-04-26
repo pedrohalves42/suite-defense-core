@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
 import { logger } from "@/lib/logger";
+import { realtimeChannelManager } from "@/lib/realtime-manager";
 
 export interface AppNotification {
   id: string;
@@ -15,11 +16,13 @@ export interface AppNotification {
 /**
  * Hook for in-app notifications with Web Push support.
  * Monitors realtime events and generates alerts for critical conditions.
+ * Reuses channels via RealtimeChannelManager.
  */
 export function useNotifications() {
   const { tenant } = useTenant();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [pushPermission, setPushPermission] = useState<NotificationPermission>("default");
+  const instanceId = useRef(`notif-${Math.random().toString(36).substring(2, 9)}`).current;
 
   useEffect(() => {
     if ("Notification" in window) {
@@ -69,42 +72,36 @@ export function useNotifications() {
 
   const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
 
-  // Monitor critical events via realtime
+  // Monitor critical events via realtime manager
   useEffect(() => {
     if (!tenant?.id) return;
 
-    const channel = supabase
-      .channel(`notifications-${tenant.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'jobs',
-        filter: `tenant_id=eq.${tenant.id}`,
-      }, (payload) => {
+    logger.debug('[useNotifications] Setting up realtime subscriptions via manager');
+
+    // Subscribe to Jobs
+    realtimeChannelManager.subscribe(
+      `${instanceId}-jobs`,
+      'jobs',
+      `tenant_id=eq.${tenant.id}`,
+      (payload) => {
         const job = payload.new as Record<string, unknown>;
         if (job.status === "failed") {
           addNotification({
-            title: "Verificação falhou",
-            message: `Job ${job.type} falhou no agente ${job.agent_name}`,
-            type: "critical",
-          });
-        }
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE', schema: 'public', table: 'jobs',
-        filter: `tenant_id=eq.${tenant.id}`,
-      }, (payload) => {
-        const job = payload.new as Record<string, unknown>;
-        if (job.status === "failed") {
-          addNotification({
-            title: "⚠️ Job falhou",
+            title: payload.eventType === 'INSERT' ? "Verificação falhou" : "⚠️ Job falhou",
             message: `${job.type} falhou no agente ${job.agent_name}`,
-            type: "warning",
+            type: payload.eventType === 'INSERT' ? "critical" : "warning",
           });
         }
-      })
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'virus_scans',
-        filter: `tenant_id=eq.${tenant.id}`,
-      }, (payload) => {
+      }
+    );
+
+    // Subscribe to Virus Scans
+    realtimeChannelManager.subscribe(
+      `${instanceId}-scans`,
+      'virus_scans',
+      `tenant_id=eq.${tenant.id}`,
+      (payload) => {
+        if (payload.eventType !== 'INSERT') return;
         const scan = payload.new as Record<string, unknown>;
         if (scan.is_malicious) {
           addNotification({
@@ -113,15 +110,19 @@ export function useNotifications() {
             type: "critical",
           });
         }
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE', schema: 'public', table: 'agents',
-        filter: `tenant_id=eq.${tenant.id}`,
-      }, (payload) => {
+      }
+    );
+
+    // Subscribe to Agents
+    realtimeChannelManager.subscribe(
+      `${instanceId}-agents`,
+      'agents',
+      `tenant_id=eq.${tenant.id}`,
+      (payload) => {
+        if (payload.eventType !== 'UPDATE') return;
         const oldAgent = payload.old as Record<string, unknown>;
         const newAgent = payload.new as Record<string, unknown>;
         
-        // Detect agent going offline (last_heartbeat stopped updating for >5 min is handled by proactive alerts)
         // Detect version change
         if (oldAgent.agent_version && newAgent.agent_version && oldAgent.agent_version !== newAgent.agent_version) {
           addNotification({
@@ -139,11 +140,16 @@ export function useNotifications() {
             type: "critical",
           });
         }
-      })
-      .subscribe();
+      }
+    );
 
-    return () => { supabase.removeChannel(channel); };
-  }, [tenant?.id, addNotification]);
+    return () => {
+      logger.debug('[useNotifications] Cleaning up realtime subscriptions');
+      realtimeChannelManager.unsubscribe(`${instanceId}-jobs`, 'jobs', `tenant_id=eq.${tenant.id}`);
+      realtimeChannelManager.unsubscribe(`${instanceId}-scans`, 'virus_scans', `tenant_id=eq.${tenant.id}`);
+      realtimeChannelManager.unsubscribe(`${instanceId}-agents`, 'agents', `tenant_id=eq.${tenant.id}`);
+    };
+  }, [tenant?.id, addNotification, instanceId]);
 
   return {
     notifications,
