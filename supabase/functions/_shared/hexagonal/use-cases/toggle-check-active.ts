@@ -1,4 +1,4 @@
-// @ts-nocheck
+// toggle-check-active.ts - Use case to enable or disable monitoring checks
 import { ICheckRepository } from '../repositories/check.repository.ts';
 
 export class ToggleCheckActiveUseCase {
