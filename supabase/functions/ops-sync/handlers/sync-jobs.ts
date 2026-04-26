@@ -149,7 +149,7 @@ export async function handleInvokeScheduledJobs(supabase: SB, requestId: string,
   const results: Array<{ name: string; job_type: string; status: 'executed' | 'skipped' | 'error'; message?: string }> = [];
 
   const { data: scheduledJobs, error: fetchError } = await supabase
-    .from('scheduled_jobs').select('id, name, job_type, schedule_cron, tenant_id, config, enabled, last_run_at, next_run_at').eq('enabled', true);
+    .from('scheduled_jobs').select('id, name, job_type, cron_expr, tenant_id, payload, enabled, last_run_at, next_run_at').eq('enabled', true);
 
   if (fetchError) throw fetchError;
 
