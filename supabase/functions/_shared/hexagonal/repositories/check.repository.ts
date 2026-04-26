@@ -319,7 +319,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getInstallationHealthBatch(tenantIds: string[]): Promise<any[]> {
-    const { data, error } = await this.supabase.rpc('get_installation_health_batch', {
+    const { data, error } = await (this.supabase as any).rpc('get_installation_health_batch', {
       p_tenant_ids: tenantIds
     });
     if (error) throw error;
