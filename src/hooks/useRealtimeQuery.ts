@@ -50,8 +50,8 @@ export function useRealtimeQuery<T>({
         const eventType = payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE';
         
         if (realtimeEvents.includes(eventType)) {
-          logger.debug(`[useRealtimeQuery] ${realtimeTable} ${eventType}, invalidating`, {
-            queryKey: queryKey[0],
+          logger.debug(`[useRealtimeQuery] Table ${realtimeTable} ${eventType}, invalidating ${queryKey[0]}`, {
+            subscriptionId,
           });
           queryClient.invalidateQueries({ queryKey });
         }

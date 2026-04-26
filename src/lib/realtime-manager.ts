@@ -92,6 +92,7 @@ class RealtimeChannelManager {
           filter: filter,
         },
         (payload) => {
+          logger.debug(`[RealtimeChannelManager] Event on ${key}: ${payload.eventType}`);
           const subs = this.subscribers.get(key) || [];
           subs.forEach(s => s.callback(payload));
         }
