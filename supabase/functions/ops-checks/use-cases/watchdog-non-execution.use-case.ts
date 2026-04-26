@@ -37,15 +37,16 @@ export class WatchdogNonExecutionUseCase {
     const alertsCreated: any[] = [];
     const alertsSkipped: string[] = [];
     const skippedDueToBusinessHours: string[] = [];
-    const tenantBusinessHoursCache: Record<string, { shouldProcess: boolean; reason: string }> = {};
 
+    const tenantIds = [...new Set(unhealthyAgents.map((a: any) => a.tenant_id))];
     const agentIds = unhealthyAgents.map((a: any) => a.agent_id).filter(Boolean);
     
+    // Batch get business hours for all relevant tenants
+    const businessHoursBatch = await this.checkRepository.getBusinessHoursBatch(tenantIds);
+    
     // Check for recent alerts to avoid spamming
-    // We can use the repository for this
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
     
-    // This is a bit specific, we could add a method to repo or use supabase client
     const { data: recentAlerts } = await (this.checkRepository as any).supabase
       .from('system_alerts').select('agent_id').in('agent_id', agentIds)
       .eq('alert_type', 'non_execution_detected').eq('resolved', false)
@@ -53,30 +54,51 @@ export class WatchdogNonExecutionUseCase {
     
     const agentsWithRecentAlerts = new Set((recentAlerts || []).map((a: any) => a.agent_id));
 
+    const pendingAlerts: any[] = [];
+
     for (const agent of unhealthyAgents as AgentExecutionHealth[]) {
-      if (!tenantBusinessHoursCache[agent.tenant_id]) {
-        tenantBusinessHoursCache[agent.tenant_id] = await shouldProcessAlertsForTenant((this.checkRepository as any).supabase, agent.tenant_id);
+      const businessHours = businessHoursBatch[agent.tenant_id];
+      const isWithinHours = !businessHours || !businessHours.enabled || isWithinBusinessHours(businessHours);
+      
+      if (!isWithinHours) { 
+        skippedDueToBusinessHours.push(agent.agent_name); 
+        continue; 
       }
-      const { shouldProcess } = tenantBusinessHoursCache[agent.tenant_id];
-      if (!shouldProcess) { skippedDueToBusinessHours.push(agent.agent_name); continue; }
 
-      if (agentsWithRecentAlerts.has(agent.agent_id)) { alertsSkipped.push(agent.agent_name); continue; }
-
-      try {
-        await this.checkRepository.createSystemAlert({
-          tenant_id: agent.tenant_id, agent_id: agent.agent_id, alert_type: 'non_execution_detected',
-          severity: agent.severity as any,
-          title: `Problema de execucao: ${agent.agent_name}`, message: agent.health_description, resolved: false,
-          details: { health_status: agent.health_status, minutes_since_heartbeat: agent.minutes_since_heartbeat, minutes_since_execution: agent.minutes_since_execution, stale_queued_jobs: agent.stale_queued_jobs, stale_delivered_jobs: agent.stale_delivered_jobs, pending_jobs: agent.pending_jobs, agent_mode: agent.agent_mode, detected_at: new Date().toISOString(), watchdog_version: '1.0.0' },
-        });
-
-        alertsCreated.push({ agent_name: agent.agent_name, health_status: agent.health_status, severity: agent.severity });
-        logger.info(`[${requestId}] WatchdogNonExecutionUseCase: Alert created for ${agent.agent_name}`);
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : String(err);
-        logger.error(`[${requestId}] WatchdogNonExecutionUseCase: Error creating alert for ${agent.agent_name}:`, errorMsg);
+      if (agentsWithRecentAlerts.has(agent.agent_id)) { 
+        alertsSkipped.push(agent.agent_name); 
+        continue; 
       }
+
+      pendingAlerts.push({
+        tenant_id: agent.tenant_id, 
+        agent_id: agent.agent_id, 
+        alert_type: 'non_execution_detected',
+        severity: agent.severity as any,
+        title: `Problema de execucao: ${agent.agent_name}`, 
+        message: agent.health_description, 
+        resolved: false,
+        details: { 
+          health_status: agent.health_status, 
+          minutes_since_heartbeat: agent.minutes_since_heartbeat, 
+          minutes_since_execution: agent.minutes_since_execution, 
+          stale_queued_jobs: agent.stale_queued_jobs, 
+          stale_delivered_jobs: agent.stale_delivered_jobs, 
+          pending_jobs: agent.pending_jobs, 
+          agent_mode: agent.agent_mode, 
+          detected_at: new Date().toISOString(), 
+          watchdog_version: '1.0.0' 
+        },
+      });
+      
+      alertsCreated.push({ agent_name: agent.agent_name, health_status: agent.health_status, severity: agent.severity });
     }
+
+    if (pendingAlerts.length > 0) {
+      await this.checkRepository.createSystemAlert(pendingAlerts);
+      logger.info(`[${requestId}] WatchdogNonExecutionUseCase: ${pendingAlerts.length} alerts created in batch`);
+    }
+
 
     // Security logs
     const alertsByTenant = new Map<string, typeof alertsCreated>();
