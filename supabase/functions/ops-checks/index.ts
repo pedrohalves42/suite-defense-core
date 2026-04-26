@@ -102,6 +102,16 @@ servePublic(async (req, ctx) => {
     if (action === 'check:check-pending-agents') {
       return await new CheckPendingAgentsUseCase(checkRepo).execute(requestId);
     }
+    if (action === 'check:build-watchdog') {
+      return await new BuildWatchdogUseCase(checkRepo).execute(requestId);
+    }
+    if (action === 'check:calculate-behavioral-baselines') {
+      return await new CalculateBehavioralBaselinesUseCase(checkRepo).execute(requestId);
+    }
+    if (action === 'check:compute-compliance-benchmarks') {
+      return await new ComputeComplianceBenchmarksUseCase(checkRepo).execute(requestId);
+    }
+
 
     return { error: `Unknown action in ops-checks: ${action}`, __status: 404 };
   } catch (err) {
