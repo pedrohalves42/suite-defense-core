@@ -110,7 +110,7 @@ servePublic(async (req, ctx) => {
   const origin = req.headers.get('origin');
 
   try {
-    const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true });
+    const authError = await assertInternalCaller(req, { allowAuthenticatedUsers: true, requireSuperAdmin: true });
     if (authError) return authError;
 
     const parsed = RouterSchema.safeParse(body);
