@@ -2,86 +2,34 @@
  * Sync Jobs handlers (Batch 3B) — jobs, DLQ, scheduling
  * Inlined from: process-failed-jobs, process-scheduled-jobs, invoke-scheduled-jobs, dlq-action, process-dlq-retries
  */
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { logger, loggerWithContext } from '../../_shared/logger.ts';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { Database } from '../../_shared/database.types.ts';
+import { logger } from '../../_shared/logger.ts';
 import { getDLQEntriesForRetry, calculateNextRetry } from '../../_shared/dlq.ts';
-import { fetchWithTimeout } from '../../_shared/fetch-with-timeout.ts';
+import { ProcessFailedJobsUseCase } from '../../_shared/hexagonal/use-cases/process-failed-jobs.ts';
+import { SupabaseJobRepository } from '../../_shared/hexagonal/repositories/job.repository.ts';
 
-type SB = any;
+type SB = any; // Reverting to any to avoid cascading type errors in unrefactored code
 
 // ── process-failed-jobs ──────────────────────────────────────────────────
 
-const MAX_RETRIES = 3;
-const RETRYABLE_CLASSES = ['TRANSIENT'];
-const DLQ_CLASSES = ['AGENT_OFFLINE', 'AGENT_STALLED', 'AGENT_INCOMPATIBLE', 'CASCADE_FAILURE', 'BUG', 'POLICY', 'SECURITY'];
-
 export async function handleProcessFailedJobs(supabase: SB, requestId: string, _payload: Record<string, unknown>) {
   const startedAt = Date.now();
-  const results = { processed: 0, retried: 0, sentToDlq: 0, alertsCreated: 0, exhausted: 0, byClass: {} as Record<string, number>, errors: [] as string[] };
+  const jobRepo = new SupabaseJobRepository(supabase);
+  const useCase = new ProcessFailedJobsUseCase(jobRepo, supabase);
 
-  const { data: failedJobs, error: fetchError } = await supabase
-    .from('jobs')
-    .select('id, tenant_id, agent_id, agent_name, type, payload, status, approved, error_message, retry_count, failure_class')
-    .eq('status', 'failed').lt('retry_count', MAX_RETRIES)
-    .order('completed_at', { ascending: true }).limit(50);
+  const results = await useCase.execute(requestId);
 
-  if (fetchError) throw new Error(`Failed to fetch failed jobs: ${fetchError.message}`);
-  if (!failedJobs || failedJobs.length === 0) {
-    await supabase.rpc('log_scheduled_job_run', { p_job_key: 'process-failed-jobs', p_success: true, p_duration_ms: Date.now() - startedAt, p_result: { message: 'No failed jobs' }, p_processed_count: 0, p_job_source: 'cron' });
-    return { success: true, ...results };
-  }
+  await supabase.rpc('log_scheduled_job_run', {
+    p_job_key: 'process-failed-jobs',
+    p_success: true,
+    p_duration_ms: Date.now() - startedAt,
+    p_result: results as any,
+    p_processed_count: results.processed,
+    p_job_source: 'cron'
+  });
 
-  for (const job of failedJobs) {
-    results.processed++;
-    const currentRetry = (job.retry_count || 0) + 1;
-    const failureClass = job.failure_class || 'BUG';
-    results.byClass[failureClass] = (results.byClass[failureClass] || 0) + 1;
-
-    try {
-      const shouldRetry = RETRYABLE_CLASSES.includes(failureClass) && currentRetry < MAX_RETRIES;
-      const shouldDlq = DLQ_CLASSES.includes(failureClass) || currentRetry >= MAX_RETRIES;
-
-      if (shouldDlq) {
-        results.sentToDlq++;
-        if (currentRetry >= MAX_RETRIES) results.exhausted++;
-
-        if (failureClass !== 'EXPECTED_DROP') {
-          const { error: alertError } = await supabase.from('system_alerts').insert({
-            tenant_id: job.tenant_id, agent_id: job.agent_id, alert_type: 'job_failure_dlq',
-            severity: failureClass === 'SECURITY' ? 'critical' : 'high',
-            message: `Job "${job.type}" enviado para DLQ: ${failureClass}`,
-            metadata: { job_id: job.id, job_type: job.type, agent_name: job.agent_name, failure_class: failureClass, last_error: job.error_message, retry_count: currentRetry },
-            resolved: false,
-          });
-          if (!alertError) results.alertsCreated++;
-        }
-
-        await supabase.from('failed_jobs_dlq').upsert({
-          original_job_id: job.id, tenant_id: job.tenant_id, agent_id: job.agent_id, agent_name: job.agent_name,
-          job_type: job.type, payload: job.payload, error_count: currentRetry, retry_count: currentRetry,
-          max_retries: MAX_RETRIES, status: 'dlq', last_error: job.error_message, failure_class: failureClass,
-          failed_at: new Date().toISOString(),
-        }, { onConflict: 'original_job_id' });
-
-        await supabase.from('jobs').update({ retry_count: MAX_RETRIES, error_message: `[DLQ:${failureClass}] ${job.error_message || 'Sent to DLQ'}` }).eq('id', job.id);
-
-      } else if (shouldRetry) {
-        const { error: createError } = await supabase.from('jobs').insert({
-          tenant_id: job.tenant_id, agent_id: job.agent_id, agent_name: job.agent_name,
-          type: job.type, payload: job.payload, status: 'queued', approved: job.approved,
-          retry_count: currentRetry, parent_job_id: job.id,
-        });
-        if (createError) throw new Error(`Failed to create retry job: ${createError.message}`);
-        await supabase.from('jobs').update({ retry_count: currentRetry, error_message: `[RETRY ${currentRetry}/${MAX_RETRIES}] ${job.error_message || 'Unknown error'}` }).eq('id', job.id);
-        results.retried++;
-      }
-    } catch (err) {
-      results.errors.push(`Job ${job.id}: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    }
-  }
-
-  await supabase.rpc('log_scheduled_job_run', { p_job_key: 'process-failed-jobs', p_success: true, p_duration_ms: Date.now() - startedAt, p_result: results, p_processed_count: results.processed, p_job_source: 'cron' });
-  return { success: true, ...results };
+  return results;
 }
 
 // ── process-scheduled-jobs ───────────────────────────────────────────────
@@ -147,16 +95,16 @@ export async function handleProcessScheduledJobs(supabase: SB, requestId: string
 
         if (!isOnline) {
           skippedOfflineCount++;
-          const { data: nextRunData } = await supabase.rpc('calculate_next_run', { pattern: recurringJob.recurrence_pattern, from_time: now });
+          const { data: nextRunData } = await supabase.rpc('calculate_next_run', { pattern: recurringJob.recurrence_pattern || '', from_time: now });
           if (nextRunData) await supabase.from('jobs').update({ next_run_at: nextRunData }).eq('id', recurringJob.id);
           continue;
         }
 
-        const { data: nextRunData, error: nextRunError } = await supabase.rpc('calculate_next_run', { pattern: recurringJob.recurrence_pattern, from_time: now });
+        const { data: nextRunData, error: nextRunError } = await supabase.rpc('calculate_next_run', { pattern: recurringJob.recurrence_pattern || '', from_time: now });
         if (nextRunError) continue;
 
         const { error: insertError } = await supabase.rpc('create_job_if_not_exists', {
-          p_agent_id: recurringJob.agent_id, p_tenant_id: recurringJob.tenant_id,
+          p_agent_id: recurringJob.agent_id || '', p_tenant_id: recurringJob.tenant_id,
           p_type: recurringJob.type, p_payload: recurringJob.payload || {},
           p_priority: recurringJob.priority || 5, p_ttl_hours: getTtlForType(recurringJob.type)
         });
@@ -201,7 +149,7 @@ export async function handleInvokeScheduledJobs(supabase: SB, requestId: string,
   const results: Array<{ name: string; job_type: string; status: 'executed' | 'skipped' | 'error'; message?: string }> = [];
 
   const { data: scheduledJobs, error: fetchError } = await supabase
-    .from('scheduled_jobs').select('id, name, job_type, schedule_cron, tenant_id, config, enabled, last_run_at, next_run_at').eq('enabled', true);
+    .from('scheduled_jobs').select('id, name, job_type, cron_expr, tenant_id, payload, enabled, last_run_at, next_run_at').eq('enabled', true);
 
   if (fetchError) throw fetchError;
 
