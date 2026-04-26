@@ -102,8 +102,9 @@ servePublic(async (req, ctx) => {
     return { agentToken, hmacSecret, expiresAt: expiresAt.toISOString(), requestId };
 
   } catch (error) {
-    logger.error(`[${requestId}] Enrollment failed after ${Date.now() - startTime}ms`, error);
-    return handleException(error, requestId, 'enroll-agent');
+    return handleExceptionWithContext(error, requestId, 'enroll-agent', startTime, {
+      tenantId: 'unknown', // Set later if available, but mandatory here
+    });
   }
 }, {
   rateLimit: {
