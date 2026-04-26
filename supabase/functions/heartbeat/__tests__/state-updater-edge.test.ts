@@ -76,7 +76,7 @@ Deno.test("state-updater-edge › executeParallelOps handles metrics insert fail
     system_metrics: { cpu_percent: 10, memory_total_gb: 16, memory_used_gb: 8 },
   };
   // Should not throw — errors are fire-and-forget
-  await executeParallelOps(sb, agent, osInfo);
+  await executeParallelOps(sb, agent, osInfo, true);
   const call = sb.calls.find((c: MockCall) => c.table === "agent_system_metrics_partitioned");
   assertExists(call, "Should attempt metrics insert even if it will fail");
 });
@@ -104,7 +104,7 @@ Deno.test("state-updater-edge › executeParallelOps with no metrics or processe
   } as any;
   const agent = makeAgent();
   const osInfo: OSInfo = {};
-  await executeParallelOps(sb, agent, osInfo);
+  await executeParallelOps(sb, agent, osInfo, true);
   // Only token update should happen
   const tokenUpdate = calls.find((c) => c.table === "agent_tokens");
   assertExists(tokenUpdate, "Should always update agent_tokens");
@@ -138,7 +138,7 @@ Deno.test("state-updater-edge › executeParallelOps with process anomalies", as
     processes: { total_processes: 3, top_by_cpu: [], top_by_memory: [] },
     process_anomalies: [{ pid: 123, name: "suspicious.exe", reason: "unknown" }],
   };
-  await executeParallelOps(sb, agent, osInfo);
+  await executeParallelOps(sb, agent, osInfo, true);
   const processInsert = calls.find((c) => c.table === "agent_processes");
   assertExists(processInsert, "Should insert process data");
   assertEquals(processInsert!.data.suspicious_processes.length, 1);
