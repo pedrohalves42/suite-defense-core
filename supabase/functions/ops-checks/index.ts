@@ -38,7 +38,6 @@ servePublic(async (req, ctx) => {
 
   try {
     const authError = await assertInternalCaller(req, { 
-      allowAuthenticatedUsers: true,
       requireSuperAdmin: true 
     });
     if (authError) return authError;

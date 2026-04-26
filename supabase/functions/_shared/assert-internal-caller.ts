@@ -22,65 +22,50 @@ import { corsHeaders } from './cors.ts';
 import { timingSafeEqual } from './crypto-utils.ts';
 import { logger } from './logger.ts';
 
-export async function assertInternalCaller(req: Request, options?: { allowAuthenticatedUsers?: boolean; requireSuperAdmin?: boolean }): Promise<Response | null> {
+export async function assertInternalCaller(req: Request, options?: { requireSuperAdmin?: boolean }): Promise<Response | null> {
   const internalSecret = req.headers.get('X-Internal-Secret') || req.headers.get('x-internal-secret');
   const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
   const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_ANON_KEY_LEGACY');
 
-  // 1. X-Internal-Secret match (timing-safe)
-  if (internalSecret && expectedSecret && await timingSafeEqual(internalSecret, expectedSecret)) {
-    logger.info('[assert-internal-caller] Authorized via X-Internal-Secret');
-    return null;
-  }
-
-  // 2. service_role key in Authorization header (timing-safe)
+  // 1. service_role key (Supabase internals or high-privilege scripts)
   if (authHeader && serviceRoleKey && await timingSafeEqual(authHeader, `Bearer ${serviceRoleKey}`)) {
     logger.info('[assert-internal-caller] Authorized via service_role key');
     return null;
   }
 
-  // 3. Scheduled cron invocation via anon key (timing-safe)
+  // 2. X-Internal-Secret (Inter-function communication)
+  if (internalSecret && expectedSecret && await timingSafeEqual(internalSecret, expectedSecret)) {
+    logger.info('[assert-internal-caller] Authorized via X-Internal-Secret');
+    return null;
+  }
+
+  // 3. Cron Scheduler (Identified via anon key in cron invocations)
   if (authHeader && anonKey && await timingSafeEqual(authHeader, `Bearer ${anonKey}`)) {
     logger.info('[assert-internal-caller] Authorized via cron anon key');
     return null;
   }
 
-  // 4. Requests without any authentication headers are REJECTED.
-  if (!authHeader && !internalSecret) {
-    logger.warn('[SECURITY] Rejected: no authentication headers present');
-    return new Response(
-      JSON.stringify({ error: 'Unauthorized: authentication required' }),
-      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-
-  // 5. Authenticated user JWT (when explicitly allowed by the caller)
-  if (options?.allowAuthenticatedUsers && authHeader && authHeader.startsWith('Bearer ')) {
-    // If requireSuperAdmin is true, we MUST verify the role
-    if (options.requireSuperAdmin) {
-      const { requireSuperAdmin } = await import('./require-super-admin.ts');
-      const authResult = await requireSuperAdmin(req);
-      if (!authResult.success) {
-        return authResult.response!;
-      }
-      logger.info('[assert-internal-caller] Authorized via super_admin user JWT');
+  // 4. Require Role (Human Super Admin) - Mandatory for proxy/gateway usage if not internal
+  if (options?.requireSuperAdmin) {
+    const { requireSuperAdmin } = await import('./require-super-admin.ts');
+    const authResult = await requireSuperAdmin(req);
+    if (authResult.success) {
+      logger.info('[assert-internal-caller] Authorized via verified super_admin role');
       return null;
     }
-
-    // Legacy fallback: allow any authenticated user if requireSuperAdmin is not specified
-    // WARNING: This is less secure and should be phased out for sensitive actions.
-    logger.info('[assert-internal-caller] Authorized via generic user JWT (allowAuthenticatedUsers)');
-    return null;
+    return authResult.response!;
   }
 
   logger.warn('[SECURITY] Unauthorized access attempt to internal/cron function', {
     hasAuthHeader: !!authHeader,
     hasInternalSecret: !!internalSecret,
+    requireSuperAdmin: !!options?.requireSuperAdmin
   });
+
   return new Response(
-    JSON.stringify({ error: 'Unauthorized: This endpoint is internal only' }),
+    JSON.stringify({ error: 'Unauthorized: Access restricted to system or super_admin' }),
     { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
 }
