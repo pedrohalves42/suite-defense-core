@@ -73,7 +73,8 @@ export class WatchdogNonExecutionUseCase {
         alertsCreated.push({ agent_name: agent.agent_name, health_status: agent.health_status, severity: agent.severity });
         logger.info(`[${requestId}] WatchdogNonExecutionUseCase: Alert created for ${agent.agent_name}`);
       } catch (err) {
-        logger.error(`[${requestId}] WatchdogNonExecutionUseCase: Error creating alert for ${agent.agent_name}:`, err);
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        logger.error(`[${requestId}] WatchdogNonExecutionUseCase: Error creating alert for ${agent.agent_name}:`, errorMsg);
       }
     }
 
