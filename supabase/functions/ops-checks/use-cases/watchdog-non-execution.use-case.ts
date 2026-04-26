@@ -47,7 +47,7 @@ export class WatchdogNonExecutionUseCase {
     // Check for recent alerts to avoid spamming
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
     
-    const { data: recentAlerts } = await (this.checkRepository as any).supabase
+    const { data: recentAlerts } = await this.checkRepository.supabase
       .from('system_alerts').select('agent_id').in('agent_id', agentIds)
       .eq('alert_type', 'non_execution_detected').eq('resolved', false)
       .gte('created_at', twoHoursAgo);
@@ -112,7 +112,7 @@ export class WatchdogNonExecutionUseCase {
         tenant_id: tid, event_type: 'watchdog_non_execution', severity: 'info',
         details: { request_id: requestId, alerts_created: alerts.length, agents_alerted: alerts.map(a => a.agent_name) }
       }));
-      await (this.checkRepository as any).supabase.from('security_logs').insert(secLogs);
+      await this.checkRepository.supabase.from('security_logs').insert(secLogs);
     }
 
     const finalResult = {

@@ -12,33 +12,37 @@ export interface ICheckRepository {
   listActiveChecks(): Promise<Check[]>;
   getCheckById(id: string): Promise<Check | null>;
   updateCheckStatus(id: string, update: CheckUpdate): Promise<void>;
-  logScheduledJobRun(payload: any): Promise<void>;
+  logScheduledJobRun(payload: Database['public']['Functions']['log_scheduled_job_run']['Args']): Promise<void>;
   createSystemAlert(alert: Tables['system_alerts']['Insert'] | Tables['system_alerts']['Insert'][]): Promise<void>;
   createTask(task: Tables['tasks']['Insert']): Promise<{ id: string }>;
   logAudit(audit: Tables['audit_logs']['Insert']): Promise<void>;
   saveCheckResult(checkId: string, result: Json): Promise<void>;
-  getTenants(): Promise<{ id: string; name: string }[]>;
-  getAgents(filters?: any): Promise<any[]>;
-  getInstallationAnalytics(filters?: any): Promise<any[]>;
-  getJobs(filters?: any): Promise<any[]>;
-  rpc(name: string, params?: any): Promise<any>;
+  getTenants(): Promise<Tables['tenants']['Row'][]>;
+  getAgents(filters?: any): Promise<Tables['agents']['Row'][]>;
+  getInstallationAnalytics(filters?: any): Promise<Tables['installation_analytics']['Row'][]>;
+  getJobs(filters?: any): Promise<Tables['jobs']['Row'][]>;
+  rpc<T extends keyof Database['public']['Functions']>(
+    name: T,
+    params?: Database['public']['Functions'][T]['Args']
+  ): Promise<Database['public']['Functions'][T]['Returns']>;
   getTenantsWithSettings(): Promise<any[]>;
   getCount(table: keyof Tables, filters: any): Promise<number>;
   updateCronHealth(cronName: string, success: boolean, details: any): Promise<void>;
-  findExistingAlert(filters: any): Promise<{ id: string } | null>;
-  findExistingInsight(filters: any): Promise<{ id: string } | null>;
+  findExistingAlert(filters: Partial<Tables['system_alerts']['Row']> & { created_at_gte?: string }): Promise<{ id: string } | null>;
+  findExistingInsight(filters: Partial<Tables['ai_insights']['Row']> & { created_at_gte?: string }): Promise<{ id: string } | null>;
   createInsight(insight: Tables['ai_insights']['Insert']): Promise<void>;
-  getSilentFailures(): Promise<any[]>;
-  getUnhealthyAgents(): Promise<any[]>;
-  getStuckAgentLifecycle(): Promise<any[]>;
-  getBatchCounts(table: string, tenantIds: string[], filters: any): Promise<Record<string, number>>;
+  getSilentFailures(): Promise<Views['v_cron_silent_failures']['Row'][]>;
+  getUnhealthyAgents(): Promise<Views['v_agent_execution_health']['Row'][]>;
+  getStuckAgentLifecycle(): Promise<Views['v_agent_lifecycle_state']['Row'][]>;
+  getBatchCounts(table: keyof Tables, tenantIds: string[], filters: any): Promise<Record<string, number>>;
   getBusinessHoursBatch(tenantIds: string[]): Promise<Record<string, any>>;
   getInstallationHealthBatch(tenantIds: string[]): Promise<any[]>;
   getTenantsComplianceScores(): Promise<any[]>;
+  supabase: SupabaseClient<Database>;
 }
 
 export class SupabaseCheckRepository implements ICheckRepository {
-  constructor(private readonly supabase: SupabaseClient<Database>) {}
+  constructor(public readonly supabase: SupabaseClient<Database>) {}
 
   async listActiveChecks(): Promise<Check[]> {
     const { data, error } = await this.supabase
@@ -102,14 +106,14 @@ export class SupabaseCheckRepository implements ICheckRepository {
     if (error) throw error;
   }
 
-  async getTenants(): Promise<{ id: string; name: string }[]|any> {
-    const { data, error } = await this.supabase.from('tenants').select('id, name');
+  async getTenants(): Promise<Tables['tenants']['Row'][]> {
+    const { data, error } = await this.supabase.from('tenants').select('*');
     if (error) throw error;
     return data || [];
   }
 
-  async getAgents(filters?: any): Promise<any[]> {
-    let query: any = this.supabase.from('agents').select('*');
+  async getAgents(filters?: any): Promise<Tables['agents']['Row'][]> {
+    let query = this.supabase.from('agents').select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
         query = query.gte(key as any, val as any);
@@ -127,11 +131,11 @@ export class SupabaseCheckRepository implements ICheckRepository {
     }
     const { data, error } = await query;
     if (error) throw error;
-    return data || [];
+    return (data || []) as Tables['agents']['Row'][];
   }
 
-  async getInstallationAnalytics(filters?: any): Promise<any[]> {
-    let query: any = this.supabase.from('installation_analytics').select('*');
+  async getInstallationAnalytics(filters?: any): Promise<Tables['installation_analytics']['Row'][]> {
+    let query = this.supabase.from('installation_analytics').select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
         query = query.gte(key as any, val as any);
@@ -144,11 +148,11 @@ export class SupabaseCheckRepository implements ICheckRepository {
     }
     const { data, error } = await query;
     if (error) throw error;
-    return data || [];
+    return (data || []) as Tables['installation_analytics']['Row'][];
   }
 
-  async getJobs(filters?: any): Promise<any[]> {
-    let query: any = this.supabase.from('jobs').select('*');
+  async getJobs(filters?: any): Promise<Tables['jobs']['Row'][]> {
+    let query = this.supabase.from('jobs').select('*');
     if (filters?.eq) {
       for (const [key, val] of Object.entries(filters.eq)) {
         query = query.eq(key as any, val as any);
@@ -161,11 +165,14 @@ export class SupabaseCheckRepository implements ICheckRepository {
     }
     const { data, error } = await query;
     if (error) throw error;
-    return data || [];
+    return (data || []) as Tables['jobs']['Row'][];
   }
 
-  async rpc(name: string, params?: any): Promise<any> {
-    const { data, error } = await this.supabase.rpc(name as any, params);
+  async rpc<T extends keyof Database['public']['Functions']>(
+    name: T,
+    params?: Database['public']['Functions'][T]['Args']
+  ): Promise<Database['public']['Functions'][T]['Returns']> {
+    const { data, error } = await this.supabase.rpc(name, params as any);
     if (error) throw error;
     return data;
   }
@@ -183,25 +190,24 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getCount(table: keyof Tables, filters: any): Promise<number> {
-    const queryTable = table as any;
-    let query: any = this.supabase.from(queryTable).select('*', { count: 'exact', head: true });
+    let query = this.supabase.from(table).select('*', { count: 'exact', head: true });
     if (filters.eq) {
       for (const [key, val] of Object.entries(filters.eq)) {
-        query = query.eq(key as any, val as any);
+        query = (query as any).eq(key as any, val as any);
       }
     }
     if (filters.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = query.gte(key as any, val as any);
+        query = (query as any).gte(key as any, val as any);
       }
     }
     if (filters.lt) {
       for (const [key, val] of Object.entries(filters.lt)) {
-        query = query.lt(key as any, val as any);
+        query = (query as any).lt(key as any, val as any);
       }
     }
     if (filters.notNull) {
-      query = query.not(filters.notNull as any, 'is', null);
+      query = (query as any).not(filters.notNull as any, 'is', null);
     }
     const { count, error } = await query;
     if (error) throw error;
@@ -219,15 +225,15 @@ export class SupabaseCheckRepository implements ICheckRepository {
     }
   }
 
-  async findExistingAlert(filters: any): Promise<{ id: string } | null> {
-    let query: any = this.supabase.from('system_alerts').select('id');
+  async findExistingAlert(filters: Partial<Tables['system_alerts']['Row']> & { created_at_gte?: string }): Promise<{ id: string } | null> {
+    let query = this.supabase.from('system_alerts').select('id');
     for (const [key, val] of Object.entries(filters)) {
       if (val === null) {
-        query = query.is(key, null);
+        query = (query as any).is(key, null);
       } else if (key === 'created_at_gte') {
-        query = query.gte('created_at', val);
+        query = (query as any).gte('created_at', val);
       } else {
-        query = query.eq(key, val);
+        query = (query as any).eq(key, val);
       }
     }
     const { data, error } = await query.limit(1).maybeSingle();
@@ -235,13 +241,13 @@ export class SupabaseCheckRepository implements ICheckRepository {
     return data;
   }
 
-  async findExistingInsight(filters: any): Promise<{ id: string } | null> {
-    let query: any = this.supabase.from('ai_insights').select('id');
+  async findExistingInsight(filters: Partial<Tables['ai_insights']['Row']> & { created_at_gte?: string }): Promise<{ id: string } | null> {
+    let query = this.supabase.from('ai_insights').select('id');
     for (const [key, val] of Object.entries(filters)) {
       if (key === 'created_at_gte') {
-        query = query.gte('created_at', val);
+        query = (query as any).gte('created_at', val);
       } else {
-        query = query.eq(key, val);
+        query = (query as any).eq(key, val);
       }
     }
     const { data, error } = await query.limit(1).maybeSingle();
@@ -254,38 +260,38 @@ export class SupabaseCheckRepository implements ICheckRepository {
     if (error) throw error;
   }
 
-  async getSilentFailures(): Promise<any[]> {
-    const { data, error } = await this.supabase.from('v_cron_silent_failures' as any).select('*');
+  async getSilentFailures(): Promise<Views['v_cron_silent_failures']['Row'][]> {
+    const { data, error } = await this.supabase.from('v_cron_silent_failures').select('*');
     if (error) throw error;
-    return data || [];
+    return (data || []) as Views['v_cron_silent_failures']['Row'][];
   }
 
-  async getUnhealthyAgents(): Promise<any[]> {
+  async getUnhealthyAgents(): Promise<Views['v_agent_execution_health']['Row'][]> {
     const { data, error } = await this.supabase
-      .from('v_agent_execution_health' as any)
+      .from('v_agent_execution_health')
       .select('*')
       .neq('health_status', 'healthy')
       .neq('health_status', 'offline')
       .neq('health_status', 'never_connected');
     if (error) throw error;
-    return data || [];
+    return (data || []) as Views['v_agent_execution_health']['Row'][];
   }
 
-  async getStuckAgentLifecycle(): Promise<any[]> {
+  async getStuckAgentLifecycle(): Promise<Views['v_agent_lifecycle_state']['Row'][]> {
     const { data, error } = await this.supabase
-      .from('v_agent_lifecycle_state' as any)
+      .from('v_agent_lifecycle_state')
       .select('agent_id, tenant_id, agent_name')
       .eq('is_stuck', true)
       .limit(100);
     if (error) throw error;
-    return data || [];
+    return (data || []) as Views['v_agent_lifecycle_state']['Row'][];
   }
 
-  async getBatchCounts(table: string, tenantIds: string[], filters: any): Promise<Record<string, number>> {
+  async getBatchCounts(table: keyof Tables, tenantIds: string[], filters: any): Promise<Record<string, number>> {
     if (tenantIds.length === 0) return {};
     
-    const { data, error } = await this.supabase.rpc('get_batch_counts' as any, {
-      p_table: table,
+    const { data, error } = await this.supabase.rpc('get_batch_counts', {
+      p_table: table as string,
       p_tenant_ids: tenantIds,
       p_filters: filters
     });
@@ -293,7 +299,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
     if (error) throw error;
     
     const counts: Record<string, number> = {};
-    (data as any[] || []).forEach(row => {
+    ((data as any[]) || []).forEach(row => {
       counts[row.tenant_id] = parseInt(row.count, 10);
     });
     
@@ -301,7 +307,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getBusinessHoursBatch(tenantIds: string[]): Promise<Record<string, any>> {
-    const { data, error } = await (this.supabase.rpc as any)('get_business_hours_batch', {
+    const { data, error } = await this.supabase.rpc('get_business_hours_batch', {
       p_tenant_ids: tenantIds
     });
     if (error) throw error;
@@ -313,7 +319,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getInstallationHealthBatch(tenantIds: string[]): Promise<any[]> {
-    const { data, error } = await (this.supabase.rpc as any)('get_installation_health_batch', {
+    const { data, error } = await this.supabase.rpc('get_installation_health_batch', {
       p_tenant_ids: tenantIds
     });
     if (error) throw error;
@@ -321,7 +327,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getTenantsComplianceScores(): Promise<any[]> {
-    const { data, error } = await (this.supabase.rpc as any)('get_tenants_compliance_scores');
+    const { data, error } = await this.supabase.rpc('get_tenants_compliance_scores');
     if (error) throw error;
     return (data as any[]) || [];
   }
