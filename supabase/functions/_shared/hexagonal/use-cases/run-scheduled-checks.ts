@@ -1,41 +1,57 @@
 // run-scheduled-checks.ts - Use case to execute scheduled monitoring checks
-import { ICheckRepository } from '../repositories/check.repository.ts';
+import { ICheckRepository, Check } from '../repositories/check.repository.ts';
 import { logger } from '../../logger.ts';
 import { httpJson } from '../../http.ts';
+
+export interface CheckExecutionResult {
+  checkId: string;
+  name: string;
+  status: 'success' | 'error' | 'skipped';
+  duration?: number;
+  reason?: string;
+  error?: string;
+}
+
+export interface RunScheduledChecksResult {
+  success: boolean;
+  results: CheckExecutionResult[];
+  requestId: string;
+}
 
 export class RunScheduledChecksUseCase {
   constructor(private readonly checkRepository: ICheckRepository) {}
 
-  async execute(requestId: string) {
+  async execute(requestId: string): Promise<RunScheduledChecksResult> {
     const activeChecks = await this.checkRepository.listActiveChecks();
-    const results = [];
+    const results: CheckExecutionResult[] = [];
 
     logger.info(`[RunScheduledChecksUseCase] Found ${activeChecks.length} active checks to execute.`);
 
     for (const check of activeChecks) {
       const startedAt = Date.now();
       try {
-        let checkResult: any;
+        let checkResult: unknown;
         
         // Determinar o tipo de execução baseado na configuração do check
         // check.check_type pode ser 'rpc', 'http', 'ping'
-        const checkType = (check as any).check_type || 'rpc';
+        const checkType = (check as Record<string, any>).check_type || 'rpc';
 
         if (checkType === 'rpc') {
           const rpcName = check.name.replaceAll('-', '_');
           try {
-            checkResult = await this.checkRepository.rpc(rpcName as any);
+            // @ts-ignore: dynamic RPC call
+            checkResult = await this.checkRepository.rpc(rpcName);
           } catch (rpcErr) {
             logger.warn(`[RunScheduledChecksUseCase] RPC ${rpcName} failed: ${rpcErr instanceof Error ? rpcErr.message : String(rpcErr)}`);
             throw rpcErr;
           }
         } else if (checkType === 'http') {
-          const targetUrl = (check as any).target_url;
+          const targetUrl = (check as Record<string, any>).target_url as string | undefined;
           if (!targetUrl) throw new Error(`HTTP Check ${check.name} missing target_url`);
           
           checkResult = await httpJson(targetUrl, {
-            method: (check as any).method || 'GET',
-            timeoutMs: (check as any).timeout_ms || 10000
+            method: (check as Record<string, any>).method as string || 'GET',
+            timeoutMs: (check as Record<string, any>).timeout_ms as number || 10000
           });
         } else {
           logger.warn(`[RunScheduledChecksUseCase] Unsupported check type: ${checkType} for ${check.name}`);
@@ -48,7 +64,7 @@ export class RunScheduledChecksUseCase {
         await this.checkRepository.saveCheckResult(check.id, { 
           success: true, 
           duration,
-          data: checkResult 
+          data: checkResult as any
         });
 
         results.push({ 

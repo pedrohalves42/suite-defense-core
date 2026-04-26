@@ -134,20 +134,23 @@ export class SupabaseCheckRepository implements ICheckRepository {
     neq?: Record<string, string | number>, 
     in?: Record<string, (string | number)[]> 
   }): Promise<Tables['agents']['Row'][]> {
-    let query = (this.supabase.from('agents') as any).select('*');
+    let query = this.supabase.from('agents').select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = query.gte(key as any, val);
+        // @ts-ignore: dynamic mapping
+        query = query.gte(key, val);
       }
     }
     if (filters?.neq) {
       for (const [key, val] of Object.entries(filters.neq)) {
-        query = query.neq(key as any, val);
+        // @ts-ignore: dynamic mapping
+        query = query.neq(key, val);
       }
     }
     if (filters?.in) {
       for (const [key, val] of Object.entries(filters.in)) {
-        query = query.in(key as any, val);
+        // @ts-ignore: dynamic mapping
+        query = query.in(key, val);
       }
     }
     const { data, error } = await query;
@@ -159,15 +162,17 @@ export class SupabaseCheckRepository implements ICheckRepository {
     gte?: Record<string, string | number>, 
     in?: Record<string, (string | number)[]> 
   }): Promise<Tables['installation_analytics']['Row'][]> {
-    let query = (this.supabase.from('installation_analytics') as any).select('*');
+    let query = this.supabase.from('installation_analytics').select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = query.gte(key as any, val);
+        // @ts-ignore: dynamic mapping
+        query = query.gte(key, val);
       }
     }
     if (filters?.in) {
       for (const [key, val] of Object.entries(filters.in)) {
-        query = query.in(key as any, val);
+        // @ts-ignore: dynamic mapping
+        query = query.in(key, val);
       }
     }
     const { data, error } = await query;
@@ -181,23 +186,26 @@ export class SupabaseCheckRepository implements ICheckRepository {
     gte?: Record<string, string | number>,
     tenant_id?: string
   }): Promise<Tables['jobs']['Row'][]> {
-    let query = (this.supabase.from('jobs') as any).select('*');
+    let query = this.supabase.from('jobs').select('*');
     if (filters?.tenant_id) {
       query = query.eq('tenant_id', filters.tenant_id);
     }
     if (filters?.eq) {
       for (const [key, val] of Object.entries(filters.eq)) {
-        query = query.eq(key as any, val);
+        // @ts-ignore: dynamic mapping
+        query = query.eq(key, val);
       }
     }
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = query.gte(key as any, val);
+        // @ts-ignore: dynamic mapping
+        query = query.gte(key, val);
       }
     }
     if (filters?.lt) {
       for (const [key, val] of Object.entries(filters.lt)) {
-        query = query.lt(key as any, val);
+        // @ts-ignore: dynamic mapping
+        query = query.lt(key, val);
       }
     }
     const { data, error } = await query;
@@ -209,7 +217,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
     name: T,
     params?: Database['public']['Functions'][T]['Args']
   ): Promise<Database['public']['Functions'][T]['Returns']> {
-    const { data, error } = await this.supabase.rpc(name, params as any);
+    const { data, error } = await this.supabase.rpc(name, params);
     if (error) throw error;
     return data;
   }
@@ -232,24 +240,24 @@ export class SupabaseCheckRepository implements ICheckRepository {
     lt?: Record<string, string | number>, 
     notNull?: string 
   }): Promise<number> {
-    let query = (this.supabase.from(table as any) as any).select('*', { count: 'exact', head: true });
+    let query = (this.supabase.from(table) as any).select('*', { count: 'exact', head: true });
     if (filters.eq) {
       for (const [key, val] of Object.entries(filters.eq)) {
-        query = query.eq(key as any, val);
+        query = query.eq(key, val);
       }
     }
     if (filters.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = query.gte(key as any, val);
+        query = query.gte(key, val);
       }
     }
     if (filters.lt) {
       for (const [key, val] of Object.entries(filters.lt)) {
-        query = query.lt(key as any, val);
+        query = query.lt(key, val);
       }
     }
     if (filters.notNull) {
-      query = query.not(filters.notNull as any, 'is', null);
+      query = query.not(filters.notNull, 'is', null);
     }
     const { count, error } = await query;
     if (error) throw error;
@@ -271,11 +279,11 @@ export class SupabaseCheckRepository implements ICheckRepository {
     let query = this.supabase.from('system_alerts').select('id');
     for (const [key, val] of Object.entries(filters)) {
       if (val === null) {
-        query = (query as any).is(key as any, null);
+        query = (query as any).is(key, null);
       } else if (key === 'created_at_gte') {
-        query = (query as any).gte('created_at', val as any);
+        query = (query as any).gte('created_at', val);
       } else {
-        query = (query as any).eq(key as any, val as any);
+        query = (query as any).eq(key, val);
       }
     }
     const { data, error } = await (query as any).limit(1).maybeSingle();
@@ -287,9 +295,9 @@ export class SupabaseCheckRepository implements ICheckRepository {
     let query = this.supabase.from('ai_insights').select('id');
     for (const [key, val] of Object.entries(filters)) {
       if (key === 'created_at_gte') {
-        query = (query as any).gte('created_at', val as any);
+        query = (query as any).gte('created_at', val);
       } else {
-        query = (query as any).eq(key as any, val as any);
+        query = (query as any).eq(key, val);
       }
     }
     const { data, error } = await (query as any).limit(1).maybeSingle();
@@ -332,7 +340,8 @@ export class SupabaseCheckRepository implements ICheckRepository {
   async getBatchCounts(table: keyof Tables, tenantIds: string[], filters: any): Promise<Record<string, number>> {
     if (tenantIds.length === 0) return {};
     
-    const { data, error } = await (this.supabase as any).rpc('get_batch_counts', {
+    // @ts-ignore: missing in types
+    const { data, error } = await this.supabase.rpc('get_batch_counts', {
       p_table: table as string,
       p_tenant_ids: tenantIds,
       p_filters: filters
@@ -349,7 +358,8 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getBusinessHoursBatch(tenantIds: string[]): Promise<Record<string, any>> {
-    const { data, error } = await (this.supabase as any).rpc('get_business_hours_batch', {
+    // @ts-ignore: missing in types
+    const { data, error } = await this.supabase.rpc('get_business_hours_batch', {
       p_tenant_ids: tenantIds
     });
     if (error) throw error;
@@ -361,7 +371,8 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getInstallationHealthBatch(tenantIds: string[]): Promise<any[]> {
-    const { data, error } = await (this.supabase as any).rpc('get_installation_health_batch', {
+    // @ts-ignore: missing in types
+    const { data, error } = await this.supabase.rpc('get_installation_health_batch', {
       p_tenant_ids: tenantIds
     });
     if (error) throw error;
@@ -369,7 +380,8 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getTenantsComplianceScores(): Promise<any[]> {
-    const { data, error } = await (this.supabase as any).rpc('get_tenants_compliance_scores');
+    // @ts-ignore: missing in types
+    const { data, error } = await this.supabase.rpc('get_tenants_compliance_scores');
     if (error) throw error;
     return (data as any[]) || [];
   }
