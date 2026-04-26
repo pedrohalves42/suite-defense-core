@@ -37,11 +37,6 @@ export interface HeartbeatResult {
   forceUpdate?: ForceUpdatePayload;
 }
 
-interface SupabaseClient {
-  from(table: string): ReturnType<SupabaseClient['from']>;
-  rpc(fn: string, params: Record<string, unknown>): Promise<{ data: Record<string, unknown> | null; error: { message: string } | null }>;
-}
-
 /**
  * Processes a heartbeat from an agent.
  * Pure use case logic ? authentication is handled by the Edge Function handler.

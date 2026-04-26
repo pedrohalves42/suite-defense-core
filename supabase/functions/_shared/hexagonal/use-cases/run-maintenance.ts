@@ -19,11 +19,6 @@ export interface MaintenanceResult {
   durationMs: number;
 }
 
-interface SupabaseClient {
-  from(table: string): ReturnType<SupabaseClient['from']>;
-  rpc(fn: string, params: Record<string, unknown>): Promise<{ data: Record<string, unknown> | null; error: { message: string } | null }>;
-}
-
 export class RunMaintenanceUseCase {
   constructor(private readonly supabase: any) {}
 

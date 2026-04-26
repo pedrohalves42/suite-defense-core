@@ -40,6 +40,7 @@ function makeAgent(overrides: Partial<AgentContext> = {}): AgentContext {
     force_update_override_safe_mode: false, force_update_override_safe_mode_expires_at: null,
     force_update_delivered_count: 0, force_update_first_delivered_at: null,
     last_forced_update_applied: null,
+    last_telemetry_at: null,
     ...overrides,
   };
 }
@@ -61,7 +62,7 @@ Deno.test("state-updater › executeParallelOps inserts metrics and processes", 
     processes: { total_processes: 5, top_by_cpu: [], top_by_memory: [] },
   };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await executeParallelOps(sb as any, agent, osInfo);
+  await executeParallelOps(sb as any, agent, osInfo, true);
   const metricsInsert = sb.calls.find((c) => c.table === "agent_system_metrics_partitioned");
   assertExists(metricsInsert, "Should insert system metrics");
   const processInsert = sb.calls.find((c) => c.table === "agent_processes");
@@ -73,7 +74,7 @@ Deno.test("state-updater › executeParallelOps skips metrics when payload has e
   const agent = makeAgent();
   const osInfo: OSInfo = { system_metrics: { error: "WMI failure" } };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await executeParallelOps(sb as any, agent, osInfo);
+  await executeParallelOps(sb as any, agent, osInfo, true);
   const metricsInsert = sb.calls.find((c) => c.table === "agent_system_metrics_partitioned");
   assertEquals(metricsInsert, undefined, "Should NOT insert metrics when error present");
 });
