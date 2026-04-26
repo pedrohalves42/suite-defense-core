@@ -2,20 +2,24 @@ import { assertEquals, assertNotEquals } from "https://deno.land/std@0.203.0/tes
 import { spy, stub } from "https://deno.land/std@0.203.0/testing/mock.ts";
 import { selfHealForceVersion, maybeAutoArmSameVersionRemediation } from "../force-update.ts";
 
+function createMockQuery(data: any, error: any = null) {
+  const query: any = {
+    select: () => query,
+    eq: () => query,
+    order: () => query,
+    limit: () => query,
+    maybeSingle: () => Promise.resolve({ data, error }),
+    is: () => query,
+    gte: () => query,
+    update: () => query,
+  };
+  return query;
+}
+
 Deno.test("selfHealForceVersion - should return release when found", async () => {
   const mockRelease = { version: "1.2.3", platform: "windows" };
   const mockSupabase = {
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          order: () => ({
-            limit: () => ({
-              maybeSingle: () => Promise.resolve({ data: mockRelease, error: null })
-            })
-          })
-        })
-      })
-    })
+    from: () => createMockQuery(mockRelease)
   };
 
   const agent = { id: "agent-1", agent_name: "test-agent" } as any;
@@ -28,26 +32,12 @@ Deno.test("selfHealForceVersion - should return release when found", async () =>
 
 Deno.test("maybeAutoArmSameVersionRemediation - should trigger update for degraded windows agent", async () => {
   const mockRelease = { version: "1.2.3", platform: "windows" };
-  const updateSpy = spy(() => ({
-    eq: () => Promise.resolve({ error: null })
-  }));
+  const updateSpy = spy(() => createMockQuery(null));
 
   const mockSupabase = {
     from: (table: string) => {
       if (table === 'agent_releases') {
-        return {
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                order: () => ({
-                  limit: () => ({
-                    maybeSingle: () => Promise.resolve({ data: mockRelease, error: null })
-                  })
-                })
-              })
-            })
-          })
-        };
+        return createMockQuery(mockRelease);
       }
       return {
         update: updateSpy
