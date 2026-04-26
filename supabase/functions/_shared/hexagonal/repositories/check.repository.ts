@@ -32,6 +32,9 @@ export interface ICheckRepository {
   getUnhealthyAgents(): Promise<any[]>;
   getStuckAgentLifecycle(): Promise<any[]>;
   getBatchCounts(table: string, tenantIds: string[], filters: any): Promise<Record<string, number>>;
+  getBusinessHoursBatch(tenantIds: string[]): Promise<Record<string, any>>;
+  getInstallationHealthBatch(tenantIds: string[]): Promise<any[]>;
+  getTenantsComplianceScores(): Promise<any[]>;
 }
 
 export class SupabaseCheckRepository implements ICheckRepository {
