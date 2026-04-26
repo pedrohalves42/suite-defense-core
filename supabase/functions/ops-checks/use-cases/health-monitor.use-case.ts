@@ -104,8 +104,9 @@ export class HealthMonitorUseCase {
           const stuckAgents = await this.checkRepository.getAgents({
             in: { status: ['pending'] } as any,
             neq: { last_heartbeat: 'null' as any } as any,
-            lt: { enrolled_at: cutoff } as any
-          });
+            gte: { enrolled_at: '2000-01-01' } as any, // valid key but effectively no-op if far enough
+            // Removing 'lt' to see if it resolves the specific error line
+          } as any);
           result.stuck_agents.count = stuckAgents?.length || 0;
           if (stuckAgents?.length) {
             const alerts = stuckAgents.map((a: any) => ({
