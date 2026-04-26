@@ -27,7 +27,8 @@ def check_file(filepath: str, max_lines: int, check_any: bool) -> list[str]:
         violations.append(f"  OVER_LIMIT: {filepath} has {len(lines)} lines (max: {max_lines})")
 
     # Check for console.* in production code (not test files)
-    if "__tests__" not in filepath and "test" not in filepath.lower():
+    is_test = "__tests__" in filepath or "test" in filepath.lower()
+    if not is_test:
         for i, line in enumerate(lines, 1):
             stripped = line.strip()
             if stripped.startswith("//"):
@@ -36,13 +37,31 @@ def check_file(filepath: str, max_lines: int, check_any: bool) -> list[str]:
                 violations.append(f"  CONSOLE: {filepath}:{i} — {stripped[:80]}")
 
     # Check for untyped `any` in production code
-    if check_any and "__tests__" not in filepath and "test" not in filepath.lower():
+    if check_any and not is_test:
         for i, line in enumerate(lines, 1):
             stripped = line.strip()
             if stripped.startswith("//") or "deno-lint-ignore" in stripped or "eslint-disable" in stripped:
                 continue
             if re.search(r":\s*any\b", stripped) or re.search(r"\bas\s+any\b", stripped):
                 violations.append(f"  ANY_TYPE: {filepath}:{i} — {stripped[:80]}")
+
+    # SOC 2: Prohibit createClient( outside _shared
+    if "supabase/functions" in filepath and "_shared/" not in filepath and not is_test:
+        if "createClient(" in content:
+            for i, line in enumerate(lines, 1):
+                if "createClient(" in line and not line.strip().startswith("//"):
+                    violations.append(f"  FORBIDDEN_PATTERN: {filepath}:{i} — createClient() is prohibited outside _shared (use shared client)")
+
+    # SOC 2: Prohibit direct fetch(
+    if "supabase/functions" in filepath and not is_test:
+        # Exemptions: fetch-with-timeout.ts, http.ts
+        if "fetch-with-timeout.ts" not in filepath and "http.ts" not in filepath:
+            for i, line in enumerate(lines, 1):
+                stripped = line.strip()
+                if re.search(r"\bfetch\s*\(", stripped) and not stripped.startswith("//"):
+                    # Special check for oauth or external APIs that might actually need raw fetch, 
+                    # but usually we want to wrap it.
+                    violations.append(f"  FORBIDDEN_PATTERN: {filepath}:{i} — direct fetch() is prohibited (use fetchWithTimeout or http wrapper)")
 
     return violations
 
