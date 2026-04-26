@@ -8,6 +8,7 @@ import { buildCorsHeaders } from './cors.ts';
 import { securityHeaders } from './security-headers.ts';
 import { requireEnv } from './env.ts';
 import { logger, loggerWithContext } from './logger.ts';
+import { handleExceptionWithContext } from './error-handler.ts';
 import type { RateLimitOption } from './serve-tenant.ts';
 
 function jsonResponse(data: unknown, status = 200, extraHeaders?: Record<string, string>, origin?: string | null) {
@@ -60,6 +61,7 @@ export interface ServeAgentOptions {
  */
 export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
   Deno.serve(async (req: Request) => {
+    const startTime = Date.now();
     const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
     const requestId = traceId;
     const origin = req.headers.get('origin');
@@ -67,6 +69,9 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
     if (req.method === 'OPTIONS') {
       return new Response(null, { headers: buildCorsHeaders(origin) });
     }
+
+    let currentAgentId: string | undefined;
+    let currentTenantId: string | undefined;
 
     try {
       const supabase = createClient<any>(
@@ -88,14 +93,12 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
       }
 
       const agent = authResult.agent;
+      currentAgentId = agent.id;
+      currentTenantId = agent.tenant_id;
 
       // === HONEYPOT GATE ===
-      // If agent is flipped to honeypot mode, divert to fake handler.
-      // Token is NOT revoked — agent authenticates normally but gets fake responses.
-      // honeypot_mode is always present in agentData (fetched as base field in agent-auth.ts).
       const honeypotMode: string | undefined = authResult.agentData.honeypot_mode as string | undefined;
       if (honeypotMode === 'flipped') {
-        // Kill switch check: if honeypot is disabled, let agent through normally
         const { isKillSwitchEnabled } = await import('./feature-flags.ts');
         const honeypotEnabled = await isKillSwitchEnabled(supabase, 'HONEYPOT_ENABLED', agent.tenant_id);
         if (honeypotEnabled) {
@@ -116,11 +119,10 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
             sourceIp,
           }, supabase);
         }
-        // If disabled, fall through to normal handler
       }
       // === END HONEYPOT GATE ===
 
-      // HMAC verification (optional, defense-in-depth)
+      // HMAC verification
       let rawBody: string | undefined;
       if (options?.hmacVerify) {
         if (!agent.hmac_secret) {
@@ -136,9 +138,6 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
         });
 
         if (!hmacResult.valid) {
-          logger.warn(`[serveAgent][${requestId}] HMAC failed for ${agent.agent_name}`, {
-            errorCode: hmacResult.errorCode,
-          });
           return jsonResponse(
             { error: 'unauthorized', code: hmacResult.errorCode, message: hmacResult.errorMessage, transient: hmacResult.transient },
             401,
@@ -149,7 +148,7 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
         rawBody = hmacResult.rawBody;
       }
 
-      // Rate limiting (optional)
+      // Rate limiting
       if (options?.rateLimit) {
         const { checkRateLimit } = await import('./rate-limit.ts');
         const rlResult = await checkRateLimit(supabase, agent.agent_name, options.rateLimit.endpoint, {
@@ -175,7 +174,6 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
       if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
         try {
           if (rawBody !== undefined) {
-            // Body already read during HMAC — parse from raw text
             body = JSON.parse(rawBody);
           } else {
             const contentEncoding = req.headers.get('Content-Encoding');
@@ -210,10 +208,10 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
       if (result instanceof Response) return result;
       return jsonResponse(result, 200, { 'X-Request-ID': requestId, 'X-Trace-ID': traceId }, origin);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Internal server error';
-      const log = loggerWithContext({ requestId });
-      log.error(`[serveAgent] Error`, { message: msg });
-      return errorResponse(msg, 500, requestId, origin);
+      return handleExceptionWithContext(error, requestId, 'serveAgent', startTime, {
+        agentId: currentAgentId,
+        tenantId: currentTenantId,
+      });
     }
   });
 }
