@@ -1,5 +1,5 @@
 
-import { Subscription, ChargeResult } from '../entities.ts';
+import { Subscription, ChargeResult, Invoice } from '../entities.ts';
 
 export interface PaymentGateway {
   charge(subscription: Subscription, amount: number): Promise<ChargeResult>;
@@ -16,4 +16,5 @@ export interface PaymentGateway {
   }): Promise<string>;
   getCustomerByEmail(email: string): Promise<string | null>;
   createCustomer(email: string): Promise<string>;
+  listInvoices(customerId: string, limit?: number): Promise<Invoice[]>;
 }

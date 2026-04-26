@@ -8,8 +8,8 @@ export interface Subscription {
   addonDevices: number;
   stripeSubscriptionId?: string;
   stripeCustomerId?: string;
-  trialEnd?: Date;
-  currentPeriodEnd?: Date;
+  trialEnd?: string; // Standardized as ISO string
+  currentPeriodEnd?: string; // Standardized as ISO string
   metadata?: Record<string, unknown>;
 }
 
@@ -27,4 +27,39 @@ export interface BillingPlan {
   pricePerDevice: number;
   maxDevices: number;
   stripePriceId?: string;
+}
+
+export interface Invoice {
+  id: string;
+  number: string;
+  amountDue: number;
+  amountPaid: number;
+  currency: string;
+  status: string;
+  createdAt: number;
+  dueDate: number | null;
+  hostedInvoiceUrl: string | null;
+  invoicePdf: string | null;
+}
+
+export interface CohortData {
+  month: string;
+  total: number;
+  active: number;
+  churned: number;
+  retentionRate: number;
+  monthsSinceCreation: number[];
+}
+
+export interface UnitEconomics {
+  mrr: number;
+  arr: number;
+  arpa: number;
+  cac: number;
+  ltv: number;
+  ltvCacRatio: number;
+  paybackMonths: number;
+  churnRate: number;
+  grossMargin: number;
+  activeCustomers: number;
 }

@@ -1,9 +1,10 @@
 
-import { Subscription, BillingPlan } from '../entities.ts';
+import { Subscription, BillingPlan, CohortData, UnitEconomics } from '../entities.ts';
 
 export interface BillingRepository {
   getSubscriptionByTenantId(tenantId: string): Promise<Subscription | null>;
   updateSubscription(tenantId: string, data: Partial<Subscription>): Promise<void>;
+  createSubscription(data: Partial<Subscription>): Promise<Subscription>;
   getPlanById(planId: string): Promise<BillingPlan | null>;
   getPlanByName(name: string): Promise<BillingPlan | null>;
   getPlanByStripePriceId(priceId: string): Promise<BillingPlan | null>;
@@ -12,4 +13,12 @@ export interface BillingRepository {
   getPlanMappingsByLogicalPlan(logicalPlan: string): Promise<any[]>;
   ensureTenantFeatures(tenantId: string, planName: string, deviceQuantity: number): Promise<void>;
   countActiveAgents(tenantId: string): Promise<number>;
+  
+  // Analytics and Management
+  getAllTenants(): Promise<Array<{ id: string; createdAt: string }>>;
+  getAllActiveSubscriptions(): Promise<Subscription[]>;
+  getMarketingCosts(): Promise<any[]>;
+  getCanceledSubscriptions(since: string): Promise<number>;
+  getCustomTrial(email: string): Promise<any | null>;
+  createCustomTrial(data: any): Promise<any>;
 }
