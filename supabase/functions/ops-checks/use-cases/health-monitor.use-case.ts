@@ -109,9 +109,12 @@ export class HealthMonitorUseCase {
           result.stuck_agents.count = stuckAgents?.length || 0;
           if (stuckAgents?.length) {
             const alerts = stuckAgents.map((a: any) => ({
-              tenant_id: a.tenant_id, severity: 'medium', type: 'stuck_agent',
+              tenant_id: a.tenant_id,
+              severity: 'medium',
+              alert_type: 'stuck_agent',
+              title: `Stuck agent: ${a.agent_name}`,
               message: `Agent '${a.agent_name}' stuck in pending for ${Math.floor((Date.now() - new Date(a.enrolled_at).getTime()) / 60000)} min`,
-              metadata: { agent_id: a.id, agent_name: a.agent_name },
+              details: { agent_id: a.id, agent_name: a.agent_name } as any,
             }));
             await this.checkRepository.createSystemAlert(alerts);
           }
