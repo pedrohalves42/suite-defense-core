@@ -1,5 +1,5 @@
 
-import { IScriptTemplateRepository } from '../../domain/deployment/ports/script-template.repository.ts';
+import { IScriptTemplateRepository } from '../../../../domain/deployment/ports/script-template.repository.ts';
 import { REINSTALL_SCRIPT_CONTENT } from '../../../reinstall-script-content.ts';
 import { REINSTALL_PRESERVE_SCRIPT_CONTENT } from '../../../reinstall-preserve-script-content.ts';
 
