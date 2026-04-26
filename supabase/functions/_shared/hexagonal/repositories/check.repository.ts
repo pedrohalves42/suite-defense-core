@@ -332,6 +332,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   async getBatchCounts(table: keyof Tables, tenantIds: string[], filters: any): Promise<Record<string, number>> {
     if (tenantIds.length === 0) return {};
     
+    // @ts-ignore: missing in types
     const { data, error } = await this.supabase.rpc('get_batch_counts', {
       p_table: table as string,
       p_tenant_ids: tenantIds,
@@ -349,6 +350,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getBusinessHoursBatch(tenantIds: string[]): Promise<Record<string, any>> {
+    // @ts-ignore: missing in types
     const { data, error } = await this.supabase.rpc('get_business_hours_batch', {
       p_tenant_ids: tenantIds
     });
@@ -361,6 +363,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getInstallationHealthBatch(tenantIds: string[]): Promise<any[]> {
+    // @ts-ignore: missing in types
     const { data, error } = await this.supabase.rpc('get_installation_health_batch', {
       p_tenant_ids: tenantIds
     });
@@ -369,6 +372,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getTenantsComplianceScores(): Promise<any[]> {
+    // @ts-ignore: missing in types
     const { data, error } = await this.supabase.rpc('get_tenants_compliance_scores');
     if (error) throw error;
     return (data as any[]) || [];
