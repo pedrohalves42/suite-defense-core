@@ -18,15 +18,32 @@ export interface ICheckRepository {
   logAudit(audit: Tables['audit_logs']['Insert']): Promise<void>;
   saveCheckResult(checkId: string, result: Json): Promise<void>;
   getTenants(): Promise<Tables['tenants']['Row'][]>;
-  getAgents(filters?: any): Promise<Tables['agents']['Row'][]>;
-  getInstallationAnalytics(filters?: any): Promise<Tables['installation_analytics']['Row'][]>;
-  getJobs(filters?: any): Promise<Tables['jobs']['Row'][]>;
+  getAgents(filters?: { 
+    gte?: Record<string, string | number>, 
+    neq?: Record<string, string | number>, 
+    in?: Record<string, (string | number)[]> 
+  }): Promise<Tables['agents']['Row'][]>;
+  getInstallationAnalytics(filters?: { 
+    gte?: Record<string, string | number>, 
+    in?: Record<string, (string | number)[]> 
+  }): Promise<Tables['installation_analytics']['Row'][]>;
+  getJobs(filters?: { 
+    eq?: Record<string, string | number>, 
+    lt?: Record<string, string | number>,
+    gte?: Record<string, string | number>,
+    tenant_id?: string
+  }): Promise<Tables['jobs']['Row'][]>;
   rpc<T extends keyof Database['public']['Functions']>(
     name: T,
     params?: Database['public']['Functions'][T]['Args']
   ): Promise<Database['public']['Functions'][T]['Returns']>;
   getTenantsWithSettings(): Promise<any[]>;
-  getCount(table: keyof Tables, filters: any): Promise<number>;
+  getCount(table: keyof Tables, filters: { 
+    eq?: Record<string, string | number>, 
+    gte?: Record<string, string | number>, 
+    lt?: Record<string, string | number>, 
+    notNull?: string 
+  }): Promise<number>;
   updateCronHealth(cronName: string, success: boolean, details: any): Promise<void>;
   findExistingAlert(filters: Partial<Tables['system_alerts']['Row']> & { created_at_gte?: string }): Promise<{ id: string } | null>;
   findExistingInsight(filters: Partial<Tables['ai_insights']['Row']> & { created_at_gte?: string }): Promise<{ id: string } | null>;
@@ -112,60 +129,80 @@ export class SupabaseCheckRepository implements ICheckRepository {
     return data || [];
   }
 
-  async getAgents(filters?: any): Promise<Tables['agents']['Row'][]> {
-    let query = this.supabase.from('agents').select('*');
+  async getAgents(filters?: { 
+    gte?: Record<string, string | number>, 
+    neq?: Record<string, string | number>, 
+    in?: Record<string, (string | number)[]> 
+  }): Promise<Tables['agents']['Row'][]> {
+    let query = (this.supabase.from('agents') as any).select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = (query as any).gte(key, val);
+        query = query.gte(key as any, val);
       }
     }
     if (filters?.neq) {
       for (const [key, val] of Object.entries(filters.neq)) {
-        query = (query as any).neq(key, val);
+        query = query.neq(key as any, val);
       }
     }
     if (filters?.in) {
       for (const [key, val] of Object.entries(filters.in)) {
-        query = (query as any).in(key, val);
+        query = query.in(key as any, val);
       }
     }
     const { data, error } = await query;
     if (error) throw error;
-    return (data || []) as Tables['agents']['Row'][];
+    return data || [];
   }
 
-  async getInstallationAnalytics(filters?: any): Promise<Tables['installation_analytics']['Row'][]> {
-    let query = this.supabase.from('installation_analytics').select('*');
+  async getInstallationAnalytics(filters?: { 
+    gte?: Record<string, string | number>, 
+    in?: Record<string, (string | number)[]> 
+  }): Promise<Tables['installation_analytics']['Row'][]> {
+    let query = (this.supabase.from('installation_analytics') as any).select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = (query as any).gte(key, val);
+        query = query.gte(key as any, val);
       }
     }
     if (filters?.in) {
       for (const [key, val] of Object.entries(filters.in)) {
-        query = (query as any).in(key, val);
+        query = query.in(key as any, val);
       }
     }
     const { data, error } = await query;
     if (error) throw error;
-    return (data || []) as Tables['installation_analytics']['Row'][];
+    return data || [];
   }
 
-  async getJobs(filters?: any): Promise<Tables['jobs']['Row'][]> {
-    let query = this.supabase.from('jobs').select('*');
+  async getJobs(filters?: { 
+    eq?: Record<string, string | number>, 
+    lt?: Record<string, string | number>,
+    gte?: Record<string, string | number>,
+    tenant_id?: string
+  }): Promise<Tables['jobs']['Row'][]> {
+    let query = (this.supabase.from('jobs') as any).select('*');
+    if (filters?.tenant_id) {
+      query = query.eq('tenant_id', filters.tenant_id);
+    }
     if (filters?.eq) {
       for (const [key, val] of Object.entries(filters.eq)) {
-        query = (query as any).eq(key, val);
+        query = query.eq(key as any, val);
+      }
+    }
+    if (filters?.gte) {
+      for (const [key, val] of Object.entries(filters.gte)) {
+        query = query.gte(key as any, val);
       }
     }
     if (filters?.lt) {
       for (const [key, val] of Object.entries(filters.lt)) {
-        query = (query as any).lt(key, val);
+        query = query.lt(key as any, val);
       }
     }
     const { data, error } = await query;
     if (error) throw error;
-    return (data || []) as Tables['jobs']['Row'][];
+    return data || [];
   }
 
   async rpc<T extends keyof Database['public']['Functions']>(
@@ -189,25 +226,30 @@ export class SupabaseCheckRepository implements ICheckRepository {
     return data || [];
   }
 
-  async getCount(table: keyof Tables, filters: any): Promise<number> {
-    let query = (this.supabase as any).from(table as string).select('*', { count: 'exact', head: true });
+  async getCount(table: keyof Tables, filters: { 
+    eq?: Record<string, string | number>, 
+    gte?: Record<string, string | number>, 
+    lt?: Record<string, string | number>, 
+    notNull?: string 
+  }): Promise<number> {
+    let query = (this.supabase.from(table as any) as any).select('*', { count: 'exact', head: true });
     if (filters.eq) {
       for (const [key, val] of Object.entries(filters.eq)) {
-        query = (query as any).eq(key as any, val as any);
+        query = query.eq(key as any, val);
       }
     }
     if (filters.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = (query as any).gte(key as any, val as any);
+        query = query.gte(key as any, val);
       }
     }
     if (filters.lt) {
       for (const [key, val] of Object.entries(filters.lt)) {
-        query = (query as any).lt(key as any, val as any);
+        query = query.lt(key as any, val);
       }
     }
     if (filters.notNull) {
-      query = (query as any).not(filters.notNull as any, 'is', null);
+      query = query.not(filters.notNull as any, 'is', null);
     }
     const { count, error } = await query;
     if (error) throw error;
@@ -229,14 +271,14 @@ export class SupabaseCheckRepository implements ICheckRepository {
     let query = this.supabase.from('system_alerts').select('id');
     for (const [key, val] of Object.entries(filters)) {
       if (val === null) {
-        query = (query as any).is(key, null);
+        query = (query as any).is(key as any, null);
       } else if (key === 'created_at_gte') {
-        query = (query as any).gte('created_at', val);
+        query = (query as any).gte('created_at', val as any);
       } else {
-        query = (query as any).eq(key, val);
+        query = (query as any).eq(key as any, val as any);
       }
     }
-    const { data, error } = await query.limit(1).maybeSingle();
+    const { data, error } = await (query as any).limit(1).maybeSingle();
     if (error) throw error;
     return data;
   }
@@ -245,12 +287,12 @@ export class SupabaseCheckRepository implements ICheckRepository {
     let query = this.supabase.from('ai_insights').select('id');
     for (const [key, val] of Object.entries(filters)) {
       if (key === 'created_at_gte') {
-        query = (query as any).gte('created_at', val);
+        query = (query as any).gte('created_at', val as any);
       } else {
-        query = (query as any).eq(key, val);
+        query = (query as any).eq(key as any, val as any);
       }
     }
-    const { data, error } = await query.limit(1).maybeSingle();
+    const { data, error } = await (query as any).limit(1).maybeSingle();
     if (error) throw error;
     return data;
   }

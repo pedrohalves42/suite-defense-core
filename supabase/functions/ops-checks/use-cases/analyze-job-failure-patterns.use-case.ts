@@ -16,14 +16,10 @@ export class AnalyzeJobFailurePatternsUseCase {
 
     const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000).toISOString();
     
-    // We can use the supabase client from repository for this specific complex query
-    const { data: jobs, error: jobsError } = await (this.checkRepository as any).supabase
-      .from('jobs')
-      .select('id, type, status, agent_id, error_message, created_at, agents(agent_name)')
-      .eq('tenant_id', tenantId)
-      .gte('created_at', since);
-
-    if (jobsError) throw jobsError;
+    const jobs = await this.checkRepository.getJobs({
+      tenant_id: tenantId,
+      gte: { created_at: since }
+    });
 
     const patterns: any[] = [];
     const insightsToCreate: any[] = [];

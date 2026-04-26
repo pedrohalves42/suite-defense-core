@@ -35,7 +35,7 @@ export class CronSentinelUseCase {
     if (existingTask) return { success: true, message: 'Alert task already exists', existing_task_id: existingTask.id, silent_jobs: unhealthyJobs.length };
 
     // Get runbook
-    const { data: runbook } = await (this.checkRepository as any).supabase.from('runbooks').select('id, title, steps').eq('anomaly_type', 'cron_silent_failure').maybeSingle();
+    const { data: runbook } = await this.checkRepository.rpc('get_runbook_by_type' as any, { p_anomaly_type: 'cron_silent_failure' } as any);
     
     const jobNames = unhealthyJobs.map((j: any) => j.job_key || j.job_name).slice(0, 10).join(', ');
     const moreCount = unhealthyJobs.length > 10 ? ` (+${unhealthyJobs.length - 10} more)` : '';

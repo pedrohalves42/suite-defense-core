@@ -35,9 +35,9 @@ export class CheckStuckJobsUseCase {
 
     let autoFailedCount = 0;
     if (autoFailIds.length > 0) {
-      const { count } = await (this.checkRepository as any).supabase
-        .from('jobs')
-        .update({ status: 'failed', error_message: 'Auto-failed by watchdog: stuck for too long' })
+      const { count } = await this.checkRepository.supabase
+        .from('jobs' as any)
+        .update({ status: 'failed', error_message: 'Auto-failed by watchdog: stuck for too long' } as any)
         .in('id', autoFailIds);
       autoFailedCount = count || autoFailIds.length;
     }
