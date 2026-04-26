@@ -70,7 +70,7 @@ serveTenant(async (req, ctx) => {
     return await handleAction(
       serviceClient,
       userClient,
-      userId,
+      userId || '',
       user?.email,
       tenantId,
       body,
