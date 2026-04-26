@@ -44,7 +44,8 @@ export function InstallationHealthCard() {
       return result || [];
     },
     staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
+    // Removed automatic polling - Audit: Performance & Resource optimization
+    refetchInterval: false,
   });
 
   const error = queryError ? (queryError as Error).message : null;
