@@ -32,6 +32,15 @@ export interface ICheckRepository {
   getInstallationAnalytics(filters?: any): Promise<any[]>;
   getJobs(filters?: any): Promise<any[]>;
   rpc(name: string, params?: any): Promise<any>;
+  getTenantsWithSettings(): Promise<any[]>;
+  getCount(table: string, filters: any): Promise<number>;
+  updateCronHealth(cronName: string, success: boolean, details: any): Promise<void>;
+  findExistingAlert(filters: any): Promise<any | null>;
+  findExistingInsight(filters: any): Promise<any | null>;
+  createInsight(insight: any): Promise<void>;
+  getSilentFailures(): Promise<any[]>;
+  getUnhealthyAgents(): Promise<any[]>;
+  getStuckAgentLifecycle(): Promise<any[]>;
 }
 
 export class SupabaseCheckRepository implements ICheckRepository {
@@ -169,4 +178,116 @@ export class SupabaseCheckRepository implements ICheckRepository {
     if (error) throw error;
     return data;
   }
+
+  async getTenantsWithSettings(): Promise<any[]> {
+    const { data, error } = await this.supabase
+      .from('tenants')
+      .select(`id, name, tenant_settings!tenant_settings_tenant_id_fkey (
+        alert_threshold_virus_positive, alert_threshold_failed_jobs,
+        alert_threshold_offline_agents, enable_email_alerts,
+        enable_webhook_alerts, alert_email, alert_webhook_url
+      )`);
+    if (error) throw error;
+    return data || [];
+  }
+
+  async getCount(table: string, filters: any): Promise<number> {
+    let query = this.supabase.from(table).select('*', { count: 'exact', head: true });
+    if (filters.eq) {
+      for (const [key, val] of Object.entries(filters.eq)) {
+        query = query.eq(key, val as any);
+      }
+    }
+    if (filters.gte) {
+      for (const [key, val] of Object.entries(filters.gte)) {
+        query = query.gte(key, val as any);
+      }
+    }
+    if (filters.lt) {
+      for (const [key, val] of Object.entries(filters.lt)) {
+        query = query.lt(key, val as any);
+      }
+    }
+    if (filters.notNull) {
+      query = query.not(filters.notNull, 'is', null);
+    }
+    const { count, error } = await query;
+    if (error) throw error;
+    return count || 0;
+  }
+
+  async updateCronHealth(cronName: string, success: boolean, details: any): Promise<void> {
+    const { error } = await this.db.rpc('update_cron_health', {
+      p_cron_name: cronName,
+      p_success: success,
+      p_details: details,
+    });
+    if (error) {
+      // Best effort, don't throw
+      console.warn(`[SupabaseCheckRepository] Failed to update cron health for ${cronName}:`, error.message);
+    }
+  }
+
+  async findExistingAlert(filters: any): Promise<any | null> {
+    let query = this.supabase.from('system_alerts').select('id');
+    for (const [key, val] of Object.entries(filters)) {
+      if (val === null) {
+        query = query.is(key, null);
+      } else if (key === 'created_at_gte') {
+        query = query.gte('created_at', val as any);
+      } else {
+        query = query.eq(key, val as any);
+      }
+    }
+    const { data, error } = await query.limit(1).maybeSingle();
+    if (error) throw error;
+    return data;
+  }
+
+  async findExistingInsight(filters: any): Promise<any | null> {
+    let query = this.supabase.from('ai_insights').select('id');
+    for (const [key, val] of Object.entries(filters)) {
+      if (key === 'created_at_gte') {
+        query = query.gte('created_at', val as any);
+      } else {
+        query = query.eq(key, val as any);
+      }
+    }
+    const { data, error } = await query.limit(1).maybeSingle();
+    if (error) throw error;
+    return data;
+  }
+
+  async createInsight(insight: any): Promise<void> {
+    const { error } = await this.supabase.from('ai_insights').insert(insight);
+    if (error) throw error;
+  }
+
+  async getSilentFailures(): Promise<any[]> {
+    const { data, error } = await this.supabase.from('v_cron_silent_failures').select('*');
+    if (error) throw error;
+    return data || [];
+  }
+
+  async getUnhealthyAgents(): Promise<any[]> {
+    const { data, error } = await this.supabase
+      .from('v_agent_execution_health')
+      .select('*')
+      .neq('health_status', 'healthy')
+      .neq('health_status', 'offline')
+      .neq('health_status', 'never_connected');
+    if (error) throw error;
+    return data || [];
+  }
+
+  async getStuckAgentLifecycle(): Promise<any[]> {
+    const { data, error } = await this.supabase
+      .from('v_agent_lifecycle_state')
+      .select('agent_id, tenant_id, agent_name')
+      .eq('is_stuck', true)
+      .limit(100);
+    if (error) throw error;
+    return data || [];
+  }
 }
+
