@@ -7,7 +7,7 @@
  */
 import { requireEnv } from '../_shared/env.ts';
 import { createTypedClient } from '../_shared/supabase-client.ts';
-import { handleException, handleValidationError } from '../_shared/error-handler.ts';
+import { handleExceptionWithContext, handleValidationError } from '../_shared/error-handler.ts';
 import { EnrollAgentSchema } from '../_shared/validation.ts';
 import { createAuditLog } from '../_shared/audit.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
