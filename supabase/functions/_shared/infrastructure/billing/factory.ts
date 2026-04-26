@@ -6,6 +6,7 @@ import { SupabaseBillingRepository } from './adapters/supabase-billing-repositor
 import { StripePaymentGateway } from './adapters/stripe-payment-gateway.ts';
 import { ManualPaymentGateway } from './adapters/manual-payment-gateway.ts';
 import { TestDoublePaymentGateway } from './adapters/test-double-payment-gateway.ts';
+import { ChargeSubscriptionUseCase } from '../../domain/billing/use-cases/charge-subscription.use-case.ts';
 
 export function createBillingRepository(supabase: SupabaseClient): BillingRepository {
   return new SupabaseBillingRepository(supabase);
@@ -25,3 +26,10 @@ export function createPaymentGateway(): PaymentGateway {
 
   return new ManualPaymentGateway();
 }
+
+export function createChargeSubscriptionUseCase(supabase: SupabaseClient): ChargeSubscriptionUseCase {
+  const repo = createBillingRepository(supabase);
+  const gateway = createPaymentGateway();
+  return new ChargeSubscriptionUseCase(repo, gateway);
+}
+

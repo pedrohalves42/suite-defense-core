@@ -17,11 +17,23 @@ export class TestDoublePaymentGateway implements PaymentGateway {
     };
   }
 
-  async getSubscriptionDetails(_externalId: string): Promise<Partial<Subscription>> {
+  async getSubscriptionDetails(_externalId: string): Promise<Partial<Subscription> & { addonDevices?: number }> {
     return { status: 'active' };
   }
 
   async createPortalSession(_customerId: string, _returnUrl: string): Promise<string> {
     return 'https://test.stripe.com/portal';
+  }
+
+  async createCheckoutSession(_params: any): Promise<string> {
+    return 'https://test.stripe.com/checkout';
+  }
+
+  async getCustomerByEmail(_email: string): Promise<string | null> {
+    return 'cus_test123';
+  }
+
+  async createCustomer(_email: string): Promise<string> {
+    return 'cus_test123';
   }
 }

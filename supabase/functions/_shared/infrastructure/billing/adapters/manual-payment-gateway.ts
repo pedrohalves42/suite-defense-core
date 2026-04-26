@@ -13,11 +13,23 @@ export class ManualPaymentGateway implements PaymentGateway {
     };
   }
 
-  async getSubscriptionDetails(_externalId: string): Promise<Partial<Subscription>> {
+  async getSubscriptionDetails(_externalId: string): Promise<Partial<Subscription> & { addonDevices?: number }> {
     return {};
   }
 
   async createPortalSession(_customerId: string, _returnUrl: string): Promise<string> {
     throw new Error('Portal not available for manual billing');
+  }
+
+  async createCheckoutSession(_params: any): Promise<string> {
+    throw new Error('Checkout not available for manual billing');
+  }
+
+  async getCustomerByEmail(_email: string): Promise<string | null> {
+    return null;
+  }
+
+  async createCustomer(_email: string): Promise<string> {
+    throw new Error('Customer creation not supported');
   }
 }
