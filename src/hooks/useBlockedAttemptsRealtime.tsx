@@ -1,10 +1,10 @@
 import { useEffect, useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ShieldX } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTenant } from '@/hooks/useTenant';
 import { logger } from '@/lib/logger';
+import { realtimeChannelManager } from '@/lib/realtime-manager';
 
 interface BlockedAttemptPayload {
   id: string;
@@ -14,17 +14,26 @@ interface BlockedAttemptPayload {
   tenant_id: string;
 }
 
+/**
+ * Hook to listen for blocked access attempts in realtime.
+ * Uses RealtimeChannelManager to optimize WebSocket usage.
+ */
 export function useBlockedAttemptsRealtime(enabled = true) {
   const queryClient = useQueryClient();
   const { tenant } = useTenant();
   const lastNotificationRef = useRef<string | null>(null);
+  const instanceId = useRef(`blocked-${Math.random().toString(36).substring(2, 9)}`).current;
 
-  const handleNewAttempt = useCallback((payload: { new: BlockedAttemptPayload }) => {
-    const attempt = payload.new;
+  const handleNewAttempt = useCallback((payload: any) => {
+    if (payload.eventType !== 'INSERT') return;
+    
+    const attempt = payload.new as BlockedAttemptPayload;
     
     // Avoid duplicate notifications for same attempt
     if (lastNotificationRef.current === attempt.id) return;
     lastNotificationRef.current = attempt.id;
+
+    logger.info('[useBlockedAttemptsRealtime] New blocked attempt detected', { domain: attempt.domain });
 
     // Show toast notification
     toast.warning(`Acesso bloqueado: ${attempt.domain}`, {
@@ -40,24 +49,19 @@ export function useBlockedAttemptsRealtime(enabled = true) {
   useEffect(() => {
     if (!enabled || !tenant?.id) return;
 
-    const channel = supabase
-      .channel(`blocked-attempts-${tenant.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'blocked_access_attempts',
-          filter: `tenant_id=eq.${tenant.id}`
-        },
-        handleNewAttempt
-      )
-      .subscribe((status) => {
-        logger.debug('[useBlockedAttemptsRealtime] Subscription status', { status: String(status) });
-      });
+    logger.debug('[useBlockedAttemptsRealtime] Subscribing via manager', { tenantId: tenant.id });
+
+    realtimeChannelManager.subscribe(
+      instanceId,
+      'blocked_access_attempts',
+      `tenant_id=eq.${tenant.id}`,
+      handleNewAttempt
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      logger.debug('[useBlockedAttemptsRealtime] Unsubscribing via manager', { tenantId: tenant.id });
+      realtimeChannelManager.unsubscribe(instanceId, 'blocked_access_attempts', `tenant_id=eq.${tenant.id}`);
     };
-  }, [enabled, tenant?.id, handleNewAttempt]);
+  }, [enabled, tenant?.id, handleNewAttempt, instanceId]);
+}
 }
