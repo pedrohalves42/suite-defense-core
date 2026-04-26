@@ -1,4 +1,4 @@
-// @ts-nocheck
+// run-check-health.ts - Use case to evaluate production environment health
 import { ICheckRepository } from '../repositories/check.repository.ts';
 
 export class RunCheckHealthUseCase {
