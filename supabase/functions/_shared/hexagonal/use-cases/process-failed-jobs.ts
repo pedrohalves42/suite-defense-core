@@ -95,13 +95,14 @@ export class ProcessFailedJobsUseCase {
       agent_name: job.agent_name,
       job_type: job.type,
       payload: job.payload,
+      payload_hash: job.payload_hash,
       error_count: currentRetry,
       retry_count: currentRetry,
       max_retries: this.MAX_RETRIES,
       status: 'dlq',
-      last_error: job.error_message,
+      error_message: job.error_message,
       failure_class: failureClass,
-      failed_at: new Date().toISOString(),
+      last_failure_at: new Date().toISOString(),
     });
 
     await this.jobRepo.updateJob(job.id, {
@@ -117,6 +118,7 @@ export class ProcessFailedJobsUseCase {
       agent_name: job.agent_name,
       type: job.type,
       payload: job.payload,
+      payload_hash: job.payload_hash || 'none', // Copy from original or default
       status: 'queued',
       approved: job.approved,
       retry_count: currentRetry,
