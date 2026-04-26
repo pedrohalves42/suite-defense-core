@@ -137,17 +137,20 @@ export class SupabaseCheckRepository implements ICheckRepository {
     let query = this.supabase.from('agents').select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = query.gte(key as any, val);
+        // @ts-ignore: dynamic mapping
+        query = query.gte(key, val);
       }
     }
     if (filters?.neq) {
       for (const [key, val] of Object.entries(filters.neq)) {
-        query = query.neq(key as any, val);
+        // @ts-ignore: dynamic mapping
+        query = query.neq(key, val);
       }
     }
     if (filters?.in) {
       for (const [key, val] of Object.entries(filters.in)) {
-        query = query.in(key as any, val);
+        // @ts-ignore: dynamic mapping
+        query = query.in(key, val);
       }
     }
     const { data, error } = await query;
@@ -162,12 +165,14 @@ export class SupabaseCheckRepository implements ICheckRepository {
     let query = this.supabase.from('installation_analytics').select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = query.gte(key as any, val);
+        // @ts-ignore: dynamic mapping
+        query = query.gte(key, val);
       }
     }
     if (filters?.in) {
       for (const [key, val] of Object.entries(filters.in)) {
-        query = query.in(key as any, val);
+        // @ts-ignore: dynamic mapping
+        query = query.in(key, val);
       }
     }
     const { data, error } = await query;
@@ -187,17 +192,20 @@ export class SupabaseCheckRepository implements ICheckRepository {
     }
     if (filters?.eq) {
       for (const [key, val] of Object.entries(filters.eq)) {
-        query = query.eq(key as any, val);
+        // @ts-ignore: dynamic mapping
+        query = query.eq(key, val);
       }
     }
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = query.gte(key as any, val);
+        // @ts-ignore: dynamic mapping
+        query = query.gte(key, val);
       }
     }
     if (filters?.lt) {
       for (const [key, val] of Object.entries(filters.lt)) {
-        query = query.lt(key as any, val);
+        // @ts-ignore: dynamic mapping
+        query = query.lt(key, val);
       }
     }
     const { data, error } = await query;
@@ -235,21 +243,21 @@ export class SupabaseCheckRepository implements ICheckRepository {
     let query = (this.supabase.from(table) as any).select('*', { count: 'exact', head: true });
     if (filters.eq) {
       for (const [key, val] of Object.entries(filters.eq)) {
-        query = query.eq(key as any, val);
+        query = query.eq(key, val);
       }
     }
     if (filters.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = query.gte(key as any, val);
+        query = query.gte(key, val);
       }
     }
     if (filters.lt) {
       for (const [key, val] of Object.entries(filters.lt)) {
-        query = query.lt(key as any, val);
+        query = query.lt(key, val);
       }
     }
     if (filters.notNull) {
-      query = query.not(filters.notNull as any, 'is', null);
+      query = query.not(filters.notNull, 'is', null);
     }
     const { count, error } = await query;
     if (error) throw error;
@@ -271,11 +279,11 @@ export class SupabaseCheckRepository implements ICheckRepository {
     let query = this.supabase.from('system_alerts').select('id');
     for (const [key, val] of Object.entries(filters)) {
       if (val === null) {
-        query = (query as any).is(key as any, null);
+        query = (query as any).is(key, null);
       } else if (key === 'created_at_gte') {
-        query = (query as any).gte('created_at', val as any);
+        query = (query as any).gte('created_at', val);
       } else {
-        query = (query as any).eq(key as any, val as any);
+        query = (query as any).eq(key, val);
       }
     }
     const { data, error } = await (query as any).limit(1).maybeSingle();
@@ -287,9 +295,9 @@ export class SupabaseCheckRepository implements ICheckRepository {
     let query = this.supabase.from('ai_insights').select('id');
     for (const [key, val] of Object.entries(filters)) {
       if (key === 'created_at_gte') {
-        query = (query as any).gte('created_at', val as any);
+        query = (query as any).gte('created_at', val);
       } else {
-        query = (query as any).eq(key as any, val as any);
+        query = (query as any).eq(key, val);
       }
     }
     const { data, error } = await (query as any).limit(1).maybeSingle();
