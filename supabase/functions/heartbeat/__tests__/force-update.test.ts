@@ -11,6 +11,7 @@ function makeAgent(overrides: Partial<AgentContext> = {}): AgentContext {
     force_update_override_safe_mode: false, force_update_override_safe_mode_expires_at: null,
     force_update_delivered_count: 0, force_update_first_delivered_at: null,
     last_forced_update_applied: null,
+    last_telemetry_at: null,
     ...overrides,
   };
 }
