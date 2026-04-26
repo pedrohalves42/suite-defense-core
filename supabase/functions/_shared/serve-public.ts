@@ -10,7 +10,7 @@ import { loggerWithContext } from './logger.ts';
 import { handleExceptionWithContext } from './error-handler.ts';
 
 function jsonResponse(data: unknown, status = 200, extraHeaders?: Record<string, string>, origin?: string | null) {
-  const cors = origin ? buildCorsHeaders(origin) : { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' };
+  const cors = buildCorsHeaders(origin);
   return new Response(JSON.stringify(data), {
     status,
     headers: { ...cors, ...securityHeaders, 'Content-Type': 'application/json', ...extraHeaders },
