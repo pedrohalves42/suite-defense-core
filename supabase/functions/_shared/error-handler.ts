@@ -5,6 +5,14 @@ import { logger } from './logger.ts';
 
 export { corsHeaders };
 
+export interface ErrorContext {
+  traceId?: string;
+  tenantId?: string;
+  agentId?: string;
+  operation: string;
+  latency?: number;
+}
+
 export interface StandardError {
   error: {
     code: string;
@@ -12,6 +20,7 @@ export interface StandardError {
     details?: unknown;
     timestamp: string;
     requestId?: string;
+    context?: ErrorContext;
   };
 }
 
