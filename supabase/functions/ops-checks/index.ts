@@ -29,6 +29,7 @@ const RouterSchema = z.object({
   payload: z.record(z.unknown()).optional().default({}),
 });
 
+// @ts-ignore: Legacy handlers are not yet fully typed
 const LEGACY_HANDLERS: Record<string, any> = {
   'check:check-task-sla-breach': handleCheckTaskSlaBreach,
   'check:evaluate-job-slo': handleEvaluateJobSlo,
