@@ -10,9 +10,8 @@ export class CheckPendingAgentsUseCase {
     logger.info(`[${requestId}] CheckPendingAgentsUseCase: Starting check for pending agents...`);
 
     const agents = await this.checkRepository.getAgents({
-      eq: { status: 'pending' } as any,
-      lt: { enrolled_at: new Date(Date.now() - 10 * 60 * 1000).toISOString() } as any
-    });
+      eq: { status: 'pending' }
+    } as any);
 
     if (!agents || agents.length === 0) {
       return { success: true, message: 'No pending agents found', timestamp: new Date().toISOString() };

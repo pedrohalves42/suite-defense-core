@@ -55,9 +55,8 @@ export class HealthMonitorUseCase {
         (async () => {
           const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
           const count = await this.checkRepository.getCount('agents', {
-            eq: { last_heartbeat: 'null' as any } as any,
-            lt: { enrolled_at: cutoff } as any
-          });
+            eq: { last_heartbeat: 'null' as any }
+          } as any);
           result.pending_agents.count = count;
         })(),
         (async () => {
