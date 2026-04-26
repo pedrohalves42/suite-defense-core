@@ -64,4 +64,3 @@ export function useBlockedAttemptsRealtime(enabled = true) {
     };
   }, [enabled, tenant?.id, handleNewAttempt, instanceId]);
 }
-}
