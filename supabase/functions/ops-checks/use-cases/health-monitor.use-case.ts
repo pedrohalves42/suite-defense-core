@@ -114,7 +114,7 @@ export class HealthMonitorUseCase {
               alert_type: 'stuck_agent',
               title: `Stuck agent: ${a.agent_name}`,
               message: `Agent '${a.agent_name}' stuck in pending for ${Math.floor((Date.now() - new Date(a.enrolled_at).getTime()) / 60000)} min`,
-              details: { agent_id: a.id, agent_name: a.agent_name } as Record<string, unknown>,
+              details: { agent_id: a.id, agent_name: a.agent_name } as any,
             }));
             await this.checkRepository.createSystemAlert(alerts);
           }

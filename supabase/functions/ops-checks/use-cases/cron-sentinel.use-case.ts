@@ -51,8 +51,10 @@ export class CronSentinelUseCase {
     logger.info(`[${requestId}] CronSentinelUseCase: Created P0 task: ${task?.id}`);
 
     await this.checkRepository.logAudit({
-      action: 'CRON_SILENT_FAILURE_DETECTED', resource_type: 'scheduled_jobs',
-      details: { silent_jobs_count: unhealthyJobs.length, task_id: task?.id, sentinel_run: requestId, jobs: unhealthyJobs.map((j: any) => j.job_name), severity: 'critical' },
+      action: 'CRON_SILENT_FAILURE_DETECTED',
+      resource_type: 'scheduled_jobs',
+      tenant_id: (unhealthyJobs[0] as any)?.tenant_id ?? '00000000-0000-0000-0000-000000000000',
+      details: { silent_jobs_count: unhealthyJobs.length, task_id: task?.id, sentinel_run: requestId, jobs: unhealthyJobs.map((j: any) => j.job_name), severity: 'critical' } as any,
     });
 
     const duration = Date.now() - startTime;
