@@ -1,8 +1,7 @@
 
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
-import { createBillingRepository, createPaymentGateway } from '../../_shared/infrastructure/billing/factory.ts';
-import { ChargeSubscriptionUseCase } from '../../_shared/domain/billing/use-cases/charge-subscription.use-case.ts';
+import { createChargeSubscriptionUseCase, createPaymentGateway, createBillingRepository } from '../../_shared/infrastructure/billing/factory.ts';
 import type { HandlerContext } from './admin.ts';
 
 /**
@@ -18,10 +17,7 @@ export async function handleChargeSubscription(supabase: SupabaseClient, request
 
   logger.info(`[billing-v2][${requestId}] Charging subscription for tenant: ${tenantId}`);
 
-  const billingRepo = createBillingRepository(supabase);
-  const paymentGateway = createPaymentGateway();
-  const useCase = new ChargeSubscriptionUseCase(billingRepo, paymentGateway);
-
+  const useCase = createChargeSubscriptionUseCase(supabase);
   const result = await useCase.execute(tenantId);
 
   if (!result.success) {
@@ -37,3 +33,32 @@ export async function handleChargeSubscription(supabase: SupabaseClient, request
     currency: result.currency
   };
 }
+
+export async function handleCheckSubscriptionV2(supabase: SupabaseClient, requestId: string, _payload: Record<string, unknown>, ctx?: HandlerContext) {
+  const tenantId = ctx?.tenantId;
+  if (!tenantId) return { subscribed: false, plan_name: 'free', status: 'inactive' };
+
+  logger.info(`[billing-v2][${requestId}] Checking subscription for tenant: ${tenantId}`);
+
+  const useCase = createChargeSubscriptionUseCase(supabase);
+  return await useCase.checkSubscription(tenantId);
+}
+
+export async function handleCustomerPortalV2(supabase: SupabaseClient, requestId: string, _payload: Record<string, unknown>, ctx?: HandlerContext) {
+  const tenantId = ctx?.tenantId;
+  if (!tenantId) return { error: 'Tenant not found', __status: 400 };
+
+  const repo = createBillingRepository(supabase);
+  const gateway = createPaymentGateway();
+  
+  const subscription = await repo.getSubscriptionByTenantId(tenantId);
+  if (!subscription?.stripeCustomerId) {
+    return { error: 'Nenhuma assinatura Stripe encontrada.', code: 'NO_STRIPE_CUSTOMER' };
+  }
+
+  const origin = ctx?.req?.headers.get('origin') || Deno.env.get('SITE_URL') || 'https://cybershield.com.br';
+  const url = await gateway.createPortalSession(subscription.stripeCustomerId, `${origin}/admin/subscriptions`);
+
+  return { url };
+}
+
