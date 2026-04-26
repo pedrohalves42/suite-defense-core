@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * serveTenant() → Centralized Edge Function middleware for tenant validation.
  * 
@@ -7,6 +6,7 @@
  */
 
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { Database } from './database.types.ts';
 import { corsHeaders, buildCorsHeaders } from './cors.ts';
 import { securityHeaders } from './security-headers.ts';
 import { requireEnv } from './env.ts';
@@ -33,7 +33,7 @@ export interface TenantContext<T = unknown> {
   /** True if call came via service_role or X-Internal-Secret */
   isInternal: boolean;
   /** Supabase client with service_role (for server-side operations) */
-  supabase: any;
+  supabase: SupabaseClient<Database>;
   /** Request ID for tracing */
   requestId: string;
   /** Parsed request body (typed via generic, defaults to unknown) */
@@ -137,7 +137,7 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
     try {
       const supabaseUrl = requireEnv('SUPABASE_URL');
       const serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
-      const supabase = createClient<any>(supabaseUrl, serviceRoleKey);
+      const supabase = createClient<Database>(supabaseUrl, serviceRoleKey);
 
       const authHeader = req.headers.get('Authorization');
       const internalSecret = req.headers.get('X-Internal-Secret') || req.headers.get('x-internal-secret');

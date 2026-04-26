@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * action-center-feed — Orchestrator
  * Migrated to serveTenant middleware + modular handlers
@@ -10,6 +9,7 @@ import {
   addHealthHeaders,
 } from '../_shared/health-probe.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { Database } from '../_shared/database.types.ts';
 import { buildFeed } from './feed-builder.ts';
 import { handleAction } from './action-handler.ts';
 
@@ -19,7 +19,7 @@ serveTenant(async (req, ctx) => {
   // Create service client for admin operations
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const serviceClient = createClient<any>(supabaseUrl, supabaseServiceKey);
+  const serviceClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
   // Health probe check
   const origin = req.headers.get('origin');
@@ -60,7 +60,7 @@ serveTenant(async (req, ctx) => {
 
     // Create user-context client for function invocations
     const authHeader = req.headers.get('Authorization') || '';
-    const userClient = createClient<any>(supabaseUrl, supabaseServiceKey, {
+    const userClient = createClient<Database>(supabaseUrl, supabaseServiceKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
