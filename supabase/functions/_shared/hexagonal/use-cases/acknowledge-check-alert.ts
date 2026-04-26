@@ -1,4 +1,4 @@
-// @ts-nocheck
+// acknowledge-check-alert.ts - Use case to acknowledge monitoring alerts
 import { ICheckRepository } from '../repositories/check.repository.ts';
 
 export class AcknowledgeCheckAlertUseCase {
