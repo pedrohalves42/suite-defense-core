@@ -55,7 +55,7 @@ export class HealthMonitorUseCase {
         (async () => {
           const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
           const count = await this.checkRepository.getCount('agents', {
-            eq: { last_heartbeat: null },
+            eq: { last_heartbeat: 'null' as any },
             lt: { enrolled_at: cutoff }
           });
           result.pending_agents.count = count;
@@ -73,7 +73,7 @@ export class HealthMonitorUseCase {
           result.agent_health.total_active = totalActive;
         })(),
         (async () => {
-          const dlqItems = await (this.checkRepository as any).supabase
+          const dlqItems = await this.checkRepository.supabase
             .from('failed_jobs_dlq').select('id, tenant_id, failure_class').eq('status', 'exhausted').limit(100);
           
           if (dlqItems.error) { logger.error('[health-monitor] dlq error:', dlqItems.error.message); return; }
@@ -81,13 +81,13 @@ export class HealthMonitorUseCase {
           result.dlq_exhaustion.exhausted = data?.length || 0;
           if (data?.length) {
             const dlqIds = data.map((d: any) => d.id);
-            const { data: existing } = await (this.checkRepository as any).supabase
+            const { data: existing } = await this.checkRepository.supabase
               .from('dlq_exhaustion_alerts').select('dlq_item_id').in('dlq_item_id', dlqIds);
             const existingIds = new Set(existing?.map((e: any) => e.dlq_item_id) || []);
             const newItems = data.filter((d: any) => !existingIds.has(d.id));
             if (newItems.length) {
               const alerts = newItems.map((item: any) => ({ dlq_item_id: item.id, tenant_id: item.tenant_id, severity: 'high', failure_class: item.failure_class }));
-              await (this.checkRepository as any).supabase.from('dlq_exhaustion_alerts').insert(alerts);
+              await this.checkRepository.supabase.from('dlq_exhaustion_alerts').insert(alerts);
               result.dlq_exhaustion.alerts_created = newItems.length;
             }
           }
@@ -103,7 +103,7 @@ export class HealthMonitorUseCase {
           const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
           const stuckAgents = await this.checkRepository.getAgents({
             in: { status: ['pending'] },
-            eq: { last_heartbeat: null },
+            neq: { last_heartbeat: 'null' as any }, // This should be is null, using is(key, null) in repo
             lt: { enrolled_at: cutoff }
           });
           result.stuck_agents.count = stuckAgents?.length || 0;
