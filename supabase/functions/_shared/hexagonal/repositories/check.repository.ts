@@ -271,14 +271,14 @@ export class SupabaseCheckRepository implements ICheckRepository {
     let query = this.supabase.from('system_alerts').select('id');
     for (const [key, val] of Object.entries(filters)) {
       if (val === null) {
-        query = query.is(key as any, null);
+        query = (query as any).is(key as any, null);
       } else if (key === 'created_at_gte') {
-        query = query.gte('created_at', val as any);
+        query = (query as any).gte('created_at', val as any);
       } else {
-        query = query.eq(key as any, val as any);
+        query = (query as any).eq(key as any, val as any);
       }
     }
-    const { data, error } = await query.limit(1).maybeSingle();
+    const { data, error } = await (query as any).limit(1).maybeSingle();
     if (error) throw error;
     return data;
   }
@@ -287,12 +287,12 @@ export class SupabaseCheckRepository implements ICheckRepository {
     let query = this.supabase.from('ai_insights').select('id');
     for (const [key, val] of Object.entries(filters)) {
       if (key === 'created_at_gte') {
-        query = query.gte('created_at', val as any);
+        query = (query as any).gte('created_at', val as any);
       } else {
-        query = query.eq(key as any, val as any);
+        query = (query as any).eq(key as any, val as any);
       }
     }
-    const { data, error } = await query.limit(1).maybeSingle();
+    const { data, error } = await (query as any).limit(1).maybeSingle();
     if (error) throw error;
     return data;
   }
