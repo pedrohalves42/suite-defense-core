@@ -29401,6 +29401,36 @@ export type Database = {
           },
         ]
       }
+      ops_checks: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean
+          last_result: Json | null
+          last_run_at: string | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          last_result?: Json | null
+          last_run_at?: string | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          last_result?: Json | null
+          last_run_at?: string | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       performance_metrics: {
         Row: {
           created_at: string
