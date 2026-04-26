@@ -220,14 +220,14 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async findExistingAlert(filters: any): Promise<{ id: string } | null> {
-    let query = this.supabase.from('system_alerts').select('id');
+    let query: any = this.supabase.from('system_alerts').select('id');
     for (const [key, val] of Object.entries(filters)) {
       if (val === null) {
-        query = query.is(key as any, null);
+        query = query.is(key, null);
       } else if (key === 'created_at_gte') {
-        query = query.gte('created_at' as any, val as any);
+        query = query.gte('created_at', val);
       } else {
-        query = query.eq(key as any, val as any);
+        query = query.eq(key, val);
       }
     }
     const { data, error } = await query.limit(1).maybeSingle();
@@ -236,12 +236,12 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async findExistingInsight(filters: any): Promise<{ id: string } | null> {
-    let query = this.supabase.from('ai_insights').select('id');
+    let query: any = this.supabase.from('ai_insights').select('id');
     for (const [key, val] of Object.entries(filters)) {
       if (key === 'created_at_gte') {
-        query = query.gte('created_at' as any, val as any);
+        query = query.gte('created_at', val);
       } else {
-        query = query.eq(key as any, val as any);
+        query = query.eq(key, val);
       }
     }
     const { data, error } = await query.limit(1).maybeSingle();
