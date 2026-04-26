@@ -419,7 +419,7 @@ export default function JobTestRunner() {
             {testState === 'polling' && (
               <div className="text-center text-xs text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin inline mr-1" />
-                Verificando status... ({pollCount}/24)
+                Aguardando execução via Realtime...
               </div>
             )}
 
