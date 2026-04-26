@@ -126,7 +126,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getInstallationAnalytics(filters?: any): Promise<any[]> {
-    let query = this.supabase.from('installation_analytics').select('*');
+    let query: any = this.supabase.from('installation_analytics').select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
         query = query.gte(key as any, val as any);
@@ -143,7 +143,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getJobs(filters?: any): Promise<any[]> {
-    let query = this.supabase.from('jobs').select('*');
+    let query: any = this.supabase.from('jobs').select('*');
     if (filters?.eq) {
       for (const [key, val] of Object.entries(filters.eq)) {
         query = query.eq(key as any, val as any);
