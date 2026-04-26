@@ -205,11 +205,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Prohibit createClient outside _shared
+        run: |
+          # Fails if createClient is found outside _shared
+          ! grep -rn "createClient(" supabase/functions --include="*.ts" | grep -v "_shared/" | grep -v "__tests__"
+
+      - name: Prohibit direct fetch usage
+        run: |
+          # Fails if fetch( is used directly (must use fetchWithTimeout or http wrapper)
+          ! grep -rn "fetch(" supabase/functions --include="*.ts" | grep -v "fetch-with-timeout" | grep -v "http.ts" | grep -v "__tests__"
+
+      - name: Audit catch blocks
+        run: deno run --allow-read scripts/audit-errors.ts supabase/functions
+
       - name: Validate Zod coverage
         run: bash ci/validate-zod-coverage.sh
 
       - name: Validate middleware usage
         run: bash ci/validate-middleware.sh
 
-      - name: Run CI quality gate
-        run: python3 scripts/ci_quality_gate.py --check-zod --root supabase/functions
+      - name: Run CI quality gate (with any check)
+        run: python3 scripts/ci_quality_gate.py --check-zod --check-any --root supabase/functions
