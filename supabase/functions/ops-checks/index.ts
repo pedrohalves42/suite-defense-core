@@ -112,7 +112,7 @@ servePublic(async (req, ctx) => {
       return await new BuildWatchdogUseCase(checkRepo).execute(requestId);
     }
     if (action === 'check:calculate-behavioral-baselines') {
-      return await new CalculateBehavioralBaselinesUseCase(checkRepo).execute(requestId);
+      return await new CalculateBehavioralBaselinesUseCase(checkRepo).execute(requestId, payload);
     }
     if (action === 'check:compute-compliance-benchmarks') {
       return await new ComputeComplianceBenchmarksUseCase(checkRepo).execute(requestId);
