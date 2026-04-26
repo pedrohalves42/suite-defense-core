@@ -59,19 +59,51 @@ servePublic(async (req, ctx) => {
       return await new RunCheckHealthUseCase(checkRepo).execute(requestId);
     }
 
-    // Legacy Routing (Fallback)
-    const handler = LEGACY_HANDLERS[action];
-    if (!handler) {
-      return { error: `Unknown action in ops-checks: ${action}`, __status: 404 };
+    // Decomposed Use Cases
+    if (action === 'check:monitor-thresholds') {
+      return await new MonitorThresholdsUseCase(checkRepo).execute(requestId, payload);
+    }
+    if (action === 'check:health-monitor') {
+      return await new HealthMonitorUseCase(checkRepo).execute(requestId, payload);
+    }
+    if (action === 'check:watchdog-non-execution') {
+      return await new WatchdogNonExecutionUseCase(checkRepo).execute(requestId, payload);
+    }
+    if (action === 'check:check-action-effectiveness') {
+      return await new CheckActionEffectivenessUseCase(checkRepo).execute(requestId, payload);
+    }
+    if (action === 'check:analyze-job-failure-patterns') {
+      return await new AnalyzeJobFailurePatternsUseCase(checkRepo).execute(requestId, payload);
+    }
+    if (action === 'check:check-task-sla-breach') {
+      return await new CheckTaskSlaBreachUseCase(checkRepo).execute(requestId);
+    }
+    if (action === 'check:evaluate-job-slo') {
+      return await new EvaluateJobSloUseCase(checkRepo).execute(requestId);
+    }
+    if (action === 'check:check-installation-health') {
+      return await new CheckInstallationHealthUseCase(checkRepo).execute(requestId);
+    }
+    if (action === 'check:detect-stuck-installations') {
+      return await new DetectBlockedAttemptsUseCase(checkRepo).execute(requestId);
+    }
+    if (action === 'check:get-installation-pipeline-metrics') {
+      return await new GetInstallationPipelineMetricsUseCase(checkRepo).execute(requestId, payload);
+    }
+    if (action === 'check:cron-sentinel') {
+      return await new CronSentinelUseCase(checkRepo).execute(requestId);
+    }
+    if (action === 'check:check-stuck-jobs') {
+      return await new CheckStuckJobsUseCase(checkRepo).execute(requestId);
+    }
+    if (action === 'check:check-pending-agents') {
+      return await new CheckPendingAgentsUseCase(checkRepo).execute(requestId);
     }
 
-    logger.info(`[ops-checks] Executing Legacy: ${action}`, { requestId });
-    const result = await handler(supabase, requestId, payload, req);
-    logger.info(`[ops-checks] ${action} legacy done in ${Date.now() - startedAt}ms`);
-
-    return result;
+    return { error: `Unknown action in ops-checks: ${action}`, __status: 404 };
   } catch (err) {
     logger.error('[ops-checks] Error:', err);
     return { error: 'Internal error', message: err instanceof Error ? err.message : 'Unknown', requestId, __status: 500 };
   }
 });
+
