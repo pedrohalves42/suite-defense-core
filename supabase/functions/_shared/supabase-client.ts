@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { Database } from './database.types.ts';
+import { fetchWithTimeout } from './fetch-with-timeout.ts';
 
 /**
  * Creates a Supabase client with the correct Database types.
@@ -33,10 +34,6 @@ export const createClientFromRequest = (req: Request) => {
 /**
  * Helper to create a service role client (Admin context).
  * Use this ONLY for privileged operations.
- */
-/**
- * Helper to create a service role client (Admin context).
- * Use this ONLY for privileged operations.
  * ADR-046: Mandatory 15s timeout for all Supabase queries.
  */
 export const getServiceClient = (timeoutMs: number = 15_000) => {
@@ -45,9 +42,9 @@ export const getServiceClient = (timeoutMs: number = 15_000) => {
   return createSupabaseClient(url, serviceKey, {
     global: {
       fetch: (url: string, options: any) => {
-        return fetch(url, {
+        return fetchWithTimeout(url, {
           ...options,
-          signal: options?.signal ?? AbortSignal.timeout(timeoutMs),
+          timeoutMs,
         });
       },
     },
