@@ -78,7 +78,8 @@ export class ComputeComplianceBenchmarksUseCase {
       for (const [cat, weight] of Object.entries(weights)) overall += (categories[cat] || 0) * weight;
       return { overall: Math.round(overall), categories };
     } catch (error) {
-      logger.error(`[calculateTenantComplianceScore] Error for tenant ${tenantId}:`, error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error(`[calculateTenantComplianceScore] Error for tenant ${tenantId}:`, errorMsg);
       return null;
     }
   }

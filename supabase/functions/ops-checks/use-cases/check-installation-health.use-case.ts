@@ -38,7 +38,9 @@ export class CheckInstallationHealthUseCase {
               alertsCreated++;
             }
           } catch (err) {
-            logger.error(`[${requestId}] CheckInstallationHealthUseCase: Error for tenant ${tenant.id}:`, err);
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            logger.error(`[${requestId}] CheckInstallationHealthUseCase: Error for tenant ${tenant.id}:`, errorMsg);
+            // Non-fatal for the loop, but we log the specific error message
           }
         }
       }, { timeoutMs: 60000 });

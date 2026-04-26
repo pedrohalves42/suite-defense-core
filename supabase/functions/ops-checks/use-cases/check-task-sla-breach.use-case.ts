@@ -18,7 +18,8 @@ export class CheckTaskSlaBreachUseCase {
         await this.checkRepository.rpc('check_job_health_anomalies_and_alert');
         anomalyCheckRan = true;
       } catch (err) {
-        logger.warn(`[${requestId}] CheckTaskSlaBreachUseCase: anomaly check error:`, err);
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        logger.warn(`[${requestId}] CheckTaskSlaBreachUseCase: anomaly check error:`, errorMsg);
       }
 
       await this.checkRepository.logScheduledJobRun({
