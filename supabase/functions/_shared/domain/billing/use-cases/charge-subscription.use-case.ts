@@ -57,12 +57,13 @@ export class ChargeSubscriptionUseCase {
       return result;
 
     } catch (error) {
-      await handleExceptionWithContext(error, {
-        traceId: traceId || crypto.randomUUID(),
-        tenantId,
-        operation: 'ChargeSubscriptionUseCase.execute',
-        latency: Date.now() - start
-      });
+      handleExceptionWithContext(
+        error,
+        traceId || crypto.randomUUID(),
+        'ChargeSubscriptionUseCase.execute',
+        start,
+        { tenantId }
+      );
       return { success: false, error: 'Erro interno ao processar cobrança.' };
     }
   }
@@ -116,12 +117,13 @@ export class CheckSubscriptionUseCase {
       };
 
     } catch (error) {
-      await handleExceptionWithContext(error, {
-        traceId: traceId || crypto.randomUUID(),
-        tenantId,
-        operation: 'CheckSubscriptionUseCase.execute',
-        latency: Date.now() - start
-      });
+      handleExceptionWithContext(
+        error,
+        traceId || crypto.randomUUID(),
+        'CheckSubscriptionUseCase.execute',
+        start,
+        { tenantId }
+      );
       return { subscribed: false, status: 'error', error: 'Erro ao verificar assinatura.' };
     }
   }

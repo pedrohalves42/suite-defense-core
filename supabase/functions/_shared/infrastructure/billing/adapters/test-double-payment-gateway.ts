@@ -1,6 +1,6 @@
 
 import { PaymentGateway } from '../../../domain/billing/ports/payment-gateway.port.ts';
-import { Subscription, ChargeResult } from '../../../domain/billing/entities.ts';
+import { Subscription, ChargeResult, Invoice } from '../../../domain/billing/entities.ts';
 
 export class TestDoublePaymentGateway implements PaymentGateway {
   public shouldFail = false;
@@ -35,5 +35,9 @@ export class TestDoublePaymentGateway implements PaymentGateway {
 
   async createCustomer(_email: string): Promise<string> {
     return 'cus_test123';
+  }
+
+  async listInvoices(_customerId: string, _limit?: number): Promise<Invoice[]> {
+    return [];
   }
 }

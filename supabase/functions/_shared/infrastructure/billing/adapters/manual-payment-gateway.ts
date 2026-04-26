@@ -1,6 +1,6 @@
 
 import { PaymentGateway } from '../../../domain/billing/ports/payment-gateway.port.ts';
-import { Subscription, ChargeResult } from '../../../domain/billing/entities.ts';
+import { Subscription, ChargeResult, Invoice } from '../../../domain/billing/entities.ts';
 
 export class ManualPaymentGateway implements PaymentGateway {
   async charge(_subscription: Subscription, amount: number): Promise<ChargeResult> {
@@ -31,5 +31,9 @@ export class ManualPaymentGateway implements PaymentGateway {
 
   async createCustomer(_email: string): Promise<string> {
     throw new Error('Customer creation not supported');
+  }
+
+  async listInvoices(_customerId: string, _limit?: number): Promise<Invoice[]> {
+    return [];
   }
 }
