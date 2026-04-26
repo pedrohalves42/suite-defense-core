@@ -223,7 +223,6 @@ export default function JobTestRunner() {
     setTestState('idle');
     setTestJobId(null);
     setTestJob(null);
-    setPollCount(0);
     setExecutionTime(null);
     queryClient.invalidateQueries({ queryKey: ["system-health-jobs"] });
   };
