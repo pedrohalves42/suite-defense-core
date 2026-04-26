@@ -48,11 +48,12 @@ export class BillingAnalyticsUseCase {
       cohorts.sort((a, b) => b.month.localeCompare(a.month));
       return { cohorts: cohorts.slice(0, 12) };
     } catch (error) {
-      await handleExceptionWithContext(error, {
-        traceId: traceId || crypto.randomUUID(),
-        operation: 'BillingAnalyticsUseCase.getCohortAnalysis',
-        latency: Date.now() - start
-      });
+      handleExceptionWithContext(
+        error,
+        traceId || crypto.randomUUID(),
+        'BillingAnalyticsUseCase.getCohortAnalysis',
+        start
+      );
       throw error;
     }
   }
@@ -101,11 +102,12 @@ export class BillingAnalyticsUseCase {
         activeCustomers: activeCount
       };
     } catch (error) {
-      await handleExceptionWithContext(error, {
-        traceId: traceId || crypto.randomUUID(),
-        operation: 'BillingAnalyticsUseCase.getUnitEconomics',
-        latency: Date.now() - start
-      });
+      handleExceptionWithContext(
+        error,
+        traceId || crypto.randomUUID(),
+        'BillingAnalyticsUseCase.getUnitEconomics',
+        start
+      );
       throw error;
     }
   }

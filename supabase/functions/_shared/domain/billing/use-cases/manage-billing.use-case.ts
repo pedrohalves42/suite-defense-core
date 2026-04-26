@@ -19,12 +19,13 @@ export class ManageBillingUseCase {
       const invoices = await this.paymentGateway.listInvoices(subscription.stripeCustomerId);
       return { invoices };
     } catch (error) {
-      await handleExceptionWithContext(error, {
-        traceId: traceId || crypto.randomUUID(),
-        tenantId,
-        operation: 'ManageBillingUseCase.getInvoices',
-        latency: Date.now() - start
-      });
+      handleExceptionWithContext(
+        error,
+        traceId || crypto.randomUUID(),
+        'ManageBillingUseCase.getInvoices',
+        start,
+        { tenantId }
+      );
       return { invoices: [], error: 'Erro ao buscar faturas.' };
     }
   }
@@ -37,12 +38,13 @@ export class ManageBillingUseCase {
       const url = await this.paymentGateway.createPortalSession(subscription.stripeCustomerId, returnUrl);
       return { url };
     } catch (error) {
-      await handleExceptionWithContext(error, {
-        traceId: traceId || crypto.randomUUID(),
-        tenantId,
-        operation: 'ManageBillingUseCase.createPortalSession',
-        latency: Date.now() - start
-      });
+      handleExceptionWithContext(
+        error,
+        traceId || crypto.randomUUID(),
+        'ManageBillingUseCase.createPortalSession',
+        start,
+        { tenantId }
+      );
       throw error;
     }
   }
@@ -85,12 +87,13 @@ export class ManageBillingUseCase {
 
       return { url };
     } catch (error) {
-      await handleExceptionWithContext(error, {
-        traceId: params.traceId || crypto.randomUUID(),
-        tenantId: params.tenantId,
-        operation: 'ManageBillingUseCase.createCheckoutSession',
-        latency: Date.now() - start
-      });
+      handleExceptionWithContext(
+        error,
+        params.traceId || crypto.randomUUID(),
+        'ManageBillingUseCase.createCheckoutSession',
+        start,
+        { tenantId: params.tenantId }
+      );
       throw error;
     }
   }
@@ -118,11 +121,12 @@ export class ManageBillingUseCase {
        });
        return trial;
     } catch (error) {
-      await handleExceptionWithContext(error, {
-        traceId: data.traceId || crypto.randomUUID(),
-        operation: 'ManageBillingUseCase.createCustomTrial',
-        latency: Date.now() - start
-      });
+      handleExceptionWithContext(
+        error,
+        data.traceId || crypto.randomUUID(),
+        'ManageBillingUseCase.createCustomTrial',
+        start
+      );
       throw error;
     }
   }
@@ -160,12 +164,13 @@ export class ManageBillingUseCase {
 
       return { success: true };
     } catch (error) {
-      await handleExceptionWithContext(error, {
-        traceId: data.traceId || crypto.randomUUID(),
-        tenantId: data.tenantId,
-        operation: 'ManageBillingUseCase.sendTrialReminder',
-        latency: Date.now() - start
-      });
+      handleExceptionWithContext(
+        error,
+        data.traceId || crypto.randomUUID(),
+        'ManageBillingUseCase.sendTrialReminder',
+        start,
+        { tenantId: data.tenantId }
+      );
       throw error;
     }
   }
