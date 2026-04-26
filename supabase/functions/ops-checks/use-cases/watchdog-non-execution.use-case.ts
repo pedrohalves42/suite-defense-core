@@ -1,7 +1,7 @@
 // watchdog-non-execution.use-case.ts
 import { ICheckRepository } from '../../_shared/hexagonal/repositories/check.repository.ts';
 import { logger } from '../../_shared/logger.ts';
-import { shouldProcessAlertsForTenant } from '../../_shared/business-hours.ts';
+import { isWithinBusinessHours } from '../../_shared/business-hours.ts';
 
 interface AgentExecutionHealth {
   agent_id: string; agent_name: string; tenant_id: string; status: string;
