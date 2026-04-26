@@ -22,7 +22,7 @@ import { corsHeaders } from './cors.ts';
 import { timingSafeEqual } from './crypto-utils.ts';
 import { logger } from './logger.ts';
 
-export async function assertInternalCaller(req: Request, options?: { allowAuthenticatedUsers?: boolean }): Promise<Response | null> {
+export async function assertInternalCaller(req: Request, options?: { allowAuthenticatedUsers?: boolean; requireSuperAdmin?: boolean }): Promise<Response | null> {
   const internalSecret = req.headers.get('X-Internal-Secret') || req.headers.get('x-internal-secret');
   const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
   const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
@@ -48,7 +48,6 @@ export async function assertInternalCaller(req: Request, options?: { allowAuthen
   }
 
   // 4. Requests without any authentication headers are REJECTED.
-  // Scheduled cron invocations are authenticated via anon key (handled in step 3).
   if (!authHeader && !internalSecret) {
     logger.warn('[SECURITY] Rejected: no authentication headers present');
     return new Response(
@@ -59,10 +58,20 @@ export async function assertInternalCaller(req: Request, options?: { allowAuthen
 
   // 5. Authenticated user JWT (when explicitly allowed by the caller)
   if (options?.allowAuthenticatedUsers && authHeader && authHeader.startsWith('Bearer ')) {
-    // The JWT is present but doesn't match service_role or anon key,
-    // so it's likely a user JWT. Let it through ? the calling function
-    // is responsible for verifying admin role via Supabase auth.getUser().
-    logger.info('[assert-internal-caller] Authorized via user JWT (allowAuthenticatedUsers)');
+    // If requireSuperAdmin is true, we MUST verify the role
+    if (options.requireSuperAdmin) {
+      const { requireSuperAdmin } = await import('./require-super-admin.ts');
+      const authResult = await requireSuperAdmin(req);
+      if (!authResult.success) {
+        return authResult.response!;
+      }
+      logger.info('[assert-internal-caller] Authorized via super_admin user JWT');
+      return null;
+    }
+
+    // Legacy fallback: allow any authenticated user if requireSuperAdmin is not specified
+    // WARNING: This is less secure and should be phased out for sensitive actions.
+    logger.info('[assert-internal-caller] Authorized via generic user JWT (allowAuthenticatedUsers)');
     return null;
   }
 
