@@ -94,23 +94,45 @@ const renderBootstrapError = (error: unknown) => {
   console.error("[Bootstrap] Critical failure:", error);
   const root = document.getElementById("root");
   if (root) {
-    root.innerHTML = `
-      <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #0a0a0a; color: #fff; font-family: system-ui, sans-serif; padding: 20px; text-align: center;">
-        <div style="max-width: 400px; width: 100%;">
-          <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
-          <h1 style="font-size: 20px; margin-bottom: 12px; font-weight: 600;">Falha na Inicialização</h1>
-          <p style="font-size: 14px; color: #a1a1aa; margin-bottom: 24px; line-height: 1.5;">
-            Ocorreu um erro ao carregar os componentes básicos do sistema. Isso pode ser um problema temporário de conexão.
-          </p>
-          <button onclick="window.location.reload()" style="background: #fff; color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: opacity 0.2s;">
-            Tentar Novamente
-          </button>
-          <div style="margin-top: 24px; font-size: 10px; color: #3f3f46; font-family: monospace; word-break: break-all; opacity: 0.5;">
-            ${String(error)}
-          </div>
-        </div>
-      </div>
-    `;
+    // SECURITY: Use textContent for error message to prevent XSS
+    const errorDiv = document.createElement("div");
+    errorDiv.style.cssText = "min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #0a0a0a; color: #fff; font-family: system-ui, sans-serif; padding: 20px; text-align: center;";
+    
+    const container = document.createElement("div");
+    container.style.width = "100%";
+    container.style.maxWidth = "400px";
+    
+    const icon = document.createElement("div");
+    icon.style.fontSize = "48px";
+    icon.style.marginBottom = "20px";
+    icon.textContent = "⚠️";
+    
+    const title = document.createElement("h1");
+    title.style.cssText = "font-size: 20px; margin-bottom: 12px; font-weight: 600;";
+    title.textContent = "Falha na Inicialização";
+    
+    const desc = document.createElement("p");
+    desc.style.cssText = "font-size: 14px; color: #a1a1aa; margin-bottom: 24px; line-height: 1.5;";
+    desc.textContent = "Ocorreu um erro ao carregar os componentes básicos do sistema. Isso pode ser um problema temporário de conexão.";
+    
+    const button = document.createElement("button");
+    button.style.cssText = "background: #fff; color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: opacity 0.2s;";
+    button.textContent = "Tentar Novamente";
+    button.onclick = () => window.location.reload();
+    
+    const debug = document.createElement("div");
+    debug.style.cssText = "margin-top: 24px; font-size: 10px; color: #3f3f46; font-family: monospace; word-break: break-all; opacity: 0.5;";
+    debug.textContent = String(error);
+    
+    container.appendChild(icon);
+    container.appendChild(title);
+    container.appendChild(desc);
+    container.appendChild(button);
+    container.appendChild(debug);
+    errorDiv.appendChild(container);
+    
+    root.innerHTML = "";
+    root.appendChild(errorDiv);
   }
 };
 
