@@ -50517,6 +50517,13 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      get_batch_counts: {
+        Args: { p_filters: Json; p_table: string; p_tenant_ids: string[] }
+        Returns: {
+          count: number
+          tenant_id: string
+        }[]
+      }
       get_cached_value: { Args: { p_key: string }; Returns: Json }
       get_critical_insights_count: {
         Args: { p_tenant_id: string }
