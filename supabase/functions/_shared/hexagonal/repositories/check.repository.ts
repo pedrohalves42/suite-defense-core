@@ -32,6 +32,15 @@ export interface ICheckRepository {
   getInstallationAnalytics(filters?: any): Promise<any[]>;
   getJobs(filters?: any): Promise<any[]>;
   rpc(name: string, params?: any): Promise<any>;
+  getTenantsWithSettings(): Promise<any[]>;
+  getCount(table: string, filters: any): Promise<number>;
+  updateCronHealth(cronName: string, success: boolean, details: any): Promise<void>;
+  findExistingAlert(filters: any): Promise<any | null>;
+  findExistingInsight(filters: any): Promise<any | null>;
+  createInsight(insight: any): Promise<void>;
+  getSilentFailures(): Promise<any[]>;
+  getUnhealthyAgents(): Promise<any[]>;
+  getStuckAgentLifecycle(): Promise<any[]>;
 }
 
 export class SupabaseCheckRepository implements ICheckRepository {
