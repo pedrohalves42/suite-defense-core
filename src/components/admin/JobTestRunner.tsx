@@ -53,7 +53,7 @@ export default function JobTestRunner() {
   const [testState, setTestState] = useState<TestState>('idle');
   const [testJobId, setTestJobId] = useState<string | null>(null);
   const [testJob, setTestJob] = useState<TestJob | null>(null);
-  const [pollCount, setPollCount] = useState(0);
+  // Removed pollCount - using Realtime and single timeout now
   const [executionTime, setExecutionTime] = useState<number | null>(null);
 
   // Fetch active agents with recent heartbeat
@@ -115,7 +115,6 @@ export default function JobTestRunner() {
     onSuccess: (jobId) => {
       setTestJobId(jobId);
       setTestState('polling');
-      setPollCount(0);
       toast.info("Job de teste criado! Monitorando status...");
     },
     onError: (error) => {
@@ -124,23 +123,9 @@ export default function JobTestRunner() {
     }
   });
 
-  // Poll job status
-  const pollJobStatus = useCallback(async () => {
-    if (!testJobId || testState !== 'polling') return;
-
-    const { data, error } = await supabase
-      .from("jobs")
-      .select("id, status, created_at, delivered_at, completed_at, output, error_message")
-      .eq("id", testJobId)
-      .single();
-
-    if (error) {
-      logger.error("Poll error:", error);
-      return;
-    }
-
-    setTestJob(data as TestJob);
-    setPollCount(prev => prev + 1);
+  // Update job state and check final states
+  const updateJobState = useCallback((data: TestJob) => {
+    setTestJob(data);
 
     // Calculate execution time
     if (data.completed_at && data.created_at) {
@@ -157,25 +142,71 @@ export default function JobTestRunner() {
       setTestState('failed');
       toast.error(`Job falhou: ${data.error_message || 'Erro desconhecido'}`);
     }
-  }, [testJobId, testState]);
+  }, []);
 
-  // Polling effect
-  useEffect(() => {
-    if (testState !== 'polling') return;
+  // Initial fetch for job status
+  const fetchJobStatus = useCallback(async () => {
+    if (!testJobId) return;
 
-    // Timeout after 24 polls (2 minutes at 5s intervals)
-    if (pollCount >= 24) {
-      setTestState('timeout');
-      toast.error("Timeout: Job não completou em 2 minutos");
+    const { data, error } = await supabase
+      .from("jobs")
+      .select("id, status, created_at, delivered_at, completed_at, output, error_message")
+      .eq("id", testJobId)
+      .single();
+
+    if (error) {
+      logger.error("Initial fetch error:", error);
       return;
     }
 
-    const interval = setInterval(pollJobStatus, 5000);
-    // Initial poll immediately
-    pollJobStatus();
+    updateJobState(data as TestJob);
+  }, [testJobId, updateJobState]);
 
-    return () => clearInterval(interval);
-  }, [testState, pollCount, pollJobStatus]);
+  // Realtime subscription and timeout effect
+  useEffect(() => {
+    if (testState !== 'polling' || !testJobId) return;
+
+    // Initial fetch to ensure we have the latest state before/during subscription
+    fetchJobStatus();
+
+    // Setup Realtime subscription - Audit: Replacing 5s polling with event-based updates
+    const channel = supabase
+      .channel(`job-monitor-${testJobId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to any change (queued -> delivered -> completed)
+          schema: 'public',
+          table: 'jobs',
+          filter: `id=eq.${testJobId}`,
+        },
+        (payload) => {
+          logger.info("Job update received via Realtime:", payload.new);
+          updateJobState(payload.new as TestJob);
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          logger.info("Subscribed to job updates via Realtime");
+        }
+      });
+
+    // 2-minute safety timeout
+    const timeoutId = setTimeout(() => {
+      setTestState((current) => {
+        if (current === 'polling') {
+          toast.error("Timeout: Job não completou em 2 minutos");
+          return 'timeout';
+        }
+        return current;
+      });
+    }, 120000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearTimeout(timeoutId);
+    };
+  }, [testState, testJobId, fetchJobStatus, updateJobState]);
 
   const handleStartTest = () => {
     if (!selectedAgentId) {
@@ -192,7 +223,6 @@ export default function JobTestRunner() {
     setTestState('idle');
     setTestJobId(null);
     setTestJob(null);
-    setPollCount(0);
     setExecutionTime(null);
     queryClient.invalidateQueries({ queryKey: ["system-health-jobs"] });
   };
@@ -387,7 +417,7 @@ export default function JobTestRunner() {
             {testState === 'polling' && (
               <div className="text-center text-xs text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin inline mr-1" />
-                Verificando status... ({pollCount}/24)
+                Aguardando execução via Realtime...
               </div>
             )}
 

@@ -44,7 +44,8 @@ export function InstallationHealthCard() {
       return result || [];
     },
     staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
+    // Removed automatic polling - Audit: Performance & Resource optimization
+    refetchInterval: false,
   });
 
   const error = queryError ? (queryError as Error).message : null;
@@ -108,9 +109,19 @@ export function InstallationHealthCard() {
             </p>
           </div>
           
-          {loading && (
-            <RefreshCw className="h-4 w-4 text-muted-foreground animate-spin" />
-          )}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                refetch();
+                toast.info("Atualizando status das instalações...");
+              }}
+              disabled={loading}
+              className="p-1.5 hover:bg-muted rounded-md transition-colors disabled:opacity-50"
+              title="Atualizar agora"
+            >
+              <RefreshCw className={`h-4 w-4 text-muted-foreground ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
       </CardHeader>
 
