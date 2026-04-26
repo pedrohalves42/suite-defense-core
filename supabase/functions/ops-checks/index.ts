@@ -8,9 +8,11 @@ import { RunScheduledChecksUseCase } from '../_shared/hexagonal/use-cases/run-sc
 import { GetCheckStatusUseCase } from '../_shared/hexagonal/use-cases/get-check-status.ts';
 import { AcknowledgeCheckAlertUseCase } from '../_shared/hexagonal/use-cases/acknowledge-check-alert.ts';
 import { ToggleCheckActiveUseCase } from '../_shared/hexagonal/use-cases/toggle-check-active.ts';
+import { RunCheckHealthUseCase } from '../_shared/hexagonal/use-cases/run-check-health.ts';
+
 import {
   handleCheckTaskSlaBreach, handleEvaluateJobSlo,
-  handleCheckInstallationHealth, handleCheckProductionHealth,
+  handleCheckInstallationHealth,
   handleDetectBlockedAttempts, handleGetInstallationPipelineMetrics,
   handleCronSentinel, handleCheckStuckJobs, handleBuildWatchdog,
   handleCalculateBehavioralBaselines, handleComputeComplianceBenchmarks,
@@ -27,11 +29,10 @@ const RouterSchema = z.object({
   payload: z.record(z.unknown()).optional().default({}),
 });
 
-const INLINED_HANDLERS: Record<string, any> = {
+const LEGACY_HANDLERS: Record<string, any> = {
   'check:check-task-sla-breach': handleCheckTaskSlaBreach,
   'check:evaluate-job-slo': handleEvaluateJobSlo,
   'check:check-installation-health': handleCheckInstallationHealth,
-  'check:check-production-health': handleCheckProductionHealth,
   'check:detect-stuck-installations': handleDetectBlockedAttempts,
   'check:get-installation-pipeline-metrics': handleGetInstallationPipelineMetrics,
   'check:cron-sentinel': handleCronSentinel,
@@ -63,6 +64,7 @@ servePublic(async (req, ctx) => {
     // Hexagonal Routing
     const checkRepo = new SupabaseCheckRepository(supabase);
 
+    // Use Case Routing (Prefered)
     if (action === 'check:run-scheduled') {
       return await new RunScheduledChecksUseCase(checkRepo).execute(requestId);
     }
@@ -75,15 +77,19 @@ servePublic(async (req, ctx) => {
     if (action === 'check:toggle-active') {
       return await new ToggleCheckActiveUseCase(checkRepo).execute(payload.check_id as string, payload.is_active as boolean);
     }
+    if (action === 'check:check-production-health') {
+      return await new RunCheckHealthUseCase(checkRepo).execute(requestId);
+    }
 
-    const handler = INLINED_HANDLERS[action];
+    // Legacy Routing (Fallback)
+    const handler = LEGACY_HANDLERS[action];
     if (!handler) {
       return { error: `Unknown action in ops-checks: ${action}`, __status: 404 };
     }
 
-    logger.info(`[ops-checks] Executing: ${action}`, { requestId });
+    logger.info(`[ops-checks] Executing Legacy: ${action}`, { requestId });
     const result = await handler(supabase, requestId, payload, req);
-    logger.info(`[ops-checks] ${action} done in ${Date.now() - startedAt}ms`);
+    logger.info(`[ops-checks] ${action} legacy done in ${Date.now() - startedAt}ms`);
 
     return result;
   } catch (err) {
