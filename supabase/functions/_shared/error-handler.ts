@@ -130,6 +130,23 @@ export function handleException(
   );
 }
 
+export function handleExceptionWithContext(
+  error: unknown,
+  requestId: string,
+  functionName: string,
+  startTime: number,
+  overrides?: Partial<ErrorContext>
+): Response {
+  const latency = Date.now() - startTime;
+  const context: ErrorContext = {
+    operation: functionName,
+    latency,
+    traceId: requestId,
+    ...overrides
+  };
+  return handleException(error, requestId, functionName, context);
+}
+
 export function createValidationError(
   message: string | ZodError,
   details?: unknown,
