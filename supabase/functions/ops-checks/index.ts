@@ -61,10 +61,9 @@ servePublic(async (req, ctx) => {
 
     const { action, payload } = parsed.data;
 
-    // Hexagonal Routing
     const checkRepo = new SupabaseCheckRepository(supabase);
 
-    // Use Case Routing (Prefered)
+    // Use Case Routing (Strongly Typed)
     if (action === 'check:run-scheduled') {
       return await new RunScheduledChecksUseCase(checkRepo).execute(requestId);
     }
@@ -97,3 +96,4 @@ servePublic(async (req, ctx) => {
     return { error: 'Internal error', message: err instanceof Error ? err.message : 'Unknown', requestId, __status: 500 };
   }
 });
+
