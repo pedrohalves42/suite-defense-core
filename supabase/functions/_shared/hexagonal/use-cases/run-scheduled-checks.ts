@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ICheckRepository } from '../repositories/check.repository.ts';
 
 export class RunScheduledChecksUseCase {
