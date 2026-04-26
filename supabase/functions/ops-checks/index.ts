@@ -3,6 +3,11 @@ import { servePublic } from '../_shared/serve-public.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
+import { SupabaseCheckRepository } from '../_shared/hexagonal/repositories/check.repository.ts';
+import { RunScheduledChecksUseCase } from '../_shared/hexagonal/use-cases/run-scheduled-checks.ts';
+import { GetCheckStatusUseCase } from '../_shared/hexagonal/use-cases/get-check-status.ts';
+import { AcknowledgeCheckAlertUseCase } from '../_shared/hexagonal/use-cases/acknowledge-check-alert.ts';
+import { ToggleCheckActiveUseCase } from '../_shared/hexagonal/use-cases/toggle-check-active.ts';
 import {
   handleCheckTaskSlaBreach, handleEvaluateJobSlo,
   handleCheckInstallationHealth, handleCheckProductionHealth,
@@ -43,7 +48,7 @@ const INLINED_HANDLERS: Record<string, any> = {
 };
 
 servePublic(async (req, ctx) => {
-  const { requestId, supabase, body } = ctx;
+  const { requestId, supabase, body, user } = ctx;
   const startedAt = Date.now();
 
   try {
@@ -54,8 +59,24 @@ servePublic(async (req, ctx) => {
     if (!parsed.success) return { error: 'Invalid request', details: parsed.error.flatten().fieldErrors, __status: 400 };
 
     const { action, payload } = parsed.data;
-    const handler = INLINED_HANDLERS[action];
 
+    // Hexagonal Routing
+    const checkRepo = new SupabaseCheckRepository(supabase);
+
+    if (action === 'check:run-scheduled') {
+      return await new RunScheduledChecksUseCase(checkRepo).execute(requestId);
+    }
+    if (action === 'check:get-status') {
+      return await new GetCheckStatusUseCase(checkRepo).execute(payload.check_id as string);
+    }
+    if (action === 'check:acknowledge-alert') {
+      return await new AcknowledgeCheckAlertUseCase(checkRepo).execute(payload.alert_id as string, user?.id);
+    }
+    if (action === 'check:toggle-active') {
+      return await new ToggleCheckActiveUseCase(checkRepo).execute(payload.check_id as string, payload.is_active as boolean);
+    }
+
+    const handler = INLINED_HANDLERS[action];
     if (!handler) {
       return { error: `Unknown action in ops-checks: ${action}`, __status: 404 };
     }
