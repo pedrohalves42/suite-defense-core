@@ -39,7 +39,7 @@ export const useSubscription = () => {
     },
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
-    refetchInterval: isVisible ? 600_000 : false,
+    refetchInterval: false, // COST-OPT-V9: Removed polling, relying on staleTime and manual refresh (ADR-052)
   });
 
   return {

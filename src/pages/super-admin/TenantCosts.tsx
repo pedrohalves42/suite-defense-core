@@ -29,7 +29,7 @@ const useTenantCosts = () => {
       if (error) throw error;
       return (data as unknown as TenantCostMetric[]) || [];
     },
-    refetchInterval: 300_000, // 5 min
+    refetchInterval: false, // FINOPS-012: Manual refresh only for cost transparency dashboards
   });
 };
 
