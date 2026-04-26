@@ -102,9 +102,9 @@ export class HealthMonitorUseCase {
         (async () => {
           const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
           const stuckAgents = await this.checkRepository.getAgents({
-            in: { status: ['pending'] },
-            neq: { last_heartbeat: 'null' as any }, // This should be is null, using is(key, null) in repo
-            lt: { enrolled_at: cutoff }
+            in: { status: ['pending'] } as any,
+            neq: { last_heartbeat: 'null' as any } as any,
+            lt: { enrolled_at: cutoff } as any
           });
           result.stuck_agents.count = stuckAgents?.length || 0;
           if (stuckAgents?.length) {
