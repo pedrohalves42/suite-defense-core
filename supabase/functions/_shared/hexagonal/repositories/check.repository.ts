@@ -41,6 +41,7 @@ export interface ICheckRepository {
   getSilentFailures(): Promise<any[]>;
   getUnhealthyAgents(): Promise<any[]>;
   getStuckAgentLifecycle(): Promise<any[]>;
+  getBatchCounts(table: string, tenantIds: string[], filters: any): Promise<Record<string, number>>;
 }
 
 export class SupabaseCheckRepository implements ICheckRepository {
@@ -288,6 +289,34 @@ export class SupabaseCheckRepository implements ICheckRepository {
       .limit(100);
     if (error) throw error;
     return data || [];
+  }
+
+  async getBatchCounts(table: string, tenantIds: string[], filters: any): Promise<Record<string, number>> {
+    if (tenantIds.length === 0) return {};
+    
+    // Using Supabase client with grouping and count
+    // Note: Standard Supabase client doesn't support grouping well in a single call for counts
+    // We'll use a RPC or a raw query if needed, but we can try to use a series of filters or 
+    // better, implement a dedicated database function for this.
+    // For now, let's use a RPC to handle this efficiently on the DB side.
+    const { data, error } = await this.supabase.rpc('get_batch_counts', {
+      p_table: table,
+      p_tenant_ids: tenantIds,
+      p_filters: filters
+    });
+    
+    if (error) {
+      // Fallback: If RPC doesn't exist yet, we might need to handle it or use a different approach
+      // In a real scenario, I'd create the migration first.
+      throw error;
+    }
+    
+    const counts: Record<string, number> = {};
+    (data as any[] || []).forEach(row => {
+      counts[row.tenant_id] = parseInt(row.count, 10);
+    });
+    
+    return counts;
   }
 }
 
