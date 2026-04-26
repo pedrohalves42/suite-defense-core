@@ -290,7 +290,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   async getBatchCounts(table: keyof Tables, tenantIds: string[], filters: any): Promise<Record<string, number>> {
     if (tenantIds.length === 0) return {};
     
-    const { data, error } = await this.supabase.rpc('get_batch_counts', {
+    const { data, error } = await (this.supabase as any).rpc('get_batch_counts', {
       p_table: table as string,
       p_tenant_ids: tenantIds,
       p_filters: filters
