@@ -73,7 +73,7 @@ export class AnalyzeJobFailurePatternsUseCase {
                 description: `O agente ${agentName} esta com ${failureRate}% de falha em jobs do tipo ${jobType}. Ultimas ${hoursBack}h: ${failureCount}/${totalCount} falharam.`,
                 severity: failureRate >= 90 ? 'critical' : 'high', category: 'performance',
                 affected_entity_type: 'agent', affected_entity_id: agentId,
-                recommendation: this.generateRecommendation(jobType, commonErrors),
+                recommendation: this.generateRecommendation(jobType, commonErrors as string[]),
                 metadata: { job_type: jobType, failure_rate: failureRate, failure_count: failureCount, total_count: totalCount, common_errors: commonErrors, agent_name: agentName },
                 status: 'open', auto_generated: true
               });
