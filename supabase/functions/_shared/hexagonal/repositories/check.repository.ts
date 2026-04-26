@@ -327,7 +327,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getTenantsComplianceScores(): Promise<any[]> {
-    const { data, error } = await this.supabase.rpc('get_tenants_compliance_scores');
+    const { data, error } = await (this.supabase as any).rpc('get_tenants_compliance_scores');
     if (error) throw error;
     return (data as any[]) || [];
   }
