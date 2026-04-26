@@ -116,17 +116,17 @@ export class SupabaseCheckRepository implements ICheckRepository {
     let query = this.supabase.from('agents').select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = query.gte(key as any, val);
+        query = (query as any).gte(key, val);
       }
     }
     if (filters?.neq) {
       for (const [key, val] of Object.entries(filters.neq)) {
-        query = query.neq(key as any, val);
+        query = (query as any).neq(key, val);
       }
     }
     if (filters?.in) {
       for (const [key, val] of Object.entries(filters.in)) {
-        query = query.in(key as any, val as any);
+        query = (query as any).in(key, val);
       }
     }
     const { data, error } = await query;
@@ -138,12 +138,12 @@ export class SupabaseCheckRepository implements ICheckRepository {
     let query = this.supabase.from('installation_analytics').select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = query.gte(key as any, val);
+        query = (query as any).gte(key, val);
       }
     }
     if (filters?.in) {
       for (const [key, val] of Object.entries(filters.in)) {
-        query = query.in(key as any, val as any);
+        query = (query as any).in(key, val);
       }
     }
     const { data, error } = await query;
@@ -155,12 +155,12 @@ export class SupabaseCheckRepository implements ICheckRepository {
     let query = this.supabase.from('jobs').select('*');
     if (filters?.eq) {
       for (const [key, val] of Object.entries(filters.eq)) {
-        query = query.eq(key as any, val);
+        query = (query as any).eq(key, val);
       }
     }
     if (filters?.lt) {
       for (const [key, val] of Object.entries(filters.lt)) {
-        query = query.lt(key as any, val);
+        query = (query as any).lt(key, val);
       }
     }
     const { data, error } = await query;
