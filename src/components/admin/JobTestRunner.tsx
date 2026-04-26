@@ -115,7 +115,6 @@ export default function JobTestRunner() {
     onSuccess: (jobId) => {
       setTestJobId(jobId);
       setTestState('polling');
-      setPollCount(0);
       toast.info("Job de teste criado! Monitorando status...");
     },
     onError: (error) => {
