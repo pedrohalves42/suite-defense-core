@@ -299,7 +299,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
     // We'll use a RPC or a raw query if needed, but we can try to use a series of filters or 
     // better, implement a dedicated database function for this.
     // For now, let's use a RPC to handle this efficiently on the DB side.
-    const { data, error } = await this.supabase.rpc('get_batch_counts', {
+    const { data, error } = await (this.supabase.rpc as any)('get_batch_counts', {
       p_table: table,
       p_tenant_ids: tenantIds,
       p_filters: filters
