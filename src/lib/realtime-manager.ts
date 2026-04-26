@@ -7,6 +7,7 @@ type EventCallback = (payload: any) => void;
 
 interface Subscription {
   id: string;
+  schema: string;
   table: string;
   filter?: string;
   callback: EventCallback;
