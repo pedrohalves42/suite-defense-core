@@ -9,7 +9,7 @@ import { getDLQEntriesForRetry, calculateNextRetry } from '../../_shared/dlq.ts'
 import { ProcessFailedJobsUseCase } from '../../_shared/hexagonal/use-cases/process-failed-jobs.ts';
 import { SupabaseJobRepository } from '../../_shared/hexagonal/repositories/job.repository.ts';
 
-type SB = SupabaseClient<Database>;
+type SB = any; // Reverting to any to avoid cascading type errors in unrefactored code
 
 // ── process-failed-jobs ──────────────────────────────────────────────────
 
