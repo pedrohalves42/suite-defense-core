@@ -105,20 +105,32 @@ export function handleException(
   functionName: string,
   context?: ErrorContext
 ): Response {
+  // Always log the full error internally for observability
   logger.error(`[${requestId}] [${functionName}] [${context?.operation || 'unknown'}] Exception:`, error, {
     requestId,
     traceId: context?.traceId,
     tenantId: context?.tenantId,
-    agentId: context?.agentId
+    agentId: context?.agentId,
+    stack: error instanceof Error ? error.stack : undefined
   });
   
-  const message = error instanceof Error ? error.message : 'Unknown error occurred';
+  const isProduction = Deno.env.get('ENV') === 'production';
+  
+  // In production, mask internal details to prevent information leakage
+  const message = isProduction 
+    ? 'Internal server error' 
+    : (error instanceof Error ? error.message : 'Unknown error occurred');
+    
+  const errorDetails = isProduction 
+    ? undefined 
+    : { functionName, latency: context?.latency, stack: error instanceof Error ? error.stack : undefined };
+
   const standardError = createStandardError(
     'INTERNAL_ERROR',
     message,
-    { functionName, latency: context?.latency },
+    errorDetails,
     requestId,
-    context
+    isProduction ? undefined : context
   );
   
   return new Response(

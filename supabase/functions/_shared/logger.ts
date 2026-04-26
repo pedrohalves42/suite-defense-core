@@ -33,6 +33,8 @@ export interface LogContext {
   traceId?: string;
   tenantId?: string;
   agentId?: string;
+  /** Internal error stack for debugging, will be sanitized/omitted in certain levels if needed */
+  stack?: string;
 }
 
 /**
@@ -82,6 +84,15 @@ function enrichEntry(entry: LogEntry, ctx?: Partial<LogContext>): LogEntry {
   else if (ctx.requestId) entry.traceId = ctx.requestId;
   if (ctx.tenantId) entry.tenantId = ctx.tenantId;
   if (ctx.agentId) entry.agentId = ctx.agentId;
+  
+  // If stack is provided, we can either add it to data or entry (if we want it first-class)
+  if (ctx.stack) {
+    if (!entry.data) entry.data = {};
+    if (typeof entry.data === 'object' && entry.data !== null) {
+      (entry.data as Record<string, any>).stack = ctx.stack;
+    }
+  }
+  
   return entry;
 }
 
