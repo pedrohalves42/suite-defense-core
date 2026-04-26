@@ -156,10 +156,10 @@ if (!hasBackend) {
     import("@tanstack/react-query"),
     import("next-themes"),
     import("react-helmet-async"),
-    import("./hooks/useActiveTenant"),
-    import("./providers/AuthProvider"),
-    import("./App"),
-    import("./lib/storage"),
+    import("@/hooks/useActiveTenant"),
+    import("@/providers/AuthProvider"),
+    import("@/App"),
+    import("@/lib/storage"),
   ])
     .then(
       ([
