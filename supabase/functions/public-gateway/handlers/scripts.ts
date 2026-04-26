@@ -2,13 +2,18 @@
  * Script-serving handlers: get-reinstall-script, get-reinstall-preserve-script
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { REINSTALL_SCRIPT_CONTENT } from '../../_shared/reinstall-script-content.ts';
-import { REINSTALL_PRESERVE_SCRIPT_CONTENT } from '../../_shared/reinstall-preserve-script-content.ts';
+import { StaticScriptTemplateRepository } from '../../_shared/infrastructure/deployment/adapters/supabase-script-template.repository.ts';
+import { RenderScriptUseCase } from '../../_shared/domain/deployment/use-cases/render-script.use-case.ts';
 
 export async function handleGetReinstallScript(
   _supabase: any, _req: Request, requestId: string, _payload: Record<string, unknown>,
 ): Promise<Response> {
-  return new Response(REINSTALL_SCRIPT_CONTENT, {
+  const repository = new StaticScriptTemplateRepository();
+  const useCase = new RenderScriptUseCase(repository);
+  
+  const content = await useCase.execute('reinstall', {});
+
+  return new Response(content, {
     status: 200,
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
@@ -22,7 +27,12 @@ export async function handleGetReinstallScript(
 export async function handleGetReinstallPreserveScript(
   _supabase: any, _req: Request, requestId: string, _payload: Record<string, unknown>,
 ): Promise<Response> {
-  return new Response(REINSTALL_PRESERVE_SCRIPT_CONTENT, {
+  const repository = new StaticScriptTemplateRepository();
+  const useCase = new RenderScriptUseCase(repository);
+  
+  const content = await useCase.execute('reinstall-preserve', {});
+
+  return new Response(content, {
     status: 200,
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
