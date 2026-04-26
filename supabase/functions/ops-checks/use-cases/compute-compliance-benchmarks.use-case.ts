@@ -18,7 +18,7 @@ export class ComputeComplianceBenchmarksUseCase {
     const categoryScores: Record<string, number[]> = {};
 
     for (const tenantId of tenantIds) {
-      const score = await this.calculateTenantComplianceScore(tenantId);
+      const score = await this.calculateTenantComplianceScore(tenantId as string);
       if (score !== null) {
         scores.push(score.overall);
         for (const [cat, val] of Object.entries(score.categories)) {
