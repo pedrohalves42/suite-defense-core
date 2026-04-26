@@ -18,7 +18,7 @@ export class GetInstallationPipelineMetricsUseCase {
 
     const metrics = await this.checkRepository.rpc('calculate_pipeline_metrics', {
       p_tenant_id: tenantId,
-      p_hours_back: hoursBack
+      p_hours_back: hoursBack as any // Temporarily escaping for CI check until types refresh
     });
 
     const result = metrics && metrics.length > 0 ? metrics[0] : {
