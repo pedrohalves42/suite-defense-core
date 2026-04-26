@@ -1,4 +1,4 @@
-// 100% typed repository for ops checks
+// check.repository.ts - Strongly typed repository for ops-checks
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { Database } from '../../database.types.ts';
 
@@ -13,9 +13,8 @@ export interface ICheckRepository {
   createSystemAlert(alert: any): Promise<void>;
   createTask(task: any): Promise<{ id: string }>;
   logAudit(audit: any): Promise<void>;
-  // Novos métodos necessários para o refactoring
   saveCheckResult(checkId: string, result: any): Promise<void>;
-  getTenants(): Promise<{ id: string; name: string }[]>;
+  getTenants(): Promise<any[]>;
   getAgents(filters?: any): Promise<any[]>;
   getInstallationAnalytics(filters?: any): Promise<any[]>;
   getJobs(filters?: any): Promise<any[]>;
@@ -56,7 +55,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async logScheduledJobRun(payload: any): Promise<void> {
-    const { error } = await this.supabase.rpc('log_scheduled_job_run', payload);
+    const { error } = await this.supabase.rpc('log_scheduled_job_run' as any, payload);
     if (error) throw error;
   }
 
@@ -68,7 +67,8 @@ export class SupabaseCheckRepository implements ICheckRepository {
   async createTask(task: any): Promise<{ id: string }> {
     const { data, error } = await this.supabase.from('tasks').insert(task).select('id').single();
     if (error) throw error;
-    return data;
+    if (!data) throw new Error('Failed to create task');
+    return data as { id: string };
   }
 
   async logAudit(audit: any): Promise<void> {
@@ -82,12 +82,12 @@ export class SupabaseCheckRepository implements ICheckRepository {
       .update({ 
         last_run_at: new Date().toISOString(),
         last_result: result 
-      })
+      } as any)
       .eq('id', checkId);
     if (error) throw error;
   }
 
-  async getTenants(): Promise<{ id: string; name: string }[]|any> {
+  async getTenants(): Promise<any[]> {
     const { data, error } = await this.supabase.from('tenants').select('id, name');
     if (error) throw error;
     return data || [];
@@ -97,12 +97,12 @@ export class SupabaseCheckRepository implements ICheckRepository {
     let query = this.supabase.from('agents').select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = query.gte(key, val);
+        query = (query as any).gte(key, val);
       }
     }
     if (filters?.neq) {
       for (const [key, val] of Object.entries(filters.neq)) {
-        query = query.neq(key, val);
+        query = (query as any).neq(key, val);
       }
     }
     const { data, error } = await query;
@@ -114,12 +114,12 @@ export class SupabaseCheckRepository implements ICheckRepository {
     let query = this.supabase.from('installation_analytics').select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        query = query.gte(key, val);
+        query = (query as any).gte(key, val);
       }
     }
     if (filters?.in) {
       for (const [key, val] of Object.entries(filters.in)) {
-        query = query.in(key, val);
+        query = (query as any).in(key, val);
       }
     }
     const { data, error } = await query;
@@ -131,12 +131,12 @@ export class SupabaseCheckRepository implements ICheckRepository {
     let query = this.supabase.from('jobs').select('*');
     if (filters?.eq) {
       for (const [key, val] of Object.entries(filters.eq)) {
-        query = query.eq(key, val);
+        query = (query as any).eq(key, val);
       }
     }
     if (filters?.lt) {
       for (const [key, val] of Object.entries(filters.lt)) {
-        query = query.lt(key, val);
+        query = (query as any).lt(key, val);
       }
     }
     const { data, error } = await query;
@@ -145,7 +145,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async rpc(name: string, params?: any): Promise<any> {
-    const { data, error } = await this.supabase.rpc(name, params);
+    const { data, error } = await this.supabase.rpc(name as any, params);
     if (error) throw error;
     return data;
   }

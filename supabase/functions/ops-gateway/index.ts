@@ -1,7 +1,3 @@
-// @ts-nocheck
-/**
- * ops-gateway — Minimal Router for Fallback
- */
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
@@ -25,7 +21,7 @@ const ACTION_TO_FUNCTION: Record<string, string> = {
   'report:scheduled': 'ops-reports',
   'report:list': 'list-reports',
 
-  // Checks
+  // Checks (All routed to ops-checks)
   'check:check-task-sla-breach': 'ops-checks',
   'check:evaluate-job-slo': 'ops-checks',
   'check:check-installation-health': 'ops-checks',
@@ -111,7 +107,6 @@ function forwardHeaders(req: Request, requestId: string): Record<string, string>
 
 servePublic(async (req, ctx) => {
   const { requestId, body } = ctx;
-  const startedAt = Date.now();
   const origin = req.headers.get('origin');
 
   try {

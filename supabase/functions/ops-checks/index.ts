@@ -1,4 +1,4 @@
-// @ts-nocheck
+// ops-checks/index.ts - Hexagonal Router with Legacy Fallback
 import { servePublic } from '../_shared/serve-public.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
@@ -29,6 +29,7 @@ const RouterSchema = z.object({
   payload: z.record(z.unknown()).optional().default({}),
 });
 
+// @ts-ignore: Legacy handlers are not yet fully typed
 const LEGACY_HANDLERS: Record<string, any> = {
   'check:check-task-sla-breach': handleCheckTaskSlaBreach,
   'check:evaluate-job-slo': handleEvaluateJobSlo,
@@ -61,9 +62,10 @@ servePublic(async (req, ctx) => {
 
     const { action, payload } = parsed.data;
 
+    // Hexagonal Routing
     const checkRepo = new SupabaseCheckRepository(supabase);
 
-    // Use Case Routing (Strongly Typed)
+    // Use Case Routing (Prefered)
     if (action === 'check:run-scheduled') {
       return await new RunScheduledChecksUseCase(checkRepo).execute(requestId);
     }
@@ -96,4 +98,3 @@ servePublic(async (req, ctx) => {
     return { error: 'Internal error', message: err instanceof Error ? err.message : 'Unknown', requestId, __status: 500 };
   }
 });
-

@@ -1,20 +1,10 @@
+// run-check-health.ts - Use case to evaluate production environment health
 import { ICheckRepository } from '../repositories/check.repository.ts';
-
-export interface RunCheckHealthResult {
-  success: boolean;
-  checked_at: string;
-  alerts_created: number;
-  alerts: Array<{
-    type: string;
-    severity: string;
-    title: string;
-  }>;
-}
 
 export class RunCheckHealthUseCase {
   constructor(private readonly checkRepository: ICheckRepository) {}
 
-  async execute(requestId: string): Promise<RunCheckHealthResult> {
+  async execute(requestId: string) {
     const startedAt = Date.now();
     const now = new Date();
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
@@ -42,7 +32,7 @@ export class RunCheckHealthUseCase {
           });
         }
       }
-    } catch (_err) { /* ignore or log */ }
+    } catch (err) { /* ignore or log */ }
 
     // 2. Installation Failure Rate
     try {
@@ -64,7 +54,7 @@ export class RunCheckHealthUseCase {
           });
         }
       }
-    } catch (_err) { /* ignore */ }
+    } catch (err) { /* ignore */ }
 
     // 3. Stuck Jobs
     try {
@@ -82,7 +72,7 @@ export class RunCheckHealthUseCase {
           trace_id: requestId 
         });
       }
-    } catch (_err) { /* ignore */ }
+    } catch (err) { /* ignore */ }
 
     if (alerts.length > 0) {
       for (const alert of alerts) {
@@ -108,4 +98,3 @@ export class RunCheckHealthUseCase {
     return result;
   }
 }
-
