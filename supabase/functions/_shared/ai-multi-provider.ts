@@ -95,7 +95,7 @@ async function persistAIMetricsWithProvider(data: {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
       {
         global: {
-          fetch: (url: string, options: any) => fetch(url, { ...options, signal: options?.signal ?? AbortSignal.timeout(5000) })
+          fetch: (url: string, options: any) => fetchWithTimeout(url, { ...options, timeoutMs: 5000 })
         }
       }
     );
