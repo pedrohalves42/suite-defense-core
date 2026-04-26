@@ -49,7 +49,7 @@ export class HealthMonitorUseCase {
           // Note: We might need a generic update method in repository, but for now we use rpc or direct
           // Since it's a batch update, I'll use the supabase client directly for now or add a method.
           const { error: updateErr } = await this.checkRepository.supabase
-            .from('jobs').update({ status: 'failed', error_message: 'Zombie: no result after timeout' }).in('id', ids);
+            .from('jobs' as any).update({ status: 'failed', error_message: 'Zombie: no result after timeout' } as any).in('id', ids);
           if (!updateErr) result.stuck_jobs.failed = ids.length;
         })(),
         (async () => {
