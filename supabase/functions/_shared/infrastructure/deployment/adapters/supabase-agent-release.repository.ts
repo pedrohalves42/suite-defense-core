@@ -1,8 +1,8 @@
 
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { Database } from '../../../database.types.ts';
-import { Release, Agent } from '../../../../domain/deployment/entities.ts';
-import { IAgentReleaseRepository } from '../../../../domain/deployment/ports/agent-release.repository.ts';
+import { Release, Agent } from '../../../domain/deployment/entities.ts';
+import { IAgentReleaseRepository } from '../../../domain/deployment/ports/agent-release.repository.ts';
 
 export class SupabaseAgentReleaseRepository implements IAgentReleaseRepository {
   constructor(private readonly supabase: SupabaseClient<Database>) {}

@@ -29,7 +29,7 @@ export async function processForceUpdate(
 
   const { agent: updatedAgent, release, options, shouldDeliver } = await useCase.execute(
     agent as any,
-    currentVersion,
+    currentVersion || 'unknown',
     platform,
     agentState
   );
