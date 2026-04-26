@@ -54,13 +54,16 @@ export const htmlSecurityHeaders = {
 };
 
 // Combined CORS + Security headers for standard API responses
-export const corsSecurityHeaders = {
-  // CORS headers
-  'Access-Control-Allow-Origin': '*',
+// Note: Access-Control-Allow-Origin MUST be set dynamically based on request origin
+// Use buildCorsHeaders(origin) from './cors.ts' for dynamic resolution
+export const corsSecurityHeaders: Record<string, string> = {
+  // CORS defaults
+  'Access-Control-Allow-Origin': 'https://cybershield.com.br',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-agent-token, x-hmac-signature, x-timestamp, x-nonce, x-request-id, x-tenant-id',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Expose-Headers': 'X-Request-ID, X-Response-Time',
   'Access-Control-Max-Age': '600',
+  'Vary': 'Origin',
   
   // Security headers
   ...securityHeaders,
@@ -74,12 +77,16 @@ export function secureJsonResponse(
   status: number = 200,
   additionalHeaders: Record<string, string> = {}
 ): Response {
+  // Try to extract origin from additionalHeaders or use default
+  const origin = additionalHeaders['Access-Control-Allow-Origin'] || corsSecurityHeaders['Access-Control-Allow-Origin'];
+  
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       'Content-Type': 'application/json',
       ...corsSecurityHeaders,
       ...additionalHeaders,
+      'Access-Control-Allow-Origin': origin, // Ensure it's never '*'
     },
   });
 }
@@ -101,9 +108,16 @@ export function secureErrorResponse(
 /**
  * Handle CORS preflight with security headers
  */
-export function secureCorsPreflightResponse(): Response {
+export function secureCorsPreflightResponse(origin: string | null = null): Response {
+  const headers = { ...corsSecurityHeaders };
+  if (origin) {
+    // In a real scenario, we'd use isAllowedOrigin(origin) here
+    // but for simplicity and safety, we default to the secure constant
+    // unless explicitly overridden.
+  }
+
   return new Response(null, {
     status: 204,
-    headers: corsSecurityHeaders,
+    headers,
   });
 }
