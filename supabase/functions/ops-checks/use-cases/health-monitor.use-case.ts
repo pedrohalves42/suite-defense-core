@@ -48,7 +48,7 @@ export class HealthMonitorUseCase {
           const ids = jobs.map((j: any) => j.id);
           // Note: We might need a generic update method in repository, but for now we use rpc or direct
           // Since it's a batch update, I'll use the supabase client directly for now or add a method.
-          const { error: updateErr } = await (this.checkRepository as any).supabase
+          const { error: updateErr } = await this.checkRepository.supabase
             .from('jobs').update({ status: 'failed', error_message: 'Zombie: no result after timeout' }).in('id', ids);
           if (!updateErr) result.stuck_jobs.failed = ids.length;
         })(),
@@ -110,7 +110,7 @@ export class HealthMonitorUseCase {
           if (stuckAgents?.length) {
             const alerts = stuckAgents.map((a: any) => ({
               tenant_id: a.tenant_id,
-              severity: 'medium',
+              severity: 'medium' as any,
               alert_type: 'stuck_agent',
               title: `Stuck agent: ${a.agent_name}`,
               message: `Agent '${a.agent_name}' stuck in pending for ${Math.floor((Date.now() - new Date(a.enrolled_at).getTime()) / 60000)} min`,

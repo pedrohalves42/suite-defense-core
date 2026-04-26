@@ -86,7 +86,7 @@ export class MonitorThresholdsUseCase {
         if (alert.offline >= s.alert_threshold_offline_agents) issues.push(`${alert.offline} agentes offline`);
 
         if (handleNotifyEmail) {
-          await handleNotifyEmail((this.checkRepository as any).supabase, requestId, {
+          await handleNotifyEmail(this.checkRepository.supabase, requestId, {
             channel: 'email',
             type: 'system',
             severity: 'high',
