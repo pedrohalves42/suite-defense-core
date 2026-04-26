@@ -301,28 +301,28 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getBusinessHoursBatch(tenantIds: string[]): Promise<Record<string, any>> {
-    const { data, error } = await this.supabase.rpc('get_business_hours_batch', {
+    const { data, error } = await (this.supabase.rpc as any)('get_business_hours_batch', {
       p_tenant_ids: tenantIds
     });
     if (error) throw error;
     const result: Record<string, any> = {};
-    (data as any[] || []).forEach(row => {
+    ((data as any[]) || []).forEach((row: any) => {
       result[row.tenant_id] = row.business_hours;
     });
     return result;
   }
 
   async getInstallationHealthBatch(tenantIds: string[]): Promise<any[]> {
-    const { data, error } = await this.supabase.rpc('get_installation_health_batch', {
+    const { data, error } = await (this.supabase.rpc as any)('get_installation_health_batch', {
       p_tenant_ids: tenantIds
     });
     if (error) throw error;
-    return data || [];
+    return (data as any[]) || [];
   }
 
   async getTenantsComplianceScores(): Promise<any[]> {
-    const { data, error } = await this.supabase.rpc('get_tenants_compliance_scores');
+    const { data, error } = await (this.supabase.rpc as any)('get_tenants_compliance_scores');
     if (error) throw error;
-    return data || [];
+    return (data as any[]) || [];
   }
 }
