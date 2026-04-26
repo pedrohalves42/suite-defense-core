@@ -13,29 +13,42 @@ export class MonitorThresholdsUseCase {
     const tenants = await this.checkRepository.getTenantsWithSettings();
     logger.info(`[${requestId}] MonitorThresholdsUseCase: Monitoring ${tenants.length} tenants`);
 
-    const alerts: any[] = [];
+    const activeTenants = tenants.filter(t => {
+      const settingsArr = (t as any).tenant_settings;
+      if (!settingsArr || settingsArr.length === 0) return false;
+      const s = settingsArr[0];
+      return s.enable_email_alerts || s.enable_webhook_alerts;
+    });
 
-    for (const tenant of tenants) {
-      const settingsArr = (tenant as any).tenant_settings;
-      if (!settingsArr || settingsArr.length === 0) continue;
-      const settings = settingsArr[0];
-      if (!settings.enable_email_alerts && !settings.enable_webhook_alerts) continue;
+    if (activeTenants.length === 0) {
+      return { success: true, monitored_tenants: tenants.length, alerts_triggered: 0, alerts_sent: 0, timestamp: now.toISOString() };
+    }
 
-      const virusCount = await this.checkRepository.getCount('virus_scans', {
-        eq: { tenant_id: tenant.id, is_malicious: true },
+    const tenantIds = activeTenants.map(t => t.id);
+
+    // Batch get counts for all active tenants in 3 parallel calls
+    const [virusCounts, failedJobsCounts, offlineAgentsCounts] = await Promise.all([
+      this.checkRepository.getBatchCounts('virus_scans', tenantIds, {
+        eq: { is_malicious: true },
         gte: { scanned_at: last24Hours }
-      });
-
-      const failedJobsCount = await this.checkRepository.getCount('jobs', {
-        eq: { tenant_id: tenant.id, status: 'failed' },
+      }),
+      this.checkRepository.getBatchCounts('jobs', tenantIds, {
+        eq: { status: 'failed' },
         gte: { created_at: last24Hours }
-      });
-
-      const offlineAgentsCount = await this.checkRepository.getCount('agents', {
-        eq: { tenant_id: tenant.id },
+      }),
+      this.checkRepository.getBatchCounts('agents', tenantIds, {
         notNull: 'last_heartbeat',
         lt: { last_heartbeat: last5Minutes }
-      });
+      })
+    ]);
+
+    const alerts: any[] = [];
+
+    for (const tenant of activeTenants) {
+      const settings = (tenant as any).tenant_settings[0];
+      const virusCount = virusCounts[tenant.id] || 0;
+      const failedJobsCount = failedJobsCounts[tenant.id] || 0;
+      const offlineAgentsCount = offlineAgentsCounts[tenant.id] || 0;
 
       if (
         virusCount >= settings.alert_threshold_virus_positive ||
