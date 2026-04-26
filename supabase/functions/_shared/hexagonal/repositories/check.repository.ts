@@ -220,14 +220,14 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async findExistingAlert(filters: any): Promise<{ id: string } | null> {
-    let query = this.supabase.from('system_alerts').select('id');
+    let query: any = this.supabase.from('system_alerts').select('id');
     for (const [key, val] of Object.entries(filters)) {
       if (val === null) {
-        query = query.is(key as any, null);
+        query = query.is(key, null);
       } else if (key === 'created_at_gte') {
-        query = query.gte('created_at' as any, val as any);
+        query = query.gte('created_at', val);
       } else {
-        query = query.eq(key as any, val as any);
+        query = query.eq(key, val);
       }
     }
     const { data, error } = await query.limit(1).maybeSingle();
@@ -236,12 +236,12 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async findExistingInsight(filters: any): Promise<{ id: string } | null> {
-    let query = this.supabase.from('ai_insights').select('id');
+    let query: any = this.supabase.from('ai_insights').select('id');
     for (const [key, val] of Object.entries(filters)) {
       if (key === 'created_at_gte') {
-        query = query.gte('created_at' as any, val as any);
+        query = query.gte('created_at', val);
       } else {
-        query = query.eq(key as any, val as any);
+        query = query.eq(key, val);
       }
     }
     const { data, error } = await query.limit(1).maybeSingle();
@@ -301,28 +301,28 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getBusinessHoursBatch(tenantIds: string[]): Promise<Record<string, any>> {
-    const { data, error } = await this.supabase.rpc('get_business_hours_batch', {
+    const { data, error } = await (this.supabase.rpc as any)('get_business_hours_batch', {
       p_tenant_ids: tenantIds
     });
     if (error) throw error;
     const result: Record<string, any> = {};
-    (data as any[] || []).forEach(row => {
+    ((data as any[]) || []).forEach((row: any) => {
       result[row.tenant_id] = row.business_hours;
     });
     return result;
   }
 
   async getInstallationHealthBatch(tenantIds: string[]): Promise<any[]> {
-    const { data, error } = await this.supabase.rpc('get_installation_health_batch', {
+    const { data, error } = await (this.supabase.rpc as any)('get_installation_health_batch', {
       p_tenant_ids: tenantIds
     });
     if (error) throw error;
-    return data || [];
+    return (data as any[]) || [];
   }
 
   async getTenantsComplianceScores(): Promise<any[]> {
-    const { data, error } = await this.supabase.rpc('get_tenants_compliance_scores');
+    const { data, error } = await (this.supabase.rpc as any)('get_tenants_compliance_scores');
     if (error) throw error;
-    return data || [];
+    return (data as any[]) || [];
   }
 }
