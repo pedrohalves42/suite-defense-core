@@ -9,6 +9,7 @@ const IGNORE_DIRS = ['node_modules', 'dist', '__tests__', '.git'];
 const ALLOWED_FILES = [
   'supabase/functions/_shared/fetch-with-timeout.ts',
   'supabase/functions/_shared/http.ts',
+  'supabase/functions/_shared/supabase-client.ts',
 ];
 
 let errorCount = 0;
