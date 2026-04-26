@@ -88,4 +88,55 @@ export class SupabaseBillingRepository implements BillingRepository {
         metadata: metadata,
       });
   }
+
+  async getPlanByStripePriceId(priceId: string): Promise<BillingPlan | null> {
+    const { data, error } = await this.supabase
+      .from('subscription_plans')
+      .select('*')
+      .eq('stripe_price_id', priceId)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    return {
+      id: data.id,
+      name: data.name,
+      pricePerDevice: data.price_per_device,
+      maxDevices: data.max_devices,
+      stripePriceId: data.stripe_price_id,
+    };
+  }
+
+  async getAddonPriceIds(): Promise<string[]> {
+    const { data } = await this.supabase
+      .from('stripe_plan_mapping')
+      .select('stripe_price_id')
+      .eq('plan_type', 'addon');
+    return data?.map((m: any) => m.stripe_price_id) || [];
+  }
+
+  async getPlanMappingsByLogicalPlan(logicalPlan: string): Promise<any[]> {
+    const { data } = await this.supabase
+      .from('stripe_plan_mapping')
+      .select('*')
+      .eq('logical_plan', logicalPlan);
+    return data || [];
+  }
+
+  async ensureTenantFeatures(tenantId: string, planName: string, deviceQuantity: number): Promise<void> {
+    await this.supabase.rpc('ensure_tenant_features', {
+      p_tenant_id: tenantId,
+      p_plan_name: planName,
+      p_device_quantity: deviceQuantity,
+    });
+  }
+
+  async countActiveAgents(tenantId: string): Promise<number> {
+    const { count } = await this.supabase
+      .from('agents')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('status', 'active');
+    return count || 0;
+  }
 }
