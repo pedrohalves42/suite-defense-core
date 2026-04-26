@@ -331,4 +331,3 @@ export class SupabaseCheckRepository implements ICheckRepository {
     return (data as any[]) || [];
   }
 }
-}
