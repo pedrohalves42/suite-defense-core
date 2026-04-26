@@ -66,12 +66,10 @@ export class BillingAnalyticsUseCase {
       let activeCount = 0;
 
       for (const sub of subscriptions) {
-        if (sub.status === 'active' || sub.status === 'trialing') {
-          const plan = await this.billingRepo.getPlanById(sub.planId);
-          if (plan) {
-            totalMrr += (plan.pricePerDevice / 100) * sub.deviceQuantity;
-            activeCount++;
-          }
+        const plan = await this.billingRepo.getPlanById(sub.planId);
+        if (plan && (sub.status === 'active' || sub.status === 'trialing')) {
+          totalMrr += (plan.pricePerDevice / 100) * sub.deviceQuantity;
+          activeCount++;
         }
       }
 
@@ -110,5 +108,30 @@ export class BillingAnalyticsUseCase {
       });
       throw error;
     }
+  }
+
+  async getRevenueProjections(traceId?: string) {
+     const economics = await this.getUnitEconomics(traceId);
+     const scenarios = [
+        { name: 'conservative', growthRate: 0.05, churnRate: 0.05 },
+        { name: 'realistic', growthRate: 0.10, churnRate: 0.03 },
+        { name: 'optimistic', growthRate: 0.20, churnRate: 0.02 },
+     ];
+
+     const results: Record<string, any[]> = {};
+     for (const scenario of scenarios) {
+        let mrr = economics.mrr;
+        let customers = economics.activeCustomers;
+        const monthlyData = [];
+        for (let m = 1; m <= 12; m++) {
+           const newCust = Math.round(customers * scenario.growthRate);
+           const churnedCust = Math.round(customers * scenario.churnRate);
+           customers = customers + newCust - churnedCust;
+           mrr = customers * economics.arpa;
+           monthlyData.push({ month: m, mrr, customers });
+        }
+        results[scenario.name] = monthlyData;
+     }
+     return results;
   }
 }

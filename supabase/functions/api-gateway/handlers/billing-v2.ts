@@ -83,8 +83,9 @@ export async function handleCohortAnalysisV2(supabase: SupabaseClient, requestId
   return await useCase.getCohortAnalysis(requestId);
 }
 
-export async function handleUnitEconomicsV2(supabase: SupabaseClient, requestId: string, _payload: Record<string, unknown>) {
-  logger.info(`[billing-v2][${requestId}] Calculating unit economics`);
+export async function handleRevenueProjectionsV2(supabase: SupabaseClient, requestId: string, _payload: Record<string, unknown>) {
+  logger.info(`[billing-v2][${requestId}] Calculating revenue projections`);
   const useCase = createBillingAnalyticsUseCase(supabase);
-  return await useCase.getUnitEconomics(requestId);
+  return await useCase.getRevenueProjections(requestId);
 }
+
