@@ -104,7 +104,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getAgents(filters?: any): Promise<any[]> {
-    let query = this.supabase.from('agents').select('*');
+    let query: any = this.supabase.from('agents').select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
         query = query.gte(key as any, val as any);
