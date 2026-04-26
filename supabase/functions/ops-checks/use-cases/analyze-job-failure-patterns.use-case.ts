@@ -103,7 +103,7 @@ export class AnalyzeJobFailurePatternsUseCase {
         insight_type: insight.insight_type,
         affected_entity_id: insight.affected_entity_id,
         created_at_gte: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-      });
+      } as any);
       if (!existing) {
         await this.checkRepository.createInsight(insight);
       }

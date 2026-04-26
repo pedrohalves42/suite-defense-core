@@ -30,7 +30,7 @@ export class CronSentinelUseCase {
       title: '⚠ Cron Jobs Silent Failure%',
       status: 'open', // and in_progress? we can check in repo
       created_at_gte: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-    });
+    } as any);
     
     if (existingTask) return { success: true, message: 'Alert task already exists', existing_task_id: existingTask.id, silent_jobs: unhealthyJobs.length };
 
