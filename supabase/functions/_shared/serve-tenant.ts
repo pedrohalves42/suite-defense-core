@@ -169,6 +169,23 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
       // 4c. Standard JWT auth
       else if (authHeader?.startsWith('Bearer ')) {
         const token = authHeader.replace('Bearer ', '');
+        
+        // Block Agent tokens from accessing Tenant routes
+        // Agent tokens are typically shorter and non-JWT, but we check the hash against agent_tokens table
+        const { hashToken } = await import('./token-hash.ts');
+        const tokenHash = await hashToken(token);
+        const { data: isAgentToken } = await supabase
+          .from('agent_tokens')
+          .select('id')
+          .eq('token_hash', tokenHash)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (isAgentToken) {
+          logger.error(`[serveTenant][${requestId}] Blocked Agent Token from accessing tenant route.`);
+          return errorResponse('Agent tokens not allowed on tenant endpoints', 403, requestId, origin);
+        }
+
         const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
         
         if (authError || !authUser) {

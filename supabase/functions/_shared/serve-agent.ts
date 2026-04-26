@@ -79,6 +79,20 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
         requireEnv('SUPABASE_SERVICE_ROLE_KEY')
       );
 
+      // 1. JWT / Cross-Auth Protection
+      // Agents MUST use X-Agent-Token or a custom Bearer token.
+      // We block any request that uses a valid Supabase User JWT (auth.users)
+      // to prevent "User-as-Agent" session hijacking.
+      const authHeader = req.headers.get('Authorization');
+      if (authHeader?.startsWith('Bearer ') && authHeader.length > 50) { // Likely a JWT
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (user && !error) {
+          logger.error(`[serveAgent][${requestId}] Blocked User JWT from accessing agent route. User: ${user.id}`);
+          return errorResponse('User JWT not allowed on agent endpoints', 403, requestId, origin);
+        }
+      }
+
       // Clone request BEFORE any body consumption (needed for HMAC verification)
       const reqClone = options?.hmacVerify ? req.clone() : req;
 
