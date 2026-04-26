@@ -38,10 +38,11 @@ export interface ICheckRepository {
   getBusinessHoursBatch(tenantIds: string[]): Promise<Record<string, any>>;
   getInstallationHealthBatch(tenantIds: string[]): Promise<any[]>;
   getTenantsComplianceScores(): Promise<any[]>;
+  supabase: SupabaseClient<Database>;
 }
 
 export class SupabaseCheckRepository implements ICheckRepository {
-  constructor(private readonly supabase: SupabaseClient<Database>) {}
+  constructor(public readonly supabase: SupabaseClient<Database>) {}
 
   async listActiveChecks(): Promise<Check[]> {
     const { data, error } = await this.supabase
