@@ -7,6 +7,7 @@ import { buildCorsHeaders } from './cors.ts';
 import { securityHeaders } from './security-headers.ts';
 import { requireEnv } from './env.ts';
 import { loggerWithContext } from './logger.ts';
+import { handleExceptionWithContext } from './error-handler.ts';
 
 function jsonResponse(data: unknown, status = 200, extraHeaders?: Record<string, string>, origin?: string | null) {
   const cors = origin ? buildCorsHeaders(origin) : { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' };
@@ -49,6 +50,7 @@ export interface ServePublicOptions {
 
 export function servePublic(handler: PublicHandler, options?: ServePublicOptions) {
   Deno.serve(async (req: Request) => {
+    const startTime = Date.now();
     const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
     const requestId = traceId;
     const origin = req.headers.get('origin');
@@ -110,10 +112,7 @@ export function servePublic(handler: PublicHandler, options?: ServePublicOptions
       if (result instanceof Response) return result;
       return jsonResponse(result, 200, { 'X-Request-ID': requestId, 'X-Trace-ID': traceId }, origin);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Internal server error';
-      const log = loggerWithContext({ requestId });
-      log.error(`[servePublic] Error`, { message: msg });
-      return errorResponse(msg, 500, requestId, origin);
+      return handleExceptionWithContext(error, requestId, 'servePublic', startTime);
     }
   });
 }
