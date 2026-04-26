@@ -64,6 +64,12 @@ export function useBuildRealtime({ buildId, onStatusChange, onError }: UseBuildR
     };
   }, [buildId, onStatusChange, instanceId]);
 
+  const cleanup = useCallback(() => {
+    if (buildId) {
+      realtimeChannelManager.unsubscribe(instanceId, 'agent_builds', `id=eq.${buildId}`);
+    }
+  }, [instanceId, buildId]);
+
   // Função para fetch manual (fallback)
   const fetchStatus = useCallback(async (): Promise<BuildStatus | null> => {
     if (!buildId) return null;
