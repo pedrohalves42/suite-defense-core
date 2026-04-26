@@ -2,7 +2,7 @@
  * Integration test helpers for Edge Functions.
  * Uses real HTTP calls against deployed functions.
  */
-import "https://deno.land/std@0.224.0/dotenv/load.ts";
+
 
 export const SUPABASE_URL = Deno.env.get("VITE_SUPABASE_URL")!;
 export const SUPABASE_ANON_KEY = Deno.env.get("VITE_SUPABASE_PUBLISHABLE_KEY")!;
