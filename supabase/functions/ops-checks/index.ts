@@ -50,7 +50,8 @@ const LEGACY_HANDLERS: Record<string, any> = {
 };
 
 servePublic(async (req, ctx) => {
-  const { requestId, supabase, body, user } = ctx;
+  const { requestId, supabase, body } = ctx;
+  const user = (ctx as any).user;
   const startedAt = Date.now();
 
   try {
