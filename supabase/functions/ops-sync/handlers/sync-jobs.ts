@@ -95,16 +95,16 @@ export async function handleProcessScheduledJobs(supabase: SB, requestId: string
 
         if (!isOnline) {
           skippedOfflineCount++;
-          const { data: nextRunData } = await supabase.rpc('calculate_next_run', { pattern: recurringJob.recurrence_pattern, from_time: now });
+          const { data: nextRunData } = await supabase.rpc('calculate_next_run', { pattern: recurringJob.recurrence_pattern || '', from_time: now });
           if (nextRunData) await supabase.from('jobs').update({ next_run_at: nextRunData }).eq('id', recurringJob.id);
           continue;
         }
 
-        const { data: nextRunData, error: nextRunError } = await supabase.rpc('calculate_next_run', { pattern: recurringJob.recurrence_pattern, from_time: now });
+        const { data: nextRunData, error: nextRunError } = await supabase.rpc('calculate_next_run', { pattern: recurringJob.recurrence_pattern || '', from_time: now });
         if (nextRunError) continue;
 
         const { error: insertError } = await supabase.rpc('create_job_if_not_exists', {
-          p_agent_id: recurringJob.agent_id, p_tenant_id: recurringJob.tenant_id,
+          p_agent_id: recurringJob.agent_id || '', p_tenant_id: recurringJob.tenant_id,
           p_type: recurringJob.type, p_payload: recurringJob.payload || {},
           p_priority: recurringJob.priority || 5, p_ttl_hours: getTtlForType(recurringJob.type)
         });
