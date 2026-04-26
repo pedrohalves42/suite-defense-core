@@ -102,16 +102,23 @@ export function createErrorResponse(
 export function handleException(
   error: unknown,
   requestId: string,
-  functionName: string
+  functionName: string,
+  context?: ErrorContext
 ): Response {
-  logger.error(`[${requestId}] [${functionName}] Exception:`, error);
+  logger.error(`[${requestId}] [${functionName}] [${context?.operation || 'unknown'}] Exception:`, error, {
+    requestId,
+    traceId: context?.traceId,
+    tenantId: context?.tenantId,
+    agentId: context?.agentId
+  });
   
   const message = error instanceof Error ? error.message : 'Unknown error occurred';
   const standardError = createStandardError(
     'INTERNAL_ERROR',
     message,
-    { functionName },
-    requestId
+    { functionName, latency: context?.latency },
+    requestId,
+    context
   );
   
   return new Response(
