@@ -10,44 +10,20 @@ import { AcknowledgeCheckAlertUseCase } from '../_shared/hexagonal/use-cases/ack
 import { ToggleCheckActiveUseCase } from '../_shared/hexagonal/use-cases/toggle-check-active.ts';
 import { RunCheckHealthUseCase } from '../_shared/hexagonal/use-cases/run-check-health.ts';
 
-import {
-  handleCheckTaskSlaBreach, handleEvaluateJobSlo,
-  handleCheckInstallationHealth,
-  handleDetectBlockedAttempts, handleGetInstallationPipelineMetrics,
-  handleCronSentinel, handleCheckStuckJobs, handleBuildWatchdog,
-  handleCalculateBehavioralBaselines, handleComputeComplianceBenchmarks,
-  handleCheckPendingAgents
-} from './handlers/check.ts';
-import {
-  handleMonitorThresholds, handleHealthMonitor,
-  handleWatchdogNonExecution, handleCheckActionEffectiveness,
-  handleAnalyzeJobFailurePatterns
-} from './handlers/check-monitors.ts';
+import { MonitorThresholdsUseCase } from './use-cases/monitor-thresholds.use-case.ts';
+import { HealthMonitorUseCase } from './use-cases/health-monitor.use-case.ts';
+import { WatchdogNonExecutionUseCase } from './use-cases/watchdog-non-execution.use-case.ts';
+import { CheckActionEffectivenessUseCase } from './use-cases/check-action-effectiveness.use-case.ts';
+import { AnalyzeJobFailurePatternsUseCase } from './use-cases/analyze-job-failure-patterns.use-case.ts';
+import { CheckTaskSlaBreachUseCase } from './use-cases/check-task-sla-breach.use-case.ts';
+import { EvaluateJobSloUseCase } from './use-cases/evaluate-job-slo.use-case.ts';
+import { CheckInstallationHealthUseCase } from './use-cases/check-installation-health.use-case.ts';
+import { DetectBlockedAttemptsUseCase } from './use-cases/detect-blocked-attempts.use-case.ts';
+import { GetInstallationPipelineMetricsUseCase } from './use-cases/get-installation-pipeline-metrics.use-case.ts';
+import { CronSentinelUseCase } from './use-cases/cron-sentinel.use-case.ts';
+import { CheckStuckJobsUseCase } from './use-cases/check-stuck-jobs.use-case.ts';
+import { CheckPendingAgentsUseCase } from './use-cases/check-pending-agents.use-case.ts';
 
-const RouterSchema = z.object({
-  action: z.string().min(1).max(80),
-  payload: z.record(z.unknown()).optional().default({}),
-});
-
-// @ts-ignore: Legacy handlers are not yet fully typed
-const LEGACY_HANDLERS: Record<string, any> = {
-  'check:check-task-sla-breach': handleCheckTaskSlaBreach,
-  'check:evaluate-job-slo': handleEvaluateJobSlo,
-  'check:check-installation-health': handleCheckInstallationHealth,
-  'check:detect-stuck-installations': handleDetectBlockedAttempts,
-  'check:get-installation-pipeline-metrics': handleGetInstallationPipelineMetrics,
-  'check:cron-sentinel': handleCronSentinel,
-  'check:check-stuck-jobs': handleCheckStuckJobs,
-  'check:build-watchdog': handleBuildWatchdog,
-  'check:calculate-behavioral-baselines': handleCalculateBehavioralBaselines,
-  'check:compute-compliance-benchmarks': handleComputeComplianceBenchmarks,
-  'check:check-pending-agents': handleCheckPendingAgents,
-  'check:monitor-thresholds': handleMonitorThresholds,
-  'check:health-monitor': handleHealthMonitor,
-  'check:watchdog-non-execution': handleWatchdogNonExecution,
-  'check:check-action-effectiveness': handleCheckActionEffectiveness,
-  'check:analyze-job-failure-patterns': handleAnalyzeJobFailurePatterns,
-};
 
 servePublic(async (req, ctx) => {
   const { requestId, supabase, body } = ctx;
