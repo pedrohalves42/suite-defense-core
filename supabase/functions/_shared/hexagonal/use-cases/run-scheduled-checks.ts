@@ -24,7 +24,7 @@ export class RunScheduledChecksUseCase {
         if (checkType === 'rpc') {
           const rpcName = check.name.replaceAll('-', '_');
           try {
-            checkResult = await this.checkRepository.rpc(rpcName);
+            checkResult = await this.checkRepository.rpc(rpcName as any);
           } catch (rpcErr) {
             logger.warn(`[RunScheduledChecksUseCase] RPC ${rpcName} failed: ${rpcErr instanceof Error ? rpcErr.message : String(rpcErr)}`);
             throw rpcErr;
