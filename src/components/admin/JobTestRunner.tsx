@@ -53,7 +53,7 @@ export default function JobTestRunner() {
   const [testState, setTestState] = useState<TestState>('idle');
   const [testJobId, setTestJobId] = useState<string | null>(null);
   const [testJob, setTestJob] = useState<TestJob | null>(null);
-  const [pollCount, setPollCount] = useState(0);
+  // Removed pollCount - using Realtime and single timeout now
   const [executionTime, setExecutionTime] = useState<number | null>(null);
 
   // Fetch active agents with recent heartbeat
