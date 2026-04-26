@@ -18,7 +18,120 @@ export function useAgentMonitoring() {
   const instanceId = useRef(`monitor-${Math.random().toString(36).substring(2, 9)}`).current;
 
   const getAgentCalculatedStatus = (agent: Agent): 'online' | 'warning' | 'offline' | 'never_connected' => {
-// ... keep existing code
+    return getAgentOnlineStatus(agent as unknown as Parameters<typeof getAgentOnlineStatus>[0]);
+  };
+
+  const handleRefresh = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['agents-monitoring'] });
+    queryClient.invalidateQueries({ queryKey: ['jobs-monitoring'] });
+    queryClient.invalidateQueries({ queryKey: ['historical-scans'] });
+    queryClient.invalidateQueries({ queryKey: ['historical-jobs'] });
+    queryClient.invalidateQueries({ queryKey: ['agent-uptime'] });
+    setLastUpdate(new Date());
+    toast.success("Dados atualizados!");
+  }, [queryClient]);
+
+  // Fetch agents
+  const { data: initialAgents } = useQuery({
+    queryKey: ['agents-monitoring', tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return [];
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false,
+      });
+      if (error) throw error;
+      return ((data || []) as unknown as Record<string, unknown>[])
+        .map((agent) => ({
+          id: String(agent.id ?? ''),
+          agent_name: String(agent.agent_name ?? ''),
+          status: String(agent.status ?? ''),
+          last_heartbeat: agent.last_heartbeat ? String(agent.last_heartbeat) : null,
+          enrolled_at: String(agent.enrolled_at ?? ''),
+          agent_state: agent.agent_state ? String(agent.agent_state) : null,
+        }))
+        .sort((a: Agent, b: Agent) => new Date(b.enrolled_at).getTime() - new Date(a.enrolled_at).getTime()) as Agent[];
+    },
+    enabled: !tenantLoading && !!tenant?.id,
+  });
+
+  // Fetch jobs
+  const { data: initialJobs } = useQuery({
+    queryKey: ['jobs-monitoring', tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return [];
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('id, agent_id, agent_name, type, status, created_at, delivered_at, completed_at, approved, tenant_id')
+        .eq('tenant_id', tenant.id)
+        .gte('created_at', twentyFourHoursAgo)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data as Job[];
+    },
+    enabled: !tenantLoading && !!tenant?.id,
+  });
+
+  // Historical scans
+  const { data: historicalScans } = useQuery({
+    queryKey: ['historical-scans', tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return [];
+      const sevenDaysAgo = subDays(new Date(), 7).toISOString();
+      const { data, error } = await supabase
+        .from('virus_scans')
+        .select('scanned_at, is_malicious')
+        .eq('tenant_id', tenant.id)
+        .gte('scanned_at', sevenDaysAgo)
+        .order('scanned_at');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !tenantLoading && !!tenant?.id,
+  });
+
+  // Historical jobs
+  const { data: historicalJobs } = useQuery({
+    queryKey: ['historical-jobs', tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return [];
+      const sevenDaysAgo = subDays(new Date(), 7).toISOString();
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('created_at, status, completed_at')
+        .eq('tenant_id', tenant.id)
+        .gte('created_at', sevenDaysAgo)
+        .order('created_at');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !tenantLoading && !!tenant?.id,
+  });
+
+  // Agent uptime
+  const { data: agentUptimeData } = useQuery({
+    queryKey: ['agent-uptime', tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return [];
+      const { data, error } = await supabase.rpc('get_agents_list', {
+        p_tenant_id: tenant.id,
+        p_include_archived: false,
+      });
+      if (error) throw error;
+      return (data || []).map((agent: unknown) => {
+        const a = agent as Record<string, unknown>;
+        return {
+          agent_name: String(a.agent_name ?? ''),
+          last_heartbeat: a.last_heartbeat ? String(a.last_heartbeat) : null,
+          enrolled_at: String(a.enrolled_at ?? ''),
+        };
+      });
+    },
+    enabled: !tenantLoading && !!tenant?.id,
+  });
+
   // Sync state
   useEffect(() => {
     if (initialAgents) setAgents(initialAgents);
@@ -123,7 +236,7 @@ export function useAgentMonitoring() {
   const last7Days = getLast7Days();
 
   const scansTrendData: ScansTrendPoint[] = last7Days.map(day => {
-    const dayScans = historicalScans?.filter(s => s.scanned_at.startsWith(day.date)) || [];
+    const dayScans = historicalScans?.filter(s => (s.scanned_at as string).startsWith(day.date)) || [];
     return {
       date: day.label,
       total: dayScans.length,
@@ -133,7 +246,7 @@ export function useAgentMonitoring() {
   });
 
   const jobsTrendData: JobsTrendPoint[] = last7Days.map(day => {
-    const dayJobs = historicalJobs?.filter(j => j.created_at.startsWith(day.date)) || [];
+    const dayJobs = historicalJobs?.filter(j => (j.created_at as string).startsWith(day.date)) || [];
     return {
       date: day.label,
       total: dayJobs.length,
