@@ -2,6 +2,8 @@
  * Webhook Alert Utilities for CyberShield
  * Supports Slack, Microsoft Teams, and generic JSON webhooks
  */
+import { httpJson } from './http.ts';
+import { TIMEOUT_TIERS } from './fetch-with-timeout.ts';
 
 export interface WebhookPayload {
   tenantId: string;
@@ -160,11 +162,12 @@ function formatGenericPayload(payload: WebhookPayload): Record<string, unknown> 
 /**
  * Sends a webhook alert to the configured URL
  * Automatically detects provider and formats payload accordingly
+ * ADR-045: Uses robust httpJson wrapper for timeouts and retries
  */
 export async function sendWebhookAlert(
   webhookUrl: string,
   payload: WebhookPayload,
-  timeoutMs: number = 10000
+  timeoutMs: number = TIMEOUT_TIERS.WEBHOOK
 ): Promise<{ success: boolean; statusCode?: number; error?: string }> {
   const provider = detectWebhookProvider(webhookUrl);
   
@@ -180,38 +183,24 @@ export async function sendWebhookAlert(
       formattedPayload = formatGenericPayload(payload);
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
   try {
-    const response = await fetch(webhookUrl, {
+    await httpJson(webhookUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
         'User-Agent': 'CyberShield-Webhook/1.0'
       },
       body: JSON.stringify(formattedPayload),
-      signal: controller.signal
+      timeoutMs,
+      retries: 2, // Default webhooks with 2 retries
     });
 
-    clearTimeout(timeoutId);
-
-    if (response.ok) {
-      return { success: true, statusCode: response.status };
-    } else {
-      return { 
-        success: false, 
-        statusCode: response.status,
-        error: `HTTP ${response.status}: ${response.statusText}`
-      };
-    }
+    return { success: true, statusCode: 200 };
   } catch (error) {
-    clearTimeout(timeoutId);
-    
-    const isTimeout = error instanceof Error && error.name === 'AbortError';
+    const statusCode = (error as any)?.status;
     return {
       success: false,
-      error: isTimeout ? 'Request timeout' : (error instanceof Error ? error.message : 'Unknown error')
+      statusCode,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
 }
