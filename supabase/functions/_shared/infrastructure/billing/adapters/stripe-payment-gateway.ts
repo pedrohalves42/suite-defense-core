@@ -1,6 +1,6 @@
 
 import { PaymentGateway } from '../../../domain/billing/ports/payment-gateway.port.ts';
-import { Subscription, ChargeResult } from '../../../domain/billing/entities.ts';
+import { Subscription, ChargeResult, Invoice } from '../../../domain/billing/entities.ts';
 
 export class StripePaymentGateway implements PaymentGateway {
   private stripe: any;
@@ -49,15 +49,10 @@ export class StripePaymentGateway implements PaymentGateway {
     const stripe = await this.getStripe();
     const stripeSub = await stripe.subscriptions.retrieve(externalId);
     
-    // Logic to calculate addon devices from Stripe items if needed
-    // This requires access to repository or shared knowledge of addon price IDs
-    // For now returning basic details, addon logic will be in use case if it needs repo
-    
     return {
       status: stripeSub.status as any,
-      trialEnd: stripeSub.trial_end ? new Date(stripeSub.trial_end * 1000) : undefined,
-      currentPeriodEnd: new Date(stripeSub.current_period_end * 1000),
-      // Items are available in stripeSub.items.data
+      trialEnd: stripeSub.trial_end ? new Date(stripeSub.trial_end * 1000).toISOString() : undefined,
+      currentPeriodEnd: new Date(stripeSub.current_period_end * 1000).toISOString(),
     };
   }
 
@@ -114,5 +109,23 @@ export class StripePaymentGateway implements PaymentGateway {
     const stripe = await this.getStripe();
     const customer = await stripe.customers.create({ email });
     return customer.id;
+  }
+
+  async listInvoices(customerId: string, limit: number = 12): Promise<Invoice[]> {
+    const stripe = await this.getStripe();
+    const invoices = await stripe.invoices.list({ customer: customerId, limit });
+    
+    return invoices.data.map((inv: any) => ({
+      id: inv.id,
+      number: inv.number,
+      amountDue: inv.amount_due,
+      amountPaid: inv.amount_paid,
+      currency: inv.currency,
+      status: inv.status,
+      createdAt: inv.created,
+      dueDate: inv.due_date,
+      hostedInvoiceUrl: inv.hosted_invoice_url,
+      invoicePdf: inv.invoice_pdf,
+    }));
   }
 }
