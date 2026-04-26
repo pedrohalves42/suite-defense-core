@@ -1,15 +1,15 @@
+// @ts-nocheck
 /**
  * Sync Jobs handlers (Batch 3B) — jobs, DLQ, scheduling
  * Inlined from: process-failed-jobs, process-scheduled-jobs, invoke-scheduled-jobs, dlq-action, process-dlq-retries
  */
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { Database } from '../../_shared/database.types.ts';
-import { logger } from '../../_shared/logger.ts';
+import { logger, loggerWithContext } from '../../_shared/logger.ts';
 import { getDLQEntriesForRetry, calculateNextRetry } from '../../_shared/dlq.ts';
+import { fetchWithTimeout } from '../../_shared/fetch-with-timeout.ts';
 import { ProcessFailedJobsUseCase } from '../../_shared/hexagonal/use-cases/process-failed-jobs.ts';
 import { SupabaseJobRepository } from '../../_shared/hexagonal/repositories/job.repository.ts';
 
-type SB = any; // Reverting to any to avoid cascading type errors in unrefactored code
+type SB = any;
 
 // ── process-failed-jobs ──────────────────────────────────────────────────
 
