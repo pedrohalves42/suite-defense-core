@@ -1,4 +1,4 @@
-// @ts-nocheck
+// get-check-status.ts - Use case to retrieve monitoring check details
 import { ICheckRepository } from '../repositories/check.repository.ts';
 
 export class GetCheckStatusUseCase {
