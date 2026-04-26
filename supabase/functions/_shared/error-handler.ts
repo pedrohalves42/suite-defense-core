@@ -40,7 +40,8 @@ export function createStandardError(
   code: string,
   message: string,
   details?: unknown,
-  requestId?: string
+  requestId?: string,
+  context?: ErrorContext
 ): StandardError {
   return {
     error: {
@@ -49,6 +50,7 @@ export function createStandardError(
       details,
       timestamp: new Date().toISOString(),
       requestId,
+      context,
     }
   };
 }
