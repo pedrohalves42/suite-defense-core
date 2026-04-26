@@ -23,6 +23,9 @@ import { GetInstallationPipelineMetricsUseCase } from './use-cases/get-installat
 import { CronSentinelUseCase } from './use-cases/cron-sentinel.use-case.ts';
 import { CheckStuckJobsUseCase } from './use-cases/check-stuck-jobs.use-case.ts';
 import { CheckPendingAgentsUseCase } from './use-cases/check-pending-agents.use-case.ts';
+import { BuildWatchdogUseCase } from './use-cases/build-watchdog.use-case.ts';
+import { CalculateBehavioralBaselinesUseCase } from './use-cases/calculate-behavioral-baselines.use-case.ts';
+import { ComputeComplianceBenchmarksUseCase } from './use-cases/compute-compliance-benchmarks.use-case.ts';
 const RouterSchema = z.object({
   action: z.string().min(1).max(80),
   payload: z.record(z.unknown()).optional().default({}),

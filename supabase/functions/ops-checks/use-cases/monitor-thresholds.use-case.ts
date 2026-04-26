@@ -60,7 +60,8 @@ export class MonitorThresholdsUseCase {
       const notifyModule = await import('../../ops-gateway/handlers/notify.ts');
       handleNotifyEmail = notifyModule.handleNotifyEmail;
     } catch (e) {
-      logger.error(`[${requestId}] MonitorThresholdsUseCase: Could not import handleNotifyEmail: ${e.message}`);
+      const msg = e instanceof Error ? e.message : String(e);
+      logger.error(`[${requestId}] MonitorThresholdsUseCase: Could not import handleNotifyEmail: ${msg}`);
     }
 
     for (const alert of alerts) {
