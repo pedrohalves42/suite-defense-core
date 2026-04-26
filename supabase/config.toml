@@ -160,6 +160,9 @@ verify_jwt = true
 [functions.auto-renew-enrollment-keys]
 verify_jwt = false
 
+[functions.cleanup-router]
+verify_jwt = false
+
 [functions.cleanup-orphaned-data]
 verify_jwt = true
 

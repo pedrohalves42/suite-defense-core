@@ -1,7 +1,7 @@
 /**
  * Integration tests: submit-software-inventory
  */
-import "https://deno.land/std@0.224.0/dotenv/load.ts";
+
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { callFunction } from "../helpers/test-client.ts";
 import { SEED } from "../helpers/seed-data.ts";
