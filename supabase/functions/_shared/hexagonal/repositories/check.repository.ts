@@ -134,7 +134,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
     neq?: Record<string, string | number>, 
     in?: Record<string, (string | number)[]> 
   }): Promise<Tables['agents']['Row'][]> {
-    let query = this.supabase.from('agents').select('*');
+    let query = (this.supabase.from('agents') as any).select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
         query = query.gte(key as any, val);
@@ -159,7 +159,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
     gte?: Record<string, string | number>, 
     in?: Record<string, (string | number)[]> 
   }): Promise<Tables['installation_analytics']['Row'][]> {
-    let query = this.supabase.from('installation_analytics').select('*');
+    let query = (this.supabase.from('installation_analytics') as any).select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
         query = query.gte(key as any, val);
@@ -181,7 +181,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
     gte?: Record<string, string | number>,
     tenant_id?: string
   }): Promise<Tables['jobs']['Row'][]> {
-    let query = this.supabase.from('jobs').select('*');
+    let query = (this.supabase.from('jobs') as any).select('*');
     if (filters?.tenant_id) {
       query = query.eq('tenant_id', filters.tenant_id);
     }
