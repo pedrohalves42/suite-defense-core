@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
-import { RealtimeChannel } from '@supabase/supabase-js';
+import { realtimeChannelManager } from '@/lib/realtime-manager';
 
 export interface BuildStatus {
   build_status: 'pending' | 'building' | 'completed' | 'failed';
@@ -21,83 +21,48 @@ interface UseBuildRealtimeOptions {
 
 /**
  * Hook para monitorar status de build via Realtime
- * Substitui polling por subscription push-based
+ * Reutiliza canais via RealtimeChannelManager
  */
 export function useBuildRealtime({ buildId, onStatusChange, onError }: UseBuildRealtimeOptions) {
-  const channelRef = useRef<RealtimeChannel | null>(null);
-  const isSubscribedRef = useRef(false);
-
-  const cleanup = useCallback(() => {
-    if (channelRef.current) {
-      logger.info('[useBuildRealtime] Cleaning up subscription', { buildId });
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
-      isSubscribedRef.current = false;
-    }
-  }, [buildId]);
+  const instanceId = useRef(`build-${Math.random().toString(36).substring(2, 9)}`).current;
 
   useEffect(() => {
-    if (!buildId) {
-      cleanup();
-      return;
-    }
+    if (!buildId) return;
 
-    // Evitar subscription duplicada
-    if (isSubscribedRef.current && channelRef.current) {
-      return;
-    }
+    logger.info('[useBuildRealtime] Subscribing via manager', { buildId, instanceId });
 
-    logger.info('[useBuildRealtime] Setting up Realtime subscription', { buildId });
+    realtimeChannelManager.subscribe(
+      instanceId,
+      'agent_builds',
+      `id=eq.${buildId}`,
+      (payload) => {
+        if (payload.eventType !== 'UPDATE') return;
+        
+        const newData = payload.new as BuildStatus & { id: string };
+        
+        logger.info('[useBuildRealtime] Received update', {
+          buildId,
+          status: newData.build_status,
+          hasDownloadUrl: !!newData.download_url
+        });
 
-    const channel = supabase
-      .channel(`build-status-${buildId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'agent_builds',
-          filter: `id=eq.${buildId}`
-        },
-        (payload) => {
-          const newData = payload.new as BuildStatus & { id: string };
-          
-          logger.info('[useBuildRealtime] Received update', {
-            buildId,
-            status: newData.build_status,
-            hasDownloadUrl: !!newData.download_url
-          });
+        onStatusChange({
+          build_status: newData.build_status,
+          download_url: newData.download_url,
+          sha256_hash: newData.sha256_hash,
+          file_size_bytes: newData.file_size_bytes,
+          error_message: newData.error_message,
+          build_duration_seconds: newData.build_duration_seconds,
+          github_run_url: newData.github_run_url
+        });
+      }
+    );
 
-          onStatusChange({
-            build_status: newData.build_status,
-            download_url: newData.download_url,
-            sha256_hash: newData.sha256_hash,
-            file_size_bytes: newData.file_size_bytes,
-            error_message: newData.error_message,
-            build_duration_seconds: newData.build_duration_seconds,
-            github_run_url: newData.github_run_url
-          });
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          logger.info('[useBuildRealtime] Successfully subscribed', { buildId });
-          isSubscribedRef.current = true;
-        } else if (status === 'CHANNEL_ERROR') {
-          logger.error('[useBuildRealtime] Subscription error', { buildId });
-          onError?.(new Error('Falha na conexão Realtime'));
-          isSubscribedRef.current = false;
-        } else if (status === 'TIMED_OUT') {
-          logger.warn('[useBuildRealtime] Subscription timeout', { buildId });
-          onError?.(new Error('Timeout na conexão Realtime'));
-          isSubscribedRef.current = false;
-        }
-      });
-
-    channelRef.current = channel;
-
-    return cleanup;
-  }, [buildId, onStatusChange, onError, cleanup]);
+    return () => {
+      logger.info('[useBuildRealtime] Unsubscribing via manager', { buildId, instanceId });
+      realtimeChannelManager.unsubscribe(instanceId, 'agent_builds', `id=eq.${buildId}`);
+    };
+  }, [buildId, onStatusChange, instanceId]);
 
   // Função para fetch manual (fallback)
   const fetchStatus = useCallback(async (): Promise<BuildStatus | null> => {
