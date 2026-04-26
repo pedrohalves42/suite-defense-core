@@ -179,7 +179,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
 
   async getCount(table: keyof Tables, filters: any): Promise<number> {
     const queryTable = table as any;
-    let query = this.supabase.from(queryTable).select('*', { count: 'exact', head: true });
+    let query: any = this.supabase.from(queryTable).select('*', { count: 'exact', head: true });
     if (filters.eq) {
       for (const [key, val] of Object.entries(filters.eq)) {
         query = query.eq(key as any, val as any);
