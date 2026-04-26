@@ -12,6 +12,109 @@ interface ForceUpdateResult {
   response?: Response;
 }
 
+interface SelfHealForceVersionResult {
+  version: string;
+  prefetchedRelease: any;
+}
+
+interface SameVersionRemediationResult extends SelfHealForceVersionResult {
+  omitPayloadSignature: boolean;
+  overrideSafeMode: boolean;
+  overrideSafeModeExpiresAt: string;
+}
+
+const SAME_VERSION_REMEDIATION_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const SAME_VERSION_REMEDIATION_OVERRIDE_MS = 15 * 60 * 1000;
+
+export async function selfHealForceVersion(
+  supabase: any,
+  _agent: AgentContext,
+  platform: string,
+  currentVersion: string | undefined,
+): Promise<SelfHealForceVersionResult | null> {
+  const normalizedCurrentVersion = normalizeVersion(currentVersion || '')
+  const query = supabase
+    .from('agent_releases')
+    .select('*')
+    .eq('platform', platform)
+
+  if (normalizedCurrentVersion) {
+    query.eq('version', normalizedCurrentVersion)
+  }
+
+  const { data: release, error } = await query
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error || !release?.version) {
+    if (error) {
+      logger.warn('Force update self-heal release lookup failed', { platform, error: error.message || String(error) })
+    }
+    return null
+  }
+
+  return {
+    version: release.version,
+    prefetchedRelease: release,
+  }
+}
+
+export async function maybeAutoArmSameVersionRemediation(
+  supabase: any,
+  agent: AgentContext,
+  updateData: AgentUpdate,
+  currentVersion: string | undefined,
+  platform: string,
+): Promise<SameVersionRemediationResult | null> {
+  const state = (updateData.state || updateData.agent_state || agent.state || '').toUpperCase()
+  const normalizedPlatform = platform.toLowerCase()
+  const normalizedCurrentVersion = normalizeVersion(currentVersion || updateData.agent_version || agent.agent_version || '')
+
+  if (normalizedPlatform !== 'windows' || !['SAFE_MODE', 'DEGRADED'].includes(state) || !normalizedCurrentVersion) {
+    return null
+  }
+
+  if (agent.last_forced_update_applied) {
+    const lastAppliedAt = new Date(agent.last_forced_update_applied).getTime()
+    if (Number.isFinite(lastAppliedAt) && Date.now() - lastAppliedAt < SAME_VERSION_REMEDIATION_COOLDOWN_MS) {
+      return null
+    }
+  }
+
+  const healed = await selfHealForceVersion(supabase, agent, platform, normalizedCurrentVersion)
+  if (!healed || normalizeVersion(healed.version) !== normalizedCurrentVersion) {
+    return null
+  }
+
+  const overrideSafeModeExpiresAt = new Date(Date.now() + SAME_VERSION_REMEDIATION_OVERRIDE_MS).toISOString()
+  const { error } = await supabase
+    .from('agents')
+    .update({
+      force_update_version: healed.version,
+      force_update_reason: 'Automatic same-version remediation for degraded Windows agent',
+      force_update_at: new Date().toISOString(),
+      force_update_override_safe_mode: true,
+      force_update_override_safe_mode_expires_at: overrideSafeModeExpiresAt,
+    })
+    .eq('id', agent.id)
+
+  if (error) {
+    logger.warn('Force update same-version auto-remediation update failed', {
+      agentName: agent.agent_name,
+      error: error.message || String(error),
+    })
+    return null
+  }
+
+  return {
+    ...healed,
+    omitPayloadSignature: true,
+    overrideSafeMode: true,
+    overrideSafeModeExpiresAt,
+  }
+}
+
 export async function processForceUpdate(
   supabase: any,
   agent: AgentContext,
