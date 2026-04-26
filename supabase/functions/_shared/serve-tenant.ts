@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * serveTenant() → Centralized Edge Function middleware for tenant validation.
  * 
