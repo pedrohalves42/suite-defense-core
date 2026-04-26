@@ -307,7 +307,7 @@ export class SupabaseCheckRepository implements ICheckRepository {
   }
 
   async getBusinessHoursBatch(tenantIds: string[]): Promise<Record<string, any>> {
-    const { data, error } = await this.supabase.rpc('get_business_hours_batch', {
+    const { data, error } = await (this.supabase as any).rpc('get_business_hours_batch', {
       p_tenant_ids: tenantIds
     });
     if (error) throw error;
