@@ -5,6 +5,14 @@ import { logger } from './logger.ts';
 
 export { corsHeaders };
 
+export interface ErrorContext {
+  traceId?: string;
+  tenantId?: string;
+  agentId?: string;
+  operation: string;
+  latency?: number;
+}
+
 export interface StandardError {
   error: {
     code: string;
@@ -12,6 +20,7 @@ export interface StandardError {
     details?: unknown;
     timestamp: string;
     requestId?: string;
+    context?: ErrorContext;
   };
 }
 
@@ -31,7 +40,8 @@ export function createStandardError(
   code: string,
   message: string,
   details?: unknown,
-  requestId?: string
+  requestId?: string,
+  context?: ErrorContext
 ): StandardError {
   return {
     error: {
@@ -40,6 +50,7 @@ export function createStandardError(
       details,
       timestamp: new Date().toISOString(),
       requestId,
+      context,
     }
   };
 }
@@ -91,16 +102,23 @@ export function createErrorResponse(
 export function handleException(
   error: unknown,
   requestId: string,
-  functionName: string
+  functionName: string,
+  context?: ErrorContext
 ): Response {
-  logger.error(`[${requestId}] [${functionName}] Exception:`, error);
+  logger.error(`[${requestId}] [${functionName}] [${context?.operation || 'unknown'}] Exception:`, error, {
+    requestId,
+    traceId: context?.traceId,
+    tenantId: context?.tenantId,
+    agentId: context?.agentId
+  });
   
   const message = error instanceof Error ? error.message : 'Unknown error occurred';
   const standardError = createStandardError(
     'INTERNAL_ERROR',
     message,
-    { functionName },
-    requestId
+    { functionName, latency: context?.latency },
+    requestId,
+    context
   );
   
   return new Response(
@@ -110,6 +128,23 @@ export function handleException(
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     }
   );
+}
+
+export function handleExceptionWithContext(
+  error: unknown,
+  requestId: string,
+  functionName: string,
+  startTime: number,
+  overrides?: Partial<ErrorContext>
+): Response {
+  const latency = Date.now() - startTime;
+  const context: ErrorContext = {
+    operation: functionName,
+    latency,
+    traceId: requestId,
+    ...overrides
+  };
+  return handleException(error, requestId, functionName, context);
 }
 
 export function createValidationError(

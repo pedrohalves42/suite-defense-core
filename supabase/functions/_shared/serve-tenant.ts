@@ -13,6 +13,7 @@ import { requireEnv } from './env.ts';
 import { logger, loggerWithContext } from './logger.ts';
 import { timingSafeEqual } from './crypto-utils.ts';
 import { withTimeout } from './timeout.ts';
+import { handleExceptionWithContext } from './error-handler.ts';
 
 // Re-export extracted middlewares for backward compatibility
 export { servePublic } from './serve-public.ts';
@@ -170,7 +171,6 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
         const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
         
         if (authError || !authUser) {
-        logger.warn(`[serveTenant][${requestId}] Invalid JWT`);
           return errorResponse('Invalid or expired token', 401, requestId, origin);
         }
         userId = authUser.id;
@@ -199,7 +199,6 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
           if (currentTenantId) {
             const hasAccess = await verifyUserTenantAccess(supabase, userId, currentTenantId);
             if (!hasAccess) {
-              logger.warn(`[SECURITY][${requestId}] User ${userId} denied access to tenant ${currentTenantId}`);
               return errorResponse('Access denied: unauthorized tenant', 403, requestId, origin);
             }
           } else if (allowFallback) {
@@ -210,10 +209,6 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
           } else {
             return errorResponse('tenant_id required', 400, requestId, origin);
           }
-        }
-      } else {
-        if (!currentTenantId) {
-          logger.warn(`[serveTenant][${requestId}] skipTenantValidation=true but no tenant_id provided`);
         }
       }
 
@@ -235,7 +230,7 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
             429,
             { 'X-Request-ID': requestId, 'Retry-After': String(retryAfter) },
             origin,
-          );
+            );
         }
       }
 
@@ -271,12 +266,11 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
       }, origin);
 
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Internal server error';
-      const isTimeout = msg.includes('Handler timeout');
-      const status = isTimeout ? 504 : 500;
-      const log = loggerWithContext({ requestId, tenantId: currentTenantId ?? undefined });
-      log.error(`[serveTenant] ${isTimeout ? 'Timeout' : 'Error'}`, { message: msg });
-      return errorResponse(msg, status, requestId, origin);
+      const isTimeout = error instanceof Error && error.message.includes('Handler timeout');
+      return handleExceptionWithContext(error, requestId, 'serveTenant', startTime, {
+        tenantId: currentTenantId ?? undefined,
+        operation: isTimeout ? 'serveTenantTimeout' : 'serveTenant',
+      });
     }
   });
 }

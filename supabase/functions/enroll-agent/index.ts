@@ -7,7 +7,7 @@
  */
 import { requireEnv } from '../_shared/env.ts';
 import { createTypedClient } from '../_shared/supabase-client.ts';
-import { handleException, handleValidationError } from '../_shared/error-handler.ts';
+import { handleExceptionWithContext, handleValidationError } from '../_shared/error-handler.ts';
 import { EnrollAgentSchema } from '../_shared/validation.ts';
 import { createAuditLog } from '../_shared/audit.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
@@ -102,8 +102,9 @@ servePublic(async (req, ctx) => {
     return { agentToken, hmacSecret, expiresAt: expiresAt.toISOString(), requestId };
 
   } catch (error) {
-    logger.error(`[${requestId}] Enrollment failed after ${Date.now() - startTime}ms`, error);
-    return handleException(error, requestId, 'enroll-agent');
+    return handleExceptionWithContext(error, requestId, 'enroll-agent', startTime, {
+      tenantId: 'unknown', // Set later if available, but mandatory here
+    });
   }
 }, {
   rateLimit: {

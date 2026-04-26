@@ -7,7 +7,7 @@
  */
 import { requireEnv } from '../_shared/env.ts';
 import { createTypedClient } from '../_shared/supabase-client.ts';
-import { handleException } from '../_shared/error-handler.ts';
+import { handleExceptionWithContext } from '../_shared/error-handler.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logger } from '../_shared/logger.ts';
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts';
@@ -19,6 +19,7 @@ import { serveAgent } from '../_shared/serve-agent.ts';
 
 serveAgent(async (req, ctx) => {
   const { requestId, supabase: supabaseAny, agentId, agentName, tenantId, agentData } = ctx;
+  const startTime = Date.now();
   const traceId = requestId;
   const origin = req.headers.get("origin");
 
@@ -51,7 +52,10 @@ serveAgent(async (req, ctx) => {
     return await claimAndBuildResponse(supabase, authenticatedAgent, origin);
 
   } catch (error) {
-    return handleException(error, traceId, 'poll-jobs');
+    return handleExceptionWithContext(error, traceId, 'poll-jobs', startTime, {
+      tenantId,
+      agentId
+    });
   }
 }, {
   rateLimit: {
