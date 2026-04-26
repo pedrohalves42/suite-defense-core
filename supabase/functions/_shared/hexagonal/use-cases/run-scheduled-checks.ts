@@ -1,4 +1,4 @@
-// @ts-nocheck
+// run-scheduled-checks.ts - Use case to execute scheduled monitoring checks
 import { ICheckRepository } from '../repositories/check.repository.ts';
 import { logger } from '../../logger.ts';
 
