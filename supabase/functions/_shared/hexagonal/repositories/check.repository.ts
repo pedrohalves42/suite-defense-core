@@ -13,7 +13,7 @@ export interface ICheckRepository {
   getCheckById(id: string): Promise<Check | null>;
   updateCheckStatus(id: string, update: CheckUpdate): Promise<void>;
   logScheduledJobRun(payload: any): Promise<void>;
-  createSystemAlert(alert: Tables['system_alerts']['Insert']): Promise<void>;
+  createSystemAlert(alert: Tables['system_alerts']['Insert'] | Tables['system_alerts']['Insert'][]): Promise<void>;
   createTask(task: Tables['tasks']['Insert']): Promise<{ id: string }>;
   logAudit(audit: Tables['audit_logs']['Insert']): Promise<void>;
   saveCheckResult(checkId: string, result: Json): Promise<void>;
@@ -69,8 +69,10 @@ export class SupabaseCheckRepository implements ICheckRepository {
     if (error) throw error;
   }
 
-  async createSystemAlert(alert: Tables['system_alerts']['Insert']): Promise<void> {
-    const { error } = await this.supabase.from('system_alerts').insert(alert);
+  async createSystemAlert(alert: Tables['system_alerts']['Insert'] | Tables['system_alerts']['Insert'][]): Promise<void> {
+    const rows = Array.isArray(alert) ? alert : [alert];
+    if (rows.length === 0) return;
+    const { error } = await this.supabase.from('system_alerts').insert(rows);
     if (error) throw error;
   }
 
