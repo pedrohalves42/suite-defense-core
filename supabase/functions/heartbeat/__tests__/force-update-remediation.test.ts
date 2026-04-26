@@ -78,7 +78,7 @@ Deno.test("maybeAutoArmSameVersionRemediation - should trigger update for degrad
   
   // Verify that the agent was updated with force_update fields
   assertEquals(updateSpy.calls.length, 1);
-  const updateArg = updateSpy.calls[0].args[0];
+  const updateArg = (updateSpy.calls[0].args[0] as any);
   assertEquals(updateArg.force_update_version, "1.2.3");
   assertEquals(updateArg.force_update_override_safe_mode, true);
 });
