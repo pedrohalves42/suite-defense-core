@@ -51270,10 +51270,6 @@ export type Database = {
         }[]
       }
       sync_pgcron_health_from_run_details: { Args: never; Returns: undefined }
-      test_rls_isolation: {
-        Args: { target_table: string; target_user_id: string }
-        Returns: Json[]
-      }
       test_tenant_isolation: {
         Args: never
         Returns: {
