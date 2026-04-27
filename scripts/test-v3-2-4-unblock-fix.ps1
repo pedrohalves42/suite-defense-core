@@ -30,7 +30,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$ServerUrl = "https://iavbnmduxpxhwubqrzzn.supabase.co"
+$ServerUrl = "https://your-project.supabase.co"
 $BaseDir = "C:\CyberShield"
 $LogFile = "$BaseDir\logs\test-validation.log"
 
