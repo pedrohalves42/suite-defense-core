@@ -73,7 +73,7 @@ cd C:\caminho\para\projeto\scripts
 - Baixa e executa o instalador
 - Credenciais pré-preenchidas:
   - Agent Name: `testev2`
-  - Enrollment Key: `BT5Y-I43E-KOOA-XAWN`
+  - Enrollment Key: `XXXX-XXXX-XXXX-XXXX`
   - Server URL: `https://iavbnmduxpxhwubqrzzn.supabase.co`
 
 #### **Fase 4: Validação de Execução**
