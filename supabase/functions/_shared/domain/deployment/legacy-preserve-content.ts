@@ -342,7 +342,7 @@ if (-not $AgentName -or -not $AgentToken) {
     Write-Host ""
     Write-Status "Options:" "INFO"
     Write-Status '  1. Set enrollment key and retry: $env:CYBERSHIELD_KEY="XXXX-XXXX-XXXX-XXXX"' "INFO"
-    Write-Status '  2. Set JWT (manual mode): $env:CYBERSHIELD_JWT="eyJ..."' "INFO"
+    Write-Status '  2. Set JWT (manual mode): $env:CYBERSHIELD_JWT="<TOKEN_AQUI>"' "INFO"
     Write-Status '  3. Optional name override: $env:CYBERSHIELD_AGENT_NAME="MIT-SERVIDOR"' "INFO"
     Write-Status "  4. Use full reinstall with enrollment key" "INFO"
     Start-Sleep -Seconds 10
