@@ -62,7 +62,7 @@ export const tutorials_integracoes: Tutorial[] = [
       {
         title: "Autenticação e API Keys",
         content: "A API usa autenticação via Bearer Token (JWT). Gere um API Key em Admin → Integrações → 'API Keys'. Cada key tem: nome descritivo, permissões (read, write, admin), IP whitelist opcional e data de expiração. Inclua o token no header: Authorization: Bearer <token>.",
-        code: "# Exemplo de requisição autenticada:\ncurl -X GET https://api.cybershield.com.br/v1/agents \\\n  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiI...' \\\n  -H 'Content-Type: application/json'\n\n# Resposta (200 OK):\n{\n  \"data\": [\n    {\n      \"id\": \"agt_abc123\",\n      \"hostname\": \"DESKTOP-001\",\n      \"status\": \"online\",\n      \"os\": \"Windows 11 Pro 23H2\",\n      \"agent_version\": \"2.5.1\",\n      \"last_heartbeat\": \"2026-03-13T14:30:00Z\"\n    }\n  ],\n  \"meta\": { \"total\": 45, \"page\": 1, \"per_page\": 20 }\n}",
+        code: "# Exemplo de requisição autenticada:\ncurl -X GET https://api.cybershield.com.br/v1/agents \\\n  -H 'Authorization: Bearer <SEU_TOKEN_JWT_AQUI>' \\\n  -H 'Content-Type: application/json'\n\n# Resposta (200 OK):\n{\n  \"data\": [\n    {\n      \"id\": \"agt_abc123\",\n      \"hostname\": \"DESKTOP-001\",\n      \"status\": \"online\",\n      \"os\": \"Windows 11 Pro 23H2\",\n      \"agent_version\": \"2.5.1\",\n      \"last_heartbeat\": \"2026-03-13T14:30:00Z\"\n    }\n  ],\n  \"meta\": { \"total\": 45, \"page\": 1, \"per_page\": 20 }\n}",
         warning: "API Keys são segredos sensíveis. Nunca exponha em código frontend, repositórios públicos ou logs. Use variáveis de ambiente (secrets) em código backend.",
       },
       {
