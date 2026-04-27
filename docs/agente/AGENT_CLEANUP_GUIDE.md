@@ -36,7 +36,7 @@ Se você vê múltiplos `AgentToken:` diferentes nos logs, você tem agentes fan
 .\scripts\cleanup-agents.ps1 -DryRun -Verbose
 
 # Modo REAL (remove processos fantasma)
-.\scripts\cleanup-agents.ps1 -ValidTokenPrefixes @("3e1973dc", "2ecb14a9")
+.\scripts\cleanup-agents.ps1 -ValidTokenPrefixes @("00000000", "11111111")
 ```
 
 #### Parâmetros
