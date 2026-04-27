@@ -11,8 +11,8 @@ const SECRET_PATTERNS = [
   { name: "Hardcoded Supabase Service Role", regex: /eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+/g } // JWT detect
 ];
 
-const EXCLUDED_DIRS = ["node_modules", ".git", "dev-dist", "playwright-report", "dist", "docs", "e2e", "tests", "__tests__"];
-const EXCLUDED_FILES = ["package-lock.json", "bun.lockb", "src/integrations/supabase/types.ts", "database.types.ts", "vite.config.ts", ".env.example", ".env.test.example"];
+const EXCLUDED_DIRS = ["node_modules", ".git", "dev-dist", "playwright-report", "dist", "docs", "e2e", "tests", "__tests__", "supabase/migrations_archived"];
+const EXCLUDED_FILES = ["package-lock.json", "bun.lockb", "src/integrations/supabase/types.ts", "database.types.ts", "vite.config.ts", ".env.example", ".env.test.example", ".env"];
 
 function scanFile(filePath: string) {
   const content = readFileSync(filePath, "utf-8");
