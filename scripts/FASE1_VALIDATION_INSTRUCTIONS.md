@@ -7,7 +7,7 @@ Validar que o instalador v3.3.0 está ativo no servidor e testar a instalação 
 - ✅ VM Windows Server com PowerShell 5.1+
 - ✅ Permissões de Administrador
 - ✅ Conectividade com `https://iavbnmduxpxhwubqrzzn.supabase.co`
-- ✅ Enrollment Key: `BT5Y-I43E-KOOA-XAWN` (válida até 24/11/2025)
+- ✅ Enrollment Key: `XXXX-XXXX-XXXX-XXXX` (obtenha no dashboard)
 
 ---
 
