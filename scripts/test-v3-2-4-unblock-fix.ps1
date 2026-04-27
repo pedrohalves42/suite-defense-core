@@ -110,11 +110,7 @@ $phase1 = Test-Phase -Name "1/5 - Limpeza de Instalacao Anterior" -Test {
 } -SuccessMessage "Instalacao anterior limpa com sucesso" -FailureMessage "Falha na limpeza"
 
 if (-not $phase1) {
-<<<<<<< HEAD
     Write-Host "`n[WARN]  Aviso: Limpeza falhou, mas continuando..." -ForegroundColor Yellow
-=======
-    Write-Host "`n[WARN] ? Aviso: Limpeza falhou, mas continuando..." -ForegroundColor Yellow
->>>>>>> 221a634 (fix(ascii): remove caracteres nao-ASCII de scripts criticos)
 }
 
 # ============================================================
