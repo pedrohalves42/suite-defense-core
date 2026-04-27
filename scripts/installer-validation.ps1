@@ -3,13 +3,13 @@
 
 param(
   [Parameter(Mandatory = $true)]
-  [string]$ServerUrl   = "https://iavbnmduxpxhwubqrzzn.supabase.co",
+  [string]$ServerUrl   = "https://your-project.supabase.co",
   [Parameter(Mandatory = $true)]
-  [string]$AgentToken  = "d96f6c22-e04f-47a8-b40e-be908d1732c1",
+  [string]$AgentToken  = "00000000-0000-0000-0000-000000000000",
   [Parameter(Mandatory = $true)]
-  [string]$HmacSecret  = "add846c502c63546ba27de98bb8c1c2e0da372f7ab864941e14837c0a6178117",
+  [string]$HmacSecret  = "0000000000000000000000000000000000000000000000000000000000000000",
   [Parameter(Mandatory = $true)]
-  [string]$AgentName   = "correcao-de-ordem-de-funcao-de-teste-v322"
+  [string]$AgentName   = "test-agent"
 )
 
 $ErrorActionPreference = "Stop"

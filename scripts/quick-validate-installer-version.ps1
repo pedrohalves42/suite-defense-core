@@ -4,7 +4,7 @@
 # Testa se o serve-installer esta servindo v3.3.1-PAYLOAD-FIX
 
 param(
-    [string]$EnrollmentKey = "BT5Y-I43E-KOOA-XAWN",
+    [string]$EnrollmentKey = "XXXX-XXXX-XXXX-XXXX",
     [string]$ServerUrl = "https://iavbnmduxpxhwubqrzzn.supabase.co"
 )
 

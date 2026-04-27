@@ -37,11 +37,11 @@
 #>
 
 param(
-    [string]$EnrollmentKey = "BT5Y-I43E-KOOA-XAWN",
-    [string]$AgentName = "testev2",
-    [string]$ServerUrl = "https://iavbnmduxpxhwubqrzzn.supabase.co",
-    [string]$AgentToken = "a40e2355-68a7-468b-aa6d-c21cb3c484dd",
-    [string]$HmacSecret = "73e838e33def1665e28a6c5b0de1fb13e6a1e835424095fae6ed2072f36e2129"
+    [string]$EnrollmentKey = "XXXX-XXXX-XXXX-XXXX",
+    [string]$AgentName = "test-agent",
+    [string]$ServerUrl = "https://your-project.supabase.co",
+    [string]$AgentToken = "00000000-0000-0000-0000-000000000000",
+    [string]$HmacSecret = "0000000000000000000000000000000000000000000000000000000000000000"
 )
 
 $ErrorActionPreference = "Continue"

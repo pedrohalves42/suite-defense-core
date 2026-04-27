@@ -36,7 +36,7 @@ Se você vê múltiplos `AgentToken:` diferentes nos logs, você tem agentes fan
 .\scripts\cleanup-agents.ps1 -DryRun -Verbose
 
 # Modo REAL (remove processos fantasma)
-.\scripts\cleanup-agents.ps1 -ValidTokenPrefixes @("3e1973dc", "2ecb14a9")
+.\scripts\cleanup-agents.ps1 -ValidTokenPrefixes @("00000000", "11111111")
 ```
 
 #### Parâmetros
@@ -76,10 +76,10 @@ Depois de limpar processos fantasma, recrie a Scheduled Task com credenciais cor
 
 ```powershell
 .\scripts\recreate-agent-task.ps1 `
-  -AgentToken "3e1973dc-b10f-4b3a-8dd3-42f9b7e5a6c8" `
-  -HmacSecret "ab482e64dc2c..." `
-  -AgentName "pcteste1" `
-  -ServerUrl "https://iavbnmduxpxhwubqrzzn.supabase.co" `
+  -AgentToken "00000000-0000-0000-0000-000000000000" `
+  -HmacSecret "000000000000..." `
+  -AgentName "test-agent" `
+  -ServerUrl "https://your-project.supabase.co" `
   -ScriptPath "C:\CyberShield\cybershield-agent.ps1"
 ```
 

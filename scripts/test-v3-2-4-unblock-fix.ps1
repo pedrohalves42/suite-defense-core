@@ -18,7 +18,7 @@
     Nome do agente a ser criado (ex: teste-fix)
     
 .EXAMPLE
-    .\test-v3-2-4-unblock-fix.ps1 -EnrollmentKey "BT5Y-I43E-KOOA-XAWN" -AgentName "teste-fix"
+    .\test-v3-2-4-unblock-fix.ps1 -EnrollmentKey "XXXX-XXXX-XXXX-XXXX" -AgentName "test-agent"
 #>
 
 param(
@@ -30,7 +30,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$ServerUrl = "https://iavbnmduxpxhwubqrzzn.supabase.co"
+$ServerUrl = "https://your-project.supabase.co"
 $BaseDir = "C:\CyberShield"
 $LogFile = "$BaseDir\logs\test-validation.log"
 
@@ -110,11 +110,7 @@ $phase1 = Test-Phase -Name "1/5 - Limpeza de Instalacao Anterior" -Test {
 } -SuccessMessage "Instalacao anterior limpa com sucesso" -FailureMessage "Falha na limpeza"
 
 if (-not $phase1) {
-<<<<<<< HEAD
     Write-Host "`n[WARN]  Aviso: Limpeza falhou, mas continuando..." -ForegroundColor Yellow
-=======
-    Write-Host "`n[WARN] ? Aviso: Limpeza falhou, mas continuando..." -ForegroundColor Yellow
->>>>>>> 221a634 (fix(ascii): remove caracteres nao-ASCII de scripts criticos)
 }
 
 # ============================================================
@@ -290,11 +286,7 @@ if ($phase4) {
     Write-Host "   O agente esta executando corretamente e enviando heartbeats." -ForegroundColor Green
     Write-Host "   Verifique o dashboard para confirmar o status 'Online'." -ForegroundColor Green
 } else {
-<<<<<<< HEAD
     Write-Host "`n[WARN]  FALHA PARCIAL" -ForegroundColor Yellow
-=======
-    Write-Host "`n[WARN] ? FALHA PARCIAL" -ForegroundColor Yellow
->>>>>>> 221a634 (fix(ascii): remove caracteres nao-ASCII de scripts criticos)
     Write-Host "   Logs completos salvos em: $LogFile" -ForegroundColor White
     Write-Host "`nDiagnostico:" -ForegroundColor Cyan
     
