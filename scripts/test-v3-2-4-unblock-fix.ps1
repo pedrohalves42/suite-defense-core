@@ -18,7 +18,7 @@
     Nome do agente a ser criado (ex: teste-fix)
     
 .EXAMPLE
-    .\test-v3-2-4-unblock-fix.ps1 -EnrollmentKey "BT5Y-I43E-KOOA-XAWN" -AgentName "teste-fix"
+    .\test-v3-2-4-unblock-fix.ps1 -EnrollmentKey "XXXX-XXXX-XXXX-XXXX" -AgentName "test-agent"
 #>
 
 param(
