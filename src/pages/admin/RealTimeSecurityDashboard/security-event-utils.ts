@@ -22,6 +22,10 @@ export const EVENT_LABELS: Record<string, { title: string; explanation: string; 
   quota_exceeded:      { title: 'Limite atingido', explanation: 'O limite de uso foi alcançado temporariamente', icon: '📊' },
   path_traversal:      { title: 'Acesso a pasta proibida', explanation: 'Tentativa de acessar arquivos restritos foi bloqueada', icon: '📁' },
   invalid_input:       { title: 'Dados inválidos rejeitados', explanation: 'Informações com formato incorreto foram recusadas', icon: '❌' },
+  HMAC_FAILURE:        { title: 'Falha Crítica de Assinatura', explanation: 'Uma requisição de agente falhou na verificação HMAC e foi bloqueada', icon: '🔐' },
+  SERVICE_ROLE_ATTEMPT: { title: 'Uso Indevido de Service Role', explanation: 'Tentativa detectada de uso da chave de serviço em contexto não autorizado', icon: '🚨' },
+  PORT_SCAN:           { title: 'Varredura de Portas Detectada', explanation: 'Múltiplas conexões em portas diferentes sugerem varredura ativa', icon: '📡' },
+  ACCESS_DENIED_SENSITIVE: { title: 'Acesso a Arquivo Restrito', explanation: 'Tentativa de acessar .env ou arquivos de configuração bloqueada', icon: '🛑' },
 };
 
 export interface SecurityEvent {

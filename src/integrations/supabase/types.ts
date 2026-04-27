@@ -50922,10 +50922,20 @@ export type Database = {
       hash_agent_token: { Args: { p_token: string }; Returns: string }
       hash_enrollment_key: { Args: { p_key: string }; Returns: string }
       hash_enrollment_key_secure: { Args: { p_key: string }; Returns: string }
-      hmac_check_and_record: {
-        Args: { p_agent_name: string; p_signature: string }
-        Returns: boolean
-      }
+      hmac_check_and_record:
+        | {
+            Args: {
+              p_agent_id: string
+              p_payload: Json
+              p_signature: string
+              p_timestamp: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: { p_agent_name: string; p_signature: string }
+            Returns: boolean
+          }
       honeypot_alert_dedup_key: {
         Args: {
           p_alert_type: string
