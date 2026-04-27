@@ -19,10 +19,10 @@
     Nome do agente (padrao: "teste")
 
 .PARAMETER ServerUrl
-    URL do servidor Supabase (padrao: "https://iavbnmduxpxhwubqrzzn.supabase.co")
+    URL do servidor (padrao: "https://your-project.supabase.co")
 
 .EXAMPLE
-    .\validate-and-test-agent.ps1 -ExpectedToken "3c7b76eb-ac97-466d-a63e-6f628e9b6131" -ExpectedHmac "a98ddad44344fe91153efe84eae03fd74074425656714d41a831076eaf38713c"
+    .\validate-and-test-agent.ps1 -ExpectedToken "00000000-0000-0000-0000-000000000000" -ExpectedHmac "0000000000000000000000000000000000000000000000000000000000000000"
 #>
 
 param(
