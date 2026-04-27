@@ -36,7 +36,7 @@ param(
     [string]$AgentName = "teste",
 
     [Parameter(Mandatory=$false)]
-    [string]$ServerUrl = "https://iavbnmduxpxhwubqrzzn.supabase.co"
+    [string]$ServerUrl = "https://your-project.supabase.co"
 )
 
 $ErrorActionPreference = "Stop"
