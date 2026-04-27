@@ -286,11 +286,7 @@ if ($phase4) {
     Write-Host "   O agente esta executando corretamente e enviando heartbeats." -ForegroundColor Green
     Write-Host "   Verifique o dashboard para confirmar o status 'Online'." -ForegroundColor Green
 } else {
-<<<<<<< HEAD
     Write-Host "`n[WARN]  FALHA PARCIAL" -ForegroundColor Yellow
-=======
-    Write-Host "`n[WARN] ? FALHA PARCIAL" -ForegroundColor Yellow
->>>>>>> 221a634 (fix(ascii): remove caracteres nao-ASCII de scripts criticos)
     Write-Host "   Logs completos salvos em: $LogFile" -ForegroundColor White
     Write-Host "`nDiagnostico:" -ForegroundColor Cyan
     
