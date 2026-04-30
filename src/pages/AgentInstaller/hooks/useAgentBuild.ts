@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger';
 import { useRetryFetch } from '@/hooks/useRetryFetch';
 import { useBuildRealtime, BuildStatus } from '@/hooks/useBuildRealtime';
 import { storage } from '@/lib/storage';
-import { retryWithBackoff, calculateSha256 } from '../utils';
+import { retryWithBackoff, calculateSha256, validateRequestUrl } from '../utils';
 import type { BuildProgressState, ExeBuildStatus } from '../types';
 
 const MAX_RETRIES = 2;
