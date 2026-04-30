@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { RpcAgentRow } from '@/types/rpc';
@@ -191,6 +192,10 @@ export default function Reports() {
             <Scale className="h-4 w-4" />
             LGPD Mensal
           </TabsTrigger>
+          <TabsTrigger value="remediation" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            Remediação
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="compliance" className="space-y-4">
@@ -199,6 +204,30 @@ export default function Reports() {
 
         <TabsContent value="lgpd-monthly" className="space-y-4">
           <LGPDMonthlyReport />
+        </TabsContent>
+
+        <TabsContent value="remediation" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Relatório de Remediação de Vulnerabilidades</CardTitle>
+              <CardDescription>
+                Acompanhe o histórico de todas as vulnerabilidades detectadas e corrigidas no sistema.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Este relatório consolida as descobertas de segurança (JWT, XSS, SSRF, Path Traversal, etc.) e detalha as medidas de remediação aplicadas.
+              </p>
+              <div className="flex gap-4">
+                <Link to="/admin/remediation-report">
+                  <Button className="gap-2">
+                    <FileText className="h-4 w-4" />
+                    Visualizar Relatório Completo
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">
