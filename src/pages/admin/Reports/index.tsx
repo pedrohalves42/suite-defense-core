@@ -191,6 +191,10 @@ export default function Reports() {
             <Scale className="h-4 w-4" />
             LGPD Mensal
           </TabsTrigger>
+          <TabsTrigger value="remediation" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            Remediação
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="compliance" className="space-y-4">
