@@ -81,7 +81,7 @@ serveTenant(async (req, ctx) => {
         await createAgentToken(supabase, agentId, agentToken, requestId);
         await linkEnrollmentKey(supabase, enrollmentKeyHash, agentId, agentName, requestId);
 
-        const { data: enrollmentData } = await supabase.from('enrollment_keys').select('installer_sha256, installer_size_bytes').eq('key', enrollmentKey).maybeSingle();
+        const { data: enrollmentData } = await supabase.from('enrollment_keys').select('installer_sha256, installer_size_bytes').eq('key_hash', enrollmentKeyHash).maybeSingle();
 
         const duration = Date.now() - startTime;
         logger.info(`[${requestId}] Successfully generated credentials for agent ${agentName} in ${duration}ms`);

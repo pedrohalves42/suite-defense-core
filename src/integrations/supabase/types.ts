@@ -50678,6 +50678,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_platform_tenant_id: { Args: never; Returns: string }
       get_playbook_execution_breakdown: {
         Args: { p_days_back?: number; p_tenant_id: string }
         Returns: {
@@ -50917,6 +50918,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      has_role_safe: {
+        Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
       }
       hash_agent_token: { Args: { p_token: string }; Returns: string }

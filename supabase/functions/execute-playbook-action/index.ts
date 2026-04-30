@@ -202,15 +202,24 @@ serveTenant(async (req, ctx) => {
 
   logger.info(`[execute-playbook-action] Using immutable snapshot v${playbookSnapshot.version} with ${actionsSnapshot.length} actions (mode: ${executionMode})`);
 
-  // Update status to in_progress
-  await supabase
+  // Update status to in_progress atomically
+  const { error: updateStartError } = await supabase
     .from('playbook_executions')
     .update({
       status: 'in_progress',
       executed_by: userId,
       notes: notes || execution.notes,
     })
-    .eq('id', execution_id);
+    .eq('id', execution_id)
+    .eq('status', 'pending'); // Ensure it hasn't been started by someone else
+
+  if (updateStartError) {
+    logger.error('[execute-playbook-action] Failed to start execution:', updateStartError);
+    return new Response(JSON.stringify({ error: 'Failed to start execution or already in progress' }), {
+      status: 409,
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
+    });
+  }
 
   // Determine actions to execute
   const actionsToExecute = action_index !== undefined
@@ -273,8 +282,8 @@ serveTenant(async (req, ctx) => {
     ? (anyFailed ? 'failed' : 'completed')
     : 'in_progress';
 
-  // Update execution
-  await supabase
+  // Update execution final status
+  const { error: finalUpdateError } = await supabase
     .from('playbook_executions')
     .update({
       status: finalStatus,
@@ -282,7 +291,12 @@ serveTenant(async (req, ctx) => {
       evidence_ids: evidenceIds,
       completed_at: allActionsExecuted ? new Date().toISOString() : null,
     })
-    .eq('id', execution_id);
+    .eq('id', execution_id)
+    .eq('status', 'in_progress'); // Ensure we only finalize if we were the ones who moved it to in_progress
+
+  if (finalUpdateError) {
+    logger.error('[execute-playbook-action] Final update failed:', finalUpdateError);
+  }
 
   // Audit log
   await supabase.from('audit_logs').insert({
