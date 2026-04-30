@@ -88,6 +88,13 @@ export function useAgentCredentials(
       toast.info(`? Baixando script ${scriptType} e verificando integridade...`, { duration: Infinity });
 
       const installUrl = getInstallUrl(enrollmentKey);
+      
+      if (!validateRequestUrl(installUrl)) {
+        toast.dismiss();
+        toast.error('FALHA DE SEGURANCA: Destino de script nao confiavel!');
+        throw new Error('Blocked SSRF attempt: Untrusted script URL');
+      }
+
       const response = await fetch(installUrl);
       if (!response.ok) throw new Error(`Falha ao baixar script: ${response.status}`);
 
