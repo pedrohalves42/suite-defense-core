@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { CircuitBreaker, CircuitState } from '@/lib/circuit-breaker';
-import { retryWithBackoff, calculateSha256, trackInstallationEvent, getInstallUrl } from '../utils';
+import { retryWithBackoff, calculateSha256, trackInstallationEvent, getInstallUrl, validateRequestUrl } from '../utils';
 import type { Platform, PreviewCredentials } from '../types';
 
 export function useAgentCredentials(
