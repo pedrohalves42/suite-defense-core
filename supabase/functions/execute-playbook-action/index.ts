@@ -202,15 +202,24 @@ serveTenant(async (req, ctx) => {
 
   logger.info(`[execute-playbook-action] Using immutable snapshot v${playbookSnapshot.version} with ${actionsSnapshot.length} actions (mode: ${executionMode})`);
 
-  // Update status to in_progress
-  await supabase
+  // Update status to in_progress atomically
+  const { error: updateStartError } = await supabase
     .from('playbook_executions')
     .update({
       status: 'in_progress',
       executed_by: userId,
       notes: notes || execution.notes,
     })
-    .eq('id', execution_id);
+    .eq('id', execution_id)
+    .eq('status', 'pending'); // Ensure it hasn't been started by someone else
+
+  if (updateStartError) {
+    logger.error('[execute-playbook-action] Failed to start execution:', updateStartError);
+    return new Response(JSON.stringify({ error: 'Failed to start execution or already in progress' }), {
+      status: 409,
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
+    });
+  }
 
   // Determine actions to execute
   const actionsToExecute = action_index !== undefined
