@@ -101,7 +101,61 @@ export const trackInstallationEvent = (body: Record<string, string>) => {
 };
 
 /**
+ * Validates if a URL is allowed (pointing to the trusted backend)
+ * to prevent SSRF and unauthorized requests.
+ */
+export const validateRequestUrl = (url: string): boolean => {
+  if (!url) return false;
+  
+  try {
+    const parsedUrl = new URL(url);
+    const supabaseBaseUrl = new URL(SUPABASE_URL || '');
+    
+    // Allowed domains list
+    const allowedDomains = [
+      supabaseBaseUrl.hostname,
+      'iavbnmduxpxhwubqrzzn.supabase.co', // Explicit project hostname
+      'storage.googleapis.com', // If using external storage
+    ];
+    
+    const isAllowed = allowedDomains.includes(parsedUrl.hostname);
+    
+    if (!isAllowed) {
+      logger.error('BLOCKED: Unrecognized destination URL', { 
+        url, 
+        hostname: parsedUrl.hostname,
+        allowed: allowedDomains 
+      });
+      
+      // Log blocked attempt to security event table
+      supabase.functions.invoke('record-security-event', {
+        body: {
+          event_type: 'ssrf_blocked_attempt',
+          severity: 'high',
+          resource_type: 'installer_url',
+          details: { 
+            blocked_url: url,
+            hostname: parsedUrl.hostname,
+            timestamp: new Date().toISOString()
+          }
+        }
+      }).catch(err => logger.warn('Failed to record blocked attempt', err));
+    }
+    
+    return isAllowed;
+  } catch (error) {
+    logger.error('Invalid URL format', { url });
+    return false;
+  }
+};
+
+/**
  * Get the install URL for a given enrollment key
  */
-export const getInstallUrl = (enrollmentKey: string): string =>
-  `${SUPABASE_URL}/functions/v1/serve-installer/${enrollmentKey}`;
+export const getInstallUrl = (enrollmentKey: string): string => {
+  const url = `${SUPABASE_URL}/functions/v1/serve-installer/${enrollmentKey}`;
+  if (!validateRequestUrl(url)) {
+    throw new Error('URL de instalacao nao confiavel detectada.');
+  }
+  return url;
+};
