@@ -205,6 +205,30 @@ export default function Reports() {
           <LGPDMonthlyReport />
         </TabsContent>
 
+        <TabsContent value="remediation" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Relatório de Remediação de Vulnerabilidades</CardTitle>
+              <CardDescription>
+                Acompanhe o histórico de todas as vulnerabilidades detectadas e corrigidas no sistema.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Este relatório consolida as descobertas de segurança (JWT, XSS, SSRF, Path Traversal, etc.) e detalha as medidas de remediação aplicadas.
+              </p>
+              <div className="flex gap-4">
+                <Link to="/admin/remediation-report">
+                  <Button className="gap-2">
+                    <FileText className="h-4 w-4" />
+                    Visualizar Relatório Completo
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="history" className="space-y-4">
           <GeneratedReportsList />
         </TabsContent>
