@@ -73,6 +73,15 @@ const vulnerabilities = [
     status: 'Corrigido',
     remediation: 'Remoção de chaves AWS e migração para o Lovable Secrets Manager.',
   },
+  {
+    id: 'VULN-008',
+    type: 'Isolamento de Dados',
+    name: 'Vazamento de Metadados em AI Actions',
+    severity: 'Alta',
+    location: 'supabase/migrations (RLS Policies), ai_actions table',
+    status: 'Corrigido',
+    remediation: 'Implementação de RLS robusto com validação de get_active_tenant_id() e bloqueio de acesso a colunas sensíveis (reasoning_summary, evidence_pack) de outros tenants.',
+  },
 ];
 
 export default function RemediationReport() {
