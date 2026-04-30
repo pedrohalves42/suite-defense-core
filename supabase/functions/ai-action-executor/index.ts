@@ -79,11 +79,15 @@ serveTenant(async (req, ctx) => {
     error_message: errorMessage, executed_at: new Date().toISOString(),
   });
 
-  // Update action status
-  await supabase.from('ai_actions').update({
+  // Update action status atomically - only if still pending
+  const { error: updateError } = await supabase.from('ai_actions').update({
     status: executionStatus, executed_by: userId,
     executed_at: new Date().toISOString(), result: executionResult,
-  }).eq('id', action.id);
+  }).eq('id', action.id).eq('status', 'pending');
+
+  if (updateError) {
+    log.error('Failed to update action status', { error: updateError.message });
+  }
 
   // Security logging
   if (executionStatus === 'executed') {
