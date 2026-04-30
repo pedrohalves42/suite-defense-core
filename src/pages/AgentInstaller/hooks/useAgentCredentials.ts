@@ -51,10 +51,14 @@ export function useAgentCredentials(
           const { data: validationResult, error: validationError } = await supabase.functions.invoke('public-gateway', {
             body: { action: 'public:validate-hmac-signature', payload: { hmac_secret: credentials.hmacSecret, test_payload: 'installation_test' } },
           });
-          if (validationError || !validationResult?.valid) {
-            toast.warning('[WARN] ? Aviso de seguranca', { description: 'A assinatura HMAC pode estar incorreta.', duration: 10000 });
-          } else {
-            toast.success('[OK]  Validacao de seguranca OK', { duration: 3000 });
+          
+          if (validationError) {
+            logger.warn('[HMAC Validation] Could not reach gateway', validationError);
+            toast.warning('Aviso: Não foi possível validar a assinatura HMAC agora.', { description: 'Verifique sua conexão, mas o comando ainda pode funcionar.' });
+          } else if (validationResult?.valid === false) {
+            toast.error('[CRITICAL] Falha na validação HMAC', { description: 'A chave gerada parece inválida. Tente gerar novamente.', duration: 10000 });
+          } else if (validationResult?.valid === true) {
+            toast.success('[OK] Validacao de seguranca OK', { duration: 3000 });
           }
         } catch (e) {
           logger.error('[HMAC Validation] Exception:', e);
