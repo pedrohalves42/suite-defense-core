@@ -188,7 +188,7 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
         handleBuildStatusChange(status);
         if (status.build_status === 'completed' || status.build_status === 'failed') clearPollingFallback();
       }
-    }, 120000); // FINOPS-012: Reduced polling frequency (2 min) for fallback only
+    }, 30000); // UI-012: Increased polling frequency for fallback to improve UX during EXE build
     pollingTimeoutRef.current = setTimeout(() => clearPollingFallback(), 300000);
   }, [exeBuildId, exeBuildStatus, fetchBuildStatus, handleBuildStatusChange, clearPollingFallback]);
 
