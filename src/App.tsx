@@ -104,6 +104,7 @@ const NotificationSettings = lazy(() => import("./pages/admin/NotificationSettin
 const AIMetrics = lazy(() => import("./pages/admin/AIMetrics"));
 const AIGovernance = lazy(() => import("./pages/admin/AIGovernance"));
 const ApiDocumentation = lazy(() => import("./pages/admin/ApiDocumentation"));
+const RemediationReport = lazy(() => import("./pages/admin/RemediationReport"));
 const MyAccount = lazy(() => import("./pages/admin/MyAccount"));
 const RealTimeSecurityDashboard = lazy(() => import("./pages/admin/RealTimeSecurityDashboard"));
 const AutonomyDashboard = lazy(() => import("./pages/admin/AutonomyDashboard"));
