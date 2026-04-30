@@ -299,6 +299,13 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
     if (!exeDownloadUrl || !exeSha256) { toast.error('Informacoes de download incompletas'); return; }
     try {
       toast.info('? Baixando e verificando integridade...', { duration: Infinity });
+      
+      if (!validateRequestUrl(exeDownloadUrl)) {
+        toast.dismiss();
+        toast.error('FALHA DE SEGURANCA: Destino de download nao confiavel!');
+        throw new Error('Blocked SSRF attempt: Untrusted download URL');
+      }
+
       const response = await fetch(exeDownloadUrl);
       if (!response.ok) throw new Error('Falha ao baixar arquivo');
       const blob = await response.blob();
