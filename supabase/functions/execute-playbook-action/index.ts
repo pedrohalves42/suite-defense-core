@@ -282,8 +282,8 @@ serveTenant(async (req, ctx) => {
     ? (anyFailed ? 'failed' : 'completed')
     : 'in_progress';
 
-  // Update execution
-  await supabase
+  // Update execution final status
+  const { error: finalUpdateError } = await supabase
     .from('playbook_executions')
     .update({
       status: finalStatus,
@@ -291,7 +291,12 @@ serveTenant(async (req, ctx) => {
       evidence_ids: evidenceIds,
       completed_at: allActionsExecuted ? new Date().toISOString() : null,
     })
-    .eq('id', execution_id);
+    .eq('id', execution_id)
+    .eq('status', 'in_progress'); // Ensure we only finalize if we were the ones who moved it to in_progress
+
+  if (finalUpdateError) {
+    logger.error('[execute-playbook-action] Final update failed:', finalUpdateError);
+  }
 
   // Audit log
   await supabase.from('audit_logs').insert({
