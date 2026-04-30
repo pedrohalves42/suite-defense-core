@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { CircuitBreaker, CircuitState } from '@/lib/circuit-breaker';
-import { retryWithBackoff, calculateSha256, trackInstallationEvent, getInstallUrl } from '../utils';
+import { retryWithBackoff, calculateSha256, trackInstallationEvent, getInstallUrl, validateRequestUrl } from '../utils';
 import type { Platform, PreviewCredentials } from '../types';
 
 export function useAgentCredentials(
@@ -88,6 +88,13 @@ export function useAgentCredentials(
       toast.info(`? Baixando script ${scriptType} e verificando integridade...`, { duration: Infinity });
 
       const installUrl = getInstallUrl(enrollmentKey);
+      
+      if (!validateRequestUrl(installUrl)) {
+        toast.dismiss();
+        toast.error('FALHA DE SEGURANCA: Destino de script nao confiavel!');
+        throw new Error('Blocked SSRF attempt: Untrusted script URL');
+      }
+
       const response = await fetch(installUrl);
       if (!response.ok) throw new Error(`Falha ao baixar script: ${response.status}`);
 
