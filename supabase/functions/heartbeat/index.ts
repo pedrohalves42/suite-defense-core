@@ -30,9 +30,9 @@ import { processForceUpdate } from './force-update.ts'
 import { buildNormalResponse } from './response-builder.ts'
 import type { AgentContext } from './types.ts'
 
-// Extra agent fields needed for force-update logic
+// Extra agent fields needed for delta-updates and force-update logic
 const HEARTBEAT_EXTRA_FIELDS = [
-  'status', 'skip_firewall_remediation', 'agent_version',
+  'status', 'skip_firewall_remediation', 'agent_version', 'hostname', 'os_type', 'os_version',
   'force_update_version', 'force_update_reason', 'force_update_at',
   'force_update_override_safe_mode', 'force_update_override_safe_mode_expires_at',
   'force_update_delivered_count', 'force_update_first_delivered_at',
