@@ -54,7 +54,7 @@ export function parseHeartbeatPayload(rawBody: string): OSInfo {
  */
 export function buildAgentUpdate(
   osInfo: OSInfo,
-  currentAgentVersion: string | null,
+  current: AgentContext,
 ): AgentUpdate {
   const updateData: AgentUpdate & { agent_state?: string } = {
     last_heartbeat: new Date().toISOString(),
