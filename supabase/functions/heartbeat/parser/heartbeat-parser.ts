@@ -61,18 +61,24 @@ export function buildAgentUpdate(
     status: 'active',
   }
 
-  // Aceitar os_type ou platform (retrocompatibilidade)
-  if (osInfo.os_type || osInfo.platform) {
-    updateData.os_type = osInfo.os_type || osInfo.platform
+  // Only include OS info if it differs from current state (delta-update optimization)
+  const incomingOs = (osInfo.os_type || osInfo.platform || '').toLowerCase();
+  const currentOs = (current.os_type as string || '').toLowerCase();
+  if (incomingOs && incomingOs !== currentOs) {
+    updateData.os_type = osInfo.os_type || osInfo.platform;
   }
-  if (osInfo.os_version) updateData.os_version = osInfo.os_version
-  if (osInfo.hostname) updateData.hostname = osInfo.hostname
+
+  if (osInfo.os_version && osInfo.os_version !== current.os_version) {
+    updateData.os_version = osInfo.os_version;
+  }
+
+  if (osInfo.hostname && osInfo.hostname !== current.hostname) {
+    updateData.hostname = osInfo.hostname;
+  }
 
   // Persist agent state (ENFORCING, SAFE_MODE, DEGRADED, INITIALIZING)
-  // AND synchronize agent_state for UI and backend logic
   if (osInfo.state) {
     updateData.state = osInfo.state
-    // Map to normalized agent_state
     const stateUpper = osInfo.state.toUpperCase()
     if (['ENFORCING', 'HEALTHY'].includes(stateUpper)) {
       updateData.agent_state = 'healthy'
@@ -82,25 +88,24 @@ export function buildAgentUpdate(
       updateData.agent_state = stateUpper.toLowerCase()
     }
   } else {
-    // If no state reported but sending heartbeat, it's healthy
     updateData.agent_state = 'healthy'
   }
 
   // Capturar agent_version do payload (somente quando realmente mudou)
   if (osInfo.agent_version) {
     const incomingNorm = normalizeVersion(osInfo.agent_version)
-    const currentNorm = normalizeVersion(currentAgentVersion || undefined)
-    if (!incomingNorm || !currentNorm || incomingNorm !== currentNorm) {
-      updateData.agent_state = 'healthy' // Clear any offline state on version change/heartbeat
+    const currentNorm = normalizeVersion(current.agent_version || undefined)
+    if (incomingNorm && incomingNorm !== currentNorm) {
+      updateData.agent_state = 'healthy' 
       updateData.agent_version = osInfo.agent_version
     }
   }
 
   // Capturar Ed25519 capability flags
-  if (osInfo.ed25519_supported !== undefined) {
+  if (osInfo.ed25519_supported !== undefined && osInfo.ed25519_supported !== current.ed25519_supported) {
     updateData.ed25519_supported = osInfo.ed25519_supported
   }
-  if (osInfo.signature_mode) {
+  if (osInfo.signature_mode && osInfo.signature_mode !== current.signature_mode) {
     updateData.signature_mode = osInfo.signature_mode
   }
 
