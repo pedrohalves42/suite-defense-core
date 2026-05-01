@@ -1,16 +1,13 @@
 // @ts-nocheck
 /**
  * Agent ops handlers — Phase 2J
- * Inlined: token-rotate, recover-agent-credentials, agent-version-management
+ * Hardened: token-rotate, recover-agent-credentials, agent-version-management
  */
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
+import { hashToken, getTokenPrefix } from '../../_shared/token-hash.ts';
 import type { HandlerContext } from './admin.ts';
 
 type Supabase = any;
-
-// ── token-rotate ───────────────────────────────────────────────────────
-import { hashToken, getTokenPrefix } from '../../_shared/token-hash.ts';
 
 async function generateSecureToken(): Promise<string> {
   const bytes = new Uint8Array(32);
@@ -19,12 +16,12 @@ async function generateSecureToken(): Promise<string> {
 }
 
 const TOKEN_TTL_DAYS = 30;
-const ROTATION_WINDOW_DAYS = 7;
+const RECOVERY_TOKEN_TTL_DAYS = 365;
 
+// ── token-rotate ───────────────────────────────────────────────────────
 export async function handleTokenRotate(
   supabase: Supabase, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
 ): Promise<unknown> {
-  const userId = ctx?.userId;
   const tenantId = ctx?.tenantId;
   const action = payload.action as string || 'needs-rotation';
 
@@ -35,7 +32,15 @@ export async function handleTokenRotate(
       .eq('tenant_id', tenantId)
       .lt('expires_at', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString());
     if (error) throw error;
-    return { needs_rotation: tokens?.length || 0, tokens: tokens?.map(t => ({ agentId: t.agent_id, id: t.id, expiresAt: t.expires_at, createdAt: t.created_at })) };
+    return { 
+      needs_rotation: tokens?.length || 0, 
+      tokens: tokens?.map(t => ({ 
+        agentId: t.agent_id, 
+        id: t.id, 
+        expiresAt: t.expires_at, 
+        createdAt: t.created_at 
+      })) 
+    };
   }
 
   if (action === 'generate') {
@@ -43,7 +48,12 @@ export async function handleTokenRotate(
     if (!agentId) return { __status: 400, error: 'agentId required' };
     
     // Verify agent belongs to tenant
-    const { data: agent, error: agentError } = await supabase.from('agents').select('id').eq('id', agentId).eq('tenant_id', tenantId).maybeSingle();
+    const { data: agent, error: agentError } = await supabase.from('agents')
+      .select('id')
+      .eq('id', agentId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
+    
     if (agentError || !agent) return { __status: 404, error: 'Agent not found in your tenant' };
 
     const agentToken = await generateSecureToken();
@@ -52,7 +62,10 @@ export async function handleTokenRotate(
     const expiresAt = new Date(Date.now() + TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
     
     // Deactivate old tokens for this agent
-    await supabase.from('agent_tokens').update({ is_active: false }).eq('agent_id', agentId).eq('tenant_id', tenantId);
+    await supabase.from('agent_tokens')
+      .update({ is_active: false })
+      .eq('agent_id', agentId)
+      .eq('tenant_id', tenantId);
 
     const { data: newToken, error: insertError } = await supabase.from('agent_tokens').insert({
       agent_id: agentId, 
@@ -70,11 +83,13 @@ export async function handleTokenRotate(
   if (action === 'revoke') {
     const agentId = payload.agentId as string;
     if (!agentId) return { __status: 400, error: 'agentId required' };
+    
     const { error } = await supabase.from('agent_tokens')
       .update({ is_active: false })
       .eq('agent_id', agentId)
       .eq('tenant_id', tenantId)
       .eq('is_active', true);
+    
     if (error) throw error;
     return { success: true };
   }
@@ -102,26 +117,49 @@ export async function handleRecoverAgentCredentials(
 
   const { data: agent, error: agentError } = await supabase.from('agents')
     .select('id, agent_name, hmac_secret, tenant_id')
-    .eq('agent_name', agentName).eq('tenant_id', tenantId).maybeSingle();
+    .eq('agent_name', agentName)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+  
   if (agentError || !agent) return { __status: 404, error: 'Agent not found in your tenant' };
 
-  const freshToken = crypto.randomUUID();
-  const tokenHash = await hashTokenLocal(freshToken);
-  const tokenPrefix = freshToken.substring(0, 8);
+  const freshToken = await generateSecureToken();
+  const tokenHash = await hashToken(freshToken);
+  const tokenPrefix = getTokenPrefix(freshToken);
 
-  await supabase.from('agent_tokens').update({ is_active: false }).eq('agent_id', agent.id);
+  // Deactivate existing tokens
+  await supabase.from('agent_tokens')
+    .update({ is_active: false })
+    .eq('agent_id', agent.id)
+    .eq('tenant_id', tenantId);
 
-  const tokenExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+  const tokenExpiresAt = new Date(Date.now() + RECOVERY_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const { error: tokenError } = await supabase.from('agent_tokens').insert({
-    agent_id: agent.id, tenant_id: agent.tenant_id, token_hash: tokenHash,
-    token_prefix: tokenPrefix, expires_at: tokenExpiresAt, is_active: true,
+    agent_id: agent.id, 
+    tenant_id: agent.tenant_id, 
+    token_hash: tokenHash,
+    token_prefix: tokenPrefix, 
+    expires_at: tokenExpiresAt, 
+    is_active: true,
   });
-  if (tokenError) return { __status: 500, error: 'Failed to generate credentials' };
+  
+  if (tokenError) {
+    logger.error(`[${requestId}] Failed to insert recovery token`, tokenError);
+    return { __status: 500, error: 'Failed to generate credentials' };
+  }
 
   await supabase.from('audit_logs').insert({
-    user_id: userId, action: 'recover_agent_credentials', resource_type: 'agent',
-    resource_id: agent.id, tenant_id: agent.tenant_id,
-    details: { agent_name: agentName, token_prefix: tokenPrefix, reason: 'reinstall_preserve_recovery' }, success: true,
+    user_id: userId, 
+    action: 'recover_agent_credentials', 
+    resource_type: 'agent',
+    resource_id: agent.id, 
+    tenant_id: agent.tenant_id,
+    details: { 
+      agent_name: agentName, 
+      token_prefix: tokenPrefix, 
+      reason: 'reinstall_preserve_recovery' 
+    }, 
+    success: true,
   });
 
   return { agentToken: freshToken, hmacSecret: agent.hmac_secret, agentName: agent.agent_name };
@@ -139,8 +177,12 @@ function versionGap(current: string, latest: string): number {
 }
 
 async function latestActiveVersion(supabase: Supabase): Promise<string> {
-  const { data } = await supabase.from('agent_releases_public').select('version')
-    .eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle();
+  const { data } = await supabase.from('agent_releases_public')
+    .select('version')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
   return data?.version ?? 'v5.0.15';
 }
 
@@ -148,7 +190,9 @@ async function getFleetCompliance(supabase: Supabase, tenantId?: string) {
   let q = supabase.from('agents_safe')
     .select('id, tenant_id, agent_version, last_seen_at, status')
     .in('status', ['active', 'online', 'idle']);
+  
   if (tenantId) q = q.eq('tenant_id', tenantId);
+  
   const { data: agents, error } = await q;
   if (error) throw error;
 
@@ -160,15 +204,25 @@ async function getFleetCompliance(supabase: Supabase, tenantId?: string) {
     const ver = a.agent_version ?? 'unknown';
     byVersion[ver] = (byVersion[ver] || 0) + 1;
     if (versionGap(ver, latest) > 2) {
-      outdated.push({ agent_id: a.id, tenant_id: a.tenant_id, version: ver, gap: versionGap(ver, latest), last_seen: a.last_seen_at });
+      outdated.push({ 
+        agent_id: a.id, 
+        tenant_id: a.tenant_id, 
+        version: ver, 
+        gap: versionGap(ver, latest), 
+        last_seen: a.last_seen_at 
+      });
     }
   }
 
   const total = agents?.length ?? 0;
   return {
-    latest_version: latest, total_agents: total, compliant: total - outdated.length,
-    outdated: outdated.length, compliance_pct: total > 0 ? Math.round(((total - outdated.length) / total) * 100) : 100,
-    by_version: byVersion, agents_needing_update: outdated.slice(0, 200),
+    latest_version: latest, 
+    total_agents: total, 
+    compliant: total - outdated.length,
+    outdated: outdated.length, 
+    compliance_pct: total > 0 ? Math.round(((total - outdated.length) / total) * 100) : 100,
+    by_version: byVersion, 
+    agents_needing_update: outdated.slice(0, 200),
   };
 }
 
@@ -188,11 +242,18 @@ export async function handleAgentVersionManagement(
     const details: any[] = [];
 
     for (const agent of compliance.agents_needing_update) {
-      if (dryRun) { details.push({ agent_id: agent.agent_id, version: agent.version, action: 'would_schedule' }); continue; }
+      if (dryRun) { 
+        details.push({ agent_id: agent.agent_id, version: agent.version, action: 'would_schedule' }); 
+        continue; 
+      }
       try {
         await supabase.from('agent_update_events').insert({
-          agent_id: agent.agent_id, tenant_id: agent.tenant_id,
-          current_version: agent.version, target_version: latest, status: 'forced', triggered_by: 'version_enforcement',
+          agent_id: agent.agent_id, 
+          tenant_id: agent.tenant_id,
+          current_version: agent.version, 
+          target_version: latest, 
+          status: 'forced', 
+          triggered_by: 'version_enforcement',
         });
         scheduled++;
         details.push({ agent_id: agent.agent_id, action: 'scheduled' });
@@ -209,7 +270,12 @@ export async function handleAgentVersionManagement(
     const minVersion = payload.min_version as string;
     if (!minVersion) return { __status: 400, error: 'min_version required' };
     const { error } = await supabase.from('tenant_version_policies')
-      .upsert({ tenant_id: tenantId, min_version: minVersion, reason: (payload.reason as string) || '', updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' });
+      .upsert({ 
+        tenant_id: tenantId, 
+        min_version: minVersion, 
+        reason: (payload.reason as string) || '', 
+        updated_at: new Date().toISOString() 
+      }, { onConflict: 'tenant_id' });
     if (error) throw error;
     return { success: true, tenant_id: tenantId, min_version: minVersion };
   }
