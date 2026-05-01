@@ -82,9 +82,18 @@ export async function handleChangePassword(
     const { data: userRole } = await supabase.from('user_roles').select('tenant_id').eq('user_id', userId).limit(1).maybeSingle();
     if (userRole?.tenant_id) {
       await supabase.from('audit_logs').insert({
-        tenant_id: userRole.tenant_id, user_id: userId, actor_id: userId,
-        action: 'change_password_failed', resource_type: 'user', resource_id: userId,
-        success: false, details: { reason: 'invalid_current_password' },
+        tenant_id: userRole.tenant_id, 
+        user_id: userId, 
+        actor_id: userId,
+        action: 'change_password_failed', 
+        resource_type: 'user', 
+        resource_id: userId,
+        success: false, 
+        details: { 
+          reason: 'invalid_current_password',
+          ip_address: req?.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown',
+          user_agent: req?.headers.get('user-agent') || 'unknown'
+        },
       });
     }
 
