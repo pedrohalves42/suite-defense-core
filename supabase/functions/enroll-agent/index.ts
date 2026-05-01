@@ -67,7 +67,22 @@ servePublic(async (req, ctx) => {
       }
     }
 
-    // Generate credentials
+    // 1. Update key usage (Atomic via RPC) - DO THIS FIRST to validate and secure slot
+    const { data: updateResult, error: updateError } = await supabase.rpc('increment_enrollment_key_usage', {
+      p_key_id: keyData.id,
+      p_agent_name: agentName
+    });
+
+    if (updateError || !updateResult.success) {
+      logger.error(`[${requestId}] Failed to authorize enrollment key usage: ${updateError?.message || updateResult?.error}`);
+      return new Response(JSON.stringify({ 
+        error: updateResult?.error || 'Failed to authorize enrollment key usage', 
+        code: updateError?.code === 'PGRST202' ? 'RPC_NOT_FOUND' : 'KEY_UPDATE_FAILED', 
+        requestId 
+      }), { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
+    }
+
+    // 2. Generate credentials
     const agentToken = crypto.randomUUID();
     const hmacSecret = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b => b.toString(16).padStart(2, '0')).join('');
 
@@ -80,26 +95,13 @@ servePublic(async (req, ctx) => {
       agentId = await createNewAgent(supabase, keyData.tenant_id, agentName, hmacSecret);
     }
 
-    // Create token
+    // 3. Create token
     const expiresAt = new Date();
     expiresAt.setFullYear(expiresAt.getFullYear() + 1);
     const tokenHash = await hashToken(agentToken);
     const tokenPrefix = getTokenPrefix(agentToken);
     await supabase.from('agent_tokens').insert({ agent_id: agentId, token_hash: tokenHash, token_prefix: tokenPrefix, expires_at: expiresAt.toISOString() });
 
-    // Update key usage (Atomic via RPC to prevent race conditions)
-    const { data: updateResult, error: updateError } = await supabase.rpc('increment_enrollment_key_usage', {
-      p_key_id: keyData.id,
-      p_agent_name: agentName
-    });
-
-    if (updateError || !updateResult.success) {
-      logger.error(`[${requestId}] Failed to update key usage: ${updateError?.message || updateResult?.error}`);
-      // If it's a new agent and key update fails, we should probably stop (unless it's already used)
-      if (!existingAgent) {
-        return new Response(JSON.stringify({ error: updateResult?.error || 'Failed to authorize enrollment key usage', code: 'KEY_UPDATE_FAILED' }), { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
-      }
-    }
 
     // Audit log
     await createAuditLog({ supabase, tenantId: keyData.tenant_id, action: 'agent_enrolled', resourceType: 'agent', resourceId: agentName, details: { tenant_id: keyData.tenant_id, enrollment_key_id: keyData.id, is_new: !existingAgent }, request: req, success: true });

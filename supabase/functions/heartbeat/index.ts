@@ -30,9 +30,9 @@ import { processForceUpdate } from './force-update.ts'
 import { buildNormalResponse } from './response-builder.ts'
 import type { AgentContext } from './types.ts'
 
-// Extra agent fields needed for force-update logic
+// Extra agent fields needed for delta-updates and force-update logic
 const HEARTBEAT_EXTRA_FIELDS = [
-  'status', 'skip_firewall_remediation', 'agent_version',
+  'status', 'skip_firewall_remediation', 'agent_version', 'hostname', 'os_type', 'os_version',
   'force_update_version', 'force_update_reason', 'force_update_at',
   'force_update_override_safe_mode', 'force_update_override_safe_mode_expires_at',
   'force_update_delivered_count', 'force_update_first_delivered_at',
@@ -53,6 +53,11 @@ serveAgent(async (req, ctx) => {
     hmac_secret: ctx.hmacSecret || '',
     tenant_id: ctx.tenantId,
     status: (agentData.status as string) || '',
+    os_type: (agentData.os_type as string | null) || null,
+    os_version: (agentData.os_version as string | null) || null,
+    hostname: (agentData.hostname as string | null) || null,
+    ed25519_supported: (agentData.ed25519_supported as boolean | null) || null,
+    signature_mode: (agentData.signature_mode as string | null) || null,
     skip_firewall_remediation: (agentData.skip_firewall_remediation as boolean) || false,
     agent_version: (agentData.agent_version as string | null) || null,
     force_update_version: (agentData.force_update_version as string | null) || null,
@@ -76,7 +81,7 @@ serveAgent(async (req, ctx) => {
 
   // ── 2. Parse payload ────────────────────────────────────
   const osInfo = parseHeartbeatPayload(hmacResult.rawBody)
-  const updateData = buildAgentUpdate(osInfo, agent.agent_version)
+  const updateData = buildAgentUpdate(osInfo, agent)
   const platform = updateData.os_type || 'windows'
 
   logger.debug('Heartbeat received', { agentName: agent.agent_name, traceId })
