@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, CheckCircle2, AlertCircle, Clock, RefreshCw, Lock, Globe, FileShield } from 'lucide-react';
+import { Shield, CheckCircle2, AlertCircle, Clock, RefreshCw, Lock, Globe, FileCheck } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -72,7 +72,8 @@ export default function SecurityMonitor() {
       setIsScanning(false);
       const now = new Date().toLocaleString();
       setLastScan(now);
-      setHistory(prev => [{ timestamp: now, status: 'Clean', headersCount: 12 }, ...prev].slice(0, 10));
+      const newEntry: ScanHistory = { timestamp: now, status: 'Clean', headersCount: 12 };
+      setHistory(prev => [newEntry, ...prev].slice(0, 10));
       toast.success('Varredura de cabeçalhos concluída com sucesso!');
     }, 1500);
   };
@@ -126,7 +127,7 @@ export default function SecurityMonitor() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <FileShield className="h-4 w-4" />
+              <FileCheck className="h-4 w-4" />
               CSP Score
             </CardTitle>
             <div className="text-2xl font-bold text-green-600">A+</div>
