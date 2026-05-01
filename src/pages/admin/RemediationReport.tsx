@@ -179,7 +179,12 @@ export default function RemediationReport() {
         doc.setFont('helvetica', 'normal');
         const lines = doc.splitTextToSize(`Ação: ${v.remediation}`, 180);
         doc.text(lines, 14, currentY);
-        currentY += lines.length * 5;
+        currentY += lines.length * 5 + 2;
+        
+        doc.setFont('helvetica', 'italic');
+        const evidenceLines = doc.splitTextToSize(`Evidência: ${v.evidence}`, 180);
+        doc.text(evidenceLines, 14, currentY);
+        currentY += evidenceLines.length * 5 + 5;
       });
       
       doc.save('relatorio-remediacao-cybershield.pdf');
