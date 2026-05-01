@@ -79,6 +79,7 @@ export function useAgentManagement() {
         .from('installation_analytics')
         .select('agent_id')
         .in('agent_id', agentIds)
+        .eq('tenant_id', tenant.id)
         .eq('event_type', 'post_installation');
       if (error) return {};
       const statusMap: Record<string, boolean> = {};
