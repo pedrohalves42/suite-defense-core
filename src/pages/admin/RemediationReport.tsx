@@ -8,8 +8,22 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useQuery } from '@tanstack/react-query';
 
-const vulnerabilities = [
+const fetchSecurityHeaders = async () => {
+  try {
+    const response = await fetch(window.location.origin, { method: 'HEAD' });
+    const headers: Record<string, string> = {};
+    response.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+    return headers;
+  } catch (error) {
+    console.error('Failed to fetch headers:', error);
+    return null;
+  }
+};
+
   {
     id: 'A01',
     type: 'Infraestrutura',
@@ -94,7 +108,15 @@ const vulnerabilities = [
 
 
 export default function RemediationReport() {
+  const { data: activeHeaders, isLoading: loadingHeaders } = useQuery({
+    queryKey: ['security-headers'],
+    queryFn: fetchSecurityHeaders,
+    refetchInterval: 30000,
+  });
+
   const exportPDF = () => {
+    // ... keep existing code
+
     try {
       const doc = new jsPDF();
       
