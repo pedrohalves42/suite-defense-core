@@ -29,6 +29,13 @@ async function authenticateApiKeyInline(
     return { success: false, error: 'API key expired' };
   }
 
+  // Update last_used_at (throttled to once per minute to reduce IOPS)
+  const lastUsed = data.last_used_at ? new Date(data.last_used_at).getTime() : 0;
+  if (Date.now() - lastUsed > 60000) {
+    supabase.from('api_keys').update({ last_used_at: new Date().toISOString() }).eq('id', data.id)
+      .then(({ error }: any) => { if (error) logger.warn(`[${requestId}] Failed to update API key last_used_at`, error); });
+  }
+
   return {
     success: true,
     tenantId: data.tenant_id,
