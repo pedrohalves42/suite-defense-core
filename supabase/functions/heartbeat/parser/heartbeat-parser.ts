@@ -7,7 +7,7 @@ import { logger } from '../../_shared/logger.ts';
 
 import { z } from 'https://esm.sh/zod@3.23.8'
 import { normalizeVersion } from '../../_shared/hexagonal/update-decision-service.ts'
-import type { OSInfo, AgentUpdate } from '../types.ts'
+import type { OSInfo, AgentUpdate, AgentContext } from '../types.ts'
 
 /**
  * Zod schema for heartbeat payload.
