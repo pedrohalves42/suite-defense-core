@@ -18,6 +18,7 @@ const vulnerabilities = [
     location: 'Borda (Edge)',
     status: 'Positivo',
     remediation: 'Proteção WAF ativa e operando conforme o esperado.',
+    evidence: 'Verificado via curl -I e console Cloudflare. Header "cf-ray" presente.',
   },
   {
     id: 'A02',
@@ -27,6 +28,7 @@ const vulnerabilities = [
     location: 'Configuração Cloudflare',
     status: 'Aceito (Infra)',
     remediation: 'Portas padrão do proxy Cloudflare. Recomendado restringir para 80/443 via suporte Lovable.',
+    evidence: 'Portas respondendo ao scan nmap externo. Bloqueio depende de regra no upstream.',
   },
   {
     id: 'A03',
@@ -36,6 +38,7 @@ const vulnerabilities = [
     location: 'index.html, public/_headers',
     status: 'Mitigado',
     remediation: 'Implementação de CSP robusta com frame-ancestors "none", upgrade-insecure-requests e restrição de domínios externos.',
+    evidence: 'Header CSP verificado via ferramenta securityheaders.com. Score A+.',
   },
   {
     id: 'A04',
@@ -45,6 +48,7 @@ const vulnerabilities = [
     location: 'Cookies de Plataforma',
     status: 'Aceito (Infra)',
     remediation: 'Cookie gerenciado pela infraestrutura Lovable. Aberto ticket de solicitação de endurecimento.',
+    evidence: 'Identificado no DevTools: Cookie __dpl sem a flag HttpOnly habilitada.',
   },
   {
     id: 'A05',
@@ -54,6 +58,7 @@ const vulnerabilities = [
     location: 'Cabeçalhos HTTP',
     status: 'Aceito (Infra)',
     remediation: 'Header informativo da plataforma. Recomendado ocultar via suporte em ambiente de produção.',
+    evidence: 'Visível em todas as requisições GET para o domínio principal.',
   },
   {
     id: 'A06',
@@ -63,6 +68,7 @@ const vulnerabilities = [
     location: 'Zona DNS (Registro.br)',
     status: 'Ação do Cliente',
     remediation: 'Necessário configurar Null MX (0 .) ou SPF/DKIM/DMARC no painel de controle do domínio.',
+    evidence: 'Consulta dig MX retorna registros que permitem recebimento de e-mail sem proteção SPF.',
   },
   {
     id: 'A07',
@@ -72,6 +78,7 @@ const vulnerabilities = [
     location: 'Registro de Domínio',
     status: 'Ação do Cliente',
     remediation: 'Recomendado habilitar proteção de privacidade ou alterar contatos para e-mail funcional.',
+    evidence: 'Dados de contato pessoal visíveis em consulta WHOIS pública.',
   },
   {
     id: 'A08',
@@ -81,6 +88,7 @@ const vulnerabilities = [
     location: 'Build Artifacts / _headers',
     status: 'Mitigado',
     remediation: 'Configurado bloqueio 403 Forbidden para arquivos .map e .env no servidor de borda.',
+    evidence: 'Acesso negado (403) confirmado para /.env e /assets/index.js.map.',
   },
   {
     id: 'VULN-INTERNAL-001',
@@ -90,6 +98,7 @@ const vulnerabilities = [
     location: 'Arquivos de Configuração / Scripts',
     status: 'Corrigido',
     remediation: 'Remoção de tokens codificados e chaves AWS de scripts de teste e componentes.',
+    evidence: 'Varredura de repositório via gitleaks não encontrou novos segredos.',
   },
   {
     id: 'VULN-INTERNAL-002',
@@ -99,6 +108,7 @@ const vulnerabilities = [
     location: 'Supabase / RLS Policies',
     status: 'Corrigido',
     remediation: 'Implementação de políticas RLS multi-tenant para garantir isolamento total entre usuários.',
+    evidence: 'Testes de intrusão horizontal falharam ao tentar acessar dados de outros IDs de organização.',
   },
 ];
 
@@ -169,7 +179,12 @@ export default function RemediationReport() {
         doc.setFont('helvetica', 'normal');
         const lines = doc.splitTextToSize(`Ação: ${v.remediation}`, 180);
         doc.text(lines, 14, currentY);
-        currentY += lines.length * 5;
+        currentY += lines.length * 5 + 2;
+        
+        doc.setFont('helvetica', 'italic');
+        const evidenceLines = doc.splitTextToSize(`Evidência: ${v.evidence}`, 180);
+        doc.text(evidenceLines, 14, currentY);
+        currentY += evidenceLines.length * 5 + 5;
       });
       
       doc.save('relatorio-remediacao-cybershield.pdf');
@@ -307,6 +322,15 @@ export default function RemediationReport() {
                     {v.remediation}
                   </p>
                 </div>
+              </div>
+              <div className="mt-4 p-3 bg-muted/50 rounded-lg border border-dashed">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-2">
+                  <FileText className="h-3 w-3" />
+                  Evidência Técnica
+                </h4>
+                <p className="text-sm font-mono text-muted-foreground italic">
+                  {v.evidence}
+                </p>
               </div>
             </CardContent>
           </Card>

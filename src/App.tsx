@@ -105,6 +105,7 @@ const AIMetrics = lazy(() => import("./pages/admin/AIMetrics"));
 const AIGovernance = lazy(() => import("./pages/admin/AIGovernance"));
 const ApiDocumentation = lazy(() => import("./pages/admin/ApiDocumentation"));
 const RemediationReport = lazy(() => import("./pages/admin/RemediationReport"));
+const SecurityMonitor = lazy(() => import("./pages/admin/SecurityMonitor"));
 const MyAccount = lazy(() => import("./pages/admin/MyAccount"));
 const RealTimeSecurityDashboard = lazy(() => import("./pages/admin/RealTimeSecurityDashboard"));
 const AutonomyDashboard = lazy(() => import("./pages/admin/AutonomyDashboard"));
@@ -264,6 +265,7 @@ const App = () => (
                 <Route path="slo-dashboard" element={<Navigate to="/admin/operations-hub?tab=performance" replace />} />
                 <Route path="system-operations" element={<Navigate to="/admin/operations-hub?tab=logs" replace />} />
                 <Route path="remediation-report" element={<RemediationReport />} />
+                <Route path="security-monitor" element={<SecurityMonitor />} />
                 <Route path="system-logs" element={<Navigate to="/admin/operations-hub?tab=logs" replace />} />
                 <Route path="dead-letter-queue" element={<Navigate to="/admin/operations-hub?tab=logs" replace />} />
                 <Route path="enrollment-keys" element={<Navigate to="/super-admin/enrollment-keys" replace />} />

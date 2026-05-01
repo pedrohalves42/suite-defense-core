@@ -53,6 +53,8 @@ export const complianceItems: MenuItem[] = [
   { icon: FileSearch, label: 'Registros e Evidências', to: '/admin/compliance-hub?tab=evidence' },
   { icon: Workflow, label: 'Planos de Ação', to: '/admin/compliance-hub?tab=procedures' },
   { icon: BarChart3, label: 'Risco', to: '/admin/compliance-hub?tab=risk' },
+  { icon: ShieldCheck, label: 'Remediação Pentest', to: '/admin/remediation-report' },
+  { icon: Activity, label: 'Monitor de Segurança', to: '/admin/security-monitor' },
 ];
 
 export function getIntelligenceItems(criticalInsightsCount: number): MenuItem[] {
