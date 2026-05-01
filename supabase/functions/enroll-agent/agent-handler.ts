@@ -123,12 +123,12 @@ export async function handleReEnrollment(
     });
 
     // Fallback seguro: tenant validado acima
-    await supabase
+    const { error: updateError } = await supabase
       .from('agents')
       .update({
         hmac_secret: hmacSecret,
         status: 'active',
-        last_heartbeat: null,
+        last_heartbeat: new Date().toISOString(), // Fix: last_heartbeat should be set to now
         is_throttled: false,
         is_isolated: false,
         safe_mode_entered_at: null,
@@ -138,6 +138,17 @@ export async function handleReEnrollment(
         archived_reason: null,
       })
       .eq('id', existingAgentId);
+
+    if (updateError) {
+      logger.error(`[${requestId}] Failed to update agent in fallback`, updateError);
+      return {
+        success: false,
+        response: new Response(
+          JSON.stringify({ error: 'Failed to update agent record', code: 'UPDATE_FAILED' }),
+          { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } }
+        ),
+      };
+    }
 
     // Deactivate old tokens
     await supabase
