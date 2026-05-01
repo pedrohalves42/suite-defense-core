@@ -323,6 +323,15 @@ export default function RemediationReport() {
                   </p>
                 </div>
               </div>
+              <div className="mt-4 p-3 bg-muted/50 rounded-lg border border-dashed">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-2">
+                  <FileText className="h-3 w-3" />
+                  Evidência Técnica
+                </h4>
+                <p className="text-sm font-mono text-muted-foreground italic">
+                  {v.evidence}
+                </p>
+              </div>
             </CardContent>
           </Card>
         ))}
