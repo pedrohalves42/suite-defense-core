@@ -29,7 +29,7 @@ export async function updateAgentStatus(
 ): Promise<void> {
   const { error } = await supabase
     .from('agents')
-    .update(updateData)
+    .update({ ...updateData, status: 'active', last_heartbeat: new Date().toISOString() })
     .eq('id', agentId)
 
   if (error) {
