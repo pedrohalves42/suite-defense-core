@@ -1,4 +1,5 @@
 /*
+  # 1. Security Headers (Enhanced)
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
@@ -9,14 +10,15 @@
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Embedder-Policy: credentialless
   Cross-Origin-Resource-Policy: same-origin
+  # Robust CSP for Production
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://*.supabase.co https://cdn.gpteng.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'; upgrade-insecure-requests;
 
-# Prevent sensitive file access and sourcemaps
+# 2. Prevent Sensitive File Access and Sourcemaps (Consolidated 403)
 /*.map
   Status: 403
-/.env*
+/*.env*
   Status: 403
-/.git*
+/*.git*
   Status: 403
 /config/*
   Status: 403
@@ -24,15 +26,19 @@
   Status: 403
 /supabase/config.toml
   Status: 403
+/.DS_Store
+  Status: 403
+/npm-debug.log*
+  Status: 403
+/yarn-error.log*
+  Status: 403
 
+# 3. Static Assets Caching
 /assets/*.webp
   Cache-Control: public, max-age=31536000, immutable
-
 /assets/*.js
   Cache-Control: public, max-age=31536000, immutable
-
 /assets/*.css
   Cache-Control: public, max-age=31536000, immutable
-
 /assets/*.woff2
   Cache-Control: public, max-age=31536000, immutable
