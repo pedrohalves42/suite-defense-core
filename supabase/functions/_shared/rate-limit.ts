@@ -129,7 +129,9 @@ export async function checkRateLimit(
   endpoint: string,
   config: RateLimitConfig = DEFAULT_CONFIG
 ): Promise<{ allowed: boolean; remainingRequests?: number; resetAt?: Date }> {
-  const key = cacheKey(identifier, endpoint);
+  // Normalize identifier to prevent cache/DB pollution via case-sensitivity or leading/trailing whitespace
+  const normIdentifier = identifier.trim().toLowerCase();
+  const key = cacheKey(normIdentifier, endpoint);
 
   // 1. Cache hit?
   const cached = getCached(key);
