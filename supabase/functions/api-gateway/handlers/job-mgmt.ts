@@ -77,13 +77,16 @@ export async function handleCreateJob(
   };
   const effectivePayload = { ...defaultPayloads[type], ...userPayload };
 
-  // Fetch agent
-  const { data: agentData, error: agentError } = await supabase
-    .from('agents')
+  // Fetch agent with tenant isolation
+  let agentQuery = supabase.from('agents')
     .select('id, tenant_id, status, last_heartbeat, scheduling_paused, scheduling_paused_reason')
-    .eq('agent_name', agentName)
-    .limit(1)
-    .maybeSingle();
+    .eq('agent_name', agentName);
+  
+  if (!hasSuperAdminRole) {
+    agentQuery = agentQuery.eq('tenant_id', tenantId);
+  }
+
+  const { data: agentData, error: agentError } = await agentQuery.limit(1).maybeSingle();
 
   if (agentError || !agentData) {
     return { __status: 404, error: { code: 'AGENT_NOT_FOUND', message: 'Agente nao encontrado.' } };
