@@ -58,6 +58,7 @@ serveAgent(async (req, ctx) => {
     hostname: (agentData.hostname as string | null) || null,
     ed25519_supported: (agentData.ed25519_supported as boolean | null) || null,
     signature_mode: (agentData.signature_mode as string | null) || null,
+    skip_firewall_remediation: (agentData.skip_firewall_remediation as boolean) || false,
     agent_version: (agentData.agent_version as string | null) || null,
     force_update_version: (agentData.force_update_version as string | null) || null,
     force_update_reason: (agentData.force_update_reason as string | null) || null,
