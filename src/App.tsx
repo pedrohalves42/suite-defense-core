@@ -265,6 +265,7 @@ const App = () => (
                 <Route path="slo-dashboard" element={<Navigate to="/admin/operations-hub?tab=performance" replace />} />
                 <Route path="system-operations" element={<Navigate to="/admin/operations-hub?tab=logs" replace />} />
                 <Route path="remediation-report" element={<RemediationReport />} />
+                <Route path="security-monitor" element={<SecurityMonitor />} />
                 <Route path="system-logs" element={<Navigate to="/admin/operations-hub?tab=logs" replace />} />
                 <Route path="dead-letter-queue" element={<Navigate to="/admin/operations-hub?tab=logs" replace />} />
                 <Route path="enrollment-keys" element={<Navigate to="/super-admin/enrollment-keys" replace />} />
