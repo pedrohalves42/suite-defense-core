@@ -37,8 +37,8 @@ const vulnerabilities = [
     severity: 'Média',
     location: 'Headers / index.html',
     status: 'Mitigado',
-    remediation: 'Refinamento da CSP e implementação de anti-clickjacking.',
-    evidence: 'Headers validados via securityheaders.com (Grade A+).'
+    remediation: 'Refinamento da CSP e implementação de anti-clickjacking via Header.',
+    evidence: 'Headers validados via securityheaders.com (Grade A+). frame-ancestors: none movido para Header.'
   },
   {
     id: 'A04',
@@ -87,8 +87,8 @@ const vulnerabilities = [
     severity: 'Baixa',
     location: 'Arquivos Estáticos',
     status: 'Mitigado',
-    remediation: 'Bloqueio via regras no public/_headers (403 Forbidden).',
-    evidence: 'Testes de curl retornam 403 para arquivos sensíveis.'
+    remediation: 'Bloqueio via regras no public/_redirects (404/403 forced).',
+    evidence: 'Testes de curl retornam 404 para arquivos sensíveis e sourcemaps.'
   }
 ];
 
@@ -210,7 +210,7 @@ export default function RemediationReport() {
         <Card className="bg-green-500/5 border-green-500/20">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Status de Remediação</CardTitle>
-            <CardDescription className="text-3xl font-bold text-green-600">100%</CardDescription>
+            <CardDescription className="text-3xl font-bold text-green-600">90%</CardDescription>
           </CardHeader>
         </Card>
         <Card className="bg-blue-500/5 border-blue-500/20">
@@ -256,8 +256,10 @@ export default function RemediationReport() {
                     {v.location}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1.5 text-green-600 font-medium">
-                      <CheckCircle2 className="h-4 w-4" />
+                    <div className={`flex items-center gap-1.5 font-medium ${
+                      v.status === 'Ação do Cliente' ? 'text-amber-600' : 'text-green-600'
+                    }`}>
+                      {v.status === 'Ação do Cliente' ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
                       {v.status}
                     </div>
                   </TableCell>
