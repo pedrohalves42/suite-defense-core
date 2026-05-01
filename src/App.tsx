@@ -43,6 +43,7 @@ const ApprovePage = lazy(() => import("./pages/ApprovePage"));
 const TestComplianceGenerator = lazy(() => import("./pages/TestComplianceGenerator"));
 const NoTenant = lazy(() => import("./pages/NoTenant"));
 const Tutorials = lazy(() => import("./pages/Tutorials"));
+const Forbidden = lazy(() => import("./pages/Forbidden"));
 
 // ─── Docs ───
 const ExeBuild = lazy(() => import("./pages/docs/ExeBuild"));
@@ -185,6 +186,7 @@ const App = () => (
             <Route path="/approve" element={<ApprovePage />} />
             <Route path="/test-compliance" element={<TestComplianceGenerator />} />
             <Route path="/tutorials" element={<Tutorials />} />
+            <Route path="/403" element={<Forbidden />} />
             
             {/* Documentation Routes */}
             <Route path="/docs/exe-build" element={<ExeBuild />} />
