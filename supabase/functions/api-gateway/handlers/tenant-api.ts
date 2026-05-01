@@ -10,10 +10,13 @@ import type { HandlerContext } from './admin.ts';
 async function authenticateApiKeyInline(
   supabase: any,
   apiKey: string,
+  requestId: string,
 ): Promise<{ success: boolean; tenantId?: string; apiKeyId?: string; scopes?: string[]; error?: string }> {
+  // Use timing-safe hash if possible, otherwise use standard match. 
+  // API keys should ideally be hashed with SHA-256 for storage.
   const { data, error } = await supabase
     .from('api_keys')
-    .select('id, tenant_id, scopes, is_active, expires_at')
+    .select('id, tenant_id, scopes, is_active, expires_at, last_used_at')
     .eq('key_hash', apiKey)
     .eq('is_active', true)
     .maybeSingle();
