@@ -57,7 +57,7 @@ export async function handleTenantFeatures(
   const apiKey = (payload.api_key as string) || '';
   if (!apiKey) return { __status: 401, error: 'Missing API key' };
 
-  const auth = await authenticateApiKeyInline(supabase, apiKey);
+  const auth = await authenticateApiKeyInline(supabase, apiKey, requestId);
   if (!auth.success) return { __status: 401, error: auth.error };
   if (!hasScope(auth.scopes!, 'read')) return { __status: 403, error: 'Insufficient permissions' };
 
