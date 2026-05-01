@@ -63,15 +63,14 @@ export async function executeParallelOps(
     // 1a. Token last_used_at update (throttled to match telemetry)
     // PERF-FIX: Only touch token timestamp when we are doing heavy telemetry work
     parallelOps.push(
-      Promise.resolve(
-        supabase
-          .from('agent_tokens')
-          .update({ last_used_at: new Date().toISOString() })
-          .eq('agent_id', agent.id)
-          .eq('is_active', true)
-      ).then(({ error }) => {
-        if (error) logger.warn('Token touch failed', { error: error.message })
-      })
+      supabase
+        .from('agent_tokens')
+        .update({ last_used_at: new Date().toISOString() })
+        .eq('agent_id', agent.id)
+        .eq('is_active', true)
+        .then(({ error }) => {
+          if (error) logger.warn('Token touch failed', { error: error.message })
+        })
     )
 
     // 1b. System metrics insert
