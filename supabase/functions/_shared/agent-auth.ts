@@ -107,7 +107,20 @@ export async function authenticateAgent(
 
   const agent = Array.isArray(token.agents) ? token.agents[0] : token.agents;
 
-  // Extract extra fields into agentData (everything beyond the base 5, including honeypot_mode)
+  // HARDENED: Check agent status
+  const status = agent.status as string | null;
+  if (status === 'retired' || status === 'blocked' || status === 'suspended') {
+    logger.error(`[${endpoint}] Blocked agent access attempt. Name: ${agent.agent_name}, Status: ${status}`);
+    return {
+      success: false,
+      response: new Response(
+        JSON.stringify({ error: `Agent is ${status}`, code: 'AGENT_BLOCKED' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      ),
+    };
+  }
+
+  // Extract extra fields into agentData (everything beyond the base 6, including honeypot_mode)
   const { id, agent_name, tenant_id, hmac_secret, honeypot_mode, ...extraData } = agent as Record<string, unknown>;
 
   return {
@@ -118,6 +131,6 @@ export async function authenticateAgent(
       tenant_id: tenant_id as string,
       hmac_secret: hmac_secret as string | null,
     },
-    agentData: { honeypot_mode, ...extraData },
+    agentData: { honeypot_mode, status, ...extraData },
   };
 }
