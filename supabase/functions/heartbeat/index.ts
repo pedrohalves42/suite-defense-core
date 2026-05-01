@@ -76,7 +76,7 @@ serveAgent(async (req, ctx) => {
 
   // ── 2. Parse payload ────────────────────────────────────
   const osInfo = parseHeartbeatPayload(hmacResult.rawBody)
-  const updateData = buildAgentUpdate(osInfo, agent.agent_version)
+  const updateData = buildAgentUpdate(osInfo, agent)
   const platform = updateData.os_type || 'windows'
 
   logger.debug('Heartbeat received', { agentName: agent.agent_name, traceId })
