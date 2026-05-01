@@ -150,7 +150,7 @@ export async function checkRateLimit(
 
   // 2. RPC call
   const { data, error } = await supabase.rpc('check_rate_limit_atomic', {
-    p_identifier: identifier,
+    p_identifier: normIdentifier,
     p_endpoint: endpoint,
     p_max_requests: config.maxRequests,
     p_window_minutes: config.windowMinutes,
