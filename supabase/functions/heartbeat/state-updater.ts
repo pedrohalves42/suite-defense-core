@@ -33,15 +33,14 @@ export async function updateAgentStatus(
     .eq('id', agentId)
 
   if (error) {
-    logger.error('Failed to update agent heartbeat', {
-      error, errorMessage: error.message, errorDetails: error.details,
-      errorHint: error.hint, agentId, agentName,
-      updateData: JSON.stringify(updateData),
+    logger.error('CRITICAL: Failed to update agent heartbeat', {
+      error, errorMessage: error.message, agentId, agentName,
     })
-    logger.warn('Heartbeat authenticated but update failed - continuing')
-  } else {
-    logger.info('Agent heartbeat updated successfully', { agentName })
+    // FIX: Throw error to prevent returning a fake success response to the agent
+    throw new Error(`Heartbeat persistence failed: ${error.message}`);
   }
+  
+  logger.info('Agent heartbeat updated successfully', { agentName })
 }
 
 /**

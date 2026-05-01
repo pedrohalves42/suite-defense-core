@@ -57,9 +57,7 @@
     <!-- Content-Security-Policy is handled by public/_headers for production consistency -->
     <script>
       (function() {
-        var isProd = !window.location.hostname.includes('lovable.app') && !window.location.hostname.includes('localhost');
-        window.__SECURITY_ENV = isProd ? 'production' : 'development';
-        window.__SECURITY_CSP_VERSION = isProd ? 'Strict (Header-First)' : 'Permissive (Dev-Meta)';
+        window.__SECURITY_ENV = (window.location.hostname === 'localhost' || window.location.hostname.includes('lovable.app')) ? 'development' : 'production';
       })();
     </script>
 

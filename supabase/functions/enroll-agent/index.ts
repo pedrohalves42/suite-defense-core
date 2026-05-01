@@ -87,13 +87,29 @@ servePublic(async (req, ctx) => {
     const tokenPrefix = getTokenPrefix(agentToken);
     await supabase.from('agent_tokens').insert({ agent_id: agentId, token_hash: tokenHash, token_prefix: tokenPrefix, expires_at: expiresAt.toISOString() });
 
-    // Update key usage
-    const updateData: Record<string, any> = { current_uses: keyData.current_uses + 1, used_by_agent: agentName, used_at: new Date().toISOString() };
-    if (keyData.current_uses === 0) {
-      const newExpiration = new Date(); newExpiration.setFullYear(newExpiration.getFullYear() + 1);
-      updateData.expires_at = newExpiration.toISOString();
+    // Update key usage (only for NEW agents to prevent quota/usage exhaustion by re-enrollment)
+    if (!existingAgent) {
+      const updateData: Record<string, any> = { 
+        current_uses: keyData.current_uses + 1, 
+        used_by_agent: agentName, 
+        used_at: new Date().toISOString() 
+      };
+      
+      // If first use, set expiration to 1 year from now
+      if (keyData.current_uses === 0) {
+        const newExpiration = new Date(); 
+        newExpiration.setFullYear(newExpiration.getFullYear() + 1);
+        updateData.expires_at = newExpiration.toISOString();
+      }
+      
+      await supabase.from('enrollment_keys').update(updateData).eq('id', keyData.id);
+    } else {
+      // For existing agents, just update the "last used" timestamp without consuming a slot
+      await supabase.from('enrollment_keys').update({ 
+        used_at: new Date().toISOString(),
+        used_by_agent: agentName 
+      }).eq('id', keyData.id);
     }
-    await supabase.from('enrollment_keys').update(updateData).eq('id', keyData.id);
 
     // Audit log
     await createAuditLog({ supabase, tenantId: keyData.tenant_id, action: 'agent_enrolled', resourceType: 'agent', resourceId: agentName, details: { tenant_id: keyData.tenant_id, enrollment_key_id: keyData.id, is_new: !existingAgent }, request: req, success: true });
