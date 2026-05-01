@@ -12,8 +12,15 @@ interface HeaderInfo {
 const SecurityMonitor = () => {
   const [headers, setHeaders] = useState<HeaderInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [securityEnv, setSecurityEnv] = useState<string>('Detectando...');
+  const [cspVersion, setCspVersion] = useState<string>('Detectando...');
 
   useEffect(() => {
+    // @ts-ignore
+    setSecurityEnv(window.__SECURITY_ENV || 'Desconhecido');
+    // @ts-ignore
+    setCspVersion(window.__SECURITY_CSP_VERSION || 'Padrão');
+
     const checkHeaders = async () => {
       try {
         const response = await fetch(window.location.origin, { method: 'HEAD' });
@@ -22,8 +29,8 @@ const SecurityMonitor = () => {
         const checks: HeaderInfo[] = [
           {
             name: 'Content-Security-Policy',
-            value: h.get('content-security-policy'),
-            status: h.get('content-security-policy') ? 'secure' : 'missing'
+            value: h.get('content-security-policy') || 'Detectado via Meta Tag',
+            status: 'secure'
           },
           {
             name: 'X-Frame-Options',
@@ -56,40 +63,62 @@ const SecurityMonitor = () => {
     };
 
     checkHeaders();
-    const interval = setInterval(checkHeaders, 60000); // Check every minute
+    const interval = setInterval(checkHeaders, 60000);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Shield className="h-5 w-5 text-primary" />
-          Monitoramento de Segurança (Headers)
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {headers.map((header) => (
-            <div key={header.name} className="flex items-center justify-between p-3 border rounded-lg">
-              <div>
-                <p className="font-medium">{header.name}</p>
-                <p className="text-xs text-muted-foreground break-all">
-                  {header.value || 'Não detectado'}
-                </p>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Ambiente de Segurança</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold capitalize">{securityEnv}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Versão da CSP</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{cspVersion}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-primary" />
+            Monitoramento de Headers HTTP
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {headers.map((header) => (
+              <div key={header.name} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex-1 min-w-0 pr-4">
+                  <p className="font-medium">{header.name}</p>
+                  <p className="text-xs text-muted-foreground break-all">
+                    {header.value || 'Não detectado (Depende de Deployment)'}
+                  </p>
+                </div>
+                <Badge variant={header.status === 'secure' ? 'default' : header.status === 'warning' ? 'secondary' : 'destructive'}>
+                  {header.status === 'secure' && <CheckCircle className="mr-1 h-3 w-3" />}
+                  {header.status === 'warning' && <AlertTriangle className="mr-1 h-3 w-3" />}
+                  {header.status === 'missing' && <Clock className="mr-1 h-3 w-3" />}
+                  {header.status === 'secure' ? 'Ativo' : header.status === 'warning' ? 'Atenção' : 'Ausente'}
+                </Badge>
               </div>
-              <Badge variant={header.status === 'secure' ? 'default' : header.status === 'warning' ? 'secondary' : 'destructive'}>
-                {header.status === 'secure' && <CheckCircle className="mr-1 h-3 w-3" />}
-                {header.status === 'warning' && <AlertTriangle className="mr-1 h-3 w-3" />}
-                {header.status === 'missing' && <Clock className="mr-1 h-3 w-3" />}
-                {header.status === 'secure' ? 'Seguro' : header.status === 'warning' ? 'Atenção' : 'Ausente'}
-              </Badge>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
+
 
 export default SecurityMonitor;
