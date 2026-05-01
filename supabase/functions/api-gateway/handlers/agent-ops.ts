@@ -10,15 +10,12 @@ import type { HandlerContext } from './admin.ts';
 type Supabase = any;
 
 // ── token-rotate ───────────────────────────────────────────────────────
+import { hashToken, getTokenPrefix } from '../../_shared/token-hash.ts';
+
 async function generateSecureToken(): Promise<string> {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function hashTokenLocal(token: string): Promise<string> {
-  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 const TOKEN_TTL_DAYS = 30;
@@ -33,51 +30,51 @@ export async function handleTokenRotate(
 
   if (action === 'needs-rotation') {
     const { data: tokens, error } = await supabase.from('agent_tokens')
-      .select('agent_id, token_id, created_at, expires_at')
-      .eq('is_revoked', false).eq('is_active', true)
+      .select('agent_id, id, created_at, expires_at')
+      .eq('is_active', true)
+      .eq('tenant_id', tenantId)
       .lt('expires_at', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString());
     if (error) throw error;
-    return { needs_rotation: tokens?.length || 0, tokens: tokens?.map(t => ({ agentId: t.agent_id, expiresAt: t.expires_at, createdAt: t.created_at })) };
+    return { needs_rotation: tokens?.length || 0, tokens: tokens?.map(t => ({ agentId: t.agent_id, id: t.id, expiresAt: t.expires_at, createdAt: t.created_at })) };
   }
 
   if (action === 'generate') {
     const agentId = payload.agentId as string;
     if (!agentId) return { __status: 400, error: 'agentId required' };
-    const agentToken = await generateSecureToken();
-    const hmacSecret = await generateSecureToken();
-    const tokenHash = await hashTokenLocal(agentToken);
-    const hmacHash = await hashTokenLocal(hmacSecret);
-    const tokenId = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
-    const { error: insertError } = await supabase.from('agent_tokens').insert({
-      token_id: tokenId, agent_id: agentId, tenant_id: tenantId, token_hash: tokenHash,
-      hmac_secret_hash: hmacHash, expires_at: expiresAt, is_active: true, is_revoked: false,
-    });
-    if (insertError) throw insertError;
-    return { token: agentToken, hmac_secret: hmacSecret, token_id: tokenId, expires_at: expiresAt };
-  }
+    
+    // Verify agent belongs to tenant
+    const { data: agent, error: agentError } = await supabase.from('agents').select('id').eq('id', agentId).eq('tenant_id', tenantId).maybeSingle();
+    if (agentError || !agent) return { __status: 404, error: 'Agent not found in your tenant' };
 
-  if (action === 'validate') {
-    const { agentId, token: agentToken, hmacSecret } = payload as Record<string, string>;
-    if (!agentId || !agentToken) return { valid: false, error: 'agentId and token required' };
-    const tokenHash = await hashTokenLocal(agentToken);
-    let query = supabase.from('agent_tokens').select('id, agent_id, token_hash, hmac_secret_hash, is_revoked, expires_at, last_used_at, created_at').eq('agent_id', agentId).eq('token_hash', tokenHash);
-    if (hmacSecret) { const hmacHash = await hashTokenLocal(hmacSecret); query = query.eq('hmac_secret_hash', hmacHash); }
-    const { data: storedToken, error } = await query.single();
-    if (error || !storedToken) return { valid: false, error: 'Invalid token' };
-    if (storedToken.is_revoked) return { valid: false, error: 'Token revoked' };
-    if (new Date(storedToken.expires_at) < new Date()) return { valid: false, error: 'Token expired' };
-    await supabase.from('agent_tokens').update({ last_used_at: new Date().toISOString() }).eq('id', storedToken.id);
-    const age = Date.now() - new Date(storedToken.created_at).getTime();
-    return { valid: true, needs_rotation: age > (TOKEN_TTL_DAYS - ROTATION_WINDOW_DAYS) * 24 * 60 * 60 * 1000 };
+    const agentToken = await generateSecureToken();
+    const tokenHash = await hashToken(agentToken);
+    const tokenPrefix = getTokenPrefix(agentToken);
+    const expiresAt = new Date(Date.now() + TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    
+    // Deactivate old tokens for this agent
+    await supabase.from('agent_tokens').update({ is_active: false }).eq('agent_id', agentId).eq('tenant_id', tenantId);
+
+    const { data: newToken, error: insertError } = await supabase.from('agent_tokens').insert({
+      agent_id: agentId, 
+      tenant_id: tenantId, 
+      token_hash: tokenHash,
+      token_prefix: tokenPrefix, 
+      expires_at: expiresAt, 
+      is_active: true,
+    }).select('id').single();
+    
+    if (insertError) throw insertError;
+    return { token: agentToken, id: newToken.id, expires_at: expiresAt };
   }
 
   if (action === 'revoke') {
     const agentId = payload.agentId as string;
     if (!agentId) return { __status: 400, error: 'agentId required' };
     const { error } = await supabase.from('agent_tokens')
-      .update({ is_revoked: true, revoked_at: new Date().toISOString(), is_active: false })
-      .eq('agent_id', agentId).eq('is_revoked', false);
+      .update({ is_active: false })
+      .eq('agent_id', agentId)
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true);
     if (error) throw error;
     return { success: true };
   }
