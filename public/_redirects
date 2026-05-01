@@ -1,7 +1,6 @@
-# Bloqueio de arquivos sensíveis com 404/403
-# Nota: Muitas plataformas de hosting estático (como Netlify) usam 404 para ocultar existência
-/*.map  /404  404!
-/.env*  /404  404!
-/.git*  /404  404!
-/logs*  /404  404!
-/backup* /404 404!
+# Bloqueio de arquivos sensíveis com 403 Forbidden para conformidade de Pentest
+/*.map  /403  403!
+/.env*  /403  403!
+/.git*  /403  403!
+/logs*  /403  403!
+/backup* /403 403!
