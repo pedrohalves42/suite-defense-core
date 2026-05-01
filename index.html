@@ -66,7 +66,7 @@
                   "font-src 'self' https://fonts.gstatic.com; " +
                   "img-src 'self' data: blob: https:; " +
                   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com" + (isProd ? "" : " https://*.lovable.app") + "; " +
-                  "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'; upgrade-insecure-requests;";
+                  "base-uri 'self'; object-src 'none'; form-action 'self'; upgrade-insecure-requests;";
         
         var meta = document.createElement('meta');
         meta.httpEquiv = "Content-Security-Policy";
@@ -75,7 +75,7 @@
         
         // Expose env for the monitor
         window.__SECURITY_ENV = isProd ? 'production' : 'development';
-        window.__SECURITY_CSP_VERSION = isProd ? 'Restrictive (Prod)' : 'Permissive (Dev)';
+        window.__SECURITY_CSP_VERSION = isProd ? 'Strict (Header-First)' : 'Permissive (Dev-Meta)';
       })();
     </script>
 
