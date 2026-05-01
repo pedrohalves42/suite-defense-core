@@ -90,7 +90,7 @@ servePublic(async (req, ctx) => {
     // Update key usage
     const updateData: Record<string, any> = { current_uses: keyData.current_uses + 1, used_by_agent: agentName, used_at: new Date().toISOString() };
     if (keyData.current_uses === 0) {
-      const newExpiration = new Date(); newExpiration.setDate(newExpiration.getDate() + 30);
+      const newExpiration = new Date(); newExpiration.setFullYear(newExpiration.getFullYear() + 1);
       updateData.expires_at = newExpiration.toISOString();
     }
     await supabase.from('enrollment_keys').update(updateData).eq('id', keyData.id);
