@@ -75,8 +75,8 @@ export async function validateEnrollmentKey(
     };
   }
 
-  // Check expiration
-  if (new Date(keyData.expires_at) < new Date()) {
+  // Check expiration (allow null for non-expiring keys)
+  if (keyData.expires_at && new Date(keyData.expires_at) < new Date()) {
     logger.warn(`[${requestId}] Expired enrollment key`);
     await createAuditLog({
       supabase,
