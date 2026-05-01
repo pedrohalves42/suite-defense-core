@@ -10,10 +10,13 @@ import type { HandlerContext } from './admin.ts';
 async function authenticateApiKeyInline(
   supabase: any,
   apiKey: string,
+  requestId: string,
 ): Promise<{ success: boolean; tenantId?: string; apiKeyId?: string; scopes?: string[]; error?: string }> {
+  // Use timing-safe hash if possible, otherwise use standard match. 
+  // API keys should ideally be hashed with SHA-256 for storage.
   const { data, error } = await supabase
     .from('api_keys')
-    .select('id, tenant_id, scopes, is_active, expires_at')
+    .select('id, tenant_id, scopes, is_active, expires_at, last_used_at')
     .eq('key_hash', apiKey)
     .eq('is_active', true)
     .maybeSingle();
@@ -24,6 +27,13 @@ async function authenticateApiKeyInline(
 
   if (data.expires_at && new Date(data.expires_at) < new Date()) {
     return { success: false, error: 'API key expired' };
+  }
+
+  // Update last_used_at (throttled to once per minute to reduce IOPS)
+  const lastUsed = data.last_used_at ? new Date(data.last_used_at).getTime() : 0;
+  if (Date.now() - lastUsed > 60000) {
+    supabase.from('api_keys').update({ last_used_at: new Date().toISOString() }).eq('id', data.id)
+      .then(({ error }: any) => { if (error) logger.warn(`[${requestId}] Failed to update API key last_used_at`, error); });
   }
 
   return {
@@ -47,7 +57,7 @@ export async function handleTenantFeatures(
   const apiKey = (payload.api_key as string) || '';
   if (!apiKey) return { __status: 401, error: 'Missing API key' };
 
-  const auth = await authenticateApiKeyInline(supabase, apiKey);
+  const auth = await authenticateApiKeyInline(supabase, apiKey, requestId);
   if (!auth.success) return { __status: 401, error: auth.error };
   if (!hasScope(auth.scopes!, 'read')) return { __status: 403, error: 'Insufficient permissions' };
 
@@ -70,7 +80,7 @@ export async function handleTenantInfo(
   const apiKey = (payload.api_key as string) || '';
   if (!apiKey) return { __status: 401, error: 'Missing API key' };
 
-  const auth = await authenticateApiKeyInline(supabase, apiKey);
+  const auth = await authenticateApiKeyInline(supabase, apiKey, requestId);
   if (!auth.success) return { __status: 401, error: auth.error };
   if (!hasScope(auth.scopes!, 'read')) return { __status: 403, error: 'Insufficient permissions' };
 
@@ -93,7 +103,7 @@ export async function handleTenantStats(
   const apiKey = (payload.api_key as string) || '';
   if (!apiKey) return { __status: 401, error: 'Missing API key' };
 
-  const auth = await authenticateApiKeyInline(supabase, apiKey);
+  const auth = await authenticateApiKeyInline(supabase, apiKey, requestId);
   if (!auth.success) return { __status: 401, error: auth.error };
   if (!hasScope(auth.scopes!, 'read')) return { __status: 403, error: 'Insufficient permissions' };
 

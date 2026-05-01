@@ -129,7 +129,9 @@ export async function checkRateLimit(
   endpoint: string,
   config: RateLimitConfig = DEFAULT_CONFIG
 ): Promise<{ allowed: boolean; remainingRequests?: number; resetAt?: Date }> {
-  const key = cacheKey(identifier, endpoint);
+  // Normalize identifier to prevent cache/DB pollution via case-sensitivity or leading/trailing whitespace
+  const normIdentifier = identifier.trim().toLowerCase();
+  const key = cacheKey(normIdentifier, endpoint);
 
   // 1. Cache hit?
   const cached = getCached(key);
@@ -148,7 +150,7 @@ export async function checkRateLimit(
 
   // 2. RPC call
   const { data, error } = await supabase.rpc('check_rate_limit_atomic', {
-    p_identifier: identifier,
+    p_identifier: normIdentifier,
     p_endpoint: endpoint,
     p_max_requests: config.maxRequests,
     p_window_minutes: config.windowMinutes,
