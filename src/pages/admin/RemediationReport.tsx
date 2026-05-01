@@ -82,6 +82,33 @@ const vulnerabilities = [
     status: 'Corrigido',
     remediation: 'Implementação de RLS robusto com validação de get_active_tenant_id() e bloqueio de acesso a colunas sensíveis (reasoning_summary, evidence_pack) de outros tenants.',
   },
+  {
+    id: 'PENT-001',
+    type: 'Segurança de Infra/Headers',
+    name: 'CSP Incompleta e Exposição de Artefatos',
+    severity: 'Média',
+    location: 'index.html, public/_headers',
+    status: 'Corrigido',
+    remediation: 'Endurecimento da CSP meta tag com style-src-elem e upgrade-insecure-requests. Bloqueio explícito de acesso a arquivos .map no _headers.',
+  },
+  {
+    id: 'PENT-002',
+    type: 'Infraestrutura Lovable',
+    name: 'Cookies sem HttpOnly e Headers Informativos',
+    severity: 'Baixa',
+    location: 'Plataforma Lovable / Cloudflare',
+    status: 'Aceito (Infra)',
+    remediation: 'Identificado como cookie da plataforma (__dpl) e header de infra (x-deployment-id). Recomendado ticket ao suporte Lovable para mitigação na borda.',
+  },
+  {
+    id: 'PENT-003',
+    type: 'DNS / WHOIS',
+    name: 'MX Inadequado e Exposição WHOIS',
+    severity: 'Média',
+    location: 'Registro.br / Painel DNS',
+    status: 'Ação do Cliente',
+    remediation: 'Recomendado configuração de Null MX (0 .) para o domínio e proteção de privacidade no WHOIS/contatos administrativos.',
+  },
 ];
 
 export default function RemediationReport() {
