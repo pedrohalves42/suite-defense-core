@@ -48,17 +48,24 @@ export async function handleCheckAgentNameAvailability(
 
 /** diagnose-agent: Runs diagnostic RPC for an agent */
 export async function handleDiagnoseAgent(
-  supabase: SB, requestId: string, payload: Record<string, unknown>,
+  supabase: SB, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
 ): Promise<unknown> {
   const agentName = payload.agent_name as string;
   if (!agentName || typeof agentName !== 'string') {
     return { error: 'agent_name is required', __status: 400 };
   }
 
-  const { data: diagnosis, error } = await supabase.rpc('diagnose_agent', { p_agent_name: agentName });
+  const tenantId = ctx?.tenantId || payload.tenant_id as string;
+  if (!tenantId) return { error: 'Tenant context required for diagnosis', __status: 400 };
+
+  const { data: diagnosis, error } = await supabase.rpc('diagnose_agent', { 
+    p_agent_name: agentName,
+    p_tenant_id: tenantId
+  });
+
   if (error) {
     logger.error('[diagnose-agent] Failed', { requestId, error: error.message });
-    throw error;
+    return { error: 'Failed to run diagnosis', details: error.message, __status: 500 };
   }
   return diagnosis;
 }

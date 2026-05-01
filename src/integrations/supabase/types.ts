@@ -50327,7 +50327,12 @@ export type Database = {
           version_id: string
         }[]
       }
-      diagnose_agent: { Args: { p_agent_name: string }; Returns: Json }
+      diagnose_agent:
+        | { Args: { p_agent_name: string }; Returns: Json }
+        | {
+            Args: { p_agent_name: string; p_tenant_id?: string }
+            Returns: Json
+          }
       diagnose_agent_issues: {
         Args: { p_agent_name: string; p_tenant_id: string }
         Returns: {
