@@ -150,11 +150,12 @@ export async function handleReEnrollment(
       };
     }
 
-    // Deactivate old tokens
+    // Deactivate old tokens for this agent specifically in this tenant
     await supabase
       .from('agent_tokens')
       .update({ is_active: false })
-      .eq('agent_id', existingAgentId);
+      .eq('agent_id', existingAgentId)
+      .eq('tenant_id', tenantId);
   }
 
   logger.info(`[${requestId}] Agent revived for reenrollment: ${agentName}`);
