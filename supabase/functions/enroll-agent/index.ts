@@ -57,7 +57,7 @@ servePublic(async (req, ctx) => {
     const keyData = keyResult.keyData!;
 
     // Check agent quota (new agents only)
-    const { data: existingAgent } = await supabase.from('agents').select('id').eq('agent_name', agentName).order('enrolled_at', { ascending: false }).limit(1).maybeSingle();
+    const { data: existingAgent } = await supabase.from('agents').select('id').eq('agent_name', agentName).eq('tenant_id', keyData.tenant_id).order('enrolled_at', { ascending: false }).limit(1).maybeSingle();
 
     if (!existingAgent) {
       const quotaCheck = await checkQuotaAvailable(supabase, keyData.tenant_id, 'max_agents');
