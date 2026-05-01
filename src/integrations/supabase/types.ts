@@ -51019,6 +51019,10 @@ export type Database = {
         Returns: string
       }
       increment_ai_cache_hit: { Args: { cache_id: string }; Returns: undefined }
+      increment_enrollment_key_usage: {
+        Args: { p_agent_name: string; p_key_id: string }
+        Returns: Json
+      }
       increment_tenant_quota: {
         Args: { p_tenant_id: string }
         Returns: undefined
