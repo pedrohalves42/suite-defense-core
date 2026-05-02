@@ -26,35 +26,44 @@ export async function createAuditLog({
   request: Request;
   success?: boolean;
 }) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() 
+    || request.headers.get('x-real-ip')
+    || 'unknown';
+  const traceId = request.headers.get('X-Trace-ID') || request.headers.get('X-Request-ID') || null;
+  const userAgent = request.headers.get('user-agent');
+
   // ADR-029 HIGH-06: Validate tenantId is provided
   if (!tenantId || tenantId === 'unknown') {
     logger.error('[createAuditLog] CRITICAL: tenantId is required for compliance audit');
     // Still insert for forensic purposes, but flag it
-    await supabase.from('audit_logs').insert({
+    const { error } = await supabase.from('audit_logs').insert({
       user_id: userId,
       tenant_id: null,
       action: `UNTRACKED_${action}`,
       resource_type: resourceType,
       resource_id: resourceId,
       details: { ...details, _warning: 'Missing tenant_id - compliance violation' },
-      ip_address: request.headers.get('x-forwarded-for'),
-      user_agent: request.headers.get('user-agent'),
-      trace_id: request.headers.get('X-Trace-ID') || request.headers.get('X-Request-ID') || null,
+      ip_address: ip,
+      user_agent: userAgent,
+      trace_id: traceId,
       success,
     });
+    if (error) logger.error('[createAuditLog] CRITICAL: Audit log insert failed', error);
     return;
   }
 
-  await supabase.from('audit_logs').insert({
+  const { error } = await supabase.from('audit_logs').insert({
     user_id: userId,
     tenant_id: tenantId,
     action,
     resource_type: resourceType,
     resource_id: resourceId,
     details,
-    ip_address: request.headers.get('x-forwarded-for'),
-    user_agent: request.headers.get('user-agent'),
-    trace_id: request.headers.get('X-Trace-ID') || request.headers.get('X-Request-ID') || null,
+    ip_address: ip,
+    user_agent: userAgent,
+    trace_id: traceId,
     success,
   });
+
+  if (error) logger.error('[createAuditLog] Audit log insert failed', error);
 }

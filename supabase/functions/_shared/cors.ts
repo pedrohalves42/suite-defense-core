@@ -19,7 +19,7 @@ function isAllowedOrigin(origin: string | null): boolean {
   if (/^https:\/\/[a-z0-9._-]+\.lovable\.app$/.test(origin)) return true;
   if (/^https:\/\/[a-z0-9._-]+\.lovableproject\.com$/.test(origin)) return true;
   if (/^https:\/\/[a-z0-9._-]+\.lovable\.dev$/.test(origin)) return true;
-  if (typeof Deno !== 'undefined' && Deno.env.get('ENVIRONMENT') === 'development' && origin.startsWith('http://localhost:')) return true;
+  if (typeof Deno !== 'undefined' && (Deno.env.get('ENV') === 'development' || Deno.env.get('ENVIRONMENT') === 'development') && origin.startsWith('http://localhost:')) return true;
   return false;
 }
 
