@@ -272,11 +272,13 @@ export async function verifyHmacSignature(
   let closestTimestamp: number | undefined;
   let hasTimestampInRange = false;
 
-  // Pre-import all CryptoKeys once (max 2, not per-variant)
-  const importedKeys: { name: string; key: CryptoKey }[] = [];
-  for (const kv of keyVariants) {
-    importedKeys.push({ name: kv.name, key: await getCryptoKey(kv.data, kv.name) });
-  }
+  // Pre-import all CryptoKeys in parallel (max 2, not per-variant)
+  const importedKeys = await Promise.all(
+    keyVariants.map(async (kv) => ({ 
+      name: kv.name, 
+      key: await getCryptoKey(kv.data, kv.name) 
+    }))
+  );
 
   // Determine fast-path: if cache exists, try ONLY cached combo first
   // This reduces worst-case from 16 crypto ops to 1 for known agents
