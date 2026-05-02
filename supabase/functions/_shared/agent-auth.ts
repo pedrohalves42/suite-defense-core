@@ -68,7 +68,7 @@ export async function authenticateAgent(
   // Build select fields: base fields + any extra requested
   const baseFields = 'id, agent_name, tenant_id, hmac_secret, honeypot_mode, status';
   const extraFields = options?.extraAgentFields?.length 
-    ? ', ' + options.extraAgentFields.filter(f => f !== 'status').join(', ')
+    ? ', ' + options.extraAgentFields.filter(f => !['status', 'id', 'agent_name', 'tenant_id', 'hmac_secret', 'honeypot_mode'].includes(f)).join(', ')
     : '';
   const agentSelect = `agent_id, expires_at, agents!inner(${baseFields}${extraFields})`;
   
