@@ -97,26 +97,31 @@ serveHoneypot(async (_req, ctx) => {
   // === EXACTLY 1 INSERT, NO agents.update ===
   // last_honeypot_interaction_at is derived from honeypot_interactions by cron/aggregation
   if (tenantId) {
-    supabase
-      .from('honeypot_interactions')
-      .insert({
-        tenant_id: tenantId,
-        agent_id: agentId,
-        mode: 'native',
-        method,
-        path: route,
-        status_code: response.status,
-        body_snippet: bodySnippet,
-        headers_filtered: headersFiltered,
-        source_ip_hash: sourceIpHash,
-        source_ip_prefix: sourceIpPrefix,
-        classification,
-        trace_id: requestId,
-        response_profile: responseProfile,
-      })
-      .then(({ error }) => {
-        if (error) logger.error(`[honeypot-handler] Insert error`, { message: error.message });
-      });
+    try {
+      const { error } = await supabase
+        .from('honeypot_interactions')
+        .insert({
+          tenant_id: tenantId,
+          agent_id: agentId,
+          mode: 'native',
+          method,
+          path: route,
+          status_code: response.status,
+          body_snippet: bodySnippet,
+          headers_filtered: headersFiltered,
+          source_ip_hash: sourceIpHash,
+          source_ip_prefix: sourceIpPrefix,
+          classification,
+          trace_id: requestId,
+          response_profile: responseProfile,
+        });
+      
+      if (error) {
+        logger.error(`[honeypot-handler] Insert error`, { message: error.message });
+      }
+    } catch (err) {
+      logger.error(`[honeypot-handler] Insert exception`, { error: err instanceof Error ? err.message : String(err) });
+    }
   }
 
   return new Response(JSON.stringify(response.body), {
