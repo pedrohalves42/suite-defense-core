@@ -2,18 +2,7 @@ import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from './logger.ts';
 
 // Timing-safe comparison for strings
-export function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-  const aBytes = new TextEncoder().encode(a);
-  const bBytes = new TextEncoder().encode(b);
-  let result = 0;
-  for (let i = 0; i < aBytes.length; i++) {
-    result |= aBytes[i] ^ bBytes[i];
-  }
-  return result === 0;
-}
+export { timingSafeEqual } from './crypto-utils.ts';
 
 export interface HmacVerificationResult {
   valid: boolean;
@@ -107,13 +96,21 @@ async function getCryptoKey(keyData: Uint8Array, keyName: string): Promise<Crypt
     return cached.promise;
   }
   
-  const promise = crypto.subtle.importKey(
-    'raw',
-    keyData.buffer as ArrayBuffer,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
+  const promise = (async () => {
+    // Re-check inside the async block to handle race conditions during import
+    const existing = cryptoKeyCache.get(cacheKey);
+    if (existing && (now - existing.ts) < CRYPTO_KEY_TTL_MS) {
+      return existing.promise;
+    }
+    
+    return await crypto.subtle.importKey(
+      'raw',
+      keyData.buffer as ArrayBuffer,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign'],
+    );
+  })();
   
   pruneCache(cryptoKeyCache, MAX_CACHE_ENTRIES);
   cryptoKeyCache.set(cacheKey, { promise, ts: now });

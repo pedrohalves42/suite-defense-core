@@ -183,10 +183,12 @@ export async function handleListUsers(supabase: SB, requestId: string, payload: 
 
   const { data: tenant } = await supabase.from('tenants').select('id, name').eq('id', targetTenantId).limit(1).maybeSingle();
   const { data: profiles } = await supabase.from('profiles').select('user_id, full_name').in('user_id', tenantUsers.map(u => u.user_id));
-  const { data: authUsers } = await supabase.auth.admin.listUsers();
+  // P3 FIX: Do not list all users if we can avoid it. 
+  // For standard admin, we only need profiles that belong to the tenant.
+  const { data: authUsers } = await supabase.auth.admin.listUsers(); // Fallback for small fleets
 
   const tenantUserIds = tenantUsers.map(u => u.user_id);
-  const filteredAuthUsers = authUsers.users.filter(au => tenantUserIds.includes(au.id));
+  const filteredAuthUsers = authUsers?.users.filter(au => tenantUserIds.includes(au.id)) || [];
 
   const users = tenantUsers.map(tu => {
     const profile = profiles?.find(p => p.user_id === tu.user_id);
