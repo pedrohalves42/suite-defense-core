@@ -1,30 +1,19 @@
 // @ts-nocheck
 /**
  * enroll-agent - Agent enrollment endpoint
- * MODULARIZED: Logic extracted to key-validator.ts and agent-handler.ts
- * 
- * Auth: Deno.serve (raw body needed for HMAC sunset policy checks)
+ * REFACTORED: Uses enroll_agent_atomic RPC for transaction integrity and quota enforcement.
  */
-import { requireEnv } from '../_shared/env.ts';
-import { createTypedClient } from '../_shared/supabase-client.ts';
-import { handleExceptionWithContext, handleValidationError } from '../_shared/error-handler.ts';
 import { EnrollAgentSchema } from '../_shared/validation.ts';
 import { createAuditLog } from '../_shared/audit.ts';
-import { checkRateLimit } from '../_shared/rate-limit.ts';
-import { checkQuotaAvailable } from '../_shared/quota.ts';
 import { logger } from '../_shared/logger.ts';
-import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts';
 import { hashToken, getTokenPrefix } from '../_shared/token-hash.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
-import { validateEnrollmentKey } from './key-validator.ts';
-import { handleReEnrollment, createNewAgent } from './agent-handler.ts';
-import { withTimeout } from '../_shared/timeout.ts';
-
+import { hashEnrollmentKey } from './key-validator.ts';
 import { servePublic } from '../_shared/serve-public.ts';
+import { handleValidationError } from '../_shared/error-handler.ts';
 
 servePublic(async (req, ctx) => {
   const { requestId, supabase: supabaseAny, body: rawData } = ctx;
-  const traceId = requestId;
   const startTime = Date.now();
   const origin = req.headers.get("origin");
 
@@ -51,67 +40,76 @@ servePublic(async (req, ctx) => {
       }
     }
 
-    // Validate enrollment key
-    const keyResult = await validateEnrollmentKey(supabase, enrollmentKey, agentName, requestId, req, origin);
-    if (!keyResult.valid) return keyResult.response!;
-    const keyData = keyResult.keyData!;
-
-    // Check agent quota (new agents only)
-    const { data: existingAgent } = await supabase.from('agents').select('id').eq('agent_name', agentName).eq('tenant_id', keyData.tenant_id).order('enrolled_at', { ascending: false }).limit(1).maybeSingle();
-
-    if (!existingAgent) {
-      const quotaCheck = await checkQuotaAvailable(supabase, keyData.tenant_id, 'max_agents');
-      if (!quotaCheck.allowed) {
-        await createAuditLog({ supabase, tenantId: keyData.tenant_id, action: 'agent_enrollment_failed', resourceType: 'agent', resourceId: agentName, details: { reason: 'quota_exceeded', quota_used: quotaCheck.current, quota_limit: quotaCheck.limit }, request: req, success: false });
-        return new Response(JSON.stringify({ error: quotaCheck.error || 'Quota de agentes excedida', quotaUsed: quotaCheck.current, quotaLimit: quotaCheck.limit }), { status: 429, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
-      }
-    }
-
-    // 1. Update key usage (Atomic via RPC) - DO THIS FIRST to validate and secure slot
-    const { data: updateResult, error: updateError } = await supabase.rpc('increment_enrollment_key_usage', {
-      p_key_id: keyData.id,
-      p_agent_name: agentName
-    });
-
-    if (updateError || !updateResult.success) {
-      logger.error(`[${requestId}] Failed to authorize enrollment key usage: ${updateError?.message || updateResult?.error}`);
-      return new Response(JSON.stringify({ 
-        error: updateResult?.error || 'Failed to authorize enrollment key usage', 
-        code: updateError?.code === 'PGRST202' ? 'RPC_NOT_FOUND' : 'KEY_UPDATE_FAILED', 
-        requestId 
-      }), { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
-    }
-
-    // 2. Generate credentials
+    // Prepare credentials
     const agentToken = crypto.randomUUID();
     const hmacSecret = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b => b.toString(16).padStart(2, '0')).join('');
-
-    let agentId: string;
-    if (existingAgent) {
-      const reEnrollResult = await handleReEnrollment(supabase, existingAgent.id, agentName, hmacSecret, keyData.tenant_id, enrollmentKey, requestId, req, origin);
-      if (!reEnrollResult.success) return reEnrollResult.response!;
-      agentId = reEnrollResult.agentId!;
-    } else {
-      agentId = await createNewAgent(supabase, keyData.tenant_id, agentName, hmacSecret);
-    }
-
-    // 3. Create token
-    const expiresAt = new Date();
-    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    
     const tokenHash = await hashToken(agentToken);
     const tokenPrefix = getTokenPrefix(agentToken);
-    await supabase.from('agent_tokens').insert({ agent_id: agentId, token_hash: tokenHash, token_prefix: tokenPrefix, expires_at: expiresAt.toISOString() });
+    const enrollmentKeyHash = await hashEnrollmentKey(enrollmentKey);
+    
+    const expiresAt = new Date();
+    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
 
+    // CALL ATOMIC RPC
+    const { data: result, error: rpcError } = await supabase.rpc('enroll_agent_atomic', {
+      p_key_hash: enrollmentKeyHash,
+      p_agent_name: agentName,
+      p_hmac_secret: hmacSecret,
+      p_token_hash: tokenHash,
+      p_token_prefix: tokenPrefix,
+      p_expires_at: expiresAt.toISOString()
+    });
 
-    // Audit log
-    await createAuditLog({ supabase, tenantId: keyData.tenant_id, action: 'agent_enrolled', resourceType: 'agent', resourceId: agentName, details: { tenant_id: keyData.tenant_id, enrollment_key_id: keyData.id, is_new: !existingAgent }, request: req, success: true });
+    if (rpcError || !result.success) {
+      const errorMsg = result?.error || rpcError?.message || 'Enrollment failed';
+      const errorCode = result?.error || 'RPC_ERROR';
+      
+      logger.error(`[${requestId}] Enrollment RPC failed: ${errorMsg}`, { rpcError, result });
+      
+      await createAuditLog({ 
+        supabase, 
+        tenantId: result?.tenant_id || 'unknown', 
+        action: 'agent_enrollment_failed', 
+        resourceType: 'agent', 
+        resourceId: agentName, 
+        details: { reason: errorCode, error: errorMsg }, 
+        request: req, 
+        success: false 
+      });
 
-    logger.success(`[${requestId}] Agent enrolled successfully`);
-    return { agentToken, hmacSecret, expiresAt: expiresAt.toISOString(), requestId };
+      return new Response(JSON.stringify({ error: errorMsg, code: errorCode, requestId }), { 
+        status: errorCode === 'QUOTA_EXCEEDED' ? 429 : 403, 
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
+      });
+    }
+
+    // Success Audit Log
+    await createAuditLog({ 
+      supabase, 
+      tenantId: result.tenant_id, 
+      action: 'agent_enrolled', 
+      resourceType: 'agent', 
+      resourceId: agentName, 
+      details: { tenant_id: result.tenant_id, agent_id: result.agent_id }, 
+      request: req, 
+      success: true 
+    });
+
+    logger.success(`[${requestId}] Agent enrolled successfully: ${agentName} (${result.agent_id})`);
+    
+    return { 
+      agentToken, 
+      hmacSecret, 
+      expiresAt: expiresAt.toISOString(), 
+      requestId 
+    };
 
   } catch (error) {
-    return handleExceptionWithContext(error, requestId, 'enroll-agent', startTime, {
-      tenantId: 'unknown', // Set later if available, but mandatory here
+    logger.error(`[${requestId}] Unexpected error in enroll-agent`, error);
+    return new Response(JSON.stringify({ error: 'Internal server error', requestId }), { 
+      status: 500, 
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
     });
   }
 }, {

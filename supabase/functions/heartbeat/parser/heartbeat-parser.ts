@@ -78,7 +78,6 @@ export function buildAgentUpdate(
 
   // Persist agent state (ENFORCING, SAFE_MODE, DEGRADED, INITIALIZING)
   if (osInfo.state) {
-    updateData.state = osInfo.state
     const stateUpper = osInfo.state.toUpperCase()
     if (['ENFORCING', 'HEALTHY'].includes(stateUpper)) {
       updateData.agent_state = 'healthy'
@@ -87,16 +86,16 @@ export function buildAgentUpdate(
     } else if (['OFFLINE', 'ERROR', 'SHUTDOWN', 'ISOLATED', 'QUARANTINED'].includes(stateUpper)) {
       updateData.agent_state = stateUpper.toLowerCase()
     }
-  } else {
-    updateData.agent_state = 'healthy'
-  }
+    updateData.state = osInfo.state
+  } 
+  // IMPORTANT: Do NOT default to 'healthy' if state is missing to avoid overriding 
+  // backend-enforced states like 'isolated' or 'blocked'.
 
-  // Capturar agent_version do payload (somente quando realmente mudou)
+  // Capture agent_version from payload (only when it actually changed)
   if (osInfo.agent_version) {
     const incomingNorm = normalizeVersion(osInfo.agent_version)
     const currentNorm = normalizeVersion(current.agent_version || undefined)
     if (incomingNorm && incomingNorm !== currentNorm) {
-      updateData.agent_state = 'healthy' 
       updateData.agent_version = osInfo.agent_version
     }
   }
