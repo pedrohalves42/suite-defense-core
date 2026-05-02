@@ -96,6 +96,7 @@ export async function executeParallelOps(
         .then(({ error }) => {
           if (error) logger.warn('Token touch failed', { error: error.message })
         })
+        .catch(e => logger.warn('Token touch promise rejected', { error: e.message }))
     )
 
     // 1b. System metrics insert
