@@ -156,7 +156,7 @@ async function insertProcessData(
     tenant_id: agent.tenant_id,
     processes: allProcs,
     services: [],
-    total_processes: processesPayload.total_processes ?? allProcs.length,
+    total_processes: processesPayload.total_processes || 0, // Avoid using allProcs.length as it only contains TOP processes
     total_services: 0,
     services_running: 0,
     services_stopped: 0,
