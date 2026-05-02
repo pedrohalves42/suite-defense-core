@@ -22,7 +22,10 @@ const RECOVERY_TOKEN_TTL_DAYS = 365;
 export async function handleTokenRotate(
   supabase: Supabase, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
 ): Promise<unknown> {
-  const tenantId = ctx?.tenantId;
+  const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: ctx?.userId });
+  const tenantId = (isSuperAdmin && (payload.tenant_id as string)) || ctx?.tenantId;
+  if (!tenantId) return { __status: 400, error: 'tenant_id required' };
+  
   const action = payload.action as string || 'needs-rotation';
 
   if (action === 'needs-rotation') {
@@ -230,7 +233,8 @@ export async function handleAgentVersionManagement(
   supabase: Supabase, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
 ): Promise<unknown> {
   const action = (payload.action as string) || 'fleet-compliance';
-  const tenantId = (payload.tenant_id as string) || ctx?.tenantId;
+  const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: ctx?.userId });
+  const tenantId = (isSuperAdmin && (payload.tenant_id as string)) || ctx?.tenantId;
 
   if (action === 'fleet-compliance') return getFleetCompliance(supabase, tenantId);
 

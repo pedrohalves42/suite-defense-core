@@ -62,6 +62,9 @@ const V5_FIELD_MAP: Record<string, string> = {
 function normalizeEvent(event: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(event)) {
+    // SECURITY: Block overwriting of internal system fields if present in payload
+    if (['agent_id', 'tenant_id', 'id', 'created_at'].includes(key.toLowerCase())) continue;
+
     const mapped = V5_FIELD_MAP[key];
     if (mapped && out[mapped] === undefined) {
       out[mapped] = value;

@@ -36,8 +36,9 @@ export async function handleCheckAgentNameAvailability(
     return { available: false, reason: 'Nome invalido: 3-50 chars, apenas letras/numeros/hifen/underscore' };
   }
 
-  const tenantId = ctx?.tenantId || payload.tenant_id as string;
-  if (!tenantId) return { available: false, reason: 'Tenant not identified', __status: 400 };
+  const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: ctx?.userId });
+  const tenantId = (isSuperAdmin && (payload.tenant_id as string)) || ctx?.tenantId;
+  if (!tenantId) return { available: false, reason: 'Tenant context required', __status: 400 };
 
   const { data: existing, error } = await supabase
     .from('agents').select('id').eq('agent_name', agentName).eq('tenant_id', tenantId).maybeSingle();
@@ -55,7 +56,8 @@ export async function handleDiagnoseAgent(
     return { error: 'agent_name is required', __status: 400 };
   }
 
-  const tenantId = ctx?.tenantId || payload.tenant_id as string;
+  const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: ctx?.userId });
+  const tenantId = (isSuperAdmin && (payload.tenant_id as string)) || ctx?.tenantId;
   if (!tenantId) return { error: 'Tenant context required for diagnosis', __status: 400 };
 
   const { data: diagnosis, error } = await supabase.rpc('diagnose_agent', { 
@@ -77,8 +79,9 @@ export async function handleGetAgentTimeline(
   const agentId = payload.agent_id as string;
   if (!agentId) return { error: 'agent_id required', __status: 400 };
 
-  const tenantId = ctx?.tenantId || payload.tenant_id as string;
-  if (!tenantId) return { error: 'Tenant not identified', __status: 400 };
+  const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: ctx?.userId });
+  const tenantId = (isSuperAdmin && (payload.tenant_id as string)) || ctx?.tenantId;
+  if (!tenantId) return { error: 'Tenant context required', __status: 400 };
 
   // Verify agent belongs to tenant
   const { data: agent, error: agentError } = await supabase
