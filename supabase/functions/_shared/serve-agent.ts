@@ -84,7 +84,7 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
       // We block any request that uses a valid Supabase User JWT (auth.users)
       // to prevent "User-as-Agent" session hijacking.
       const authHeader = req.headers.get('Authorization');
-      if (authHeader?.startsWith('Bearer ') && authHeader.length > 50) { // Likely a JWT
+      if (authHeader?.startsWith('Bearer ') && authHeader.split('.').length === 3) { // Proper JWT check (two dots)
         const token = authHeader.replace('Bearer ', '');
         const { data: { user }, error } = await supabase.auth.getUser(token);
         if (user && !error) {

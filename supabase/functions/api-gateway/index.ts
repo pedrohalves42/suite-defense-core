@@ -78,7 +78,7 @@ import { handleCalculateCompliance } from './handlers/compliance.ts';
 import { handleExportEvidenceBundle } from './handlers/evidence-bundle.ts';
 import { handleTenantFeatures, handleTenantInfo, handleTenantStats } from './handlers/tenant-api.ts';
 
-const FETCH_TIMEOUT_MS = 30000;
+const FETCH_TIMEOUT_MS = 20000; // Lower than middleware timeout (25s) to allow gateway to return a clean 504/error
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -234,19 +234,23 @@ function decodeJwtContext(req: Request): { userId?: string; tenantId?: string } 
     const token = auth.slice(7);
     const parts = token.split('.');
     if (parts.length !== 3) return {};
-    const payloadPart = parts[1];
     
-    // Normalize base64url to base64
+    // Use a safer decoding approach
+    const payloadPart = parts[1];
     const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
     const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=');
     
     const decoded = JSON.parse(atob(padded));
+    
+    // Validate required fields exist
     return {
-      userId: decoded.sub,
-      tenantId: decoded.app_metadata?.active_tenant_id,
+      userId: typeof decoded.sub === 'string' ? decoded.sub : undefined,
+      tenantId: typeof decoded.app_metadata?.active_tenant_id === 'string' 
+        ? decoded.app_metadata.active_tenant_id 
+        : undefined,
     };
   } catch (err) {
-    logger.warn('[api-gateway] Failed to decode JWT context (expected for non-JWT auth)', { error: err instanceof Error ? err.message : String(err) });
+    logger.debug('[api-gateway] JWT context extraction skipped (non-JWT or invalid format)');
     return {};
   }
 }

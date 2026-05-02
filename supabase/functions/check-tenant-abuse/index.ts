@@ -16,94 +16,36 @@ serveInternal(async (_req, ctx) => {
   const { supabase, requestId } = ctx;
   logger.info(`[${requestId}] check-tenant-abuse started`);
 
-  // Get all active tenants
-  const { data: tenants, error: tenantErr } = await supabase
-    .from('tenants')
-    .select('id, name')
-    .eq('suspension_status', 'active');
+  // Call optimized RPC to get all abuse metrics in one go
+  const { data: metrics, error: rpcErr } = await supabase.rpc('get_tenant_abuse_metrics', {
+    job_threshold: THRESHOLDS.JOBS_PER_HOUR,
+    failed_auth_threshold: THRESHOLDS.FAILED_AUTH_PER_HOUR,
+    agent_overflow_ratio: THRESHOLDS.AGENTS_OVER_LIMIT_RATIO,
+  });
 
-  if (tenantErr) {
-    logger.error(`[${requestId}] Failed to fetch tenants`, tenantErr);
-    return new Response(JSON.stringify({ error: 'Failed to fetch tenants' }), {
+  if (rpcErr) {
+    logger.error(`[${requestId}] RPC get_tenant_abuse_metrics failed`, rpcErr);
+    return new Response(JSON.stringify({ error: 'Failed to fetch abuse metrics' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const alerts: Array<{ tenant_id: string; tenant_name: string; abuse_type: string; value: number; threshold: number }> = [];
-
-  for (const tenant of tenants || []) {
-    // Check jobs/hour
-    const { count: jobCount } = await supabase
-      .from('jobs')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenant.id)
-      .gte('created_at', oneHourAgo);
-
-    if ((jobCount ?? 0) > THRESHOLDS.JOBS_PER_HOUR) {
-      alerts.push({
-        tenant_id: tenant.id,
-        tenant_name: tenant.name,
-        abuse_type: 'excessive_jobs',
-        value: jobCount ?? 0,
-        threshold: THRESHOLDS.JOBS_PER_HOUR,
-      });
-    }
-
-    // Check failed auth attempts
-    const { count: failedAuth } = await supabase
-      .from('failed_login_attempts')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenant.id)
-      .gte('attempted_at', oneHourAgo);
-
-    if ((failedAuth ?? 0) > THRESHOLDS.FAILED_AUTH_PER_HOUR) {
-      alerts.push({
-        tenant_id: tenant.id,
-        tenant_name: tenant.name,
-        abuse_type: 'brute_force_suspected',
-        value: failedAuth ?? 0,
-        threshold: THRESHOLDS.FAILED_AUTH_PER_HOUR,
-      });
-    }
-
-    // Check agent limit overflow
-    const { count: agentCount } = await supabase
-      .from('agents')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenant.id)
-      .eq('status', 'active');
-
-    const { data: sub } = await supabase
-      .from('tenant_subscriptions')
-      .select('agent_limit')
-      .eq('tenant_id', tenant.id)
-      .maybeSingle();
-
-    const limit = sub?.agent_limit ?? 2;
-    if ((agentCount ?? 0) > limit * THRESHOLDS.AGENTS_OVER_LIMIT_RATIO) {
-      alerts.push({
-        tenant_id: tenant.id,
-        tenant_name: tenant.name,
-        abuse_type: 'agent_limit_exceeded',
-        value: agentCount ?? 0,
-        threshold: Math.ceil(limit * THRESHOLDS.AGENTS_OVER_LIMIT_RATIO),
-      });
-    }
-  }
-
-  // Persist alerts
+  const alerts = metrics || [];
+  
+  // Persist alerts if found
   if (alerts.length > 0) {
     const alertRows = alerts.map(a => ({
       tenant_id: a.tenant_id,
       alert_type: `abuse_${a.abuse_type}`,
       title: `Abuse detected: ${a.abuse_type}`,
-      message: `Tenant "${a.tenant_name}" exceeded threshold: ${a.value}/${a.threshold}`,
-      severity: a.abuse_type === 'brute_force_suspected' ? 'critical' : 'warning',
+      message: `Tenant "${a.tenant_name}" exceeded threshold: ${a.current_value}/${a.threshold}`,
+      severity: a.severity || 'warning',
       status: 'active',
     }));
 
+    // Use upsert to avoid duplicate alerts for the same abuse type/tenant if needed, 
+    // or just insert if we want a history. Using insert for history.
     const { error: insertErr } = await supabase
       .from('system_alerts')
       .insert(alertRows);
@@ -115,7 +57,7 @@ serveInternal(async (_req, ctx) => {
     }
   }
 
-  logger.info(`[${requestId}] check-tenant-abuse completed. Tenants checked: ${tenants?.length ?? 0}, Alerts: ${alerts.length}`);
+  logger.info(`[${requestId}] check-tenant-abuse completed. Abuse cases found: ${alerts.length}`);
 
   return {
     success: true,
