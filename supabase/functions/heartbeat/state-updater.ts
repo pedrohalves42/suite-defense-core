@@ -49,13 +49,27 @@ export async function updateAgentStatus(
     return;
   }
 
+  // 2. Filter updateData to only include valid agent columns
+  const validAgentColumns = new Set([
+    'status', 'last_heartbeat', 'os_type', 'os_version', 'hostname', 'agent_version',
+    'last_telemetry_at', 'skip_firewall_remediation', 'force_update_delivered_count',
+    'force_update_first_delivered_at', 'last_forced_update_applied'
+  ]);
+
+  const filteredUpdate: Record<string, any> = { 
+    status: 'active', 
+    last_heartbeat: now.toISOString() 
+  };
+
+  for (const [key, value] of Object.entries(updateData)) {
+    if (validAgentColumns.has(key)) {
+      filteredUpdate[key] = value;
+    }
+  }
+
   const { error } = await supabase
     .from('agents')
-    .update({ 
-      ...updateData, 
-      status: 'active', 
-      last_heartbeat: now.toISOString() 
-    })
+    .update(filteredUpdate)
     .eq('id', agentId)
 
   if (error) {

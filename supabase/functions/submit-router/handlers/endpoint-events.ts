@@ -164,20 +164,34 @@ export async function handleEndpointEvents(
     .filter(([, rows]) => rows.length > 0)
     .map(async ([category, rows]) => {
       const table = TABLE_MAP[category];
-      const { error } = await supabase.from(table).insert(rows);
-      if (error) {
-        logger.error(`[${requestId}] Insert ${table}: ${error.message}`);
+      try {
+        const { error } = await supabase.from(table).insert(rows);
+        if (error) {
+          logger.error(`[${requestId}] Insert ${table} failed: ${error.message}. Falling back to buffer.`);
+          stats.errors += rows.length;
+          
+          const bufferRows = rows.map(row => ({
+            agent_id: agentId, 
+            tenant_id: tenantId,
+            event_category: category, 
+            payload: row,
+            batch_id: batchId || null, 
+            received_at: now,
+          }));
+
+          const { error: bufErr } = await supabase.from('endpoint_event_buffer').insert(bufferRows);
+          if (!bufErr) { 
+            stats.buffered += rows.length; 
+            stats.errors -= rows.length; 
+          } else {
+            logger.error(`[${requestId}] Buffer fallback failed critically: ${bufErr.message}`);
+          }
+        } else {
+          stats.direct += rows.length;
+        }
+      } catch (err) {
+        logger.error(`[${requestId}] Exception during event processing for ${category}`, { error: String(err) });
         stats.errors += rows.length;
-        const bufferRows = rows.map(row => ({
-          agent_id: agentId, tenant_id: tenantId,
-          event_category: category, payload: row,
-          batch_id: batchId || null, received_at: now,
-        }));
-        const { error: bufErr } = await supabase.from('endpoint_event_buffer').insert(bufferRows);
-        if (!bufErr) { stats.buffered += rows.length; stats.errors -= rows.length; }
-        else logger.error(`[${requestId}] Buffer fallback failed: ${bufErr.message}`);
-      } else {
-        stats.direct += rows.length;
       }
     });
 
