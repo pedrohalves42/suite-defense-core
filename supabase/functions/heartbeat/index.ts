@@ -69,6 +69,7 @@ serveAgent(async (req, ctx) => {
     force_update_first_delivered_at: (agentData.force_update_first_delivered_at as string | null) || null,
     last_forced_update_applied: (agentData.last_forced_update_applied as string | null) || null,
     last_telemetry_at: (agentData.last_telemetry_at as string | null) || null,
+    last_heartbeat: (agentData.last_heartbeat as string | null) || null,
   }
 
   // ── 1. HMAC validation ──────────────────────────────────
