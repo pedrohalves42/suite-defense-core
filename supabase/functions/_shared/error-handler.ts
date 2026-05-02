@@ -114,7 +114,8 @@ export function handleException(
     stack: error instanceof Error ? error.stack : undefined
   });
   
-  const isProduction = Deno.env.get('ENV') === 'production';
+  const env = Deno.env.get('ENV') || Deno.env.get('ENVIRONMENT');
+  const isProduction = env === 'production';
   
   // In production, mask internal details to prevent information leakage
   const message = isProduction 
