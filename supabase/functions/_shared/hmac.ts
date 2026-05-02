@@ -338,6 +338,8 @@ export async function verifyHmacSignature(
         { onConflict: 'agent_id' },
       ).then(({ error }: { error: any }) => {
         if (error) logger.warn('[HMAC] Cache update failed', { error: error.message });
+      }).catch((e: Error) => {
+        logger.error('[HMAC] Cache update promise rejected', { error: e.message });
       });
     }
 
