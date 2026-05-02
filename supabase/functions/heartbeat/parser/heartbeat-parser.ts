@@ -54,7 +54,7 @@ export function parseHeartbeatPayload(rawBody: string): OSInfo {
  */
 export function buildAgentUpdate(
   osInfo: OSInfo,
-  current: AgentContext,
+  current: AgentContext | null,
 ): AgentUpdate {
   const updateData: AgentUpdate & { agent_state?: string } = {
     // We only set status here; last_heartbeat is managed by state-updater dirty-checking
@@ -63,16 +63,16 @@ export function buildAgentUpdate(
 
   // Only include OS info if it differs from current state (delta-update optimization)
   const incomingOs = (osInfo.os_type || osInfo.platform || '').toLowerCase();
-  const currentOs = (current.os_type as string || '').toLowerCase();
+  const currentOs = (current?.os_type as string || '').toLowerCase();
   if (incomingOs && incomingOs !== currentOs) {
     updateData.os_type = osInfo.os_type || osInfo.platform;
   }
 
-  if (osInfo.os_version && osInfo.os_version !== current.os_version) {
+  if (osInfo.os_version && osInfo.os_version !== current?.os_version) {
     updateData.os_version = osInfo.os_version;
   }
 
-  if (osInfo.hostname && osInfo.hostname !== current.hostname) {
+  if (osInfo.hostname && osInfo.hostname !== current?.hostname) {
     updateData.hostname = osInfo.hostname;
   }
 
@@ -94,17 +94,17 @@ export function buildAgentUpdate(
   // Capture agent_version from payload (only when it actually changed)
   if (osInfo.agent_version) {
     const incomingNorm = normalizeVersion(osInfo.agent_version)
-    const currentNorm = normalizeVersion(current.agent_version || undefined)
+    const currentNorm = normalizeVersion(current?.agent_version || undefined)
     if (incomingNorm && incomingNorm !== currentNorm) {
       updateData.agent_version = osInfo.agent_version
     }
   }
 
   // Capturar Ed25519 capability flags
-  if (osInfo.ed25519_supported !== undefined && osInfo.ed25519_supported !== current.ed25519_supported) {
+  if (osInfo.ed25519_supported !== undefined && osInfo.ed25519_supported !== current?.ed25519_supported) {
     updateData.ed25519_supported = osInfo.ed25519_supported
   }
-  if (osInfo.signature_mode && osInfo.signature_mode !== current.signature_mode) {
+  if (osInfo.signature_mode && osInfo.signature_mode !== current?.signature_mode) {
     updateData.signature_mode = osInfo.signature_mode
   }
 

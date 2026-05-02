@@ -82,18 +82,17 @@ interface CachedFormat {
 }
 
 // ── In-memory CryptoKey cache (avoids re-importing same key material) ──
-const cryptoKeyCache = new Map<string, { key: CryptoKey; ts: number }>();
+// P3 hardening: Storing Promises to prevent race conditions during concurrent imports
+const cryptoKeyCache = new Map<string, { promise: Promise<CryptoKey>; ts: number }>();
 const CRYPTO_KEY_TTL_MS = 10 * 60 * 1000; // 10 min
 const MAX_CACHE_ENTRIES = 500;
 
 function pruneCache<T>(cache: Map<string, { ts: number } & T>, maxEntries: number) {
   if (cache.size <= maxEntries) return;
   const now = Date.now();
-  // Remove expired or oldest
-  const keys = Array.from(cache.keys());
-  for (const key of keys) {
-    const entry = cache.get(key);
-    if (!entry || (now - entry.ts) > CRYPTO_KEY_TTL_MS || cache.size > maxEntries) {
+  // Sort by age and prune oldest if necessary, or just remove expired
+  for (const [key, entry] of cache.entries()) {
+    if ((now - entry.ts) > CRYPTO_KEY_TTL_MS || cache.size > maxEntries) {
       cache.delete(key);
     }
   }
@@ -101,14 +100,14 @@ function pruneCache<T>(cache: Map<string, { ts: number } & T>, maxEntries: numbe
 
 async function getCryptoKey(keyData: Uint8Array, keyName: string): Promise<CryptoKey> {
   const cacheKey = `${keyName}:${keyData.length}`;
-  const cached = cryptoKeyCache.get(cacheKey);
   const now = Date.now();
+  const cached = cryptoKeyCache.get(cacheKey);
   
   if (cached && (now - cached.ts) < CRYPTO_KEY_TTL_MS) {
-    return cached.key;
+    return cached.promise;
   }
   
-  const key = await crypto.subtle.importKey(
+  const promise = crypto.subtle.importKey(
     'raw',
     keyData.buffer as ArrayBuffer,
     { name: 'HMAC', hash: 'SHA-256' },
@@ -117,8 +116,8 @@ async function getCryptoKey(keyData: Uint8Array, keyName: string): Promise<Crypt
   );
   
   pruneCache(cryptoKeyCache, MAX_CACHE_ENTRIES);
-  cryptoKeyCache.set(cacheKey, { key, ts: now });
-  return key;
+  cryptoKeyCache.set(cacheKey, { promise, ts: now });
+  return promise;
 }
 
 /**
@@ -133,17 +132,10 @@ async function computeHmacHex(cryptoKey: CryptoKey, message: string): Promise<st
 }
 
 /**
- * Timing-safe comparison of two hex signature strings.
+ * Legacy wrapper for hex comparison
  */
 function timingSafeHexCompare(a: string, b: string): boolean {
-  const aBytes = new TextEncoder().encode(a);
-  const bBytes = new TextEncoder().encode(b);
-  let diff = aBytes.length ^ bBytes.length;
-  const len = Math.min(aBytes.length, bBytes.length);
-  for (let i = 0; i < len; i++) {
-    diff |= aBytes[i] ^ bBytes[i];
-  }
-  return diff === 0;
+  return timingSafeEqual(a.toLowerCase(), b.toLowerCase());
 }
 
 /**
@@ -273,11 +265,13 @@ export async function verifyHmacSignature(
   let closestTimestamp: number | undefined;
   let hasTimestampInRange = false;
 
-  // Pre-import all CryptoKeys once (max 2, not per-variant)
-  const importedKeys: { name: string; key: CryptoKey }[] = [];
-  for (const kv of keyVariants) {
-    importedKeys.push({ name: kv.name, key: await getCryptoKey(kv.data, kv.name) });
-  }
+  // Pre-import all CryptoKeys in parallel (max 2, not per-variant)
+  const importedKeys = await Promise.all(
+    keyVariants.map(async (kv) => ({ 
+      name: kv.name, 
+      key: await getCryptoKey(kv.data, kv.name) 
+    }))
+  );
 
   // Determine fast-path: if cache exists, try ONLY cached combo first
   // This reduces worst-case from 16 crypto ops to 1 for known agents
@@ -313,20 +307,26 @@ export async function verifyHmacSignature(
 
     // Update format cache (fire-and-forget)
     if (context?.agentId && resolvedTenantId) {
-      supabase.from('agent_hmac_format_cache').upsert(
-        {
-          agent_id: context.agentId,
-          tenant_id: resolvedTenantId,
-          key_encoding: keyName,
-          separator: variant.sep,
-          body_format: variant.fmt,
-          last_verified_at: new Date().toISOString(),
-          hit_count: 1,
-        },
-        { onConflict: 'agent_id' },
-      ).then(({ error }: { error: any }) => {
+    const updateCache = async () => {
+      try {
+        const { error } = await supabase.from('agent_hmac_format_cache').upsert(
+          {
+            agent_id: context.agentId,
+            tenant_id: resolvedTenantId,
+            key_encoding: keyName,
+            separator: variant.sep,
+            body_format: variant.fmt,
+            last_verified_at: new Date().toISOString(),
+            hit_count: 1,
+          },
+          { onConflict: 'agent_id' },
+        );
         if (error) logger.warn('[HMAC] Cache update failed', { error: error.message });
-      });
+      } catch (e: any) {
+        logger.error('[HMAC] Cache update promise rejected', { error: e.message });
+      }
+    };
+    updateCache();
     }
 
     return { valid: true, rawBody: body, modeUsed: variant.mode };

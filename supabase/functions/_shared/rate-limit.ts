@@ -137,21 +137,31 @@ export async function checkRateLimit(
   const cached = getCached(key);
   if (cached) {
     cacheHits++;
+    // Atomic check within single-threaded Deno isolate (no awaits between read/write)
     if (cached.allowed && cached.remainingRequests > 0) {
       cached.remainingRequests--;
+      maybeEmitMetrics();
+      return {
+        allowed: true,
+        remainingRequests: cached.remainingRequests,
+        resetAt: cached.resetAt,
+      };
+    } else if (!cached.allowed) {
+      // If we cached a block, respect it
+      maybeEmitMetrics();
+      return {
+        allowed: false,
+        resetAt: cached.resetAt,
+      };
     }
-    maybeEmitMetrics();
-    return {
-      allowed: cached.allowed,
-      remainingRequests: cached.remainingRequests,
-      resetAt: cached.resetAt,
-    };
+    // If we have 0 remaining but it's a "hit", we fall through to RPC to refresh the window
+    // This handles the transition at the end of a window gracefully.
   }
 
   cacheMisses++;
   rpcCalls++;
 
-  // 2. RPC call
+  // 2. RPC call (source of truth)
   const { data, error } = await supabase.rpc('check_rate_limit_atomic', {
     p_identifier: normIdentifier,
     p_endpoint: endpoint,
@@ -162,11 +172,15 @@ export async function checkRateLimit(
 
   if (error) {
     rpcErrors++;
-    // FAIL CLOSED: Block requests when rate-limit check fails
+    // FAIL CLOSED: Block requests when rate-limit check fails to prevent bypass under load
     logger.error('[RateLimit] RPC error, failing CLOSED for safety:', error.message);
     maybeEmitMetrics();
-    // Do NOT cache errors — let next request retry
-    return { allowed: false, resetAt: new Date(Date.now() + 60_000) };
+    // Do NOT cache errors — let next request retry. 
+    // Return a short block (60s) to reduce DB pressure if it's struggling.
+    return { 
+      allowed: false, 
+      resetAt: new Date(Date.now() + 60_000) 
+    };
   }
 
   const result = data as { allowed: boolean; remaining?: number; reset_at?: string; reason?: string };
