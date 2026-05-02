@@ -94,17 +94,17 @@ export function buildAgentUpdate(
   // Capture agent_version from payload (only when it actually changed)
   if (osInfo.agent_version) {
     const incomingNorm = normalizeVersion(osInfo.agent_version)
-    const currentNorm = normalizeVersion(current.agent_version || undefined)
+    const currentNorm = normalizeVersion(current?.agent_version || undefined)
     if (incomingNorm && incomingNorm !== currentNorm) {
       updateData.agent_version = osInfo.agent_version
     }
   }
 
   // Capturar Ed25519 capability flags
-  if (osInfo.ed25519_supported !== undefined && osInfo.ed25519_supported !== current.ed25519_supported) {
+  if (osInfo.ed25519_supported !== undefined && osInfo.ed25519_supported !== current?.ed25519_supported) {
     updateData.ed25519_supported = osInfo.ed25519_supported
   }
-  if (osInfo.signature_mode && osInfo.signature_mode !== current.signature_mode) {
+  if (osInfo.signature_mode && osInfo.signature_mode !== current?.signature_mode) {
     updateData.signature_mode = osInfo.signature_mode
   }
 
