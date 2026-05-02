@@ -40,9 +40,9 @@ const HEARTBEAT_EXTRA_FIELDS = [
 ]
 
 serveAgent(async (req, ctx) => {
-  const { requestId, supabase: supabaseAny, agentData, rawBody, body } = ctx
+  const { requestId, supabase: supabaseAny, agentData, rawBody } = ctx
   const traceId = requestId
-  const supabase = supabaseAny // serveAgent provides service_role client
+  const supabase = supabaseAny
   const origin = req.headers.get('origin')
   const supabaseUrl = requireEnv('SUPABASE_URL')
 
@@ -73,15 +73,14 @@ serveAgent(async (req, ctx) => {
   }
 
   // ── 1. HMAC validation ──────────────────────────────────
-  // Note: serveAgent already has hmacVerify option, but heartbeat uses a custom
-  // version-aware validator (validateHeartbeatHmac) that we keep for legacy compat.
-  const hmacResult = await validateHeartbeatHmac(
-    supabase, req, agent.agent_name, agent.hmac_secret, agent.agent_version, origin,
-  )
-  if (!hmacResult.ok) return hmacResult.errorResponse!
+  // CENTRALIZED: Now uses serveAgent's hmacVerify. rawBody is guaranteed.
+  if (!rawBody) {
+    logger.error('CRITICAL: rawBody missing from ctx. Ensure hmacVerify: true is set in serveAgent options.');
+    return new Response(JSON.stringify({ error: 'Auth context error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+  }
 
   // ── 2. Parse payload ────────────────────────────────────
-  const osInfo = parseHeartbeatPayload(hmacResult.rawBody)
+  const osInfo = parseHeartbeatPayload(rawBody)
   const updateData = buildAgentUpdate(osInfo, agent)
   const platform = updateData.os_type || 'windows'
 
@@ -127,6 +126,7 @@ serveAgent(async (req, ctx) => {
   return response
 }, {
   extraAgentFields: HEARTBEAT_EXTRA_FIELDS,
+  hmacVerify: true,
   rateLimit: {
     endpoint: 'heartbeat',
     maxRequests: 30,
