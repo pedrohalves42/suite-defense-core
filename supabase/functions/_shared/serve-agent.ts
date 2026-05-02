@@ -192,14 +192,14 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
           } else {
             const contentEncoding = req.headers.get('Content-Encoding');
             if (contentEncoding === 'gzip') {
-              const compressed = await req.arrayBuffer();
+              const compressed = await (options?.hmacVerify ? reqClone : req).arrayBuffer();
               const ds = new DecompressionStream('gzip');
               const decompressed = new Response(
-                new Blob([compressed]).stream().pipeThrough(ds)
+                new Response(compressed).body?.pipeThrough(ds)
               );
               body = await decompressed.json();
             } else {
-              body = await req.json();
+              body = await (options?.hmacVerify ? reqClone : req).json();
             }
           }
         } catch { body = {}; }
