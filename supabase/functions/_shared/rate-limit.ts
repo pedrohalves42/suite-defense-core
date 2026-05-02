@@ -137,15 +137,25 @@ export async function checkRateLimit(
   const cached = getCached(key);
   if (cached) {
     cacheHits++;
+    // Atomic check within single-threaded Deno isolate (no awaits between read/write)
     if (cached.allowed && cached.remainingRequests > 0) {
       cached.remainingRequests--;
+      maybeEmitMetrics();
+      return {
+        allowed: true,
+        remainingRequests: cached.remainingRequests,
+        resetAt: cached.resetAt,
+      };
+    } else if (!cached.allowed) {
+      // If we cached a block, respect it
+      maybeEmitMetrics();
+      return {
+        allowed: false,
+        resetAt: cached.resetAt,
+      };
     }
-    maybeEmitMetrics();
-    return {
-      allowed: cached.allowed,
-      remainingRequests: cached.remainingRequests,
-      resetAt: cached.resetAt,
-    };
+    // If we have 0 remaining but it's a "hit", we fall through to RPC to refresh the window
+    // This handles the transition at the end of a window gracefully.
   }
 
   cacheMisses++;
