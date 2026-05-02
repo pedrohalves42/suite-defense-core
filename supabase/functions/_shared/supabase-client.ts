@@ -16,19 +16,21 @@ export const createSupabaseClient = (
 
 /**
  * Helper to create a client from Request headers (Auth context).
+ * ADR-046: Mandatory 15s timeout for all Supabase queries.
  */
-export const createClientFromRequest = (req: Request) => {
+export const createClientFromRequest = (req: Request, timeoutMs: number = 15_000) => {
   const authHeader = req.headers.get('Authorization');
-  const url = Deno.env.get('SUPABASE_URL') ?? '';
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+  const url = Deno.env.get('SUPABASE_URL') || '';
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
   
-  if (!authHeader) {
-    return createSupabaseClient(url, anonKey);
-  }
+  const options = {
+    global: {
+      fetch: (url: string, options: any) => fetchWithTimeout(url, { ...options, timeoutMs }),
+      headers: authHeader ? { Authorization: authHeader } : undefined,
+    },
+  };
 
-  return createSupabaseClient(url, anonKey, {
-    global: { headers: { Authorization: authHeader } },
-  });
+  return createSupabaseClient(url, anonKey, options);
 };
 
 /**
