@@ -4,6 +4,7 @@
  */
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
+import { hashToken } from '../../_shared/token-hash.ts';
 import type { HandlerContext } from './admin.ts';
 
 // Simplified API key auth for inlined context
@@ -14,10 +15,11 @@ async function authenticateApiKeyInline(
 ): Promise<{ success: boolean; tenantId?: string; apiKeyId?: string; scopes?: string[]; error?: string }> {
   // Use timing-safe hash if possible, otherwise use standard match. 
   // API keys should ideally be hashed with SHA-256 for storage.
+  const hashedKey = await hashToken(apiKey);
   const { data, error } = await supabase
     .from('api_keys')
     .select('id, tenant_id, scopes, is_active, expires_at, last_used_at')
-    .eq('key_hash', apiKey)
+    .eq('key_hash', hashedKey)
     .eq('is_active', true)
     .maybeSingle();
 
@@ -32,8 +34,7 @@ async function authenticateApiKeyInline(
   // Update last_used_at (throttled to once per minute to reduce IOPS)
   const lastUsed = data.last_used_at ? new Date(data.last_used_at).getTime() : 0;
   if (Date.now() - lastUsed > 60000) {
-    supabase.from('api_keys').update({ last_used_at: new Date().toISOString() }).eq('id', data.id)
-      .then(({ error }: any) => { if (error) logger.warn(`[${requestId}] Failed to update API key last_used_at`, error); });
+    await supabase.from('api_keys').update({ last_used_at: new Date().toISOString() }).eq('id', data.id);
   }
 
   return {
