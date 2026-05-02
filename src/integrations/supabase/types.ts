@@ -50359,6 +50359,17 @@ export type Database = {
         Args: { retention_days?: number }
         Returns: undefined
       }
+      enroll_agent_atomic: {
+        Args: {
+          p_agent_name: string
+          p_expires_at: string
+          p_hmac_secret: string
+          p_key_hash: string
+          p_token_hash: string
+          p_token_prefix: string
+        }
+        Returns: Json
+      }
       ensure_partition_rls: { Args: never; Returns: undefined }
       ensure_tenant_features: {
         Args: {

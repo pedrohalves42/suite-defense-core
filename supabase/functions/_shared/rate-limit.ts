@@ -137,10 +137,13 @@ export async function checkRateLimit(
   const cached = getCached(key);
   if (cached) {
     cacheHits++;
+    if (cached.allowed && cached.remainingRequests > 0) {
+      cached.remainingRequests--;
+    }
     maybeEmitMetrics();
     return {
       allowed: cached.allowed,
-      remainingRequests: cached.allowed ? Math.max(0, cached.remainingRequests - 1) : 0,
+      remainingRequests: cached.remainingRequests,
       resetAt: cached.resetAt,
     };
   }
