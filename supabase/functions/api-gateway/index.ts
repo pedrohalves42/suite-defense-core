@@ -232,14 +232,21 @@ function decodeJwtContext(req: Request): { userId?: string; tenantId?: string } 
     const auth = req.headers.get('Authorization');
     if (!auth?.startsWith('Bearer ')) return {};
     const token = auth.slice(7);
-    const payloadPart = token.split('.')[1];
-    if (!payloadPart) return {};
-    const decoded = JSON.parse(atob(payloadPart.replace(/-/g, '+').replace(/_/g, '/')));
+    const parts = token.split('.');
+    if (parts.length !== 3) return {};
+    const payloadPart = parts[1];
+    
+    // Normalize base64url to base64
+    const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=');
+    
+    const decoded = JSON.parse(atob(padded));
     return {
       userId: decoded.sub,
       tenantId: decoded.app_metadata?.active_tenant_id,
     };
-  } catch {
+  } catch (err) {
+    logger.warn('[api-gateway] Failed to decode JWT context (expected for non-JWT auth)', { error: err instanceof Error ? err.message : String(err) });
     return {};
   }
 }
