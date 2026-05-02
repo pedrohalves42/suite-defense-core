@@ -36,7 +36,7 @@ const HEARTBEAT_EXTRA_FIELDS = [
   'force_update_version', 'force_update_reason', 'force_update_at',
   'force_update_override_safe_mode', 'force_update_override_safe_mode_expires_at',
   'force_update_delivered_count', 'force_update_first_delivered_at',
-  'last_forced_update_applied', 'last_telemetry_at',
+  'last_forced_update_applied', 'last_telemetry_at', 'last_heartbeat',
 ]
 
 serveAgent(async (req, ctx) => {
