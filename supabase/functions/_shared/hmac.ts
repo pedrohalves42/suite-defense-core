@@ -82,18 +82,17 @@ interface CachedFormat {
 }
 
 // ── In-memory CryptoKey cache (avoids re-importing same key material) ──
-const cryptoKeyCache = new Map<string, { key: CryptoKey; ts: number }>();
+// P3 hardening: Storing Promises to prevent race conditions during concurrent imports
+const cryptoKeyCache = new Map<string, { promise: Promise<CryptoKey>; ts: number }>();
 const CRYPTO_KEY_TTL_MS = 10 * 60 * 1000; // 10 min
 const MAX_CACHE_ENTRIES = 500;
 
 function pruneCache<T>(cache: Map<string, { ts: number } & T>, maxEntries: number) {
   if (cache.size <= maxEntries) return;
   const now = Date.now();
-  // Remove expired or oldest
-  const keys = Array.from(cache.keys());
-  for (const key of keys) {
-    const entry = cache.get(key);
-    if (!entry || (now - entry.ts) > CRYPTO_KEY_TTL_MS || cache.size > maxEntries) {
+  // Sort by age and prune oldest if necessary, or just remove expired
+  for (const [key, entry] of cache.entries()) {
+    if ((now - entry.ts) > CRYPTO_KEY_TTL_MS || cache.size > maxEntries) {
       cache.delete(key);
     }
   }
@@ -101,14 +100,14 @@ function pruneCache<T>(cache: Map<string, { ts: number } & T>, maxEntries: numbe
 
 async function getCryptoKey(keyData: Uint8Array, keyName: string): Promise<CryptoKey> {
   const cacheKey = `${keyName}:${keyData.length}`;
-  const cached = cryptoKeyCache.get(cacheKey);
   const now = Date.now();
+  const cached = cryptoKeyCache.get(cacheKey);
   
   if (cached && (now - cached.ts) < CRYPTO_KEY_TTL_MS) {
-    return cached.key;
+    return cached.promise;
   }
   
-  const key = await crypto.subtle.importKey(
+  const promise = crypto.subtle.importKey(
     'raw',
     keyData.buffer as ArrayBuffer,
     { name: 'HMAC', hash: 'SHA-256' },
@@ -117,8 +116,8 @@ async function getCryptoKey(keyData: Uint8Array, keyName: string): Promise<Crypt
   );
   
   pruneCache(cryptoKeyCache, MAX_CACHE_ENTRIES);
-  cryptoKeyCache.set(cacheKey, { key, ts: now });
-  return key;
+  cryptoKeyCache.set(cacheKey, { promise, ts: now });
+  return promise;
 }
 
 /**
