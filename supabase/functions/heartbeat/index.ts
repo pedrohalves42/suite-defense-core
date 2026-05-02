@@ -23,7 +23,7 @@ import { logger } from '../_shared/logger.ts'
 import { requireEnv } from '../_shared/env.ts'
 import { serveAgent } from '../_shared/serve-agent.ts'
 
-import { validateHeartbeatHmac } from './auth/hmac-validator.ts'
+// Removed validateHeartbeatHmac import (now using serveAgent hmacVerify)
 import { parseHeartbeatPayload, buildAgentUpdate } from './parser/heartbeat-parser.ts'
 import { updateAgentStatus, executeParallelOps, TELEMETRY_THROTTLE_MS } from './state-updater.ts'
 import { processForceUpdate } from './force-update.ts'
