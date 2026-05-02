@@ -87,17 +87,19 @@ export async function executeParallelOps(
   if (hasTelemetry && shouldInsertTelemetry) {
     // 1a. Token last_used_at update (throttled to match telemetry)
     // PERF-FIX: Only touch token timestamp when we are doing heavy telemetry work
-    parallelOps.push(
-      supabase
-        .from('agent_tokens')
-        .update({ last_used_at: new Date().toISOString() })
-        .eq('agent_id', agent.id)
-        .eq('is_active', true)
-        .then(({ error }) => {
-          if (error) logger.warn('Token touch failed', { error: error.message })
-        })
-        .catch(e => logger.warn('Token touch promise rejected', { error: e.message }))
-    )
+    const touchToken = async () => {
+      try {
+        const { error } = await supabase
+          .from('agent_tokens')
+          .update({ last_used_at: new Date().toISOString() })
+          .eq('agent_id', agent.id)
+          .eq('is_active', true);
+        if (error) logger.warn('Token touch failed', { error: error.message });
+      } catch (e: any) {
+        logger.warn('Token touch promise rejected', { error: e.message });
+      }
+    };
+    parallelOps.push(touchToken());
 
     // 1b. System metrics insert
     const systemMetrics = osInfo.system_metrics
