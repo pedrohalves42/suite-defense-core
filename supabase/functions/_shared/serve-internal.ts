@@ -42,7 +42,7 @@ export function serveInternal(handler: InternalHandler) {
   Deno.serve(async (req: Request) => {
     const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
     const requestId = traceId;
-    const origin = req.headers.get('origin');
+    const origin = req.headers.get('Origin') || req.headers.get('origin');
     const log = loggerWithContext({ requestId, traceId });
 
     if (req.method === 'OPTIONS') {
