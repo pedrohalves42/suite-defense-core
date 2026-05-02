@@ -51,7 +51,10 @@ function cacheKey(identifier: string, endpoint: string): string {
 function getCached(key: string): CacheEntry | null {
   const entry = cache.get(key);
   if (!entry) return null;
-  if (Date.now() - entry.cachedAt > CACHE_TTL_MS) {
+  
+  const now = Date.now();
+  // Expire if TTL reached OR if the window's reset_at has passed
+  if (now - entry.cachedAt > CACHE_TTL_MS || (entry.resetAt && now > entry.resetAt.getTime())) {
     cache.delete(key);
     ttlEvictions++;
     return null;

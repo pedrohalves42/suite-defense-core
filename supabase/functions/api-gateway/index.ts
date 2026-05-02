@@ -253,7 +253,7 @@ servePublic(async (req, ctx) => {
   const startedAt = Date.now();
 
   try {
-    const authError = await assertInternalCaller(req, { requireSuperAdmin: true });
+    const authError = await assertInternalCaller(req, { allowAuthenticated: true });
     if (authError) return authError;
 
     const parsed = RouterSchema.safeParse(body);

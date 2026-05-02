@@ -22,7 +22,7 @@ import { corsHeaders } from './cors.ts';
 import { timingSafeEqual } from './crypto-utils.ts';
 import { logger } from './logger.ts';
 
-export async function assertInternalCaller(req: Request, options?: { requireSuperAdmin?: boolean }): Promise<Response | null> {
+export async function assertInternalCaller(req: Request, options?: { requireSuperAdmin?: boolean; allowAuthenticated?: boolean }): Promise<Response | null> {
   const internalSecret = req.headers.get('X-Internal-Secret') || req.headers.get('x-internal-secret');
   const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
   const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
@@ -47,15 +47,35 @@ export async function assertInternalCaller(req: Request, options?: { requireSupe
     return null;
   }
 
-  // 4. Require Role (Human Super Admin) - Mandatory for proxy/gateway usage if not internal
-  if (options?.requireSuperAdmin) {
+  // 4. Authenticated User or Super Admin
+  if (options?.requireSuperAdmin || options?.allowAuthenticated) {
     const { requireSuperAdmin } = await import('./require-super-admin.ts');
     const authResult = await requireSuperAdmin(req);
-    if (authResult.success) {
-      logger.info('[assert-internal-caller] Authorized via verified super_admin role');
+    
+    // If super_admin is required, we MUST have success from requireSuperAdmin
+    if (options?.requireSuperAdmin) {
+      if (authResult.success) {
+        logger.info('[assert-internal-caller] Authorized via verified super_admin role');
+        return null;
+      }
+      return authResult.response!;
+    }
+
+    // If only authentication is required (allowAuthenticated), check if user exists
+    if (options?.allowAuthenticated && authResult.userId) {
+      logger.info(`[assert-internal-caller] Authorized via authenticated user: ${authResult.userId}`);
       return null;
     }
-    return authResult.response!;
+    
+    if (options?.allowAuthenticated && authResult.response) {
+      // If requireSuperAdmin returned a 403 because they aren't a super admin, 
+      // but they ARE authenticated, we allow it because allowAuthenticated=true.
+      // However, requireSuperAdmin returns 401 if they aren't authenticated at all.
+      if (authResult.response.status === 403 && authResult.userId) {
+        return null; 
+      }
+      return authResult.response;
+    }
   }
 
   logger.warn('[SECURITY] Unauthorized access attempt to internal/cron function', {
