@@ -121,7 +121,8 @@ export async function authenticateAgent(
   }
 
   // Extract extra fields into agentData (everything beyond the base 6, including honeypot_mode)
-  const { id, agent_name, tenant_id, hmac_secret, honeypot_mode, ...extraData } = agent as Record<string, unknown>;
+  const agentObj = (agent || {}) as Record<string, unknown>;
+  const { id, agent_name, tenant_id, hmac_secret, honeypot_mode, ...extraData } = agentObj;
 
   return {
     success: true,

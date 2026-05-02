@@ -36,7 +36,7 @@ const HEARTBEAT_EXTRA_FIELDS = [
   'force_update_version', 'force_update_reason', 'force_update_at',
   'force_update_override_safe_mode', 'force_update_override_safe_mode_expires_at',
   'force_update_delivered_count', 'force_update_first_delivered_at',
-  'last_forced_update_applied', 'last_telemetry_at',
+  'last_forced_update_applied', 'last_telemetry_at', 'last_heartbeat',
 ]
 
 serveAgent(async (req, ctx) => {
@@ -69,6 +69,7 @@ serveAgent(async (req, ctx) => {
     force_update_first_delivered_at: (agentData.force_update_first_delivered_at as string | null) || null,
     last_forced_update_applied: (agentData.last_forced_update_applied as string | null) || null,
     last_telemetry_at: (agentData.last_telemetry_at as string | null) || null,
+    last_heartbeat: (agentData.last_heartbeat as string | null) || null,
   }
 
   // ── 1. HMAC validation ──────────────────────────────────
@@ -94,7 +95,7 @@ serveAgent(async (req, ctx) => {
     (updateData as any).last_telemetry_at = new Date().toISOString()
   }
 
-  await updateAgentStatus(supabase, agent.id, agent.agent_name, updateData)
+  await updateAgentStatus(supabase, agent.id, agent.agent_name, updateData, agent.last_heartbeat)
 
   // ── 4. Force-update check (critical path) ───────────────
   const forceResult = await processForceUpdate(
@@ -110,11 +111,12 @@ serveAgent(async (req, ctx) => {
   // ── 6. COST-OPT: Defer side-effects ─────────────────────
   try {
     const bgWork = executeParallelOps(supabase, agent, osInfo, shouldInsertTelemetry)
+      .catch(e => logger.warn('Deferred work failed', { error: e.message, agentName: agent.agent_name }));
+      
     if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
       EdgeRuntime.waitUntil(bgWork)
     } else {
-      // Fallback if waitUntil is missing
-      bgWork.catch(e => logger.warn('Deferred work failed', { error: e.message }))
+      // Fallback: the promise is already being caught above
     }
   } catch (bgErr) {
     logger.warn('Background ops setup failed', {

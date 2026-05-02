@@ -57,7 +57,7 @@ export function buildAgentUpdate(
   current: AgentContext,
 ): AgentUpdate {
   const updateData: AgentUpdate & { agent_state?: string } = {
-    last_heartbeat: new Date().toISOString(),
+    // We only set status here; last_heartbeat is managed by state-updater dirty-checking
     status: 'active',
   }
 

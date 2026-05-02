@@ -34,14 +34,18 @@ export async function handleGenerateEnrollmentKey(
 
   const effectiveTenantId = tenantId || userRole.tenant_id;
 
-  // Generate key XXXX-XXXX-XXXX-XXXX
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  // Generate key XXXX-XXXX-XXXX-XXXX using bias-free crypto random values
   const segments: string[] = [];
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const charArray = chars.split('');
+  
   for (let i = 0; i < 4; i++) {
-    const randomBytes = new Uint8Array(4);
-    crypto.getRandomValues(randomBytes);
     let segment = '';
-    for (let j = 0; j < 4; j++) segment += chars[randomBytes[j] % chars.length];
+    const randomValues = new Uint32Array(4);
+    crypto.getRandomValues(randomValues);
+    for (let j = 0; j < 4; j++) {
+      segment += charArray[randomValues[j] % chars.length];
+    }
     segments.push(segment);
   }
   const enrollmentKey = segments.join('-');

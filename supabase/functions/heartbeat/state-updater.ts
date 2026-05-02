@@ -19,6 +19,12 @@ export type { AgentContext, AgentUpdate, OSInfo }
 export const TELEMETRY_THROTTLE_MS = 5 * 60 * 1000
 
 /**
+ * Minimum interval between agent table updates if no metadata changed (1 minute)
+ * Prevents redundant DB writes for frequent heartbeats.
+ */
+const HEARTBEAT_WRITE_THROTTLE_MS = 60 * 1000
+
+/**
  * Update agent heartbeat status in DB.
  */
 export async function updateAgentStatus(
@@ -26,21 +32,40 @@ export async function updateAgentStatus(
   agentId: string,
   agentName: string,
   updateData: AgentUpdate & { last_telemetry_at?: string },
+  currentHeartbeat?: string | null,
 ): Promise<void> {
+  const now = new Date();
+  
+  // 1. Check if we really need to update the agents table
+  // Metadata changes (updateData length > 1 since 'status' is always present)
+  const metadataChanged = Object.keys(updateData).length > 1;
+  
+  // Time-based check
+  const lastUpdate = currentHeartbeat ? new Date(currentHeartbeat).getTime() : 0;
+  const timeThresholdReached = (now.getTime() - lastUpdate) >= HEARTBEAT_WRITE_THROTTLE_MS;
+
+  if (!metadataChanged && !timeThresholdReached) {
+    logger.debug('Skipping redundant agent heartbeat DB update', { agentName });
+    return;
+  }
+
   const { error } = await supabase
     .from('agents')
-    .update({ ...updateData, status: 'active', last_heartbeat: new Date().toISOString() })
+    .update({ 
+      ...updateData, 
+      status: 'active', 
+      last_heartbeat: now.toISOString() 
+    })
     .eq('id', agentId)
 
   if (error) {
     logger.error('CRITICAL: Failed to update agent heartbeat', {
       error, errorMessage: error.message, agentId, agentName,
     })
-    // FIX: Throw error to prevent returning a fake success response to the agent
     throw new Error(`Heartbeat persistence failed: ${error.message}`);
   }
   
-  logger.info('Agent heartbeat updated successfully', { agentName })
+  logger.info('Agent heartbeat updated successfully', { agentName, metadataChanged, timeThresholdReached })
 }
 
 /**
