@@ -75,11 +75,12 @@ export interface AgentContext {
   force_update_first_delivered_at: string | null;
   last_forced_update_applied: string | null;
   last_telemetry_at: string | null;
+  last_heartbeat: string | null;
 }
 
 export interface AgentUpdate {
-  last_heartbeat: string;
-  status: string;
+  last_heartbeat?: string;
+  status?: string;
   state?: string;
   agent_state?: string;
   os_type?: string;
