@@ -50914,6 +50914,22 @@ export type Database = {
         Returns: Database["public"]["Enums"]["system_operational_mode"]
       }
       get_system_mode_safe: { Args: never; Returns: string }
+      get_tenant_abuse_metrics: {
+        Args: {
+          agent_overflow_ratio: number
+          failed_auth_threshold: number
+          job_threshold: number
+          lookback_interval?: string
+        }
+        Returns: {
+          abuse_type: string
+          current_value: number
+          severity: string
+          tenant_id: string
+          tenant_name: string
+          threshold: number
+        }[]
+      }
       get_tenant_cost_metrics: {
         Args: never
         Returns: {
