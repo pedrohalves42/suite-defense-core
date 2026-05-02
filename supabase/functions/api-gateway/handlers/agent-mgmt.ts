@@ -79,8 +79,9 @@ export async function handleGetAgentTimeline(
   const agentId = payload.agent_id as string;
   if (!agentId) return { error: 'agent_id required', __status: 400 };
 
-  const tenantId = ctx?.tenantId || payload.tenant_id as string;
-  if (!tenantId) return { error: 'Tenant not identified', __status: 400 };
+  const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: ctx?.userId });
+  const tenantId = (isSuperAdmin && (payload.tenant_id as string)) || ctx?.tenantId;
+  if (!tenantId) return { error: 'Tenant context required', __status: 400 };
 
   // Verify agent belongs to tenant
   const { data: agent, error: agentError } = await supabase
