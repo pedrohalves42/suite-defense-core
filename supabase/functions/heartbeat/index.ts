@@ -108,19 +108,14 @@ serveAgent(async (req, ctx) => {
   )
 
   // ── 6. COST-OPT: Defer side-effects ─────────────────────
-  try {
-    const bgWork = executeParallelOps(supabase, agent, osInfo, shouldInsertTelemetry)
-      .catch(e => logger.warn('Deferred work failed', { error: e.message, agentName: agent.agent_name }));
-      
-    if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
-      EdgeRuntime.waitUntil(bgWork)
-    } else {
-      // Fallback: the promise is already being caught above
-    }
-  } catch (bgErr) {
-    logger.warn('Background ops setup failed', {
-      agentName: agent.agent_name, error: (bgErr as Error).message,
-    })
+  const bgWork = executeParallelOps(supabase, agent, osInfo, shouldInsertTelemetry)
+    .catch(e => logger.warn('Deferred work failed', { error: e.message, agentName: agent.agent_name }));
+    
+  if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+    EdgeRuntime.waitUntil(bgWork)
+  } else {
+    // If not in EdgeRuntime (e.g. local dev), we MUST await to prevent data loss
+    await bgWork
   }
 
   return response
