@@ -51026,6 +51026,15 @@ export type Database = {
             Args: { p_agent_name: string; p_signature: string }
             Returns: boolean
           }
+      hmac_verify_signature_v2: {
+        Args: {
+          p_agent_id: string
+          p_payload: Json
+          p_signature: string
+          p_timestamp: string
+        }
+        Returns: boolean
+      }
       honeypot_alert_dedup_key: {
         Args: {
           p_alert_type: string
