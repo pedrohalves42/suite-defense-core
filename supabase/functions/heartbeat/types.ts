@@ -64,18 +64,18 @@ export interface AgentContext {
   ed25519_supported?: boolean | null;
   signature_mode?: string | null;
   state?: string; // Agent lifecycle state (ENFORCING, SAFE_MODE, DEGRADED, INITIALIZING)
-  skip_firewall_remediation: boolean;
-  agent_version: string | null;
-  force_update_version: string | null;
-  force_update_reason: string | null;
-  force_update_at: string | null;
-  force_update_override_safe_mode: boolean;
-  force_update_override_safe_mode_expires_at: string | null;
-  force_update_delivered_count: number;
-  force_update_first_delivered_at: string | null;
-  last_forced_update_applied: string | null;
-  last_telemetry_at: string | null;
-  last_heartbeat: string | null;
+  skip_firewall_remediation?: boolean;
+  agent_version?: string | null;
+  force_update_version?: string | null;
+  force_update_reason?: string | null;
+  force_update_at?: string | null;
+  force_update_override_safe_mode?: boolean;
+  force_update_override_safe_mode_expires_at?: string | null;
+  force_update_delivered_count?: number;
+  force_update_first_delivered_at?: string | null;
+  last_forced_update_applied?: string | null;
+  last_telemetry_at?: string | null;
+  last_heartbeat?: string | null;
 }
 
 export interface AgentUpdate {
