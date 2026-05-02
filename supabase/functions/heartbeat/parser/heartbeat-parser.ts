@@ -63,7 +63,7 @@ export function buildAgentUpdate(
 
   // Only include OS info if it differs from current state (delta-update optimization)
   const incomingOs = (osInfo.os_type || osInfo.platform || '').toLowerCase();
-  const currentOs = (current.os_type as string || '').toLowerCase();
+  const currentOs = (current?.os_type as string || '').toLowerCase();
   if (incomingOs && incomingOs !== currentOs) {
     updateData.os_type = osInfo.os_type || osInfo.platform;
   }
