@@ -95,7 +95,7 @@ serveAgent(async (req, ctx) => {
     (updateData as any).last_telemetry_at = new Date().toISOString()
   }
 
-  await updateAgentStatus(supabase, agent.id, agent.agent_name, updateData)
+  await updateAgentStatus(supabase, agent.id, agent.agent_name, updateData, agent.last_heartbeat)
 
   // ── 4. Force-update check (critical path) ───────────────
   const forceResult = await processForceUpdate(
