@@ -5,6 +5,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
+import { checkRateLimit } from '../../_shared/rate-limit.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import type { HandlerContext } from './admin.ts';
 
@@ -21,22 +22,12 @@ const ChangePasswordSchema = z.object({
     .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Must contain a special character'),
 });
 
-// In-memory rate limiting (resets on function restart)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const MAX_ATTEMPTS = 5;
-const WINDOW_MS = 15 * 60 * 1000;
-
-function checkRateLimitLocal(userId: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(userId);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(userId, { count: 1, resetAt: now + WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= MAX_ATTEMPTS) return false;
-  entry.count++;
-  return true;
-}
+// Using shared checkRateLimit for persistent enforcement across isolates
+const PASSWORD_CHANGE_CONFIG = {
+  maxRequests: 5,
+  windowMinutes: 15,
+  blockMinutes: 15,
+};
 
 export async function handleChangePassword(
   supabase: SB, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext,
@@ -45,7 +36,8 @@ export async function handleChangePassword(
   const req = ctx?.req;
   if (!userId) return { __status: 401, error: 'Authorization required' };
 
-  if (!checkRateLimitLocal(userId)) {
+  const rateLimit = await checkRateLimit(supabase, userId, 'change-password', PASSWORD_CHANGE_CONFIG);
+  if (!rateLimit.allowed) {
     logger.warn(`[change-password][${requestId}] Rate limit exceeded for user ${userId}`);
     return { __status: 429, error: 'Too many attempts. Try again in 15 minutes.' };
   }
