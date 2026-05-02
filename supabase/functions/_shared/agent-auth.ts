@@ -63,6 +63,18 @@ export async function authenticateAgent(
     };
   }
 
+  // Optimization: Skip hashing if it's clearly a JWT (hashing is CPU intensive)
+  if (agentToken.split('.').length === 3) {
+    logger.debug(`[${endpoint}] Token looks like a JWT, skipping hash lookup for agent_tokens`);
+    return {
+      success: false,
+      response: new Response(
+        JSON.stringify({ error: 'Agent tokens cannot be JWTs' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      ),
+    };
+  }
+
   const tokenHash = await hashToken(agentToken);
   
   // Build select fields: base fields + any extra requested
