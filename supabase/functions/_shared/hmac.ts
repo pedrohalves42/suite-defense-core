@@ -132,17 +132,28 @@ async function computeHmacHex(cryptoKey: CryptoKey, message: string): Promise<st
 }
 
 /**
- * Timing-safe comparison of two hex signature strings.
+ * Timing-safe comparison of two strings.
  */
-function timingSafeHexCompare(a: string, b: string): boolean {
+export function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    // Avoid returning early to prevent timing attacks, 
+    // but the encoder handles the logic below.
+    return false;
+  }
   const aBytes = new TextEncoder().encode(a);
   const bBytes = new TextEncoder().encode(b);
-  let diff = aBytes.length ^ bBytes.length;
-  const len = Math.min(aBytes.length, bBytes.length);
-  for (let i = 0; i < len; i++) {
+  let diff = 0;
+  for (let i = 0; i < aBytes.length; i++) {
     diff |= aBytes[i] ^ bBytes[i];
   }
   return diff === 0;
+}
+
+/**
+ * Legacy wrapper for hex comparison
+ */
+function timingSafeHexCompare(a: string, b: string): boolean {
+  return timingSafeEqual(a.toLowerCase(), b.toLowerCase());
 }
 
 /**
