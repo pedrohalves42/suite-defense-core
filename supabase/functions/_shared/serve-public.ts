@@ -53,7 +53,7 @@ export function servePublic(handler: PublicHandler, options?: ServePublicOptions
     const startTime = Date.now();
     const traceId = req.headers.get('X-Trace-ID') || req.headers.get('X-Request-ID') || crypto.randomUUID();
     const requestId = traceId;
-    const origin = req.headers.get('origin');
+    const origin = req.headers.get('Origin') || req.headers.get('origin');
 
     if (req.method === 'OPTIONS') {
       return new Response(null, { headers: buildCorsHeaders(origin) });

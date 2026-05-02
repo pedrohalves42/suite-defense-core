@@ -123,7 +123,7 @@ export function handleException(
     : (error instanceof Error ? error.message : 'Unknown error occurred');
     
   const errorDetails = isProduction 
-    ? undefined 
+    ? { requestId } 
     : { functionName, latency: context?.latency, stack: error instanceof Error ? error.stack : undefined };
 
   const standardError = createStandardError(

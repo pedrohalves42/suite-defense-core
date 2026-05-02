@@ -40,28 +40,38 @@ export interface LogContext {
 /**
  * Sanitize sensitive data for production logging
  */
-function sanitize(data: unknown): unknown {
-  if (typeof data === 'string') {
-    if (data.includes('@')) {
-      const [local, domain] = data.split('@');
-      return `${local.slice(0, 2)}***@${domain}`;
-    }
-    if (data.length > 20) {
-      return `${data.slice(0, 8)}***`;
-    }
-  }
-  if (typeof data === 'object' && data !== null) {
-    const sanitized: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(data)) {
-      if (['password', 'token', 'secret', 'key', 'hmac'].some(s => key.toLowerCase().includes(s))) {
-        sanitized[key] = '***REDACTED***';
-      } else {
-        sanitized[key] = sanitize(value);
+function sanitize(data: unknown, seen = new WeakSet()): unknown {
+  if (data === null || typeof data !== 'object') {
+    if (typeof data === 'string') {
+      if (data.includes('@') && data.includes('.')) {
+        const [local, domain] = data.split('@');
+        return `${local.slice(0, 2)}***@${domain}`;
+      }
+      if (data.length > 40) {
+        return `${data.slice(0, 8)}***`;
       }
     }
-    return sanitized;
+    return data;
   }
-  return data;
+
+  // Handle circular references
+  if (seen.has(data as object)) return '[Circular]';
+  seen.add(data as object);
+
+  if (Array.isArray(data)) {
+    return data.map(item => sanitize(item, seen));
+  }
+
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+    const lowKey = key.toLowerCase();
+    if (['password', 'token', 'secret', 'key', 'hmac', 'auth', 'credential', 'private'].some(s => lowKey.includes(s))) {
+      sanitized[key] = '***REDACTED***';
+    } else {
+      sanitized[key] = sanitize(value, seen);
+    }
+  }
+  return sanitized;
 }
 
 /**
