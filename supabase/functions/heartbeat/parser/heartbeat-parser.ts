@@ -54,7 +54,7 @@ export function parseHeartbeatPayload(rawBody: string): OSInfo {
  */
 export function buildAgentUpdate(
   osInfo: OSInfo,
-  current: AgentContext,
+  current: AgentContext | null,
 ): AgentUpdate {
   const updateData: AgentUpdate & { agent_state?: string } = {
     // We only set status here; last_heartbeat is managed by state-updater dirty-checking
