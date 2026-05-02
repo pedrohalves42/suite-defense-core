@@ -68,11 +68,11 @@ export function buildAgentUpdate(
     updateData.os_type = osInfo.os_type || osInfo.platform;
   }
 
-  if (osInfo.os_version && osInfo.os_version !== current.os_version) {
+  if (osInfo.os_version && osInfo.os_version !== current?.os_version) {
     updateData.os_version = osInfo.os_version;
   }
 
-  if (osInfo.hostname && osInfo.hostname !== current.hostname) {
+  if (osInfo.hostname && osInfo.hostname !== current?.hostname) {
     updateData.hostname = osInfo.hostname;
   }
 
