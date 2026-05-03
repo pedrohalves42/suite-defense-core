@@ -235,8 +235,10 @@ servePublic(async (req, ctx) => {
   const startedAt = Date.now();
 
   try {
-    const authError = await assertInternalCaller(req, { allowAuthenticated: true });
-    if (authError) return authError;
+    const authResult = await assertInternalCaller(req, { allowAuthenticated: true, returnContext: true });
+    if (authResult instanceof Response) return authResult;
+
+    const validatedCtx = authResult as { userId: string | null; tenantId: string | null; isInternal: boolean };
 
     const parsed = RouterSchema.safeParse(body);
     if (!parsed.success) return jsonRes({ error: 'Invalid request', details: parsed.error.flatten().fieldErrors }, 400, origin);
@@ -255,8 +257,7 @@ servePublic(async (req, ctx) => {
     const inlinedHandler = INLINED_HANDLERS[action];
     if (inlinedHandler) {
       const supabase = supabaseAny; // servePublic provides service_role client
-      const jwtCtx = decodeJwtContext(req);
-      const handlerCtx: HandlerContext = { req, userId: jwtCtx.userId, tenantId: jwtCtx.tenantId };
+      const handlerCtx: HandlerContext = { req, userId: validatedCtx.userId || undefined, tenantId: validatedCtx.tenantId || undefined };
       
       logger.info(`[api-gateway] Inline: ${action}`, { requestId });
       const result = await inlinedHandler(supabase, requestId, payload, handlerCtx);
