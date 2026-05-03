@@ -67,23 +67,27 @@ export function servePublic(handler: PublicHandler, options?: ServePublicOptions
 
       // Rate limiting (optional)
       if (options?.rateLimit) {
-        const { checkRateLimit } = await import('./rate-limit.ts');
-        const sourceIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-        const rlResult = await checkRateLimit(supabase, `ip:${sourceIp}`, options.rateLimit.endpoint, {
-          maxRequests: options.rateLimit.maxRequests ?? 100,
-          windowMinutes: options.rateLimit.windowMinutes ?? 1,
-          blockMinutes: options.rateLimit.blockMinutes ?? 5,
-        });
-        if (!rlResult.allowed) {
-          const retryAfter = rlResult.resetAt
-            ? Math.max(1, Math.ceil((rlResult.resetAt.getTime() - Date.now()) / 1000))
-            : 60;
-          return jsonResponse(
-            { error: { message: 'Rate limit exceeded', code: 'RATE_LIMITED' } },
-            429,
-            { 'X-Request-ID': requestId, 'Retry-After': String(retryAfter) },
-            origin,
-          );
+        try {
+          const { checkRateLimit } = await import('./rate-limit.ts');
+          const sourceIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+          const rlResult = await checkRateLimit(supabase, `ip:${sourceIp}`, options.rateLimit.endpoint, {
+            maxRequests: options.rateLimit.maxRequests ?? 100,
+            windowMinutes: options.rateLimit.windowMinutes ?? 1,
+            blockMinutes: options.rateLimit.blockMinutes ?? 5,
+          });
+          if (!rlResult.allowed) {
+            const retryAfter = rlResult.resetAt
+              ? Math.max(1, Math.ceil((rlResult.resetAt.getTime() - Date.now()) / 1000))
+              : 60;
+            return jsonResponse(
+              { error: { message: 'Rate limit exceeded', code: 'RATE_LIMITED' } },
+              429,
+              { 'X-Request-ID': requestId, 'Retry-After': String(retryAfter) },
+              origin,
+            );
+          }
+        } catch (rlError) {
+          loggerWithContext(requestId).warn('Rate limiting failed to initialize, skipping check', rlError);
         }
       }
 

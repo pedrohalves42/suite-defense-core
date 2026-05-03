@@ -124,6 +124,6 @@ export async function handleProcesses(
     success: true,
     new_processes_detected: newProcesses.length,
     suspicious_processes_detected: suspiciousProcesses.length,
-    automation_triggered: 0,
+    automation_triggered: suspiciousProcesses.length > 0 ? 1 : 0,
   };
 }
