@@ -25,7 +25,7 @@ export const TELEMETRY_THROTTLE_MS = 5 * 60 * 1000
 const HEARTBEAT_WRITE_THROTTLE_MS = 60 * 1000
 
 /**
- * Update agent heartbeat status in DB.
+ * Update agent heartbeat status in DB using an atomic RPC call.
  */
 export async function updateAgentStatus(
   supabase: SupabaseClient<Database>,
@@ -36,11 +36,8 @@ export async function updateAgentStatus(
 ): Promise<void> {
   const now = new Date();
   
-  // 1. Check if we really need to update the agents table
-  // Metadata changes (updateData length > 1 since 'status' is always present)
+  // 1. Pre-check for redundancy (still useful to avoid RPC overhead)
   const metadataChanged = Object.keys(updateData).length > 1;
-  
-  // Time-based check
   const lastUpdate = currentHeartbeat ? new Date(currentHeartbeat).getTime() : 0;
   const timeThresholdReached = (now.getTime() - lastUpdate) >= HEARTBEAT_WRITE_THROTTLE_MS;
 
@@ -49,37 +46,21 @@ export async function updateAgentStatus(
     return;
   }
 
-  // 2. Filter updateData to only include valid agent columns
-  const validAgentColumns = new Set([
-    'status', 'last_heartbeat', 'os_type', 'os_version', 'hostname', 'agent_version',
-    'last_telemetry_at', 'skip_firewall_remediation', 'force_update_delivered_count',
-    'force_update_first_delivered_at', 'last_forced_update_applied'
-  ]);
-
-  const filteredUpdate: Record<string, any> = { 
-    status: 'active', 
-    last_heartbeat: now.toISOString() 
-  };
-
-  for (const [key, value] of Object.entries(updateData)) {
-    if (validAgentColumns.has(key)) {
-      filteredUpdate[key] = value;
-    }
-  }
-
-  const { error } = await supabase
-    .from('agents')
-    .update(filteredUpdate)
-    .eq('id', agentId)
+  // 2. Delegate to Atomic RPC (Locking + Transactional Update)
+  // This prevents Race Conditions between concurrent heartbeat instances.
+  const { error } = await supabase.rpc('update_agent_heartbeat_atomic', {
+    p_agent_id: agentId,
+    p_update_data: updateData as any
+  });
 
   if (error) {
-    logger.error('CRITICAL: Failed to update agent heartbeat', {
+    logger.error('CRITICAL: Failed to update agent heartbeat atomically', {
       error, errorMessage: error.message, agentId, agentName,
-    })
+    });
     throw new Error(`Heartbeat persistence failed: ${error.message}`);
   }
   
-  logger.info('Agent heartbeat updated successfully', { agentName, metadataChanged, timeThresholdReached })
+  logger.info('Agent heartbeat updated atomically', { agentName, metadataChanged, timeThresholdReached });
 }
 
 /**
