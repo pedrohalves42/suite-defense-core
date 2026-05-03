@@ -51199,6 +51199,7 @@ export type Database = {
         Returns: string
       }
       process_tenant_suspensions: { Args: never; Returns: Json }
+      prune_old_telemetry: { Args: never; Returns: undefined }
       purge_expired_hmac_signatures: { Args: never; Returns: number }
       reactivate_tenant: { Args: { p_tenant_id: string }; Returns: Json }
       reanchor_audit_log_chain: { Args: { p_tenant_id: string }; Returns: Json }

@@ -44,7 +44,7 @@ export class ProcessFailedJobsUseCase {
 
       for (const job of failedJobs) {
         results.processed++;
-        const currentRetry = (job.retry_count || 0) + 1;
+        const currentRetry = (job.retry_count || 0);
         const failureClass = job.failure_class || 'BUG';
         results.byClass[failureClass] = (results.byClass[failureClass] || 0) + 1;
 
@@ -121,12 +121,12 @@ export class ProcessFailedJobsUseCase {
       payload_hash: job.payload_hash || 'none', // Copy from original or default
       status: 'queued',
       approved: job.approved,
-      retry_count: currentRetry,
+      retry_count: currentRetry + 1,
       parent_job_id: job.id,
     });
 
     await this.jobRepo.updateJob(job.id, {
-      retry_count: currentRetry,
+      retry_count: currentRetry + 1,
       error_message: `[RETRY ${currentRetry}/${this.MAX_RETRIES}] ${job.error_message || 'Unknown error'}`
     });
 
