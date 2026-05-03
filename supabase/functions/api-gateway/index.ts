@@ -312,7 +312,16 @@ servePublic(async (req, ctx) => {
       headers: forwardHeaders(req, requestId),
       body: JSON.stringify(payload),
       timeoutMs: FETCH_TIMEOUT_MS,
+    }).catch(err => {
+      logger.error(`[api-gateway] Proxy failed for ${action}:`, err);
+      return new Response(JSON.stringify({ 
+        error: 'GATEWAY_PROXY_TIMEOUT', 
+        message: 'A operacao demorou demais ou o servico de destino esta indisponivel.',
+        details: err.message
+      }), { status: 504, headers: { 'Content-Type': 'application/json' } });
     });
+
+    if (response.status === 504) return response;
 
     const responseData = await response.text();
     logger.info(`[api-gateway] ${action} done in ${Date.now() - startedAt}ms (status: ${response.status})`);
