@@ -87,8 +87,10 @@ serveAgent(async (req, ctx) => {
   logger.debug('Heartbeat received', { agentName: agent.agent_name, traceId })
 
   // ── 3. Update agent status (critical path) ──────────────
+  // Use a more precise check to prevent redundant telemetry inserts in high-frequency scenarios
   const lastInsert = agent.last_telemetry_at ? new Date(agent.last_telemetry_at).getTime() : 0
-  const shouldInsertTelemetry = (Date.now() - lastInsert) >= TELEMETRY_THROTTLE_MS
+  const driftBufferMs = 1000 // Small buffer for clock drift
+  const shouldInsertTelemetry = (Date.now() - lastInsert) >= (TELEMETRY_THROTTLE_MS - driftBufferMs)
   
   if (shouldInsertTelemetry) {
     (updateData as any).last_telemetry_at = new Date().toISOString()

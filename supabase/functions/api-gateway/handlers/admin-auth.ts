@@ -103,7 +103,7 @@ export async function handleSendInvite(
   }
 
   // Verify admin role
-  const { data: hasAdminRole } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
+  const { data: hasAdminRole } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin', _tenant_id: tenantId });
   if (!hasAdminRole) return { __status: 403, error: 'Acesso negado' };
 
   // Get tenant

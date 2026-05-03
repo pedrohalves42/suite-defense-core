@@ -50,7 +50,7 @@ export async function handleUpdateUserStatus(supabase: SB, requestId: string, pa
   const tenantId = ctx?.tenantId;
   if (!actorId) return { __status: 401, error: 'Authentication required' };
 
-  const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', { _user_id: actorId, _role: 'admin' });
+  const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', { _user_id: actorId, _role: 'admin', _tenant_id: tenantId });
   if (roleError || !hasAdminRole) return { __status: 403, error: 'Acesso negado' };
 
   const validation = UpdateStatusSchema.safeParse(payload);
@@ -85,7 +85,7 @@ export async function handleUpdateMemberRole(supabase: SB, requestId: string, pa
   const userId = ctx?.userId;
   if (!userId) return { __status: 401, error: 'Authentication required' };
 
-  const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
+  const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin', _tenant_id: ctx?.tenantId });
   if (roleError || !hasAdminRole) return { __status: 403, error: 'Acesso negado' };
 
   const validation = UpdateMemberRoleSchema.safeParse(payload);
