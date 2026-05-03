@@ -73,7 +73,25 @@ export async function handleProcessScheduledJobs(supabase: SB, requestId: string
     }
 
     if (offlineJobIds.length > 0) {
-      await supabase.from('jobs').update({ status: 'failed', error_message: '[DLQ:AGENT_OFFLINE] Scheduled job skipped: agent offline at execution time', completed_at: now }).in('id', offlineJobIds).lt('expires_at', now);
+      // FIX: Move offline jobs forward instead of just ignoring them if not expired
+      const nextAttempt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // +15 mins
+      await supabase.from('jobs')
+        .update({ 
+          status: 'queued', 
+          scheduled_at: nextAttempt,
+          metadata: { last_skip_reason: 'AGENT_OFFLINE', last_skip_at: now }
+        })
+        .in('id', offlineJobIds)
+        .gt('expires_at', now);
+
+      await supabase.from('jobs')
+        .update({ 
+          status: 'failed', 
+          error_message: '[DLQ:AGENT_OFFLINE] Scheduled job skipped: agent offline and job expired', 
+          completed_at: now 
+        })
+        .in('id', offlineJobIds)
+        .lte('expires_at', now);
     }
   }
 
@@ -232,9 +250,15 @@ export async function handleInvokeScheduledJobs(supabase: SB, requestId: string,
       }
 
       const nextRunAt = calculateNextRunFromCron(job.cron_expr, now);
+      
+      // FIX: If cron parsing fails, don't set to null (which leads to infinite runs)
+      // Instead, set to +1 hour as safety or disable if persistent
+      const finalNextRun = nextRunAt || new Date(now.getTime() + 60 * 60 * 1000);
+      
       await supabase.from('scheduled_jobs').update({
         last_run_at: now.toISOString(),
-        next_run_at: nextRunAt?.toISOString() || null
+        next_run_at: finalNextRun.toISOString(),
+        metadata: nextRunAt ? job.metadata : { ...(job.metadata || {}), last_error: 'CRON_PARSE_FAILED', last_attempt: now.toISOString() }
       }).eq('id', job.id);
 
       results.push({ name: job.name, job_type: job.job_type, status: 'executed', message: 'Success' });
