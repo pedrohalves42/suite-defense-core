@@ -121,7 +121,7 @@ export class ProcessFailedJobsUseCase {
       payload_hash: job.payload_hash || 'none', // Copy from original or default
       status: 'queued',
       approved: job.approved,
-      retry_count: currentRetry,
+      retry_count: currentRetry + 1,
       parent_job_id: job.id,
     });
 
