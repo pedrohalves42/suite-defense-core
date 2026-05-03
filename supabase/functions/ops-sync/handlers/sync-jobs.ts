@@ -268,44 +268,67 @@ export async function handleInvokeScheduledJobs(supabase: SB, requestId: string,
 
 function calculateNextRunFromCron(cronExpr: string, from: Date): Date | null {
   try {
-    const parts = cronExpr.split(' ');
+    const parts = cronExpr.split(' ').filter(p => p.length > 0);
     if (parts.length !== 5) return null;
-    const [minute, hour] = parts;
+    const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
     const next = new Date(from);
+    next.setSeconds(0);
+    next.setMilliseconds(0);
 
-    if (minute.startsWith('*/')) {
-      const interval = parseInt(minute.slice(2), 10);
-      const currentMinute = next.getMinutes();
-      const nextMinute = Math.ceil((currentMinute + 1) / interval) * interval;
-      if (nextMinute >= 60) { next.setHours(next.getHours() + 1); next.setMinutes(nextMinute - 60); }
-      else { next.setMinutes(nextMinute); }
-      next.setSeconds(0); next.setMilliseconds(0);
-      return next;
-    }
-
-    if (minute !== '*' && hour.startsWith('*/')) {
-      const hourInterval = parseInt(hour.slice(2), 10);
-      const targetMinute = parseInt(minute, 10);
-      next.setMinutes(targetMinute); next.setSeconds(0); next.setMilliseconds(0);
-      if (next <= from) {
-        const currentHour = next.getHours();
-        const nextHour = Math.ceil((currentHour + 1) / hourInterval) * hourInterval;
-        if (nextHour >= 24) { next.setDate(next.getDate() + 1); next.setHours(nextHour - 24); }
-        else { next.setHours(nextHour); }
+    // Helper to parse complex cron parts (lists, ranges, intervals)
+    const parsePart = (part: string, min: number, max: number): number[] => {
+      if (part === '*') return Array.from({ length: max - min + 1 }, (_, i) => i + min);
+      const results: number[] = [];
+      const atoms = part.split(',');
+      for (const atom of atoms) {
+        if (atom.includes('/')) {
+          const [range, step] = atom.split('/');
+          const interval = parseInt(step, 10);
+          let start = min;
+          let end = max;
+          if (range !== '*') {
+            if (range.includes('-')) {
+              [start, end] = range.split('-').map(v => parseInt(v, 10));
+            } else {
+              start = parseInt(range, 10);
+            }
+          }
+          for (let i = start; i <= end; i += interval) results.push(i);
+        } else if (atom.includes('-')) {
+          const [start, end] = atom.split('-').map(v => parseInt(v, 10));
+          for (let i = start; i <= end; i++) results.push(i);
+        } else {
+          results.push(parseInt(atom, 10));
+        }
       }
-      return next;
+      return [...new Set(results)].sort((a, b) => a - b);
+    };
+
+    const allowedMinutes = parsePart(minute, 0, 59);
+    const allowedHours = parsePart(hour, 0, 23);
+
+    // Simple implementation for next occurrence (minutes/hours only for now, but safer)
+    for (let h = 0; h < 48; h++) { // Look ahead 48 hours
+      for (const m of allowedMinutes) {
+        const candidate = new Date(next);
+        candidate.setHours(next.getHours() + h);
+        candidate.setMinutes(m);
+        if (candidate > from && allowedHours.includes(candidate.getHours())) {
+          // Additional check for dayOfMonth, month, dayOfWeek could be added here
+          return candidate;
+        }
+      }
     }
 
-    if (!minute.includes('*') && !hour.includes('*')) {
-      next.setHours(parseInt(hour, 10)); next.setMinutes(parseInt(minute, 10));
-      next.setSeconds(0); next.setMilliseconds(0);
-      if (next <= from) next.setDate(next.getDate() + 1);
-      return next;
-    }
-
-    next.setHours(next.getHours() + 1); next.setMinutes(0); next.setSeconds(0); next.setMilliseconds(0);
-    return next;
-  } catch { return null; }
+    // Fallback: +1 hour
+    const fallback = new Date(from);
+    fallback.setHours(fallback.getHours() + 1);
+    fallback.setMinutes(0);
+    return fallback;
+  } catch (err) {
+    logger.error('Error parsing cron expression:', err);
+    return null;
+  }
 }
 
 // ── dlq-action ───────────────────────────────────────────────────────────
