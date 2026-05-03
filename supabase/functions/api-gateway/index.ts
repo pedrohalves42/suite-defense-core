@@ -226,35 +226,6 @@ function forwardHeaders(req: Request, requestId: string): Record<string, string>
   return h;
 }
 
-/** Decode JWT payload to extract userId and tenantId (best-effort, no verification — auth already validated) */
-function decodeJwtContext(req: Request): { userId?: string; tenantId?: string } {
-  try {
-    const auth = req.headers.get('Authorization');
-    if (!auth?.startsWith('Bearer ')) return {};
-    const token = auth.slice(7);
-    const parts = token.split('.');
-    if (parts.length !== 3) return {};
-    
-    // Use a safer decoding approach
-    const payloadPart = parts[1];
-    const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=');
-    
-    const decoded = JSON.parse(atob(padded));
-    
-    // Validate required fields exist
-    return {
-      userId: typeof decoded.sub === 'string' ? decoded.sub : undefined,
-      tenantId: typeof decoded.app_metadata?.active_tenant_id === 'string' 
-        ? decoded.app_metadata.active_tenant_id 
-        : undefined,
-    };
-  } catch (err) {
-    logger.debug('[api-gateway] JWT context extraction skipped (non-JWT or invalid format)');
-    return {};
-  }
-}
-
 import { servePublic } from '../_shared/serve-public.ts';
 
 servePublic(async (req, ctx) => {
@@ -264,8 +235,10 @@ servePublic(async (req, ctx) => {
   const startedAt = Date.now();
 
   try {
-    const authError = await assertInternalCaller(req, { allowAuthenticated: true });
-    if (authError) return authError;
+    const authResult = await assertInternalCaller(req, { allowAuthenticated: true, returnContext: true });
+    if (authResult instanceof Response) return authResult;
+
+    const validatedCtx = authResult as { userId: string | null; tenantId: string | null; isInternal: boolean };
 
     const parsed = RouterSchema.safeParse(body);
     if (!parsed.success) return jsonRes({ error: 'Invalid request', details: parsed.error.flatten().fieldErrors }, 400, origin);
@@ -284,8 +257,7 @@ servePublic(async (req, ctx) => {
     const inlinedHandler = INLINED_HANDLERS[action];
     if (inlinedHandler) {
       const supabase = supabaseAny; // servePublic provides service_role client
-      const jwtCtx = decodeJwtContext(req);
-      const handlerCtx: HandlerContext = { req, userId: jwtCtx.userId, tenantId: jwtCtx.tenantId };
+      const handlerCtx: HandlerContext = { req, userId: validatedCtx.userId || undefined, tenantId: validatedCtx.tenantId || undefined };
       
       logger.info(`[api-gateway] Inline: ${action}`, { requestId });
       const result = await inlinedHandler(supabase, requestId, payload, handlerCtx);
