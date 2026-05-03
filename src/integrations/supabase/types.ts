@@ -50013,6 +50013,7 @@ export type Database = {
       cleanup_expired_keys: { Args: never; Returns: number }
       cleanup_expired_sessions: { Args: never; Returns: number }
       cleanup_expired_telemetry: { Args: never; Returns: Json }
+      cleanup_hmac_nonces: { Args: never; Returns: undefined }
       cleanup_honeypot_old_data: {
         Args: { p_retention_days?: number }
         Returns: Json
@@ -51014,13 +51015,18 @@ export type Database = {
         }
         Returns: boolean
       }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
+      has_role:
+        | {
+            Args: {
+              _role: Database["public"]["Enums"]["app_role"]
+              _user_id: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: { _role: string; _tenant_id?: string; _user_id: string }
+            Returns: boolean
+          }
       has_role_safe: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
@@ -51028,20 +51034,10 @@ export type Database = {
       hash_agent_token: { Args: { p_token: string }; Returns: string }
       hash_enrollment_key: { Args: { p_key: string }; Returns: string }
       hash_enrollment_key_secure: { Args: { p_key: string }; Returns: string }
-      hmac_check_and_record:
-        | {
-            Args: {
-              p_agent_id: string
-              p_payload: Json
-              p_signature: string
-              p_timestamp: string
-            }
-            Returns: boolean
-          }
-        | {
-            Args: { p_agent_name: string; p_signature: string }
-            Returns: boolean
-          }
+      hmac_check_and_record: {
+        Args: { p_agent_name: string; p_signature: string }
+        Returns: boolean
+      }
       hmac_verify_signature_v2: {
         Args: {
           p_agent_id: string
