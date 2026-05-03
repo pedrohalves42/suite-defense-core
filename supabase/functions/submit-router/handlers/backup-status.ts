@@ -120,7 +120,7 @@ export async function handleBackupStatus(
   // --- Phase 2: Single batch upsert + single batch insert (max 2 queries) ---
   const { error: upsertError } = await supabase
     .from('backup_status')
-    .upsert(rows, { onConflict: 'agent_id,backup_type,backup_tool' });
+    .upsert(rows, { onConflict: 'agent_id,backup_type,backup_tool', ignoreDuplicates: false });
 
   const upsertedCount = upsertError ? 0 : rows.length;
   if (upsertError) {
