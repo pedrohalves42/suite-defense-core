@@ -123,9 +123,16 @@ export async function handleSendInvite(
   }
 
   // Check existing user targeted (don't list all)
-  const { data: existingUser } = await supabase.auth.admin.getUserByEmail(email);
-  if (existingUser) {
+  const { data: authData } = await supabase.auth.admin.getUserByEmail(email);
+  if (authData?.user) {
     return { __status: 409, error: 'Usuario ja cadastrado' };
+  }
+
+  // Check pending invites
+  const { data: pendingInvite } = await supabase.from('invites')
+    .select('id').eq('email', email).eq('tenant_id', tenantId).eq('status', 'pending').maybeSingle();
+  if (pendingInvite) {
+    return { __status: 409, error: 'Ja existe um convite pendente para este email' };
   }
 
   // Create invite
