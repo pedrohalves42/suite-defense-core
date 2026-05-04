@@ -50,7 +50,16 @@ export async function handleUpdateUserStatus(supabase: SB, requestId: string, pa
   const tenantId = ctx?.tenantId;
   if (!actorId) return { __status: 401, error: 'Authentication required' };
 
-  const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', { _user_id: actorId, _role: 'admin', _tenant_id: tenantId });
+  const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: actorId });
+  
+  // Use tenantId if provided (enforced for non-super-admins)
+  if (!isSuperAdmin && !tenantId) return { __status: 401, error: 'Tenant context required for admin actions' };
+
+  const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', { 
+    _user_id: actorId, 
+    _role: 'admin', 
+    _tenant_id: isSuperAdmin ? null : tenantId 
+  });
   if (roleError || !hasAdminRole) return { __status: 403, error: 'Acesso negado' };
 
   const validation = UpdateStatusSchema.safeParse(payload);
@@ -59,9 +68,12 @@ export async function handleUpdateUserStatus(supabase: SB, requestId: string, pa
   const { user_id, is_active } = validation.data;
   if (user_id === actorId) return { __status: 400, error: 'Nao e possivel desativar sua propria conta' };
 
-  if (tenantId) {
-    const { data: targetRole } = await supabase.from('user_roles').select('tenant_id').eq('user_id', user_id).eq('tenant_id', tenantId).maybeSingle();
-    if (!targetRole) return { __status: 403, error: 'Usuario nao encontrado no seu tenant' };
+  if (tenantId || !isSuperAdmin) {
+    const checkTenantId = tenantId || (isSuperAdmin ? null : tenantId);
+    if (checkTenantId) {
+      const { data: targetRole } = await supabase.from('user_roles').select('tenant_id').eq('user_id', user_id).eq('tenant_id', checkTenantId).maybeSingle();
+      if (!targetRole) return { __status: 403, error: 'Usuario nao encontrado no seu tenant' };
+    }
   }
 
   const banConfig = is_active ? { ban_duration: 'none' } : { ban_duration: '876000h' };
