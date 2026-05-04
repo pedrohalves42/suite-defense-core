@@ -57,37 +57,45 @@ export function NextBestAction({ onExecute, className }: NextBestActionProps) {
 
   return (
     <div className={cn(
-      'flex items-center gap-3 rounded-lg border p-3',
+      'flex items-center gap-6 rounded-2xl border p-5 shadow-elevated relative overflow-hidden group transition-all duration-500 hover:shadow-float',
       isUrgent 
-        ? 'bg-red-500/5 border-red-500/20' 
-        : 'bg-amber-500/5 border-amber-500/20',
+        ? 'bg-destructive/5 border-destructive/20' 
+        : 'bg-primary/5 border-primary/10',
       className
     )}>
-      <Zap className={cn('h-4 w-4 shrink-0', isUrgent ? 'text-red-500' : 'text-amber-500')} />
+      {/* Glossy overlay */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent pointer-events-none" />
       
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-muted-foreground">Próxima ação</p>
-        <p className="text-sm font-medium truncate">{displayTitle}</p>
-        <p className="text-xs text-muted-foreground flex items-center gap-1">
-          <Monitor className="h-3 w-3" />{agentDisplay}
+      <div className={cn(
+        'w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-premium group-hover:scale-110 transition-transform duration-500',
+        isUrgent ? 'bg-destructive text-destructive-foreground' : 'bg-primary text-primary-foreground'
+      )}>
+        <Zap className="h-6 w-6" />
+      </div>
+      
+      <div className="flex-1 min-w-0 relative z-10">
+        <span className="section-label mb-1 block">Próxima Ação Prioritária</span>
+        <p className="text-[17px] font-bold tracking-tight text-foreground">{displayTitle}</p>
+        <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 mt-1 opacity-80">
+          <Monitor className="h-3.5 w-3.5" />{agentDisplay}
         </p>
       </div>
 
       <Button 
-        size="sm"
+        size="lg"
         onClick={handleExecute}
         disabled={executeAction.isPending}
         className={cn(
-          'shrink-0',
+          'shrink-0 h-12 px-8 rounded-xl font-bold shadow-premium interactive-hover',
           isUrgent 
-            ? 'bg-red-600 hover:bg-red-700 text-white' 
-            : 'bg-amber-600 hover:bg-amber-700 text-white'
+            ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground' 
+            : 'bg-primary hover:bg-primary/90 text-primary-foreground'
         )}
       >
         {executeAction.isPending ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
-          <>{displayCta}<ArrowRight className="h-3.5 w-3.5 ml-1" /></>
+          <>{displayCta}<ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" /></>
         )}
       </Button>
     </div>
