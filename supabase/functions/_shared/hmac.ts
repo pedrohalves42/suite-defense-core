@@ -332,7 +332,6 @@ export async function verifyHmacSignature(
       // often uses EdgeRuntime.waitUntil, it's generally safe.
       updateCache();
     }
-    }
 
     return { valid: true, rawBody: body, modeUsed: variant.mode };
   };
