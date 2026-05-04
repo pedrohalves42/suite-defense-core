@@ -193,6 +193,11 @@ function jsonRes(data: unknown, status: number, origin: string | null) {
   });
 }
 
+const ALL_VALID_ACTIONS = new Set([
+  ...Object.keys(ACTION_TO_FUNCTION),
+  ...Object.keys(INLINED_HANDLERS),
+]);
+
 const FORWARDED_HEADERS = [
   'Authorization', 'apikey', 'X-Internal-Secret', 'X-Agent-Token',
   'X-HMAC-Signature', 'X-Timestamp', 'X-Nonce', 'x-cron-source',
@@ -225,6 +230,14 @@ servePublic(async (req, ctx) => {
     if (!parsed.success) return jsonRes({ error: 'Invalid request', details: parsed.error.flatten().fieldErrors }, 400, origin);
 
     const { action, payload } = parsed.data;
+
+    if (!ALL_VALID_ACTIONS.has(action)) {
+      return jsonRes({
+        error: `Unknown action: ${action}`,
+        available_namespaces: ['admin', 'billing', 'security', 'build', 'agent'],
+        hint: 'Use format "namespace:action", e.g. "admin:create-user"',
+      }, 400, origin);
+    }
 
     // Use Hexagonal Dispatcher
     const dispatchContext = {
