@@ -4,8 +4,8 @@
 
 @layer base {
   :root {
-    --transition-all: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-slow: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-all: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+    --transition-slow: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
   }
 
   * {
@@ -163,7 +163,7 @@
 @layer utilities {
   /* === Transitions & Interactions === */
   .interactive-hover {
-    @apply transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 hover:shadow-float active:translate-y-0 active:scale-[0.98];
+    @apply transition-all duration-300 ease-premium hover:-translate-y-1 hover:shadow-float active:translate-y-0 active:scale-[0.98];
   }
 
   .glass-effect {

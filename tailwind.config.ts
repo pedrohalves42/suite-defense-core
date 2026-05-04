@@ -139,6 +139,10 @@ export default {
         "gradient-x": "gradient-x 15s ease infinite",
         "pulse-subtle": "pulse-subtle 3s ease-in-out infinite",
       },
+      transitionTimingFunction: {
+        'premium': 'cubic-bezier(0.23, 1, 0.32, 1)',
+        'apple': 'cubic-bezier(0.4, 0, 0.2, 1)',
+      },
     },
   },
   plugins: [tailwindcssAnimate],
