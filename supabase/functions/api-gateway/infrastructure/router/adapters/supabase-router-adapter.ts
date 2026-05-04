@@ -2,7 +2,7 @@
  * Supabase/Deno Adapter for API Routing
  */
 
-import { RouterPort, ActionMetadata } from '../ports/router-port.ts';
+import { RouterPort, ActionMetadata } from '../../../domain/router/ports/router-port.ts';
 import { fetchWithTimeout } from '../../../../_shared/fetch-with-timeout.ts';
 import { requireEnv } from '../../../../_shared/env.ts';
 
