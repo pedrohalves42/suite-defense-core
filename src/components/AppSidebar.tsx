@@ -80,7 +80,7 @@ export const AppSidebar = memo(({ mobile = false, onNavigate }: AppSidebarProps)
         onMouseLeave={() => !mobile && setHovered(false)}
         className={cn(
           'h-screen sidebar-futuristic sidebar-grid-bg',
-          'transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col relative overflow-hidden',
+          'transition-all duration-500 ease-premium flex flex-col relative overflow-hidden',
           mobile ? 'w-full' : 'fixed left-0 top-0 z-40',
           !mobile && effectiveWidth,
           !mobile && 'sidebar-float'
