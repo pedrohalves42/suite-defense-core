@@ -84,8 +84,8 @@ export async function handleCheckCredentialLeaks(
   try {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (LOVABLE_API_KEY) {
-      const { data: agents } = await supabase.from('agents').select('id, name, hostname').eq('tenant_id', tenantId).eq('is_active', true).limit(50);
-      const { data: recentAlerts } = await supabase.from('security_alerts').select('alert_type, severity, description, created_at').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(20);
+      const { data: agents } = await supabase.from('agents').select('id, agent_name, hostname').eq('tenant_id', tenantId).eq('status', 'active').limit(50);
+      const { data: recentAlerts } = await supabase.from('system_alerts').select('alert_type, severity, title, created_at').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(20);
       if (agents?.length) {
         const prompt = `Analise os riscos de identidade. Endpoints: ${agents.length}. Dominios: ${monitors?.map(m => m.email_domain).join(', ') || 'Nenhum'}. Senhas comprometidas: ${results.passwords_compromised}. Vazamentos: ${results.leaks_found}. Alertas: ${JSON.stringify(recentAlerts?.slice(0, 5) || [])}. Forneca: Score de risco (0-100), Top 3 riscos, Recomendacoes.`;
         const aiResp = await fetchWithTimeout('https://ai.gateway.lovable.dev/v1/chat/completions', {
