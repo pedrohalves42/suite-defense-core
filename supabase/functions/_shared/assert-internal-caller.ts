@@ -35,7 +35,7 @@ export async function assertInternalCaller(
   const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
   const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_ANON_KEY_LEGACY');
+  // REMOVED: anonKey check (Security vulnerability SSA-009)
 
   let validatedUserId: string | null = null;
   let validatedTenantId: string | null = null;
@@ -51,11 +51,8 @@ export async function assertInternalCaller(
     logger.info('[assert-internal-caller] Authorized via X-Internal-Secret');
     isInternal = true;
   }
-  // 3. Cron Scheduler (Identified via anon key in cron invocations)
-  else if (authHeader && anonKey && await timingSafeEqual(authHeader, `Bearer ${anonKey}`)) {
-    logger.info('[assert-internal-caller] Authorized via cron anon key');
-    isInternal = true;
-  }
+  // 3. REMOVED: Authorization via anon key (SSA-009)
+  // Cron jobs and internal calls MUST use service_role or X-Internal-Secret.
   // 4. Authenticated User or Super Admin
   else if (options?.requireSuperAdmin || options?.allowAuthenticated) {
     const { requireSuperAdmin } = await import('./require-super-admin.ts');

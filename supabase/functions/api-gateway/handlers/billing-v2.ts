@@ -15,7 +15,9 @@ import type { HandlerContext } from './admin.ts';
  */
 
 export async function handleChargeSubscription(supabase: SupabaseClient, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext) {
-  const tenantId = (payload.tenant_id as string) || ctx?.tenantId;
+  // HARDENED: Use validated tenantId from context, allow override ONLY for super admins
+  const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: ctx?.userId });
+  const tenantId = (isSuperAdmin && (payload.tenant_id as string)) || ctx?.tenantId;
   if (!tenantId) return { error: 'Tenant ID is required', __status: 400 };
 
   logger.info(`[billing-v2][${requestId}] Charging subscription: ${tenantId}`);
