@@ -190,26 +190,45 @@ export async function handleListUsers(supabase: SB, requestId: string, payload: 
 
   if (!targetTenantId) return { __status: 400, error: 'Tenant nao encontrado' };
 
-  const { data: tenantUsers } = await supabase.from('user_roles').select('user_id, role, created_at').eq('tenant_id', targetTenantId);
-  if (!tenantUsers) return { users: [] };
+  // Pagination for user roles
+  const limit = Math.min(Number(payload.limit) || 100, 1000);
+  const offset = Number(payload.offset) || 0;
+
+  const { data: tenantUsers, count: totalCount } = await supabase
+    .from('user_roles')
+    .select('user_id, role, created_at', { count: 'exact' })
+    .eq('tenant_id', targetTenantId)
+    .range(offset, offset + limit - 1)
+    .order('created_at', { ascending: false });
+
+  if (!tenantUsers || tenantUsers.length === 0) return { users: [], pagination: { total: totalCount || 0, limit, offset } };
 
   const { data: tenant } = await supabase.from('tenants').select('id, name').eq('id', targetTenantId).limit(1).maybeSingle();
   const { data: profiles } = await supabase.from('profiles').select('user_id, full_name').in('user_id', tenantUsers.map(u => u.user_id));
-  // P3 FIX: Do not list all users if we can avoid it. 
-  // For standard admin, we only need profiles that belong to the tenant.
-  const { data: authUsers } = await supabase.auth.admin.listUsers(); // Fallback for small fleets
-
-  const tenantUserIds = tenantUsers.map(u => u.user_id);
-  const filteredAuthUsers = authUsers?.users.filter(au => tenantUserIds.includes(au.id)) || [];
+  
+  // P3 FIX: Fetch user details in parallel batches to handle pagination correctly
+  // Instead of listUsers() which returns a global list, we fetch only the needed users.
+  const authUsersPromises = tenantUsers.map(tu => supabase.auth.admin.getUserById(tu.user_id));
+  const authResults = await Promise.all(authUsersPromises);
+  const filteredAuthUsers = authResults.map(r => r.data.user).filter(Boolean);
 
   const users = tenantUsers.map(tu => {
     const profile = profiles?.find(p => p.user_id === tu.user_id);
-    const authUser = filteredAuthUsers.find(au => au.id === tu.user_id);
-    const isBanned = authUser && (authUser as Record<string, unknown>).banned_until && new Date((authUser as Record<string, unknown>).banned_until as string) > new Date();
-    return { user_id: tu.user_id, email: authUser?.email || '', full_name: profile?.full_name || '', role: tu.role, tenant_id: targetTenantId, tenant_name: tenant?.name || '', created_at: tu.created_at, is_active: !isBanned };
+    const authUser = filteredAuthUsers.find(au => au?.id === tu.user_id);
+    const isBanned = authUser && (authUser as any).banned_until && new Date((authUser as any).banned_until) > new Date();
+    return { 
+      user_id: tu.user_id, 
+      email: authUser?.email || '', 
+      full_name: profile?.full_name || '', 
+      role: tu.role, 
+      tenant_id: targetTenantId, 
+      tenant_name: tenant?.name || '', 
+      created_at: tu.created_at, 
+      is_active: !isBanned 
+    };
   });
 
-  return { users };
+  return { users, pagination: { total: totalCount || 0, limit, offset, hasMore: (totalCount || 0) > offset + limit } };
 }
 
 // ── list-all-users-admin ────────────────────────────────────────────────
