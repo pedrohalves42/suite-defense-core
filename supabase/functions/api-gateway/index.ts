@@ -1,12 +1,9 @@
 // @ts-nocheck
 /**
- * api-gateway — Unified Platform API Gateway (Phase 5)
- *
- * Consolidates: admin, billing, security, build, agent namespaces
- *
- * Action format: "namespace:action" e.g. "admin:create-user", "billing:create-checkout"
- *
- * Auth: assertInternalCaller with allowAuthenticatedUsers
+ * api-gateway — Unified Platform API Gateway (Phase 6 Hexagonal)
+ * 
+ * Refactored using Hexagonal Architecture (Ports and Adapters).
+ * Logic moved to Domain (Use Cases) and Infrastructure (Adapters).
  */
 import { createTypedClient } from '../_shared/supabase-client.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
