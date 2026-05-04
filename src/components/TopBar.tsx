@@ -13,9 +13,9 @@ interface TopBarProps {
 export const TopBar = memo(({ isMobile, sidebarCollapsed, onMobileMenuClick }: TopBarProps) => {
   return (
     <header className={cn(
-      "fixed top-0 right-0 z-30 h-14 border-b border-border/40 bg-background/80 backdrop-blur-md flex items-center justify-between px-4",
+      "fixed top-0 right-0 z-30 h-16 border-b border-border/40 bg-background/60 backdrop-blur-xl flex items-center justify-between px-6 md:px-10",
       isMobile ? "left-0" : (sidebarCollapsed ? "left-[calc(4rem+16px)]" : "left-[calc(14rem+16px)]"),
-      "transition-all duration-300"
+      "transition-all duration-500 ease-premium"
     )} role="banner">
       <div className="flex items-center gap-3">
         {isMobile && (

@@ -47,8 +47,8 @@ export const AppLayout = () => {
           className="fixed inset-0 pointer-events-none"
           style={{
             background: `
-              radial-gradient(ellipse at 10% 20%, rgba(45, 158, 140, 0.015) 0%, transparent 50%),
-              radial-gradient(ellipse at 90% 80%, rgba(45, 158, 140, 0.01) 0%, transparent 50%)
+              radial-gradient(circle at 0% 0%, hsla(var(--primary), 0.03) 0%, transparent 50%),
+              radial-gradient(circle at 100% 100%, hsla(var(--cta-positive), 0.02) 0%, transparent 50%)
             `,
           }}
         />
@@ -88,8 +88,8 @@ export const AppLayout = () => {
               <GlobalKillSwitchBanner />
             </div>
             <main className={cn(
-              "p-4 md:p-6 relative z-0",
-              isMobile && "pb-24"
+              "p-6 md:p-10 relative z-0 stagger-visible",
+              isMobile && "pb-28"
             )} id="main-content">
               <div className="max-w-7xl mx-auto">
                 {isMobile && <PushNotificationBanner />}

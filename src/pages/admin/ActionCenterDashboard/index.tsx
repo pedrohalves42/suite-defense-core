@@ -49,44 +49,61 @@ export default function ActionCenterDashboard() {
 
   return (
     <TooltipProvider delayDuration={200}>
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20">
-            <Target className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-              Central de Ações
-            </h2>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              {totalActions > 0 ? (
-                <span>{totalActions} {totalActions === 1 ? 'ação pendente' : 'ações pendentes'}</span>
-              ) : (
-                <span>Gerencie ações de segurança</span>
-              )}
-              {lastUpdated && (
-                <>
-                  <span>•</span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    Atualizado {lastUpdated}
-                  </span>
-                </>
-              )}
+    <div className="space-y-10">
+      {/* Header Premium - Apple style */}
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8 animate-fade-in-up">
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-primary shadow-glow">
+              <Target className="h-6 w-6 text-primary-foreground" />
+            </div>
+            <div className="space-y-1">
+              <span className="section-label">Gerenciamento Operacional</span>
+              <h1 className="text-display-md tracking-tighter text-foreground">
+                Central de Ações
+              </h1>
             </div>
           </div>
+          <div className="flex items-center gap-4 text-sm font-medium">
+            {totalActions > 0 ? (
+              <span className="text-destructive flex items-center gap-1.5 px-3 py-1 bg-destructive/10 rounded-full border border-destructive/10 shadow-sm transition-all duration-500 hover:scale-105">
+                <span className="w-1.5 h-1.5 bg-destructive rounded-full animate-pulse" />
+                {totalActions} {totalActions === 1 ? 'pendência crítica' : 'pendências críticas'}
+              </span>
+            ) : (
+              <span className="text-cta-positive flex items-center gap-1.5 px-3 py-1 bg-cta-positive/10 rounded-full border border-cta-positive/10 shadow-sm">
+                <span className="w-1.5 h-1.5 bg-cta-positive rounded-full" />
+                Infraestrutura Segura
+              </span>
+            )}
+            {lastUpdated && (
+              <span className="flex items-center gap-1.5 text-muted-foreground bg-muted/30 px-3 py-1 rounded-full border border-border/40">
+                <Clock className="h-3.5 w-3.5" />
+                Sincronizado {lastUpdated}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isRefetching}>
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            size="lg" 
+            onClick={() => refetch()} 
+            disabled={isRefetching}
+            className="h-12 px-6 rounded-xl bg-background/50 backdrop-blur-sm border-border/60 hover:border-primary/40"
+          >
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
-            Atualizar
+            Sincronizar
           </Button>
-          <Button variant="outline" size="sm" asChild>
+          <Button 
+            variant="default" 
+            size="lg" 
+            asChild
+            className="h-12 px-8 rounded-xl shadow-premium hover:shadow-glow transition-all duration-500"
+          >
             <Link to="/admin/playbooks">
-              Ver Playbooks
-              <ArrowRight className="h-4 w-4 ml-2" />
+              Estratégias de Resposta
+              <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
             </Link>
           </Button>
         </div>

@@ -48,7 +48,7 @@ export const AdminLayout = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto" role="region" aria-label="Painel administrativo">
+    <div className="max-w-7xl mx-auto px-6 md:px-10 py-4" role="region" aria-label="Painel administrativo">
       {/* First Time Setup Wizard */}
       <FirstTimeSetupWizard />
       
