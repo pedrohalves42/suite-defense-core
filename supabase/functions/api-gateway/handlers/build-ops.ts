@@ -2,6 +2,7 @@
  * Build operations handlers — inlined from standalone functions (Phase 2E).
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { decodeBase64 } from 'https://deno.land/std@0.208.0/encoding/base64.ts';
 import { logger } from '../../_shared/logger.ts';
 
 type SB = any;
@@ -33,7 +34,7 @@ export async function handleBuildCallback(
 
   if (!exeBase64) return { error: 'exe_binary_base64 required when no error', __status: 400 };
 
-  const exeBuffer = Uint8Array.from(atob(exeBase64), c => c.charCodeAt(0));
+  const exeBuffer = decodeBase64(exeBase64);
   const { data: buildData } = await supabase
     .from('agent_builds')
     .select('tenant_id, build_started_at, agents!inner(agent_name)')
