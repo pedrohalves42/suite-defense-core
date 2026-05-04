@@ -132,7 +132,7 @@ async function insertSystemMetrics(
     memory_usage_percent: metrics.memory_used_percent ?? null,
     disk_total_gb: metrics.disk_total_gb ?? null,
     disk_used_gb: metrics.disk_total_gb != null && metrics.disk_free_gb != null
-      ? Math.round((metrics.disk_total_gb - metrics.disk_free_gb) * 100) / 100
+      ? Math.max(0, Math.round((metrics.disk_total_gb - metrics.disk_free_gb) * 100) / 100)
       : null,
     disk_free_gb: metrics.disk_free_gb ?? null,
     disk_usage_percent: metrics.disk_used_percent ?? null,

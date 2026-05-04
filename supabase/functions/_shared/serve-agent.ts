@@ -188,7 +188,7 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
       if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
         try {
           if (rawBody !== undefined) {
-            body = JSON.parse(rawBody);
+            body = rawBody.trim() ? JSON.parse(rawBody) : {};
           } else {
             const contentEncoding = req.headers.get('Content-Encoding');
             if (contentEncoding === 'gzip') {
