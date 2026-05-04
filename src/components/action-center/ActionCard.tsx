@@ -197,26 +197,27 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
   return (
     <>
       <Card className={cn(
-        'border-l-4 transition-all hover:shadow-sm',
+        'border-l-[6px] transition-all duration-500 ease-premium hover:shadow-float hover:-translate-y-1 rounded-2xl group',
         severityConfig.borderClassName,
-        severityConfig.bgClassName
+        severityConfig.bgClassName,
+        'bg-card/40 backdrop-blur-sm'
       )}>
-        <CardContent className="p-4">
+        <CardContent className="p-5">
           {/* Main row: icon + info + time + action */}
-          <div className="flex items-start gap-3">
+          <div className="flex items-center gap-5">
             {/* Icon */}
             <div className={cn(
-              'rounded-full p-2 shrink-0 mt-0.5',
-              `${severityConfig.iconClassName.replace('text-', 'bg-')}/20`
+              'rounded-2xl p-3 shrink-0 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-premium',
+              `${severityConfig.iconClassName.replace('text-', 'bg-')}/10`
             )}>
-              <Icon className={cn('h-4 w-4', severityConfig.iconClassName)} />
+              <Icon className={cn('h-6 w-6', severityConfig.iconClassName)} />
             </div>
 
             {/* Content */}
             <div className="flex-1 min-w-0 space-y-1">
               {/* Title + badges */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-sm truncate">{displayTitle}</span>
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="font-bold text-[15px] tracking-tight text-foreground">{displayTitle}</span>
                 <Badge variant="outline" className={cn('shrink-0 text-[10px] px-1.5 py-0', severityConfig.className)}>
                   {severityConfig.label}
                 </Badge>
@@ -289,21 +290,21 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
             </div>
 
             {/* Actions - compact column */}
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 ml-auto">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    size="sm"
+                    size="default"
                     onClick={handleExecute}
                     disabled={executeAction.isPending}
-                    className="h-8"
+                    className="h-10 px-5 rounded-xl font-bold shadow-premium transition-all duration-300 active:scale-95"
                   >
                     {executeAction.isPending ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : isInvestigateAction ? (
-                      <><Search className="h-3.5 w-3.5 mr-1" />{displayCta}</>
+                      <><Search className="h-4 w-4 mr-2" />{displayCta}</>
                     ) : (
-                      <><CheckCircle2 className="h-3.5 w-3.5 mr-1" />{displayCta}</>
+                      <><CheckCircle2 className="h-4 w-4 mr-2" />{displayCta}</>
                     )}
                   </Button>
                 </TooltipTrigger>
