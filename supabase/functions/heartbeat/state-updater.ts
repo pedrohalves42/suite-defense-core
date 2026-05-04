@@ -54,10 +54,26 @@ export async function updateAgentStatus(
   });
 
   if (error) {
-    logger.error('CRITICAL: Failed to update agent heartbeat atomically', {
-      error, errorMessage: error.message, agentId, agentName,
-    });
-    throw new Error(`Heartbeat persistence failed: ${error.message}`);
+    // P3 FIX: Handle case where RPC doesn't exist or is inaccessible
+    if (error.code === 'P0001' || error.message?.includes('database error')) {
+      logger.error('CRITICAL: Failed to update agent heartbeat atomically', {
+        error, errorMessage: error.message, agentId, agentName,
+      });
+      throw new Error(`Heartbeat persistence failed: ${error.message}`);
+    }
+    
+    // Fallback to standard update if atomic RPC is missing (prevents total outage)
+    logger.warn('Atomic heartbeat RPC failed, falling back to standard update', { agentName, errorCode: error.code });
+    const { error: updateError } = await supabase
+      .from('agents')
+      .update({ 
+        ...updateData, 
+        status: 'active', 
+        last_heartbeat: now.toISOString() 
+      } as any)
+      .eq('id', agentId);
+
+    if (updateError) throw updateError;
   }
   
   logger.info('Agent heartbeat updated atomically', { agentName, metadataChanged, timeThresholdReached });
