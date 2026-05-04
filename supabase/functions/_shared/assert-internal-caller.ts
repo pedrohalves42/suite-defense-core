@@ -72,19 +72,11 @@ export async function assertInternalCaller(
         return authResult.response!;
       }
 
-      // CRITICAL: Fetch the user directly from Supabase to trust the metadata
+      // CRITICAL: Trust the metadata from the verified user object
       // This is the "Cryptographic Validation" step - relying on the signed JWT 
       // already verified by supabaseClient.auth.getUser() inside requireSuperAdmin.
-      if (validatedUserId) {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-        const { createClient: cc } = await import('https://esm.sh/@supabase/supabase-js@2.74.0');
-        const token = authHeader?.replace('Bearer ', '') || '';
-        const supabaseClient = cc(supabaseUrl, supabaseServiceKey);
-        
-        // This is safe because requireSuperAdmin already called getUser(token) successfully
-        const { data: { user } } = await supabaseClient.auth.getUser(token);
-        validatedTenantId = (user?.app_metadata?.active_tenant_id as string) || null;
+      if (authResult.user) {
+        validatedTenantId = (authResult.user?.app_metadata?.active_tenant_id as string) || null;
       }
     } else {
       return authResult.response || new Response(

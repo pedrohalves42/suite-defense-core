@@ -146,7 +146,7 @@ async function insertSystemMetrics(
 
   if (error) {
     logger.error('METRICS INSERT FAILED', {
-      agentName: agent.agent_name, error: error.message,
+      agentId: agent.id, agentName: agent.agent_name, error: error.message,
     })
   }
 }
@@ -192,7 +192,7 @@ async function insertProcessData(
 
   if (error) {
     logger.error('PROCESS INSERT FAILED', {
-      agentName: agent.agent_name, error: error.message,
+      agentId: agent.id, agentName: agent.agent_name, error: error.message,
     })
   }
 }
