@@ -38,13 +38,19 @@ export async function handleGenerateEnrollmentKey(
   const segments: string[] = [];
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   const charArray = chars.split('');
+  const charsLen = chars.length;
   
   for (let i = 0; i < 4; i++) {
     let segment = '';
-    const randomValues = new Uint32Array(4);
-    crypto.getRandomValues(randomValues);
-    for (let j = 0; j < 4; j++) {
-      segment += charArray[randomValues[j] % chars.length];
+    while (segment.length < 4) {
+      const randomValues = new Uint32Array(1);
+      crypto.getRandomValues(randomValues);
+      const val = randomValues[0];
+      // Use rejection sampling to eliminate modulo bias
+      // 2^32 is 4,294,967,296. maxMultiple = 4,294,967,296 - (4,294,967,296 % 36) = 4,294,967,280
+      if (val < 4294967280) {
+        segment += charArray[val % charsLen];
+      }
     }
     segments.push(segment);
   }

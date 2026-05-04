@@ -117,7 +117,7 @@ export async function handleTenantStats(
     { count: alertCount },
   ] = await Promise.all([
     supabase.from('agents').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).not('status', 'in', '("archived","deleted")'),
-    supabase.from('agents').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).in('status', ['online', 'active', 'healthy']),
+    supabase.from('agents').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).gt('last_heartbeat', new Date(Date.now() - 2 * 60 * 1000).toISOString()),
     supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
     supabase.from('system_alerts').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('resolved', false),
   ]);
