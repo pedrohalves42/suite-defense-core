@@ -331,9 +331,12 @@ const UpdateRoleSchema = z.object({
 }).refine(data => data.userId || data.user_id, { message: 'Either userId or user_id is required' });
 
 export async function handleUpdateUserRole(supabase: SB, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext) {
-  const actorId = ctx?.userId;
-  const tenantId = ctx?.tenantId;
-  if (!actorId || !tenantId) return { __status: 401, error: { code: 'UNAUTHORIZED', message: 'Authentication required', requestId } };
+  if (!actorId) return { __status: 401, error: { code: 'UNAUTHORIZED', message: 'Authentication required', requestId } };
+  
+  // Use tenantId from context (enforced for non-super-admins)
+  const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: actorId });
+  const targetTenantId = (isSuperAdmin && (payload.tenant_id as string)) || tenantId;
+  if (!targetTenantId) return { __status: 400, error: 'Tenant context required' };
 
   const { data: actorRole, error: roleError } = await supabase.from('user_roles').select('role, tenant_id').eq('user_id', actorId).eq('tenant_id', tenantId).maybeSingle();
   if (roleError || !actorRole || !['admin', 'super_admin'].includes(actorRole.role)) {
