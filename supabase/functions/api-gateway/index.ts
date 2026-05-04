@@ -296,11 +296,13 @@ servePublic(async (req, ctx) => {
     if (response.status === 504) return response;
 
     const responseData = await response.text();
+    const contentType = response.headers.get('Content-Type') || 'application/json';
+    
     logger.info(`[api-gateway] ${action} done in ${Date.now() - startedAt}ms (status: ${response.status})`);
 
-    return new Response(responseData, {
+    return new Response(responseData || null, {
       status: response.status,
-      headers: { ...buildCorsHeaders(origin), 'Content-Type': response.headers.get('Content-Type') || 'application/json' },
+      headers: { ...buildCorsHeaders(origin), 'Content-Type': contentType },
     });
   } catch (err) {
     logger.error('[api-gateway] Error:', err);
