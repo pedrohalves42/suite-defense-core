@@ -227,7 +227,7 @@ servePublic(async (req, ctx) => {
 
     const { action, payload } = parsed.data;
 
-    if (!ALL_VALID_ACTIONS.has(action)) {
+    if (!routerAdapter.getAction(action)) {
       return jsonRes({
         error: `Unknown action: ${action}`,
         available_namespaces: ['admin', 'billing', 'security', 'build', 'agent'],
