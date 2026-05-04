@@ -114,7 +114,7 @@ serveAgent(async (req, ctx) => {
 
   // ── 6. COST-OPT: Defer side-effects ─────────────────────
   const bgWork = executeParallelOps(supabase, agent, osInfo, shouldInsertTelemetry)
-    .catch(e => logger.warn('Deferred work failed', { error: e.message, agentName: agent.agent_name }));
+    .catch(e => logger.warn('Deferred work failed', { error: e.message, agentName: agent.agent_name, traceId }));
     
   if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
     EdgeRuntime.waitUntil(bgWork)

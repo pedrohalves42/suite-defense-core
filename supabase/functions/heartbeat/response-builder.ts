@@ -165,13 +165,15 @@ export async function buildNormalResponse(
  * Previous: 120s/60s — reduced invocations by ~60%.
  */
 function _getHeartbeatInterval(agentState: string | null | undefined): number {
-  const degradedStates = ['SAFE_MODE', 'DEGRADED', 'INITIALIZING']
-  if (agentState && degradedStates.includes(agentState)) return 120
+  const state = (agentState || '').toUpperCase()
+  const degradedStates = ['SAFE_MODE', 'DEGRADED', 'INITIALIZING', 'RECOVERY', 'UPDATING', 'ROLLBACK']
+  if (state && degradedStates.includes(state)) return 120
   return 300
 }
 
 function _getPollInterval(agentState: string | null | undefined): number {
-  const degradedStates = ['SAFE_MODE', 'DEGRADED', 'INITIALIZING']
-  if (agentState && degradedStates.includes(agentState)) return 60
+  const state = (agentState || '').toUpperCase()
+  const degradedStates = ['SAFE_MODE', 'DEGRADED', 'INITIALIZING', 'RECOVERY', 'UPDATING', 'ROLLBACK']
+  if (state && degradedStates.includes(state)) return 60
   return 300
 }
