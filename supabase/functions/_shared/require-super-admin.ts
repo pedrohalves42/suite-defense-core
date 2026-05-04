@@ -5,6 +5,7 @@ import { logger } from './logger.ts';
 export interface SuperAdminAuthResult {
   success: boolean;
   userId?: string;
+  user?: any;
   error?: string;
   response?: Response;
 }
@@ -134,6 +135,7 @@ export async function requireSuperAdmin(
     return {
       success: true,
       userId: user.id,
+      user: user,
     };
   } catch (error) {
     logger.error(`${logPrefix} [SECURITY] Unexpected error in requireSuperAdmin:`, error);

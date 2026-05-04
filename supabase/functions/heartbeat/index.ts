@@ -74,7 +74,7 @@ serveAgent(async (req, ctx) => {
 
   // ── 1. HMAC validation ──────────────────────────────────
   // CENTRALIZED: Now uses serveAgent's hmacVerify. rawBody is guaranteed.
-  if (!rawBody) {
+  if (rawBody === undefined) {
     logger.error('CRITICAL: rawBody missing from ctx. Ensure hmacVerify: true is set in serveAgent options.');
     return new Response(JSON.stringify({ error: 'Auth context error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
