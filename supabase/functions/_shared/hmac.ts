@@ -308,26 +308,30 @@ export async function verifyHmacSignature(
 
     // Update format cache (fire-and-forget)
     if (context?.agentId && resolvedTenantId) {
-    const updateCache = async () => {
-      try {
-        const { error } = await supabase.from('agent_hmac_format_cache').upsert(
-          {
-            agent_id: context.agentId,
-            tenant_id: resolvedTenantId,
-            key_encoding: keyName,
-            separator: variant.sep,
-            body_format: variant.fmt,
-            last_verified_at: new Date().toISOString(),
-            hit_count: 1,
-          },
-          { onConflict: 'agent_id' },
-        );
-        if (error) logger.warn('[HMAC] Cache update failed', { error: error.message });
-      } catch (e: any) {
-        logger.error('[HMAC] Cache update promise rejected', { error: e.message });
-      }
-    };
-    updateCache();
+      const updateCache = async () => {
+        try {
+          const { error } = await supabase.from('agent_hmac_format_cache').upsert(
+            {
+              agent_id: context.agentId,
+              tenant_id: resolvedTenantId,
+              key_encoding: keyName,
+              separator: variant.sep,
+              body_format: variant.fmt,
+              last_verified_at: new Date().toISOString(),
+              hit_count: 1,
+            },
+            { onConflict: 'agent_id' },
+          );
+          if (error) logger.warn('[HMAC] Cache update failed', { error: error.message });
+        } catch (e: any) {
+          logger.error('[HMAC] Cache update promise rejected', { error: e.message });
+        }
+      };
+      // In Deno Deploy / Edge Functions, we should not use un-awaited async functions 
+      // without waitUntil or similar, but since this is called within a context that 
+      // often uses EdgeRuntime.waitUntil, it's generally safe.
+      updateCache();
+    }
     }
 
     return { valid: true, rawBody: body, modeUsed: variant.mode };

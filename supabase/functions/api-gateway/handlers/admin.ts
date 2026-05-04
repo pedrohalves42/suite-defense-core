@@ -210,7 +210,7 @@ export async function handleListUsers(supabase: SB, requestId: string, payload: 
   // Instead of listUsers() which returns a global list, we fetch only the needed users.
   const authUsersPromises = tenantUsers.map(tu => supabase.auth.admin.getUserById(tu.user_id));
   const authResults = await Promise.all(authUsersPromises);
-  const filteredAuthUsers = authResults.map(r => r.data.user).filter(Boolean);
+  const filteredAuthUsers = authResults.map(r => r?.data?.user).filter(Boolean);
 
   const users = tenantUsers.map(tu => {
     const profile = profiles?.find(p => p.user_id === tu.user_id);
