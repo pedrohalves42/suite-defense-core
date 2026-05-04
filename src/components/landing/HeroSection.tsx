@@ -13,9 +13,12 @@ export function HeroSection() {
   const { hero } = useLandingContent();
 
   return (
-    <section id="inicio" className="relative min-h-[85vh] sm:min-h-[90vh] flex items-center overflow-hidden" aria-labelledby="hero-heading">
-      {/* Deep blue-green gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(220,20%,10%)] via-[hsl(200,18%,12%)] to-[hsl(160,15%,10%)]" />
+    <section id="inicio" className="relative min-h-[85vh] sm:min-h-[90vh] flex items-center overflow-hidden py-24" aria-labelledby="hero-heading">
+      {/* Refined Background - Apple Style */}
+      <div className="absolute inset-0 bg-[#000] overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-cta-positive/10 rounded-full blur-[120px] animate-pulse-subtle" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-500/10 rounded-full blur-[120px]" />
+      </div>
       
       {/* Subtle grid pattern */}
       <div className="absolute inset-0 opacity-[0.03]" style={{
@@ -43,12 +46,12 @@ export function HeroSection() {
             </div>
 
             {/* Title — fluid scaling */}
-            <h1 id="hero-heading" className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold tracking-tight leading-[1.05] text-balance">
-              <span className="text-white drop-shadow-sm">
+            <h1 id="hero-heading" className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-display font-extrabold tracking-tight leading-[1.02] text-balance">
+              <span className="text-white drop-shadow-2xl">
                 {hero.title1}
               </span>
               <br />
-              <span className="bg-gradient-to-r from-cta-positive via-emerald-400 to-shield-active bg-clip-text text-transparent animate-gradient-x">
+              <span className="bg-gradient-to-r from-cta-positive via-emerald-300 to-shield-active bg-clip-text text-transparent animate-gradient-x brightness-110">
                 {hero.title2}
               </span>
             </h1>
@@ -83,18 +86,18 @@ export function HeroSection() {
                 asChild 
                 size="lg" 
                 variant="cta"
-                className="w-full sm:w-auto text-base sm:text-lg h-14 sm:h-16 px-6 sm:px-10 font-bold rounded-full shadow-2xl shadow-cta-positive/30 hover:shadow-cta-positive/50 transition-all duration-300 interactive-hover"
+                className="w-full sm:w-auto text-base sm:text-lg h-14 sm:h-16 px-8 sm:px-12 font-bold rounded-full shadow-2xl shadow-cta-positive/20 hover:shadow-cta-positive/40 transition-all duration-500 ease-premium interactive-hover"
               >
                 <Link to="/signup" aria-label="Descobrir se minha empresa está vulnerável - Começar agora">
                   <span className="truncate">{hero.ctaButton}</span>
-                  <ArrowRight className="ml-2 sm:ml-3 h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
+                  <ArrowRight className="ml-2 sm:ml-3 h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 group-hover:translate-x-1 transition-transform duration-500" aria-hidden="true" />
                 </Link>
               </Button>
               <Button 
                 asChild 
                 size="lg" 
                 variant="outline"
-                className="w-full sm:w-auto text-base sm:text-lg h-14 sm:h-16 px-6 sm:px-10 border-white/20 text-white rounded-full bg-white/5 backdrop-blur-sm hover:bg-white/10 hover:border-white/40 transition-all duration-300 focus-ring"
+                className="w-full sm:w-auto text-base sm:text-lg h-14 sm:h-16 px-8 sm:px-12 border-white/10 text-white/90 rounded-full bg-white/5 backdrop-blur-md hover:bg-white/10 hover:border-white/20 transition-all duration-500 ease-premium"
               >
                 <a href="#mini-diagnostico" aria-label="Agendar diagnóstico gratuito de 15 minutos">
                   <span className="truncate">{hero.ctaSecondary || "Agendar diagnóstico gratuito"}</span>
