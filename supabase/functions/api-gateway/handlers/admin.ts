@@ -390,14 +390,17 @@ export async function handleAdminCreateUser(supabase: SB, requestId: string, pay
 
   const { username, password, full_name, role, tenant_id } = parsed.data;
 
-  const { data: callerRole, error: roleError } = await supabase.from('user_roles').select('role').eq('user_id', userId).eq('tenant_id', tenant_id).in('role', ['admin', 'super_admin']).maybeSingle();
-  if (roleError || !callerRole) return { __status: 403, success: false, error: 'Forbidden: Admin role required in this tenant' };
+  const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: userId });
+  if (!isSuperAdmin) {
+    const { data: callerRole } = await supabase.from('user_roles').select('role').eq('user_id', userId).eq('tenant_id', tenant_id).eq('role', 'admin').maybeSingle();
+    if (!callerRole) return { __status: 403, success: false, error: 'Forbidden: Admin role required in this tenant' };
+  }
 
   const { data: existingUser } = await supabase.from('profiles').select('id').eq('username', username.toLowerCase()).maybeSingle();
   if (existingUser) return { __status: 409, success: false, error: 'Username already exists' };
 
   const { count: userCount } = await supabase.from('user_roles').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant_id);
-  const { data: tenantFeatures } = await supabase.from('tenant_features').select('quota_limit').eq('tenant_id', tenant_id).eq('feature_code', 'max_users').maybeSingle();
+  const { data: tenantFeatures } = await supabase.from('tenant_features').select('quota_limit').eq('tenant_id', tenant_id).eq('feature_key', 'max_users').maybeSingle();
   const maxUsers = tenantFeatures?.quota_limit ?? 5;
   if ((userCount ?? 0) >= maxUsers) return { __status: 403, success: false, error: `Limite de usuarios atingido (${userCount}/${maxUsers}). Faca upgrade do plano.` };
 
