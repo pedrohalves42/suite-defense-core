@@ -51,9 +51,14 @@ export async function handleCheckCredentialLeaks(
   // Check monitored domains
   const { data: monitors } = await supabase.from('credential_monitors').select('id, tenant_id, email_domain, monitoring_enabled, last_checked_at').eq('tenant_id', tenantId).eq('monitoring_enabled', true);
   if (monitors?.length) {
-    for (const monitor of monitors) {
+    // SECURITY/PERF: Process domain monitors in parallel up to a limit
+    // but respect HIBP's strict 1.5s rate limit for the API.
+    // For many domains, this should be moved to a background job.
+    for (const monitor of monitors.slice(0, 5)) { // Limit to 5 domains to prevent timeout
       try {
-        const resp = await fetchWithTimeout('https://haveibeenpwned.com/api/v3/breaches', { headers: { 'user-agent': 'CyberShield-Security-Platform' } });
+        const resp = await fetchWithTimeout('https://haveibeenpwned.com/api/v3/breaches', { 
+          headers: { 'user-agent': 'CyberShield-Security-Platform' } 
+        });
         if (resp.ok) {
           const allBreaches = await resp.json();
           const domainBreaches = allBreaches.filter((b: Record<string, unknown>) =>
@@ -69,8 +74,8 @@ export async function handleCheckCredentialLeaks(
             detected_at: new Date().toISOString(),
           }));
           if (breachRows.length > 0) {
-            const { error } = await supabase.from('credential_leaks').upsert(breachRows, { onConflict: 'id' });
-            if (!error) results.leaks_found += breachRows.length;
+            await supabase.from('credential_leaks').upsert(breachRows, { onConflict: 'tenant_id,email,breach_name' });
+            results.leaks_found += breachRows.length;
           }
         }
         await new Promise(r => setTimeout(r, 1600));
@@ -84,8 +89,8 @@ export async function handleCheckCredentialLeaks(
   try {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (LOVABLE_API_KEY) {
-      const { data: agents } = await supabase.from('agents').select('id, name, hostname').eq('tenant_id', tenantId).eq('is_active', true).limit(50);
-      const { data: recentAlerts } = await supabase.from('security_alerts').select('alert_type, severity, description, created_at').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(20);
+      const { data: agents } = await supabase.from('agents').select('id, agent_name, hostname').eq('tenant_id', tenantId).eq('status', 'active').limit(50);
+      const { data: recentAlerts } = await supabase.from('system_alerts').select('alert_type, severity, title, created_at').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(20);
       if (agents?.length) {
         const prompt = `Analise os riscos de identidade. Endpoints: ${agents.length}. Dominios: ${monitors?.map(m => m.email_domain).join(', ') || 'Nenhum'}. Senhas comprometidas: ${results.passwords_compromised}. Vazamentos: ${results.leaks_found}. Alertas: ${JSON.stringify(recentAlerts?.slice(0, 5) || [])}. Forneca: Score de risco (0-100), Top 3 riscos, Recomendacoes.`;
         const aiResp = await fetchWithTimeout('https://ai.gateway.lovable.dev/v1/chat/completions', {

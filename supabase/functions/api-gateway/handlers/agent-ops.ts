@@ -170,13 +170,17 @@ export async function handleRecoverAgentCredentials(
 
 // ── agent-version-management ───────────────────────────────────────────
 function parseVersion(v: string): number[] {
-  return (v ?? '0.0.0').replace(/^v/i, '').split('.').map(Number);
+  const parts = (v ?? '0.0.0').replace(/^v/i, '').split('.').map(n => parseInt(n, 10));
+  while (parts.length < 3) parts.push(0);
+  return parts.map(n => isNaN(n) ? 0 : n);
 }
 
 function versionGap(current: string, latest: string): number {
   const c = parseVersion(current);
   const l = parseVersion(latest);
-  return (l[0] - c[0]) * 100 + (l[1] - c[1]) * 10 + (l[2] - c[2]);
+  // Major diff is highest weight, then minor, then patch
+  // This helps identify significant version drift
+  return (l[0] - c[0]) * 10000 + (l[1] - c[1]) * 100 + (l[2] - c[2]);
 }
 
 async function latestActiveVersion(supabase: Supabase): Promise<string> {

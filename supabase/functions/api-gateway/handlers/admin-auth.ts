@@ -102,14 +102,14 @@ export async function handleSendInvite(
     return { __status: 400, error: 'Email e role validos sao obrigatorios' };
   }
 
-  // Verify admin role
-  const { data: hasAdminRole } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin', _tenant_id: tenantId });
-  if (!hasAdminRole) return { __status: 403, error: 'Acesso negado' };
-
-  // Get tenant
-  const { data: userRole } = await supabase.from('user_roles').select('tenant_id')
+  // Get tenant and verify admin role
+  const { data: userRole } = await supabase.from('user_roles').select('tenant_id, role')
     .eq('user_id', userId).limit(1).maybeSingle();
   const tenantId = ctx?.tenantId || userRole?.tenant_id;
+  if (!tenantId) return { __status: 400, error: 'Tenant nao encontrado' };
+
+  const { data: hasAdminRole } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin', _tenant_id: tenantId });
+  if (!hasAdminRole) return { __status: 403, error: 'Acesso negado' };
   if (!tenantId) return { __status: 400, error: 'Tenant nao encontrado' };
 
   // Check quota
@@ -122,10 +122,17 @@ export async function handleSendInvite(
     return { __status: 403, error: `Limite de usuarios atingido (${maxUsers})` };
   }
 
-  // Check existing user
-  const { data: existingUser } = await supabase.auth.admin.listUsers();
-  if (existingUser.users.some(u => u.email === email)) {
+  // Check existing user targeted (don't list all)
+  const { data: authData } = await supabase.auth.admin.getUserByEmail(email);
+  if (authData?.user) {
     return { __status: 409, error: 'Usuario ja cadastrado' };
+  }
+
+  // Check pending invites
+  const { data: pendingInvite } = await supabase.from('invites')
+    .select('id').eq('email', email).eq('tenant_id', tenantId).eq('status', 'pending').maybeSingle();
+  if (pendingInvite) {
+    return { __status: 409, error: 'Ja existe um convite pendente para este email' };
   }
 
   // Create invite
