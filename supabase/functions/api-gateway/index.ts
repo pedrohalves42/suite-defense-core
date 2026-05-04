@@ -1,12 +1,9 @@
 // @ts-nocheck
 /**
- * api-gateway — Unified Platform API Gateway (Phase 5)
- *
- * Consolidates: admin, billing, security, build, agent namespaces
- *
- * Action format: "namespace:action" e.g. "admin:create-user", "billing:create-checkout"
- *
- * Auth: assertInternalCaller with allowAuthenticatedUsers
+ * api-gateway — Unified Platform API Gateway (Phase 6 Hexagonal)
+ * 
+ * Refactored using Hexagonal Architecture (Ports and Adapters).
+ * Logic moved to Domain (Use Cases) and Infrastructure (Adapters).
  */
 import { createTypedClient } from '../_shared/supabase-client.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
@@ -82,15 +79,10 @@ const FETCH_TIMEOUT_MS = 20000; // Lower than middleware timeout (25s) to allow 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-// ── Proxy map: actions still dispatched via HTTP ────────────────────────
-// Only serveTenant functions that accept JWT auth forwarded from the gateway.
-// serveAgent/HMAC, servePublic, and raw Deno.serve functions must be called
-// directly — their auth is incompatible with assertInternalCaller proxy.
+// Configuration for the Router Adapter
 const ACTION_TO_FUNCTION: Record<string, string> = {
-  // security proxy targets — serveTenant (JWT-compatible)
   'security:scan-vulnerabilities': 'scan-vulnerabilities',
   'security:fido2-register': 'fido2-register',
-  // build proxy targets — serveTenant (JWT-compatible)
   'build:build-agent-exe': 'build-agent-exe',
   'build:generate-deploy-package': 'generate-deploy-package',
   'build:generate-portable-installer': 'generate-portable-installer',
@@ -99,14 +91,12 @@ const ACTION_TO_FUNCTION: Record<string, string> = {
   'build:sign-release': 'sign-release',
   'build:upload-release-content': 'upload-release-content',
   'build:validate-build-pipeline': 'validate-build-pipeline',
-  // agent proxy targets — serveTenant (JWT-compatible)
   'agent:get-agent-script-content': 'get-agent-script-content',
   'agent:promote-agent-v5': 'promote-agent-v5',
   'agent:setup-agent-script': 'setup-agent-script',
   'agent:force-reinstall-fleet': 'force-reinstall-fleet',
   'agent:create-reinstall-jobs': 'create-reinstall-jobs',
   'agent:action-center-feed': 'action-center-feed',
-  // AI proxy targets — serveTenant (JWT-compatible)
   'agent:ai-action-executor': 'ai-action-executor',
   'agent:ai-agent-assist': 'ai-agent-assist',
   'agent:ai-analyze-agent': 'ai-analyze-agent',
@@ -117,11 +107,7 @@ const ACTION_TO_FUNCTION: Record<string, string> = {
   'agent:ai-system-audit': 'ai-system-audit',
 };
 
-// ── Inlined handlers (no HTTP hop) ──────────────────────────────────────
-type InlinedHandler = (supabase: any, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext) => Promise<unknown>;
-
-const INLINED_HANDLERS: Record<string, InlinedHandler> = {
-  // billing inlined (V2 Hexagonal)
+const INLINED_HANDLERS: Record<string, any> = {
   'billing:cohort-analysis': handleCohortAnalysisV2,
   'billing:unit-economics': handleUnitEconomicsV2,
   'billing:list-invoices': handleListInvoicesV2,
@@ -129,22 +115,16 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'billing:check-subscription': handleCheckSubscriptionV2,
   'billing:create-checkout': handleCreateCheckoutV2,
   'billing:charge-subscription': handleChargeSubscription,
-  // legacy or other billing logic not yet in use case
   'billing:security-cleanup': handleSecurityCleanup,
-
-  // security inlined
   'security:security-cleanup': handleSecurityCleanup,
-  // security inlined — Phase 1A (JWT-compatible)
   'security:auto-block-threats': handleAutoBlockThreats,
   'security:check-credential-leaks': handleCheckCredentialLeaks,
   'security:clear-failed-logins': handleClearFailedLogins,
   'security:classify-shadow-it': handleClassifyShadowIt,
   'security:threat-intelligence-lookup': handleThreatIntelligenceLookup,
   'security:build-security-graph': handleBuildSecurityGraph,
-  // honeypot inlined (Phase 1B)
   'security:activate-agent-honeypot': handleActivateAgentHoneypot,
   'security:revert-agent-honeypot': handleRevertAgentHoneypot,
-  // admin inlined (Phase 2A)
   'admin:get-admin-releases': handleGetAdminReleases,
   'admin:update-user-status': handleUpdateUserStatus,
   'admin:update-member-role': handleUpdateMemberRole,
@@ -155,50 +135,47 @@ const INLINED_HANDLERS: Record<string, InlinedHandler> = {
   'admin:update-user-role': handleUpdateUserRole,
   'admin:create-user': handleAdminCreateUser,
   'admin:rate-limit-stats': handleGetRateLimitStats,
-  // agent-mgmt inlined (Phase 2E)
   'agent:agent-snapshot': handleAgentSnapshot,
   'agent:check-agent-name-availability': handleCheckAgentNameAvailability,
   'agent:diagnose-agent': handleDiagnoseAgent,
   'agent:get-agent-timeline': handleGetAgentTimeline,
-  // build inlined (Phase 2E)
   'build:build-callback': handleBuildCallback,
-  // ── Phase 2F: admin-auth inlined ──
   'admin:accept-invite': handleAcceptInvite,
   'admin:delete-invite': handleDeleteInvite,
   'admin:send-invite': handleSendInvite,
-  // ── Phase 2F: enrollment inlined ──
   'build:generate-enrollment-key': handleGenerateEnrollmentKey,
   'build:revoke-enrollment-key': handleRevokeEnrollmentKey,
-  // ── Phase 2F: agent-data inlined ──
   'agent:get-software-inventory': handleGetSoftwareInventory,
   'agent:get-web-activity': handleGetWebActivity,
   'agent:get-agent-dashboard-data': handleGetAgentDashboardData,
-  // ── Phase 2J: agent-ops inlined ──
   'agent:token-rotate': handleTokenRotate,
   'agent:recover-agent-credentials': handleRecoverAgentCredentials,
   'agent:agent-version-management': handleAgentVersionManagement,
-  // ── Phase 3A: serveTenant inlined ──
   'security:analyze-url': handleAnalyzeUrl,
   'security:siem-export': handleSiemExport,
   'security:security-advisor': handleSecurityAdvisor,
   'admin:change-password': handleChangePassword,
   'admin:create-job': handleCreateJob,
-  'security:sync-cve-database': handleSyncCveDatabase as InlinedHandler,
-  'security:mitre-sync': handleMitreSync as InlinedHandler,
-  // ── Phase 6C: serveTenant inlined (consolidation) ──
+  'security:sync-cve-database': handleSyncCveDatabase,
+  'security:mitre-sync': handleMitreSync,
   'security:translate-cve': handleTranslateCve,
   'security:calculate-compliance': handleCalculateCompliance,
   'security:export-evidence-bundle': handleExportEvidenceBundle,
-  // ── Phase 6C: API-key endpoints inlined ──
   'admin:tenant-features': handleTenantFeatures,
   'admin:tenant-info': handleTenantInfo,
   'admin:tenant-stats': handleTenantStats,
 };
 
-const ALL_VALID_ACTIONS = new Set([
-  ...Object.keys(ACTION_TO_FUNCTION),
-  ...Object.keys(INLINED_HANDLERS),
-]);
+// Initialize Hexagonal Components
+import { SupabaseRouterAdapter } from './infrastructure/router/adapters/supabase-router-adapter.ts';
+import { ActionDispatcherUseCase } from './domain/router/use-cases/action-dispatcher.ts';
+
+const routerAdapter = new SupabaseRouterAdapter(ACTION_TO_FUNCTION, INLINED_HANDLERS);
+const actionDispatcher = new ActionDispatcherUseCase(routerAdapter);
+
+// ALL_VALID_ACTIONS Set is derived from keys of ACTION_TO_FUNCTION and INLINED_HANDLERS
+// and is checked inside the actionDispatcher logic.
+// Keeping it here for backward compatibility if any middleware uses it.
 
 const RouterSchema = z.object({
   action: z.string().min(1).max(80),
@@ -211,6 +188,8 @@ function jsonRes(data: unknown, status: number, origin: string | null) {
     headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
   });
 }
+
+// Removed duplicate Set definition
 
 const FORWARDED_HEADERS = [
   'Authorization', 'apikey', 'X-Internal-Secret', 'X-Agent-Token',
@@ -245,7 +224,7 @@ servePublic(async (req, ctx) => {
 
     const { action, payload } = parsed.data;
 
-    if (!ALL_VALID_ACTIONS.has(action)) {
+    if (!routerAdapter.getAction(action)) {
       return jsonRes({
         error: `Unknown action: ${action}`,
         available_namespaces: ['admin', 'billing', 'security', 'build', 'agent'],
@@ -253,57 +232,45 @@ servePublic(async (req, ctx) => {
       }, 400, origin);
     }
 
-    // Try inlined handler first (no HTTP hop)
-    const inlinedHandler = INLINED_HANDLERS[action];
-    if (inlinedHandler) {
-      const supabase = supabaseAny; // servePublic provides service_role client
-      const handlerCtx: HandlerContext = { req, userId: validatedCtx.userId || undefined, tenantId: validatedCtx.tenantId || undefined };
-      
-      logger.info(`[api-gateway] Inline: ${action}`, { requestId });
-      const result = await inlinedHandler(supabase, requestId, payload, handlerCtx);
-      const elapsed = Date.now() - startedAt;
-      logger.info(`[api-gateway] ${action} done in ${elapsed}ms`);
+    // Use Hexagonal Dispatcher
+    const dispatchContext = {
+      supabase: supabaseAny,
+      requestId,
+      userId: validatedCtx.userId || undefined,
+      tenantId: validatedCtx.tenantId || undefined,
+      req,
+      forwardHeaders
+    };
 
-      // Support __status for custom HTTP status codes from handlers
-      const resultObj = result as Record<string, unknown>;
-      const status = typeof resultObj?.__status === 'number' ? resultObj.__status : 200;
-      if (resultObj?.__status) {
-        const { __status, ...rest } = resultObj;
-        return jsonRes(rest, status, origin);
-      }
-      return jsonRes(result, 200, origin);
+    const result = await actionDispatcher.dispatch(action, payload, dispatchContext);
+
+    // If dispatcher returned a raw Response (e.g. from proxy or direct handler return)
+    if (result instanceof Response) {
+      if (result.status === 504) return result;
+      
+      const responseData = await result.text();
+      const contentType = result.headers.get('Content-Type') || 'application/json';
+      
+      logger.info(`[api-gateway] ${action} done in ${Date.now() - startedAt}ms (status: ${result.status})`);
+
+      return new Response(responseData || null, {
+        status: result.status,
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': contentType },
+      });
     }
 
-    // Proxy to target function
-    const targetFn = ACTION_TO_FUNCTION[action];
-    const url = `${requireEnv('SUPABASE_URL')}/functions/v1/${targetFn}`;
-    logger.info(`[api-gateway] Proxy: ${action} → ${targetFn}`, { requestId });
+    // Handle normal object results from inlined handlers
+    const elapsed = Date.now() - startedAt;
+    logger.info(`[api-gateway] ${action} done in ${elapsed}ms`);
 
-    const response = await fetchWithTimeout(url, {
-      method: 'POST',
-      headers: forwardHeaders(req, requestId),
-      body: JSON.stringify(payload),
-      timeoutMs: FETCH_TIMEOUT_MS,
-    }).catch(err => {
-      logger.error(`[api-gateway] Proxy failed for ${action}:`, err);
-      return new Response(JSON.stringify({ 
-        error: 'GATEWAY_PROXY_TIMEOUT', 
-        message: 'A operacao demorou demais ou o servico de destino esta indisponivel.',
-        details: err.message
-      }), { status: 504, headers: { 'Content-Type': 'application/json' } });
-    });
-
-    if (response.status === 504) return response;
-
-    const responseData = await response.text();
-    const contentType = response.headers.get('Content-Type') || 'application/json';
-    
-    logger.info(`[api-gateway] ${action} done in ${Date.now() - startedAt}ms (status: ${response.status})`);
-
-    return new Response(responseData || null, {
-      status: response.status,
-      headers: { ...buildCorsHeaders(origin), 'Content-Type': contentType },
-    });
+    // Support __status for custom HTTP status codes from handlers
+    const resultObj = result as Record<string, unknown>;
+    const status = typeof resultObj?.__status === 'number' ? resultObj.__status : 200;
+    if (resultObj?.__status) {
+      const { __status, ...rest } = resultObj;
+      return jsonRes(rest, status, origin);
+    }
+    return jsonRes(result, 200, origin);
   } catch (err) {
     logger.error('[api-gateway] Error:', err);
     return jsonRes({ error: 'Internal error', message: err instanceof Error ? err.message : 'Unknown', requestId }, 500, origin);
