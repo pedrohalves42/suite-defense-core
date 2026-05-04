@@ -176,10 +176,9 @@ import { ActionDispatcherUseCase } from './domain/router/use-cases/action-dispat
 const routerAdapter = new SupabaseRouterAdapter(ACTION_TO_FUNCTION, INLINED_HANDLERS);
 const actionDispatcher = new ActionDispatcherUseCase(routerAdapter);
 
-const ALL_VALID_ACTIONS = new Set([
-  ...Object.keys(ACTION_TO_FUNCTION),
-  ...Object.keys(INLINED_HANDLERS),
-]);
+// ALL_VALID_ACTIONS Set is derived from keys of ACTION_TO_FUNCTION and INLINED_HANDLERS
+// and is checked inside the actionDispatcher logic.
+// Keeping it here for backward compatibility if any middleware uses it.
 
 const RouterSchema = z.object({
   action: z.string().min(1).max(80),
@@ -193,10 +192,7 @@ function jsonRes(data: unknown, status: number, origin: string | null) {
   });
 }
 
-const ALL_VALID_ACTIONS = new Set([
-  ...Object.keys(ACTION_TO_FUNCTION),
-  ...Object.keys(INLINED_HANDLERS),
-]);
+// Removed duplicate Set definition
 
 const FORWARDED_HEADERS = [
   'Authorization', 'apikey', 'X-Internal-Secret', 'X-Agent-Token',
