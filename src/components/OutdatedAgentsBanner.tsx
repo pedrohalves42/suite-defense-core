@@ -84,7 +84,7 @@ export const OutdatedAgentsBanner = () => {
   }
 
   return (
-    <div className="mb-4 p-4 rounded-lg border border-warning/50 bg-warning/20 flex items-start gap-3">
+    <div className="mb-6 p-5 rounded-xl border border-warning/30 bg-warning/5 backdrop-blur-md flex items-start gap-4 shadow-sm">
       <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
       <div className="flex-1 min-w-0">
         <h4 className="font-semibold text-warning-foreground">
@@ -98,7 +98,7 @@ export const OutdatedAgentsBanner = () => {
           {outdatedAgents.slice(0, 5).map(agent => (
             <span 
               key={agent.agent_name}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-warning/20 text-xs font-medium"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-warning/10 border border-warning/20 text-[10px] font-bold uppercase tracking-wider text-warning-foreground"
             >
               {agent.agent_name}
               <span className="text-muted-foreground">({agent.agent_version})</span>
