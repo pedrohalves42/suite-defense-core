@@ -16,9 +16,14 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['CalSans', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['IBM Plex Mono', 'JetBrains Mono', 'monospace'],
       },
       fontSize: {
+        'display-2xl': ['4.5rem', { lineHeight: '1.05', letterSpacing: '-0.04em', fontWeight: '800' }],
+        'display-xl': ['3.75rem', { lineHeight: '1.1', letterSpacing: '-0.03em', fontWeight: '800' }],
+        'display-lg': ['3rem', { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '700' }],
+        'display-md': ['2.25rem', { lineHeight: '1.2', letterSpacing: '-0.02em', fontWeight: '700' }],
         'metric': ['1.75rem', { lineHeight: '1.2', fontWeight: '600' }],
         'metric-lg': ['2.25rem', { lineHeight: '1.1', fontWeight: '700' }],
       },
@@ -79,10 +84,11 @@ export default {
         },
       },
       boxShadow: {
-        'xs': 'var(--shadow-xs)',
-        'premium': 'var(--shadow-sm)',
-        'elevated': 'var(--shadow-md)',
-        'float': 'var(--shadow-lg)',
+        'xs': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+        'premium': '0 2px 4px 0 rgb(0 0 0 / 0.02), 0 1px 0 0 rgb(255 255 255 / 0.05) inset',
+        'elevated': '0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -2px rgb(0 0 0 / 0.02)',
+        'float': '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04)',
+        'glow': '0 0 20px -5px hsl(var(--primary) / 0.3)',
       },
       borderRadius: {
         lg: "var(--radius)",
