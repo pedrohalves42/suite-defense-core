@@ -64,26 +64,34 @@ export function ActionCenterOverview({
   ];
 
   return (
-    <div className={cn('grid grid-cols-2 md:grid-cols-4 gap-3', className)}>
+    <div className={cn('grid grid-cols-2 md:grid-cols-4 gap-6', className)}>
       {stats.map((stat) => {
         const Icon = stat.icon;
         
         const content = (
           <div className={cn(
-            'rounded-lg border p-3 transition-all',
-            stat.bgColor,
-            stat.isUrgent && 'ring-1 ring-red-500/20',
-            stat.link && 'hover:scale-[1.02] cursor-pointer'
+            'group relative rounded-2xl border bg-card p-5 transition-all duration-500 ease-premium overflow-hidden',
+            stat.isUrgent ? 'border-destructive/20 shadow-sm' : 'border-border/40 shadow-premium',
+            stat.link && 'hover:-translate-y-1 hover:shadow-elevated cursor-pointer hover:border-primary/20'
           )}>
-            <div className="flex items-center gap-2 mb-1">
-              <Icon className={cn('h-4 w-4', stat.color)} />
-              <span className="text-xs text-muted-foreground">{stat.label}</span>
-            </div>
-            <div className="flex items-baseline gap-1">
-              <span className={cn('text-xl font-bold', stat.color)}>{stat.value}</span>
-              {stat.subValue && (
-                <span className={cn('text-xs', stat.color)}>({stat.subValue})</span>
-              )}
+            <div className={cn(
+              "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700",
+              stat.bgColor.replace('bg-', 'bg-gradient-to-br from-')
+            )} />
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className={cn("p-2.5 rounded-xl transition-transform duration-500 group-hover:scale-110", stat.bgColor)}>
+                  <Icon className={cn('h-5 w-5', stat.color)} />
+                </div>
+                <span className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">{stat.label}</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className={cn('text-3xl font-bold tracking-tight', stat.color)}>{stat.value}</span>
+                {stat.subValue && (
+                  <span className={cn('text-sm font-semibold opacity-70', stat.color)}>{stat.subValue}</span>
+                )}
+              </div>
             </div>
           </div>
         );
