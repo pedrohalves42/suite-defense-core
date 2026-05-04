@@ -79,13 +79,27 @@ export async function handleCreateCheckoutV2(supabase: SupabaseClient, requestId
   });
 }
 
-export async function handleCohortAnalysisV2(supabase: SupabaseClient, requestId: string, _payload: Record<string, unknown>) {
+export async function handleCohortAnalysisV2(supabase: SupabaseClient, requestId: string, _payload: Record<string, unknown>, ctx?: HandlerContext) {
+  // CRITICAL: Protect global analytics from unauthorized access
+  const userId = ctx?.userId;
+  if (!userId) return { error: 'Authentication required', __status: 401 };
+  
+  const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: userId });
+  if (!isSuperAdmin) return { error: 'Forbidden: Super Admin access required for global analytics', __status: 403 };
+
   logger.info(`[billing-v2][${requestId}] Running cohort analysis`);
   const useCase = createBillingAnalyticsUseCase(supabase);
   return await useCase.getCohortAnalysis(requestId);
 }
 
-export async function handleRevenueProjectionsV2(supabase: SupabaseClient, requestId: string, _payload: Record<string, unknown>) {
+export async function handleRevenueProjectionsV2(supabase: SupabaseClient, requestId: string, _payload: Record<string, unknown>, ctx?: HandlerContext) {
+  // CRITICAL: Protect global analytics from unauthorized access
+  const userId = ctx?.userId;
+  if (!userId) return { error: 'Authentication required', __status: 401 };
+  
+  const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: userId });
+  if (!isSuperAdmin) return { error: 'Forbidden: Super Admin access required for global analytics', __status: 403 };
+
   logger.info(`[billing-v2][${requestId}] Calculating revenue projections`);
   const useCase = createBillingAnalyticsUseCase(supabase);
   return await useCase.getRevenueProjections(requestId);
