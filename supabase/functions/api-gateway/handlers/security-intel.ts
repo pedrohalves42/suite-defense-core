@@ -13,7 +13,8 @@ type SupabaseClient = any;
 
 function determineTargetType(target: string): 'url' | 'ip' | 'domain' {
   if (/^(\d{1,3}\.){3}\d{1,3}$/.test(target)) return 'ip';
-  if (target.startsWith('http://') || target.startsWith('https://')) return 'url';
+  // Match http, https, ws, wss, ftp, etc.
+  if (/^[a-z]+:\/\//i.test(target)) return 'url';
   return 'domain';
 }
 

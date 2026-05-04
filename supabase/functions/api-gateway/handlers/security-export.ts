@@ -70,7 +70,7 @@ export async function handleSiemExport(
     supabase.from('quarantined_files').select('id, tenant_id, agent_name, file_path, file_hash, quarantine_reason, status, quarantined_at')
       .eq('tenant_id', tenantId).gte('quarantined_at', since).order('quarantined_at', { ascending: false }).limit(limit),
     supabase.from('agent_vulnerabilities').select('id, agent_id, cve_id, severity, software_name, remediation_status, created_at')
-      .gte('created_at', since).order('created_at', { ascending: false }).limit(limit),
+      .eq('tenant_id', tenantId).gte('created_at', since).order('created_at', { ascending: false }).limit(limit),
   ]);
 
   const events: Record<string, unknown>[] = [];

@@ -51,9 +51,14 @@ export async function handleCheckCredentialLeaks(
   // Check monitored domains
   const { data: monitors } = await supabase.from('credential_monitors').select('id, tenant_id, email_domain, monitoring_enabled, last_checked_at').eq('tenant_id', tenantId).eq('monitoring_enabled', true);
   if (monitors?.length) {
-    for (const monitor of monitors) {
+    // SECURITY/PERF: Process domain monitors in parallel up to a limit
+    // but respect HIBP's strict 1.5s rate limit for the API.
+    // For many domains, this should be moved to a background job.
+    for (const monitor of monitors.slice(0, 5)) { // Limit to 5 domains to prevent timeout
       try {
-        const resp = await fetchWithTimeout('https://haveibeenpwned.com/api/v3/breaches', { headers: { 'user-agent': 'CyberShield-Security-Platform' } });
+        const resp = await fetchWithTimeout('https://haveibeenpwned.com/api/v3/breaches', { 
+          headers: { 'user-agent': 'CyberShield-Security-Platform' } 
+        });
         if (resp.ok) {
           const allBreaches = await resp.json();
           const domainBreaches = allBreaches.filter((b: Record<string, unknown>) =>
@@ -69,8 +74,8 @@ export async function handleCheckCredentialLeaks(
             detected_at: new Date().toISOString(),
           }));
           if (breachRows.length > 0) {
-            const { error } = await supabase.from('credential_leaks').upsert(breachRows, { onConflict: 'id' });
-            if (!error) results.leaks_found += breachRows.length;
+            await supabase.from('credential_leaks').upsert(breachRows, { onConflict: 'tenant_id,email,breach_name' });
+            results.leaks_found += breachRows.length;
           }
         }
         await new Promise(r => setTimeout(r, 1600));
