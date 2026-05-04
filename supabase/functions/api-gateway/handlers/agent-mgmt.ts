@@ -17,6 +17,17 @@ export async function handleAgentSnapshot(
     return { error: 'Invalid payload: agent_id (UUID) required', __status: 400 };
   }
 
+  const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: ctx?.userId });
+  const tenantId = ctx?.tenantId;
+
+  if (!isSuperAdmin) {
+    if (!tenantId) return { error: 'Tenant context required', __status: 401 };
+    // Verify agent belongs to tenant BEFORE calling potentially permissive RPC
+    const { data: agent } = await supabase
+      .from('agents').select('id').eq('id', agentId).eq('tenant_id', tenantId).maybeSingle();
+    if (!agent) return { error: 'Agent not found or access denied', __status: 404 };
+  }
+
   const { data: snapshot, error } = await supabase.rpc('get_agent_snapshot', { p_agent_id: agentId });
   if (error) {
     logger.error('[agent-snapshot][RPC_ERROR]', { error, agentId, requestId });

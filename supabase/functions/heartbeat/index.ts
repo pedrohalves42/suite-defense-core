@@ -33,6 +33,7 @@ import type { AgentContext } from './types.ts'
 // Extra agent fields needed for delta-updates and force-update logic
 const HEARTBEAT_EXTRA_FIELDS = [
   'status', 'skip_firewall_remediation', 'agent_version', 'hostname', 'os_type', 'os_version',
+  'state', 'agent_state', 'ed25519_supported', 'signature_mode',
   'force_update_version', 'force_update_reason', 'force_update_at',
   'force_update_override_safe_mode', 'force_update_override_safe_mode_expires_at',
   'force_update_delivered_count', 'force_update_first_delivered_at',
@@ -70,6 +71,8 @@ serveAgent(async (req, ctx) => {
     last_forced_update_applied: (agentData.last_forced_update_applied as string | null) || null,
     last_telemetry_at: (agentData.last_telemetry_at as string | null) || null,
     last_heartbeat: (agentData.last_heartbeat as string | null) || null,
+    state: (agentData.state as string | null) || null,
+    agent_state: (agentData.agent_state as string | null) || null,
   }
 
   // ── 1. HMAC validation ──────────────────────────────────

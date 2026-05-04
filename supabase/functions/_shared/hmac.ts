@@ -88,7 +88,10 @@ function pruneCache<T>(cache: Map<string, { ts: number } & T>, maxEntries: numbe
 }
 
 async function getCryptoKey(keyData: Uint8Array, keyName: string): Promise<CryptoKey> {
-  const cacheKey = `${keyName}:${keyData.length}`;
+  // P3 FIX: Include a digest of the key data to prevent cross-agent cache collisions
+  const keyDigest = await crypto.subtle.digest('SHA-256', keyData);
+  const keyHash = Array.from(new Uint8Array(keyDigest)).map(b => b.toString(16).padStart(2, '0')).join('');
+  const cacheKey = `${keyName}:${keyHash}`;
   const now = Date.now();
   const cached = cryptoKeyCache.get(cacheKey);
   
@@ -189,12 +192,13 @@ export async function verifyHmacSignature(
   }
 
   let compactBody = body;
-  try {
-    if (body.trim().startsWith('{') || body.trim().startsWith('[')) {
-      compactBody = JSON.stringify(JSON.parse(body));
+  const trimmedBody = body.trim();
+  if (trimmedBody.startsWith('{') || trimmedBody.startsWith('[')) {
+    try {
+      compactBody = JSON.stringify(JSON.parse(trimmedBody));
+    } catch {
+      compactBody = body;
     }
-  } catch {
-    compactBody = body;
   }
 
   // ── 3. Build key material ─────────────────────────────────
