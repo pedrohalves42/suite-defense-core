@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * api-gateway — Unified Platform API Gateway (Phase 6 Hexagonal)
  * 
@@ -10,7 +9,8 @@ import { buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
-import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { httpJson } from '../_shared/http.ts';
+import { handleExceptionWithContext, createErrorResponse, ErrorCode } from '../_shared/error-handler.ts';
 import { requireEnv } from '../_shared/env.ts';
 import {
   handleCohortAnalysisV2,
