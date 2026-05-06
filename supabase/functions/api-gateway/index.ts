@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * api-gateway — Unified Platform API Gateway (Phase 6 Hexagonal)
  * 
@@ -10,7 +9,8 @@ import { buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
-import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { httpJson } from '../_shared/http.ts';
+import { handleExceptionWithContext, createErrorResponse, ErrorCode } from '../_shared/error-handler.ts';
 import { requireEnv } from '../_shared/env.ts';
 import {
   handleCohortAnalysisV2,
@@ -220,16 +220,19 @@ servePublic(async (req, ctx) => {
     const validatedCtx = authResult as { userId: string | null; tenantId: string | null; isInternal: boolean };
 
     const parsed = RouterSchema.safeParse(body);
-    if (!parsed.success) return jsonRes({ error: 'Invalid request', details: parsed.error.flatten().fieldErrors }, 400, origin);
+    if (!parsed.success) {
+      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Invalid request', 400, requestId);
+    }
 
     const { action, payload } = parsed.data;
 
     if (!routerAdapter.getAction(action)) {
-      return jsonRes({
-        error: `Unknown action: ${action}`,
-        available_namespaces: ['admin', 'billing', 'security', 'build', 'agent'],
-        hint: 'Use format "namespace:action", e.g. "admin:create-user"',
-      }, 400, origin);
+      return createErrorResponse(
+        ErrorCode.NOT_FOUND,
+        `Unknown action: ${action}`,
+        404,
+        requestId
+      );
     }
 
     // Use Hexagonal Dispatcher
@@ -242,38 +245,34 @@ servePublic(async (req, ctx) => {
       forwardHeaders
     };
 
+    // Override the router's default proxy fetch with our retry-enabled httpJson if needed
+    // But since the dispatcher is internal, we should ensure the adapter/use-case uses the right tool.
+    // For now, we handle the result.
     const result = await actionDispatcher.dispatch(action, payload, dispatchContext);
 
-    // If dispatcher returned a raw Response (e.g. from proxy or direct handler return)
-    if (result instanceof Response) {
-      if (result.status === 504) return result;
-      
-      const responseData = await result.text();
-      const contentType = result.headers.get('Content-Type') || 'application/json';
-      
-      logger.info(`[api-gateway] ${action} done in ${Date.now() - startedAt}ms (status: ${result.status})`);
+    const elapsed = Date.now() - startedAt;
 
-      return new Response(responseData || null, {
-        status: result.status,
-        headers: { ...buildCorsHeaders(origin), 'Content-Type': contentType },
-      });
+    if (result instanceof Response) {
+      logger.info(`[api-gateway] ${action} proxied in ${elapsed}ms (status: ${result.status})`);
+      return result;
     }
 
-    // Handle normal object results from inlined handlers
-    const elapsed = Date.now() - startedAt;
-    logger.info(`[api-gateway] ${action} done in ${elapsed}ms`);
+    logger.info(`[api-gateway] ${action} handled in ${elapsed}ms`);
 
-    // Support __status for custom HTTP status codes from handlers
     const resultObj = result as Record<string, unknown>;
     const status = typeof resultObj?.__status === 'number' ? resultObj.__status : 200;
+    
     if (resultObj?.__status) {
       const { __status, ...rest } = resultObj;
       return jsonRes(rest, status, origin);
     }
+    
     return jsonRes(result, 200, origin);
   } catch (err) {
-    logger.error('[api-gateway] Error:', err);
-    return jsonRes({ error: 'Internal error', message: err instanceof Error ? err.message : 'Unknown', requestId }, 500, origin);
+    return handleExceptionWithContext(err, requestId, 'api-gateway', startedAt, {
+      operation: 'dispatch',
+      tenantId: (body as any)?.payload?.tenant_id
+    });
   }
 }, {
   rateLimit: {

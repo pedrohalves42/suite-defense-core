@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * report-generators.ts — Inlined report generation handlers (Phase 1D)
  * 
@@ -8,6 +7,7 @@ import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { validateCallerTenant } from '../../_shared/validate-caller-tenant.ts';
+import { Database } from '../../_shared/database.types.ts';
 
 // ===================== SHARED CRYPTO =====================
 
@@ -80,7 +80,7 @@ const ComplianceReportSchema = z.object({
 }).refine(d => d.template || d.template_type, { message: 'template or template_type is required' });
 
 export async function handleComplianceReport(
-  supabase: any, requestId: string, payload: Record<string, unknown>, req?: Request
+  supabase: SupabaseClient<Database>, requestId: string, payload: Record<string, unknown>, req?: Request
 ): Promise<unknown> {
   const parsed = ComplianceReportSchema.safeParse(payload);
   if (!parsed.success) {

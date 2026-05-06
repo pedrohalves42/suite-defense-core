@@ -1,10 +1,10 @@
-// @ts-nocheck
 /**
  * Billing Stripe Handlers — Inlined from standalone functions (Phase 2B)
  * Uses dynamic Stripe import to avoid loading SDK on non-billing requests.
  */
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
+import { Database } from '../../_shared/database.types.ts';
 import type { HandlerContext } from './admin.ts';
 
 type SB = any;
@@ -49,7 +49,7 @@ async function getStripe(): Promise<{ stripe: StripeInstance; Stripe: unknown }>
 }
 
 // ── list-invoices ───────────────────────────────────────────────────────
-export async function handleListInvoices(supabase: SB, requestId: string, _payload: Record<string, unknown>, ctx?: HandlerContext) {
+export async function handleListInvoices(supabase: SupabaseClient<Database>, requestId: string, _payload: Record<string, unknown>, ctx?: HandlerContext) {
   const userId = ctx?.userId;
   if (!userId) return { invoices: [] };
 
@@ -217,11 +217,25 @@ export async function handleCheckSubscription(supabase: SB, requestId: string, _
   const trialEnd = stripeSubscription.trial_end ? new Date(stripeSubscription.trial_end * 1000).toISOString() : null;
   const currentPeriodEnd = new Date(stripeSubscription.current_period_end * 1000).toISOString();
 
-  await supabase.from('tenant_subscriptions')
+  const { error: updateError } = await supabase.from('tenant_subscriptions')
     .update({ device_quantity: totalDevices, addon_devices: addonDevicesFromStripe, status, trial_end: trialEnd, current_period_end: currentPeriodEnd })
     .eq('tenant_id', tenantId);
+  
+  if (updateError) {
+    logger.error(`[CHECK-SUBSCRIPTION] Failed to update subscription record: ${updateError.message}`);
+    throw updateError;
+  }
 
-  await supabase.rpc('ensure_tenant_features', { p_tenant_id: tenantId, p_plan_name: planName, p_device_quantity: totalDevices });
+  const { error: rpcError } = await supabase.rpc('ensure_tenant_features', { 
+    p_tenant_id: tenantId, 
+    p_plan_name: planName, 
+    p_device_quantity: totalDevices 
+  });
+
+  if (rpcError) {
+    logger.error(`[CHECK-SUBSCRIPTION] Failed to sync tenant features: ${rpcError.message}`);
+    // Optional: add compensating transaction or alert
+  }
 
   const { data: features } = await supabase
     .from('tenant_features').select('feature_key, enabled, quota_limit, quota_used').eq('tenant_id', tenantId);

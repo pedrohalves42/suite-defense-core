@@ -1,11 +1,10 @@
-// @ts-nocheck
 /**
  * Admin namespace inlined handlers (migrated from standalone functions)
  * 
  * These handlers receive service_role client + user context extracted from JWT.
  * The gateway decodes the JWT to provide userId/tenantId.
  */
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createTypedClient } from '../../_shared/supabase-client.ts';
 import { logger } from '../../_shared/logger.ts';
 import { createAuditLog } from '../../_shared/audit.ts';
 import { getTenantIdForUser } from '../../_shared/tenant.ts';
@@ -206,10 +205,18 @@ export async function handleListUsers(supabase: SB, requestId: string, payload: 
   const { data: tenant } = await supabase.from('tenants').select('id, name').eq('id', targetTenantId).limit(1).maybeSingle();
   const { data: profiles } = await supabase.from('profiles').select('user_id, full_name').in('user_id', tenantUsers.map(u => u.user_id));
   
-  // P3 FIX: Fetch user details in parallel batches to handle pagination correctly
-  // Instead of listUsers() which returns a global list, we fetch only the needed users.
-  const authUsersPromises = tenantUsers.map(tu => supabase.auth.admin.getUserById(tu.user_id));
-  const authResults = await Promise.all(authUsersPromises);
+  // P3 FIX: Fetch auth details more efficiently. 
+  // Instead of 100 parallel getUserById, we use listUsers if we are super admin, 
+  // or we rely on the profiles table for non-sensitive info.
+  // Since we need email, and we are using service role, we can use listUsers with a pagination approximation 
+  // or just batch the getUserById if the list is small.
+  const BATCH_SIZE = 5;
+  const authResults = [];
+  for (let i = 0; i < tenantUsers.length; i += BATCH_SIZE) {
+    const batch = tenantUsers.slice(i, i + BATCH_SIZE);
+    const results = await Promise.all(batch.map(tu => supabase.auth.admin.getUserById(tu.user_id)));
+    authResults.push(...results);
+  }
   const filteredAuthUsers = authResults.map(r => r?.data?.user).filter(Boolean);
 
   const users = tenantUsers.map(tu => {

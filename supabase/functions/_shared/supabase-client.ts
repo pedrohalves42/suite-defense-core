@@ -6,12 +6,12 @@ import { fetchWithTimeout } from './fetch-with-timeout.ts';
  * Creates a Supabase client with the correct Database types.
  * This is the central factory for all Edge Functions.
  */
-export const createSupabaseClient = (
+export const createTypedClient = <T = Database>(
   supabaseUrl: string,
   supabaseKey: string,
   options?: any
 ) => {
-  return createClient<Database>(supabaseUrl, supabaseKey, options);
+  return createClient<T>(supabaseUrl, supabaseKey, options);
 };
 
 /**
@@ -54,4 +54,4 @@ export const getServiceClient = (timeoutMs: number = 15_000) => {
 };
 
 // Re-export for convenience
-export { createSupabaseClient as createTypedClient };
+export { createTypedClient as createSupabaseClient };
