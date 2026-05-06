@@ -2,8 +2,9 @@ import { buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
-import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { httpJson } from '../_shared/http.ts';
 import { servePublic } from '../_shared/serve-public.ts';
+import { handleExceptionWithContext, createErrorResponse, ErrorCode } from '../_shared/error-handler.ts';
 
 const FETCH_TIMEOUT_MS = 45000;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -108,41 +109,44 @@ function forwardHeaders(req: Request, requestId: string): Record<string, string>
 servePublic(async (req, ctx) => {
   const { requestId, body } = ctx;
   const origin = req.headers.get('origin');
+  const startedAt = Date.now();
 
   try {
     const authError = await assertInternalCaller(req, { requireSuperAdmin: true });
     if (authError) return authError;
 
     const parsed = RouterSchema.safeParse(body);
-    if (!parsed.success) return { error: 'Invalid request', details: parsed.error.flatten().fieldErrors, __status: 400 };
+    if (!parsed.success) {
+      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Invalid request', 400, requestId);
+    }
 
     const { action } = parsed.data;
     const targetFn = ACTION_TO_FUNCTION[action];
 
     if (!targetFn) {
-      return { error: `Unknown action: ${action}`, __status: 404 };
+      return createErrorResponse(ErrorCode.NOT_FOUND, `Unknown action: ${action}`, 404, requestId);
     }
 
     const url = `${SUPABASE_URL}/functions/v1/${targetFn}`;
     logger.info(`[ops-gateway] Routing: ${action} → ${targetFn}`, { requestId });
 
-    const response = await fetchWithTimeout(url, {
+    // Use httpJson for robust internal routing with retries
+    const json = await httpJson(url, {
       method: 'POST',
       headers: forwardHeaders(req, requestId),
       body: JSON.stringify(body),
       timeoutMs: FETCH_TIMEOUT_MS,
+      retries: 2, // Standard internal retry
     });
 
-    const responseData = await response.text();
-    let json;
-    try { json = JSON.parse(responseData); } catch { json = { message: responseData }; }
-
     return new Response(JSON.stringify(json), {
-      status: response.status,
+      status: 200,
       headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    logger.error('[ops-gateway] Router error:', err);
-    return { error: 'Internal router error', message: err instanceof Error ? err.message : 'Unknown', requestId, __status: 500 };
+    return handleExceptionWithContext(err, requestId, 'ops-gateway', startedAt, {
+      operation: 'routing',
+      traceId: requestId
+    });
   }
 });
