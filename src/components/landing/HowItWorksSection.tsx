@@ -13,8 +13,8 @@ export function HowItWorksSection() {
   ];
 
   return (
-    <section className="py-32 relative bg-[#020203]">
-      <div className="absolute inset-0 bg-gradient-to-b from-[#020203] via-info/5 to-[#020203]" />
+    <section className="py-32 relative bg-background">
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-info/5 to-background" />
       <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
         <SectionHeader title={howItWorks.title} subtitle={howItWorks.subtitle} />
         <div className="max-w-6xl mx-auto relative">
