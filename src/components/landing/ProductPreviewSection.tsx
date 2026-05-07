@@ -22,6 +22,8 @@ const lgpdItems = [
   "Política de retenção aplicada",
 ];
 
+export function ProductPreviewSection() {
+  return (
     <section className="py-32 relative overflow-hidden bg-[#020203]">
       <div className="absolute inset-0 bg-gradient-to-b from-[#020203] via-cta-positive/[0.02] to-[#020203]" />
       
