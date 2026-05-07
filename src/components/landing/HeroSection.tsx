@@ -15,7 +15,7 @@ export function HeroSection() {
   return (
     <section id="inicio" className="relative min-h-screen flex items-center overflow-hidden py-32" aria-labelledby="hero-heading">
       {/* Refined Background - Ultra Premium Obsidian */}
-      <div className="absolute inset-0 bg-[#020203] overflow-hidden">
+      <div className="absolute inset-0 bg-background overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-cta-positive/20 rounded-full blur-[160px] animate-pulse-subtle" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-info/10 rounded-full blur-[140px]" />
       </div>
