@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { FeatureCard } from "./shared/FeatureCard";
 import { motion } from "framer-motion";
-import { PainPointsDecorations } from "./shared/AnimatedDecorations";
 
 export function PainPointsSection() {
   const { painPoints } = useLandingContent();
