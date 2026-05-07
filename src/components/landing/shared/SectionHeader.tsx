@@ -21,35 +21,35 @@ export function SectionHeader({
   titleClassName 
 }: SectionHeaderProps) {
   return (
-    <div className={cn("text-center mb-12 animate-fade-in", className)}>
+    <div className={cn("text-center mb-16 animate-fade-in-up", className)}>
       {badge && (
         <div className={cn(
-          "inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6",
+          "inline-flex items-center gap-2.5 px-5 py-2 rounded-full mb-8 glass-card border-white/10",
           badge.variant === "destructive" 
-            ? "bg-destructive/10 border border-destructive/20" 
-            : "bg-accent/10 border border-accent/20"
+            ? "border-destructive/30" 
+            : "border-cta-positive/30"
         )}>
           {badge.icon && (
             <badge.icon className={cn(
               "w-4 h-4",
-              badge.variant === "destructive" ? "text-destructive" : "text-accent"
+              badge.variant === "destructive" ? "text-destructive" : "text-cta-positive"
             )} />
           )}
           <span className={cn(
-            "text-sm font-medium",
-            badge.variant === "destructive" ? "text-destructive" : "text-foreground"
+            "text-[10px] font-bold tracking-[0.15em] uppercase",
+            badge.variant === "destructive" ? "text-destructive" : "text-cta-positive"
           )}>
             {badge.text}
           </span>
         </div>
       )}
       
-      <h2 className={cn("text-2xl md:text-3xl font-bold mb-4 text-foreground", titleClassName)}>
+      <h2 className={cn("text-4xl md:text-5xl font-display font-extrabold mb-6 text-white tracking-tight drop-shadow-sm", titleClassName)}>
         {title}
       </h2>
       
       {subtitle && (
-        <p className="text-base text-muted-foreground max-w-3xl mx-auto">
+        <p className="text-lg text-white/50 max-w-2xl mx-auto font-medium leading-relaxed">
           {subtitle}
         </p>
       )}
