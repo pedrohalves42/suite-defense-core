@@ -27,8 +27,8 @@ export function LandingNavbar() {
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
         scrolled 
-          ? "bg-[#020203]/80 backdrop-blur-2xl border-b border-white/5 py-2 shadow-2xl" 
-          : "bg-transparent border-b border-transparent py-6"
+          ? "bg-[#020203]/70 backdrop-blur-[32px] border-b border-white/[0.05] py-3 shadow-[0_10px_40px_rgba(0,0,0,0.4)]" 
+          : "bg-transparent border-b border-transparent py-8"
       )}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
