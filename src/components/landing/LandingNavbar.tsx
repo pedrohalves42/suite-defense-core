@@ -45,13 +45,13 @@ export function LandingNavbar() {
           }}
           aria-label="CyberShield - Voltar ao topo"
         >
-          <div className="relative">
-            <img src={cybershieldLogo} alt="" className="h-9 w-9 object-contain group-hover:rotate-12 transition-transform duration-300" aria-hidden="true" width={36} height={36} />
-            <div className="absolute inset-0 bg-cta-positive/20 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="relative group-hover:scale-110 transition-transform duration-500">
+            <img src={cybershieldLogo} alt="" className="h-10 w-10 object-contain group-hover:rotate-12 transition-transform duration-500" aria-hidden="true" width={40} height={40} />
+            <div className="absolute inset-0 bg-cta-positive/40 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <span className={cn(
-            "font-bold text-xl tracking-tight transition-colors duration-300",
-            scrolled ? "text-foreground" : "text-white"
+            "font-display font-bold text-2xl tracking-tighter transition-colors duration-500",
+            scrolled ? "text-white" : "text-white"
           )}>CyberShield</span>
         </Link>
 
