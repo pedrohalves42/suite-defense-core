@@ -25,20 +25,20 @@ export function PainPointsSection() {
               viewport={{ once: true }}
               className="space-y-6"
             >
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive/10 border border-destructive/20">
-                <ShieldAlert className="w-4 h-4 text-destructive" />
-                <span className="text-sm font-medium text-destructive">{painPoints.badge}</span>
+              <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full glass-card border-destructive/30 shadow-2xl">
+                <ShieldAlert className="w-4 h-4 text-destructive animate-pulse" />
+                <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-destructive">{painPoints.badge}</span>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {painPoints.questions.map((question, index) => (
                   <motion.p 
                     key={index} 
-                    className="text-xl md:text-2xl font-bold text-foreground leading-snug"
-                    initial={{ opacity: 0, x: -20 }}
+                    className="text-2xl md:text-3xl font-display font-extrabold text-white leading-tight tracking-tight drop-shadow-sm"
+                    initial={{ opacity: 0, x: -30 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
-                    transition={{ delay: index * 0.1 }}
+                    transition={{ delay: index * 0.15, duration: 0.8, ease: "easeOut" }}
                   >
                     {question}
                   </motion.p>
