@@ -81,21 +81,21 @@ export function LandingNavbar() {
           </div>
 
           <span className={cn(
-            "hidden lg:inline text-xs font-medium uppercase tracking-wider transition-colors duration-300",
-            scrolled ? "text-muted-foreground" : "text-white/60"
+            "hidden lg:inline text-[10px] font-bold uppercase tracking-[0.2em] transition-colors duration-500",
+            scrolled ? "text-white/40" : "text-white/40"
           )}>
             Suporte 24/7 PT-BR
           </span>
 
-          <Link to="/login" className="focus-ring rounded-md">
+          <Link to="/login" className="focus-ring rounded-full">
             <Button 
               size="sm" 
               variant="ghost"
               className={cn(
-                "text-sm font-medium gap-2 px-4 h-10 rounded-full transition-all duration-300",
+                "text-sm font-semibold gap-2 px-6 h-11 rounded-full transition-all duration-500",
                 scrolled 
-                  ? "text-foreground hover:bg-secondary" 
-                  : "text-white/90 hover:bg-white/10 hover:text-white"
+                  ? "text-white/90 hover:bg-white/10" 
+                  : "text-white/90 hover:bg-white/10"
               )}
             >
               <LogIn className="h-4 w-4" aria-hidden="true" />
@@ -106,7 +106,7 @@ export function LandingNavbar() {
           <Button 
             size="sm" 
             variant="cta"
-            className="hidden sm:flex text-sm font-semibold h-10 px-6 rounded-full shadow-lg shadow-cta-positive/20 interactive-hover"
+            className="hidden sm:flex text-sm font-bold h-11 px-8 rounded-full shadow-2xl shadow-cta-positive/20 interactive-hover border border-white/10"
             onClick={() => document.getElementById('contato')?.scrollIntoView({ behavior: 'smooth' })}
             aria-label="Agendar uma demonstração gratuita"
           >
