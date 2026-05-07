@@ -93,12 +93,10 @@ export function useLandingContent() {
     targetAudience: {
       title: t('landing.targetAudience.title'),
       subtitle: t('landing.targetAudience.subtitle'),
-      segments: [
-        { icon: Building2, title: t('landing.targetAudience.segments.0.title'), description: t('landing.targetAudience.segments.0.description') },
-        { icon: Laptop, title: t('landing.targetAudience.segments.1.title'), description: t('landing.targetAudience.segments.1.description') },
-        { icon: Stethoscope, title: t('landing.targetAudience.segments.2.title'), description: t('landing.targetAudience.segments.2.description') },
-        { icon: Scale, title: t('landing.targetAudience.segments.3.title'), description: t('landing.targetAudience.segments.3.description') },
-      ],
+      segments: (t('landing.targetAudience.segments', { returnObjects: true }) as { title: string; description: string }[] || []).map((segment, i) => ({
+        icon: [Building2, Laptop, Stethoscope, Scale][i] || Building2,
+        ...segment
+      })),
     },
     trustProof: {
       title: t('landing.trustProof.title'),
