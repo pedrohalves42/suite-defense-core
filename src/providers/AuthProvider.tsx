@@ -17,6 +17,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasHydrated, setHasHydrated] = useState(false);
   const isInitialized = useRef(false);
 
   useEffect(() => {
@@ -61,10 +62,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(initialSession);
         setUser(initialSession?.user ?? null);
         setLoading(false);
+        setHasHydrated(true);
         isInitialized.current = true;
       } catch (err) {
         logger.error('[AuthProvider] Unexpected initialization error', err);
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+          setHasHydrated(true);
+        }
       }
     };
 
@@ -77,6 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       setLoading(false);
+      setHasHydrated(true);
       isInitialized.current = true;
       
       // Prevent unnecessary state updates if values are identical
@@ -106,6 +112,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logger.error('[AuthProvider] Sign out error', error);
     }
   };
+
+  if (!hasHydrated && loading) {
+    return null; // Don't even mount the tree until the first session check is done
+  }
 
   return (
     <AuthContext.Provider value={{ user, session, loading, signOut }}>

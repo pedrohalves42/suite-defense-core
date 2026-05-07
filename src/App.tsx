@@ -17,11 +17,8 @@ import { Server } from "lucide-react";
 import ActionCenterDashboard from "./pages/admin/ActionCenterDashboard";
 
 // Lazy route-level loading fallback
-const RouteFallback = () => (
-  <div className="min-h-screen bg-background flex items-center justify-center">
-    <Server className="h-10 w-10 text-primary animate-pulse" />
-  </div>
-);
+import { DashboardSkeleton } from "./components/skeletons/DashboardSkeleton";
+const RouteFallback = () => <DashboardSkeleton />;
 
 // ─── Public pages (Landing is statically imported to avoid dynamic-import failures in preview) ───
 import Landing from "./pages/Landing";
