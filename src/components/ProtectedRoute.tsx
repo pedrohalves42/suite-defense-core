@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { SessionProvider } from '@/components/SessionProvider';
+import { DashboardSkeleton } from './skeletons/DashboardSkeleton';
 
 /**
  * ADR-026: Enhanced ProtectedRoute with tenant validation
@@ -50,11 +51,7 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   // Loading states
   if (loading || verifyingSession) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   // Only redirect if both useAuth and second chance confirm no session
@@ -64,11 +61,7 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   // Still waiting for second chance check
   if (!user && hasValidSession === null) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   // Check if user must change password (ADR-008: Access Governance)
