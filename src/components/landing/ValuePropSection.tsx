@@ -5,8 +5,8 @@ export function ValuePropSection() {
   const { valueProp } = useLandingContent();
 
   return (
-    <section className="py-24 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-cta-positive/[0.03] to-background" />
+    <section className="py-24 relative overflow-hidden bg-background">
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-cta-positive/[0.05] to-background" />
       
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <motion.div
