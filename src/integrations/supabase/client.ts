@@ -9,7 +9,7 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 // Auth state is managed via memory and secure cookies (provider default).
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    persistSession: false, // Do not store session in localStorage
+    persistSession: true, // Restore persistence for better UX; use MFA/Short JWT for security instead.
     autoRefreshToken: true,
     detectSessionInUrl: true,
   }
