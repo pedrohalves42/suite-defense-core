@@ -154,7 +154,10 @@ export function useLandingContent() {
     faq: {
       title: t('landing.faq.title'),
       subtitle: t('landing.faq.subtitle'),
-      items: (t('landing.faq.items', { returnObjects: true }) as { question: string; answer: string }[]) || [],
+      items: (() => {
+        const itemsObj = t('landing.faq.items', { returnObjects: true });
+        return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+      })(),
     },
     ctaFinal: {
       title: t('landing.ctaFinal.title'),
