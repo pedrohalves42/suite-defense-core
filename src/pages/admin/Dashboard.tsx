@@ -189,46 +189,47 @@ export default function Dashboard() {
       {/* ═══ BLOCO 1: Status + KPIs (sempre visível) ═══ */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <Card className={cn(
-          "border-l-4 overflow-hidden backdrop-blur-sm",
-          globalStatus.variant === 'success' && "border-l-success bg-gradient-to-r from-success/8 to-transparent",
-          globalStatus.variant === 'warning' && "border-l-warning bg-gradient-to-r from-warning/8 to-transparent",
-          globalStatus.variant === 'danger' && "border-l-destructive bg-gradient-to-r from-destructive/8 to-transparent"
+          "border border-white/5 glass-card overflow-hidden shadow-premium group transition-all duration-700",
+          globalStatus.variant === 'success' && "border-l-4 border-l-success",
+          globalStatus.variant === 'warning' && "border-l-4 border-l-warning",
+          globalStatus.variant === 'danger' && "border-l-4 border-l-destructive"
         )}>
-          <CardContent className="py-5">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4 min-w-0">
+          <CardContent className="py-8 px-10 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-white/[0.01] via-transparent to-transparent" />
+            <div className="flex items-center justify-between gap-6 relative z-10">
+              <div className="flex items-center gap-6 min-w-0">
                 <div className={cn(
-                  "p-3 rounded-2xl shrink-0 shadow-sm",
+                  "p-5 rounded-[2rem] shrink-0 shadow-glow transition-transform duration-700 group-hover:scale-110",
                   globalStatus.variant === 'success' && "bg-success/10",
                   globalStatus.variant === 'warning' && "bg-warning/10",
                   globalStatus.variant === 'danger' && "bg-destructive/10"
                 )}>
                   <Shield className={cn(
-                    "h-6 w-6 md:h-7 md:w-7",
+                    "h-8 w-8",
                     globalStatus.variant === 'success' && "text-success",
                     globalStatus.variant === 'warning' && "text-warning",
                     globalStatus.variant === 'danger' && "text-destructive"
                   )} />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="text-base md:text-lg font-bold truncate">
+                  <h1 className="text-2xl md:text-3xl font-display font-extrabold text-white tracking-tight truncate">
                     {globalStatus.emoji} {globalStatus.title}
                   </h1>
-                  <p className="text-xs md:text-sm text-muted-foreground truncate">
+                  <p className="text-base text-white/40 font-medium truncate mt-1">
                     {globalStatus.description}
                   </p>
                 </div>
               </div>
               <div className="text-right shrink-0">
                 <div className={cn(
-                  "text-2xl md:text-3xl font-bold tabular-nums",
-                  securityScore >= 80 && "text-success",
+                  "text-4xl md:text-5xl font-display font-black tabular-nums tracking-tighter drop-shadow-sm",
+                  securityScore >= 80 && "text-success shadow-glow",
                   securityScore >= 60 && securityScore < 80 && "text-warning",
                   securityScore < 60 && "text-destructive"
                 )}>
                   {securityScore}%
                 </div>
-                <div className="text-[10px] md:text-[11px] text-muted-foreground">
+                <div className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mt-1">
                   {t('adminPages.dashboard.protectionLevel')}
                 </div>
               </div>
