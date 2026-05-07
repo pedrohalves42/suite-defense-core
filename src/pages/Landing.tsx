@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import { SectionSkeleton } from "@/components/landing/SectionSkeleton";
 import { SEOHead } from "@/components/SEOHead";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
@@ -74,7 +75,7 @@ const Landing = () => {
           {/* 3. Proposta de valor - Eager loaded */}
           <ValuePropSection />
           
-          <Suspense fallback={null}>
+          <Suspense fallback={<SectionSkeleton />}>
             {/* 4. Como funciona */}
             <HowItWorksSection />
             {/* 5. Assessment */}

@@ -72,11 +72,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       logger.debug('[AuthProvider] Auth event', { event, hasSession: !!currentSession });
       
-      if (isMounted) {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
+      if (!isMounted) return;
+
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      setLoading(false);
+      isInitialized.current = true;
+      
+      // Prevent unnecessary state updates if values are identical
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+        // Clear potential loading loops
         setLoading(false);
-        isInitialized.current = true;
       }
     });
 
