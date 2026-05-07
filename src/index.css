@@ -671,50 +671,6 @@
   }
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    letter-spacing: -0.011em;
-  }
-
-  .font-mono {
-    font-family: 'IBM Plex Mono', 'JetBrains Mono', 'Courier New', monospace;
-  }
-
-  /* Premium scrollbar */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  ::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
-    border-radius: 3px;
-  }
-  
-  ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.3);
-  }
-
-  /* Dark mode refinements */
-  .dark .card-enterprise,
-  .dark .card-enterprise-hover,
-  .dark .stats-card-enterprise {
-    border-color: hsl(var(--border));
-  }
-
-  .dark .recharts-cartesian-grid-horizontal line,
-  .dark .recharts-cartesian-grid-vertical line {
-    stroke: hsl(var(--border));
-  }
-
   /* Mobile responsive helpers */
   @media (max-width: 380px) {
     .grid-cols-2 {
