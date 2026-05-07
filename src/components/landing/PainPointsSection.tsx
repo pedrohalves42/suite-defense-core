@@ -9,11 +9,11 @@ export function PainPointsSection() {
   const { painPoints } = useLandingContent();
 
   return (
-    <section className="py-24 relative overflow-hidden">
-      {/* Red gradient — danger, urgency, fear (psicologia: vermelho = alerta) */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-destructive/[0.04] to-background" />
+    <section className="py-32 relative overflow-hidden bg-[#020203]">
+      {/* Refined Dark Gradient */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#020203] via-destructive/5 to-[#020203]" />
       {/* Subtle red side glow */}
-      <div className="absolute top-1/2 -left-32 w-[300px] h-[300px] bg-destructive/5 rounded-full blur-[100px]" />
+      <div className="absolute top-1/2 -left-32 w-[500px] h-[500px] bg-destructive/10 rounded-full blur-[140px] opacity-30" />
       
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
