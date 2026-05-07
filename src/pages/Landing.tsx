@@ -11,8 +11,7 @@ import { ValuePropSection } from "@/components/landing/ValuePropSection";
 const WhatsAppButton = lazy(() => import("@/components/WhatsAppButton").then(m => ({ default: m.WhatsAppButton })));
 
 // Below-the-fold sections — lazy loaded to reduce initial bundle
-const PainPointsSection = lazy(() => import("@/components/landing/PainPointsSection").then(m => ({ default: m.PainPointsSection })));
-const ValuePropSection = lazy(() => import("@/components/landing/ValuePropSection").then(m => ({ default: m.ValuePropSection })));
+// PainPointsSection and ValuePropSection are now eager-loaded for better LCP
 const HowItWorksSection = lazy(() => import("@/components/landing/HowItWorksSection").then(m => ({ default: m.HowItWorksSection })));
 const AssessmentSection = lazy(() => import("@/components/landing/AssessmentSection").then(m => ({ default: m.AssessmentSection })));
 const BenefitsSection = lazy(() => import("@/components/landing/BenefitsSection").then(m => ({ default: m.BenefitsSection })));
