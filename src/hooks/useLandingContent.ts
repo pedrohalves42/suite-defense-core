@@ -85,14 +85,10 @@ export function useLandingContent() {
     features: {
       title: t('landing.features.title'),
       subtitle: t('landing.features.subtitle'),
-      items: [
-        { icon: Server, title: t('landing.features.items.0.title'), description: t('landing.features.items.0.description') },
-        { icon: Shield, title: t('landing.features.items.1.title'), description: t('landing.features.items.1.description') },
-        { icon: Zap, title: t('landing.features.items.2.title'), description: t('landing.features.items.2.description') },
-        { icon: FileCheck, title: t('landing.features.items.3.title'), description: t('landing.features.items.3.description') },
-        { icon: Users, title: t('landing.features.items.4.title'), description: t('landing.features.items.4.description') },
-        { icon: Clock, title: t('landing.features.items.5.title'), description: t('landing.features.items.5.description') },
-      ],
+      items: (t('landing.features.items', { returnObjects: true }) as { title: string; description: string }[] || []).map((item, i) => ({
+        icon: [Server, Shield, Zap, FileCheck, Users, Clock][i] || Shield,
+        ...item
+      })),
     },
     targetAudience: {
       title: t('landing.targetAudience.title'),
