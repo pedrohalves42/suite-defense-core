@@ -23,7 +23,6 @@
   }
 }
 
-
 /* ============================================================
    CYBERSHIELD — Premium Design System
    
@@ -35,7 +34,8 @@
 
 @layer base {
   html {
-    font-size: 14px; /* Scale down from 16px default — removes the "zoomed in" feel */
+    font-size: 14px;
+    scroll-behavior: smooth;
   }
 
   :root {
