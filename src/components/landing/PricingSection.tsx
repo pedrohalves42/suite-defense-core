@@ -10,8 +10,8 @@ export function PricingSection() {
   const { t } = useTranslation();
 
   return (
-    <section id="planos" className="py-32 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-cta-positive/[0.01] to-background" />
+    <section id="planos" className="py-32 relative overflow-hidden bg-background">
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-cta-positive/[0.04] to-background" />
 
       <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
         <SectionHeader 
