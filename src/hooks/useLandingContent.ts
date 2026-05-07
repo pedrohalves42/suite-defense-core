@@ -77,12 +77,10 @@ export function useLandingContent() {
     benefits: {
       title: t('landing.benefits.title'),
       subtitle: t('landing.benefits.subtitle'),
-      cards: [
-        { icon: Zap, title: t('landing.benefits.cards.0.title'), description: t('landing.benefits.cards.0.description') },
-        { icon: Activity, title: t('landing.benefits.cards.1.title'), description: t('landing.benefits.cards.1.description') },
-        { icon: BarChart, title: t('landing.benefits.cards.2.title'), description: t('landing.benefits.cards.2.description') },
-        { icon: ShieldCheck, title: t('landing.benefits.cards.3.title'), description: t('landing.benefits.cards.3.description') },
-      ],
+      cards: (t('landing.benefits.cards', { returnObjects: true }) as { title: string; description: string }[] || []).map((card, i) => ({
+        icon: [Zap, Activity, BarChart, ShieldCheck][i] || ShieldCheck,
+        ...card
+      })),
     },
     features: {
       title: t('landing.features.title'),
