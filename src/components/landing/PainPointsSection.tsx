@@ -45,20 +45,19 @@ export function PainPointsSection() {
                 ))}
               </div>
 
-              <h2 className="text-lg font-bold text-destructive pt-2">
+              <h2 className="text-xl font-bold text-destructive/90 pt-4 font-display uppercase tracking-widest italic">
                 {painPoints.conclusion}
               </h2>
 
-              {/* CTA verde aqui = "escape do perigo" — contraste vermelho→verde */}
               <Button 
                 asChild 
                 size="lg" 
                 variant="cta"
-                className="mt-4 shadow-lg shadow-cta-positive/20"
+                className="mt-8 h-14 px-10 shadow-[0_15px_30px_rgba(16,185,129,0.2)] hover:shadow-[0_15px_40px_rgba(16,185,129,0.4)] transition-all duration-500 rounded-full border border-white/10 interactive-hover"
               >
                 <Link to="/signup">
                   {painPoints.cta}
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
             </motion.div>
