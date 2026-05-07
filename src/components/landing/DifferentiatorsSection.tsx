@@ -1,7 +1,6 @@
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { DifferentiatorsDecorations } from "./shared/AnimatedDecorations";
 import { Shield, Link2, Brain, Zap, Fingerprint, Layers } from "lucide-react";
 
 const ICONS = [Shield, Link2, Brain, Zap, Fingerprint, Layers];
