@@ -56,15 +56,15 @@ export default function Login() {
           </Link>
           
           <div className="space-y-3">
-            <CardTitle className="text-4xl font-extrabold tracking-tight text-white leading-tight">
+            <CardTitle className="text-4xl md:text-5xl font-display font-extrabold tracking-tight text-white leading-tight">
               {t('loginPage.title')}
             </CardTitle>
-            <div className="flex flex-col items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/60 text-[10px] font-bold uppercase tracking-[0.15em]">
-                <Lock className="h-3 w-3 text-cta-positive" />
+            <div className="flex flex-col items-center gap-3">
+              <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-cta-positive/10 border border-cta-positive/20 text-cta-positive text-[10px] font-black uppercase tracking-[0.2em] shadow-glow">
+                <Lock className="h-3 w-3" />
                 {t('loginPage.enterprise')}
-              </span>
-              <CardDescription className="text-base text-white/50 font-medium max-w-[280px] leading-relaxed mx-auto">
+              </div>
+              <CardDescription className="text-lg text-white/40 font-medium max-w-[280px] leading-relaxed mx-auto">
                 {t('loginPage.subtitle')}
               </CardDescription>
             </div>
