@@ -5,18 +5,19 @@
 /* Base styles merged below */
 
 /* ============================================================
-   CYBERSHIELD — Premium Design System
+   CYBERSHIELD — Ultra Premium UI System
    
-   Visual identity: Clean, minimal, enterprise-grade.
-   Primary: Deep Graphite (#1A1D21)
-   Accent: Warm Gold (#B8963E)
-   Font: Inter
+   Visual identity: Obsidian, Glass, and Emerald.
+   Primary: Obsidian Black (#020203)
+   Accent: Strategic Emerald (#10B981)
+   Font: Inter Display + CalSans
    ============================================================ */
 
 @layer base {
   :root {
-    --transition-all: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
-    --transition-slow: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    --transition-all: all 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+    --transition-slow: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-premium: cubic-bezier(0.23, 1, 0.32, 1);
   }
 
   * {
@@ -24,17 +25,18 @@
   }
 
   html {
-    font-size: 14px;
+    font-size: 16px;
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/10 selection:text-primary;
+    @apply bg-background text-foreground antialiased selection:bg-cta-positive/20 selection:text-cta-positive;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    letter-spacing: -0.011em;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+    letter-spacing: -0.01em;
+    line-height: 1.6;
   }
 
   /* Improved focus visibility */
@@ -102,67 +104,69 @@
     
     /* Elevation — stronger shadows for light mode */
     --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.04);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.04);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+    --shadow-sm: 0 2px 4px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 8px 0 rgb(0 0 0 / 0.05);
+    --shadow-lg: 0 8px 16px 0 rgb(0 0 0 / 0.05);
+    --shadow-premium: 0 20px 40px -10px rgba(0,0,0,0.1);
   }
   
   .dark {
-    /* === PREMIUM DARK MODE — Sophisticated deep palette === */
-    --background: 222 18% 10%;          /* #141820 — deep navy ink */
-    --foreground: 215 20% 93%;          /* #ECF0F6 */
+    /* === PREMIUM DARK MODE === */
+    --background: 224 25% 4%;           /* Deepest Obsidian */
+    --foreground: 210 20% 98%;          /* Crisp Off-White */
     
-    --card: 220 16% 14%;                /* #1E2430 — elevated surface */
-    --card-foreground: 215 20% 93%;
+    --card: 224 25% 7%;                 /* Elevated surface */
+    --card-foreground: 210 20% 98%;
     
-    --popover: 220 14% 17%;             /* #272E3B */
-    --popover-foreground: 215 20% 93%;
+    --popover: 224 25% 8%;
+    --popover-foreground: 210 20% 98%;
     
-    --primary: 215 20% 93%;
-    --primary-foreground: 222 18% 10%;
-    --primary-hover: 215 18% 82%;
-    --primary-active: 215 20% 96%;
+    --primary: 210 20% 98%;
+    --primary-foreground: 224 25% 4%;
+    --primary-hover: 210 20% 90%;
+    --primary-active: 210 20% 95%;
     
-    --secondary: 220 14% 18%;           /* #262D39 */
-    --secondary-foreground: 215 20% 93%;
+    --secondary: 224 15% 12%;           /* Subtle secondary */
+    --secondary-foreground: 210 20% 98%;
     
-    --muted: 220 14% 16%;
-    --muted-foreground: 215 12% 58%;    /* #8694A8 — softer, bluer grey */
+    --muted: 224 15% 10%;
+    --muted-foreground: 215 12% 65%;    /* High legibility muted */
     
-    --accent: 40 52% 50%;
-    --accent-foreground: 215 20% 93%;
-    --accent-soft: 40 38% 32%;
+    --accent: 160 84% 42%;              /* Emerald primary accent */
+    --accent-foreground: 210 20% 98%;
+    --accent-soft: 160 84% 15%;
     
-    --destructive: 0 72% 54%;           /* Slightly brighter for contrast */
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 20% 98%;
     
-    --warning: 38 92% 52%;
-    --warning-foreground: 222 18% 10%;
+    --warning: 45 93% 47%;
+    --warning-foreground: 224 25% 4%;
     
-    --success: 160 60% 48%;             /* Slightly brighter emerald */
-    --success-foreground: 0 0% 98%;
+    --success: 160 84% 42%;
+    --success-foreground: 210 20% 98%;
     
-    /* Strategic Green — Dark mode (slightly luminous) */
+    /* Strategic semantic greens */
     --cta-positive: 160 84% 42%;
-    --cta-positive-foreground: 0 0% 98%;
+    --cta-positive-foreground: 210 20% 98%;
     --shield-active: 152 69% 52%;
     --metric-positive: 142 71% 52%;
     
-    --info: 217 60% 58%;                /* Brighter blue */
-    --info-foreground: 0 0% 98%;
+    --info: 217 91% 60%;
+    --info-foreground: 210 20% 98%;
     
-    --border: 220 14% 22%;              /* #323A48 — subtle but visible */
-    --input: 220 14% 18%;
-    --ring: 215 20% 93%;
+    --border: 224 15% 14%;              /* Sharper borders */
+    --input: 224 15% 12%;
+    --ring: 160 84% 42%;
     
-    /* Glass effects */
-    --glass-bg: 220 16% 14% / 0.7;
-    --glass-border: 220 14% 30% / 0.4;
+    /* Premium Glass */
+    --glass-bg: 224 25% 6% / 0.75;
+    --glass-border: 255 100% 100% / 0.08;
     
-    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.2);
-    --shadow-sm: 0 2px 4px 0 rgb(0 0 0 / 0.15), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-    --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.2), 0 2px 6px -2px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 12px 24px -4px rgb(0 0 0 / 0.25), 0 4px 8px -4px rgb(0 0 0 / 0.1);
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow-sm: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 12px 20px -3px rgb(0 0 0 / 0.5), 0 4px 10px -4px rgb(0 0 0 / 0.5);
+    --shadow-lg: 0 25px 40px -5px rgb(0 0 0 / 0.6), 0 10px 20px -10px rgb(0 0 0 / 0.6);
+    --shadow-premium: 0 0 0 1px rgba(255,255,255,0.05), 0 20px 40px -10px rgba(0,0,0,0.5);
   }
 }
 
@@ -173,30 +177,43 @@
 @layer utilities {
   /* === Transitions & Interactions === */
   .interactive-hover {
-    @apply transition-all duration-300 ease-premium hover:-translate-y-1 hover:shadow-float active:translate-y-0 active:scale-[0.98];
+    transition: transform 0.4s var(--ease-premium), box-shadow 0.4s var(--ease-premium), filter 0.4s var(--ease-premium), border-color 0.4s var(--ease-premium);
+  }
+  .interactive-hover:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: var(--shadow-lg);
+  }
+  .interactive-hover:active {
+    transform: translateY(-1px) scale(0.99);
   }
 
   .glass-effect {
-    @apply backdrop-blur-md bg-white/5 border border-white/10 shadow-float;
+    @apply backdrop-blur-xl bg-white/5 border border-white/10;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   }
 
   .glass-card {
-    @apply backdrop-blur-xl bg-card/60 border border-border/50 shadow-float;
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-premium);
   }
 
   .premium-gradient {
-    background: linear-gradient(135deg, hsl(var(--primary) / 0.02) 0%, transparent 100%);
+    background: radial-gradient(circle at top left, hsl(var(--accent) / 0.08), transparent 70%);
   }
 
   .bento-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(12, 1fr);
     gap: 1.5rem;
   }
 
   .stagger-visible > * {
     opacity: 0;
-    animation: fade-in-up 0.5s ease forwards;
+    transform: translateY(20px);
+    animation: fade-in-up 0.8s var(--ease-premium) forwards;
   }
 
   .stagger-visible > *:nth-child(1) { animation-delay: 0.1s; }
@@ -215,7 +232,8 @@
 
   /* === Focus States === */
   .focus-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-shadow;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    transition: ring 0.3s var(--ease-premium);
   }
 
   /* === Safe Area for PWA === */

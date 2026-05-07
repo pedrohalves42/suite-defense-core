@@ -9,11 +9,11 @@ export function PainPointsSection() {
   const { painPoints } = useLandingContent();
 
   return (
-    <section className="py-24 relative overflow-hidden">
-      {/* Red gradient — danger, urgency, fear (psicologia: vermelho = alerta) */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-destructive/[0.04] to-background" />
+    <section className="py-32 relative overflow-hidden bg-[#020203]">
+      {/* Refined Dark Gradient */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#020203] via-destructive/5 to-[#020203]" />
       {/* Subtle red side glow */}
-      <div className="absolute top-1/2 -left-32 w-[300px] h-[300px] bg-destructive/5 rounded-full blur-[100px]" />
+      <div className="absolute top-1/2 -left-32 w-[500px] h-[500px] bg-destructive/10 rounded-full blur-[140px] opacity-30" />
       
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -25,40 +25,39 @@ export function PainPointsSection() {
               viewport={{ once: true }}
               className="space-y-6"
             >
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive/10 border border-destructive/20">
-                <ShieldAlert className="w-4 h-4 text-destructive" />
-                <span className="text-sm font-medium text-destructive">{painPoints.badge}</span>
+              <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full glass-card border-destructive/30 shadow-2xl">
+                <ShieldAlert className="w-4 h-4 text-destructive animate-pulse" />
+                <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-destructive">{painPoints.badge}</span>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {painPoints.questions.map((question, index) => (
                   <motion.p 
                     key={index} 
-                    className="text-xl md:text-2xl font-bold text-foreground leading-snug"
-                    initial={{ opacity: 0, x: -20 }}
+                    className="text-2xl md:text-3xl font-display font-extrabold text-white leading-tight tracking-tight drop-shadow-sm"
+                    initial={{ opacity: 0, x: -30 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
-                    transition={{ delay: index * 0.1 }}
+                    transition={{ delay: index * 0.15, duration: 0.8, ease: "easeOut" }}
                   >
                     {question}
                   </motion.p>
                 ))}
               </div>
 
-              <h2 className="text-lg font-bold text-destructive pt-2">
+              <h2 className="text-xl font-bold text-destructive/90 pt-4 font-display uppercase tracking-widest italic">
                 {painPoints.conclusion}
               </h2>
 
-              {/* CTA verde aqui = "escape do perigo" — contraste vermelho→verde */}
               <Button 
                 asChild 
                 size="lg" 
                 variant="cta"
-                className="mt-4 shadow-lg shadow-cta-positive/20"
+                className="mt-8 h-14 px-10 shadow-[0_15px_30px_rgba(16,185,129,0.2)] hover:shadow-[0_15px_40px_rgba(16,185,129,0.4)] transition-all duration-500 rounded-full border border-white/10 interactive-hover"
               >
                 <Link to="/signup">
                   {painPoints.cta}
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
             </motion.div>
