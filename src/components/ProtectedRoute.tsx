@@ -85,11 +85,11 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   // PATCH #4: Wait for both loading AND isFetched before making redirect decision
   // This prevents flash of /no-tenant during initial fetch
   if (!tenantLoading && isFetched && tenants !== undefined) {
-    const hasTenant = tenants && tenants.length > 0;
+    const hasTenant = Array.isArray(tenants) && tenants.length > 0;
     
     // User has no tenant and is not on allowed pages
     if (!hasTenant && !isOnNoTenantPage && !isOnForcePasswordPage) {
-      logger.warn('ProtectedRoute: User has no associated tenant, redirecting to /no-tenant');
+      logger.warn('ProtectedRoute: User has no associated tenant, redirecting to /no-tenant', { tenantsCount: tenants?.length });
       return <Navigate to="/no-tenant" replace />;
     }
     

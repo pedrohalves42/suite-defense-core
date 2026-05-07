@@ -18,7 +18,7 @@ export function useSessionGuard() {
       id: "session-expired",
     });
     // Small delay so the toast is visible
-    setTimeout(() => navigate("/auth", { replace: true }), 1500);
+    setTimeout(() => navigate("/login", { replace: true }), 1500);
   }, [navigate]);
 
   useEffect(() => {

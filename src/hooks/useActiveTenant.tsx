@@ -176,7 +176,12 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
         isSyncingRef.current = true;
         const synced = await syncActiveTenantToBackend(activeTenant.id);
         if (synced) {
-          await supabase.auth.refreshSession();
+          const { error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) {
+            logger.error('[useActiveTenant] Sync refresh error', refreshError);
+          } else {
+            logger.info('[useActiveTenant] Session refreshed after background sync');
+          }
         }
       } catch (err) {
         logger.warn('[useActiveTenant] JWT sync hint failed');
