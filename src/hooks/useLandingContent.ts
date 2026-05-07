@@ -117,10 +117,14 @@ export function useLandingContent() {
     trustProof: {
       title: t('landing.trustProof.title'),
       text: t('landing.trustProof.text'),
-      blocks: (t('landing.trustProof.blocks', { returnObjects: true }) as { title: string; description: string }[] || []).map((block, i) => ({
-        icon: [Lock, Eye, FileText, CheckCircle][i] || Lock,
-        ...block
-      })),
+      blocks: (() => {
+        const blocksObj = t('landing.trustProof.blocks', { returnObjects: true });
+        const blocksArray = Array.isArray(blocksObj) ? blocksObj : Object.values(blocksObj || {});
+        return blocksArray.map((block: any, i: number) => ({
+          icon: [Lock, Eye, FileText, CheckCircle][i] || Lock,
+          ...block
+        }));
+      })(),
     },
     comparison: {
       title: t('landing.comparison.title'),
