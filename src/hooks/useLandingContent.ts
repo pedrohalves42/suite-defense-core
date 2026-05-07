@@ -63,12 +63,10 @@ export function useLandingContent() {
     howItWorks: {
       title: t('landing.howItWorks.title'),
       subtitle: t('landing.howItWorks.subtitle'),
-      steps: [
-        { number: 1, title: t('landing.howItWorks.steps.0.title'), description: t('landing.howItWorks.steps.0.description') },
-        { number: 2, title: t('landing.howItWorks.steps.1.title'), description: t('landing.howItWorks.steps.1.description') },
-        { number: 3, title: t('landing.howItWorks.steps.2.title'), description: t('landing.howItWorks.steps.2.description') },
-        { number: 4, title: t('landing.howItWorks.steps.3.title'), description: t('landing.howItWorks.steps.3.description') },
-      ],
+      steps: (t('landing.howItWorks.steps', { returnObjects: true }) as { title: string; description: string }[] || []).map((step, i) => ({
+        number: i + 1,
+        ...step
+      })),
     },
     assessment: {
       title: t('landing.assessment.title'),
