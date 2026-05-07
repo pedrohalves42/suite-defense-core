@@ -8,7 +8,6 @@ export function TargetAudienceSection() {
   return (
     <section className="py-24 relative">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-info/[0.02] to-background" />
-      <TargetAudienceDecorations />
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader title={targetAudience.title} subtitle={targetAudience.subtitle} />
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
