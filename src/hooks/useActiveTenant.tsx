@@ -102,13 +102,21 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) throw error;
       
+      const rolePriority: Record<string, number> = { 'admin': 100, 'technician': 50, 'viewer': 10 };
       const uniqueTenants = new Map<string, UserTenantRole>();
-      (data || []).forEach((role: any) => {
-        if (role.tenant && !uniqueTenants.has(role.tenant_id)) {
-          uniqueTenants.set(role.tenant_id, {
-            tenant_id: role.tenant_id,
-            role: role.role,
-            tenant: role.tenant as Tenant
+      
+      (data || []).forEach((item: any) => {
+        if (!item.tenant) return;
+        
+        const existing = uniqueTenants.get(item.tenant_id);
+        const currentPriority = rolePriority[item.role] || 0;
+        const existingPriority = existing ? (rolePriority[existing.role] || 0) : -1;
+        
+        if (currentPriority > existingPriority) {
+          uniqueTenants.set(item.tenant_id, {
+            tenant_id: item.tenant_id,
+            role: item.role,
+            tenant: item.tenant as Tenant
           });
         }
       });
