@@ -179,7 +179,8 @@ export function useLandingContent() {
       subtitle: t('landing.differentiators.subtitle'),
       items: (() => {
         const itemsObj = t('landing.differentiators.items', { returnObjects: true });
-        return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+        if (!itemsObj || typeof itemsObj !== 'object') return [];
+        return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj);
       })(),
     },
   }), [t]);

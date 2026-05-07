@@ -9,7 +9,7 @@ export function DifferentiatorsSection() {
   const { differentiators } = useLandingContent();
   const { t } = useTranslation();
 
-  if (!differentiators) return null;
+  if (!differentiators || !Array.isArray(differentiators.items)) return null;
 
   return (
     <section className="py-24 relative overflow-hidden bg-background">
