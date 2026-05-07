@@ -1,7 +1,6 @@
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 import { motion } from "framer-motion";
-import { TrustProofDecorations } from "./shared/AnimatedDecorations";
 
 export function TrustProofSection() {
   const { trustProof } = useLandingContent();
@@ -11,7 +10,6 @@ export function TrustProofSection() {
       {/* Dark premium background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[hsl(220,18%,10%)] via-[hsl(200,15%,12%)] to-[hsl(220,18%,10%)]" />
       <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-cta-positive/5 rounded-full blur-[150px]" />
-      <TrustProofDecorations />
       
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div

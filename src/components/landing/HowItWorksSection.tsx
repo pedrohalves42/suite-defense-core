@@ -1,7 +1,6 @@
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 import { motion } from "framer-motion";
-import { HowItWorksDecorations } from "./shared/AnimatedDecorations";
 
 export function HowItWorksSection() {
   const { howItWorks } = useLandingContent();
@@ -16,7 +15,6 @@ export function HowItWorksSection() {
   return (
     <section className="py-24 relative">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-info/[0.02] to-background" />
-      <HowItWorksDecorations />
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader title={howItWorks.title} subtitle={howItWorks.subtitle} />
         <div className="max-w-6xl mx-auto relative">

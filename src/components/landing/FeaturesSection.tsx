@@ -1,7 +1,6 @@
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 import { motion } from "framer-motion";
-import { FeaturesDecorations } from "./shared/AnimatedDecorations";
 
 export function FeaturesSection() {
   const { features } = useLandingContent();
@@ -9,7 +8,6 @@ export function FeaturesSection() {
   return (
     <section className="py-24 relative">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-muted/20 to-background" />
-      <FeaturesDecorations />
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader title={features.title} subtitle={features.subtitle} />
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto stagger-visible">

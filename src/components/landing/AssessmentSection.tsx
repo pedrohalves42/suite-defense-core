@@ -2,7 +2,6 @@ import { CheckCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { motion } from "framer-motion";
-import { AssessmentDecorations } from "./shared/AnimatedDecorations";
 
 export function AssessmentSection() {
   const { assessment } = useLandingContent();
@@ -10,7 +9,6 @@ export function AssessmentSection() {
   return (
     <section className="py-24 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-info/[0.03] to-background" />
-      <AssessmentDecorations />
       
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-16 items-center">

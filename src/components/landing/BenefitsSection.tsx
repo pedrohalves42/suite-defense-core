@@ -1,7 +1,6 @@
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 import { motion } from "framer-motion";
-import { BenefitsDecorations } from "./shared/AnimatedDecorations";
 
 export function BenefitsSection() {
   const { benefits } = useLandingContent();
@@ -10,7 +9,6 @@ export function BenefitsSection() {
     <section id="recursos" className="py-24 relative">
       {/* Green tinted background — "you're now in the safe zone" */}
       <div className="absolute inset-0 bg-gradient-to-b from-cta-positive/[0.03] via-background to-background" />
-      <BenefitsDecorations />
       
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader 
