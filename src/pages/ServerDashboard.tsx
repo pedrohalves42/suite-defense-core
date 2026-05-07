@@ -22,6 +22,7 @@ import { WebVitalsCard } from "@/components/dashboard/WebVitalsCard";
 import { NotificationBell } from "@/components/dashboard/NotificationBell";
 
 const ServerDashboard = () => {
+  const { t } = useTranslation();
   useSessionGuard();
   const { showOnboarding, completeOnboarding, dismissFor7Days } = useOnboarding();
   const { isAdmin } = useIsAdmin();
