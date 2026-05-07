@@ -33,8 +33,6 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         setVerifyingSession(true);
         
         try {
-          // Add a small delay for Supabase to recover if it's a momentary sync issue
-          await new Promise(resolve => setTimeout(resolve, 500));
           const { data: { session } } = await supabase.auth.getSession();
           setHasValidSession(!!session?.user);
           logger.debug('ProtectedRoute: Second chance result', { hasSession: !!session?.user });
