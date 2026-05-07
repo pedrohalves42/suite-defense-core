@@ -7,8 +7,8 @@ export function ComparisonSection() {
   const { comparison } = useLandingContent();
 
   return (
-    <section className="py-32 relative overflow-hidden bg-[bg-background]">
-      <div className="absolute inset-0 bg-gradient-to-b from-[bg-background] via-white/[0.01] to-[bg-background]" />
+    <section className="py-32 relative overflow-hidden bg-background">
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-white/[0.01] to-background" />
       
       <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
         <motion.div

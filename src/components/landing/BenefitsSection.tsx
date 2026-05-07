@@ -6,9 +6,9 @@ export function BenefitsSection() {
   const { benefits } = useLandingContent();
 
   return (
-    <section id="recursos" className="py-32 relative bg-[bg-background]">
+    <section id="recursos" className="py-32 relative bg-background">
       {/* Refined gradient layer */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[bg-background] via-cta-positive/[0.03] to-[bg-background]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-cta-positive/[0.03] to-background" />
       
       <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
         <SectionHeader 
