@@ -75,7 +75,10 @@ export function useLandingContent() {
     assessment: {
       title: t('landing.assessment.title'),
       text: t('landing.assessment.text'),
-      items: (t('landing.assessment.items', { returnObjects: true }) as string[]) || [],
+      items: (() => {
+        const itemsObj = t('landing.assessment.items', { returnObjects: true });
+        return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+      })(),
       cta: t('landing.assessment.cta'),
     },
     benefits: {
