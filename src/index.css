@@ -342,7 +342,7 @@
   
   .sidebar-futuristic {
     background: #050507;
-    border-right: 1px solid white/[0.03];
+    border-right: 1px solid rgba(255, 255, 255, 0.03);
     box-shadow: 20px 0 80px -20px rgba(0,0,0,0.5);
   }
 
