@@ -189,46 +189,47 @@ export default function Dashboard() {
       {/* ═══ BLOCO 1: Status + KPIs (sempre visível) ═══ */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <Card className={cn(
-          "border-l-4 overflow-hidden backdrop-blur-sm",
-          globalStatus.variant === 'success' && "border-l-success bg-gradient-to-r from-success/8 to-transparent",
-          globalStatus.variant === 'warning' && "border-l-warning bg-gradient-to-r from-warning/8 to-transparent",
-          globalStatus.variant === 'danger' && "border-l-destructive bg-gradient-to-r from-destructive/8 to-transparent"
+          "border border-white/5 glass-card overflow-hidden shadow-premium group transition-all duration-700",
+          globalStatus.variant === 'success' && "border-l-4 border-l-success",
+          globalStatus.variant === 'warning' && "border-l-4 border-l-warning",
+          globalStatus.variant === 'danger' && "border-l-4 border-l-destructive"
         )}>
-          <CardContent className="py-5">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4 min-w-0">
+          <CardContent className="py-8 px-10 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-white/[0.01] via-transparent to-transparent" />
+            <div className="flex items-center justify-between gap-6 relative z-10">
+              <div className="flex items-center gap-6 min-w-0">
                 <div className={cn(
-                  "p-3 rounded-2xl shrink-0 shadow-sm",
+                  "p-5 rounded-[2rem] shrink-0 shadow-glow transition-transform duration-700 group-hover:scale-110",
                   globalStatus.variant === 'success' && "bg-success/10",
                   globalStatus.variant === 'warning' && "bg-warning/10",
                   globalStatus.variant === 'danger' && "bg-destructive/10"
                 )}>
                   <Shield className={cn(
-                    "h-6 w-6 md:h-7 md:w-7",
+                    "h-8 w-8",
                     globalStatus.variant === 'success' && "text-success",
                     globalStatus.variant === 'warning' && "text-warning",
                     globalStatus.variant === 'danger' && "text-destructive"
                   )} />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="text-base md:text-lg font-bold truncate">
+                  <h1 className="text-2xl md:text-3xl font-display font-extrabold text-white tracking-tight truncate">
                     {globalStatus.emoji} {globalStatus.title}
                   </h1>
-                  <p className="text-xs md:text-sm text-muted-foreground truncate">
+                  <p className="text-base text-white/40 font-medium truncate mt-1">
                     {globalStatus.description}
                   </p>
                 </div>
               </div>
               <div className="text-right shrink-0">
                 <div className={cn(
-                  "text-2xl md:text-3xl font-bold tabular-nums",
-                  securityScore >= 80 && "text-success",
+                  "text-4xl md:text-5xl font-display font-black tabular-nums tracking-tighter drop-shadow-sm",
+                  securityScore >= 80 && "text-success shadow-glow",
                   securityScore >= 60 && securityScore < 80 && "text-warning",
                   securityScore < 60 && "text-destructive"
                 )}>
                   {securityScore}%
                 </div>
-                <div className="text-[10px] md:text-[11px] text-muted-foreground">
+                <div className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mt-1">
                   {t('adminPages.dashboard.protectionLevel')}
                 </div>
               </div>
@@ -238,37 +239,38 @@ export default function Dashboard() {
       </motion.div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card, i) => {
           const Icon = card.icon;
           return (
             <motion.div key={card.label} custom={i} initial="hidden" animate="visible" variants={fadeUp}>
               <Link to={card.to}>
                 <Card className={cn(
-                  "card-enterprise-hover cursor-pointer h-full transition-all duration-200 hover:scale-[1.02] backdrop-blur-sm",
-                  card.ring && "ring-1 ring-destructive/20"
+                  "glass-card border-white/5 h-full transition-all duration-500 hover:border-cta-positive/30 hover:scale-[1.02] shadow-premium relative overflow-hidden group",
+                  card.ring && "ring-1 ring-destructive/30"
                 )}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="p-1.5 rounded-md bg-muted/60">
-                        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <CardContent className="p-6 relative z-10">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="p-2 rounded-xl bg-white/[0.03] border border-white/5">
+                        <Icon className="h-4 w-4 text-white/40 group-hover:text-cta-positive transition-colors" />
                       </div>
-                      <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                      <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">
                         {card.label}
                       </span>
                     </div>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className={cn("text-2xl font-bold tabular-nums", card.valueColor)}>
+                    <div className="flex items-baseline gap-2">
+                      <span className={cn("text-3xl font-black tabular-nums tracking-tighter text-white", card.valueColor)}>
                         {card.value}
                       </span>
                       {card.suffix && (
-                        <span className="text-xs text-muted-foreground">{card.suffix}</span>
+                        <span className="text-xs font-bold text-white/20 uppercase tracking-widest">{card.suffix}</span>
                       )}
                     </div>
                     {card.alert && (
-                      <div className="flex items-center gap-1 mt-2">
+                      <div className="flex items-center gap-2 mt-4 px-3 py-1.5 rounded-full bg-white/[0.02] border border-white/5 w-fit">
                         {card.alert.icon && <card.alert.icon className={cn("h-3 w-3", card.alert.color)} />}
-                        <span className={cn("text-[11px]", card.alert.color)}>{card.alert.text}</span>
+                        <span className={cn("text-[10px] font-bold uppercase tracking-widest", card.alert.color)}>{card.alert.text}</span>
                       </div>
                     )}
                   </CardContent>

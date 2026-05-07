@@ -1,4 +1,5 @@
 import { Server, Info } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import { useOnboarding } from "@/hooks/useOnboarding";
@@ -22,6 +23,7 @@ import { WebVitalsCard } from "@/components/dashboard/WebVitalsCard";
 import { NotificationBell } from "@/components/dashboard/NotificationBell";
 
 const ServerDashboard = () => {
+  const { t } = useTranslation();
   useSessionGuard();
   const { showOnboarding, completeOnboarding, dismissFor7Days } = useOnboarding();
   const { isAdmin } = useIsAdmin();
@@ -55,27 +57,28 @@ const ServerDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-3 sm:p-4 md:p-6 lg:p-8 animate-fade-in">
-      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 lg:space-y-8">
+    <div className="min-h-screen bg-transparent p-3 sm:p-4 md:p-6 lg:p-8 animate-fade-in">
+      <div className="max-w-7xl mx-auto space-y-8 lg:space-y-12">
         {/* Header — stacks on mobile, side-by-side from sm+ */}
         <header 
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-border/40 pb-4 sm:pb-6"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-white/5 pb-8 sm:pb-10"
           role="banner"
         >
-          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-            <div className="p-2 sm:p-3 bg-primary/5 rounded-xl sm:rounded-2xl border border-primary/10 shadow-sm transition-transform hover:scale-105 duration-300 flex-shrink-0">
-              <Server className="h-6 w-6 sm:h-8 sm:w-8 text-primary" aria-hidden="true" />
+          <div className="flex items-center gap-5 sm:gap-6 min-w-0">
+            <div className="p-4 bg-cta-positive/10 rounded-2xl border border-cta-positive/20 shadow-glow transition-transform hover:scale-110 duration-700 flex-shrink-0">
+              <Server className="h-8 w-8 text-cta-positive animate-pulse" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-foreground truncate">
-                Painel Principal
+              <h1 className="text-3xl sm:text-4xl font-display font-extrabold tracking-tight text-white truncate">
+                {t('nav.dashboard')}
               </h1>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className="inline-block w-2 h-2 rounded-full bg-success animate-pulse flex-shrink-0" />
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
+              <div className="flex items-center gap-3 mt-2 flex-wrap">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cta-positive/10 border border-cta-positive/20">
+                  <span className="w-2 h-2 rounded-full bg-cta-positive animate-pulse flex-shrink-0" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-cta-positive">Live System</span>
+                </div>
+                <p className="text-sm font-bold text-white/30 truncate uppercase tracking-widest">
                   <span className="truncate">{tenant.name}</span>
-                  <span className="hidden sm:inline mx-1 text-muted-foreground/40">•</span>
-                  <span className="hidden sm:inline">Visão global em tempo real</span>
                 </p>
               </div>
             </div>
@@ -182,14 +185,17 @@ const ServerDashboard = () => {
           />
         </DashboardErrorBoundary>
 
-        <Card className="bg-muted/10 border-dashed border-muted-foreground/30 backdrop-blur-sm hover:border-primary/40 transition-colors">
-          <CardContent className="py-6 sm:py-8 text-center">
-            <p className="text-sm sm:text-base text-muted-foreground flex items-center justify-center gap-2 font-medium">
-              <Info className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-              Este painel monitora a saúde global do sistema em tempo real.
-            </p>
-            <p className="text-xs sm:text-sm text-primary/80 mt-2 font-semibold">
-              Sincronização ativa • Atualização inteligente a cada 10s
+        <Card className="glass-card border-white/5 shadow-2xl relative overflow-hidden group hover:border-cta-positive/20 transition-all duration-700">
+          <div className="absolute inset-0 bg-cta-positive/[0.02] opacity-0 group-hover:opacity-100 transition-opacity" />
+          <CardContent className="py-12 sm:py-16 text-center relative z-10">
+            <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-white/[0.03] border border-white/5 mb-6">
+              <Info className="h-4 w-4 text-cta-positive animate-pulse" />
+              <p className="text-sm text-white/50 font-bold uppercase tracking-widest">
+                System Monitoring Active
+              </p>
+            </div>
+            <p className="text-lg text-white/40 font-medium max-w-2xl mx-auto leading-relaxed">
+              Este painel monitora a saúde global do sistema em tempo real. Sincronização inteligente a cada 10s.
             </p>
           </CardContent>
         </Card>

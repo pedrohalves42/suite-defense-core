@@ -25,23 +25,22 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-background relative overflow-hidden">
-      {/* Strategic Background - Same as HeroSection */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(220,20%,10%)] via-[hsl(200,18%,12%)] to-[hsl(160,15%,10%)] z-0" />
+    <div className="min-h-screen flex items-center justify-center p-6 bg-[#020203] relative overflow-hidden">
+      {/* Strategic Background - Premium Obsidian */}
+      <div className="absolute inset-0 bg-[#020203] overflow-hidden">
+        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-cta-positive/10 rounded-full blur-[160px] animate-pulse-subtle" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-info/5 rounded-full blur-[140px]" />
+      </div>
       
-      {/* Subtle grid pattern */}
-      <div className="absolute inset-0 opacity-[0.03] z-0" style={{
-        backgroundImage: `radial-gradient(circle at 1px 1px, hsl(var(--primary-foreground)) 1px, transparent 0)`,
-        backgroundSize: '40px 40px'
+      {/* Subtle refined grid */}
+      <div className="absolute inset-0 opacity-[0.05] z-0" style={{
+        backgroundImage: `linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)`,
+        backgroundSize: '80px 80px'
       }} />
 
-      {/* Dynamic Security Glows */}
-      <div className="absolute top-1/4 -right-24 w-[500px] h-[500px] bg-cta-positive/10 rounded-full blur-[120px] animate-pulse z-0" />
-      <div className="absolute -bottom-24 -left-24 w-[400px] h-[400px] bg-info/5 rounded-full blur-[100px] z-0" />
-
-      <Card className="w-full max-w-[440px] border border-white/10 bg-[hsl(220,20%,10%)]/60 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10 rounded-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-700 ease-out">
-        {/* Magnet Top Border */}
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cta-positive/50 to-transparent" />
+      <Card className="w-full max-w-[460px] glass-card relative z-10 rounded-[2.5rem] overflow-hidden animate-in fade-in zoom-in-95 duration-1000 ease-out border-white/5 shadow-2xl">
+        {/* light streak */}
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-cta-positive/30 to-transparent" />
         
         <CardHeader className="space-y-6 text-center pb-2 pt-12">
           <Link 
@@ -57,15 +56,15 @@ export default function Login() {
           </Link>
           
           <div className="space-y-3">
-            <CardTitle className="text-4xl font-extrabold tracking-tight text-white leading-tight">
+            <CardTitle className="text-4xl md:text-5xl font-display font-extrabold tracking-tight text-white leading-tight">
               {t('loginPage.title')}
             </CardTitle>
-            <div className="flex flex-col items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/60 text-[10px] font-bold uppercase tracking-[0.15em]">
-                <Lock className="h-3 w-3 text-cta-positive" />
+            <div className="flex flex-col items-center gap-3">
+              <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-cta-positive/10 border border-cta-positive/20 text-cta-positive text-[10px] font-black uppercase tracking-[0.2em] shadow-glow">
+                <Lock className="h-3 w-3" />
                 {t('loginPage.enterprise')}
-              </span>
-              <CardDescription className="text-base text-white/50 font-medium max-w-[280px] leading-relaxed mx-auto">
+              </div>
+              <CardDescription className="text-lg text-white/40 font-medium max-w-[280px] leading-relaxed mx-auto">
                 {t('loginPage.subtitle')}
               </CardDescription>
             </div>
@@ -74,7 +73,7 @@ export default function Login() {
 
         <CardContent className="px-10 pb-12 pt-8">
           <Tabs defaultValue="password" className="w-full space-y-10">
-            <TabsList className="grid w-full grid-cols-2 h-14 bg-white/[0.03] p-1.5 border border-white/10 rounded-2xl">
+            <TabsList className="grid w-full grid-cols-2 h-14 bg-white/[0.04] p-1.5 border border-white/5 rounded-2xl">
               <TabsTrigger
                 value="password"
                 className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-[0_8px_20px_rgba(255,255,255,0.2)] transition-all duration-500 font-bold text-xs uppercase tracking-wider gap-2.5"

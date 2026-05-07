@@ -22,17 +22,17 @@ export function SystemStatusBanner({
   return (
     <Card 
       className={cn(
-        "relative overflow-hidden transition-all duration-500 shadow-2xl border-2 backdrop-blur-sm",
-        systemState === 'healthy' ? "bg-success/5 border-success/30 shadow-success/10" :
-        systemState === 'critical' ? "bg-destructive/5 border-destructive/30 shadow-destructive/10" :
-        "bg-warning/5 border-warning/30 shadow-warning/10"
+        "relative overflow-hidden transition-all duration-700 shadow-premium border border-white/5 glass-card",
+        systemState === 'healthy' ? "bg-success/[0.02]" :
+        systemState === 'critical' ? "bg-destructive/[0.02]" :
+        "bg-warning/[0.02]"
       )}
       role="status"
       aria-live="polite"
     >
-      {/* Dynamic background glow */}
+      {/* Dynamic background glow - Refined */}
       <div className={cn(
-        "absolute -right-20 -top-20 w-64 h-64 rounded-full blur-[100px] opacity-20 transition-colors duration-1000",
+        "absolute -right-32 -top-32 w-80 h-80 rounded-full blur-[140px] opacity-10 transition-colors duration-1000",
         systemState === 'healthy' ? "bg-success" :
         systemState === 'critical' ? "bg-destructive" :
         "bg-warning"
@@ -56,7 +56,7 @@ export function SystemStatusBanner({
             
             <div className="space-y-3 sm:space-y-4 w-full text-center sm:text-left">
               <div>
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-foreground tracking-tight">
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-display font-black text-white tracking-tight">
                   {systemState === 'healthy' ? 'Sistema Protegido' : 
                    systemState === 'critical' ? 'Atenção Necessária' : 
                    'Monitoramento Requerido'}
