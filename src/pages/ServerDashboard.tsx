@@ -185,14 +185,17 @@ const ServerDashboard = () => {
           />
         </DashboardErrorBoundary>
 
-        <Card className="bg-muted/10 border-dashed border-muted-foreground/30 backdrop-blur-sm hover:border-primary/40 transition-colors">
-          <CardContent className="py-6 sm:py-8 text-center">
-            <p className="text-sm sm:text-base text-muted-foreground flex items-center justify-center gap-2 font-medium">
-              <Info className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-              Este painel monitora a saúde global do sistema em tempo real.
-            </p>
-            <p className="text-xs sm:text-sm text-primary/80 mt-2 font-semibold">
-              Sincronização ativa • Atualização inteligente a cada 10s
+        <Card className="glass-card border-white/5 shadow-2xl relative overflow-hidden group hover:border-cta-positive/20 transition-all duration-700">
+          <div className="absolute inset-0 bg-cta-positive/[0.02] opacity-0 group-hover:opacity-100 transition-opacity" />
+          <CardContent className="py-12 sm:py-16 text-center relative z-10">
+            <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-white/[0.03] border border-white/5 mb-6">
+              <Info className="h-4 w-4 text-cta-positive animate-pulse" />
+              <p className="text-sm text-white/50 font-bold uppercase tracking-widest">
+                System Monitoring Active
+              </p>
+            </div>
+            <p className="text-lg text-white/40 font-medium max-w-2xl mx-auto leading-relaxed">
+              Este painel monitora a saúde global do sistema em tempo real. Sincronização inteligente a cada 10s.
             </p>
           </CardContent>
         </Card>
