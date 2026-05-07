@@ -73,7 +73,7 @@ export function useLandingContent() {
     assessment: {
       title: t('landing.assessment.title'),
       text: t('landing.assessment.text'),
-      items: Array.from({ length: 5 }, (_, i) => t(`landing.assessment.items.${i}`)),
+      items: (t('landing.assessment.items', { returnObjects: true }) as string[]) || [],
       cta: t('landing.assessment.cta'),
     },
     benefits: {
@@ -123,11 +123,11 @@ export function useLandingContent() {
       text: t('landing.comparison.text'),
       before: {
         label: t('landing.comparison.before.label'),
-        items: Array.from({ length: 5 }, (_, i) => t(`landing.comparison.before.items.${i}`)),
+        items: (t('landing.comparison.before.items', { returnObjects: true }) as string[]) || [],
       },
       after: {
         label: t('landing.comparison.after.label'),
-        items: Array.from({ length: 5 }, (_, i) => t(`landing.comparison.after.items.${i}`)),
+        items: (t('landing.comparison.after.items', { returnObjects: true }) as string[]) || [],
       },
     },
     offer: {
@@ -140,10 +140,7 @@ export function useLandingContent() {
     faq: {
       title: t('landing.faq.title'),
       subtitle: t('landing.faq.subtitle'),
-      items: Array.from({ length: 6 }, (_, i) => ({
-        question: t(`landing.faq.items.${i}.question`),
-        answer: t(`landing.faq.items.${i}.answer`),
-      })),
+      items: (t('landing.faq.items', { returnObjects: true }) as { question: string; answer: string }[]) || [],
     },
     ctaFinal: {
       title: t('landing.ctaFinal.title'),
@@ -157,12 +154,7 @@ export function useLandingContent() {
     differentiators: {
       title: t('landing.differentiators.title'),
       subtitle: t('landing.differentiators.subtitle'),
-      items: Array.from({ length: 6 }, (_, i) => ({
-        title: t(`landing.differentiators.items.${i}.title`),
-        description: t(`landing.differentiators.items.${i}.description`),
-        metric: t(`landing.differentiators.items.${i}.metric`),
-        metricLabel: t(`landing.differentiators.items.${i}.metricLabel`),
-      })),
+      items: (t('landing.differentiators.items', { returnObjects: true }) as { title: string; description: string; metric: string; metricLabel: string }[]) || [],
     },
   }), [t]);
 }
