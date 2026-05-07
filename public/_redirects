@@ -4,3 +4,6 @@
 /.git*  /403  403!
 /logs*  /403  403!
 /backup* /403 403!
+
+# SPA Redirect
+/*  /index.html  200
