@@ -73,7 +73,7 @@ export default function Login() {
 
         <CardContent className="px-10 pb-12 pt-8">
           <Tabs defaultValue="password" className="w-full space-y-10">
-            <TabsList className="grid w-full grid-cols-2 h-14 bg-white/[0.03] p-1.5 border border-white/10 rounded-2xl">
+            <TabsList className="grid w-full grid-cols-2 h-14 bg-white/[0.04] p-1.5 border border-white/5 rounded-2xl">
               <TabsTrigger
                 value="password"
                 className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-[0_8px_20px_rgba(255,255,255,0.2)] transition-all duration-500 font-bold text-xs uppercase tracking-wider gap-2.5"
