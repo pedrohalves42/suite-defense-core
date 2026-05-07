@@ -253,10 +253,20 @@ servePublic(async (req, ctx) => {
     const resultObj = result as Record<string, unknown>;
     const status = typeof resultObj?.__status === 'number' ? resultObj.__status : 200;
     
-    if (resultObj?.__status) {
+    if (typeof resultObj?.__status === 'number') {
       const { __status, ...rest } = resultObj;
       if (__status >= 400) {
-        return createErrorResponse(rest.error as string || 'Error', __status, requestId);
+        // Fix: correct arg order is (code, message, status, requestId)
+        const errMessage =
+          typeof rest.error === 'string'
+            ? rest.error
+            : (rest.message as string) || 'Error';
+        return createErrorResponse(
+          ErrorCode.INTERNAL_ERROR,
+          errMessage,
+          __status,
+          requestId,
+        );
       }
       return jsonRes(rest, __status, origin);
     }
