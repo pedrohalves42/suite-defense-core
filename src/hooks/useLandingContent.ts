@@ -63,10 +63,14 @@ export function useLandingContent() {
     howItWorks: {
       title: t('landing.howItWorks.title'),
       subtitle: t('landing.howItWorks.subtitle'),
-      steps: (t('landing.howItWorks.steps', { returnObjects: true }) as { title: string; description: string }[] || []).map((step, i) => ({
-        number: i + 1,
-        ...step
-      })),
+      steps: (() => {
+        const stepsObj = t('landing.howItWorks.steps', { returnObjects: true });
+        const stepsArray = Array.isArray(stepsObj) ? stepsObj : Object.values(stepsObj || {});
+        return stepsArray.map((step: any, i: number) => ({
+          number: i + 1,
+          ...step
+        }));
+      })(),
     },
     assessment: {
       title: t('landing.assessment.title'),
