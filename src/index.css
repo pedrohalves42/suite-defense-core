@@ -111,62 +111,62 @@
   }
   
   .dark {
-    /* === PREMIUM DARK MODE === */
-    --background: 224 25% 4%;           /* Deepest Obsidian */
-    --foreground: 210 20% 98%;          /* Crisp Off-White */
+    /* === SOPHISTICATED NEUTRAL DARK MODE === */
+    --background: 220 15% 7%;           /* Lighter, softer Obsidian */
+    --foreground: 210 20% 98%;
     
-    --card: 224 25% 7%;                 /* Elevated surface */
+    --card: 220 15% 10%;                /* Subtle contrast for cards */
     --card-foreground: 210 20% 98%;
     
-    --popover: 224 25% 8%;
+    --popover: 220 15% 10%;
     --popover-foreground: 210 20% 98%;
     
     --primary: 210 20% 98%;
-    --primary-foreground: 224 25% 4%;
+    --primary-foreground: 220 15% 7%;
     --primary-hover: 210 20% 90%;
     --primary-active: 210 20% 95%;
     
-    --secondary: 224 15% 12%;           /* Subtle secondary */
+    --secondary: 220 15% 14%;
     --secondary-foreground: 210 20% 98%;
     
-    --muted: 224 15% 10%;
-    --muted-foreground: 215 12% 65%;    /* High legibility muted */
+    --muted: 220 15% 12%;
+    --muted-foreground: 215 12% 70%;
     
-    --accent: 160 84% 42%;              /* Emerald primary accent */
+    --accent: 160 84% 45%;              /* Brighter Emerald */
     --accent-foreground: 210 20% 98%;
-    --accent-soft: 160 84% 15%;
+    --accent-soft: 160 84% 12%;
     
-    --destructive: 0 84% 60%;
+    --destructive: 0 84% 65%;
     --destructive-foreground: 210 20% 98%;
     
-    --warning: 45 93% 47%;
-    --warning-foreground: 224 25% 4%;
+    --warning: 45 93% 55%;
+    --warning-foreground: 220 15% 7%;
     
-    --success: 160 84% 42%;
+    --success: 160 84% 45%;
     --success-foreground: 210 20% 98%;
     
-    /* Strategic semantic greens */
-    --cta-positive: 160 84% 42%;
+    /* Strategic semantic colors */
+    --cta-positive: 160 84% 45%;
     --cta-positive-foreground: 210 20% 98%;
-    --shield-active: 152 69% 52%;
-    --metric-positive: 142 71% 52%;
+    --shield-active: 152 69% 55%;
+    --metric-positive: 142 71% 55%;
     
-    --info: 217 91% 60%;
+    --info: 217 91% 65%;
     --info-foreground: 210 20% 98%;
     
-    --border: 224 15% 14%;              /* Sharper borders */
-    --input: 224 15% 12%;
-    --ring: 160 84% 42%;
+    --border: 220 15% 16%;
+    --input: 220 15% 14%;
+    --ring: 160 84% 45%;
     
-    /* Premium Glass */
-    --glass-bg: 224 25% 6% / 0.75;
-    --glass-border: 255 100% 100% / 0.08;
+    /* Premium Glass - Softer and more legible */
+    --glass-bg: 220 15% 10% / 0.65;
+    --glass-border: 255 100% 100% / 0.1;
     
     --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-    --shadow-sm: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
-    --shadow-md: 0 12px 20px -3px rgb(0 0 0 / 0.5), 0 4px 10px -4px rgb(0 0 0 / 0.5);
-    --shadow-lg: 0 25px 40px -5px rgb(0 0 0 / 0.6), 0 10px 20px -10px rgb(0 0 0 / 0.6);
-    --shadow-premium: 0 0 0 1px rgba(255,255,255,0.05), 0 20px 40px -10px rgba(0,0,0,0.5);
+    --shadow-sm: 0 4px 6px -1px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 12px 20px -3px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 25px 40px -5px rgb(0 0 0 / 0.5);
+    --shadow-premium: 0 0 0 1px rgba(255,255,255,0.07), 0 20px 40px -10px rgba(0,0,0,0.5);
   }
 }
 

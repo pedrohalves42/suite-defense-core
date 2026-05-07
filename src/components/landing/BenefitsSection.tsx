@@ -6,37 +6,37 @@ export function BenefitsSection() {
   const { benefits } = useLandingContent();
 
   return (
-    <section id="recursos" className="py-24 relative">
-      {/* Green tinted background — "you're now in the safe zone" */}
-      <div className="absolute inset-0 bg-gradient-to-b from-cta-positive/[0.03] via-background to-background" />
+    <section id="recursos" className="py-32 relative bg-[#020203]">
+      {/* Refined gradient layer */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#020203] via-cta-positive/[0.03] to-[#020203]" />
       
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
         <SectionHeader 
           title={benefits.title}
           subtitle={benefits.subtitle}
         />
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto stagger-visible">
           {benefits.cards.map((card, index) => {
             const Icon = card.icon;
             return (
               <motion.div 
                 key={index}
-                className="group relative p-8 rounded-2xl bg-card border border-border hover:border-cta-positive/30 transition-all duration-300 hover:shadow-elevated"
-                initial={{ opacity: 0, y: 20 }}
+                className="group relative p-10 rounded-[2.5rem] glass-card border-white/5 hover:border-cta-positive/30 transition-all duration-700 hover:shadow-premium"
+                initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
+                transition={{ delay: index * 0.1, duration: 0.8 }}
               >
-                {/* Hover glow — green = security */}
-                <div className="absolute inset-0 rounded-2xl bg-cta-positive/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                {/* Visual Depth Glow */}
+                <div className="absolute inset-0 rounded-[2.5rem] bg-gradient-to-br from-cta-positive/[0.05] via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                 
-                <div className="relative">
-                  <div className="w-14 h-14 bg-cta-positive/10 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-cta-positive/15 transition-colors">
-                    <Icon className="w-7 h-7 text-cta-positive" />
+                <div className="relative z-10">
+                  <div className="w-20 h-20 bg-cta-positive/10 rounded-[2rem] flex items-center justify-center mb-8 group-hover:scale-110 group-hover:rotate-6 transition-all duration-700 ease-premium shadow-glow">
+                    <Icon className="w-10 h-10 text-cta-positive" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-3 text-foreground">{card.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{card.description}</p>
+                  <h3 className="text-2xl font-bold mb-4 text-white tracking-tight leading-tight">{card.title}</h3>
+                  <p className="text-base text-white/40 leading-relaxed font-medium group-hover:text-white/60 transition-colors duration-500">{card.description}</p>
                 </div>
               </motion.div>
             );

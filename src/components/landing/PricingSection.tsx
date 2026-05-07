@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
-import { CheckCircle, ArrowRight, Star } from "lucide-react";
+import { CheckCircle, ArrowRight, Star, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import { SectionHeader } from "./shared/SectionHeader";
 
 const PLAN_KEYS = ["starter", "business", "enterprise"] as const;
 
@@ -10,31 +10,20 @@ export function PricingSection() {
   const { t } = useTranslation();
 
   return (
-    <section id="planos" className="py-24 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/[0.02] to-background" />
+    <section id="planos" className="py-32 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-cta-positive/[0.01] to-background" />
 
-      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-16"
-        >
-          <Badge variant="outline" className="mb-4">
-            {t("landing.pricing.badge")}
-          </Badge>
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            {t("landing.pricing.title")}
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            {t("landing.pricing.subtitle")}
-          </p>
-        </motion.div>
+      <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
+        <SectionHeader 
+          badge={{ text: t("landing.pricing.badge"), icon: ShieldCheck }}
+          title={t("landing.pricing.title")}
+          subtitle={t("landing.pricing.subtitle")}
+        />
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-10 max-w-7xl mx-auto">
           {PLAN_KEYS.map((key, index) => {
-            const badge = t(`landing.pricing.plans.${key}.badge`);
-            const isPopular = !!badge;
+            const planBadge = t(`landing.pricing.plans.${key}.badge`);
+            const isPopular = !!planBadge;
             const price = t(`landing.pricing.plans.${key}.price`);
             const isCustomPrice = isNaN(Number(price));
             const features = Array.from({ length: 6 }, (_, i) =>
@@ -47,55 +36,60 @@ export function PricingSection() {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className={`relative rounded-2xl border p-8 flex flex-col ${
+                transition={{ delay: index * 0.1, duration: 0.8 }}
+                className={`relative rounded-[2.5rem] border p-10 flex flex-col glass-card transition-all duration-700 ${
                   isPopular
-                    ? "border-primary bg-card shadow-2xl shadow-primary/20 scale-[1.04] ring-2 ring-primary/30"
-                    : "border-border bg-card opacity-90"
+                    ? "border-cta-positive/30 shadow-[0_20px_50px_rgba(16,185,129,0.1)] scale-[1.05] z-10"
+                    : "border-white/5 opacity-90"
                 }`}
               >
                 {isPopular && (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1">
-                    <Star className="w-3 h-3 mr-1" />
-                    {badge}
-                  </Badge>
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-cta-positive text-white text-[10px] font-black uppercase tracking-[0.2em] px-6 py-2 rounded-full shadow-glow">
+                    {planBadge}
+                  </div>
                 )}
 
-                <div className="mb-6">
-                  <h3 className="text-xl font-bold text-foreground mb-2">
+                <div className="mb-8">
+                  <h3 className="text-2xl font-bold text-white mb-3 tracking-tight">
                     {t(`landing.pricing.plans.${key}.name`)}
                   </h3>
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <p className="text-sm text-white/50 mb-6 font-medium leading-relaxed">
                     {t(`landing.pricing.plans.${key}.description`)}
                   </p>
 
-                  <div className="flex items-baseline gap-1 mb-2">
+                  <div className="flex items-baseline gap-1 mb-3">
                     {!isCustomPrice && (
-                      <span className="text-sm text-muted-foreground">R$</span>
+                      <span className="text-xl font-bold text-white/40">R$</span>
                     )}
-                    <span className="text-4xl font-bold text-foreground">
-                      {isCustomPrice ? price : price}
+                    <span className="text-5xl font-black text-white tracking-tighter">
+                      {price}
                     </span>
                     {!isCustomPrice && (
-                      <span className="text-muted-foreground">
+                      <span className="text-white/40 font-bold ml-2">
                         {t("landing.pricing.perMonth")}
                       </span>
                     )}
                   </div>
 
-                  <p className="text-xs text-muted-foreground">
-                    {t(`landing.pricing.plans.${key}.baseInfo`)}
-                  </p>
-                  <p className="text-xs font-medium text-foreground/70">
-                    {t(`landing.pricing.plans.${key}.maxInfo`)}
-                  </p>
+                  <div className="space-y-1">
+                    <p className="text-xs text-white/40 font-medium">
+                      {t(`landing.pricing.plans.${key}.baseInfo`)}
+                    </p>
+                    <p className="text-xs font-bold text-cta-positive/80 uppercase tracking-widest">
+                      {t(`landing.pricing.plans.${key}.maxInfo`)}
+                    </p>
+                  </div>
                 </div>
 
-                <ul className="space-y-3 mb-8 flex-1">
+                <div className="h-px bg-gradient-to-r from-transparent via-white/5 to-transparent mb-8" />
+
+                <ul className="space-y-4 mb-10 flex-1">
                   {features.map((feature, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-cta-positive mt-0.5 shrink-0" />
-                      <span className="text-sm text-foreground">{feature}</span>
+                    <li key={i} className="flex items-start gap-3 group/item">
+                      <div className="w-5 h-5 rounded-full bg-cta-positive/10 flex items-center justify-center mt-0.5 group-hover/item:scale-110 transition-transform">
+                        <CheckCircle className="w-3.5 h-3.5 text-cta-positive" />
+                      </div>
+                      <span className="text-[15px] text-white/60 group-hover/item:text-white/80 transition-colors font-medium">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -103,8 +97,8 @@ export function PricingSection() {
                 <Button
                   size="lg"
                   variant={isPopular ? "cta" : "outline"}
-                  className={`w-full font-semibold ${
-                    isPopular ? "shadow-lg shadow-cta-positive/25" : ""
+                  className={`w-full h-14 rounded-full font-bold text-base transition-all duration-500 border border-white/10 ${
+                    isPopular ? "shadow-glow hover:shadow-[0_0_30px_rgba(16,185,129,0.4)]" : "bg-white/[0.02] hover:bg-white/[0.05]"
                   }`}
                   onClick={() =>
                     document
@@ -113,7 +107,7 @@ export function PricingSection() {
                   }
                 >
                   {t(`landing.pricing.plans.${key}.cta`)}
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </motion.div>
             );

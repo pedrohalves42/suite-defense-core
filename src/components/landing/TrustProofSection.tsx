@@ -6,43 +6,44 @@ export function TrustProofSection() {
   const { trustProof } = useLandingContent();
 
   return (
-    <section className="py-24 relative overflow-hidden">
-      {/* Dark premium background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(220,18%,10%)] via-[hsl(200,15%,12%)] to-[hsl(220,18%,10%)]" />
-      <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-cta-positive/5 rounded-full blur-[150px]" />
+    <section className="py-32 relative overflow-hidden bg-[#020203]">
+      {/* Dark premium background with more visibility */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#020203] via-white/[0.01] to-[#020203]" />
+      <div className="absolute top-1/2 left-1/4 w-[600px] h-[600px] bg-cta-positive/10 rounded-full blur-[160px] opacity-20" />
       
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16 space-y-4"
+          transition={{ duration: 0.8 }}
+          className="text-center mb-20 space-y-6"
         >
-          <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight">
+          <h2 className="text-4xl md:text-5xl font-display font-extrabold text-white leading-tight tracking-tight">
             {trustProof.title}
           </h2>
-          <p className="text-lg text-white/60 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg text-white/50 max-w-3xl mx-auto leading-relaxed font-medium">
             {trustProof.text}
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto stagger-visible">
           {trustProof.blocks.map((block, index) => {
             const Icon = block.icon;
             return (
               <motion.div
                 key={index}
-                className="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-cta-positive/30 transition-all"
-                initial={{ opacity: 0, y: 20 }}
+                className="group p-10 rounded-[2.5rem] glass-card border-white/5 hover:border-cta-positive/30 transition-all duration-700"
+                initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
+                transition={{ delay: index * 0.1, duration: 0.8 }}
               >
-                <div className="w-12 h-12 bg-cta-positive/10 rounded-xl flex items-center justify-center mb-4">
-                  <Icon className="w-6 h-6 text-cta-positive" />
+                <div className="w-16 h-16 bg-cta-positive/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-700 shadow-glow">
+                  <Icon className="w-8 h-8 text-cta-positive" />
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">{block.title}</h3>
-                <p className="text-sm text-white/50 leading-relaxed">{block.description}</p>
+                <h3 className="text-2xl font-bold text-white mb-4 tracking-tight">{block.title}</h3>
+                <p className="text-base text-white/40 leading-relaxed font-medium group-hover:text-white/60 transition-colors duration-500">{block.description}</p>
               </motion.div>
             );
           })}
