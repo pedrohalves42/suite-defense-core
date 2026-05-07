@@ -17,7 +17,6 @@ export function DifferentiatorsSection() {
       <div className="absolute inset-0 bg-gradient-to-br from-[hsl(220,20%,8%)] via-[hsl(200,18%,10%)] to-[hsl(160,15%,8%)]" />
       <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-cta-positive/5 rounded-full blur-[200px]" />
       <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-info/5 rounded-full blur-[150px]" />
-      <DifferentiatorsDecorations />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
