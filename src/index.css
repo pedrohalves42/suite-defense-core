@@ -671,6 +671,7 @@
   }
 }
 
+@layer utilities {
   /* Mobile responsive helpers */
   @media (max-width: 380px) {
     .grid-cols-2 {
