@@ -55,27 +55,28 @@ const ServerDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-3 sm:p-4 md:p-6 lg:p-8 animate-fade-in">
-      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 lg:space-y-8">
+    <div className="min-h-screen bg-transparent p-3 sm:p-4 md:p-6 lg:p-8 animate-fade-in">
+      <div className="max-w-7xl mx-auto space-y-8 lg:space-y-12">
         {/* Header — stacks on mobile, side-by-side from sm+ */}
         <header 
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-border/40 pb-4 sm:pb-6"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-white/5 pb-8 sm:pb-10"
           role="banner"
         >
-          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-            <div className="p-2 sm:p-3 bg-primary/5 rounded-xl sm:rounded-2xl border border-primary/10 shadow-sm transition-transform hover:scale-105 duration-300 flex-shrink-0">
-              <Server className="h-6 w-6 sm:h-8 sm:w-8 text-primary" aria-hidden="true" />
+          <div className="flex items-center gap-5 sm:gap-6 min-w-0">
+            <div className="p-4 bg-cta-positive/10 rounded-2xl border border-cta-positive/20 shadow-glow transition-transform hover:scale-110 duration-700 flex-shrink-0">
+              <Server className="h-8 w-8 text-cta-positive animate-pulse" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-foreground truncate">
-                Painel Principal
+              <h1 className="text-3xl sm:text-4xl font-display font-extrabold tracking-tight text-white truncate">
+                {t('nav.dashboard')}
               </h1>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className="inline-block w-2 h-2 rounded-full bg-success animate-pulse flex-shrink-0" />
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
+              <div className="flex items-center gap-3 mt-2 flex-wrap">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cta-positive/10 border border-cta-positive/20">
+                  <span className="w-2 h-2 rounded-full bg-cta-positive animate-pulse flex-shrink-0" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-cta-positive">Live System</span>
+                </div>
+                <p className="text-sm font-bold text-white/30 truncate uppercase tracking-widest">
                   <span className="truncate">{tenant.name}</span>
-                  <span className="hidden sm:inline mx-1 text-muted-foreground/40">•</span>
-                  <span className="hidden sm:inline">Visão global em tempo real</span>
                 </p>
               </div>
             </div>
