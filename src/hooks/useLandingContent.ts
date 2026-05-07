@@ -138,7 +138,10 @@ export function useLandingContent() {
       },
       after: {
         label: t('landing.comparison.after.label'),
-        items: (t('landing.comparison.after.items', { returnObjects: true }) as string[]) || [],
+        items: (() => {
+          const itemsObj = t('landing.comparison.after.items', { returnObjects: true });
+          return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+        })(),
       },
     },
     offer: {
