@@ -22,10 +22,12 @@ export const createClientFromRequest = (req: Request, timeoutMs: number = 15_000
   const authHeader = req.headers.get('Authorization');
   const url = Deno.env.get('SUPABASE_URL') || '';
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
-  
+
   const options = {
     global: {
-      fetch: (url: string, options: any) => fetchWithTimeout(url, { ...options, timeoutMs }),
+      // Supabase passes (Request | URL | string, RequestInit). Preserve the original signal.
+      fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+        fetchWithTimeout(input as any, { ...(init ?? {}), timeoutMs }),
       headers: authHeader ? { Authorization: authHeader } : undefined,
     },
   };
@@ -43,12 +45,8 @@ export const getServiceClient = (timeoutMs: number = 15_000) => {
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   return createSupabaseClient(url, serviceKey, {
     global: {
-      fetch: (url: string, options: any) => {
-        return fetchWithTimeout(url, {
-          ...options,
-          timeoutMs,
-        });
-      },
+      fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+        fetchWithTimeout(input as any, { ...(init ?? {}), timeoutMs }),
     },
   });
 };
