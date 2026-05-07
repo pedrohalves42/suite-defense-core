@@ -56,7 +56,7 @@ export function SystemStatusBanner({
             
             <div className="space-y-3 sm:space-y-4 w-full text-center sm:text-left">
               <div>
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-foreground tracking-tight">
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-display font-black text-white tracking-tight">
                   {systemState === 'healthy' ? 'Sistema Protegido' : 
                    systemState === 'critical' ? 'Atenção Necessária' : 
                    'Monitoramento Requerido'}
