@@ -112,7 +112,7 @@
   
   .dark {
     /* === SOPHISTICATED DEEP SLATE DARK MODE === */
-    --background: 222 25% 6%;           /* #090a0f - Deep Slate, more breathable than pure black */
+    --background: 222 30% 5%;           /* #050608 - Refined Deep Slate */
     --foreground: 210 20% 98%;
     
     --card: 220 15% 10%;                /* Subtle contrast for cards */
