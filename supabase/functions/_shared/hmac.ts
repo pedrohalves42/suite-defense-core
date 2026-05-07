@@ -94,29 +94,31 @@ async function getCryptoKey(keyData: Uint8Array, keyName: string): Promise<Crypt
   const cacheKey = `${keyName}:${keyHash}`;
   const now = Date.now();
   const cached = cryptoKeyCache.get(cacheKey);
-  
+
   if (cached && (now - cached.ts) < CRYPTO_KEY_TTL_MS) {
+    // Reuse the in-flight or resolved Promise — race-safe.
     return cached.promise;
   }
-  
-  const promise = (async () => {
-    // Re-check inside the async block to handle race conditions during import
-    const existing = cryptoKeyCache.get(cacheKey);
-    if (existing && (now - existing.ts) < CRYPTO_KEY_TTL_MS) {
-      return existing.promise;
-    }
-    
-    return await crypto.subtle.importKey(
-      'raw',
-      keyData.buffer as ArrayBuffer,
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign'],
-    );
-  })();
-  
+
+  // Create the import Promise WITHOUT re-reading the cache inside (which
+  // would deadlock by awaiting our own entry).
+  const promise = crypto.subtle.importKey(
+    'raw',
+    keyData.buffer as ArrayBuffer,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+
   pruneCache(cryptoKeyCache, MAX_CACHE_ENTRIES);
   cryptoKeyCache.set(cacheKey, { promise, ts: now });
+
+  // If import fails, evict so the next caller retries instead of caching a rejected Promise.
+  promise.catch(() => {
+    const current = cryptoKeyCache.get(cacheKey);
+    if (current && current.promise === promise) cryptoKeyCache.delete(cacheKey);
+  });
+
   return promise;
 }
 
