@@ -2,7 +2,6 @@ import { CheckCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { motion } from "framer-motion";
-import { AssessmentDecorations } from "./shared/AnimatedDecorations";
 
 export function AssessmentSection() {
   const { assessment } = useLandingContent();
