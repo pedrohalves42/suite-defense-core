@@ -105,10 +105,14 @@ export function useLandingContent() {
     targetAudience: {
       title: t('landing.targetAudience.title'),
       subtitle: t('landing.targetAudience.subtitle'),
-      segments: (t('landing.targetAudience.segments', { returnObjects: true }) as { title: string; description: string }[] || []).map((segment, i) => ({
-        icon: [Building2, Laptop, Stethoscope, Scale][i] || Building2,
-        ...segment
-      })),
+      segments: (() => {
+        const segmentsObj = t('landing.targetAudience.segments', { returnObjects: true });
+        const segmentsArray = Array.isArray(segmentsObj) ? segmentsObj : Object.values(segmentsObj || {});
+        return segmentsArray.map((segment: any, i: number) => ({
+          icon: [Building2, Laptop, Stethoscope, Scale][i] || Building2,
+          ...segment
+        }));
+      })(),
     },
     trustProof: {
       title: t('landing.trustProof.title'),
