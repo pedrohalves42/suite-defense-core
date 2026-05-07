@@ -25,23 +25,22 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-background relative overflow-hidden">
-      {/* Strategic Background - Same as HeroSection */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(220,20%,10%)] via-[hsl(200,18%,12%)] to-[hsl(160,15%,10%)] z-0" />
+    <div className="min-h-screen flex items-center justify-center p-6 bg-[#020203] relative overflow-hidden">
+      {/* Strategic Background - Premium Obsidian */}
+      <div className="absolute inset-0 bg-[#020203] overflow-hidden">
+        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-cta-positive/10 rounded-full blur-[160px] animate-pulse-subtle" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-info/5 rounded-full blur-[140px]" />
+      </div>
       
-      {/* Subtle grid pattern */}
-      <div className="absolute inset-0 opacity-[0.03] z-0" style={{
-        backgroundImage: `radial-gradient(circle at 1px 1px, hsl(var(--primary-foreground)) 1px, transparent 0)`,
-        backgroundSize: '40px 40px'
+      {/* Subtle refined grid */}
+      <div className="absolute inset-0 opacity-[0.05] z-0" style={{
+        backgroundImage: `linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)`,
+        backgroundSize: '80px 80px'
       }} />
 
-      {/* Dynamic Security Glows */}
-      <div className="absolute top-1/4 -right-24 w-[500px] h-[500px] bg-cta-positive/10 rounded-full blur-[120px] animate-pulse z-0" />
-      <div className="absolute -bottom-24 -left-24 w-[400px] h-[400px] bg-info/5 rounded-full blur-[100px] z-0" />
-
-      <Card className="w-full max-w-[440px] border border-white/10 bg-[hsl(220,20%,10%)]/60 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10 rounded-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-700 ease-out">
-        {/* Magnet Top Border */}
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cta-positive/50 to-transparent" />
+      <Card className="w-full max-w-[460px] glass-card relative z-10 rounded-[2.5rem] overflow-hidden animate-in fade-in zoom-in-95 duration-1000 ease-out border-white/5 shadow-2xl">
+        {/* light streak */}
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-cta-positive/30 to-transparent" />
         
         <CardHeader className="space-y-6 text-center pb-2 pt-12">
           <Link 
