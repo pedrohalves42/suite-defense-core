@@ -2,12 +2,12 @@
  * servePublic() — Middleware for webhooks and unauthenticated endpoints.
  * Extracted from serve-tenant.ts for modularity.
  */
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createSupabaseClient } from './supabase-client.ts';
 import { buildCorsHeaders } from './cors.ts';
 import { securityHeaders } from './security-headers.ts';
 import { requireEnv } from './env.ts';
 import { loggerWithContext } from './logger.ts';
-import { handleExceptionWithContext } from './error-handler.ts';
+import { handleExceptionWithContext, createErrorResponse, ErrorCode } from './error-handler.ts';
 
 function jsonResponse(data: unknown, status = 200, extraHeaders?: Record<string, string>, origin?: string | null) {
   const cors = buildCorsHeaders(origin ?? null);
@@ -17,13 +17,9 @@ function jsonResponse(data: unknown, status = 200, extraHeaders?: Record<string,
   });
 }
 
-function errorResponse(message: string, status: number, requestId: string, origin?: string | null) {
-  return jsonResponse(
-    { error: { message, code: status === 401 ? 'UNAUTHORIZED' : status === 403 ? 'FORBIDDEN' : 'ERROR' } },
-    status,
-    { 'X-Request-ID': requestId },
-    origin
-  );
+function errorResponse(message: string, status: number, requestId: string) {
+  const code = status === 429 ? 'RATE_LIMITED' : status === 401 ? ErrorCode.UNAUTHORIZED : ErrorCode.BAD_REQUEST;
+  return createErrorResponse(code, message, status, requestId);
 }
 
 export interface PublicContext {
@@ -60,7 +56,7 @@ export function servePublic(handler: PublicHandler, options?: ServePublicOptions
     }
 
     try {
-      const supabase = createClient<any>(
+      const supabase = createSupabaseClient(
         requireEnv('SUPABASE_URL'),
         requireEnv('SUPABASE_SERVICE_ROLE_KEY')
       );

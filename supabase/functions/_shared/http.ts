@@ -63,7 +63,7 @@ export async function httpJson<T = any>(
           ...fetchOptions.headers,
         },
         timeoutMs,
-        signal: fetchOptions.signal, // Se já houver um signal externo, o fetchWithTimeout tenta respeitar
+        signal: fetchOptions.signal || controller.signal,
       });
 
       clearTimeout(timeoutId);
