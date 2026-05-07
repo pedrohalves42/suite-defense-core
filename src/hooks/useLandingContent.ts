@@ -81,10 +81,14 @@ export function useLandingContent() {
     benefits: {
       title: t('landing.benefits.title'),
       subtitle: t('landing.benefits.subtitle'),
-      cards: (t('landing.benefits.cards', { returnObjects: true }) as { title: string; description: string }[] || []).map((card, i) => ({
-        icon: [Zap, Activity, BarChart, ShieldCheck][i] || ShieldCheck,
-        ...card
-      })),
+      cards: (() => {
+        const cardsObj = t('landing.benefits.cards', { returnObjects: true });
+        const cardsArray = Array.isArray(cardsObj) ? cardsObj : Object.values(cardsObj || {});
+        return cardsArray.map((card: any, i: number) => ({
+          icon: [Zap, Activity, BarChart, ShieldCheck][i] || ShieldCheck,
+          ...card
+        }));
+      })(),
     },
     features: {
       title: t('landing.features.title'),
