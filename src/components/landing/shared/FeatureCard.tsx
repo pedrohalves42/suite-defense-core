@@ -34,8 +34,8 @@ export function FeatureCard({
 
   return (
     <div className={cn(
-      "group p-6 rounded-xl bg-card border transition-all duration-200",
-      variantStyles[variant],
+      "group p-8 rounded-3xl bg-[#0a0a0b] border border-white/5 transition-all duration-500 hover:border-cta-positive/30 hover:bg-[#0f0f11]",
+      variant === "danger" && "border-destructive/10 hover:border-destructive/30",
       centered && "text-center",
       className
     )}>
