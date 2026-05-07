@@ -1,4 +1,4 @@
-import { CheckCircle, ArrowRight } from "lucide-react";
+import { CheckCircle, ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { motion } from "framer-motion";
