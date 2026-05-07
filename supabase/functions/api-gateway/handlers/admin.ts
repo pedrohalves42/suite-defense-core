@@ -310,7 +310,7 @@ export async function handleSetActiveTenant(supabase: SB, requestId: string, pay
   if (authHeader) {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
     const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const { createClient: cc } = await import('https://esm.sh/@supabase/supabase-js@2.74.0');
+    const { createSupabaseClient: cc } = await import('../../_shared/supabase-client.ts');
     const userClient = cc(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { headers: { Authorization: authHeader } } });
     const { data: { user } } = await userClient.auth.getUser();
     existingAppMetadata = user?.app_metadata || {};

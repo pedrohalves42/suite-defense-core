@@ -4,7 +4,7 @@
  * Refactored using Hexagonal Architecture (Ports and Adapters).
  * Logic moved to Domain (Use Cases) and Infrastructure (Adapters).
  */
-import { createTypedClient } from '../_shared/supabase-client.ts';
+import { createSupabaseClient } from '../_shared/supabase-client.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
@@ -226,16 +226,7 @@ servePublic(async (req, ctx) => {
 
     const { action, payload } = parsed.data;
 
-    if (!routerAdapter.getAction(action)) {
-      return createErrorResponse(
-        ErrorCode.NOT_FOUND,
-        `Unknown action: ${action}`,
-        404,
-        requestId
-      );
-    }
-
-    // Use Hexagonal Dispatcher
+    // Use Hexagonal Dispatcher - It will handle the action check internally and return 400 if unknown
     const dispatchContext = {
       supabase: supabaseAny,
       requestId,
@@ -264,7 +255,10 @@ servePublic(async (req, ctx) => {
     
     if (resultObj?.__status) {
       const { __status, ...rest } = resultObj;
-      return jsonRes(rest, status, origin);
+      if (__status >= 400) {
+        return createErrorResponse(rest.error as string || 'Error', __status, requestId);
+      }
+      return jsonRes(rest, __status, origin);
     }
     
     return jsonRes(result, 200, origin);
