@@ -75,7 +75,7 @@ export const AppLayout = () => {
           {/* Mobile sidebar sheet */}
           {isMobile && (
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetContent side="left" className="p-0 w-[300px] max-w-[85vw] bg-[hsl(224_25%_6%)] border-r-0 [&>button:last-child]:hidden" aria-label="Menu lateral">
+              <SheetContent side="left" className="p-0 w-[300px] max-w-[85vw] bg-[#050507] border-r-0 [&>button:last-child]:hidden" aria-label="Menu lateral">
                 <AppSidebar mobile onNavigate={() => setMobileMenuOpen(false)} />
               </SheetContent>
             </Sheet>
