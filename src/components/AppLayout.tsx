@@ -41,7 +41,7 @@ export const AppLayout = () => {
 
   return (
     <SimpleModeProvider>
-      <div className="min-h-screen bg-[#020203] relative selection:bg-cta-positive/20 selection:text-cta-positive-foreground overflow-hidden">
+      <div className="min-h-screen bg-background relative selection:bg-cta-positive/20 selection:text-cta-positive-foreground overflow-hidden">
         {/* Enterprise Obsidian background */}
         <div 
           className="fixed inset-0 pointer-events-none z-0"
