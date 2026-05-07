@@ -142,7 +142,7 @@ export function useLandingContent() {
     differentiators: {
       title: t('landing.differentiators.title'),
       subtitle: t('landing.differentiators.subtitle'),
-      items: (t('landing.differentiators.items', { returnObjects: true }) as { title: string; description: string; metric: string; metricLabel: string }[]) || [],
+      items: Array.isArray(t('landing.differentiators.items', { returnObjects: true })) ? (t('landing.differentiators.items', { returnObjects: true }) as any[]) : Object.values(t('landing.differentiators.items', { returnObjects: true }) || {}),
     },
   }), [t]);
 }
