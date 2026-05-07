@@ -150,7 +150,10 @@ export function useLandingContent() {
     offer: {
       title: t('landing.offer.title'),
       text: t('landing.offer.text'),
-      items: Array.from({ length: 4 }, (_, i) => t(`landing.offer.items.${i}`)),
+      items: (() => {
+        const itemsObj = t('landing.offer.items', { returnObjects: true });
+        return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+      })(),
       cta: t('landing.offer.cta'),
       microcopy: t('landing.offer.microcopy'),
     },
