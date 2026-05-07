@@ -57,7 +57,7 @@ export function LandingNavbar() {
 
         {/* Right: trust signal + login + CTA */}
         <div className="flex items-center gap-2 md:gap-4">
-          <div className="hidden md:flex items-center gap-4 mr-2 pr-4 border-r border-border/20">
+          <div className="hidden md:flex items-center gap-4 mr-2 pr-4 border-r border-white/5">
             <Suspense fallback={<div className="w-8 h-8 rounded-full bg-muted animate-pulse" />}>
               <LanguageSwitcher 
                 className={cn(
