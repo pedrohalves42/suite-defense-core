@@ -59,13 +59,7 @@ async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
       return false;
     }
 
-    // Refresh session to get updated JWT with active_tenant_id
-    const { error: refreshError } = await supabase.auth.refreshSession();
-    if (refreshError) {
-      logger.warn('[syncActiveTenantToBackend] Session refresh warning');
-      // Non-blocking - continue even if refresh fails
-    }
-
+    // Session refresh moved to caller level for better control and to avoid redundancy
     return true;
   } catch (err) {
     // P2 MED-01: Handle timeout specifically
