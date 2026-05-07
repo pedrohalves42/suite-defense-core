@@ -672,15 +672,7 @@
     @apply border-border;
   }
 
-  html {
-    font-size: 14px;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
   body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     letter-spacing: -0.011em;
   }
 
