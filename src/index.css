@@ -176,30 +176,43 @@
 @layer utilities {
   /* === Transitions & Interactions === */
   .interactive-hover {
-    @apply transition-all duration-300 ease-premium hover:-translate-y-1 hover:shadow-float active:translate-y-0 active:scale-[0.98];
+    transition: transform 0.4s var(--ease-premium), box-shadow 0.4s var(--ease-premium), filter 0.4s var(--ease-premium), border-color 0.4s var(--ease-premium);
+  }
+  .interactive-hover:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: var(--shadow-lg);
+  }
+  .interactive-hover:active {
+    transform: translateY(-1px) scale(0.99);
   }
 
   .glass-effect {
-    @apply backdrop-blur-md bg-white/5 border border-white/10 shadow-float;
+    @apply backdrop-blur-xl bg-white/5 border border-white/10;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   }
 
   .glass-card {
-    @apply backdrop-blur-xl bg-card/60 border border-border/50 shadow-float;
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-premium);
   }
 
   .premium-gradient {
-    background: linear-gradient(135deg, hsl(var(--primary) / 0.02) 0%, transparent 100%);
+    background: radial-gradient(circle at top left, hsl(var(--accent) / 0.08), transparent 70%);
   }
 
   .bento-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(12, 1fr);
     gap: 1.5rem;
   }
 
   .stagger-visible > * {
     opacity: 0;
-    animation: fade-in-up 0.5s ease forwards;
+    transform: translateY(20px);
+    animation: fade-in-up 0.8s var(--ease-premium) forwards;
   }
 
   .stagger-visible > *:nth-child(1) { animation-delay: 0.1s; }
@@ -218,7 +231,8 @@
 
   /* === Focus States === */
   .focus-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-shadow;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    transition: ring 0.3s var(--ease-premium);
   }
 
   /* === Safe Area for PWA === */
