@@ -3,7 +3,7 @@ import { SEOHead } from "@/components/SEOHead";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
 
-// Eager load critical above-fold components
+// Eager load critical above-fold components for better LCP
 import { PainPointsSection } from "@/components/landing/PainPointsSection";
 import { ValuePropSection } from "@/components/landing/ValuePropSection";
 
@@ -11,7 +11,6 @@ import { ValuePropSection } from "@/components/landing/ValuePropSection";
 const WhatsAppButton = lazy(() => import("@/components/WhatsAppButton").then(m => ({ default: m.WhatsAppButton })));
 
 // Below-the-fold sections — lazy loaded to reduce initial bundle
-// PainPointsSection and ValuePropSection are now eager-loaded for better LCP
 const HowItWorksSection = lazy(() => import("@/components/landing/HowItWorksSection").then(m => ({ default: m.HowItWorksSection })));
 const AssessmentSection = lazy(() => import("@/components/landing/AssessmentSection").then(m => ({ default: m.AssessmentSection })));
 const BenefitsSection = lazy(() => import("@/components/landing/BenefitsSection").then(m => ({ default: m.BenefitsSection })));
@@ -70,11 +69,12 @@ const Landing = () => {
           {/* 1. Hero */}
           <HeroSection />
           
+          {/* 2. Dor do mercado - Eager loaded */}
+          <PainPointsSection />
+          {/* 3. Proposta de valor - Eager loaded */}
+          <ValuePropSection />
+          
           <Suspense fallback={null}>
-            {/* 2. Dor do mercado */}
-            <PainPointsSection />
-            {/* 3. Proposta de valor */}
-            <ValuePropSection />
             {/* 4. Como funciona */}
             <HowItWorksSection />
             {/* 5. Assessment */}
