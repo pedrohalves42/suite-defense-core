@@ -123,11 +123,11 @@ export function useLandingContent() {
       text: t('landing.comparison.text'),
       before: {
         label: t('landing.comparison.before.label'),
-        items: Array.from({ length: 5 }, (_, i) => t(`landing.comparison.before.items.${i}`)),
+        items: (t('landing.comparison.before.items', { returnObjects: true }) as string[]) || [],
       },
       after: {
         label: t('landing.comparison.after.label'),
-        items: Array.from({ length: 5 }, (_, i) => t(`landing.comparison.after.items.${i}`)),
+        items: (t('landing.comparison.after.items', { returnObjects: true }) as string[]) || [],
       },
     },
     offer: {
