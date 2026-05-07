@@ -14,9 +14,32 @@
    ============================================================ */
 
 @layer base {
+  :root {
+    --transition-all: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+    --transition-slow: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  * {
+    @apply border-border outline-none;
+  }
+
   html {
     font-size: 14px;
     scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-primary/10 selection:text-primary;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    letter-spacing: -0.011em;
+  }
+
+  /* Improved focus visibility */
+  :focus-visible {
+    @apply ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 
   :root {
