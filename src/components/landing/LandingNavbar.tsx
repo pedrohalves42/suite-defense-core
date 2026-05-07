@@ -1,13 +1,11 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import cybershieldLogo from "@/assets/logo-cybshield-new.webp";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { LogIn } from "lucide-react";
-
-// Lazy load non-critical navbar widgets to reduce initial JS
-const LanguageSwitcher = lazy(() => import("@/components/LanguageSwitcher").then(m => ({ default: m.LanguageSwitcher })));
-const ThemeToggle = lazy(() => import("@/components/ThemeToggle").then(m => ({ default: m.ThemeToggle })));
+import { LogIn, Globe2, Sun, Moon } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useTheme } from "next-themes";
 
 /**
  * Minimal landing page navbar — logo left, trust + login + CTA right
