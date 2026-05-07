@@ -25,9 +25,9 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-[#020203] relative overflow-hidden">
-      {/* Strategic Background - Premium Obsidian */}
-      <div className="absolute inset-0 bg-[#020203] overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-background relative overflow-hidden">
+      {/* Strategic Background - Premium Deep Slate */}
+      <div className="absolute inset-0 bg-background overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-cta-positive/10 rounded-full blur-[160px] animate-pulse-subtle" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-info/5 rounded-full blur-[140px]" />
       </div>
