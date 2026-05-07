@@ -63,72 +63,107 @@ export function useLandingContent() {
     howItWorks: {
       title: t('landing.howItWorks.title'),
       subtitle: t('landing.howItWorks.subtitle'),
-      steps: (t('landing.howItWorks.steps', { returnObjects: true }) as { title: string; description: string }[] || []).map((step, i) => ({
-        number: i + 1,
-        ...step
-      })),
+      steps: (() => {
+        const stepsObj = t('landing.howItWorks.steps', { returnObjects: true });
+        const stepsArray = Array.isArray(stepsObj) ? stepsObj : Object.values(stepsObj || {});
+        return stepsArray.map((step: any, i: number) => ({
+          number: i + 1,
+          ...step
+        }));
+      })(),
     },
     assessment: {
       title: t('landing.assessment.title'),
       text: t('landing.assessment.text'),
-      items: (t('landing.assessment.items', { returnObjects: true }) as string[]) || [],
+      items: (() => {
+        const itemsObj = t('landing.assessment.items', { returnObjects: true });
+        return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+      })(),
       cta: t('landing.assessment.cta'),
     },
     benefits: {
       title: t('landing.benefits.title'),
       subtitle: t('landing.benefits.subtitle'),
-      cards: (t('landing.benefits.cards', { returnObjects: true }) as { title: string; description: string }[] || []).map((card, i) => ({
-        icon: [Zap, Activity, BarChart, ShieldCheck][i] || ShieldCheck,
-        ...card
-      })),
+      cards: (() => {
+        const cardsObj = t('landing.benefits.cards', { returnObjects: true });
+        const cardsArray = Array.isArray(cardsObj) ? cardsObj : Object.values(cardsObj || {});
+        return cardsArray.map((card: any, i: number) => ({
+          icon: [Zap, Activity, BarChart, ShieldCheck][i] || ShieldCheck,
+          ...card
+        }));
+      })(),
     },
     features: {
       title: t('landing.features.title'),
       subtitle: t('landing.features.subtitle'),
-      items: (t('landing.features.items', { returnObjects: true }) as { title: string; description: string }[] || []).map((item, i) => ({
-        icon: [Server, Shield, Zap, FileCheck, Users, Clock][i] || Shield,
-        ...item
-      })),
+      items: (() => {
+        const itemsObj = t('landing.features.items', { returnObjects: true });
+        const itemsArray = Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+        return itemsArray.map((item: any, i: number) => ({
+          icon: [Server, Shield, Zap, FileCheck, Users, Clock][i] || Shield,
+          ...item
+        }));
+      })(),
     },
     targetAudience: {
       title: t('landing.targetAudience.title'),
       subtitle: t('landing.targetAudience.subtitle'),
-      segments: (t('landing.targetAudience.segments', { returnObjects: true }) as { title: string; description: string }[] || []).map((segment, i) => ({
-        icon: [Building2, Laptop, Stethoscope, Scale][i] || Building2,
-        ...segment
-      })),
+      segments: (() => {
+        const segmentsObj = t('landing.targetAudience.segments', { returnObjects: true });
+        const segmentsArray = Array.isArray(segmentsObj) ? segmentsObj : Object.values(segmentsObj || {});
+        return segmentsArray.map((segment: any, i: number) => ({
+          icon: [Building2, Laptop, Stethoscope, Scale][i] || Building2,
+          ...segment
+        }));
+      })(),
     },
     trustProof: {
       title: t('landing.trustProof.title'),
       text: t('landing.trustProof.text'),
-      blocks: (t('landing.trustProof.blocks', { returnObjects: true }) as { title: string; description: string }[] || []).map((block, i) => ({
-        icon: [Lock, Eye, FileText, CheckCircle][i] || Lock,
-        ...block
-      })),
+      blocks: (() => {
+        const blocksObj = t('landing.trustProof.blocks', { returnObjects: true });
+        const blocksArray = Array.isArray(blocksObj) ? blocksObj : Object.values(blocksObj || {});
+        return blocksArray.map((block: any, i: number) => ({
+          icon: [Lock, Eye, FileText, CheckCircle][i] || Lock,
+          ...block
+        }));
+      })(),
     },
     comparison: {
       title: t('landing.comparison.title'),
       text: t('landing.comparison.text'),
       before: {
         label: t('landing.comparison.before.label'),
-        items: (t('landing.comparison.before.items', { returnObjects: true }) as string[]) || [],
+        items: (() => {
+          const itemsObj = t('landing.comparison.before.items', { returnObjects: true });
+          return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+        })(),
       },
       after: {
         label: t('landing.comparison.after.label'),
-        items: (t('landing.comparison.after.items', { returnObjects: true }) as string[]) || [],
+        items: (() => {
+          const itemsObj = t('landing.comparison.after.items', { returnObjects: true });
+          return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+        })(),
       },
     },
     offer: {
       title: t('landing.offer.title'),
       text: t('landing.offer.text'),
-      items: Array.from({ length: 4 }, (_, i) => t(`landing.offer.items.${i}`)),
+      items: (() => {
+        const itemsObj = t('landing.offer.items', { returnObjects: true });
+        return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+      })(),
       cta: t('landing.offer.cta'),
       microcopy: t('landing.offer.microcopy'),
     },
     faq: {
       title: t('landing.faq.title'),
       subtitle: t('landing.faq.subtitle'),
-      items: (t('landing.faq.items', { returnObjects: true }) as { question: string; answer: string }[]) || [],
+      items: (() => {
+        const itemsObj = t('landing.faq.items', { returnObjects: true });
+        return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+      })(),
     },
     ctaFinal: {
       title: t('landing.ctaFinal.title'),
@@ -142,7 +177,10 @@ export function useLandingContent() {
     differentiators: {
       title: t('landing.differentiators.title'),
       subtitle: t('landing.differentiators.subtitle'),
-      items: (t('landing.differentiators.items', { returnObjects: true }) as { title: string; description: string; metric: string; metricLabel: string }[]) || [],
+      items: (() => {
+        const itemsObj = t('landing.differentiators.items', { returnObjects: true });
+        return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+      })(),
     },
   }), [t]);
 }
