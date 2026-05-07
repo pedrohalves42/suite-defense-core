@@ -3,6 +3,10 @@ import { SEOHead } from "@/components/SEOHead";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
 
+// Eager load critical above-fold components
+import { PainPointsSection } from "@/components/landing/PainPointsSection";
+import { ValuePropSection } from "@/components/landing/ValuePropSection";
+
 // Lazy load non-critical above-fold elements
 const WhatsAppButton = lazy(() => import("@/components/WhatsAppButton").then(m => ({ default: m.WhatsAppButton })));
 
