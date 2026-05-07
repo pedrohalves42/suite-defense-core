@@ -15,8 +15,9 @@
 
 @layer base {
   :root {
-    --transition-all: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
-    --transition-slow: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    --transition-all: all 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+    --transition-slow: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-premium: cubic-bezier(0.23, 1, 0.32, 1);
   }
 
   * {
@@ -24,17 +25,18 @@
   }
 
   html {
-    font-size: 14px;
+    font-size: 16px;
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/10 selection:text-primary;
+    @apply bg-background text-foreground antialiased selection:bg-cta-positive/20 selection:text-cta-positive;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    letter-spacing: -0.011em;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+    letter-spacing: -0.01em;
+    line-height: 1.6;
   }
 
   /* Improved focus visibility */
