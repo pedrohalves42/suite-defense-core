@@ -13,53 +13,50 @@ export function HeroSection() {
   const { hero } = useLandingContent();
 
   return (
-    <section id="inicio" className="relative min-h-[85vh] sm:min-h-[90vh] flex items-center overflow-hidden py-24" aria-labelledby="hero-heading">
-      {/* Refined Background - Apple Style */}
-      <div className="absolute inset-0 bg-[#000] overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-cta-positive/10 rounded-full blur-[120px] animate-pulse-subtle" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-500/10 rounded-full blur-[120px]" />
+    <section id="inicio" className="relative min-h-screen flex items-center overflow-hidden py-32" aria-labelledby="hero-heading">
+      {/* Refined Background - Ultra Premium Obsidian */}
+      <div className="absolute inset-0 bg-[#020203] overflow-hidden">
+        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-cta-positive/20 rounded-full blur-[160px] animate-pulse-subtle" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-info/10 rounded-full blur-[140px]" />
       </div>
       
-      {/* Subtle grid pattern */}
-      <div className="absolute inset-0 opacity-[0.03]" style={{
-        backgroundImage: `radial-gradient(circle at 1px 1px, hsl(var(--primary-foreground)) 1px, transparent 0)`,
-        backgroundSize: '40px 40px'
+      {/* Dynamic light streak */}
+      <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-cta-positive/50 to-transparent opacity-20" />
+
+      {/* Subtle refined grid */}
+      <div className="absolute inset-0 opacity-[0.05]" style={{
+        backgroundImage: `linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)`,
+        backgroundSize: '80px 80px'
       }} />
 
-      {/* Green security glow — scaled down on mobile */}
-      <div className="absolute top-1/4 right-1/4 w-[300px] h-[300px] sm:w-[500px] sm:h-[500px] bg-cta-positive/8 rounded-full blur-[100px] sm:blur-[150px]" />
-      <div className="absolute bottom-1/4 left-0 w-[250px] h-[250px] sm:w-[400px] sm:h-[400px] bg-info/5 rounded-full blur-[80px] sm:blur-[120px]" />
-      
-      {/* Decorations — deferred so they don't block FCP */}
-      <Suspense fallback={null}>
-        <HeroDecorations />
-      </Suspense>
-
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24 w-full">
-        <div className="grid lg:grid-cols-2 gap-10 md:gap-12 lg:gap-16 items-center">
+      <div className="relative max-w-7xl mx-auto px-6 lg:px-8 py-20 w-full">
+        <div className="grid lg:grid-cols-2 gap-20 items-center">
           {/* Left: Text content */}
-          <div className="space-y-6 sm:space-y-8 animate-fade-in-left text-center lg:text-left">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-cta-positive/10 border border-cta-positive/20 backdrop-blur-md shadow-sm animate-pulse-subtle">
-              <img src={cybershieldLogo} alt="" className="w-4 h-4 sm:w-5 sm:h-5 object-contain" aria-hidden="true" width={20} height={20} />
-              <span className="text-[10px] sm:text-xs md:text-sm font-bold tracking-wide uppercase text-cta-positive">{hero.badge}</span>
+          <div className="space-y-10 animate-fade-in-left text-center lg:text-left">
+            {/* Badge - Cyber Shield Premium */}
+            <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full glass-card border-cta-positive/30 shadow-glow">
+              <div className="relative">
+                <img src={cybershieldLogo} alt="" className="w-5 h-5 object-contain animate-pulse" aria-hidden="true" width={20} height={20} />
+                <div className="absolute inset-0 bg-cta-positive/40 blur-sm rounded-full" />
+              </div>
+              <span className="text-[11px] font-bold tracking-[0.15em] uppercase text-cta-positive/90">{hero.badge}</span>
             </div>
 
-            {/* Title — fluid scaling */}
-            <h1 id="hero-heading" className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-display font-extrabold tracking-tight leading-[1.02] text-balance">
-              <span className="text-white drop-shadow-2xl">
+            {/* Title — fluid scaling & high impact */}
+            <h1 id="hero-heading" className="text-5xl sm:text-6xl md:text-7xl xl:text-[5.5rem] font-display font-extrabold tracking-tight leading-[1] text-balance">
+              <span className="text-white drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
                 {hero.title1}
               </span>
               <br />
-              <span className="bg-gradient-to-r from-cta-positive via-emerald-300 to-shield-active bg-clip-text text-transparent animate-gradient-x brightness-110">
+              <span className="bg-gradient-to-r from-cta-positive via-emerald-300 to-cta-positive bg-clip-text text-transparent animate-gradient-x brightness-125 saturate-150">
                 {hero.title2}
               </span>
             </h1>
 
             {/* Description */}
-            <p className="text-base sm:text-lg md:text-xl text-white/70 max-w-xl mx-auto lg:mx-0 leading-relaxed text-pretty font-medium">
+            <p className="text-lg md:text-xl text-white/60 max-w-xl mx-auto lg:mx-0 leading-relaxed text-pretty font-medium">
               {hero.description}
-              <strong className="text-white font-bold ml-1 border-b-2 border-cta-positive/30 pb-0.5">{hero.descriptionBold}</strong>
+              <span className="text-white border-b border-cta-positive/40 pb-0.5 ml-1">{hero.descriptionBold}</span>
             </p>
 
             {/* Benefits */}
