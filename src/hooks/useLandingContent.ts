@@ -63,12 +63,10 @@ export function useLandingContent() {
     howItWorks: {
       title: t('landing.howItWorks.title'),
       subtitle: t('landing.howItWorks.subtitle'),
-      steps: [
-        { number: 1, title: t('landing.howItWorks.steps.0.title'), description: t('landing.howItWorks.steps.0.description') },
-        { number: 2, title: t('landing.howItWorks.steps.1.title'), description: t('landing.howItWorks.steps.1.description') },
-        { number: 3, title: t('landing.howItWorks.steps.2.title'), description: t('landing.howItWorks.steps.2.description') },
-        { number: 4, title: t('landing.howItWorks.steps.3.title'), description: t('landing.howItWorks.steps.3.description') },
-      ],
+      steps: (t('landing.howItWorks.steps', { returnObjects: true }) as { title: string; description: string }[] || []).map((step, i) => ({
+        number: i + 1,
+        ...step
+      })),
     },
     assessment: {
       title: t('landing.assessment.title'),
@@ -79,44 +77,34 @@ export function useLandingContent() {
     benefits: {
       title: t('landing.benefits.title'),
       subtitle: t('landing.benefits.subtitle'),
-      cards: [
-        { icon: Zap, title: t('landing.benefits.cards.0.title'), description: t('landing.benefits.cards.0.description') },
-        { icon: Activity, title: t('landing.benefits.cards.1.title'), description: t('landing.benefits.cards.1.description') },
-        { icon: BarChart, title: t('landing.benefits.cards.2.title'), description: t('landing.benefits.cards.2.description') },
-        { icon: ShieldCheck, title: t('landing.benefits.cards.3.title'), description: t('landing.benefits.cards.3.description') },
-      ],
+      cards: (t('landing.benefits.cards', { returnObjects: true }) as { title: string; description: string }[] || []).map((card, i) => ({
+        icon: [Zap, Activity, BarChart, ShieldCheck][i] || ShieldCheck,
+        ...card
+      })),
     },
     features: {
       title: t('landing.features.title'),
       subtitle: t('landing.features.subtitle'),
-      items: [
-        { icon: Server, title: t('landing.features.items.0.title'), description: t('landing.features.items.0.description') },
-        { icon: Shield, title: t('landing.features.items.1.title'), description: t('landing.features.items.1.description') },
-        { icon: Zap, title: t('landing.features.items.2.title'), description: t('landing.features.items.2.description') },
-        { icon: FileCheck, title: t('landing.features.items.3.title'), description: t('landing.features.items.3.description') },
-        { icon: Users, title: t('landing.features.items.4.title'), description: t('landing.features.items.4.description') },
-        { icon: Clock, title: t('landing.features.items.5.title'), description: t('landing.features.items.5.description') },
-      ],
+      items: (t('landing.features.items', { returnObjects: true }) as { title: string; description: string }[] || []).map((item, i) => ({
+        icon: [Server, Shield, Zap, FileCheck, Users, Clock][i] || Shield,
+        ...item
+      })),
     },
     targetAudience: {
       title: t('landing.targetAudience.title'),
       subtitle: t('landing.targetAudience.subtitle'),
-      segments: [
-        { icon: Building2, title: t('landing.targetAudience.segments.0.title'), description: t('landing.targetAudience.segments.0.description') },
-        { icon: Laptop, title: t('landing.targetAudience.segments.1.title'), description: t('landing.targetAudience.segments.1.description') },
-        { icon: Stethoscope, title: t('landing.targetAudience.segments.2.title'), description: t('landing.targetAudience.segments.2.description') },
-        { icon: Scale, title: t('landing.targetAudience.segments.3.title'), description: t('landing.targetAudience.segments.3.description') },
-      ],
+      segments: (t('landing.targetAudience.segments', { returnObjects: true }) as { title: string; description: string }[] || []).map((segment, i) => ({
+        icon: [Building2, Laptop, Stethoscope, Scale][i] || Building2,
+        ...segment
+      })),
     },
     trustProof: {
       title: t('landing.trustProof.title'),
       text: t('landing.trustProof.text'),
-      blocks: [
-        { icon: Lock, title: t('landing.trustProof.blocks.0.title'), description: t('landing.trustProof.blocks.0.description') },
-        { icon: Eye, title: t('landing.trustProof.blocks.1.title'), description: t('landing.trustProof.blocks.1.description') },
-        { icon: FileText, title: t('landing.trustProof.blocks.2.title'), description: t('landing.trustProof.blocks.2.description') },
-        { icon: CheckCircle, title: t('landing.trustProof.blocks.3.title'), description: t('landing.trustProof.blocks.3.description') },
-      ],
+      blocks: (t('landing.trustProof.blocks', { returnObjects: true }) as { title: string; description: string }[] || []).map((block, i) => ({
+        icon: [Lock, Eye, FileText, CheckCircle][i] || Lock,
+        ...block
+      })),
     },
     comparison: {
       title: t('landing.comparison.title'),
