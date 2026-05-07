@@ -78,23 +78,23 @@ export function HeroSection() {
             )}
 
             {/* CTA — stacks on mobile, side-by-side from sm+ */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3 sm:gap-4 lg:gap-5 pt-4 sm:pt-6">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-5 pt-8">
               <Button 
                 asChild 
                 size="lg" 
                 variant="cta"
-                className="w-full sm:w-auto text-base sm:text-lg h-14 sm:h-16 px-8 sm:px-12 font-bold rounded-full shadow-2xl shadow-cta-positive/20 hover:shadow-cta-positive/40 transition-all duration-500 ease-premium interactive-hover"
+                className="w-full sm:w-auto text-lg h-16 px-12 font-bold rounded-full shadow-[0_20px_50px_rgba(16,185,129,0.3)] hover:shadow-[0_20px_60px_rgba(16,185,129,0.5)] transition-all duration-500 interactive-hover border border-white/10"
               >
                 <Link to="/signup" aria-label="Descobrir se minha empresa está vulnerável - Começar agora">
                   <span className="truncate">{hero.ctaButton}</span>
-                  <ArrowRight className="ml-2 sm:ml-3 h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 group-hover:translate-x-1 transition-transform duration-500" aria-hidden="true" />
+                  <ArrowRight className="ml-3 h-6 w-6 flex-shrink-0 group-hover:translate-x-1 transition-transform duration-500" aria-hidden="true" />
                 </Link>
               </Button>
               <Button 
                 asChild 
                 size="lg" 
                 variant="outline"
-                className="w-full sm:w-auto text-base sm:text-lg h-14 sm:h-16 px-8 sm:px-12 border-white/10 text-white/90 rounded-full bg-white/5 backdrop-blur-md hover:bg-white/10 hover:border-white/20 transition-all duration-500 ease-premium"
+                className="w-full sm:w-auto text-lg h-16 px-12 border-white/5 text-white/90 rounded-full bg-white/[0.03] backdrop-blur-xl hover:bg-white/[0.08] hover:border-white/20 transition-all duration-500"
               >
                 <a href="#mini-diagnostico" aria-label="Agendar diagnóstico gratuito de 15 minutos">
                   <span className="truncate">{hero.ctaSecondary || "Agendar diagnóstico gratuito"}</span>
