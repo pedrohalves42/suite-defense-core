@@ -2,27 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --transition-all: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
-    --transition-slow: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
-  }
-
-  * {
-    @apply border-border outline-none;
-  }
-
-  body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/10 selection:text-primary;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-  }
-
-  /* Improved focus visibility */
-  :focus-visible {
-    @apply ring-2 ring-ring ring-offset-2 ring-offset-background;
-  }
-}
-
+/* Base styles merged below */
 
 /* ============================================================
    CYBERSHIELD — Premium Design System
@@ -34,8 +14,32 @@
    ============================================================ */
 
 @layer base {
+  :root {
+    --transition-all: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+    --transition-slow: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  * {
+    @apply border-border outline-none;
+  }
+
   html {
-    font-size: 14px; /* Scale down from 16px default — removes the "zoomed in" feel */
+    font-size: 14px;
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-primary/10 selection:text-primary;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    letter-spacing: -0.011em;
+  }
+
+  /* Improved focus visibility */
+  :focus-visible {
+    @apply ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 
   :root {
@@ -89,6 +93,12 @@
     --ring: 220 12% 12%;
     
     --radius: 0.625rem;
+    
+    /* Neon glow tokens — Green primary for cybersecurity identity */
+    --neon-cyan: 160 84% 42%;           /* Esmeralda — replaces cyan for security feel */
+    --neon-blue: 220 90% 60%;
+    --neon-purple: 270 85% 60%;
+    --neon-green: 150 90% 50%;
     
     /* Elevation — stronger shadows for light mode */
     --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -312,13 +322,8 @@
 
   /* === Futuristic Sidebar System === */
   
-  /* Neon glow tokens — Green primary for cybersecurity identity */
-  --neon-cyan: 160 84% 42%;           /* Esmeralda — replaces cyan for security feel */
-  --neon-blue: 220 90% 60%;
-  --neon-purple: 270 85% 60%;
-  --neon-green: 150 90% 50%;
-  
   .sidebar-futuristic {
+    /* Neon glow tokens moved to :root */
     background: linear-gradient(
       180deg,
       hsl(224 25% 6%) 0%,
@@ -666,58 +671,7 @@
   }
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  html {
-    font-size: 14px;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    letter-spacing: -0.011em;
-  }
-
-  .font-mono {
-    font-family: 'IBM Plex Mono', 'JetBrains Mono', 'Courier New', monospace;
-  }
-
-  /* Premium scrollbar */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  ::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
-    border-radius: 3px;
-  }
-  
-  ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.3);
-  }
-
-  /* Dark mode refinements */
-  .dark .card-enterprise,
-  .dark .card-enterprise-hover,
-  .dark .stats-card-enterprise {
-    border-color: hsl(var(--border));
-  }
-
-  .dark .recharts-cartesian-grid-horizontal line,
-  .dark .recharts-cartesian-grid-vertical line {
-    stroke: hsl(var(--border));
-  }
-
+@layer utilities {
   /* Mobile responsive helpers */
   @media (max-width: 380px) {
     .grid-cols-2 {
