@@ -82,22 +82,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initializeAuth();
 
-    // Proactive token refresh
-    const refreshInterval = setInterval(async () => {
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      if (!currentSession?.expires_at) return;
-
-      const now = Math.floor(Date.now() / 1000);
-      const timeUntilExpiry = currentSession.expires_at - now;
-
-      if (timeUntilExpiry < 600) {
-        logger.info('[AuthProvider] Proactive refresh');
-        const { error } = await supabase.auth.refreshSession();
-        if (error) {
-          logger.error('[AuthProvider] Refresh failed', error);
-        }
-      }
-    }, 1000 * 60 * 5); // 5 minutes
+    // Supabase autoRefreshToken handles token refresh automatically.
+    // Redundant interval removed to prevent race conditions and unnecessary gateway calls.
 
     return () => {
       isMounted = false;
