@@ -24,8 +24,8 @@ const lgpdItems = [
 
 export function ProductPreviewSection() {
   return (
-    <section className="py-32 relative overflow-hidden bg-[#020203]">
-      <div className="absolute inset-0 bg-gradient-to-b from-[#020203] via-cta-positive/[0.02] to-[#020203]" />
+    <section className="py-32 relative overflow-hidden bg-[bg-background]">
+      <div className="absolute inset-0 bg-gradient-to-b from-[bg-background] via-cta-positive/[0.02] to-[bg-background]" />
       
       <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
         <SectionHeader

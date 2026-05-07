@@ -27,7 +27,7 @@ export function LandingNavbar() {
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
         scrolled 
-          ? "bg-[#020203]/70 backdrop-blur-[32px] border-b border-white/[0.05] py-3 shadow-[0_10px_40px_rgba(0,0,0,0.4)]" 
+          ? "bg-[bg-background]/70 backdrop-blur-[32px] border-b border-white/[0.05] py-3 shadow-[0_10px_40px_rgba(0,0,0,0.4)]" 
           : "bg-transparent border-b border-transparent py-8"
       )}
     >
