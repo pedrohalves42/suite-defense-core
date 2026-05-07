@@ -131,7 +131,10 @@ export function useLandingContent() {
       text: t('landing.comparison.text'),
       before: {
         label: t('landing.comparison.before.label'),
-        items: (t('landing.comparison.before.items', { returnObjects: true }) as string[]) || [],
+        items: (() => {
+          const itemsObj = t('landing.comparison.before.items', { returnObjects: true });
+          return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+        })(),
       },
       after: {
         label: t('landing.comparison.after.label'),
