@@ -239,37 +239,38 @@ export default function Dashboard() {
       </motion.div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card, i) => {
           const Icon = card.icon;
           return (
             <motion.div key={card.label} custom={i} initial="hidden" animate="visible" variants={fadeUp}>
               <Link to={card.to}>
                 <Card className={cn(
-                  "card-enterprise-hover cursor-pointer h-full transition-all duration-200 hover:scale-[1.02] backdrop-blur-sm",
-                  card.ring && "ring-1 ring-destructive/20"
+                  "glass-card border-white/5 h-full transition-all duration-500 hover:border-cta-positive/30 hover:scale-[1.02] shadow-premium relative overflow-hidden group",
+                  card.ring && "ring-1 ring-destructive/30"
                 )}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="p-1.5 rounded-md bg-muted/60">
-                        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <CardContent className="p-6 relative z-10">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="p-2 rounded-xl bg-white/[0.03] border border-white/5">
+                        <Icon className="h-4 w-4 text-white/40 group-hover:text-cta-positive transition-colors" />
                       </div>
-                      <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                      <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">
                         {card.label}
                       </span>
                     </div>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className={cn("text-2xl font-bold tabular-nums", card.valueColor)}>
+                    <div className="flex items-baseline gap-2">
+                      <span className={cn("text-3xl font-black tabular-nums tracking-tighter text-white", card.valueColor)}>
                         {card.value}
                       </span>
                       {card.suffix && (
-                        <span className="text-xs text-muted-foreground">{card.suffix}</span>
+                        <span className="text-xs font-bold text-white/20 uppercase tracking-widest">{card.suffix}</span>
                       )}
                     </div>
                     {card.alert && (
-                      <div className="flex items-center gap-1 mt-2">
+                      <div className="flex items-center gap-2 mt-4 px-3 py-1.5 rounded-full bg-white/[0.02] border border-white/5 w-fit">
                         {card.alert.icon && <card.alert.icon className={cn("h-3 w-3", card.alert.color)} />}
-                        <span className={cn("text-[11px]", card.alert.color)}>{card.alert.text}</span>
+                        <span className={cn("text-[10px] font-bold uppercase tracking-widest", card.alert.color)}>{card.alert.text}</span>
                       </div>
                     )}
                   </CardContent>
