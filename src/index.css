@@ -90,6 +90,12 @@
     
     --radius: 0.625rem;
     
+    /* Neon glow tokens — Green primary for cybersecurity identity */
+    --neon-cyan: 160 84% 42%;           /* Esmeralda — replaces cyan for security feel */
+    --neon-blue: 220 90% 60%;
+    --neon-purple: 270 85% 60%;
+    --neon-green: 150 90% 50%;
+    
     /* Elevation — stronger shadows for light mode */
     --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.04);
