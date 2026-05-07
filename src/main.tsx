@@ -17,7 +17,7 @@ import PublicApp from "./PublicApp";
 
 // Check if backend env vars are available
 const _supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const _supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const _supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
 const hasBackend = Boolean(_supabaseUrl && _supabaseKey);
 
 const DEPLOY_RECOVERY_KEY = "__cybershield_deploy_recovery__";

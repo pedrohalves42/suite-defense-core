@@ -7,8 +7,8 @@ export function AssessmentSection() {
   const { assessment } = useLandingContent();
 
   return (
-    <section className="py-32 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-cta-positive/[0.02] to-background" />
+    <section className="py-32 relative overflow-hidden bg-background">
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-cta-positive/[0.04] to-background" />
       
       <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-20 items-center">

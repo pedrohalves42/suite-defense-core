@@ -6,9 +6,9 @@ export function TrustProofSection() {
   const { trustProof } = useLandingContent();
 
   return (
-    <section className="py-32 relative overflow-hidden bg-[#020203]">
+    <section className="py-32 relative overflow-hidden bg-background">
       {/* Dark premium background with more visibility */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#020203] via-white/[0.01] to-[#020203]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-white/[0.01] to-background" />
       <div className="absolute top-1/2 left-1/4 w-[600px] h-[600px] bg-cta-positive/10 rounded-full blur-[160px] opacity-20" />
       
       <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
