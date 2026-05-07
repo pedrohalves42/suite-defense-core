@@ -93,10 +93,14 @@ export function useLandingContent() {
     features: {
       title: t('landing.features.title'),
       subtitle: t('landing.features.subtitle'),
-      items: (t('landing.features.items', { returnObjects: true }) as { title: string; description: string }[] || []).map((item, i) => ({
-        icon: [Server, Shield, Zap, FileCheck, Users, Clock][i] || Shield,
-        ...item
-      })),
+      items: (() => {
+        const itemsObj = t('landing.features.items', { returnObjects: true });
+        const itemsArray = Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+        return itemsArray.map((item: any, i: number) => ({
+          icon: [Server, Shield, Zap, FileCheck, Users, Clock][i] || Shield,
+          ...item
+        }));
+      })(),
     },
     targetAudience: {
       title: t('landing.targetAudience.title'),
