@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
-import { CheckCircle, ArrowRight, Star } from "lucide-react";
+import { CheckCircle, ArrowRight, Star, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import { SectionHeader } from "./shared/SectionHeader";
 
 const PLAN_KEYS = ["starter", "business", "enterprise"] as const;
 
