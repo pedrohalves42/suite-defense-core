@@ -1,6 +1,5 @@
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { motion } from "framer-motion";
-import { ValuePropDecorations } from "./shared/AnimatedDecorations";
 
 export function ValuePropSection() {
   const { valueProp } = useLandingContent();
