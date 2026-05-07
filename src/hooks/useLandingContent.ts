@@ -140,10 +140,7 @@ export function useLandingContent() {
     faq: {
       title: t('landing.faq.title'),
       subtitle: t('landing.faq.subtitle'),
-      items: Array.from({ length: 6 }, (_, i) => ({
-        question: t(`landing.faq.items.${i}.question`),
-        answer: t(`landing.faq.items.${i}.answer`),
-      })),
+      items: (t('landing.faq.items', { returnObjects: true }) as { question: string; answer: string }[]) || [],
     },
     ctaFinal: {
       title: t('landing.ctaFinal.title'),
