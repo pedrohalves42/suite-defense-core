@@ -41,17 +41,23 @@ export const AppLayout = () => {
 
   return (
     <SimpleModeProvider>
-      <div className="min-h-screen bg-background relative selection:bg-cta-positive/20 selection:text-cta-positive-foreground">
-        {/* Enterprise background pattern */}
+      <div className="min-h-screen bg-[#020203] relative selection:bg-cta-positive/20 selection:text-cta-positive-foreground overflow-hidden">
+        {/* Enterprise Obsidian background */}
         <div 
-          className="fixed inset-0 pointer-events-none"
+          className="fixed inset-0 pointer-events-none z-0"
           style={{
             background: `
-              radial-gradient(circle at 0% 0%, hsla(var(--primary), 0.03) 0%, transparent 50%),
-              radial-gradient(circle at 100% 100%, hsla(var(--cta-positive), 0.02) 0%, transparent 50%)
+              radial-gradient(circle at 0% 0%, hsla(var(--cta-positive), 0.05) 0%, transparent 40%),
+              radial-gradient(circle at 100% 100%, hsla(var(--info), 0.03) 0%, transparent 40%)
             `,
           }}
         />
+        
+        {/* Refined mesh pattern */}
+        <div className="fixed inset-0 opacity-[0.03] pointer-events-none z-0" style={{
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)`,
+          backgroundSize: '100px 100px'
+        }} />
         
         <div className="relative">
           {/* Global background listeners */}
