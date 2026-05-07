@@ -111,8 +111,8 @@
   }
   
   .dark {
-    /* === SOPHISTICATED NEUTRAL DARK MODE === */
-    --background: 220 15% 7%;           /* Lighter, softer Obsidian */
+    /* === SOPHISTICATED DEEP SLATE DARK MODE === */
+    --background: 222 25% 6%;           /* #090a0f - Deep Slate, more breathable than pure black */
     --foreground: 210 20% 98%;
     
     --card: 220 15% 10%;                /* Subtle contrast for cards */
