@@ -249,39 +249,67 @@ export default function Dashboard() {
 
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         {statCards.map((card, i) => {
           const Icon = card.icon;
           return (
-            <motion.div key={card.label} custom={i} initial="hidden" animate="visible" variants={fadeUp}>
-              <Link to={card.to}>
+            <motion.div 
+              key={card.label} 
+              custom={i} 
+              initial="hidden" 
+              animate="visible" 
+              variants={fadeUp}
+              whileHover={{ y: -5 }}
+              className="h-full"
+            >
+              <Link to={card.to} className="block h-full">
                 <Card className={cn(
-                  "glass-card border-white/5 h-full transition-all duration-500 hover:border-cta-positive/30 hover:scale-[1.02] shadow-premium relative overflow-hidden group",
+                  "glass-card border-white/5 h-full transition-all duration-500 hover:border-cta-positive/30 shadow-premium relative overflow-hidden group rounded-[2rem]",
                   card.ring && "ring-1 ring-destructive/30"
                 )}>
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <CardContent className="p-6 relative z-10">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="p-2 rounded-xl bg-white/[0.03] border border-white/5">
-                        <Icon className="h-4 w-4 text-white/40 group-hover:text-cta-positive transition-colors" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  
+                  {/* Subtle corner highlight */}
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-cta-positive/5 rounded-full blur-[40px] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                  <CardContent className="p-8 relative z-10 flex flex-col h-full">
+                    <div className="flex items-center justify-between mb-8">
+                      <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/5 transition-colors group-hover:bg-white/[0.08] group-hover:border-white/10">
+                        <Icon className="h-5 w-5 text-white/50 group-hover:text-cta-positive transition-all duration-500" />
                       </div>
-                      <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">
-                        {card.label}
-                      </span>
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                      <span className={cn("text-3xl font-black tabular-nums tracking-tighter text-white", card.valueColor)}>
-                        {card.value}
-                      </span>
-                      {card.suffix && (
-                        <span className="text-xs font-bold text-white/20 uppercase tracking-widest">{card.suffix}</span>
+                      {card.ring && (
+                        <div className="h-2 w-2 rounded-full bg-destructive animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]" />
                       )}
                     </div>
-                    {card.alert && (
-                      <div className="flex items-center gap-2 mt-4 px-3 py-1.5 rounded-full bg-white/[0.02] border border-white/5 w-fit">
-                        {card.alert.icon && <card.alert.icon className={cn("h-3 w-3", card.alert.color)} />}
-                        <span className={cn("text-[10px] font-bold uppercase tracking-widest", card.alert.color)}>{card.alert.text}</span>
+
+                    <div className="space-y-2 mt-auto">
+                      <div className="text-[10px] font-black text-white/20 uppercase tracking-[0.25em]">
+                        {card.label}
                       </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className={cn("text-4xl font-black tabular-nums tracking-tighter text-white", card.valueColor)}>
+                          {card.value}
+                        </span>
+                        {card.suffix && (
+                          <span className="text-xs font-bold text-white/20 uppercase tracking-widest">{card.suffix}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {card.alert && (
+                      <div className="flex items-center gap-2 mt-6 px-4 py-2 rounded-xl bg-white/[0.03] border border-white/5 w-fit group-hover:bg-white/[0.05] transition-colors">
+                        {card.alert.icon && <card.alert.icon className={cn("h-3.5 w-3.5", card.alert.color)} />}
+                        <span className={cn("text-[10px] font-black uppercase tracking-widest", card.alert.color)}>{card.alert.text}</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </Link>
+            </motion.div>
+          );
+        })}
+      </div>
+
                     )}
                   </CardContent>
                 </Card>
