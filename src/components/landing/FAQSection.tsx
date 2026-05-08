@@ -26,7 +26,7 @@ export function FAQSection() {
           viewport={{ once: true }}
         >
           <Accordion type="single" collapsible className="max-w-3xl mx-auto space-y-3">
-            {faq.items.map((item, index) => (
+            {safeMap(faq.items, (item, index) => (
               <AccordionItem 
                 key={index} 
                 value={`q${index}`}
