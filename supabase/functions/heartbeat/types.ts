@@ -79,6 +79,7 @@ export interface AgentContext {
   last_telemetry_at?: string | null;
   last_heartbeat?: string | null;
   metadata_hash?: string | null;
+  version?: number;
 }
 
 export interface AgentUpdate {
@@ -93,6 +94,8 @@ export interface AgentUpdate {
   ed25519_supported?: boolean;
   signature_mode?: string;
   metadata_hash?: string;
+  version?: number;
+}
 }
 }
 
