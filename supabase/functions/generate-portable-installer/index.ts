@@ -238,7 +238,8 @@ try {
 
     Write-InstallLog "[3/7] Testando conectividade..."
     try {
-        Invoke-WebRequest -Uri "$ServerUrl/functions/v1/heartbeat" -Method GET -TimeoutSec 10 -UseBasicParsing | Out-Null
+        # AUDIT-FIX: Use POST for heartbeat check as GET is not supported
+        Invoke-WebRequest -Uri "$ServerUrl/functions/v1/heartbeat" -Method POST -Body "{}" -TimeoutSec 10 -UseBasicParsing | Out-Null
         Write-InstallLog "OK Conectividade verificada"
     } catch {
         Write-Host "AVISO: Backend nao acessivel. Continuar? (S/N)" -ForegroundColor Yellow
@@ -247,10 +248,10 @@ try {
     }
 
     Write-InstallLog "[4/7] Salvando script do agente..."
-    $AgentContent = @'
-${agentScriptContent}
-'@
-    Set-Content -Path $AgentScript -Value $AgentContent -Encoding UTF8 -Force
+    # AUDIT-FIX: Use Base64 to inject script content to avoid delimiter collision in here-strings
+    $AgentB64 = "${btoa(agentScriptContent)}"
+    $AgentBytes = [Convert]::FromBase64String($AgentB64)
+    [System.IO.File]::WriteAllBytes($AgentScript, $AgentBytes)
     Write-InstallLog "OK Script salvo em $AgentScript"
 
     Write-InstallLog "[5/7] Configurando firewall..."

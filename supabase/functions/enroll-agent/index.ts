@@ -41,15 +41,20 @@ servePublic(async (req, ctx) => {
     }
 
     // Prepare credentials
-    const agentToken = crypto.randomUUID();
+    const agentToken = `cs_${crypto.randomUUID().replace(/-/g, '')}`;
     const hmacSecret = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b => b.toString(16).padStart(2, '0')).join('');
     
     const tokenHash = await hashToken(agentToken);
     const tokenPrefix = getTokenPrefix(agentToken);
     const enrollmentKeyHash = await hashEnrollmentKey(enrollmentKey);
     
+    // AUDIT-FIX: Fetch tenant policy for token expiration
+    const { data: keyInfo } = await supabase.from('enrollment_keys').select('tenant_id').eq('key_hash', enrollmentKeyHash).single();
+    const { data: policy } = await supabase.from('tenant_security_policies').select('token_expiry_days').eq('tenant_id', keyInfo?.tenant_id).maybeSingle();
+    
+    const expiryDays = policy?.token_expiry_days || 365;
     const expiresAt = new Date();
-    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    expiresAt.setDate(expiresAt.getDate() + expiryDays);
 
     // CALL ATOMIC RPC
     const { data: result, error: rpcError } = await supabase.rpc('enroll_agent_atomic', {
