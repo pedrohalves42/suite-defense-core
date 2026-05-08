@@ -31,6 +31,8 @@ const TabLoader = () => (
 export default function IntelligenceHub() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'insights';
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   const TABS = useMemo(() => [
     { value: 'insights', label: t('hubs.intelligence.insights'), icon: BrainCircuit },
