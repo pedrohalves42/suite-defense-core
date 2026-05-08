@@ -23,6 +23,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let isMounted = true;
     let retryCount = 0;
+    const abortController = new AbortController();
 
     const initializeAuth = async (abortController?: AbortController) => {
       if (isInitialized.current) return;
@@ -55,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           if (retryCount < 2) {
             retryCount++;
-            setTimeout(initializeAuth, 1000 * retryCount);
+            setTimeout(() => initializeAuth(abortController), 1000 * retryCount);
             return;
           }
         }
@@ -93,13 +94,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    initializeAuth();
+    initializeAuth(abortController);
 
     // Supabase autoRefreshToken handles token refresh automatically.
     // Redundant interval removed to prevent race conditions and unnecessary gateway calls.
 
     return () => {
       isMounted = false;
+      abortController.abort();
       subscription.unsubscribe();
     };
   }, []);
