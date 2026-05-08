@@ -69,13 +69,23 @@ export function useRealtimeQuery<T>({
             queryClient.setQueryData(queryKey, (oldData: any) => {
               if (!oldData) return oldData;
               
-              // Handle both single object and array of objects
+              const updateItem = (item: any) => 
+                item.id === payload.new.id ? { ...item, ...payload.new } : item;
+
+              // 1. Array of objects
               if (Array.isArray(oldData)) {
-                return oldData.map((item: any) => 
-                  item.id === payload.new.id ? { ...item, ...payload.new } : item
-                );
+                return oldData.map(updateItem);
               }
               
+              // 2. Paginated object or complex structure with .items or .data
+              if (oldData.items && Array.isArray(oldData.items)) {
+                return { ...oldData, items: oldData.items.map(updateItem) };
+              }
+              if (oldData.data && Array.isArray(oldData.data)) {
+                return { ...oldData, data: oldData.data.map(updateItem) };
+              }
+              
+              // 3. Single object
               if (oldData.id === payload.new.id) {
                 return { ...oldData, ...payload.new };
               }
@@ -84,18 +94,36 @@ export function useRealtimeQuery<T>({
             });
           } else if (eventType === 'DELETE' && payload.old) {
             queryClient.setQueryData(queryKey, (oldData: any) => {
-              if (!oldData || !Array.isArray(oldData)) return oldData;
-              return oldData.filter((item: any) => item.id !== payload.old.id);
+              if (!oldData) return oldData;
+              const filterItem = (item: any) => item.id !== payload.old.id;
+
+              if (Array.isArray(oldData)) return oldData.filter(filterItem);
+              if (oldData.items && Array.isArray(oldData.items)) return { ...oldData, items: oldData.items.filter(filterItem) };
+              if (oldData.data && Array.isArray(oldData.data)) return { ...oldData, data: oldData.data.filter(filterItem) };
+              
+              return oldData;
             });
           } else if (eventType === 'INSERT' && payload.new) {
             queryClient.setQueryData(queryKey, (oldData: any) => {
-              if (!oldData || !Array.isArray(oldData)) return oldData;
-              // Check if already exists to avoid duplicates
-              if (oldData.some((item: any) => item.id === payload.new.id)) return oldData;
-              return [payload.new, ...oldData];
+              if (!oldData) return oldData;
+              const exists = (list: any[]) => list.some((item: any) => item.id === payload.new.id);
+
+              if (Array.isArray(oldData)) {
+                if (exists(oldData)) return oldData;
+                return [payload.new, ...oldData];
+              }
+              if (oldData.items && Array.isArray(oldData.items)) {
+                if (exists(oldData.items)) return oldData;
+                return { ...oldData, items: [payload.new, ...oldData.items] };
+              }
+              if (oldData.data && Array.isArray(oldData.data)) {
+                if (exists(oldData.data)) return oldData;
+                return { ...oldData, data: [payload.new, ...oldData.data] };
+              }
+              return oldData;
             });
           } else {
-            // Fallback for complex filters or data structures
+            // Fallback for complex structures
             queryClient.invalidateQueries({ queryKey });
           }
         }

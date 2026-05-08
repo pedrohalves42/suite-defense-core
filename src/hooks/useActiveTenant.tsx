@@ -219,9 +219,9 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
       }
 
       setActiveTenantId(tenant.id);
-      // P-AUDIT: Remove specific queries instead of clearing everything
-      queryClient.removeQueries({ queryKey: ['unified-metrics'] });
-      queryClient.removeQueries({ queryKey: ['agent-snapshots-list'] });
+      // P-AUDIT: Invalidate queries instead of removing for smoother transitions
+      queryClient.invalidateQueries({ queryKey: ['unified-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['agent-snapshots-list'] });
       queryClient.invalidateQueries();
 
       toast.success(`Alterado para ${tenant.name}`, {

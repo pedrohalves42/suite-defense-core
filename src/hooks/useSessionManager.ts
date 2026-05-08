@@ -128,6 +128,9 @@ export const useSessionManager = () => {
         if (activityIntervalRef.current) {
           clearInterval(activityIntervalRef.current);
         }
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
         events.forEach(event => 
           document.removeEventListener(event, handleActivity, { capture: false })
         );
