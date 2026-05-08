@@ -166,8 +166,8 @@ export function useUnifiedMetrics() {
       const mediumPrevented = evidenceSummary.medium_prevented || 0;
       const incidentsContained = evidenceSummary.incidents_contained || 0;
 
-      // Use exact count for financial modeling
-      const totalBlockedCount = blockedCount7d;
+      // Use 30d count for financial modeling to match the label/expectation
+      const totalBlockedCount30d = blockedCount30dRes.count || 0;
 
       const breakdown: Record<string, number> = {
         autoRepairs: autoRepairs * COST_MODEL.auto_repair,
@@ -175,7 +175,7 @@ export function useUnifiedMetrics() {
         criticalPrevented: criticalPrevented * COST_MODEL.security_event_critical,
         highPrevented: highPrevented * COST_MODEL.security_event_high,
         policyCorrections: policyDrifts * COST_MODEL.policy_drift,
-        blockedAccess: totalBlockedCount * COST_MODEL.blocked_access
+        blockedAccess: totalBlockedCount30d * COST_MODEL.blocked_access
       };
       const totalCostAvoided = Object.values(breakdown).reduce((a, b) => a + b, 0);
       const hoursOfITSaved = (autoRepairs * 0.5) + (autoRecoveries * 1) + (policyDrifts * 0.25) + (criticalPrevented * 2) + (incidentsContained * 1.5);
