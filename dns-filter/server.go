@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"net"
 	"sync"
 	"time"
 
@@ -11,18 +10,19 @@ import (
 
 // DNSServer represents the DNS filter server
 type DNSServer struct {
-	config       *Config
-	policy       *PolicyEngine
-	logger       *EventLogger
-	udpServer    *dns.Server
-	tcpServer    *dns.Server
-	upstream     string
-	fallback     string
-	passthrough  bool
-	mu           sync.RWMutex
-	stopChan     chan struct{}
-	client       *dns.Client
-	clientTCP    *dns.Client
+	config      *Config
+	policy      *PolicyEngine
+	logger      *EventLogger
+	udpServer   *dns.Server
+	tcpServer   *dns.Server
+	upstream    string
+	fallback    string
+	passthrough bool
+	mu          sync.RWMutex
+	stopChan    chan struct{}
+	stopOnce    sync.Once
+	client      *dns.Client
+	clientTCP   *dns.Client
 }
 
 // NewDNSServer creates a new DNS server
@@ -47,19 +47,23 @@ func NewDNSServer(config *Config, policy *PolicyEngine, logger *EventLogger) *DN
 
 // Start starts the DNS server
 func (s *DNSServer) Start() error {
-	// Setup handler
-	dns.HandleFunc(".", s.handleRequest)
+	// Use a dedicated mux instead of the process-wide default mux so multiple
+	// server instances (for tests or restarts) do not overwrite each other.
+	mux := dns.NewServeMux()
+	mux.HandleFunc(".", s.handleRequest)
 
 	// UDP server
 	s.udpServer = &dns.Server{
-		Addr: s.config.ListenAddr,
-		Net:  "udp",
+		Addr:    s.config.ListenAddr,
+		Net:     "udp",
+		Handler: mux,
 	}
 
 	// TCP server
 	s.tcpServer = &dns.Server{
-		Addr: s.config.ListenAddr,
-		Net:  "tcp",
+		Addr:    s.config.ListenAddr,
+		Net:     "tcp",
+		Handler: mux,
 	}
 
 	// Start healthcheck
@@ -93,13 +97,15 @@ func (s *DNSServer) Start() error {
 
 // Stop stops the DNS server
 func (s *DNSServer) Stop() {
-	close(s.stopChan)
-	if s.udpServer != nil {
-		s.udpServer.Shutdown()
-	}
-	if s.tcpServer != nil {
-		s.tcpServer.Shutdown()
-	}
+	s.stopOnce.Do(func() {
+		close(s.stopChan)
+		if s.udpServer != nil {
+			_ = s.udpServer.Shutdown()
+		}
+		if s.tcpServer != nil {
+			_ = s.tcpServer.Shutdown()
+		}
+	})
 }
 
 // handleRequest handles incoming DNS requests
@@ -120,11 +126,11 @@ func (s *DNSServer) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 
 		// Only apply policy to A, AAAA, and HTTPS records
 		// This prevents DoH bypass via HTTPS/SVCB records
-		shouldFilter := q.Qtype == dns.TypeA || 
-			q.Qtype == dns.TypeAAAA || 
+		shouldFilter := q.Qtype == dns.TypeA ||
+			q.Qtype == dns.TypeAAAA ||
 			q.Qtype == dns.TypeHTTPS
 
-		if !passthrough && shouldFilter {
+		if !passthrough && shouldFilter && s.policy != nil {
 			blocked, pattern := s.policy.IsBlocked(domain)
 			if blocked {
 				log.Printf("[DNS] BLOCKED: %s (%s) - pattern: %s", domain, qtype, pattern)
@@ -176,6 +182,11 @@ func (s *DNSServer) forwardQuery(r *dns.Msg) *dns.Msg {
 		return response
 	}
 
+	response, _, err = s.clientTCP.Exchange(r, s.fallback)
+	if err == nil {
+		return response
+	}
+
 	log.Printf("[DNS] Failed to forward query: %v", err)
 	return nil
 }
@@ -208,14 +219,15 @@ func (s *DNSServer) healthcheck() {
 	for {
 		select {
 		case <-ticker.C:
-			// Test upstream DNS
-			m := new(dns.Msg)
-			m.SetQuestion("dns.google.", dns.TypeA)
+			primaryOK := s.probeResolver(s.upstream)
+			fallbackOK := false
+			if !primaryOK && s.fallback != "" && s.fallback != s.upstream {
+				fallbackOK = s.probeResolver(s.fallback)
+			}
+			resolverAvailable := primaryOK || fallbackOK
 
-			_, _, err := s.client.Exchange(m, s.upstream)
-			
 			s.mu.Lock()
-			if err != nil {
+			if !resolverAvailable {
 				if !s.passthrough {
 					log.Printf("[DNS] Upstream unreachable, entering passthrough mode")
 				}
@@ -232,6 +244,19 @@ func (s *DNSServer) healthcheck() {
 			return
 		}
 	}
+}
+
+func (s *DNSServer) probeResolver(addr string) bool {
+	m := new(dns.Msg)
+	m.SetQuestion("dns.google.", dns.TypeA)
+
+	if _, _, err := s.client.Exchange(m, addr); err == nil {
+		return true
+	}
+	if _, _, err := s.clientTCP.Exchange(m, addr); err == nil {
+		return true
+	}
+	return false
 }
 
 // IsPassthrough returns current passthrough state
