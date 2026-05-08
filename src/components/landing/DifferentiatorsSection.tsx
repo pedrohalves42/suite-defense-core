@@ -2,6 +2,7 @@ import { useLandingContent } from "@/hooks/useLandingContent";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Shield, Link2, Brain, Zap, Fingerprint, Layers } from "lucide-react";
+import { safeMap } from "@/lib/safe-data";
 
 const ICONS = [Shield, Link2, Brain, Zap, Fingerprint, Layers];
 
