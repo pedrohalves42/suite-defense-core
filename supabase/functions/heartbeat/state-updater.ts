@@ -37,12 +37,18 @@ export async function updateAgentStatus(
   const now = new Date();
   
   // 1. Pre-check for redundancy (still useful to avoid RPC overhead)
-  const metadataChanged = Object.keys(updateData).length > 1;
+  // Ensure we check update_timestamp if available for better idempotency
+  const incomingTs = updateData.last_telemetry_at || (updateData as any).update_timestamp;
   const lastUpdate = currentHeartbeat ? new Date(currentHeartbeat).getTime() : 0;
-  const timeThresholdReached = (now.getTime() - lastUpdate) >= HEARTBEAT_WRITE_THROTTLE_MS;
+  const incomingTime = incomingTs ? new Date(incomingTs).getTime() : now.getTime();
+  
+  const metadataChanged = Object.keys(updateData).filter(k => k !== 'last_telemetry_at' && k !== 'update_timestamp').length > 1;
+  const timeThresholdReached = (incomingTime - lastUpdate) >= HEARTBEAT_WRITE_THROTTLE_MS;
 
-  if (!metadataChanged && !timeThresholdReached) {
-    logger.debug('Skipping redundant agent heartbeat DB update', { agentName });
+  // STRICT IDEMPOTENCY: If incoming timestamp is older than current heartbeat, 
+  // we still call RPC for online status but metadataChanged is effectively false for safety.
+  if (!metadataChanged && !timeThresholdReached && incomingTime <= lastUpdate) {
+    logger.debug('Skipping redundant agent heartbeat DB update (idempotent)', { agentName });
     return;
   }
 

@@ -1,6 +1,7 @@
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 import { motion } from "framer-motion";
+import { safeMap } from "@/lib/safe-data";
 
 export function HowItWorksSection() {
   const { howItWorks } = useLandingContent();
@@ -24,7 +25,7 @@ export function HowItWorksSection() {
           <div className="hidden md:block absolute top-12 left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
           
           <div className="grid md:grid-cols-4 gap-12">
-            {howItWorks.steps.map((step, index) => {
+            {safeMap(howItWorks.steps, (step, index) => {
               return (
                 <motion.div 
                   key={index} 

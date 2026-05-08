@@ -173,7 +173,7 @@ export function useUnifiedMetrics() {
         blockedAccess: totalBlockedCount * COST_MODEL.blocked_access
       };
       const totalCostAvoided = Object.values(breakdown).reduce((a, b) => a + b, 0);
-      const hoursOfITSaved = (autoRepairs * 0.5) + (autoRecoveries * 1) + (policyDrifts * 0.25) + (criticalPrevented * 2);
+      const hoursOfITSaved = (autoRepairs * 0.5) + (autoRecoveries * 1) + (policyDrifts * 0.25) + (criticalPrevented * 2) + (incidentsContained * 1.5);
 
       return {
         _raw: true as const,

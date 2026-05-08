@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 export function ValuePropSection() {
   const { valueProp } = useLandingContent();
 
+  if (!valueProp) return null;
+
   return (
     <section className="py-24 relative overflow-hidden bg-background">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-cta-positive/[0.05] to-background" />
