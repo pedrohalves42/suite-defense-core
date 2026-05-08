@@ -26,12 +26,13 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   // Second chance: verify session directly if useAuth says no user
   useEffect(() => {
+    let isMounted = true;
     const verifySession = async () => {
       if (loading) return;
       
       if (!user && hasValidSession === null) {
         logger.debug('ProtectedRoute: No user from useAuth, doing second chance check');
-        setVerifyingSession(true);
+        if (isMounted) setVerifyingSession(true);
         
         try {
           const { data: { session } } = await supabase.auth.getSession();
@@ -41,12 +42,13 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           logger.error('ProtectedRoute: Session verification failed', error);
           setHasValidSession(false);
         } finally {
-          setVerifyingSession(false);
+          if (isMounted) setVerifyingSession(false);
         }
       }
     };
 
     verifySession();
+    return () => { isMounted = false; };
   }, [user, loading, hasValidSession]);
 
   // Loading states

@@ -36,10 +36,17 @@ export function parseHeartbeatPayload(rawBody: string): OSInfo {
     if (typeof jsonParsed !== 'object' || jsonParsed === null) return {}
     
     const result = HeartbeatPayloadSchema.safeParse(jsonParsed)
-    // If validation fails, still use the raw parsed object for backward compat
-    // but strip obviously dangerous fields
     if (!result.success) {
-      return jsonParsed as OSInfo
+      // SECURITY-FIX: Do NOT return the raw object if validation fails.
+      // This prevents "object injection" vulnerabilities and memory bloat.
+      const sanitized: Record<string, any> = {};
+      const shape = HeartbeatPayloadSchema.shape;
+      for (const key in shape) {
+        if (jsonParsed[key] !== undefined) {
+          sanitized[key] = jsonParsed[key];
+        }
+      }
+      return sanitized as OSInfo;
     }
     return result.data as OSInfo
   } catch (err) {
