@@ -42,6 +42,14 @@ export async function updateAgentStatus(
   const lastUpdate = currentHeartbeat ? new Date(currentHeartbeat).getTime() : 0;
   const incomingTime = incomingTs ? new Date(incomingTs).getTime() : now.getTime();
   
+  // FETCH current state from DB for dirty-checking if not provided in context
+  let currentAgent = (updateData as any)._current_agent; 
+  if (!currentAgent && (updateData as any).metadata_hash) {
+     const { data } = await supabase.from('agents').select('*').eq('id', agentId).single();
+     currentAgent = data;
+  }
+
+  
   // OTIMIZACAO: Check metadata hash to avoid redundant DB reads/writes
   const incomingMetadataHash = (updateData as any).metadata_hash;
   const currentMetadataHash = (currentAgent as any)?.metadata_hash;
