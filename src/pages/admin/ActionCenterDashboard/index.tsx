@@ -213,7 +213,7 @@ export default function ActionCenterDashboard() {
                     <div className="flex items-center justify-center gap-3 text-cta-positive py-8 border-t border-white/5">
                       <div className="w-2 h-2 rounded-full bg-cta-positive animate-pulse" />
                       <span className="text-sm font-medium">
-                        {healthyCount} {healthyCount === 1 ? 'computador' : 'computadores'} com ambiente estável
+                        {t('dashboard.actionCenter.stableEnvironment', { count: healthyCount })}
                       </span>
                     </div>
                   )}
@@ -236,21 +236,21 @@ export default function ActionCenterDashboard() {
                   {historyData.length === 0 ? (
                     <div className="text-center py-20 px-6 rounded-[2.5rem] border border-dashed border-white/10 bg-white/[0.01]">
                       <History className="h-16 w-16 mx-auto mb-6 text-white/10" />
-                      <p className="text-xl font-bold text-white mb-2">Nenhuma ação resolvida ainda</p>
-                      <p className="text-white/40 max-w-sm mx-auto">Quando você executar ou ignorar ações, elas aparecerão aqui com o histórico completo.</p>
+                      <p className="text-xl font-bold text-white mb-2">{t('dashboard.actionCenter.noResolvedActions')}</p>
+                      <p className="text-white/40 max-w-sm mx-auto">{t('dashboard.actionCenter.resolvedActionsDesc')}</p>
                     </div>
                   ) : (
                     <>
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <p className="text-sm font-medium text-white/40">Mostrando últimas {historyData.length} ações</p>
+                        <p className="text-sm font-medium text-white/40">{t('dashboard.actionCenter.showingLastActions', { count: historyData.length })}</p>
                         <div className="flex items-center gap-6 text-sm">
                           <span className="flex items-center gap-2 text-cta-positive font-bold">
                             <CheckCircle2 className="h-4 w-4" />
-                            {historyData.filter(i => i.status === 'resolved').length} resolvidas
+                            {t('dashboard.actionCenter.resolvedCount', { count: historyData.filter(i => i.status === 'resolved').length })}
                           </span>
                           <span className="flex items-center gap-2 text-white/40">
                             <XCircle className="h-4 w-4" />
-                            {historyData.filter(i => i.status === 'ignored').length} ignoradas
+                            {t('dashboard.actionCenter.ignoredCount', { count: historyData.filter(i => i.status === 'ignored').length })}
                           </span>
                         </div>
                       </div>
