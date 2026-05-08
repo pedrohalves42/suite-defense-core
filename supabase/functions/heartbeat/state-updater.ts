@@ -128,7 +128,7 @@ export async function updateAgentStatus(
     }
   }
   
-  logger.info('Agent heartbeat updated atomically', { agentName, metadataChanged, timeThresholdReached });
+  logger.info('Agent heartbeat updated atomically', { agentName, metadataChanged });
 }
 
 /**
