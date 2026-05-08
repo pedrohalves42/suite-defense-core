@@ -109,8 +109,9 @@ export function useUnifiedMetrics() {
       const now = new Date();
       const sevenDaysAgo = subDays(now, 7).toISOString();
       const thirtyDaysAgo = subDays(now, 30).toISOString();
+      const ninetyDaysAgo = subDays(now, 90).toISOString(); // For trend analysis
 
-      const [alertsRes, evidenceSummaryRes, vulnRes, insightsRes, blockedItemsRes, blockedCountRes] = await Promise.all([
+      const [alertsRes, evidenceSummaryRes, vulnRes, insightsRes, blockedItemsRes, blockedCountRes, blockedCount30dRes] = await Promise.all([
         sb.from('system_alerts')
           .select('id, severity, message, alert_type, status, title, created_at')
           .eq('tenant_id', tenant.id)
@@ -133,6 +134,10 @@ export function useUnifiedMetrics() {
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', tenant.id)
           .gte('attempted_at', sevenDaysAgo),
+        sb.from('blocked_access_attempts')
+          .select('id', { count: 'exact', head: true })
+          .eq('tenant_id', tenant.id)
+          .gte('attempted_at', thirtyDaysAgo),
       ]);
 
       // Vuln counts from RPC or calculated from results
@@ -161,8 +166,8 @@ export function useUnifiedMetrics() {
       const mediumPrevented = evidenceSummary.medium_prevented || 0;
       const incidentsContained = evidenceSummary.incidents_contained || 0;
 
-      // Use exact count for financial modeling
-      const totalBlockedCount = blockedCount7d;
+      // Use 30d count for financial modeling to match the label/expectation
+      const totalBlockedCount30d = blockedCount30dRes.count || 0;
 
       const breakdown: Record<string, number> = {
         autoRepairs: autoRepairs * COST_MODEL.auto_repair,
@@ -170,7 +175,7 @@ export function useUnifiedMetrics() {
         criticalPrevented: criticalPrevented * COST_MODEL.security_event_critical,
         highPrevented: highPrevented * COST_MODEL.security_event_high,
         policyCorrections: policyDrifts * COST_MODEL.policy_drift,
-        blockedAccess: totalBlockedCount * COST_MODEL.blocked_access
+        blockedAccess: totalBlockedCount30d * COST_MODEL.blocked_access
       };
       const totalCostAvoided = Object.values(breakdown).reduce((a, b) => a + b, 0);
       const hoursOfITSaved = (autoRepairs * 0.5) + (autoRecoveries * 1) + (policyDrifts * 0.25) + (criticalPrevented * 2) + (incidentsContained * 1.5);

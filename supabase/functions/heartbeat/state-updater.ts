@@ -68,18 +68,40 @@ export async function updateAgentStatus(
       throw new Error(`Heartbeat persistence failed: ${error.message}`);
     }
     
-    // Fallback to standard update if atomic RPC is missing (prevents total outage)
-    logger.warn('Atomic heartbeat RPC failed, falling back to standard update', { agentName, errorCode: error.code });
+    // Fallback to standard update with Optimistic Locking (MVCC) if atomic RPC is missing
+    logger.warn('Atomic heartbeat RPC failed, falling back to MVCC update', { agentName, errorCode: error.code });
+    
+    // FETCH current version for optimistic lock
+    const { data: currentAgent } = await supabase
+      .from('agents')
+      .select('version, last_heartbeat')
+      .eq('id', agentId)
+      .single();
+
+    const currentVersion = currentAgent?.version || 1;
+    const currentHb = currentAgent?.last_heartbeat ? new Date(currentAgent.last_heartbeat).getTime() : 0;
+
+    // Idempotency check before update
+    if (incomingTime < currentHb) {
+      logger.debug('Skipping stale heartbeat update (MVCC fallback)', { agentName });
+      return;
+    }
+
     const { error: updateError } = await supabase
       .from('agents')
       .update({ 
         ...updateData, 
         status: 'active', 
-        last_heartbeat: now.toISOString() 
+        last_heartbeat: now.toISOString(),
+        version: currentVersion + 1
       } as any)
-      .eq('id', agentId);
+      .eq('id', agentId)
+      .eq('version', currentVersion); // The "Optimistic Lock"
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      if (updateError.code === 'P0001') logger.warn('MVCC collision detected (concurrent update), retry handled by agent', { agentName });
+      else throw updateError;
+    }
   }
   
   logger.info('Agent heartbeat updated atomically', { agentName, metadataChanged, timeThresholdReached });

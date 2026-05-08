@@ -19,7 +19,11 @@ export function TargetAudienceSection() {
             return (
               <motion.div key={index} className="group p-8 rounded-2xl bg-card border border-border hover:border-info/30 transition-all" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.1 }}>
                 <div className="w-14 h-14 bg-info/10 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-info/15 transition-colors">
-                  <Icon className="w-7 h-7 text-info" />
+                  {Icon ? (
+                    <Icon className="w-7 h-7 text-info" />
+                  ) : (
+                    <div className="w-7 h-7 bg-info/20 rounded-lg animate-pulse" />
+                  )}
                 </div>
                 <h3 className="text-lg font-semibold mb-3 text-foreground">{segment.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{segment.description}</p>
