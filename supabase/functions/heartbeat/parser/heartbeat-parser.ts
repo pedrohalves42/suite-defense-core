@@ -47,6 +47,8 @@ export function parseHeartbeatPayload(rawBody: string): OSInfo {
           sanitized[key] = jsonParsed[key];
         }
       }
+      // Also preserve extra fields that are known to be safe if passthrough is intended, 
+      // but here we force strict adherence to the schema for safety.
       return sanitized as OSInfo;
     }
     return result.data as OSInfo
