@@ -1,10 +1,11 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AdminPageLayout } from '@/components/AdminPageLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Heart, Gauge, ScrollText, Wrench } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 const CronHealthDashboard = lazy(() => import('./CronHealthDashboard'));
 const CronHealthAlert = lazy(() => import('@/components/operations/CronHealthAlert').then(m => ({ default: m.CronHealthAlert })));
@@ -29,17 +30,20 @@ const TabLoader = () => (
   </div>
 );
 
-const TABS = [
-  { value: 'health', label: 'Saúde', icon: Heart },
-  { value: 'performance', label: 'Performance', icon: Gauge },
-  { value: 'logs', label: 'Logs & Operações', icon: ScrollText },
-  { value: 'tools', label: 'Ferramentas', icon: Wrench },
-] as const;
+// TABS inside component
 
 export default function OperationsHub() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') || 'health';
   const [activeTab, setActiveTab] = useState(initialTab);
+
+  const TABS = useMemo(() => [
+    { value: 'health', label: t('hubs.operations.health'), icon: Heart },
+    { value: 'performance', label: t('hubs.operations.performance'), icon: Gauge },
+    { value: 'logs', label: t('hubs.operations.logs'), icon: ScrollText },
+    { value: 'tools', label: t('hubs.operations.tools'), icon: Wrench },
+  ], [t]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
@@ -48,8 +52,8 @@ export default function OperationsHub() {
 
   return (
     <AdminPageLayout
-      title="Operações do Sistema"
-      description="Saúde, performance, logs e ferramentas operacionais em um só lugar"
+      title={t('hubs.operations.title')}
+      description={t('hubs.operations.description')}
       icon={Gauge}
     >
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">

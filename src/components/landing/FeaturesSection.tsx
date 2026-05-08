@@ -1,6 +1,7 @@
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 import { motion } from "framer-motion";
+import { safeMap } from "@/lib/safe-data";
 
 export function FeaturesSection() {
   const { features } = useLandingContent();
@@ -18,7 +19,7 @@ export function FeaturesSection() {
         <SectionHeader title={features.title} subtitle={features.subtitle} />
         
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10 max-w-7xl mx-auto stagger-visible">
-          {features.items.map((item, index) => {
+          {safeMap(features.items, (item, index) => {
             const Icon = item.icon;
             return (
               <motion.div 

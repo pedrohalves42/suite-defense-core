@@ -1,10 +1,11 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AdminPageLayout } from '@/components/AdminPageLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BrainCircuit, Zap, Eye, BookOpen } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 const AIInsights = lazy(() => import('./AIInsights'));
 const InsightTriageCenter = lazy(() => import('./InsightTriageCenter'));
@@ -25,17 +26,20 @@ const TabLoader = () => (
   </div>
 );
 
-const TABS = [
-  { value: 'insights', label: 'Sugestões', icon: BrainCircuit },
-  { value: 'automation', label: 'Automação', icon: Zap },
-  { value: 'governance', label: 'Revisão de Decisões', icon: Eye },
-  { value: 'knowledge', label: 'Conhecimento', icon: BookOpen },
-] as const;
+// TABS inside component
 
 export default function IntelligenceHub() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') || 'insights';
   const [activeTab, setActiveTab] = useState(initialTab);
+
+  const TABS = useMemo(() => [
+    { value: 'insights', label: t('hubs.intelligence.insights'), icon: BrainCircuit },
+    { value: 'automation', label: t('hubs.intelligence.automation'), icon: Zap },
+    { value: 'governance', label: t('hubs.intelligence.governance'), icon: Eye },
+    { value: 'knowledge', label: t('hubs.intelligence.knowledge'), icon: BookOpen },
+  ], [t]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
@@ -44,8 +48,8 @@ export default function IntelligenceHub() {
 
   return (
     <AdminPageLayout
-      title="Assistente IA"
-      description="Sugestões, automação, revisão de decisões e base de conhecimento"
+      title={t('hubs.intelligence.title')}
+      description={t('hubs.intelligence.description')}
       icon={BrainCircuit}
     >
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">

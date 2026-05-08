@@ -201,7 +201,43 @@
   }
 
   .premium-gradient {
-    background: radial-gradient(circle at top left, hsl(var(--accent) / 0.08), transparent 70%);
+    background: radial-gradient(circle at top left, hsl(var(--cta-positive) / 0.12), transparent 70%);
+  }
+
+  /* Awwwards Style Utility Classes */
+  .awwwards-card {
+    @apply relative overflow-hidden rounded-[2.5rem] glass-card border-white/5 shadow-premium transition-all duration-700 ease-premium;
+  }
+
+  .awwwards-card:hover {
+    @apply border-cta-positive/40;
+    box-shadow: 0 20px 60px -10px rgba(16, 185, 129, 0.3);
+  }
+
+  .awwwards-glow {
+    @apply relative;
+  }
+
+  .awwwards-glow::after {
+    content: '';
+    @apply absolute -inset-1 bg-cta-positive/20 blur-2xl rounded-full opacity-0 transition-opacity duration-700 pointer-events-none;
+  }
+
+  .awwwards-glow:hover::after {
+    @apply opacity-100;
+  }
+
+  .text-gradient-premium {
+    @apply bg-gradient-to-r from-cta-positive via-emerald-400 to-info bg-clip-text text-transparent animate-gradient-x;
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2.5s infinite linear;
+  }
+
+  @keyframes shimmer {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
   }
 
   .bento-grid {
