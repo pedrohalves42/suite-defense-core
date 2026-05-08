@@ -117,14 +117,14 @@ export default function ActionCenterDashboard() {
         <TabsList className="bg-white/[0.03] border border-white/5 p-1 h-auto rounded-2xl mb-8">
           <TabsTrigger value="pending" className="flex items-center gap-2 rounded-xl data-[state=active]:bg-cta-positive/10 data-[state=active]:text-cta-positive data-[state=active]:border-cta-positive/20 border border-transparent transition-all duration-300">
             <Target className="h-4 w-4" />
-            Pendentes
+            {t('dashboard.actionCenter.pending')}
             {totalActions > 0 && (
               <Badge variant="destructive" className="ml-1 h-5 px-1.5">{totalActions}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="history" className="flex items-center gap-2 rounded-xl data-[state=active]:bg-cta-positive/10 data-[state=active]:text-cta-positive data-[state=active]:border-cta-positive/20 border border-transparent transition-all duration-300">
             <History className="h-4 w-4" />
-            Resolvidos
+            {t('dashboard.actionCenter.resolved')}
             {historyCount > 0 && (
               <Badge variant="secondary" className="ml-1 h-5 px-1.5">{historyCount}</Badge>
             )}
@@ -173,7 +173,7 @@ export default function ActionCenterDashboard() {
                     <div className="relative max-w-md">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
                       <Input 
-                        placeholder="Buscar por agente, tipo de alerta..." 
+                        placeholder={t('dashboard.actionCenter.searchPlaceholder')} 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)} 
                         className="pl-11 h-12 bg-white/[0.03] border-white/10 rounded-xl focus:border-cta-positive/50 transition-all" 
