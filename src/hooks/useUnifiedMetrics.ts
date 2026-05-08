@@ -145,8 +145,8 @@ export function useUnifiedMetrics() {
       const activeAlerts = allAlerts.filter(a => unresolvedStatuses.includes(a.status));
       const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical' || a.severity === 'high');
 
-      // Removed vulnTotalRes/vulnCriticalRes in favor of combined vulnCounts above
-      const blockedCount7d = blockedItemsRes.data?.length || 0; // Approximate from items list
+      // CORRECTION: Use exact count from database for statistical accuracy (ROSI)
+      const blockedCount7d = blockedCountRes.count || 0;
 
       const evidenceSummary = (evidenceSummaryRes.data || {
         auto_repairs: 0, auto_recoveries: 0, policy_drifts: 0,
@@ -161,8 +161,8 @@ export function useUnifiedMetrics() {
       const mediumPrevented = evidenceSummary.medium_prevented || 0;
       const incidentsContained = evidenceSummary.incidents_contained || 0;
 
-      // We've moved this to the breakdown directly or can re-query if exact count is critical
-      const totalBlockedCount = blockedCount7d; // Using 7d count for financial modeling in this view
+      // Use exact count for financial modeling
+      const totalBlockedCount = blockedCount7d;
 
       const breakdown: Record<string, number> = {
         autoRepairs: autoRepairs * COST_MODEL.auto_repair,
