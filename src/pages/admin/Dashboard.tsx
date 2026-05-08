@@ -357,15 +357,15 @@ export default function Dashboard() {
           <TabsList className="w-full justify-start bg-muted/30 h-9">
             <TabsTrigger value="fleet" className="text-xs gap-1.5">
               <Server className="h-3.5 w-3.5" />
-              Frota
+              {t('adminPages.dashboard.fleet')}
             </TabsTrigger>
             <TabsTrigger value="trends" className="text-xs gap-1.5">
               <BarChart3 className="h-3.5 w-3.5" />
-              Tendências
+              {t('adminPages.dashboard.trends')}
             </TabsTrigger>
             <TabsTrigger value="operations" className="text-xs gap-1.5">
               <Activity className="h-3.5 w-3.5" />
-              Operações
+              {t('adminPages.dashboard.operations')}
             </TabsTrigger>
           </TabsList>
 
@@ -415,7 +415,7 @@ export default function Dashboard() {
           <Button variant="ghost" className="w-full justify-between text-muted-foreground hover:text-foreground h-9 text-xs">
             <span className="flex items-center gap-2">
               <Lightbulb className="h-3.5 w-3.5" />
-              Acesso Rápido
+              {t('adminPages.dashboard.quickAccess')}
             </span>
             <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", extrasOpen && "rotate-180")} />
           </Button>

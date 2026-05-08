@@ -2,9 +2,12 @@ import { X, CheckCircle } from "lucide-react";
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 import { motion } from "framer-motion";
+import { safeMap } from "@/lib/safe-data";
 
 export function ComparisonSection() {
   const { comparison } = useLandingContent();
+
+  if (!comparison || !comparison.before || !comparison.after) return null;
 
   return (
     <section className="py-32 relative overflow-hidden bg-background">
@@ -41,7 +44,7 @@ export function ComparisonSection() {
                 {comparison.before.label}
               </div>
               <ul className="space-y-5">
-                {comparison.before.items.map((item, i) => (
+                {safeMap(comparison.before.items, (item, i) => (
                   <li key={i} className="flex items-center gap-4 text-white/40 font-medium">
                     <div className="flex-shrink-0 w-5 h-5 rounded-full bg-destructive/10 flex items-center justify-center">
                       <X className="w-3 h-3 text-destructive" />
@@ -67,7 +70,7 @@ export function ComparisonSection() {
                 {comparison.after.label}
               </div>
               <ul className="space-y-5">
-                {comparison.after.items.map((item, i) => (
+                {safeMap(comparison.after.items, (item, i) => (
                   <li key={i} className="flex items-center gap-4 text-white/90 font-bold">
                     <div className="flex-shrink-0 w-6 h-6 rounded-full bg-cta-positive/20 flex items-center justify-center shadow-glow">
                       <CheckCircle className="w-4 h-4 text-cta-positive" />
