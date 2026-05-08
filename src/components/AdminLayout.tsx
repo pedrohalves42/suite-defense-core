@@ -76,7 +76,7 @@ export const AdminLayout = () => {
         <main>
           <AnimatePresence mode="wait">
             <motion.div
-              key={location.pathname}
+              key={location.pathname.split('?')[0]} // FIXED: Ignore query params to prevent unnecessary full-page resets on tab changes
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
