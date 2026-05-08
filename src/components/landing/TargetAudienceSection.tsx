@@ -1,6 +1,7 @@
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 import { motion } from "framer-motion";
+import { safeMap } from "@/lib/safe-data";
 
 export function TargetAudienceSection() {
   const { targetAudience } = useLandingContent();
@@ -13,7 +14,7 @@ export function TargetAudienceSection() {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader title={targetAudience.title} subtitle={targetAudience.subtitle} />
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-          {targetAudience.segments.map((segment, index) => {
+          {safeMap(targetAudience.segments, (segment, index) => {
             const Icon = segment.icon;
             return (
               <motion.div key={index} className="group p-8 rounded-2xl bg-card border border-border hover:border-info/30 transition-all" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.1 }}>

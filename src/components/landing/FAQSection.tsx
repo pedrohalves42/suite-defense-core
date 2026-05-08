@@ -3,6 +3,7 @@ import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 import { motion } from "framer-motion";
 import { FAQDecorations } from "./shared/AnimatedDecorations";
+import { safeMap } from "@/lib/safe-data";
 
 export function FAQSection() {
   const { faq } = useLandingContent();
@@ -25,7 +26,7 @@ export function FAQSection() {
           viewport={{ once: true }}
         >
           <Accordion type="single" collapsible className="max-w-3xl mx-auto space-y-3">
-            {faq.items.map((item, index) => (
+            {safeMap(faq.items, (item, index) => (
               <AccordionItem 
                 key={index} 
                 value={`q${index}`}

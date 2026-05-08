@@ -10,8 +10,12 @@ import { toast } from "sonner";
 export function useSessionGuard() {
   const navigate = useNavigate();
   const [sessionValid, setSessionValid] = useState(true);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const handleExpired = useCallback(() => {
+    if (isRedirecting) return;
+    
+    setIsRedirecting(true);
     setSessionValid(false);
     toast.error("Sua sessão expirou. Faça login novamente.", {
       duration: 5000,
@@ -19,7 +23,7 @@ export function useSessionGuard() {
     });
     // Small delay so the toast is visible
     setTimeout(() => navigate("/login", { replace: true }), 1500);
-  }, [navigate]);
+  }, [navigate, isRedirecting]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {

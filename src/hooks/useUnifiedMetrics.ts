@@ -110,7 +110,7 @@ export function useUnifiedMetrics() {
       const sevenDaysAgo = subDays(now, 7).toISOString();
       const thirtyDaysAgo = subDays(now, 30).toISOString();
 
-      const [alertsRes, evidenceSummaryRes, vulnRes, insightsRes, blockedItemsRes] = await Promise.all([
+      const [alertsRes, evidenceSummaryRes, vulnRes, insightsRes, blockedItemsRes, blockedCountRes] = await Promise.all([
         sb.from('system_alerts')
           .select('id, severity, message, alert_type, status, title, created_at')
           .eq('tenant_id', tenant.id)
@@ -129,6 +129,10 @@ export function useUnifiedMetrics() {
           .gte('attempted_at', sevenDaysAgo)
           .order('attempted_at', { ascending: false })
           .limit(50),
+        sb.from('blocked_access_attempts')
+          .select('id', { count: 'exact', head: true })
+          .eq('tenant_id', tenant.id)
+          .gte('attempted_at', sevenDaysAgo),
       ]);
 
       // Vuln counts from RPC or calculated from results
@@ -141,8 +145,8 @@ export function useUnifiedMetrics() {
       const activeAlerts = allAlerts.filter(a => unresolvedStatuses.includes(a.status));
       const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical' || a.severity === 'high');
 
-      // Removed vulnTotalRes/vulnCriticalRes in favor of combined vulnCounts above
-      const blockedCount7d = blockedItemsRes.data?.length || 0; // Approximate from items list
+      // CORRECTION: Use exact count from database for statistical accuracy (ROSI)
+      const blockedCount7d = blockedCountRes.count || 0;
 
       const evidenceSummary = (evidenceSummaryRes.data || {
         auto_repairs: 0, auto_recoveries: 0, policy_drifts: 0,
@@ -157,8 +161,8 @@ export function useUnifiedMetrics() {
       const mediumPrevented = evidenceSummary.medium_prevented || 0;
       const incidentsContained = evidenceSummary.incidents_contained || 0;
 
-      // We've moved this to the breakdown directly or can re-query if exact count is critical
-      const totalBlockedCount = blockedCount7d; // Using 7d count for financial modeling in this view
+      // Use exact count for financial modeling
+      const totalBlockedCount = blockedCount7d;
 
       const breakdown: Record<string, number> = {
         autoRepairs: autoRepairs * COST_MODEL.auto_repair,

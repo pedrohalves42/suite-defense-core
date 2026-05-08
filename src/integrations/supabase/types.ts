@@ -7210,6 +7210,7 @@ export type Database = {
           result_public_key: string | null
           revalidation_reason: string | null
           revalidation_required_at: string | null
+          row_version: number
           safe_mode_entered_at: string | null
           safe_mode_reason: string | null
           scheduling_paused: boolean
@@ -7275,6 +7276,7 @@ export type Database = {
           result_public_key?: string | null
           revalidation_reason?: string | null
           revalidation_required_at?: string | null
+          row_version?: number
           safe_mode_entered_at?: string | null
           safe_mode_reason?: string | null
           scheduling_paused?: boolean
@@ -7340,6 +7342,7 @@ export type Database = {
           result_public_key?: string | null
           revalidation_reason?: string | null
           revalidation_required_at?: string | null
+          row_version?: number
           safe_mode_entered_at?: string | null
           safe_mode_reason?: string | null
           scheduling_paused?: boolean
@@ -50038,7 +50041,7 @@ export type Database = {
         Returns: number
       }
       cleanup_old_failed_attempts: { Args: never; Returns: undefined }
-      cleanup_old_hmac_signatures: { Args: never; Returns: number }
+      cleanup_old_hmac_signatures: { Args: never; Returns: undefined }
       cleanup_old_metrics: { Args: never; Returns: undefined }
       cleanup_old_metrics_90days: {
         Args: never

@@ -146,7 +146,27 @@
     "securityScore": "Pontuação de Segurança",
     "activeAlerts": "Alertas Ativos",
     "resolvedToday": "Resolvidos Hoje",
-    "pendingActions": "Ações Pendentes"
+    "pendingActions": "Ações Pendentes",
+    "actionCenter": {
+      "title": "Central de Ações",
+      "operationalManagement": "Gerenciamento Operacional",
+      "criticalPending": "{{count}} pendência crítica",
+      "criticalPending_plural": "{{count}} pendências críticas",
+      "secureInfrastructure": "Infraestrutura Segura",
+      "synced": "Sincronizado {{time}}",
+      "sync": "Sincronizar",
+      "responseStrategies": "Estratégias de Resposta",
+      "pending": "Pendentes",
+      "resolved": "Resolvidos",
+      "searchPlaceholder": "Buscar por agente, tipo de alerta...",
+      "stableEnvironment": "{{count}} computador com ambiente estável",
+      "stableEnvironment_plural": "{{count}} computadores com ambiente estável",
+      "noResolvedActions": "Nenhuma ação resolvida ainda",
+      "resolvedActionsDesc": "Quando você executar ou ignorar ações, elas aparecerão aqui com o histórico completo.",
+      "showingLastActions": "Mostrando últimas {{count}} ações",
+      "resolvedCount": "{{count}} resolvidas",
+      "ignoredCount": "{{count}} ignoradas"
+    }
   },
   "agents": {
     "name": "Nome",
