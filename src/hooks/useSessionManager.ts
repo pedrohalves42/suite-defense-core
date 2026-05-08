@@ -37,7 +37,10 @@ export const useSessionManager = () => {
       const userAgent = navigator.userAgent;
       // AUDIT-FIX: Do NOT capture window.location.hostname as IP. 
       // The backend will capture the real IP from X-Forwarded-For.
+      // We pass an empty string for _ip_address to satisfy the RPC contract 
+      // while delegating the real detection to the server.
       const { data: sessionId, error } = await supabase.rpc('log_session_start', {
+        _ip_address: '',
         _user_agent: userAgent
       });
 

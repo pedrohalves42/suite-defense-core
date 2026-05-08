@@ -51322,7 +51322,7 @@ export type Database = {
         Returns: Json
       }
       run_partition_maintenance: { Args: never; Returns: undefined }
-      run_system_maintenance: { Args: never; Returns: Json }
+      run_system_maintenance: { Args: never; Returns: undefined }
       set_cached_value: {
         Args: { p_key: string; p_ttl_seconds?: number; p_value: Json }
         Returns: undefined
