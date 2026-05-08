@@ -95,9 +95,15 @@ serveAgent(async (req, ctx) => {
   const driftBufferMs = 1000 // Small buffer for clock drift
   const shouldInsertTelemetry = (Date.now() - lastInsert) >= (TELEMETRY_THROTTLE_MS - driftBufferMs)
   
+  // Use agent's high-precision timestamp if available, else fallback to server now
+  const telemetryTimestamp = osInfo.collected_at || new Date().toISOString()
+  
   if (shouldInsertTelemetry) {
-    (updateData as any).last_telemetry_at = new Date().toISOString()
+    (updateData as any).last_telemetry_at = telemetryTimestamp
   }
+  
+  // Always include a timestamp for the update to support idempotency in RPC
+  (updateData as any).update_timestamp = telemetryTimestamp;
 
   await updateAgentStatus(supabase, agent.id, agent.agent_name, updateData, agent.last_heartbeat)
 
