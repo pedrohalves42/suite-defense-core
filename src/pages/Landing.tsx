@@ -105,15 +105,48 @@ const Landing = () => {
           </Suspense>
         </main>
 
-        {/* Footer */}
-        <footer className="bg-[hsl(220,18%,8%)] border-t border-white/5 py-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-              <p className="text-sm text-white/40">© {new Date().getFullYear()} CyberShield. Todos os direitos reservados.</p>
-              <div className="flex gap-6 text-sm text-white/40">
-                <a href="/privacidade" className="hover:text-white/70 transition-colors">Política de Privacidade</a>
-                <a href="/terms" className="hover:text-white/70 transition-colors">Termos de Uso</a>
-                <a href="#contato" className="hover:text-white/70 transition-colors">Contato</a>
+        {/* Premium Refined Footer */}
+        <footer className="bg-[hsl(220,18%,8%)] border-t border-white/5 py-20 relative overflow-hidden">
+          <div className="absolute top-0 left-1/4 w-[300px] h-[300px] bg-cta-positive/5 rounded-full blur-[120px] pointer-events-none" />
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+              <div className="col-span-1 md:col-span-2 space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-cta-positive/10 rounded-xl flex items-center justify-center border border-cta-positive/20">
+                    <img src="/logo-cybshield-new.webp" alt="CyberShield" className="w-6 h-6 object-contain" />
+                  </div>
+                  <span className="text-xl font-bold tracking-tight text-white">CyberShield</span>
+                </div>
+                <p className="text-white/40 max-w-sm leading-relaxed">
+                  A plataforma unificada que transforma segurança cibernética em vantagem competitiva através de automação inteligente e compliance matemático.
+                </p>
+              </div>
+              <div>
+                <h4 className="text-white font-semibold mb-6">Plataforma</h4>
+                <ul className="space-y-4 text-sm text-white/40">
+                  <li><a href="#recursos" className="hover:text-cta-positive transition-colors">Recursos</a></li>
+                  <li><a href="/pricing" className="hover:text-cta-positive transition-colors">Preços</a></li>
+                  <li><a href="/security" className="hover:text-cta-positive transition-colors">Segurança</a></li>
+                  <li><a href="/tutorials" className="hover:text-cta-positive transition-colors">Tutoriais</a></li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-white font-semibold mb-6">Jurídico</h4>
+                <ul className="space-y-4 text-sm text-white/40">
+                  <li><a href="/privacidade" className="hover:text-cta-positive transition-colors">Privacidade</a></li>
+                  <li><a href="/terms" className="hover:text-cta-positive transition-colors">Termos</a></li>
+                  <li><a href="#contato" className="hover:text-cta-positive transition-colors">Contato</a></li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+              <p className="text-sm text-white/40">© {new Date().getFullYear()} CyberShield Operational Security. Registros auditáveis e integridade de dados garantidos.</p>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-cta-positive animate-pulse" />
+                  <span className="text-[10px] uppercase tracking-wider text-white/60 font-bold">System Status: Optimal</span>
+                </div>
               </div>
             </div>
           </div>
