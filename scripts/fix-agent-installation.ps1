@@ -95,7 +95,7 @@ $TaskName = "CyberShieldAgent-$AgentName"
 # ============================================
 # PASSO 1: Verificacoes Iniciais
 # ============================================
-Write-Host "[PASSO 1] Verificacoes Iniciais..." -ForegroundColor Yellow
+Write-Host "[STEP 1] $($Global:Strings.step1)" -ForegroundColor Yellow
 
 if (-not (Test-Path $ScriptPath)) {
     Write-Host "[ERROR]  ERRO: Script nao encontrado em: $ScriptPath" -ForegroundColor Red
@@ -107,7 +107,7 @@ Write-Host "? Script encontrado: $ScriptPath" -ForegroundColor Green
 # ============================================
 # PASSO 2: Desbloquear Arquivo
 # ============================================
-Write-Host "`n[PASSO 2] Desbloqueando arquivo (remover Zone.Identifier)..." -ForegroundColor Yellow
+Write-Host "`n[STEP 2] $($Global:Strings.step2)" -ForegroundColor Yellow
 
 try {
     Unblock-File -Path $ScriptPath -ErrorAction Stop
@@ -126,7 +126,7 @@ if ($hasZoneId) {
 # ============================================
 # PASSO 3: Limpar Processos e Tasks Antigas
 # ============================================
-Write-Host "`n[PASSO 3] Limpando processos e tasks antigas..." -ForegroundColor Yellow
+Write-Host "`n[STEP 3] $($Global:Strings.step3)" -ForegroundColor Yellow
 
 # Parar processos
 $oldProcesses = Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'cybershield-agent.*ps1' }
@@ -162,7 +162,7 @@ try {
 # ============================================
 # PASSO 4: Criar Diretorio de Logs
 # ============================================
-Write-Host "`n[PASSO 4] Criando diretorio de logs..." -ForegroundColor Yellow
+Write-Host "`n[STEP 4] $($Global:Strings.step4)" -ForegroundColor Yellow
 
 if (-not (Test-Path $LogDir)) {
     New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
@@ -177,7 +177,7 @@ Get-ChildItem "$LogDir\*.log" -ErrorAction SilentlyContinue | Remove-Item -Force
 # ============================================
 # PASSO 5: Criar Scheduled Task com Logging Agressivo
 # ============================================
-Write-Host "`n[PASSO 5] Criando Scheduled Task com logging agressivo..." -ForegroundColor Yellow
+Write-Host "`n[STEP 5] $($Global:Strings.step5)" -ForegroundColor Yellow
 
 # Argumentos do agente
 $AgentArgs = @(
@@ -225,7 +225,7 @@ try {
 }
 
 # Iniciar a task imediatamente
-Write-Host "`n[PASSO 6] Iniciando task..." -ForegroundColor Yellow
+Write-Host "`n[STEP 6] $($Global:Strings.step6)" -ForegroundColor Yellow
 Start-ScheduledTask -TaskName $TaskName
 Write-Host "? Task iniciada. Aguardando 30 segundos..." -ForegroundColor Green
 
@@ -234,7 +234,7 @@ Write-Host "? Task iniciada. Aguardando 30 segundos..." -ForegroundColor Green
 # ============================================
 Start-Sleep -Seconds 30
 
-Write-Host "`n[PASSO 7] Verificando status da task..." -ForegroundColor Yellow
+Write-Host "`n[STEP 7] $($Global:Strings.step7)" -ForegroundColor Yellow
 $task = Get-ScheduledTask -TaskName $TaskName
 $taskInfo = Get-ScheduledTaskInfo -TaskName $TaskName
 
@@ -245,7 +245,7 @@ Write-Host "LastTaskResult: $($taskInfo.LastTaskResult)" -ForegroundColor $(if (
 # ============================================
 # PASSO 8: Verificar Logs
 # ============================================
-Write-Host "`n[PASSO 8] Verificando logs gerados..." -ForegroundColor Yellow
+Write-Host "`n[STEP 8] $($Global:Strings.step8)" -ForegroundColor Yellow
 
 $logFiles = Get-ChildItem "$LogDir\*.log" -ErrorAction SilentlyContinue
 if ($logFiles) {
@@ -279,7 +279,7 @@ if ($logFiles) {
 # ============================================
 # PASSO 9: Verificar Event Viewer (PowerShell)
 # ============================================
-Write-Host "`n[PASSO 9] Verificando Event Viewer (PowerShell)..." -ForegroundColor Yellow
+Write-Host "`n[STEP 9] $($Global:Strings.step9)" -ForegroundColor Yellow
 
 try {
     $events = Get-WinEvent -LogName Application -MaxEvents 20 -ErrorAction Stop | 
