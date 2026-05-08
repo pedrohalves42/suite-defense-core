@@ -146,7 +146,30 @@
     "securityScore": "Security Score",
     "activeAlerts": "Active Alerts",
     "resolvedToday": "Resolved Today",
-    "pendingActions": "Pending Actions"
+    "pendingActions": "Pending Actions",
+    "metrics": {
+      "activeProtection": "Active Protection",
+      "computersCount": "{{count}} computer",
+      "computersCount_plural": "{{count}} computers",
+      "monitoredRealtime": "✓ Monitored in real-time",
+      "connection": "Connection",
+      "onlinePercent": "{{percent}}% online",
+      "needsAttention": "{{count}} needs attention",
+      "needsAttention_plural": "{{count}} need attention",
+      "allConnected": "✓ All connected",
+      "alerts": "Alerts",
+      "activeAlerts": "{{count}} active",
+      "activeAlerts_plural": "{{count}} active",
+      "none": "None",
+      "requiresVerification": "Requires verification",
+      "noPendingActions": "✓ No pending actions",
+      "verifications": "Scans",
+      "successRate": "{{rate}}% success",
+      "failures24h": "{{count}} failure in 24h",
+      "failures24h_plural": "{{count}} failures in 24h",
+      "everythingWorking": "✓ Everything working",
+      "stable": "stable"
+    }
   },
   "agents": {
     "name": "Name",

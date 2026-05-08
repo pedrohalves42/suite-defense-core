@@ -46,7 +46,11 @@ export async function updateAgentStatus(
     .filter(([k]) => k !== 'last_telemetry_at' && k !== 'update_timestamp' && k !== 'last_heartbeat')
     .some(([k, v]) => {
       const currentVal = (currentAgent as any)?.[k];
-      return JSON.stringify(v) !== JSON.stringify(currentVal);
+      if (v === currentVal) return false;
+      if (typeof v === 'object' && v !== null && typeof currentVal === 'object' && currentVal !== null) {
+        return JSON.stringify(v) !== JSON.stringify(currentVal);
+      }
+      return v !== currentVal;
     });
   const timeThresholdReached = (incomingTime - lastUpdate) >= HEARTBEAT_WRITE_THROTTLE_MS;
 

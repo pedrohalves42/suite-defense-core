@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -11,9 +11,15 @@ export function useSessionGuard() {
   const navigate = useNavigate();
   const [sessionValid, setSessionValid] = useState(true);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   const handleExpired = useCallback(() => {
-    if (isRedirecting) return;
+    if (isRedirecting || !isMountedRef.current) return;
     
     setIsRedirecting(true);
     setSessionValid(false);

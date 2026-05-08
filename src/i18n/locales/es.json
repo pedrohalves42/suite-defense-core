@@ -146,7 +146,30 @@
     "securityScore": "Puntuación de Seguridad",
     "activeAlerts": "Alertas Activas",
     "resolvedToday": "Resueltas Hoy",
-    "pendingActions": "Acciones Pendientes"
+    "pendingActions": "Acciones Pendientes",
+    "metrics": {
+      "activeProtection": "Protección Activa",
+      "computersCount": "{{count}} computadora",
+      "computersCount_plural": "{{count}} computadoras",
+      "monitoredRealtime": "✓ Monitoreados en tiempo real",
+      "connection": "Conexión",
+      "onlinePercent": "{{percent}}% online",
+      "needsAttention": "{{count}} necesita atención",
+      "needsAttention_plural": "{{count}} necesitan atención",
+      "allConnected": "✓ Todos conectados",
+      "alerts": "Alertas",
+      "activeAlerts": "{{count}} activo",
+      "activeAlerts_plural": "{{count}} activos",
+      "none": "Ninguno",
+      "requiresVerification": "Requiere verificación",
+      "noPendingActions": "✓ Sin acciones pendientes",
+      "verifications": "Verificaciones",
+      "successRate": "{{rate}}% éxito",
+      "failures24h": "{{count}} falla en 24h",
+      "failures24h_plural": "{{count}} fallas en 24h",
+      "everythingWorking": "✓ Todo funcionando",
+      "stable": "estable"
+    }
   },
   "agents": {
     "name": "Nombre",
