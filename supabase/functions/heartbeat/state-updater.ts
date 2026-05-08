@@ -103,7 +103,7 @@ export async function updateAgentStatus(
         currentAgent = data;
     }
 
-    const currentVersion = currentAgent?.version || 1;
+    const currentVersion = currentAgent?.version || (updateData as any).version || 1;
     const currentHb = currentAgent?.last_heartbeat ? new Date(currentAgent.last_heartbeat).getTime() : 0;
 
     // Idempotency check before update
