@@ -36,7 +36,7 @@ export function HeroSection() {
             {/* Badge - Cyber Shield Premium */}
             <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full glass-card border-cta-positive/30 shadow-glow">
               <div className="relative">
-                <img src={cybershieldLogo} alt="" className="w-5 h-5 object-contain animate-pulse" aria-hidden="true" width={20} height={20} />
+                <img src={cybershieldLogo} alt="CyberShield" className="w-5 h-5 object-contain animate-pulse" width={20} height={20} />
                 <div className="absolute inset-0 bg-cta-positive/40 blur-sm rounded-full" />
               </div>
               <span className="text-[11px] font-bold tracking-[0.15em] uppercase text-cta-positive/90">{hero.badge}</span>
@@ -64,7 +64,7 @@ export function HeroSection() {
               <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3 sm:gap-3.5 pt-2 max-w-xl mx-auto lg:mx-0" aria-label="Benefícios principais">
                 {hero.benefits.map((benefit, index) => (
                   <li
-                    key={index}
+                    key={`benefit-${index}`}
                     className="flex items-center gap-3 sm:gap-3.5 text-white/85 group animate-fade-in-left text-left"
                     style={{ animationDelay: `${0.4 + index * 0.1}s` }}
                   >

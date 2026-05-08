@@ -3,6 +3,7 @@ import { Users, Network, AlertCircle, TrendingUp, TrendingDown, ArrowRight, Minu
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 interface MetricCardsProps {
   totalAgents: number;
@@ -19,9 +20,11 @@ interface MetricCardsProps {
 }
 
 function TrendIndicator({ value, inverted = false }: { value: number; inverted?: boolean }) {
+  const { t } = useTranslation();
+  
   if (value === 0) return (
     <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-      <Minus className="h-2.5 w-2.5" /> estável
+      <Minus className="h-2.5 w-2.5" /> {t('dashboard.metrics.stable', 'estável')}
     </span>
   );
   
@@ -44,48 +47,49 @@ function MetricCardsComponent({
   alerts, successRate, failedJobs, trends,
 }: MetricCardsProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const cards = [
     {
-      title: "Proteção Ativa",
+      title: t('dashboard.metrics.activeProtection', 'Proteção Ativa'),
       icon: Users,
-      value: `${totalAgents} computador${totalAgents !== 1 ? 'es' : ''}`,
-      subtitle: "✓ Monitorados em tempo real",
+      value: t('dashboard.metrics.computersCount', { count: totalAgents, defaultValue: `${totalAgents} computadores` }),
+      subtitle: t('dashboard.metrics.monitoredRealtime', '✓ Monitorados em tempo real'),
       subtitleClass: "text-success",
       borderClass: "border-primary/20",
       route: '/admin/agent-health',
       trend: trends ? <TrendIndicator value={trends.totalJobsTrend} /> : null,
     },
     {
-      title: "Conexão",
+      title: t('dashboard.metrics.connection', 'Conexão'),
       icon: Network,
-      value: `${onlinePercentage}% online`,
+      value: t('dashboard.metrics.onlinePercent', { percent: onlinePercentage, defaultValue: `${onlinePercentage}% online` }),
       subtitle: offlineCount > 0 
-        ? `${offlineCount} precisa${offlineCount !== 1 ? 'm' : ''} de atenção`
-        : '✓ Todos conectados',
+        ? t('dashboard.metrics.needsAttention', { count: offlineCount, defaultValue: `${offlineCount} precisam de atenção` })
+        : t('dashboard.metrics.allConnected', '✓ Todos conectados'),
       subtitleClass: offlineCount > 0 ? "text-warning" : "text-success",
       borderClass: offlineCount > 0 ? "border-warning/30" : "border-success/20",
       route: '/admin/agent-health',
       trend: null,
     },
     {
-      title: "Alertas",
+      title: t('dashboard.metrics.alerts', 'Alertas'),
       icon: AlertCircle,
-      value: alerts > 0 ? `${alerts} ativo${alerts !== 1 ? 's' : ''}` : 'Nenhum',
+      value: alerts > 0 ? t('dashboard.metrics.activeAlerts', { count: alerts, defaultValue: `${alerts} ativos` }) : t('dashboard.metrics.none', 'Nenhum'),
       valueClass: alerts > 0 ? "text-destructive" : "text-success",
-      subtitle: alerts > 0 ? 'Requer verificação' : '✓ Sem ações pendentes',
+      subtitle: alerts > 0 ? t('dashboard.metrics.requiresVerification', 'Requer verificação') : t('dashboard.metrics.noPendingActions', '✓ Sem ações pendentes'),
       subtitleClass: "text-muted-foreground",
       borderClass: alerts > 0 ? "border-destructive/30" : "border-success/20",
       route: '/admin/security-monitoring',
       trend: trends ? <TrendIndicator value={trends.failedTrend} inverted /> : null,
     },
     {
-      title: "Verificações",
+      title: t('dashboard.metrics.verifications', 'Verificações'),
       icon: TrendingUp,
-      value: `${successRate}% sucesso`,
+      value: t('dashboard.metrics.successRate', { rate: successRate, defaultValue: `${successRate}% sucesso` }),
       subtitle: failedJobs > 0 
-        ? `${failedJobs} falha${failedJobs !== 1 ? 's' : ''} nas 24h`
-        : '✓ Tudo funcionando',
+        ? t('dashboard.metrics.failures24h', { count: failedJobs, defaultValue: `${failedJobs} falhas nas 24h` })
+        : t('dashboard.metrics.everythingWorking', '✓ Tudo funcionando'),
       subtitleClass: failedJobs > 0 ? "text-warning" : "text-success",
       borderClass: failedJobs > 0 ? "border-warning/30" : "border-success/20",
       route: '/admin/job-health',

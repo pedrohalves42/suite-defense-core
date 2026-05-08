@@ -17,6 +17,7 @@ export const useSessionManager = () => {
   const sessionIdRef = useRef<string | null>(null);
   const userIdRef = useRef<string | null>(null);
   const activityIntervalRef = useRef<ReturnType<typeof setInterval>>();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Keep userIdRef in sync to allow cleanup even after logout
   useEffect(() => {
@@ -27,13 +28,19 @@ export const useSessionManager = () => {
 
   const logSessionStart = useCallback(async () => {
     if (!user) return null;
+    
+    // Cancel any pending request
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
 
     try {
       const userAgent = navigator.userAgent;
-      const ipAddress = window.location.hostname;
-
+      // AUDIT-FIX: Do NOT capture window.location.hostname as IP. 
+      // The backend will capture the real IP from X-Forwarded-For.
+      // We pass an empty string for _ip_address to satisfy the RPC contract 
+      // while delegating the real detection to the server.
       const { data: sessionId, error } = await supabase.rpc('log_session_start', {
-        _ip_address: ipAddress,
+        _ip_address: '',
         _user_agent: userAgent
       });
 

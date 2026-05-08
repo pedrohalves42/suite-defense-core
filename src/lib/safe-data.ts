@@ -5,8 +5,8 @@
 export function safeMap<T, R>(
   data: T[] | undefined | null,
   renderItem: (item: T, index: number) => R,
-  fallback: R | null = null
-): R[] | R | null {
+  fallback: any = []
+): R[] | R {
   if (!data || !Array.isArray(data) || data.length === 0) {
     return fallback;
   }
