@@ -105,6 +105,7 @@ serveAgent(async (req, ctx) => {
   
   // Always include a timestamp for the update to support idempotency in RPC
   (updateData as any).update_timestamp = telemetryTimestamp;
+  (updateData as any)._current_agent = agentData; // Pass current state for efficient dirty-checking
 
   await updateAgentStatus(supabase, agent.id, agent.agent_name, updateData, agent.last_heartbeat)
 

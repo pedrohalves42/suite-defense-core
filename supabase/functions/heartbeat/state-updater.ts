@@ -31,7 +31,7 @@ export async function updateAgentStatus(
   supabase: SupabaseClient<Database>,
   agentId: string,
   agentName: string,
-  updateData: AgentUpdate & { last_telemetry_at?: string },
+  updateData: AgentUpdate & { last_telemetry_at?: string, _current_agent?: any },
   currentHeartbeat?: string | null,
 ): Promise<void> {
   const now = new Date();
