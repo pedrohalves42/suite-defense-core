@@ -15,6 +15,7 @@ import { Link } from 'react-router-dom';
 import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
 import { HistoryItemCard } from './components/HistoryItemCard';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 export default function ActionCenterDashboard() {
   const [activeTab, setActiveTab] = useState('pending');
