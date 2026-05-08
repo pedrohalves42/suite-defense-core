@@ -7222,6 +7222,7 @@ export type Database = {
           tenant_id: string
           throttle_reason: string | null
           throttled_at: string | null
+          version: number | null
           web_activity_consent_at: string | null
           web_activity_consent_by: string | null
           web_activity_consent_enabled: boolean | null
@@ -7288,6 +7289,7 @@ export type Database = {
           tenant_id: string
           throttle_reason?: string | null
           throttled_at?: string | null
+          version?: number | null
           web_activity_consent_at?: string | null
           web_activity_consent_by?: string | null
           web_activity_consent_enabled?: boolean | null
@@ -7354,6 +7356,7 @@ export type Database = {
           tenant_id?: string
           throttle_reason?: string | null
           throttled_at?: string | null
+          version?: number | null
           web_activity_consent_at?: string | null
           web_activity_consent_by?: string | null
           web_activity_consent_enabled?: boolean | null
