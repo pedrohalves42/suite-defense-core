@@ -1,10 +1,11 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AdminPageLayout } from '@/components/AdminPageLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ClipboardCheck, FileSearch, Workflow, BarChart3 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 const SOC2Dashboard = lazy(() => import('./SOC2Dashboard'));
 const ComplianceTimeline = lazy(() => import('./ComplianceTimeline'));
@@ -29,12 +30,7 @@ const TabLoader = () => (
   </div>
 );
 
-const TABS = [
-  { value: 'overview', label: 'Visão Geral', icon: ClipboardCheck },
-  { value: 'evidence', label: 'Registros e Evidências', icon: FileSearch },
-  { value: 'procedures', label: 'Planos de Ação', icon: Workflow },
-  { value: 'risk', label: 'Risco', icon: BarChart3 },
-] as const;
+// TABS will be defined inside the component to use translation
 
 // Map old route segments to tab values for backward compatibility
 const SUB_TAB_MAP: Record<string, { tab: string }> = {
@@ -52,7 +48,15 @@ const SUB_TAB_MAP: Record<string, { tab: string }> = {
 };
 
 export default function ComplianceHub() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const TABS = useMemo(() => [
+    { value: 'overview', label: t('hubs.compliance.overview'), icon: ClipboardCheck },
+    { value: 'evidence', label: t('hubs.compliance.evidence'), icon: FileSearch },
+    { value: 'procedures', label: t('hubs.compliance.procedures'), icon: Workflow },
+    { value: 'risk', label: t('hubs.compliance.risk'), icon: BarChart3 },
+  ], [t]);
   const initialTab = searchParams.get('tab') || 'overview';
   const [activeTab, setActiveTab] = useState(initialTab);
 
@@ -63,8 +67,8 @@ export default function ComplianceHub() {
 
   return (
     <AdminPageLayout
-      title="Conformidade"
-      description="SOC 2, registros, planos de ação e gestão de risco em um só lugar"
+      title={t('hubs.compliance.title')}
+      description={t('hubs.compliance.description')}
       icon={ClipboardCheck}
     >
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
