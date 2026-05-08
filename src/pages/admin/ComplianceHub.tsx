@@ -4,6 +4,7 @@ import { AdminPageLayout } from '@/components/AdminPageLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ClipboardCheck, FileSearch, Workflow, BarChart3 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const SOC2Dashboard = lazy(() => import('./SOC2Dashboard'));
 const ComplianceTimeline = lazy(() => import('./ComplianceTimeline'));
@@ -20,9 +21,11 @@ const SecurityBenchmark = lazy(() => import('./SecurityBenchmark'));
 const RansomwareIncident = lazy(() => import('./RansomwareIncident'));
 
 const TabLoader = () => (
-  <div className="space-y-4 py-8">
-    <Skeleton className="h-8 w-64" />
-    <Skeleton className="h-64 w-full" />
+  <div className="space-y-6 py-8">
+    <div className="h-10 w-64 rounded-xl bg-white/[0.03] animate-pulse" />
+    <div className="h-80 w-full rounded-[2.5rem] bg-white/[0.03] border border-white/5 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cta-positive/[0.02] to-transparent animate-shimmer" />
+    </div>
   </div>
 );
 
@@ -65,9 +68,9 @@ export default function ComplianceHub() {
       icon={ClipboardCheck}
     >
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 bg-secondary h-auto">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 bg-white/[0.03] border border-white/5 p-1 h-auto rounded-2xl">
           {TABS.map(({ value, label, icon: Icon }) => (
-            <TabsTrigger key={value} value={value} className="text-xs sm:text-sm gap-1.5">
+            <TabsTrigger key={value} value={value} className="text-xs sm:text-sm gap-1.5 rounded-xl data-[state=active]:bg-cta-positive/10 data-[state=active]:text-cta-positive data-[state=active]:border-cta-positive/20 border border-transparent transition-all duration-300">
               <Icon className="h-3.5 w-3.5 hidden sm:inline" />
               {label}
             </TabsTrigger>
@@ -75,26 +78,36 @@ export default function ComplianceHub() {
         </TabsList>
 
         <Suspense fallback={<TabLoader />}>
-          <TabsContent value="overview" className="mt-4 space-y-6">
-            <SOC2Dashboard />
-            <SOC2Checklist />
-            <ComplianceTimeline />
-          </TabsContent>
-          <TabsContent value="evidence" className="mt-4 space-y-6">
-            <SystemAudit />
-            <EvidenceBundlePage />
-          </TabsContent>
-          <TabsContent value="procedures" className="mt-4 space-y-6">
-            <Governance />
-            <Playbooks />
-            <ComplianceAutomation />
-          </TabsContent>
-          <TabsContent value="risk" className="mt-4 space-y-6">
-            <DriftDashboard />
-            <RiskScore />
-            <SecurityBenchmark />
-            <RansomwareIncident />
-          </TabsContent>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+            >
+              <TabsContent value="overview" className="mt-6 space-y-6 outline-none">
+                <SOC2Dashboard />
+                <SOC2Checklist />
+                <ComplianceTimeline />
+              </TabsContent>
+              <TabsContent value="evidence" className="mt-6 space-y-6 outline-none">
+                <SystemAudit />
+                <EvidenceBundlePage />
+              </TabsContent>
+              <TabsContent value="procedures" className="mt-6 space-y-6 outline-none">
+                <Governance />
+                <Playbooks />
+                <ComplianceAutomation />
+              </TabsContent>
+              <TabsContent value="risk" className="mt-6 space-y-6 outline-none">
+                <DriftDashboard />
+                <RiskScore />
+                <SecurityBenchmark />
+                <RansomwareIncident />
+              </TabsContent>
+            </motion.div>
+          </AnimatePresence>
         </Suspense>
       </Tabs>
     </AdminPageLayout>
