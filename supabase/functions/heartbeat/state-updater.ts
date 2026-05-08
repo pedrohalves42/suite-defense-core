@@ -57,7 +57,7 @@ export async function updateAgentStatus(
   const metadataChanged = incomingMetadataHash 
     ? incomingMetadataHash !== currentMetadataHash
     : Object.entries(updateData)
-        .filter(([k]) => k !== 'last_telemetry_at' && k !== 'update_timestamp' && k !== 'last_heartbeat' && k !== 'metadata_hash')
+        .filter(([k]) => k !== 'last_telemetry_at' && k !== 'update_timestamp' && k !== 'last_heartbeat' && k !== 'metadata_hash' && k !== '_current_agent')
         .some(([k, v]) => {
           const currentVal = (currentAgent as any)?.[k];
           if (v === currentVal) return false;
