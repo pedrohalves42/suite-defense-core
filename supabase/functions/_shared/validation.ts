@@ -51,6 +51,7 @@ export const EnrollAgentSchema = z.object({
   agentVersion: z.string().max(20).optional(),
   /** Explicit flag: agent declares HMAC support. Legacy agents omit this. */
   supportsHmac: z.boolean().optional(),
+  metadataHash: z.string().max(64).optional(),
 });
 
 export const CreateJobSchema = z.object({
