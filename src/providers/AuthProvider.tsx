@@ -24,12 +24,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let isMounted = true;
     let retryCount = 0;
 
-    const initializeAuth = async () => {
+    const initializeAuth = async (abortController?: AbortController) => {
       if (isInitialized.current) return;
       
       try {
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
         
+        if (abortController?.signal.aborted) return;
         if (!isMounted) return;
 
         if (error) {
