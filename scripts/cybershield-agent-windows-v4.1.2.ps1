@@ -1892,17 +1892,23 @@ function Get-SystemInfo {
 function Send-Heartbeat {
     $sysInfo = Get-SystemInfo
 
-    $body = @{
-        agent_name    = $Global:AgentName
+    # OTIMIZACAO: Compute metadata hash to allow backend dirty-checking
+    $metadataPayload = @{
         hostname      = $sysInfo.hostname
         os_type       = $sysInfo.os_type
         os_version    = $sysInfo.os_version
         agent_version = $Global:AgentVersion
         state         = Get-AgentState
-        error_count   = $Global:AgentState.ErrorCount
     }
+    $metadataJson = $metadataPayload | ConvertTo-Json -Compress
+    $metadataHash = (Get-FileHash -InputStream ([System.IO.MemoryStream]::new([System.Text.Encoding]::UTF8.GetBytes($metadataJson))) -Algorithm SHA256).Hash
 
-    Write-Log "[HEARTBEAT] Enviando heartbeat (state: $(Get-AgentState))..." "INFO"
+    $body = $metadataPayload
+    $body.agent_name    = $Global:AgentName
+    $body.error_count   = $Global:AgentState.ErrorCount
+    $body.metadata_hash = $metadataHash
+
+    Write-Log "[HEARTBEAT] Enviando heartbeat (state: $(Get-AgentState), hash: $($metadataHash.Substring(0,8)))..." "INFO"
 
     try {
         $result = Invoke-SecureRequest `
