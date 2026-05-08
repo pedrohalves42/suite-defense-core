@@ -276,7 +276,16 @@ function Verify-Ed25519Signature {
                 return $isValid
             }
             catch {
-                # If Ed25519 is not supported on this system, log warning and allow
+                # SECURITY-FIX: If strict mode is enabled, we MUST NOT allow fallback.
+                if ($Global:RequireJobSignatures) {
+                    Write-Log "[SECURITY] [FATAL] Native Ed25519 not supported and strict mode is active. REJECTING update for safety." "ERROR"
+                    Add-EvidenceEntry -Type "error" -Data @{
+                        event = "strict_signature_rejected_no_native_support"
+                        error = "Native crypto support missing on this system"
+                    } -Severity "critical"
+                    return $false
+                }
+
                 Write-Log "[SECURITY] Ed25519 verification not supported on this system: $($_.Exception.Message)" "WARN"
                 Write-Log "[SECURITY] Allowing update (signature present but cannot verify)" "WARN"
                 
@@ -857,11 +866,9 @@ function Set-AgentState {
     Write-Log "[STATE] $currentState -> $NewState ($Reason)" "INFO"
     
     # SECURITY-FIX: Always flush evidence BEFORE transitions to ERROR or DEGRADED
-    # This ensures logs of what caused the failure are sent before the agent stops/slows down
     if ($NewState -eq "ERROR" -or $NewState -eq "DEGRADED") {
-        Write-Log "[STATE] Critical transition detected, flushing evidence..." "DEBUG"
-        # Defer to flush logic but call it synchronously here if possible
-        # (Assuming Send-EvidenceHeartbeat or similar exists)
+        Write-Log "[STATE] Critical transition detected, forcing evidence flush..." "DEBUG"
+        Invoke-FlushEvidence
     }
 
     # Registrar evidencia
@@ -1096,8 +1103,9 @@ function Invoke-AutoRecovery {
         }
         "network" {
             try {
-                # Testar conectividade basica
-                $test = Test-NetConnection -ComputerName "google.com" -Port 443 -WarningAction SilentlyContinue
+                # AUDIT-FIX: Test connectivity directly against backend URL instead of google.com
+                $uri = [System.Uri]$Global:ServerUrl
+                $test = Test-NetConnection -ComputerName $uri.Host -Port $uri.Port -WarningAction SilentlyContinue
                 $recovered = $test.TcpTestSucceeded
             } catch { }
         }

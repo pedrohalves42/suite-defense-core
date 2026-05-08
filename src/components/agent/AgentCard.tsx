@@ -3,7 +3,9 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { AgentMetricsBar } from './AgentMetricsBar';
-import { formatDistanceToNow, ptBR } from '@/lib/date-utils';
+import { formatDistanceToNow } from 'date-fns';
+import { useTranslation } from 'react-i18next';
+import * as Locales from 'date-fns/locale';
 
 export interface DiskMetric {
   drive_letter: string;
@@ -36,31 +38,34 @@ export interface AgentCardProps {
   compact?: boolean;
 }
 
-function formatUptime(seconds: number | undefined): string {
+function formatUptime(seconds: number | undefined, t: any): string {
   if (!seconds) return '';
   const hours = Math.floor(seconds / 3600);
-  if (hours < 24) return `${hours}h ligado`;
+  if (hours < 24) return t('agent.uptime.hours', { count: hours, defaultValue: `${hours}h ligado` });
   const days = Math.floor(hours / 24);
-  return `${days}d ${hours % 24}h ligado`;
+  return t('agent.uptime.days', { days, hours: hours % 24, defaultValue: `${days}d ${hours % 24}h ligado` });
 }
 
-function formatLastSeen(date: string | Date | undefined): string {
+function formatLastSeen(date: string | Date | undefined, locale: any): string {
   if (!date) return '';
   try {
     const d = typeof date === 'string' ? new Date(date) : date;
-    return formatDistanceToNow(d, { addSuffix: true, locale: ptBR });
+    return formatDistanceToNow(d, { addSuffix: true, locale });
   } catch {
     return '';
   }
 }
 
-function getOfflineDuration(date: string | Date | undefined): string {
-  if (!date) return 'Sem conexão';
+function getOfflineDuration(date: string | Date | undefined, t: any, locale: any): string {
+  if (!date) return t('agent.status.noConnection', 'Sem conexão');
   try {
     const d = typeof date === 'string' ? new Date(date) : date;
-    return `Offline ${formatDistanceToNow(d, { locale: ptBR })}`;
+    return t('agent.status.offlineFor', { 
+      duration: formatDistanceToNow(d, { locale }),
+      defaultValue: `Offline ${formatDistanceToNow(d, { locale })}` 
+    });
   } catch {
-    return 'Offline';
+    return t('agent.status.offline', 'Offline');
   }
 }
 
@@ -91,6 +96,10 @@ export function AgentCard({
   selected,
   compact = false,
 }: AgentCardProps) {
+  const { t, i18n } = useTranslation();
+  const currentLocaleName = i18n.language.replace('-', '') as keyof typeof Locales;
+  const dateLocale = Locales[currentLocaleName] || Locales.ptBR;
+
   const hasSystemMetrics = cpuPercent !== undefined || memoryPercent !== undefined || diskPercent !== undefined;
   const hasDisks = disks && disks.length > 0;
 
