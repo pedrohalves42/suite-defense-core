@@ -36,10 +36,17 @@ export function parseHeartbeatPayload(rawBody: string): OSInfo {
     if (typeof jsonParsed !== 'object' || jsonParsed === null) return {}
     
     const result = HeartbeatPayloadSchema.safeParse(jsonParsed)
-    // If validation fails, still use the raw parsed object for backward compat
-    // but strip obviously dangerous fields
     if (!result.success) {
-      return jsonParsed as OSInfo
+      // SECURITY-FIX: Do NOT return the raw object if validation fails.
+      // This prevents "object injection" vulnerabilities and memory bloat.
+      const sanitized: Record<string, any> = {};
+      const shape = HeartbeatPayloadSchema.shape;
+      for (const key in shape) {
+        if (jsonParsed[key] !== undefined) {
+          sanitized[key] = jsonParsed[key];
+        }
+      }
+      return sanitized as OSInfo;
     }
     return result.data as OSInfo
   } catch (err) {
@@ -61,11 +68,10 @@ export function buildAgentUpdate(
     status: 'active',
   }
 
-  // Only include OS info if it differs from current state (delta-update optimization)
-  const incomingOs = (osInfo.os_type || osInfo.platform || '').toLowerCase();
-  const currentOs = (current?.os_type as string || '').toLowerCase();
-  if (incomingOs && incomingOs !== currentOs) {
-    updateData.os_type = osInfo.os_type || osInfo.platform;
+  // Delta-update optimization: only include OS info if it actually changed
+  const incomingOsType = osInfo.os_type || osInfo.platform;
+  if (incomingOsType && incomingOsType.toLowerCase() !== (current?.os_type as string || '').toLowerCase()) {
+    updateData.os_type = incomingOsType;
   }
 
   if (osInfo.os_version && osInfo.os_version !== current?.os_version) {
@@ -78,16 +84,27 @@ export function buildAgentUpdate(
 
   // Persist agent state (ENFORCING, SAFE_MODE, DEGRADED, INITIALIZING)
   if (osInfo.state) {
-    const stateUpper = osInfo.state.toUpperCase()
+    const stateUpper = osInfo.state.toUpperCase();
+    let canonicalState = 'healthy'; // Default for unrecognized active states
+    
     if (['ENFORCING', 'HEALTHY'].includes(stateUpper)) {
-      updateData.agent_state = 'healthy'
+      canonicalState = 'healthy';
     } else if (['SAFE_MODE', 'DEGRADED', 'RECOVERY', 'UPDATING', 'ROLLBACK'].includes(stateUpper)) {
-      updateData.agent_state = stateUpper.toLowerCase()
+      canonicalState = stateUpper.toLowerCase();
     } else if (['OFFLINE', 'ERROR', 'SHUTDOWN', 'ISOLATED', 'QUARANTINED'].includes(stateUpper)) {
-      updateData.agent_state = stateUpper.toLowerCase()
+      canonicalState = stateUpper.toLowerCase();
+    } else {
+      // For any other state, if online, keep it as 'warning' or 'degraded' if suspicious
+      canonicalState = 'warning';
     }
-    updateData.state = osInfo.state
-  } 
+
+    // Only update if canonical state differs from current to save IOPS
+    if (canonicalState !== (current as any)?.agent_state) {
+      updateData.agent_state = canonicalState;
+    }
+    
+    updateData.state = osInfo.state;
+  }
   // IMPORTANT: Do NOT default to 'healthy' if state is missing to avoid overriding 
   // backend-enforced states like 'isolated' or 'blocked'.
 

@@ -152,13 +152,16 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
     return tenants[0];
   }, [tenants, activeTenantId, user?.app_metadata?.active_tenant_id]);
 
-  // CORREÇÃO: Calcular role baseada no tenant ATIVO
+  // CORREÇÃO: Calcular role baseada no tenant ATIVO e no status de super_admin global
   const activeRole = useMemo((): AppRole | null => {
+    // Check global super_admin status first
+    if (user?.app_metadata?.is_super_admin === true) return 'super_admin';
+
     if (!activeTenant || userTenantRoles.length === 0) return null;
     
     const tenantRole = userTenantRoles.find(r => r.tenant_id === activeTenant.id);
     return (tenantRole?.role as AppRole) || null;
-  }, [activeTenant, userTenantRoles]);
+  }, [activeTenant, userTenantRoles, user?.app_metadata?.is_super_admin]);
 
   // V-AUDIT: No longer persist to localStorage (XSS risk).
   // Tenant preference survives via JWT app_metadata.active_tenant_id.
