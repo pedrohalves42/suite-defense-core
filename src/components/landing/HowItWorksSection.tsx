@@ -12,6 +12,8 @@ export function HowItWorksSection() {
     { bg: "bg-accent", text: "text-accent-foreground", shadow: "shadow-accent/20", ring: "border-accent/20" },
   ];
 
+  if (!howItWorks || !Array.isArray(howItWorks.steps)) return null;
+
   return (
     <section className="py-32 relative bg-background">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-info/5 to-background" />

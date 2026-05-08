@@ -7,6 +7,8 @@ import { FAQDecorations } from "./shared/AnimatedDecorations";
 export function FAQSection() {
   const { faq } = useLandingContent();
 
+  if (!faq || !Array.isArray(faq.items)) return null;
+
   return (
     <section id="faq" className="py-24 relative">
       <div className="absolute inset-0 bg-gradient-to-b from-muted/30 via-background to-background" />

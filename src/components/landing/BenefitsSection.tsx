@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 export function BenefitsSection() {
   const { benefits } = useLandingContent();
 
+  if (!benefits || !Array.isArray(benefits.cards)) return null;
+
   return (
     <section id="recursos" className="py-32 relative bg-background">
       {/* Refined gradient layer */}

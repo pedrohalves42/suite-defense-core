@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 export function FeaturesSection() {
   const { features } = useLandingContent();
 
+  if (!features || !Array.isArray(features.items)) return null;
+
   return (
     <section className="py-32 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-white/[0.01] to-background" />
