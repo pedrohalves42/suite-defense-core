@@ -3,6 +3,7 @@ import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 import { motion } from "framer-motion";
 import { FAQDecorations } from "./shared/AnimatedDecorations";
+import { safeMap } from "@/lib/safe-data";
 
 export function FAQSection() {
   const { faq } = useLandingContent();
