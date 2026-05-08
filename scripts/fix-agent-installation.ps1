@@ -307,7 +307,7 @@ try {
 # PASSO 10: Diagnostico Final
 # ============================================
 Write-Host "`n?????????????????????????????????????????????????????????????" -ForegroundColor Cyan
-Write-Host "?  DIAGNOSTICO FINAL                                        ?" -ForegroundColor Cyan
+Write-Host "?  $($Global:Strings.step10.PadRight(55)) ?" -ForegroundColor Cyan
 Write-Host "?????????????????????????????????????????????????????????????`n" -ForegroundColor Cyan
 
 $success = $false
@@ -316,7 +316,7 @@ $mainLog = "$LogDir\cybershield-agent-v3.log"
 if (Test-Path $mainLog) {
     $logContent = Get-Content $mainLog -Raw
     if ($logContent -match '[OK]  Autenticado com sucesso') {
-        Write-Host "[OK]  SUCESSO! Agente esta rodando e autenticado!" -ForegroundColor Green
+        Write-Host "[OK]  $($Global:Strings.success)" -ForegroundColor Green
         $success = $true
     } elseif ($logContent -match '\[ERROR\].*401') {
         Write-Host "[ERROR]  ERRO: Credenciais invalidas (401)" -ForegroundColor Red
@@ -330,7 +330,7 @@ if (Test-Path $mainLog) {
         Write-Host "   - Aguarde mais 1-2 minutos e verifique o dashboard" -ForegroundColor Yellow
     }
 } else {
-    Write-Host "[ERROR]  FALHA CRITICA: Script nao foi executado" -ForegroundColor Red
+    Write-Host "[ERROR]  $($Global:Strings.fail)" -ForegroundColor Red
     Write-Host "`nPossiveis causas:" -ForegroundColor Yellow
     Write-Host "1. AppLocker ou outro software de seguranca bloqueando" -ForegroundColor Gray
     Write-Host "2. ExecutionPolicy ainda restritiva (mesmo com Unrestricted)" -ForegroundColor Gray
