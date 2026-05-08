@@ -143,22 +143,26 @@ export default function Dashboard() {
   // Loading state
   if (metricsLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-24 w-full" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
+      <div className="space-y-6 animate-pulse">
+        {/* Header Card Skeleton */}
+        <div className="h-44 w-full bg-white/[0.03] rounded-[2.5rem] border border-white/5" />
+
+        {/* KPI Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-44 bg-white/[0.03] rounded-[2rem] border border-white/5" />
+          ))}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Skeleton className="h-48" />
-          <Skeleton className="h-48" />
+
+        {/* Lower Sections */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 h-[450px] bg-white/[0.03] rounded-[2.5rem] border border-white/5" />
+          <div className="h-[450px] bg-white/[0.03] rounded-[2.5rem] border border-white/5" />
         </div>
       </div>
     );
   }
+
 
   // Simple mode
   if (isSimple) {
