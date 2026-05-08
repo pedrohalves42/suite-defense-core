@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 
 export default function ActionCenterDashboard() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('pending');
   const [searchTerm, setSearchTerm] = useState('');
   const { data, isLoading, refetch, isRefetching } = useActionCenter();
@@ -60,9 +61,9 @@ export default function ActionCenterDashboard() {
               <Target className="h-6 w-6 text-primary-foreground" />
             </div>
             <div className="space-y-1">
-              <span className="section-label">Gerenciamento Operacional</span>
+              <span className="section-label">{t('dashboard.actionCenter.operationalManagement')}</span>
               <h1 className="text-display-md tracking-tighter text-foreground">
-                Central de Ações
+                {t('dashboard.actionCenter.title')}
               </h1>
             </div>
           </div>
@@ -70,18 +71,18 @@ export default function ActionCenterDashboard() {
             {totalActions > 0 ? (
               <span className="text-destructive flex items-center gap-1.5 px-3 py-1 bg-destructive/10 rounded-full border border-destructive/10 shadow-sm transition-all duration-500 hover:scale-105">
                 <span className="w-1.5 h-1.5 bg-destructive rounded-full animate-pulse" />
-                {totalActions} {totalActions === 1 ? 'pendência crítica' : 'pendências críticas'}
+                {t('dashboard.actionCenter.criticalPending', { count: totalActions })}
               </span>
             ) : (
               <span className="text-cta-positive flex items-center gap-1.5 px-3 py-1 bg-cta-positive/10 rounded-full border border-cta-positive/10 shadow-sm">
                 <span className="w-1.5 h-1.5 bg-cta-positive rounded-full" />
-                Infraestrutura Segura
+                {t('dashboard.actionCenter.secureInfrastructure')}
               </span>
             )}
             {lastUpdated && (
               <span className="flex items-center gap-1.5 text-muted-foreground bg-muted/30 px-3 py-1 rounded-full border border-border/40">
                 <Clock className="h-3.5 w-3.5" />
-                Sincronizado {lastUpdated}
+                {t('dashboard.actionCenter.synced', { time: lastUpdated })}
               </span>
             )}
           </div>
@@ -95,7 +96,7 @@ export default function ActionCenterDashboard() {
             className="h-12 px-6 rounded-xl bg-background/50 backdrop-blur-sm border-border/60 hover:border-primary/40"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
-            Sincronizar
+            {t('dashboard.actionCenter.sync')}
           </Button>
           <Button 
             variant="default" 
@@ -104,7 +105,7 @@ export default function ActionCenterDashboard() {
             className="h-12 px-8 rounded-xl shadow-premium hover:shadow-glow transition-all duration-500"
           >
             <Link to="/admin/playbooks">
-              Estratégias de Resposta
+              {t('dashboard.actionCenter.responseStrategies')}
               <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
             </Link>
           </Button>
