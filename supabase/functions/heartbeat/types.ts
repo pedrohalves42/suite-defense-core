@@ -19,6 +19,7 @@ export interface OSInfo {
   system_metrics?: SystemMetricsPayload;
   processes?: ProcessesPayload;
   process_anomalies?: unknown[];
+  metadata_hash?: string;
 }
 
 export interface SystemMetricsPayload {
@@ -77,6 +78,7 @@ export interface AgentContext {
   last_forced_update_applied?: string | null;
   last_telemetry_at?: string | null;
   last_heartbeat?: string | null;
+  metadata_hash?: string | null;
 }
 
 export interface AgentUpdate {
@@ -90,6 +92,8 @@ export interface AgentUpdate {
   agent_version?: string;
   ed25519_supported?: boolean;
   signature_mode?: string;
+  metadata_hash?: string;
+}
 }
 
 export interface HeartbeatContext {
