@@ -36,9 +36,14 @@ export const AdminLayout = () => {
 
   if (loading || setupLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4" role="status" aria-live="polite">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" aria-hidden="true"></div>
-        <p className="text-muted-foreground">{t('adminPages.layout.checkingPermissions')}</p>
+      <div className="flex flex-col items-center justify-center min-h-screen gap-6 bg-background relative overflow-hidden">
+        <div className="absolute inset-0 bg-cta-positive/5 rounded-full blur-[160px] animate-pulse" />
+        <div className="relative p-6 glass-card rounded-[2.5rem] border-white/5 flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cta-positive" aria-hidden="true"></div>
+          <p className="text-white/40 font-medium tracking-wide uppercase text-xs">
+            {t('adminPages.layout.checkingPermissions')}
+          </p>
+        </div>
       </div>
     );
   }
@@ -48,20 +53,28 @@ export const AdminLayout = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 md:px-10 py-4" role="region" aria-label="Painel administrativo">
-      {/* First Time Setup Wizard */}
-      <FirstTimeSetupWizard />
-      
-      {/* Tenant Setup Wizard - shows when tenant needs initial configuration */}
-      <TenantSetupWizard open={needsSetup} />
+    <div className="min-h-screen relative overflow-hidden selection:bg-cta-positive/20">
+      {/* Premium Admin Background Layer */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-[10%] left-[20%] w-[40%] h-[40%] bg-cta-positive/5 rounded-full blur-[140px]" />
+        <div className="absolute bottom-[10%] right-[15%] w-[35%] h-[35%] bg-info/5 rounded-full blur-[120px]" />
+      </div>
 
-      <header>
-        <OutdatedAgentsBanner />
-      </header>
-      
-      <section>
-        <Outlet />
-      </section>
+      <div className="max-w-7xl mx-auto px-6 md:px-10 py-8 relative z-10" role="region" aria-label="Painel administrativo">
+        {/* First Time Setup Wizard */}
+        <FirstTimeSetupWizard />
+        
+        {/* Tenant Setup Wizard - shows when tenant needs initial configuration */}
+        <TenantSetupWizard open={needsSetup} />
+
+        <header className="mb-8">
+          <OutdatedAgentsBanner />
+        </header>
+        
+        <main className="stagger-visible">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 };
