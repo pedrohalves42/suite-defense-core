@@ -54,10 +54,11 @@ const Landing = () => {
   return (
     <>
       <SEOHead 
-        title="CyberShield - Segurança Operacional e Compliance em Uma Única Plataforma"
-        description="Descubra em 48h onde sua empresa está exposta. Centralize monitoramento de endpoints, detecção de ameaças, automação de resposta e evidências de compliance. Assessment gratuito."
-        keywords="segurança cibernética, proteção de endpoints, EDR, compliance, auditoria, automação de segurança, monitoramento, assessment gratuito"
+        title="CyberShield | Segurança Cibernética e Compliance Operacional"
+        description="Plataforma líder em segurança cibernética e compliance. Proteja endpoints, automatize respostas e garanta evidências auditáveis SOC2/LGPD em tempo real."
+        keywords="segurança cibernética, proteção de endpoints, EDR brasileiro, compliance LGPD, auditoria SOC2, automação de segurança, monitoramento 24/7, CyberShield"
         canonicalUrl="/"
+        ogImage="https://cybershield.com.br/og-premium.png"
         jsonLd={LANDING_JSON_LD}
       />
       <div className="min-h-screen bg-background">
