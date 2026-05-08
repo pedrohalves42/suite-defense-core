@@ -39,7 +39,7 @@ export function DifferentiatorsSection() {
         </motion.div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {differentiators.items.map((item: { title: string; description: string; metric: string; metricLabel: string }, index: number) => {
+          {safeMap(differentiators.items, (item: { title: string; description: string; metric: string; metricLabel: string }, index: number) => {
             const Icon = ICONS[index] || Shield;
             return (
               <motion.div
