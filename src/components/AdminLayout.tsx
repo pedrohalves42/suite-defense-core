@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,6 +10,7 @@ import { OutdatedAgentsBanner } from '@/components/OutdatedAgentsBanner';
 import { TenantSetupWizard } from '@/components/TenantSetupWizard';
 import { useTenantSetup } from '@/hooks/useTenantSetup';
 import { FirstTimeSetupWizard } from '@/components/onboarding/FirstTimeSetupWizard';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export const AdminLayout = () => {
   const { isAdmin, loading } = useIsAdmin();
@@ -17,6 +18,7 @@ export const AdminLayout = () => {
   const { toast } = useToast();
   const { t } = useTranslation();
   const { needsSetup, loading: setupLoading } = useTenantSetup();
+  const location = useLocation();
 
   useEffect(() => {
     logger.debug('Admin check', { 
@@ -71,8 +73,19 @@ export const AdminLayout = () => {
           <OutdatedAgentsBanner />
         </header>
         
-        <main className="stagger-visible">
-          <Outlet />
+        <main>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="stagger-visible"
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
     </div>

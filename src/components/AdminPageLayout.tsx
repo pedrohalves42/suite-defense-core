@@ -29,13 +29,13 @@ export const AdminPageLayout = ({
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="flex items-start gap-3">
           {Icon && (
-            <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20">
-              <Icon className="h-5 w-5 text-primary" />
+            <div className="p-2 rounded-lg bg-gradient-to-br from-cta-positive/20 to-info/20 border border-cta-positive/20 shadow-glow">
+              <Icon className="h-5 w-5 text-cta-positive" />
             </div>
           )}
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              <h2 className="text-xl font-bold bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text text-transparent">
                 {title}
               </h2>
               {badge}

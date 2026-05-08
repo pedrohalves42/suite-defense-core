@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 export function TargetAudienceSection() {
   const { targetAudience } = useLandingContent();
 
+  if (!targetAudience || !Array.isArray(targetAudience.segments)) return null;
+
   return (
     <section className="py-24 relative bg-background">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-info/[0.04] to-background" />

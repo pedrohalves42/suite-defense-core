@@ -4,6 +4,7 @@ import { AdminPageLayout } from '@/components/AdminPageLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BrainCircuit, Zap, Eye, BookOpen } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const AIInsights = lazy(() => import('./AIInsights'));
 const InsightTriageCenter = lazy(() => import('./InsightTriageCenter'));
@@ -16,9 +17,11 @@ const AIFeedbackDashboard = lazy(() => import('./AIFeedbackDashboard'));
 const SoftwareKnowledgeBase = lazy(() => import('./SoftwareKnowledgeBase'));
 
 const TabLoader = () => (
-  <div className="space-y-4 py-8">
-    <Skeleton className="h-8 w-64" />
-    <Skeleton className="h-64 w-full" />
+  <div className="space-y-6 py-8">
+    <div className="h-10 w-64 rounded-xl bg-white/[0.03] animate-pulse" />
+    <div className="h-80 w-full rounded-[2.5rem] bg-white/[0.03] border border-white/5 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cta-positive/[0.02] to-transparent animate-shimmer" />
+    </div>
   </div>
 );
 
@@ -46,9 +49,9 @@ export default function IntelligenceHub() {
       icon={BrainCircuit}
     >
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 bg-secondary h-auto">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 bg-white/[0.03] border border-white/5 p-1 h-auto rounded-2xl">
           {TABS.map(({ value, label, icon: Icon }) => (
-            <TabsTrigger key={value} value={value} className="text-xs sm:text-sm gap-1.5">
+            <TabsTrigger key={value} value={value} className="text-xs sm:text-sm gap-1.5 rounded-xl data-[state=active]:bg-cta-positive/10 data-[state=active]:text-cta-positive data-[state=active]:border-cta-positive/20 border border-transparent transition-all duration-300">
               <Icon className="h-3.5 w-3.5 hidden sm:inline" />
               {label}
             </TabsTrigger>
@@ -56,23 +59,33 @@ export default function IntelligenceHub() {
         </TabsList>
 
         <Suspense fallback={<TabLoader />}>
-          <TabsContent value="insights" className="mt-4 space-y-6">
-            <AIInsights />
-            <InsightTriageCenter />
-            <ConfidenceGapDashboard />
-          </TabsContent>
-          <TabsContent value="automation" className="mt-4 space-y-6">
-            <RulesManagement />
-            <AIActionApproval />
-            <AIAnomalies />
-          </TabsContent>
-          <TabsContent value="governance" className="mt-4 space-y-6">
-            <DecisionAudit />
-            <AIFeedbackDashboard />
-          </TabsContent>
-          <TabsContent value="knowledge" className="mt-4 space-y-6">
-            <SoftwareKnowledgeBase />
-          </TabsContent>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+            >
+              <TabsContent value="insights" className="mt-6 space-y-6 outline-none">
+                <AIInsights />
+                <InsightTriageCenter />
+                <ConfidenceGapDashboard />
+              </TabsContent>
+              <TabsContent value="automation" className="mt-6 space-y-6 outline-none">
+                <RulesManagement />
+                <AIActionApproval />
+                <AIAnomalies />
+              </TabsContent>
+              <TabsContent value="governance" className="mt-6 space-y-6 outline-none">
+                <DecisionAudit />
+                <AIFeedbackDashboard />
+              </TabsContent>
+              <TabsContent value="knowledge" className="mt-6 space-y-6 outline-none">
+                <SoftwareKnowledgeBase />
+              </TabsContent>
+            </motion.div>
+          </AnimatePresence>
         </Suspense>
       </Tabs>
     </AdminPageLayout>
