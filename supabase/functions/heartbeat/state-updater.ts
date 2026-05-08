@@ -70,6 +70,7 @@ export async function updateAgentStatus(
   // Note: timeThresholdReached is usually handled by the caller or implicitly in metadataChanged/lastUpdate comparison
   if (!metadataChanged && incomingTime <= lastUpdate) {
     logger.debug('Skipping redundant agent heartbeat DB update (idempotent)', { agentName });
+    // Still ensure status is online by doing a fast partial update if needed, but RPC handles this better
     return;
   }
 
@@ -128,7 +129,7 @@ export async function updateAgentStatus(
     }
   }
   
-  logger.info('Agent heartbeat updated atomically', { agentName, metadataChanged, timeThresholdReached });
+  logger.info('Agent heartbeat updated atomically', { agentName, metadataChanged });
 }
 
 /**
