@@ -34,7 +34,11 @@ export function FeaturesSection() {
                 
                 <div className="relative z-10">
                   <div className="w-16 h-16 bg-cta-positive/10 rounded-2xl flex items-center justify-center mb-8 group-hover:bg-cta-positive/20 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-700 ease-premium shadow-glow">
-                    <Icon className="w-8 h-8 text-cta-positive brightness-125" />
+                    {Icon ? (
+                      <Icon className="w-8 h-8 text-cta-positive brightness-125" />
+                    ) : (
+                      <div className="w-8 h-8 bg-cta-positive/20 rounded-lg animate-pulse" />
+                    )}
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-4 tracking-tight leading-tight">{item.title}</h3>
                   <p className="text-base text-white/40 leading-relaxed font-medium group-hover:text-white/60 transition-colors duration-500">{item.description}</p>
