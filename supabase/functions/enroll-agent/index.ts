@@ -58,7 +58,8 @@ servePublic(async (req, ctx) => {
       p_hmac_secret: hmacSecret,
       p_token_hash: tokenHash,
       p_token_prefix: tokenPrefix,
-      p_expires_at: expiresAt.toISOString()
+      p_expires_at: expiresAt.toISOString(),
+      p_metadata_hash: metadataHash || null
     });
 
     if (rpcError || !result.success) {
