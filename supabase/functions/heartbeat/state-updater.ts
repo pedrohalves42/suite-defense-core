@@ -31,7 +31,7 @@ export async function updateAgentStatus(
   supabase: SupabaseClient<Database>,
   agentId: string,
   agentName: string,
-  updateData: AgentUpdate & { last_telemetry_at?: string },
+  updateData: AgentUpdate & { last_telemetry_at?: string, _current_agent?: any },
   currentHeartbeat?: string | null,
 ): Promise<void> {
   const now = new Date();
@@ -42,17 +42,30 @@ export async function updateAgentStatus(
   const lastUpdate = currentHeartbeat ? new Date(currentHeartbeat).getTime() : 0;
   const incomingTime = incomingTs ? new Date(incomingTs).getTime() : now.getTime();
   
-  const metadataChanged = Object.entries(updateData)
-    .filter(([k]) => k !== 'last_telemetry_at' && k !== 'update_timestamp' && k !== 'last_heartbeat')
-    .some(([k, v]) => {
-      const currentVal = (currentAgent as any)?.[k];
-      if (v === currentVal) return false;
-      if (typeof v === 'object' && v !== null && typeof currentVal === 'object' && currentVal !== null) {
-        return JSON.stringify(v) !== JSON.stringify(currentVal);
-      }
-      return v !== currentVal;
-    });
-  const timeThresholdReached = (incomingTime - lastUpdate) >= HEARTBEAT_WRITE_THROTTLE_MS;
+  // FETCH current state from DB for dirty-checking if not provided in context
+  let currentAgent = (updateData as any)._current_agent; 
+  if (!currentAgent && (updateData as any).metadata_hash) {
+     const { data } = await supabase.from('agents').select('*').eq('id', agentId).single();
+     currentAgent = data;
+  }
+
+  
+  // OTIMIZACAO: Check metadata hash to avoid redundant DB reads/writes
+  const incomingMetadataHash = (updateData as any).metadata_hash;
+  const currentMetadataHash = (currentAgent as any)?.metadata_hash;
+  
+  const metadataChanged = incomingMetadataHash 
+    ? incomingMetadataHash !== currentMetadataHash
+    : Object.entries(updateData)
+        .filter(([k]) => k !== 'last_telemetry_at' && k !== 'update_timestamp' && k !== 'last_heartbeat' && k !== 'metadata_hash' && k !== '_current_agent')
+        .some(([k, v]) => {
+          const currentVal = (currentAgent as any)?.[k];
+          if (v === currentVal) return false;
+          if (typeof v === 'object' && v !== null && typeof currentVal === 'object' && currentVal !== null) {
+            return JSON.stringify(v) !== JSON.stringify(currentVal);
+          }
+          return v !== currentVal;
+        });
 
   // STRICT IDEMPOTENCY: If incoming timestamp is older than current heartbeat, 
   // we still call RPC for online status but metadataChanged is effectively false for safety.
@@ -80,14 +93,17 @@ export async function updateAgentStatus(
     // Fallback to standard update with Optimistic Locking (MVCC) if atomic RPC is missing
     logger.warn('Atomic heartbeat RPC failed, falling back to MVCC update', { agentName, errorCode: error.code });
     
-    // FETCH current version for optimistic lock
-    const { data: currentAgent } = await supabase
-      .from('agents')
-      .select('version, last_heartbeat')
-      .eq('id', agentId)
-      .single();
+    // Use the captured current state or fetch if missing
+    if (!currentAgent) {
+        const { data } = await supabase
+          .from('agents')
+          .select('version, last_heartbeat')
+          .eq('id', agentId)
+          .single();
+        currentAgent = data;
+    }
 
-    const currentVersion = currentAgent?.version || 1;
+    const currentVersion = currentAgent?.version || (updateData as any).version || 1;
     const currentHb = currentAgent?.last_heartbeat ? new Date(currentAgent.last_heartbeat).getTime() : 0;
 
     // Idempotency check before update

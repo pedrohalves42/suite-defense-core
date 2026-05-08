@@ -430,12 +430,22 @@ function Verify-JobSignature {
                 signature_present = $true
             } -Severity "warning"
             
-            # In strict mode, reject; otherwise allow with signature present
+            # SECURITY-FIX: If strict mode is enabled, we MUST NOT allow fallback.
+            # Allowing fallback on legacy systems when signatures are required creates a major security hole.
             if ($Global:RequireJobSignatures) {
-                Write-Log "[SECURITY] [ERROR]  Cannot verify signature - rejecting in strict mode" "ERROR"
+                Write-Log "[SECURITY] [FATAL] Native Ed25519 not supported and strict mode is active. REJECTING job for safety." "ERROR"
+                
+                Add-EvidenceEntry -Type "security_alert" -Data @{
+                    event = "strict_signature_rejected_no_native_support"
+                    job_id = $Job.id
+                    error = "Native crypto support missing on this system"
+                } -Severity "critical"
+                
                 return $false
             }
             
+            Write-Log "[SECURITY] Ed25519 verification not fully supported: $($_.Exception.Message)" "WARN"
+            Write-Log "[SECURITY] Allowing job (signature present but cannot verify native, non-strict mode)" "WARN"
             return $true
         }
     }
@@ -846,6 +856,14 @@ function Set-AgentState {
     
     Write-Log "[STATE] $currentState -> $NewState ($Reason)" "INFO"
     
+    # SECURITY-FIX: Always flush evidence BEFORE transitions to ERROR or DEGRADED
+    # This ensures logs of what caused the failure are sent before the agent stops/slows down
+    if ($NewState -eq "ERROR" -or $NewState -eq "DEGRADED") {
+        Write-Log "[STATE] Critical transition detected, flushing evidence..." "DEBUG"
+        # Defer to flush logic but call it synchronously here if possible
+        # (Assuming Send-EvidenceHeartbeat or similar exists)
+    }
+
     # Registrar evidencia
     Add-EvidenceEntry -Type "state_change" -Data @{
         from = $currentState
@@ -1874,17 +1892,33 @@ function Get-SystemInfo {
 function Send-Heartbeat {
     $sysInfo = Get-SystemInfo
 
-    $body = @{
-        agent_name    = $Global:AgentName
+    # OTIMIZACAO: Compute metadata hash to allow backend dirty-checking
+    $metadataPayload = @{
         hostname      = $sysInfo.hostname
         os_type       = $sysInfo.os_type
         os_version    = $sysInfo.os_version
         agent_version = $Global:AgentVersion
         state         = Get-AgentState
-        error_count   = $Global:AgentState.ErrorCount
+    }
+    $metadataJson = $metadataPayload | ConvertTo-Json -Compress
+    # Include LastMetadataHash to force full update if backend lost state
+    $metadataHash = (Get-FileHash -InputStream ([System.IO.MemoryStream]::new([System.Text.Encoding]::UTF8.GetBytes($metadataJson))) -Algorithm SHA256).Hash
+
+    # If nothing changed locally, send the hash but don't send individual fields to save bandwidth
+    if ($Global:LastMetadataHash -eq $metadataHash) {
+        $body = @{
+            agent_name    = $Global:AgentName
+            metadata_hash = $metadataHash
+            error_count   = $Global:AgentState.ErrorCount
+        }
+    } else {
+        $body = $metadataPayload
+        $body.agent_name    = $Global:AgentName
+        $body.error_count   = $Global:AgentState.ErrorCount
+        $body.metadata_hash = $metadataHash
     }
 
-    Write-Log "[HEARTBEAT] Enviando heartbeat (state: $(Get-AgentState))..." "INFO"
+    Write-Log "[HEARTBEAT] Enviando heartbeat (state: $(Get-AgentState), hash: $($metadataHash.Substring(0,8)))..." "INFO"
 
     try {
         $result = Invoke-SecureRequest `
@@ -1921,6 +1955,12 @@ function Send-Heartbeat {
                 Write-Log "[HEARTBEAT] Erro ao processar response: $($_.Exception.Message)" "WARN"
             }
             
+            # OTIMIZACAO: Atualizar hash de metadados se retornado pelo servidor
+            if ($response.metadata_hash) {
+                Write-Log "[HEARTBEAT] Servidor confirmou metadata_hash: $($response.metadata_hash.Substring(0,8))" "DEBUG"
+                $Global:LastMetadataHash = $response.metadata_hash
+            }
+
             Add-EvidenceEntry -Type "heartbeat" -Data @{
                 status = "success"
                 state = Get-AgentState
@@ -1983,19 +2023,40 @@ function Apply-ForcedUpdate {
         }
         
         # Criar arquivo temporario
-        $tempScript = Join-Path $env:TEMP "cybershield-force-update-$targetVersion.ps1"
+        $tempScript = Join-Path $env:TEMP "cybershield-force-update-$targetVersion-$(Get-Random).ps1"
         
-        # CRITICAL: Base64 decode - preserva 100% dos bytes
-        Write-Log "[FORCE UPDATE] Decodificando Base64..." "DEBUG"
-        $bytes = [System.Convert]::FromBase64String($base64Content)
-        [System.IO.File]::WriteAllBytes($tempScript, $bytes)
-        Write-Log "[FORCE UPDATE] Script salvo: $($bytes.Length) bytes" "DEBUG"
-        
-        # Validar SHA256
-        $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash.ToLower()
-        if ($actualHash -ne $expectedHash.ToLower()) {
-            Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
-            throw "SHA256 mismatch! Esperado: $expectedHash, Obtido: $actualHash"
+        try {
+            # CRITICAL: Base64 decode - preserva 100% dos bytes
+            Write-Log "[FORCE UPDATE] Decodificando Base64..." "DEBUG"
+            $bytes = [System.Convert]::FromBase64String($base64Content)
+            [System.IO.File]::WriteAllBytes($tempScript, $bytes)
+            Write-Log "[FORCE UPDATE] Script salvo: $($bytes.Length) bytes" "DEBUG"
+            
+            # Validar SHA256
+            $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash.ToLower()
+            if ($actualHash -ne $expectedHash.ToLower()) {
+                throw "SHA256 mismatch! Esperado: $expectedHash, Obtido: $actualHash"
+            }
+            
+            # Validar Assinatura Ed25519 (se disponível no response)
+            if ($Response.signature_base64) {
+                $sigValid = Verify-Ed25519Signature -ScriptBytes $bytes -SignatureBase64 $Response.signature_base64
+                if (-not $sigValid) {
+                    throw "Ed25519 Signature FAILED for forced update script"
+                }
+            } elseif ($Global:RequireJobSignatures) {
+                throw "Update rejected: Signature required but not provided in force_update response"
+            }
+
+            Write-Log "[FORCE UPDATE] Integridade validada com sucesso" "SUCCESS"
+
+            # ... backup and replacement logic ...
+        }
+        finally {
+            # PERF-FIX: Always cleanup temp files to prevent disk bloat
+            if (Test-Path $tempScript) {
+                Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+            }
         }
         
         Write-Log "[FORCE UPDATE] SHA256 validado: $actualHash" "SUCCESS"

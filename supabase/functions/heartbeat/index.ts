@@ -37,7 +37,7 @@ const HEARTBEAT_EXTRA_FIELDS = [
   'force_update_version', 'force_update_reason', 'force_update_at',
   'force_update_override_safe_mode', 'force_update_override_safe_mode_expires_at',
   'force_update_delivered_count', 'force_update_first_delivered_at',
-  'last_forced_update_applied', 'last_telemetry_at', 'last_heartbeat',
+  'last_forced_update_applied', 'last_telemetry_at', 'last_heartbeat', 'metadata_hash',
 ]
 
 serveAgent(async (req, ctx) => {
@@ -73,6 +73,8 @@ serveAgent(async (req, ctx) => {
     last_heartbeat: (agentData.last_heartbeat as string | null) || null,
     state: (agentData.state as string | null) || null,
     agent_state: (agentData.agent_state as string | null) || null,
+    metadata_hash: (agentData.metadata_hash as string | null) || null,
+    version: (agentData.version as number) || 1,
   }
 
   // ── 1. HMAC validation ──────────────────────────────────
@@ -104,6 +106,7 @@ serveAgent(async (req, ctx) => {
   
   // Always include a timestamp for the update to support idempotency in RPC
   (updateData as any).update_timestamp = telemetryTimestamp;
+  (updateData as any)._current_agent = agentData; // Pass current state for efficient dirty-checking
 
   await updateAgentStatus(supabase, agent.id, agent.agent_name, updateData, agent.last_heartbeat)
 

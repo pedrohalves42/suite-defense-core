@@ -22,6 +22,7 @@ const HeartbeatPayloadSchema = z.object({
   state: z.string().max(32).optional(),
   ed25519_supported: z.boolean().optional(),
   signature_mode: z.string().max(32).optional(),
+  metadata_hash: z.string().max(64).optional(),
 }).passthrough()  // Allow extra fields for forward compatibility
 
 /**
@@ -46,6 +47,8 @@ export function parseHeartbeatPayload(rawBody: string): OSInfo {
           sanitized[key] = jsonParsed[key];
         }
       }
+      // Also preserve extra fields that are known to be safe if passthrough is intended, 
+      // but here we force strict adherence to the schema for safety.
       return sanitized as OSInfo;
     }
     return result.data as OSInfo
@@ -123,6 +126,10 @@ export function buildAgentUpdate(
   }
   if (osInfo.signature_mode && osInfo.signature_mode !== current?.signature_mode) {
     updateData.signature_mode = osInfo.signature_mode
+  }
+
+  if (osInfo.metadata_hash) {
+    updateData.metadata_hash = osInfo.metadata_hash;
   }
 
   return updateData

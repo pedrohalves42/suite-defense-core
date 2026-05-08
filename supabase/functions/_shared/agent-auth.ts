@@ -106,15 +106,19 @@ export async function authenticateAgent(
 
   // HARDENED: Check token expiration (propagates to all serveAgent endpoints)
   const expiresAt = token.expires_at as string | null;
-  if (expiresAt && new Date(expiresAt) < new Date()) {
-    logger.warn(`[${endpoint}] Expired agent token, prefix: ${agentToken.substring(0, 8)}, expired: ${expiresAt}`);
-    return {
-      success: false,
-      response: new Response(
-        JSON.stringify({ error: 'Token has expired' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      ),
-    };
+  if (expiresAt) {
+    const expiryDate = new Date(expiresAt);
+    const LEEWAY_MS = 60000; // 60 seconds leeway for clock drift
+    if (expiryDate.getTime() + LEEWAY_MS < Date.now()) {
+      logger.warn(`[${endpoint}] Expired agent token, prefix: ${agentToken.substring(0, 8)}, expired: ${expiresAt}`);
+      return {
+        success: false,
+        response: new Response(
+          JSON.stringify({ error: 'Token has expired', code: 'TOKEN_EXPIRED' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        ),
+      };
+    }
   }
 
   const agent = Array.isArray(token.agents) ? token.agents[0] : token.agents;

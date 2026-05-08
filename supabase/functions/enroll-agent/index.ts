@@ -29,7 +29,7 @@ servePublic(async (req, ctx) => {
     const validation = EnrollAgentSchema.safeParse(rawData);
     if (!validation.success) return handleValidationError(validation.error, undefined, requestId);
 
-    const { enrollmentKey, agentName, agentVersion, supportsHmac } = validation.data;
+    const { enrollmentKey, agentName, agentVersion, supportsHmac, metadataHash } = validation.data;
 
     // PR-5: HMAC Sunset Policy
     if (supportsHmac !== true) {
@@ -58,7 +58,8 @@ servePublic(async (req, ctx) => {
       p_hmac_secret: hmacSecret,
       p_token_hash: tokenHash,
       p_token_prefix: tokenPrefix,
-      p_expires_at: expiresAt.toISOString()
+      p_expires_at: expiresAt.toISOString(),
+      p_metadata_hash: metadataHash || null
     });
 
     if (rpcError || !result.success) {
@@ -101,7 +102,8 @@ servePublic(async (req, ctx) => {
     return { 
       agentToken, 
       hmacSecret, 
-      expiresAt: expiresAt.toISOString(), 
+      expiresAt: expiresAt.toISOString(),
+      metadataHash: metadataHash || null,
       requestId 
     };
 

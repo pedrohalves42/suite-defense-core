@@ -1,5 +1,44 @@
 #Requires -RunAsAdministrator
 
+# STRINGS_MAP: Mapeamento de mensagens para i18n/Cultura
+$Global:UI_STRINGS = @{
+    "pt-BR" = @{
+        "title" = "CYBER SHIELD - FIX AGENT INSTALLATION"
+        "diagnostics" = "Diagnostico e Correcao Definitiva"
+        "step1" = "[PASSO 1] Verificacoes Iniciais..."
+        "step2" = "[PASSO 2] Desbloqueando arquivo (remover Zone.Identifier)..."
+        "step3" = "[PASSO 3] Limpando processos e tasks antigas..."
+        "step4" = "[PASSO 4] Criando diretorio de logs..."
+        "step5" = "[PASSO 5] Criando Scheduled Task com logging agressivo..."
+        "step6" = "[PASSO 6] Iniciando task..."
+        "step7" = "[PASSO 7] Verificando status da task..."
+        "step8" = "[PASSO 8] Verificando logs gerados..."
+        "step9" = "[PASSO 9] Verificando Event Viewer (PowerShell)..."
+        "step10" = "[PASSO 10] Diagnostico Final"
+        "success" = "SUCESSO! Agente esta rodando e autenticado!"
+        "fail" = "FALHA CRITICA: Script nao foi executado"
+    }
+    "en-US" = @{
+        "title" = "CYBER SHIELD - FIX AGENT INSTALLATION"
+        "diagnostics" = "Diagnostic and Definitive Fix"
+        "step1" = "[STEP 1] Initial Checks..."
+        "step2" = "[STEP 2] Unblocking file (removing Zone.Identifier)..."
+        "step3" = "[STEP 3] Cleaning old processes and tasks..."
+        "step4" = "[STEP 4] Creating log directory..."
+        "step5" = "[STEP 5] Creating Scheduled Task with aggressive logging..."
+        "step6" = "[STEP 6] Starting task..."
+        "step7" = "[STEP 7] Verifying task status..."
+        "step8" = "[STEP 8] Verifying generated logs..."
+        "step9" = "[STEP 9] Checking Event Viewer (PowerShell)..."
+        "step10" = "[STEP 10] Final Diagnostic"
+        "success" = "SUCCESS! Agent is running and authenticated!"
+        "fail" = "CRITICAL FAILURE: Script was not executed"
+    }
+}
+
+$culture = [System.Globalization.CultureInfo]::CurrentCulture.Name
+$Global:Strings = if ($Global:UI_STRINGS.ContainsKey($culture)) { $Global:UI_STRINGS[$culture] } else { $Global:UI_STRINGS["en-US"] }
+
 <#
 .SYNOPSIS
     Script de correcao definitiva para instalacao do CyberShield Agent
@@ -44,8 +83,8 @@ param(
 $ErrorActionPreference = "Continue"
 
 Write-Host "`n?????????????????????????????????????????????????????????????" -ForegroundColor Cyan
-Write-Host "?  CYBER SHIELD - FIX AGENT INSTALLATION                    ?" -ForegroundColor Cyan
-Write-Host "?  Diagnostico e Correcao Definitiva                        ?" -ForegroundColor Cyan
+Write-Host "?  $($Global:Strings.title.PadRight(55)) ?" -ForegroundColor Cyan
+Write-Host "?  $($Global:Strings.diagnostics.PadRight(55)) ?" -ForegroundColor Cyan
 Write-Host "?????????????????????????????????????????????????????????????`n" -ForegroundColor Cyan
 
 $BaseDir = "C:\CyberShield"
@@ -56,7 +95,7 @@ $TaskName = "CyberShieldAgent-$AgentName"
 # ============================================
 # PASSO 1: Verificacoes Iniciais
 # ============================================
-Write-Host "[PASSO 1] Verificacoes Iniciais..." -ForegroundColor Yellow
+Write-Host "[STEP 1] $($Global:Strings.step1)" -ForegroundColor Yellow
 
 if (-not (Test-Path $ScriptPath)) {
     Write-Host "[ERROR]  ERRO: Script nao encontrado em: $ScriptPath" -ForegroundColor Red
@@ -68,7 +107,7 @@ Write-Host "? Script encontrado: $ScriptPath" -ForegroundColor Green
 # ============================================
 # PASSO 2: Desbloquear Arquivo
 # ============================================
-Write-Host "`n[PASSO 2] Desbloqueando arquivo (remover Zone.Identifier)..." -ForegroundColor Yellow
+Write-Host "`n[STEP 2] $($Global:Strings.step2)" -ForegroundColor Yellow
 
 try {
     Unblock-File -Path $ScriptPath -ErrorAction Stop
@@ -87,7 +126,7 @@ if ($hasZoneId) {
 # ============================================
 # PASSO 3: Limpar Processos e Tasks Antigas
 # ============================================
-Write-Host "`n[PASSO 3] Limpando processos e tasks antigas..." -ForegroundColor Yellow
+Write-Host "`n[STEP 3] $($Global:Strings.step3)" -ForegroundColor Yellow
 
 # Parar processos
 $oldProcesses = Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'cybershield-agent.*ps1' }
@@ -123,7 +162,7 @@ try {
 # ============================================
 # PASSO 4: Criar Diretorio de Logs
 # ============================================
-Write-Host "`n[PASSO 4] Criando diretorio de logs..." -ForegroundColor Yellow
+Write-Host "`n[STEP 4] $($Global:Strings.step4)" -ForegroundColor Yellow
 
 if (-not (Test-Path $LogDir)) {
     New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
@@ -138,7 +177,7 @@ Get-ChildItem "$LogDir\*.log" -ErrorAction SilentlyContinue | Remove-Item -Force
 # ============================================
 # PASSO 5: Criar Scheduled Task com Logging Agressivo
 # ============================================
-Write-Host "`n[PASSO 5] Criando Scheduled Task com logging agressivo..." -ForegroundColor Yellow
+Write-Host "`n[STEP 5] $($Global:Strings.step5)" -ForegroundColor Yellow
 
 # Argumentos do agente
 $AgentArgs = @(
@@ -186,7 +225,7 @@ try {
 }
 
 # Iniciar a task imediatamente
-Write-Host "`n[PASSO 6] Iniciando task..." -ForegroundColor Yellow
+Write-Host "`n[STEP 6] $($Global:Strings.step6)" -ForegroundColor Yellow
 Start-ScheduledTask -TaskName $TaskName
 Write-Host "? Task iniciada. Aguardando 30 segundos..." -ForegroundColor Green
 
@@ -195,7 +234,7 @@ Write-Host "? Task iniciada. Aguardando 30 segundos..." -ForegroundColor Green
 # ============================================
 Start-Sleep -Seconds 30
 
-Write-Host "`n[PASSO 7] Verificando status da task..." -ForegroundColor Yellow
+Write-Host "`n[STEP 7] $($Global:Strings.step7)" -ForegroundColor Yellow
 $task = Get-ScheduledTask -TaskName $TaskName
 $taskInfo = Get-ScheduledTaskInfo -TaskName $TaskName
 
@@ -206,7 +245,7 @@ Write-Host "LastTaskResult: $($taskInfo.LastTaskResult)" -ForegroundColor $(if (
 # ============================================
 # PASSO 8: Verificar Logs
 # ============================================
-Write-Host "`n[PASSO 8] Verificando logs gerados..." -ForegroundColor Yellow
+Write-Host "`n[STEP 8] $($Global:Strings.step8)" -ForegroundColor Yellow
 
 $logFiles = Get-ChildItem "$LogDir\*.log" -ErrorAction SilentlyContinue
 if ($logFiles) {
@@ -240,7 +279,7 @@ if ($logFiles) {
 # ============================================
 # PASSO 9: Verificar Event Viewer (PowerShell)
 # ============================================
-Write-Host "`n[PASSO 9] Verificando Event Viewer (PowerShell)..." -ForegroundColor Yellow
+Write-Host "`n[STEP 9] $($Global:Strings.step9)" -ForegroundColor Yellow
 
 try {
     $events = Get-WinEvent -LogName Application -MaxEvents 20 -ErrorAction Stop | 
@@ -268,7 +307,7 @@ try {
 # PASSO 10: Diagnostico Final
 # ============================================
 Write-Host "`n?????????????????????????????????????????????????????????????" -ForegroundColor Cyan
-Write-Host "?  DIAGNOSTICO FINAL                                        ?" -ForegroundColor Cyan
+Write-Host "?  $($Global:Strings.step10.PadRight(55)) ?" -ForegroundColor Cyan
 Write-Host "?????????????????????????????????????????????????????????????`n" -ForegroundColor Cyan
 
 $success = $false
@@ -277,7 +316,7 @@ $mainLog = "$LogDir\cybershield-agent-v3.log"
 if (Test-Path $mainLog) {
     $logContent = Get-Content $mainLog -Raw
     if ($logContent -match '[OK]  Autenticado com sucesso') {
-        Write-Host "[OK]  SUCESSO! Agente esta rodando e autenticado!" -ForegroundColor Green
+        Write-Host "[OK]  $($Global:Strings.success)" -ForegroundColor Green
         $success = $true
     } elseif ($logContent -match '\[ERROR\].*401') {
         Write-Host "[ERROR]  ERRO: Credenciais invalidas (401)" -ForegroundColor Red
@@ -291,7 +330,7 @@ if (Test-Path $mainLog) {
         Write-Host "   - Aguarde mais 1-2 minutos e verifique o dashboard" -ForegroundColor Yellow
     }
 } else {
-    Write-Host "[ERROR]  FALHA CRITICA: Script nao foi executado" -ForegroundColor Red
+    Write-Host "[ERROR]  $($Global:Strings.fail)" -ForegroundColor Red
     Write-Host "`nPossiveis causas:" -ForegroundColor Yellow
     Write-Host "1. AppLocker ou outro software de seguranca bloqueando" -ForegroundColor Gray
     Write-Host "2. ExecutionPolicy ainda restritiva (mesmo com Unrestricted)" -ForegroundColor Gray

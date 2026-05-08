@@ -150,6 +150,7 @@ export async function buildNormalResponse(
       ed25519_public_key: ed25519PublicKey,
       rsa_public_key: rsaPublicKey,
       aggregation: null,
+      metadata_hash: updateData.metadata_hash || agent.metadata_hash,
       jobs: [],
     }),
     {
