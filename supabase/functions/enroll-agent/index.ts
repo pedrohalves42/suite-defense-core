@@ -29,7 +29,7 @@ servePublic(async (req, ctx) => {
     const validation = EnrollAgentSchema.safeParse(rawData);
     if (!validation.success) return handleValidationError(validation.error, undefined, requestId);
 
-    const { enrollmentKey, agentName, agentVersion, supportsHmac } = validation.data;
+    const { enrollmentKey, agentName, agentVersion, supportsHmac, metadataHash } = validation.data;
 
     // PR-5: HMAC Sunset Policy
     if (supportsHmac !== true) {
