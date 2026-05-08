@@ -42,17 +42,22 @@ export async function updateAgentStatus(
   const lastUpdate = currentHeartbeat ? new Date(currentHeartbeat).getTime() : 0;
   const incomingTime = incomingTs ? new Date(incomingTs).getTime() : now.getTime();
   
-  const metadataChanged = Object.entries(updateData)
-    .filter(([k]) => k !== 'last_telemetry_at' && k !== 'update_timestamp' && k !== 'last_heartbeat')
-    .some(([k, v]) => {
-      const currentVal = (currentAgent as any)?.[k];
-      if (v === currentVal) return false;
-      if (typeof v === 'object' && v !== null && typeof currentVal === 'object' && currentVal !== null) {
-        return JSON.stringify(v) !== JSON.stringify(currentVal);
-      }
-      return v !== currentVal;
-    });
-  const timeThresholdReached = (incomingTime - lastUpdate) >= HEARTBEAT_WRITE_THROTTLE_MS;
+  // OTIMIZACAO: Check metadata hash to avoid redundant DB reads/writes
+  const incomingMetadataHash = (updateData as any).metadata_hash;
+  const currentMetadataHash = (currentAgent as any)?.metadata_hash;
+  
+  const metadataChanged = incomingMetadataHash 
+    ? incomingMetadataHash !== currentMetadataHash
+    : Object.entries(updateData)
+        .filter(([k]) => k !== 'last_telemetry_at' && k !== 'update_timestamp' && k !== 'last_heartbeat' && k !== 'metadata_hash')
+        .some(([k, v]) => {
+          const currentVal = (currentAgent as any)?.[k];
+          if (v === currentVal) return false;
+          if (typeof v === 'object' && v !== null && typeof currentVal === 'object' && currentVal !== null) {
+            return JSON.stringify(v) !== JSON.stringify(currentVal);
+          }
+          return v !== currentVal;
+        });
 
   // STRICT IDEMPOTENCY: If incoming timestamp is older than current heartbeat, 
   // we still call RPC for online status but metadataChanged is effectively false for safety.
