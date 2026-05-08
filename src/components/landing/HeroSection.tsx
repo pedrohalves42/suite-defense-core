@@ -115,6 +115,7 @@ export function HeroSection() {
                 src={heroBanner} 
                 alt="CyberShield - Segurança Operacional" 
                 className="w-full rounded-2xl shadow-2xl shadow-cta-positive/20 border border-white/10"
+                fetchPriority="high"
                 width={800}
                 height={533}
                 loading="eager"
