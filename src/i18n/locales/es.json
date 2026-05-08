@@ -695,7 +695,11 @@
       "actionCenter": "Centro de Acciones",
       "reassurance": "CyberShield monitorea sus computadoras automáticamente.",
       "reassuranceBold": "Si algo crítico sucede, será notificado.",
-      "offline": "sin conexión"
+      "offline": "sin conexión",
+      "fleet": "Flota",
+      "trends": "Tendencias",
+      "operations": "Operaciones",
+      "quickAccess": "Acceso Rápido"
     },
     "sidebar": {
       "actionCenter": "Centro de Acciones",
