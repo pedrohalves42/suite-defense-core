@@ -181,7 +181,7 @@
   }
   .interactive-hover:hover {
     transform: translateY(-4px) scale(1.01);
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 20px 40px -10px rgba(16, 185, 129, 0.2);
   }
   .interactive-hover:active {
     transform: translateY(-1px) scale(0.99);
