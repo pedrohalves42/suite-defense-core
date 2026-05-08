@@ -187,49 +187,58 @@ export default function Dashboard() {
       <GovernanceHealthBanner />
 
       {/* ═══ BLOCO 1: Status + KPIs (sempre visível) ═══ */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.98 }} 
+        animate={{ opacity: 1, scale: 1 }} 
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
         <Card className={cn(
-          "border border-white/5 glass-card overflow-hidden shadow-premium group transition-all duration-700",
-          globalStatus.variant === 'success' && "border-l-4 border-l-success",
-          globalStatus.variant === 'warning' && "border-l-4 border-l-warning",
-          globalStatus.variant === 'danger' && "border-l-4 border-l-destructive"
+          "border border-white/5 glass-card overflow-hidden shadow-premium group transition-all duration-700 rounded-[2.5rem]",
+          globalStatus.variant === 'success' && "bg-success/5 border-l-4 border-l-success",
+          globalStatus.variant === 'warning' && "bg-warning/5 border-l-4 border-l-warning",
+          globalStatus.variant === 'danger' && "bg-destructive/5 border-l-4 border-l-destructive"
         )}>
-          <CardContent className="py-8 px-10 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-white/[0.01] via-transparent to-transparent" />
-            <div className="flex items-center justify-between gap-6 relative z-10">
-              <div className="flex items-center gap-6 min-w-0">
+          <CardContent className="py-10 px-12 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-white/[0.02] via-transparent to-transparent pointer-events-none" />
+            
+            {/* Ambient glow that moves on hover */}
+            <div className="absolute -right-20 -top-20 w-64 h-64 bg-white/5 rounded-full blur-[80px] group-hover:bg-white/10 transition-colors duration-700" />
+
+            <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
+              <div className="flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
                 <div className={cn(
-                  "p-5 rounded-[2rem] shrink-0 shadow-glow transition-transform duration-700 group-hover:scale-110",
-                  globalStatus.variant === 'success' && "bg-success/10",
-                  globalStatus.variant === 'warning' && "bg-warning/10",
-                  globalStatus.variant === 'danger' && "bg-destructive/10"
+                  "p-6 rounded-[2.5rem] shrink-0 shadow-glow transition-all duration-700 group-hover:scale-110 group-hover:rotate-3",
+                  globalStatus.variant === 'success' && "bg-success/20 border border-success/30",
+                  globalStatus.variant === 'warning' && "bg-warning/20 border border-warning/30",
+                  globalStatus.variant === 'danger' && "bg-destructive/20 border border-destructive/30"
                 )}>
                   <Shield className={cn(
-                    "h-8 w-8",
+                    "h-10 w-10 drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]",
                     globalStatus.variant === 'success' && "text-success",
                     globalStatus.variant === 'warning' && "text-warning",
                     globalStatus.variant === 'danger' && "text-destructive"
                   )} />
                 </div>
-                <div className="min-w-0">
-                  <h1 className="text-2xl md:text-3xl font-display font-extrabold text-white tracking-tight truncate">
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-display font-black text-white tracking-tight leading-tight">
                     {globalStatus.emoji} {globalStatus.title}
                   </h1>
-                  <p className="text-base text-white/40 font-medium truncate mt-1">
+                  <p className="text-lg text-white/40 font-medium mt-2 max-w-lg">
                     {globalStatus.description}
                   </p>
                 </div>
               </div>
-              <div className="text-right shrink-0">
+              
+              <div className="flex flex-col items-center md:items-end gap-2 px-8 py-4 rounded-3xl bg-white/[0.02] border border-white/5">
                 <div className={cn(
-                  "text-4xl md:text-5xl font-display font-black tabular-nums tracking-tighter drop-shadow-sm",
+                  "text-5xl md:text-6xl font-display font-black tabular-nums tracking-tighter drop-shadow-sm",
                   securityScore >= 80 && "text-success shadow-glow",
                   securityScore >= 60 && securityScore < 80 && "text-warning",
                   securityScore < 60 && "text-destructive"
                 )}>
                   {securityScore}%
                 </div>
-                <div className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mt-1">
+                <div className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">
                   {t('adminPages.dashboard.protectionLevel')}
                 </div>
               </div>
@@ -237,6 +246,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </motion.div>
+
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
