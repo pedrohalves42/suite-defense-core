@@ -110,7 +110,7 @@ export function useUnifiedMetrics() {
       const sevenDaysAgo = subDays(now, 7).toISOString();
       const thirtyDaysAgo = subDays(now, 30).toISOString();
 
-      const [alertsRes, evidenceSummaryRes, vulnRes, insightsRes, blockedItemsRes] = await Promise.all([
+      const [alertsRes, evidenceSummaryRes, vulnRes, insightsRes, blockedItemsRes, blockedCountRes] = await Promise.all([
         sb.from('system_alerts')
           .select('id, severity, message, alert_type, status, title, created_at')
           .eq('tenant_id', tenant.id)
@@ -129,6 +129,10 @@ export function useUnifiedMetrics() {
           .gte('attempted_at', sevenDaysAgo)
           .order('attempted_at', { ascending: false })
           .limit(50),
+        sb.from('blocked_access_attempts')
+          .select('id', { count: 'exact', head: true })
+          .eq('tenant_id', tenant.id)
+          .gte('attempted_at', sevenDaysAgo),
       ]);
 
       // Vuln counts from RPC or calculated from results
