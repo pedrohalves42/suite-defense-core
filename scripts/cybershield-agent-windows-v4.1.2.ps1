@@ -1901,12 +1901,22 @@ function Send-Heartbeat {
         state         = Get-AgentState
     }
     $metadataJson = $metadataPayload | ConvertTo-Json -Compress
+    # Include LastMetadataHash to force full update if backend lost state
     $metadataHash = (Get-FileHash -InputStream ([System.IO.MemoryStream]::new([System.Text.Encoding]::UTF8.GetBytes($metadataJson))) -Algorithm SHA256).Hash
 
-    $body = $metadataPayload
-    $body.agent_name    = $Global:AgentName
-    $body.error_count   = $Global:AgentState.ErrorCount
-    $body.metadata_hash = $metadataHash
+    # If nothing changed locally, send the hash but don't send individual fields to save bandwidth
+    if ($Global:LastMetadataHash -eq $metadataHash) {
+        $body = @{
+            agent_name    = $Global:AgentName
+            metadata_hash = $metadataHash
+            error_count   = $Global:AgentState.ErrorCount
+        }
+    } else {
+        $body = $metadataPayload
+        $body.agent_name    = $Global:AgentName
+        $body.error_count   = $Global:AgentState.ErrorCount
+        $body.metadata_hash = $metadataHash
+    }
 
     Write-Log "[HEARTBEAT] Enviando heartbeat (state: $(Get-AgentState), hash: $($metadataHash.Substring(0,8)))..." "INFO"
 
