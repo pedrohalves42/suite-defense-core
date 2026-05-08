@@ -1945,6 +1945,12 @@ function Send-Heartbeat {
                 Write-Log "[HEARTBEAT] Erro ao processar response: $($_.Exception.Message)" "WARN"
             }
             
+            # OTIMIZACAO: Atualizar hash de metadados se retornado pelo servidor
+            if ($response.metadata_hash) {
+                Write-Log "[HEARTBEAT] Servidor confirmou metadata_hash: $($response.metadata_hash.Substring(0,8))" "DEBUG"
+                # O agente pode usar isso para saber se o servidor ja tem o estado mais recente
+            }
+
             Add-EvidenceEntry -Type "heartbeat" -Data @{
                 status = "success"
                 state = Get-AgentState
