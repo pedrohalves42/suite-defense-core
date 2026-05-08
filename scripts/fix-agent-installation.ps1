@@ -1,5 +1,44 @@
 #Requires -RunAsAdministrator
 
+# STRINGS_MAP: Mapeamento de mensagens para i18n/Cultura
+$Global:UI_STRINGS = @{
+    "pt-BR" = @{
+        "title" = "CYBER SHIELD - FIX AGENT INSTALLATION"
+        "diagnostics" = "Diagnostico e Correcao Definitiva"
+        "step1" = "[PASSO 1] Verificacoes Iniciais..."
+        "step2" = "[PASSO 2] Desbloqueando arquivo (remover Zone.Identifier)..."
+        "step3" = "[PASSO 3] Limpando processos e tasks antigas..."
+        "step4" = "[PASSO 4] Criando diretorio de logs..."
+        "step5" = "[PASSO 5] Criando Scheduled Task com logging agressivo..."
+        "step6" = "[PASSO 6] Iniciando task..."
+        "step7" = "[PASSO 7] Verificando status da task..."
+        "step8" = "[PASSO 8] Verificando logs gerados..."
+        "step9" = "[PASSO 9] Verificando Event Viewer (PowerShell)..."
+        "step10" = "[PASSO 10] Diagnostico Final"
+        "success" = "SUCESSO! Agente esta rodando e autenticado!"
+        "fail" = "FALHA CRITICA: Script nao foi executado"
+    }
+    "en-US" = @{
+        "title" = "CYBER SHIELD - FIX AGENT INSTALLATION"
+        "diagnostics" = "Diagnostic and Definitive Fix"
+        "step1" = "[STEP 1] Initial Checks..."
+        "step2" = "[STEP 2] Unblocking file (removing Zone.Identifier)..."
+        "step3" = "[STEP 3] Cleaning old processes and tasks..."
+        "step4" = "[STEP 4] Creating log directory..."
+        "step5" = "[STEP 5] Creating Scheduled Task with aggressive logging..."
+        "step6" = "[STEP 6] Starting task..."
+        "step7" = "[STEP 7] Verifying task status..."
+        "step8" = "[STEP 8] Verifying generated logs..."
+        "step9" = "[STEP 9] Checking Event Viewer (PowerShell)..."
+        "step10" = "[STEP 10] Final Diagnostic"
+        "success" = "SUCCESS! Agent is running and authenticated!"
+        "fail" = "CRITICAL FAILURE: Script was not executed"
+    }
+}
+
+$culture = [System.Globalization.CultureInfo]::CurrentCulture.Name
+$Global:Strings = if ($Global:UI_STRINGS.ContainsKey($culture)) { $Global:UI_STRINGS[$culture] } else { $Global:UI_STRINGS["en-US"] }
+
 <#
 .SYNOPSIS
     Script de correcao definitiva para instalacao do CyberShield Agent
