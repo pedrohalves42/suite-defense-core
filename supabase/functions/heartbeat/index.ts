@@ -87,11 +87,6 @@ serveAgent(async (req, ctx) => {
   const osInfo = parseHeartbeatPayload(rawBody)
   const updateData = buildAgentUpdate(osInfo, agent)
   const platform = updateData.os_type || 'windows'
-  
-  // Inject metadata_hash into updateData for state-updater dirty check
-  if (osInfo.metadata_hash) {
-    (updateData as any).metadata_hash = osInfo.metadata_hash;
-  }
 
   logger.debug('Heartbeat received', { agentName: agent.agent_name, traceId })
 

@@ -125,5 +125,9 @@ export function buildAgentUpdate(
     updateData.signature_mode = osInfo.signature_mode
   }
 
+  if (osInfo.metadata_hash) {
+    updateData.metadata_hash = osInfo.metadata_hash;
+  }
+
   return updateData
 }
