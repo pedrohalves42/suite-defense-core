@@ -102,7 +102,8 @@ servePublic(async (req, ctx) => {
     return { 
       agentToken, 
       hmacSecret, 
-      expiresAt: expiresAt.toISOString(), 
+      expiresAt: expiresAt.toISOString(),
+      metadataHash: metadataHash || null,
       requestId 
     };
 
