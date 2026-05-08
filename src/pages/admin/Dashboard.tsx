@@ -310,14 +310,6 @@ export default function Dashboard() {
         })}
       </div>
 
-                    )}
-                  </CardContent>
-                </Card>
-              </Link>
-            </motion.div>
-          );
-        })}
-      </div>
 
       {/* Alertas críticos */}
       {criticalAlerts > 0 && (
