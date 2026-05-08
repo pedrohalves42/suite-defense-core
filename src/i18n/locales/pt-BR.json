@@ -1315,5 +1315,31 @@
     "loadingData": "Carregando dados...",
     "realTimeUpdate": "Este painel monitora a saúde global do sistema em tempo real (atualiza a cada 10s).",
     "criticalAlert": "Se algo crítico surgir, você será alertado automaticamente."
+  },
+  "hubs": {
+    "compliance": {
+      "title": "Conformidade",
+      "description": "SOC 2, registros, planos de ação e gestão de risco em um só lugar",
+      "overview": "Visão Geral",
+      "evidence": "Registros e Evidências",
+      "procedures": "Planos de Ação",
+      "risk": "Risco"
+    },
+    "intelligence": {
+      "title": "Assistente IA",
+      "description": "Sugestões, automação, revisão de decisões e base de conhecimento",
+      "insights": "Sugestões",
+      "automation": "Automação",
+      "governance": "Revisão de Decisões",
+      "knowledge": "Conhecimento"
+    },
+    "operations": {
+      "title": "Operações do Sistema",
+      "description": "Saúde, performance, logs e ferramentas operacionais em um só lugar",
+      "health": "Saúde",
+      "performance": "Performance",
+      "logs": "Logs & Operações",
+      "tools": "Ferramentas"
+    }
   }
 }
