@@ -50010,6 +50010,7 @@ export type Database = {
         Args: { p_error_message: string }
         Returns: string
       }
+      cleanup_agent_hmac_signatures: { Args: never; Returns: undefined }
       cleanup_all_problematic_agents: {
         Args: { p_tenant_id: string }
         Returns: Json
