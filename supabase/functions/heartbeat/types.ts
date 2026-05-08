@@ -8,6 +8,7 @@ import { Database } from '../_shared/database.types.ts'
 
 export interface OSInfo {
   os_type?: string;
+  collected_at?: string; // High-precision timestamp from agent
   platform?: string; // Legacy field
   os_version?: string;
   hostname?: string;
