@@ -74,6 +74,7 @@ serveAgent(async (req, ctx) => {
     state: (agentData.state as string | null) || null,
     agent_state: (agentData.agent_state as string | null) || null,
     metadata_hash: (agentData.metadata_hash as string | null) || null,
+    version: (agentData.version as number) || 1,
   }
 
   // ── 1. HMAC validation ──────────────────────────────────
