@@ -166,7 +166,7 @@ export function AgentCard({
         {!isOnline && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 rounded-md px-3 py-1.5">
             <Clock className="h-3.5 w-3.5" />
-            <span>{getOfflineDuration(lastHeartbeat)}</span>
+            <span>{getOfflineDuration(lastHeartbeat, t, dateLocale)}</span>
           </div>
         )}
 
@@ -240,14 +240,14 @@ export function AgentCard({
               {uptimeSeconds !== undefined && uptimeSeconds > 0 && (
                 <>
                   <Clock className="h-3 w-3" />
-                  <span>{formatUptime(uptimeSeconds)}</span>
+                  <span>{formatUptime(uptimeSeconds, t)}</span>
                 </>
               )}
               {lastHeartbeat && (
                 <>
                   {uptimeSeconds !== undefined && uptimeSeconds > 0 && <span>•</span>}
                   <Activity className="h-3 w-3" />
-                  <span>{formatLastSeen(lastHeartbeat)}</span>
+                  <span>{formatLastSeen(lastHeartbeat, dateLocale)}</span>
                 </>
               )}
             </div>
