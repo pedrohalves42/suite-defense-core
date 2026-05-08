@@ -16,6 +16,8 @@ export interface OSInfo {
   state?: string; // Agent lifecycle state (ENFORCING, SAFE_MODE, DEGRADED, INITIALIZING)
   ed25519_supported?: boolean;
   signature_mode?: string;
+  metadata_hash?: string;
+  metadataHash?: string;
   system_metrics?: SystemMetricsPayload;
   processes?: ProcessesPayload;
   process_anomalies?: unknown[];
@@ -90,6 +92,7 @@ export interface AgentUpdate {
   agent_version?: string;
   ed25519_supported?: boolean;
   signature_mode?: string;
+  metadata_hash?: string;
 }
 
 export interface HeartbeatContext {

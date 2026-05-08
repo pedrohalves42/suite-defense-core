@@ -9,6 +9,8 @@ import { hashToken } from './token-hash.ts';
 import { corsHeaders } from './cors.ts';
 import { logger } from './logger.ts';
 
+const AGENT_TOKEN_EXPIRY_LEEWAY_MS = 60 * 1000;
+
 export interface AuthenticatedAgent {
   id: string;
   agent_name: string;
@@ -104,10 +106,24 @@ export async function authenticateAgent(
     };
   }
 
-  // HARDENED: Check token expiration (propagates to all serveAgent endpoints)
+  // HARDENED: Check token expiration (propagates to all serveAgent endpoints).
+  // Allow a small 60s leeway so a token is not accepted by one edge function
+  // and rejected by the next function in the same request chain due to clock drift.
   const expiresAt = token.expires_at as string | null;
-  if (expiresAt && new Date(expiresAt) < new Date()) {
-    logger.warn(`[${endpoint}] Expired agent token, prefix: ${agentToken.substring(0, 8)}, expired: ${expiresAt}`);
+  const expiresAtMs = expiresAt ? new Date(expiresAt).getTime() : Number.NaN;
+  if (expiresAt && Number.isNaN(expiresAtMs)) {
+    logger.warn(`[${endpoint}] Invalid agent token expiry, prefix: ${agentToken.substring(0, 8)}, expires_at: ${expiresAt}`);
+    return {
+      success: false,
+      response: new Response(
+        JSON.stringify({ error: 'Invalid token expiry' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      ),
+    };
+  }
+
+  if (expiresAt && expiresAtMs + AGENT_TOKEN_EXPIRY_LEEWAY_MS < Date.now()) {
+    logger.warn(`[${endpoint}] Expired agent token, prefix: ${agentToken.substring(0, 8)}, expired: ${expiresAt}, leeway_ms: ${AGENT_TOKEN_EXPIRY_LEEWAY_MS}`);
     return {
       success: false,
       response: new Response(

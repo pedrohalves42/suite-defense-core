@@ -17,6 +17,7 @@ function mockSupabaseWithError(errorTable: string) {
   const errorChain: Record<string, unknown> = {
     eq: () => errorChain,
     lt: () => errorChain,
+    single: () => Promise.resolve({ data: { version: 1, last_heartbeat: null }, error: null }),
     then: (cb: (v: { data: null; error: { message: string; details: string; hint: string } }) => void) => {
       cb({ data: null, error: { message: "DB error", details: "test", hint: "test" } });
       return Promise.resolve();
@@ -25,6 +26,7 @@ function mockSupabaseWithError(errorTable: string) {
   const okChain: Record<string, unknown> = {
     eq: () => okChain,
     lt: () => okChain,
+    single: () => Promise.resolve({ data: { version: 1, last_heartbeat: null }, error: null }),
     then: (cb: (v: { data: null; error: null }) => void) => {
       cb({ data: null, error: null });
       return Promise.resolve();
@@ -32,9 +34,11 @@ function mockSupabaseWithError(errorTable: string) {
   };
   return {
     calls,
+    rpc: (fn: string, data: unknown) => { calls.push({ table: fn, method: "rpc", data }); return Promise.resolve({ data: null, error: { code: "42883", message: "function missing" } }); },
     from: (table: string) => {
       const chain = table === errorTable ? errorChain : okChain;
       return {
+        select: () => chain,
         // deno-lint-ignore no-explicit-any
         update: (data: any) => { calls.push({ table, method: "update", data }); return chain; },
         // deno-lint-ignore no-explicit-any
@@ -65,7 +69,7 @@ Deno.test("state-updater-edge › updateAgentStatus handles DB error gracefully"
   // Should not throw — errors are logged but not propagated
   await updateAgentStatus(sb, "agent-id-1", "agent1", update);
   const call = sb.calls.find((c: MockCall) => c.table === "agents" && c.method === "update");
-  assertExists(call, "agents.update should still be called even if it errors");
+  assertExists(call, "agents.update should be called by MVCC fallback when RPC is unavailable");
 });
 
 Deno.test("state-updater-edge › executeParallelOps handles metrics insert failure", async () => {

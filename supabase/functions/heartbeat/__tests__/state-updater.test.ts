@@ -15,6 +15,7 @@ function mockSupabase() {
   const chain: Record<string, unknown> = {
     eq: () => chain,
     lt: () => chain,
+    single: () => Promise.resolve({ data: { version: 1, last_heartbeat: null }, error: null }),
     then: (cb: (v: { data: null; error: null }) => void) => {
       cb({ data: null, error: null });
       return Promise.resolve();
@@ -22,7 +23,9 @@ function mockSupabase() {
   };
   return {
     calls,
+    rpc: (fn: string, data: unknown) => { calls.push({ table: fn, method: "rpc", data }); return Promise.resolve({ data: null, error: null }); },
     from: (table: string) => ({
+      select: () => chain,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       update: (data: any) => { calls.push({ table, method: "update", data }); return chain; },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -50,8 +53,8 @@ Deno.test("state-updater › updateAgentStatus calls agents.update", async () =>
   const update: AgentUpdate = { last_heartbeat: new Date().toISOString(), status: "active" };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await updateAgentStatus(sb as any, "agent-id-1", "agent1", update);
-  const call = sb.calls.find((c) => c.table === "agents" && c.method === "update");
-  assertExists(call, "agents.update should be called");
+  const call = sb.calls.find((c) => c.table === "update_agent_heartbeat_atomic" && c.method === "rpc");
+  assertExists(call, "atomic heartbeat RPC should be called");
 });
 
 Deno.test("state-updater › executeParallelOps inserts metrics and processes", async () => {

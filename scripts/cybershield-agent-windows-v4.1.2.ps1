@@ -276,9 +276,13 @@ function Verify-Ed25519Signature {
                 return $isValid
             }
             catch {
-                # If Ed25519 is not supported on this system, log warning and allow
+                # If Ed25519 is not supported on this system, strict mode must fail closed.
                 Write-Log "[SECURITY] Ed25519 verification not supported on this system: $($_.Exception.Message)" "WARN"
-                Write-Log "[SECURITY] Allowing update (signature present but cannot verify)" "WARN"
+                if ($Global:RequireJobSignatures) {
+                    Write-Log "[SECURITY] [ERROR] Cannot mathematically verify Ed25519 signature - rejecting in strict mode" "ERROR"
+                } else {
+                    Write-Log "[SECURITY] Allowing update (signature present but cannot verify) in audit-only mode" "WARN"
+                }
                 
                 Add-EvidenceEntry -Type "security_warning" -Data @{
                     event = "ed25519_not_supported"
@@ -286,7 +290,7 @@ function Verify-Ed25519Signature {
                     signature_provided = $true
                 } -Severity "warning"
                 
-                return $true
+                return (-not $Global:RequireJobSignatures)
             }
         }
         else {
@@ -813,6 +817,15 @@ function Set-AgentState {
         }
     }
     
+    # Evitar inversao cronologica no Evidence Journal antes de transicoes criticas.
+    if ($currentState -ne $NewState -and ($NewState -in @('ERROR', 'DEGRADED') -or $currentState -eq 'ENFORCING')) {
+        try {
+            Invoke-FlushEvidence
+        } catch {
+            Write-Log "[STATE] Evidence flush before critical transition failed: $($_.Exception.Message)" "WARN"
+        }
+    }
+
     # Aplicar transicao
     $Global:AgentState.Previous = $currentState
     $Global:AgentState.Current = $NewState
@@ -1956,11 +1969,12 @@ function Apply-ForcedUpdate {
     try {
         Write-Log "[FORCE UPDATE] Iniciando aplicacao de update forcado..." "INFO"
         
-        # Extrair dados do response
-        $targetVersion = $Response.target_version
-        $base64Content = $Response.script_content_base64
-        $expectedHash = $Response.sha256
-        $reason = $Response.reason
+        # Extrair dados do response usando escopo local para evitar vazamento entre jobs.
+        $local:targetVersion = $Response.target_version
+        $local:base64Content = $Response.script_content_base64
+        $local:expectedHash = $Response.sha256
+        $local:reason = $Response.reason
+        $local:tempScript = $null
         
         if (-not $targetVersion -or -not $base64Content -or -not $expectedHash) {
             throw "Dados de force update incompletos no response"
@@ -1983,19 +1997,18 @@ function Apply-ForcedUpdate {
         }
         
         # Criar arquivo temporario
-        $tempScript = Join-Path $env:TEMP "cybershield-force-update-$targetVersion.ps1"
+        $local:tempScript = Join-Path $env:TEMP "cybershield-force-update-$targetVersion-$([Guid]::NewGuid().ToString('N')).ps1"
         
         # CRITICAL: Base64 decode - preserva 100% dos bytes
         Write-Log "[FORCE UPDATE] Decodificando Base64..." "DEBUG"
-        $bytes = [System.Convert]::FromBase64String($base64Content)
-        [System.IO.File]::WriteAllBytes($tempScript, $bytes)
-        Write-Log "[FORCE UPDATE] Script salvo: $($bytes.Length) bytes" "DEBUG"
+        $local:bytes = [System.Convert]::FromBase64String($local:base64Content)
+        [System.IO.File]::WriteAllBytes($local:tempScript, $local:bytes)
+        Write-Log "[FORCE UPDATE] Script salvo: $($local:bytes.Length) bytes" "DEBUG"
         
         # Validar SHA256
-        $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash.ToLower()
+        $local:actualHash = (Get-FileHash -Path $local:tempScript -Algorithm SHA256).Hash.ToLower()
         if ($actualHash -ne $expectedHash.ToLower()) {
-            Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
-            throw "SHA256 mismatch! Esperado: $expectedHash, Obtido: $actualHash"
+            throw "SHA256 mismatch! Esperado: $($local:expectedHash), Obtido: $($local:actualHash)"
         }
         
         Write-Log "[FORCE UPDATE] SHA256 validado: $actualHash" "SUCCESS"
@@ -2040,8 +2053,7 @@ function Apply-ForcedUpdate {
         }
         
         # APLICAR UPDATE
-        Copy-Item -Path $tempScript -Destination $targetScript -Force
-        Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+        Copy-Item -Path $local:tempScript -Destination $targetScript -Force
         Write-Log "[FORCE UPDATE] Script instalado: $targetScript" "SUCCESS"
         
         # Registrar evidencia
@@ -2087,6 +2099,14 @@ function Apply-ForcedUpdate {
         } -Severity "error"
         
         return @{ success = $false; error = $_.Exception.Message }
+    } finally {
+        if ($local:tempScript -and (Test-Path $local:tempScript)) {
+            Remove-Item $local:tempScript -Force -ErrorAction SilentlyContinue
+        }
+        if ($null -ne $local:bytes) {
+            [Array]::Clear($local:bytes, 0, $local:bytes.Length)
+        }
+        $local:base64Content = $null
     }
 }
 

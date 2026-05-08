@@ -25,95 +25,116 @@ export const TELEMETRY_THROTTLE_MS = 5 * 60 * 1000
 const HEARTBEAT_WRITE_THROTTLE_MS = 60 * 1000
 
 /**
+ * In-memory EdgeRuntime cache for metadata hashes.
+ * This is intentionally best-effort: a cold isolate simply falls back to the RPC path,
+ * while warm isolates can skip redundant dirty-check work without a DB read.
+ */
+const AGENT_METADATA_HASH_CACHE = new Map<string, { hash: string; lastSeen: number }>()
+
+function hasMetadataFields(updateData: AgentUpdate & { last_telemetry_at?: string; update_timestamp?: string; metadata_hash?: string }): boolean {
+  return Object.keys(updateData).some((key) => ![
+    'last_telemetry_at',
+    'update_timestamp',
+    'last_heartbeat',
+    'status',
+    'metadata_hash',
+  ].includes(key))
+}
+
+/**
  * Update agent heartbeat status in DB using an atomic RPC call.
  */
 export async function updateAgentStatus(
   supabase: SupabaseClient<Database>,
   agentId: string,
   agentName: string,
-  updateData: AgentUpdate & { last_telemetry_at?: string },
+  updateData: AgentUpdate & { last_telemetry_at?: string; update_timestamp?: string; metadata_hash?: string },
   currentHeartbeat?: string | null,
 ): Promise<void> {
-  const now = new Date();
-  
-  // 1. Pre-check for redundancy (still useful to avoid RPC overhead)
-  // Ensure we check update_timestamp if available for better idempotency
-  const incomingTs = updateData.last_telemetry_at || (updateData as any).update_timestamp;
-  const lastUpdate = currentHeartbeat ? new Date(currentHeartbeat).getTime() : 0;
-  const incomingTime = incomingTs ? new Date(incomingTs).getTime() : now.getTime();
-  
-  const metadataChanged = Object.entries(updateData)
-    .filter(([k]) => k !== 'last_telemetry_at' && k !== 'update_timestamp' && k !== 'last_heartbeat')
-    .some(([k, v]) => {
-      const currentVal = (currentAgent as any)?.[k];
-      if (v === currentVal) return false;
-      if (typeof v === 'object' && v !== null && typeof currentVal === 'object' && currentVal !== null) {
-        return JSON.stringify(v) !== JSON.stringify(currentVal);
-      }
-      return v !== currentVal;
-    });
-  const timeThresholdReached = (incomingTime - lastUpdate) >= HEARTBEAT_WRITE_THROTTLE_MS;
+  const now = new Date()
 
-  // STRICT IDEMPOTENCY: If incoming timestamp is older than current heartbeat, 
-  // we still call RPC for online status but metadataChanged is effectively false for safety.
+  // 1. Pre-check for redundancy without fetching the agent row on every heartbeat.
+  // Agents may send metadata_hash; warm EdgeRuntime isolates use it as a cheap dirty-check.
+  const incomingTs = updateData.last_telemetry_at || updateData.update_timestamp
+  const lastUpdate = currentHeartbeat ? new Date(currentHeartbeat).getTime() : 0
+  const incomingTime = incomingTs ? new Date(incomingTs).getTime() : now.getTime()
+  const timeThresholdReached = (incomingTime - lastUpdate) >= HEARTBEAT_WRITE_THROTTLE_MS
+
+  const incomingMetadataHash = typeof updateData.metadata_hash === 'string' && updateData.metadata_hash.length > 0
+    ? updateData.metadata_hash
+    : null
+  const cachedHash = AGENT_METADATA_HASH_CACHE.get(agentId)?.hash
+  const metadataChanged = incomingMetadataHash
+    ? cachedHash !== incomingMetadataHash
+    : hasMetadataFields(updateData)
+
+  // Do not persist metadata_hash unless a future migration adds a column for it.
+  const { metadata_hash: _metadataHash, ...persistedUpdateData } = updateData
+
+  // STRICT IDEMPOTENCY: If incoming timestamp is older than current heartbeat,
+  // and metadata is unchanged, skip the DB write entirely.
   if (!metadataChanged && !timeThresholdReached && incomingTime <= lastUpdate) {
-    logger.debug('Skipping redundant agent heartbeat DB update (idempotent)', { agentName });
-    return;
+    logger.debug('Skipping redundant agent heartbeat DB update (metadata hash cache hit)', { agentName })
+    return
   }
 
   // 2. Delegate to Atomic RPC (Locking + Transactional Update)
   // This prevents Race Conditions between concurrent heartbeat instances.
   const { error } = await supabase.rpc('update_agent_heartbeat_atomic', {
     p_agent_id: agentId,
-    p_update_data: updateData as any
-  });
+    p_update_data: persistedUpdateData as any,
+  })
 
   if (error) {
     // P3 FIX: Handle case where RPC doesn't exist or is inaccessible
     if (error.code === 'P0001' || error.message?.includes('database error')) {
       logger.error('CRITICAL: Failed to update agent heartbeat atomically', {
         error, errorMessage: error.message, agentId, agentName,
-      });
-      throw new Error(`Heartbeat persistence failed: ${error.message}`);
+      })
+      throw new Error(`Heartbeat persistence failed: ${error.message}`)
     }
-    
+
     // Fallback to standard update with Optimistic Locking (MVCC) if atomic RPC is missing
-    logger.warn('Atomic heartbeat RPC failed, falling back to MVCC update', { agentName, errorCode: error.code });
-    
-    // FETCH current version for optimistic lock
+    logger.warn('Atomic heartbeat RPC failed, falling back to MVCC update', { agentName, errorCode: error.code })
+
+    // FETCH current version for optimistic lock only in fallback, not on the hot path.
     const { data: currentAgent } = await supabase
       .from('agents')
       .select('version, last_heartbeat')
       .eq('id', agentId)
-      .single();
+      .single()
 
-    const currentVersion = currentAgent?.version || 1;
-    const currentHb = currentAgent?.last_heartbeat ? new Date(currentAgent.last_heartbeat).getTime() : 0;
+    const currentVersion = currentAgent?.version || 1
+    const currentHb = currentAgent?.last_heartbeat ? new Date(currentAgent.last_heartbeat).getTime() : 0
 
     // Idempotency check before update
     if (incomingTime < currentHb) {
-      logger.debug('Skipping stale heartbeat update (MVCC fallback)', { agentName });
-      return;
+      logger.debug('Skipping stale heartbeat update (MVCC fallback)', { agentName })
+      return
     }
 
     const { error: updateError } = await supabase
       .from('agents')
-      .update({ 
-        ...updateData, 
-        status: 'active', 
+      .update({
+        ...persistedUpdateData,
+        status: 'active',
         last_heartbeat: now.toISOString(),
-        version: currentVersion + 1
+        version: currentVersion + 1,
       } as any)
       .eq('id', agentId)
-      .eq('version', currentVersion); // The "Optimistic Lock"
+      .eq('version', currentVersion)
 
     if (updateError) {
-      if (updateError.code === 'P0001') logger.warn('MVCC collision detected (concurrent update), retry handled by agent', { agentName });
-      else throw updateError;
+      if (updateError.code === 'P0001') logger.warn('MVCC collision detected (concurrent update), retry handled by agent', { agentName })
+      else throw updateError
     }
   }
-  
-  logger.info('Agent heartbeat updated atomically', { agentName, metadataChanged, timeThresholdReached });
+
+  if (incomingMetadataHash) {
+    AGENT_METADATA_HASH_CACHE.set(agentId, { hash: incomingMetadataHash, lastSeen: now.getTime() })
+  }
+
+  logger.info('Agent heartbeat updated atomically', { agentName, metadataChanged, timeThresholdReached })
 }
 
 /**

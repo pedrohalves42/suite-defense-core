@@ -22,6 +22,8 @@ const HeartbeatPayloadSchema = z.object({
   state: z.string().max(32).optional(),
   ed25519_supported: z.boolean().optional(),
   signature_mode: z.string().max(32).optional(),
+  metadata_hash: z.string().max(128).optional(),
+  metadataHash: z.string().max(128).optional(),
 }).passthrough()  // Allow extra fields for forward compatibility
 
 /**
@@ -115,6 +117,11 @@ export function buildAgentUpdate(
     if (incomingNorm && incomingNorm !== currentNorm) {
       updateData.agent_version = osInfo.agent_version
     }
+  }
+
+  const metadataHash = osInfo.metadata_hash || osInfo.metadataHash;
+  if (metadataHash) {
+    updateData.metadata_hash = metadataHash;
   }
 
   // Capturar Ed25519 capability flags

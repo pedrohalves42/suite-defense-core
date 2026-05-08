@@ -43,9 +43,75 @@ param(
 
 $ErrorActionPreference = "Continue"
 
+
+$CultureName = [System.Globalization.CultureInfo]::CurrentUICulture.Name
+$MessageCulture = if ($CultureName -like 'pt-*') { 'pt-BR' } else { 'en-US' }
+$Messages = @{
+    'pt-BR' = @{
+        BannerTitle = '?  CYBER SHIELD - FIX AGENT INSTALLATION                    ?'
+        BannerSubtitle = '?  Diagnostico e Correcao Definitiva                        ?'
+        Step1 = '[PASSO 1] Verificacoes Iniciais...'
+        ScriptMissing = '[ERROR]  ERRO: Script nao encontrado em: {0}'
+        RunInstallerFirst = '   Execute primeiro o instalador para gerar o script.'
+        ScriptFound = '? Script encontrado: {0}'
+        Step2 = '`n[PASSO 2] Desbloqueando arquivo (remover Zone.Identifier)...'
+        FileUnblocked = '? Arquivo desbloqueado com sucesso'
+        Step3 = '`n[PASSO 3] Limpando processos e tasks antigas...'
+        Step4 = '`n[PASSO 4] Criando diretorio de logs...'
+        Step5 = '`n[PASSO 5] Criando Scheduled Task com logging agressivo...'
+        Step6 = '`n[PASSO 6] Iniciando task...'
+        Step7 = '`n[PASSO 7] Verificando status da task...'
+        Step8 = '`n[PASSO 8] Verificando logs gerados...'
+        Step9 = '`n[PASSO 9] Verificando Event Viewer (PowerShell)...'
+        FinalDiagnostic = '?  DIAGNOSTICO FINAL                                        ?'
+        SuccessAuthenticated = '[OK]  SUCESSO! Agente esta rodando e autenticado!'
+        CriticalNotExecuted = '[ERROR]  FALHA CRITICA: Script nao foi executado'
+        NextSteps = '?  PROXIMOS PASSOS                                          ?'
+    }
+    'en-US' = @{
+        BannerTitle = '?  CYBER SHIELD - FIX AGENT INSTALLATION                    ?'
+        BannerSubtitle = '?  Diagnostics and definitive repair                         ?'
+        Step1 = '[STEP 1] Initial checks...'
+        ScriptMissing = '[ERROR] Script not found at: {0}'
+        RunInstallerFirst = '   Run the installer first to generate the script.'
+        ScriptFound = '? Script found: {0}'
+        Step2 = '`n[STEP 2] Unblocking file (remove Zone.Identifier)...'
+        FileUnblocked = '? File unblocked successfully'
+        Step3 = '`n[STEP 3] Cleaning old processes and tasks...'
+        Step4 = '`n[STEP 4] Creating log directory...'
+        Step5 = '`n[STEP 5] Creating Scheduled Task with aggressive logging...'
+        Step6 = '`n[STEP 6] Starting task...'
+        Step7 = '`n[STEP 7] Checking task status...'
+        Step8 = '`n[STEP 8] Checking generated logs...'
+        Step9 = '`n[STEP 9] Checking Event Viewer (PowerShell)...'
+        FinalDiagnostic = '?  FINAL DIAGNOSTIC                                         ?'
+        SuccessAuthenticated = '[OK] SUCCESS! Agent is running and authenticated!'
+        CriticalNotExecuted = '[ERROR] CRITICAL FAILURE: Script was not executed'
+        NextSteps = '?  NEXT STEPS                                               ?'
+    }
+}
+
+function Get-LocalizedMessage {
+    param(
+        [Parameter(Mandatory = $true)][string]$Key,
+        [object[]]$Args = @()
+    )
+
+    $catalog = $Messages[$MessageCulture]
+    if (-not $catalog.ContainsKey($Key)) {
+        $catalog = $Messages['en-US']
+    }
+
+    $template = $catalog[$Key].Replace('`n', "`n")
+    if ($Args.Count -gt 0) {
+        return [string]::Format($template, $Args)
+    }
+    return $template
+}
+
 Write-Host "`n?????????????????????????????????????????????????????????????" -ForegroundColor Cyan
-Write-Host "?  CYBER SHIELD - FIX AGENT INSTALLATION                    ?" -ForegroundColor Cyan
-Write-Host "?  Diagnostico e Correcao Definitiva                        ?" -ForegroundColor Cyan
+Write-Host (Get-LocalizedMessage "BannerTitle") -ForegroundColor Cyan
+Write-Host (Get-LocalizedMessage "BannerSubtitle") -ForegroundColor Cyan
 Write-Host "?????????????????????????????????????????????????????????????`n" -ForegroundColor Cyan
 
 $BaseDir = "C:\CyberShield"
@@ -56,23 +122,23 @@ $TaskName = "CyberShieldAgent-$AgentName"
 # ============================================
 # PASSO 1: Verificacoes Iniciais
 # ============================================
-Write-Host "[PASSO 1] Verificacoes Iniciais..." -ForegroundColor Yellow
+Write-Host (Get-LocalizedMessage "Step1") -ForegroundColor Yellow
 
 if (-not (Test-Path $ScriptPath)) {
-    Write-Host "[ERROR]  ERRO: Script nao encontrado em: $ScriptPath" -ForegroundColor Red
-    Write-Host "   Execute primeiro o instalador para gerar o script." -ForegroundColor Yellow
+    Write-Host (Get-LocalizedMessage "ScriptMissing" @($ScriptPath)) -ForegroundColor Red
+    Write-Host (Get-LocalizedMessage "RunInstallerFirst") -ForegroundColor Yellow
     exit 1
 }
-Write-Host "? Script encontrado: $ScriptPath" -ForegroundColor Green
+Write-Host (Get-LocalizedMessage "ScriptFound" @($ScriptPath)) -ForegroundColor Green
 
 # ============================================
 # PASSO 2: Desbloquear Arquivo
 # ============================================
-Write-Host "`n[PASSO 2] Desbloqueando arquivo (remover Zone.Identifier)..." -ForegroundColor Yellow
+Write-Host (Get-LocalizedMessage "Step2") -ForegroundColor Yellow
 
 try {
     Unblock-File -Path $ScriptPath -ErrorAction Stop
-    Write-Host "? Arquivo desbloqueado com sucesso" -ForegroundColor Green
+    Write-Host (Get-LocalizedMessage "FileUnblocked") -ForegroundColor Green
 } catch {
     Write-Host "[WARN]  Aviso ao desbloquear: $_" -ForegroundColor Yellow
 }
@@ -87,7 +153,7 @@ if ($hasZoneId) {
 # ============================================
 # PASSO 3: Limpar Processos e Tasks Antigas
 # ============================================
-Write-Host "`n[PASSO 3] Limpando processos e tasks antigas..." -ForegroundColor Yellow
+Write-Host (Get-LocalizedMessage "Step3") -ForegroundColor Yellow
 
 # Parar processos
 $oldProcesses = Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'cybershield-agent.*ps1' }
@@ -123,7 +189,7 @@ try {
 # ============================================
 # PASSO 4: Criar Diretorio de Logs
 # ============================================
-Write-Host "`n[PASSO 4] Criando diretorio de logs..." -ForegroundColor Yellow
+Write-Host (Get-LocalizedMessage "Step4") -ForegroundColor Yellow
 
 if (-not (Test-Path $LogDir)) {
     New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
@@ -138,7 +204,7 @@ Get-ChildItem "$LogDir\*.log" -ErrorAction SilentlyContinue | Remove-Item -Force
 # ============================================
 # PASSO 5: Criar Scheduled Task com Logging Agressivo
 # ============================================
-Write-Host "`n[PASSO 5] Criando Scheduled Task com logging agressivo..." -ForegroundColor Yellow
+Write-Host (Get-LocalizedMessage "Step5") -ForegroundColor Yellow
 
 # Argumentos do agente
 $AgentArgs = @(
@@ -186,7 +252,7 @@ try {
 }
 
 # Iniciar a task imediatamente
-Write-Host "`n[PASSO 6] Iniciando task..." -ForegroundColor Yellow
+Write-Host (Get-LocalizedMessage "Step6") -ForegroundColor Yellow
 Start-ScheduledTask -TaskName $TaskName
 Write-Host "? Task iniciada. Aguardando 30 segundos..." -ForegroundColor Green
 
@@ -195,7 +261,7 @@ Write-Host "? Task iniciada. Aguardando 30 segundos..." -ForegroundColor Green
 # ============================================
 Start-Sleep -Seconds 30
 
-Write-Host "`n[PASSO 7] Verificando status da task..." -ForegroundColor Yellow
+Write-Host (Get-LocalizedMessage "Step7") -ForegroundColor Yellow
 $task = Get-ScheduledTask -TaskName $TaskName
 $taskInfo = Get-ScheduledTaskInfo -TaskName $TaskName
 
@@ -206,7 +272,7 @@ Write-Host "LastTaskResult: $($taskInfo.LastTaskResult)" -ForegroundColor $(if (
 # ============================================
 # PASSO 8: Verificar Logs
 # ============================================
-Write-Host "`n[PASSO 8] Verificando logs gerados..." -ForegroundColor Yellow
+Write-Host (Get-LocalizedMessage "Step8") -ForegroundColor Yellow
 
 $logFiles = Get-ChildItem "$LogDir\*.log" -ErrorAction SilentlyContinue
 if ($logFiles) {
@@ -240,7 +306,7 @@ if ($logFiles) {
 # ============================================
 # PASSO 9: Verificar Event Viewer (PowerShell)
 # ============================================
-Write-Host "`n[PASSO 9] Verificando Event Viewer (PowerShell)..." -ForegroundColor Yellow
+Write-Host (Get-LocalizedMessage "Step9") -ForegroundColor Yellow
 
 try {
     $events = Get-WinEvent -LogName Application -MaxEvents 20 -ErrorAction Stop | 
@@ -268,7 +334,7 @@ try {
 # PASSO 10: Diagnostico Final
 # ============================================
 Write-Host "`n?????????????????????????????????????????????????????????????" -ForegroundColor Cyan
-Write-Host "?  DIAGNOSTICO FINAL                                        ?" -ForegroundColor Cyan
+Write-Host (Get-LocalizedMessage "FinalDiagnostic") -ForegroundColor Cyan
 Write-Host "?????????????????????????????????????????????????????????????`n" -ForegroundColor Cyan
 
 $success = $false
@@ -277,7 +343,7 @@ $mainLog = "$LogDir\cybershield-agent-v3.log"
 if (Test-Path $mainLog) {
     $logContent = Get-Content $mainLog -Raw
     if ($logContent -match '[OK]  Autenticado com sucesso') {
-        Write-Host "[OK]  SUCESSO! Agente esta rodando e autenticado!" -ForegroundColor Green
+        Write-Host (Get-LocalizedMessage "SuccessAuthenticated") -ForegroundColor Green
         $success = $true
     } elseif ($logContent -match '\[ERROR\].*401') {
         Write-Host "[ERROR]  ERRO: Credenciais invalidas (401)" -ForegroundColor Red
@@ -291,7 +357,7 @@ if (Test-Path $mainLog) {
         Write-Host "   - Aguarde mais 1-2 minutos e verifique o dashboard" -ForegroundColor Yellow
     }
 } else {
-    Write-Host "[ERROR]  FALHA CRITICA: Script nao foi executado" -ForegroundColor Red
+    Write-Host (Get-LocalizedMessage "CriticalNotExecuted") -ForegroundColor Red
     Write-Host "`nPossiveis causas:" -ForegroundColor Yellow
     Write-Host "1. AppLocker ou outro software de seguranca bloqueando" -ForegroundColor Gray
     Write-Host "2. ExecutionPolicy ainda restritiva (mesmo com Unrestricted)" -ForegroundColor Gray
@@ -304,7 +370,7 @@ if (Test-Path $mainLog) {
 }
 
 Write-Host "`n?????????????????????????????????????????????????????????????" -ForegroundColor $(if ($success) { 'Green' } else { 'Yellow' })
-Write-Host "?  PROXIMOS PASSOS                                          ?" -ForegroundColor $(if ($success) { 'Green' } else { 'Yellow' })
+Write-Host (Get-LocalizedMessage "NextSteps") -ForegroundColor $(if ($success) { 'Green' } else { 'Yellow' })
 Write-Host "?????????????????????????????????????????????????????????????`n" -ForegroundColor $(if ($success) { 'Green' } else { 'Yellow' })
 
 if ($success) {
