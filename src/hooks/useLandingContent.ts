@@ -65,7 +65,8 @@ export function useLandingContent() {
       subtitle: t('landing.howItWorks.subtitle'),
       steps: (() => {
         const stepsObj = t('landing.howItWorks.steps', { returnObjects: true });
-        const stepsArray = Array.isArray(stepsObj) ? stepsObj : Object.values(stepsObj || {});
+        if (!stepsObj || typeof stepsObj !== 'object') return [];
+        const stepsArray = Array.isArray(stepsObj) ? stepsObj : Object.values(stepsObj);
         return stepsArray.map((step: any, i: number) => ({
           number: i + 1,
           ...step
@@ -77,7 +78,8 @@ export function useLandingContent() {
       text: t('landing.assessment.text'),
       items: (() => {
         const itemsObj = t('landing.assessment.items', { returnObjects: true });
-        return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+        if (!itemsObj || typeof itemsObj !== 'object') return [];
+        return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj);
       })(),
       cta: t('landing.assessment.cta'),
     },
@@ -86,7 +88,8 @@ export function useLandingContent() {
       subtitle: t('landing.benefits.subtitle'),
       cards: (() => {
         const cardsObj = t('landing.benefits.cards', { returnObjects: true });
-        const cardsArray = Array.isArray(cardsObj) ? cardsObj : Object.values(cardsObj || {});
+        if (!cardsObj || typeof cardsObj !== 'object') return [];
+        const cardsArray = Array.isArray(cardsObj) ? cardsObj : Object.values(cardsObj);
         return cardsArray.map((card: any, i: number) => ({
           icon: [Zap, Activity, BarChart, ShieldCheck][i] || ShieldCheck,
           ...card
@@ -98,7 +101,8 @@ export function useLandingContent() {
       subtitle: t('landing.features.subtitle'),
       items: (() => {
         const itemsObj = t('landing.features.items', { returnObjects: true });
-        const itemsArray = Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+        if (!itemsObj || typeof itemsObj !== 'object') return [];
+        const itemsArray = Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj);
         return itemsArray.map((item: any, i: number) => ({
           icon: [Server, Shield, Zap, FileCheck, Users, Clock][i] || Shield,
           ...item
@@ -110,7 +114,8 @@ export function useLandingContent() {
       subtitle: t('landing.targetAudience.subtitle'),
       segments: (() => {
         const segmentsObj = t('landing.targetAudience.segments', { returnObjects: true });
-        const segmentsArray = Array.isArray(segmentsObj) ? segmentsObj : Object.values(segmentsObj || {});
+        if (!segmentsObj || typeof segmentsObj !== 'object') return [];
+        const segmentsArray = Array.isArray(segmentsObj) ? segmentsObj : Object.values(segmentsObj);
         return segmentsArray.map((segment: any, i: number) => ({
           icon: [Building2, Laptop, Stethoscope, Scale][i] || Building2,
           ...segment
@@ -122,7 +127,8 @@ export function useLandingContent() {
       text: t('landing.trustProof.text'),
       blocks: (() => {
         const blocksObj = t('landing.trustProof.blocks', { returnObjects: true });
-        const blocksArray = Array.isArray(blocksObj) ? blocksObj : Object.values(blocksObj || {});
+        if (!blocksObj || typeof blocksObj !== 'object') return [];
+        const blocksArray = Array.isArray(blocksObj) ? blocksObj : Object.values(blocksObj);
         return blocksArray.map((block: any, i: number) => ({
           icon: [Lock, Eye, FileText, CheckCircle][i] || Lock,
           ...block
@@ -136,14 +142,16 @@ export function useLandingContent() {
         label: t('landing.comparison.before.label'),
         items: (() => {
           const itemsObj = t('landing.comparison.before.items', { returnObjects: true });
-          return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+          if (!itemsObj || typeof itemsObj !== 'object') return [];
+          return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj);
         })(),
       },
       after: {
         label: t('landing.comparison.after.label'),
         items: (() => {
           const itemsObj = t('landing.comparison.after.items', { returnObjects: true });
-          return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+          if (!itemsObj || typeof itemsObj !== 'object') return [];
+          return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj);
         })(),
       },
     },
@@ -152,7 +160,8 @@ export function useLandingContent() {
       text: t('landing.offer.text'),
       items: (() => {
         const itemsObj = t('landing.offer.items', { returnObjects: true });
-        return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+        if (!itemsObj || typeof itemsObj !== 'object') return [];
+        return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj);
       })(),
       cta: t('landing.offer.cta'),
       microcopy: t('landing.offer.microcopy'),
@@ -162,7 +171,8 @@ export function useLandingContent() {
       subtitle: t('landing.faq.subtitle'),
       items: (() => {
         const itemsObj = t('landing.faq.items', { returnObjects: true });
-        return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj || {});
+        if (!itemsObj || typeof itemsObj !== 'object') return [];
+        return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj);
       })(),
     },
     ctaFinal: {
