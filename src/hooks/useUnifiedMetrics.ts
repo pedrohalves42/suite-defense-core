@@ -166,6 +166,10 @@ export function useUnifiedMetrics() {
       const mediumPrevented = evidenceSummary.medium_prevented || 0;
       const incidentsContained = evidenceSummary.incidents_contained || 0;
 
+      // ROSI-FIX: Return real evidence objects for the UI
+      const last7dEvidence = Array.isArray(evidenceSummary.last_7d_events) ? evidenceSummary.last_7d_events : [];
+      const last30dEvidence = Array.isArray(evidenceSummary.last_30_days_events) ? evidenceSummary.last_30_days_events : [];
+
       // Use 30d count for financial modeling to match the label/expectation
       const totalBlockedCount30d = blockedCount30dRes.count || 0;
 
@@ -193,8 +197,8 @@ export function useUnifiedMetrics() {
           items: (blockedItemsRes.data || []) as Array<{ id: string; agent_name: string; domain: string; attempted_at: string; blocked_by: string }>
         },
         evidence: {
-          last7d: [],
-          last30d: [],
+          last7d: last7dEvidence,
+          last30d: last30dEvidence,
           incidentsContained,
           autoRepairs,
           autoRecoveries,
@@ -238,14 +242,25 @@ export function useUnifiedMetrics() {
     };
   }, [agentCounts]);
 
-  // PERF-FIX: Memoize security score
+  // PERF-FIX: Memoize security score with refined logic
   const securityScore = useMemo(() => {
     let score = 100;
+    
+    // Penalize for offline agents (impacts protection coverage)
     score -= Math.min(agents.offline * 5, 25);
-    score -= Math.min((data?.alerts.critical || 0) * 10, 30);
-    score -= Math.min((data?.vulnerabilities.critical || 0) * 5, 25);
-    return Math.max(0, score);
-  }, [agents.offline, data?.alerts.critical, data?.vulnerabilities.critical]);
+    
+    // Penalize for critical alerts (real-time risk)
+    score -= Math.min((data?.alerts.critical || 0) * 15, 40);
+    
+    // Penalize for critical vulnerabilities (technical debt/exposure)
+    score -= Math.min((data?.vulnerabilities.critical || 0) * 8, 30);
+    
+    // Bonus for contained incidents (resilience factor)
+    const bonus = Math.min((data?.evidence.incidentsContained || 0) * 2, 5);
+    score += bonus;
+
+    return Math.max(0, Math.min(100, score));
+  }, [agents.offline, data?.alerts.critical, data?.vulnerabilities.critical, data?.evidence.incidentsContained]);
 
   // PERF-FIX: Memoize global status
   const globalStatus = useMemo(() => {

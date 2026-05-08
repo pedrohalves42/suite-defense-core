@@ -3,6 +3,7 @@ import { Users, Network, AlertCircle, TrendingUp, TrendingDown, ArrowRight, Minu
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 interface MetricCardsProps {
   totalAgents: number;
@@ -19,9 +20,11 @@ interface MetricCardsProps {
 }
 
 function TrendIndicator({ value, inverted = false }: { value: number; inverted?: boolean }) {
+  const { t } = useTranslation();
+  
   if (value === 0) return (
     <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-      <Minus className="h-2.5 w-2.5" /> estável
+      <Minus className="h-2.5 w-2.5" /> {t('dashboard.metrics.stable', 'estável')}
     </span>
   );
   

@@ -42,7 +42,12 @@ export async function updateAgentStatus(
   const lastUpdate = currentHeartbeat ? new Date(currentHeartbeat).getTime() : 0;
   const incomingTime = incomingTs ? new Date(incomingTs).getTime() : now.getTime();
   
-  const metadataChanged = Object.keys(updateData).filter(k => k !== 'last_telemetry_at' && k !== 'update_timestamp').length > 1;
+  const metadataChanged = Object.entries(updateData)
+    .filter(([k]) => k !== 'last_telemetry_at' && k !== 'update_timestamp' && k !== 'last_heartbeat')
+    .some(([k, v]) => {
+      const currentVal = (currentAgent as any)?.[k];
+      return JSON.stringify(v) !== JSON.stringify(currentVal);
+    });
   const timeThresholdReached = (incomingTime - lastUpdate) >= HEARTBEAT_WRITE_THROTTLE_MS;
 
   // STRICT IDEMPOTENCY: If incoming timestamp is older than current heartbeat, 
