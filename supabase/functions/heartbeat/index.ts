@@ -37,7 +37,7 @@ const HEARTBEAT_EXTRA_FIELDS = [
   'force_update_version', 'force_update_reason', 'force_update_at',
   'force_update_override_safe_mode', 'force_update_override_safe_mode_expires_at',
   'force_update_delivered_count', 'force_update_first_delivered_at',
-  'last_forced_update_applied', 'last_telemetry_at', 'last_heartbeat',
+  'last_forced_update_applied', 'last_telemetry_at', 'last_heartbeat', 'metadata_hash',
 ]
 
 serveAgent(async (req, ctx) => {
@@ -73,6 +73,7 @@ serveAgent(async (req, ctx) => {
     last_heartbeat: (agentData.last_heartbeat as string | null) || null,
     state: (agentData.state as string | null) || null,
     agent_state: (agentData.agent_state as string | null) || null,
+    metadata_hash: (agentData.metadata_hash as string | null) || null,
   }
 
   // ── 1. HMAC validation ──────────────────────────────────
@@ -86,6 +87,11 @@ serveAgent(async (req, ctx) => {
   const osInfo = parseHeartbeatPayload(rawBody)
   const updateData = buildAgentUpdate(osInfo, agent)
   const platform = updateData.os_type || 'windows'
+  
+  // Inject metadata_hash into updateData for state-updater dirty check
+  if (osInfo.metadata_hash) {
+    (updateData as any).metadata_hash = osInfo.metadata_hash;
+  }
 
   logger.debug('Heartbeat received', { agentName: agent.agent_name, traceId })
 
