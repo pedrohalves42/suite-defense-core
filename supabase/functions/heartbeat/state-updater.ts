@@ -93,12 +93,15 @@ export async function updateAgentStatus(
     // Fallback to standard update with Optimistic Locking (MVCC) if atomic RPC is missing
     logger.warn('Atomic heartbeat RPC failed, falling back to MVCC update', { agentName, errorCode: error.code });
     
-    // FETCH current version for optimistic lock
-    const { data: currentAgent } = await supabase
-      .from('agents')
-      .select('version, last_heartbeat')
-      .eq('id', agentId)
-      .single();
+    // Use the captured current state or fetch if missing
+    if (!currentAgent) {
+        const { data } = await supabase
+          .from('agents')
+          .select('version, last_heartbeat')
+          .eq('id', agentId)
+          .single();
+        currentAgent = data;
+    }
 
     const currentVersion = currentAgent?.version || 1;
     const currentHb = currentAgent?.last_heartbeat ? new Date(currentAgent.last_heartbeat).getTime() : 0;
