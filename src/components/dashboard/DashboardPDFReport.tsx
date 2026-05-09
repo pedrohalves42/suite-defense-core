@@ -35,8 +35,8 @@ export function DashboardPDFReport({
       const doc = new jsPDF();
 
       const now = new Date();
-      const dateStr = now.toLocaleDateString('pt-BR');
-      const timeStr = now.toLocaleTimeString('pt-BR');
+      const dateStr = now.toLocaleDateString(t('common.locale', { defaultValue: 'pt-BR' }));
+      const timeStr = now.toLocaleTimeString(t('common.locale', { defaultValue: 'pt-BR' }));
 
       // Header
       doc.setFillColor(15, 23, 42);
