@@ -8318,6 +8318,72 @@ export type Database = {
           },
         ]
       }
+      ai_analysis_cache: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          input_hash: string
+          model_name: string | null
+          result_data: Json
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          input_hash: string
+          model_name?: string | null
+          result_data: Json
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          input_hash?: string
+          model_name?: string | null
+          result_data?: Json
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_analysis_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_analysis_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_analysis_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_analysis_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_analysis_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       ai_anomalies: {
         Row: {
           anomaly_type: string
@@ -50138,6 +50204,7 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: Json
       }
+      cleanup_expired_ai_cache: { Args: never; Returns: undefined }
       cleanup_expired_cache: { Args: never; Returns: number }
       cleanup_expired_hmac_signatures: { Args: never; Returns: undefined }
       cleanup_expired_keys: { Args: never; Returns: number }
