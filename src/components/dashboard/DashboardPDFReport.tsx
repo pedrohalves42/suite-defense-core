@@ -74,7 +74,7 @@ export function DashboardPDFReport({
 
       (doc as unknown as { autoTable: (...args: unknown[]) => void }).autoTable({
         startY: y,
-        head: [['Métrica', 'Valor']],
+        head: [[t('common.metric'), t('common.value')]],
         body: kpis,
         theme: 'grid',
         headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontSize: 10 },
