@@ -36,23 +36,26 @@ export async function updateAgentStatus(
 ): Promise<void> {
   const now = new Date();
   
-  // 1. Pre-check for redundancy
+  // 1. Pre-check for redundancy & idempotency
   const incomingTs = updateData.last_telemetry_at || (updateData as any).update_timestamp;
   const lastUpdate = currentHeartbeat ? new Date(currentHeartbeat).getTime() : 0;
   const incomingTime = incomingTs ? new Date(incomingTs).getTime() : now.getTime();
   
+  // STRICT IDEMPOTENCY: If incoming timestamp is older than current heartbeat, 
+  // we skip metadata updates to prevent overwriting with stale state.
+  const isStale = incomingTime < lastUpdate;
+  
   // FETCH current state from DB for dirty-checking if not provided in context
   let currentAgent = (updateData as any)._current_agent; 
   if (!currentAgent && (updateData as any).metadata_hash) {
-     const { data } = await supabase.from('agents').select('*').eq('id', agentId).single();
+     const { data } = await supabase.from('agents').select('metadata_hash, version').eq('id', agentId).single();
      currentAgent = data;
   }
 
-  // OTIMIZACAO: Check metadata hash to avoid redundant DB reads/writes
   const incomingMetadataHash = (updateData as any).metadata_hash;
   const currentMetadataHash = (currentAgent as any)?.metadata_hash;
   
-  const metadataChanged = incomingMetadataHash 
+  const metadataChanged = !isStale && (incomingMetadataHash 
     ? incomingMetadataHash !== currentMetadataHash
     : Object.entries(updateData)
         .filter(([k]) => k !== 'last_telemetry_at' && k !== 'update_timestamp' && k !== 'last_heartbeat' && k !== 'metadata_hash' && k !== '_current_agent')
@@ -63,14 +66,10 @@ export async function updateAgentStatus(
             return JSON.stringify(v) !== JSON.stringify(currentVal);
           }
           return v !== currentVal;
-        });
+        }));
 
-  // STRICT IDEMPOTENCY: If incoming timestamp is older than current heartbeat, 
-  // we still call RPC for online status but metadataChanged is effectively false for safety.
-  // Note: timeThresholdReached is usually handled by the caller or implicitly in metadataChanged/lastUpdate comparison
-  if (!metadataChanged && incomingTime <= lastUpdate) {
-    logger.debug('Skipping redundant agent heartbeat DB update (idempotent)', { agentName });
-    // Still ensure status is online by doing a fast partial update if needed, but RPC handles this better
+  if (!metadataChanged && !isStale && (now.getTime() - lastUpdate) < HEARTBEAT_WRITE_THROTTLE_MS) {
+    logger.debug('Skipping redundant agent heartbeat (throttled)', { agentName });
     return;
   }
 

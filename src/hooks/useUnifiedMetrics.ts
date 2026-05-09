@@ -18,6 +18,7 @@ import { useTenant } from '@/hooks/useTenant';
 import { useAgentSnapshots, getAgentStatusCounts } from '@/hooks/useAgentSnapshots';
 import { subDays } from 'date-fns';
 import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
+import { useTranslation } from 'react-i18next';
 
 // === Modelo de custo REALISTA para PMEs brasileiras ===
 // Valores conservadores baseados em custo médio de suporte técnico local
@@ -95,6 +96,7 @@ export interface UnifiedMetrics {
 }
 
 export function useUnifiedMetrics() {
+  const { t } = useTranslation();
   const { tenant, loading: tenantLoading } = useTenant();
   const { data: snapshots, isLoading: snapshotsLoading } = useAgentSnapshots();
   
@@ -247,31 +249,36 @@ export function useUnifiedMetrics() {
     let score = 100;
     
     // Penalize for offline agents (impacts protection coverage)
-    score -= Math.min(agents.offline * 5, 25);
+    // Scale: 10% offline = -5 points, up to 30 points penalty
+    const offlineRatio = agents.total > 0 ? (agents.offline / agents.total) : 0;
+    score -= Math.min(Math.round(offlineRatio * 50), 30);
     
     // Penalize for critical alerts (real-time risk)
-    score -= Math.min((data?.alerts.critical || 0) * 15, 40);
+    // Each critical alert is -10 points, up to 40 points penalty
+    score -= Math.min((data?.alerts.critical || 0) * 10, 40);
     
     // Penalize for critical vulnerabilities (technical debt/exposure)
-    score -= Math.min((data?.vulnerabilities.critical || 0) * 8, 30);
+    // Each critical vulnerability is -5 points, up to 25 points penalty
+    score -= Math.min((data?.vulnerabilities.critical || 0) * 5, 25);
     
     // Bonus for contained incidents (resilience factor)
     const bonus = Math.min((data?.evidence.incidentsContained || 0) * 2, 5);
     score += bonus;
 
     return Math.max(0, Math.min(100, score));
-  }, [agents.offline, data?.alerts.critical, data?.vulnerabilities.critical, data?.evidence.incidentsContained]);
+  }, [agents.total, agents.offline, data?.alerts.critical, data?.vulnerabilities.critical, data?.evidence.incidentsContained]);
 
   // PERF-FIX: Memoize global status
   const globalStatus = useMemo(() => {
-    if (securityScore >= 80 && (data?.alerts.critical || 0) === 0) {
-      return { emoji: '🟢', title: 'Tudo sob controle', description: 'Todos os computadores estão protegidos.', variant: 'success' as const };
+    const criticalCount = data?.alerts.critical || 0;
+    if (securityScore >= 85 && criticalCount === 0) {
+      return { emoji: '🟢', title: t('adminPages.dashboard.allUnderControl'), description: t('adminPages.dashboard.allProtected'), variant: 'success' as const };
     }
-    if (securityScore >= 60 || (data?.alerts.critical || 0) <= 2) {
-      return { emoji: '🟡', title: 'Atenção necessária', description: 'Alguns itens precisam de verificação.', variant: 'warning' as const };
+    if (securityScore >= 65 && criticalCount <= 2) {
+      return { emoji: '🟡', title: t('adminPages.dashboard.attentionNeeded'), description: t('adminPages.dashboard.someItemsNeedCheck'), variant: 'warning' as const };
     }
-    return { emoji: '🔴', title: 'Ação urgente', description: 'Há riscos que podem afetar seu negócio.', variant: 'danger' as const };
-  }, [securityScore, data?.alerts.critical]);
+    return { emoji: '🔴', title: t('adminPages.dashboard.urgentAction'), description: t('adminPages.dashboard.riskImpact'), variant: 'danger' as const };
+  }, [securityScore, data?.alerts.critical, t]);
 
   const metrics: UnifiedMetrics | null = useMemo(() => {
     if (!data) return null;

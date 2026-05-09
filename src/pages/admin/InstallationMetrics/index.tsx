@@ -4,8 +4,10 @@ import { Activity, CheckCircle2, Clock, AlertTriangle, TrendingUp, TrendingDown,
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { useInstallationMetrics } from './useInstallationMetrics';
 import { InstallationCharts } from './components/InstallationCharts';
+import { useTranslation } from 'react-i18next';
 
 export default function InstallationMetrics() {
+  const { t } = useTranslation();
   const {
     metrics, errors, isLoading, totalMetrics, totalAttempts,
     successRate, avgInstallTime, platformMetrics,
@@ -26,8 +28,8 @@ export default function InstallationMetrics() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Metricas de Instalacao</h1>
-          <p className="text-muted-foreground">Analise consolidada com dados das views SQL otimizadas</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('adminPages.installationMetrics.title')}</h1>
+          <p className="text-muted-foreground">{t('adminPages.installationMetrics.subtitle')}</p>
         </div>
         <Activity className="h-8 w-8 text-primary" />
       </div>
@@ -40,18 +42,18 @@ export default function InstallationMetrics() {
         }>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium">Status de Saude dos Agentes</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('adminPages.installationMetrics.agentHealthStatus')}</CardTitle>
               <Badge variant={healthLevel === 'healthy' ? 'default' : healthLevel === 'unhealthy' ? 'destructive' : 'secondary'}>
-                {healthLevel === 'healthy' ? 'Saudavel' : healthLevel === 'unhealthy' ? 'Critico' : healthLevel === 'warning' ? 'Atencao' : 'Sem Dados'}
+                {healthLevel === 'healthy' ? t('common.healthy') : healthLevel === 'unhealthy' ? t('common.critical') : healthLevel === 'warning' ? t('common.attention') : t('common.noData')}
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="space-y-1"><span className="text-xs text-muted-foreground">Total Agentes</span><p className="text-lg font-semibold">{healthSummary.total_agents}</p></div>
-            <div className="space-y-1"><span className="text-xs text-muted-foreground">Ativos</span><p className="text-lg font-semibold text-green-600">{healthSummary.active_agents}</p></div>
-            <div className="space-y-1"><span className="text-xs text-muted-foreground">Pendentes</span><p className="text-lg font-semibold text-yellow-600">{healthSummary.pending_agents}</p></div>
-            <div className="space-y-1"><span className="text-xs text-muted-foreground">Travados</span><p className="text-lg font-semibold text-red-600">{healthSummary.stuck_agents}</p></div>
-            <div className="space-y-1"><span className="text-xs text-muted-foreground">Taxa de Ativacao</span><p className="text-lg font-semibold">{healthSummary.activation_rate_pct?.toFixed(1)}%</p></div>
+            <div className="space-y-1"><span className="text-xs text-muted-foreground">{t('adminPages.installationMetrics.totalAgents')}</span><p className="text-lg font-semibold">{healthSummary.total_agents}</p></div>
+            <div className="space-y-1"><span className="text-xs text-muted-foreground">{t('common.active')}</span><p className="text-lg font-semibold text-green-600">{healthSummary.active_agents}</p></div>
+            <div className="space-y-1"><span className="text-xs text-muted-foreground">{t('common.pending')}</span><p className="text-lg font-semibold text-yellow-600">{healthSummary.pending_agents}</p></div>
+            <div className="space-y-1"><span className="text-xs text-muted-foreground">{t('adminPages.installationMetrics.stuck')}</span><p className="text-lg font-semibold text-red-600">{healthSummary.stuck_agents}</p></div>
+            <div className="space-y-1"><span className="text-xs text-muted-foreground">{t('adminPages.installationMetrics.activationRate')}</span><p className="text-lg font-semibold">{healthSummary.activation_rate_pct?.toFixed(1)}%</p></div>
           </CardContent>
         </Card>
       )}
@@ -59,42 +61,42 @@ export default function InstallationMetrics() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taxa de Sucesso Global</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('adminPages.installationMetrics.globalSuccessRate')}</CardTitle>
             {parseFloat(successRate) >= 80 ? <TrendingUp className="h-4 w-4 text-green-600" /> : <TrendingDown className="h-4 w-4 text-red-600" />}
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{successRate}%</div>
-            <p className="text-xs text-muted-foreground">{totalMetrics?.successful_events} sucessos de {totalAttempts} eventos</p>
+            <p className="text-xs text-muted-foreground">{totalMetrics?.successful_events} {t('common.success_plural')} {t('common.of')} {totalAttempts} {t('common.events')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tempo Medio</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('adminPages.installationMetrics.avgTime')}</CardTitle>
             <Clock className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{avgInstallTime}s</div>
-            <p className="text-xs text-muted-foreground">{parseFloat(avgInstallTime) < 60 ? "Performance excelente" : "Pode otimizar"}</p>
+            <p className="text-xs text-muted-foreground">{parseFloat(avgInstallTime) < 60 ? t('adminPages.installationMetrics.excellentPerformance') : t('adminPages.installationMetrics.canOptimize')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Eventos com Falha</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('adminPages.installationMetrics.failedEvents')}</CardTitle>
             <AlertTriangle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalMetrics?.failed_events || 0}</div>
-            <p className="text-xs text-muted-foreground">{errors?.length || 0} tipos de erro unicos</p>
+            <p className="text-xs text-muted-foreground">{errors?.length || 0} {t('adminPages.installationMetrics.uniqueErrorTypes')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Instalacoes Completas</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('adminPages.installationMetrics.completeInstallations')}</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalMetrics?.total_installed || 0}</div>
-            <p className="text-xs text-muted-foreground">{totalMetrics?.total_generated || 0} gerados, {totalMetrics?.total_copied || 0} copiados</p>
+            <p className="text-xs text-muted-foreground">{totalMetrics?.total_generated || 0} {t('common.generated')}, {totalMetrics?.total_copied || 0} {t('common.copied')}</p>
           </CardContent>
         </Card>
       </div>
@@ -104,8 +106,8 @@ export default function InstallationMetrics() {
       {errors && errors.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Resumo de Erros</CardTitle>
-            <CardDescription>Erros mais comuns agrupados por plataforma</CardDescription>
+            <CardTitle>{t('adminPages.installationMetrics.errorSummary')}</CardTitle>
+            <CardDescription>{t('adminPages.installationMetrics.errorSummaryDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {Object.entries(errorsByPlatform || {}).map(([platform, platformErrors]) => (
@@ -118,11 +120,11 @@ export default function InstallationMetrics() {
                   {platformErrors.map((err, idx) => (
                     <div key={idx} className="text-sm border-l-2 border-destructive/50 pl-3 py-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground truncate max-w-[70%]">{err.error_message || 'Erro desconhecido'}</span>
+                        <span className="text-muted-foreground truncate max-w-[70%]">{err.error_message || t('common.unknownError')}</span>
                         <Badge variant="outline" className="ml-2">{err.error_count}x</Badge>
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        Tipo: {err.event_type} | Ultimo: {err.last_occurrence ? formatBrazilDateTime(err.last_occurrence, 'date') : 'N/A'}
+                        {t('common.type')}: {err.event_type} | {t('common.last')}: {err.last_occurrence ? formatBrazilDateTime(err.last_occurrence, 'date') : t('common.noData')}
                       </span>
                     </div>
                   ))}
@@ -137,9 +139,9 @@ export default function InstallationMetrics() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Activity className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium">Sem Dados de Metricas</h3>
+            <h3 className="text-lg font-medium">{t('adminPages.installationMetrics.noMetrics')}</h3>
             <p className="text-muted-foreground text-center max-w-md">
-              Ainda nao ha dados de instalacao suficientes. As metricas serao exibidas apos as primeiras instalacoes de agentes.
+              {t('adminPages.installationMetrics.noMetricsDesc')}
             </p>
           </CardContent>
         </Card>

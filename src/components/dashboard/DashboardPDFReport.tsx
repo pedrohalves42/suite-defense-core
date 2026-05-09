@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FileDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import type { DashboardAgent, DashboardJob } from "@/types/dashboard";
 import { logger } from '@/lib/logger';
 
@@ -21,6 +22,7 @@ export function DashboardPDFReport({
   agents, jobs, tenantName, onlinePercentage, successRate,
   offlineCount, failedJobs, alerts, systemState,
 }: DashboardPDFReportProps) {
+  const { t } = useTranslation();
   const [generating, setGenerating] = useState(false);
 
   const generatePDF = async () => {
@@ -33,20 +35,20 @@ export function DashboardPDFReport({
       const doc = new jsPDF();
 
       const now = new Date();
-      const dateStr = now.toLocaleDateString('pt-BR');
-      const timeStr = now.toLocaleTimeString('pt-BR');
+      const dateStr = now.toLocaleDateString(t('common.locale', { defaultValue: 'pt-BR' }));
+      const timeStr = now.toLocaleTimeString(t('common.locale', { defaultValue: 'pt-BR' }));
 
       // Header
       doc.setFillColor(15, 23, 42);
       doc.rect(0, 0, 210, 40, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(22);
-      doc.text('CyberShield — Relatório Executivo', 14, 18);
+      doc.text(t('adminPages.dashboard.pdfReport.title'), 14, 18);
       doc.setFontSize(10);
-      doc.text(`${tenantName} • Gerado em ${dateStr} às ${timeStr}`, 14, 28);
+      doc.text(`${tenantName} • ${t('adminPages.dashboard.pdfReport.generatedAt', { date: dateStr, time: timeStr })}`, 14, 28);
 
       // Status badge
-      const stateLabel = systemState === 'healthy' ? 'SAUDÁVEL' : systemState === 'critical' ? 'CRÍTICO' : 'ATENÇÃO';
+      const stateLabel = systemState === 'healthy' ? t('common.healthy').toUpperCase() : systemState === 'critical' ? t('common.critical').toUpperCase() : t('common.attention').toUpperCase();
       const stateColor: [number, number, number] = systemState === 'healthy' ? [34, 197, 94] : systemState === 'critical' ? [239, 68, 68] : [234, 179, 8];
       doc.setFillColor(...stateColor);
       doc.roundedRect(150, 32, 46, 8, 2, 2, 'F');
@@ -58,21 +60,21 @@ export function DashboardPDFReport({
       let y = 52;
       doc.setTextColor(30, 41, 59);
       doc.setFontSize(14);
-      doc.text('Indicadores Principais', 14, y);
+      doc.text(t('adminPages.dashboard.pdfReport.mainIndicators'), 14, y);
       y += 8;
 
       const kpis = [
-        ['Computadores Monitorados', `${agents.length}`],
-        ['Online', `${onlinePercentage}%`],
-        ['Offline', `${offlineCount}`],
-        ['Taxa de Sucesso', `${successRate}%`],
-        ['Alertas Ativos', `${alerts}`],
-        ['Falhas (24h)', `${failedJobs}`],
+        [t('adminPages.dashboard.pdfReport.monitoredComputers'), `${agents.length}`],
+        [t('dashboard.online'), `${onlinePercentage}%`],
+        [t('dashboard.offline'), `${offlineCount}`],
+        [t('adminPages.dashboard.pdfReport.successRate'), `${successRate}%`],
+        [t('adminPages.dashboard.pdfReport.activeAlerts'), `${alerts}`],
+        [t('adminPages.dashboard.pdfReport.failures24h'), `${failedJobs}`],
       ];
 
       (doc as unknown as { autoTable: (...args: unknown[]) => void }).autoTable({
         startY: y,
-        head: [['Métrica', 'Valor']],
+        head: [[t('common.metric'), t('common.value')]],
         body: kpis,
         theme: 'grid',
         headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontSize: 10 },
@@ -86,18 +88,18 @@ export function DashboardPDFReport({
       // Jobs by status
       doc.setFontSize(14);
       doc.setTextColor(30, 41, 59);
-      doc.text('Distribuição de Verificações', 14, y);
+      doc.text(t('adminPages.dashboard.pdfReport.distribution'), 14, y);
       y += 8;
 
       const statusCounts = jobs.reduce((acc, j) => {
-        const label = j.status === 'completed' ? 'Concluída' : j.status === 'failed' ? 'Falha' : j.status === 'queued' ? 'Aguardando' : j.status;
+        const label = j.status === 'completed' ? t('common.completed') : j.status === 'failed' ? t('common.failure') : j.status === 'queued' ? t('common.waiting') : j.status;
         acc[label] = (acc[label] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
 
       (doc as unknown as { autoTable: (...args: unknown[]) => void }).autoTable({
         startY: y,
-        head: [['Status', 'Quantidade', '% do Total']],
+        head: [[t('common.status'), t('common.quantity'), t('common.percentageOfTotal')]],
         body: Object.entries(statusCounts).map(([status, count]) => [
           status, count.toString(), `${((count / Math.max(jobs.length, 1)) * 100).toFixed(1)}%`
         ]),
@@ -114,7 +116,7 @@ export function DashboardPDFReport({
       if (y > 230) { doc.addPage(); y = 20; }
       doc.setFontSize(14);
       doc.setTextColor(30, 41, 59);
-      doc.text('Top 10 Computadores Mais Ativos', 14, y);
+      doc.text(t('adminPages.dashboard.pdfReport.topActiveComputers'), 14, y);
       y += 8;
 
       const agentJobCounts = agents
@@ -128,8 +130,8 @@ export function DashboardPDFReport({
 
       (doc as unknown as { autoTable: (...args: unknown[]) => void }).autoTable({
         startY: y,
-        head: [['Computador', 'Verificações', 'Status']],
-        body: agentJobCounts.map(a => [a.name, a.jobs.toString(), a.online ? 'Online' : 'Offline']),
+        head: [[t('adminPages.dashboard.computers'), t('adminPages.dashboard.pdfReport.verifications'), t('common.status')]],
+        body: agentJobCounts.map(a => [a.name, a.jobs.toString(), a.online ? t('dashboard.online') : t('dashboard.offline')]),
         theme: 'grid',
         headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontSize: 10 },
         bodyStyles: { fontSize: 10 },
@@ -143,15 +145,15 @@ export function DashboardPDFReport({
       if (y > 240) { doc.addPage(); y = 20; }
       doc.setFontSize(14);
       doc.setTextColor(30, 41, 59);
-      doc.text('Recomendações', 14, y);
+      doc.text(t('adminPages.dashboard.pdfReport.recommendations'), 14, y);
       y += 8;
-
+ 
       const recommendations: string[] = [];
-      if (offlineCount > 0) recommendations.push(`• Verificar ${offlineCount} computador(es) offline e restaurar conectividade.`);
-      if (failedJobs > 0) recommendations.push(`• Investigar ${failedJobs} verificação(ões) com falha nas últimas 24h.`);
-      if (Number(onlinePercentage) < 90) recommendations.push('• Cobertura de proteção abaixo de 90% — considerar ação urgente.');
-      if (alerts > 0) recommendations.push(`• ${alerts} alerta(s) ativo(s) requerem atenção imediata.`);
-      if (recommendations.length === 0) recommendations.push('• Sistema operando dentro dos parâmetros esperados. Nenhuma ação necessária.');
+      if (offlineCount > 0) recommendations.push(t('adminPages.dashboard.pdfReport.recOffline', { count: offlineCount }));
+      if (failedJobs > 0) recommendations.push(t('adminPages.dashboard.pdfReport.recFailed', { count: failedJobs }));
+      if (Number(onlinePercentage) < 90) recommendations.push(t('adminPages.dashboard.pdfReport.recCoverage'));
+      if (alerts > 0) recommendations.push(t('adminPages.dashboard.pdfReport.recAlerts', { count: alerts }));
+      if (recommendations.length === 0) recommendations.push(t('adminPages.dashboard.pdfReport.recHealthy'));
 
       doc.setFontSize(10);
       doc.setTextColor(71, 85, 105);
@@ -166,7 +168,7 @@ export function DashboardPDFReport({
         doc.setPage(i);
         doc.setFontSize(8);
         doc.setTextColor(148, 163, 184);
-        doc.text(`CyberShield • ${tenantName} • Página ${i}/${pageCount}`, 105, 290, { align: 'center' });
+        doc.text(t('adminPages.dashboard.pdfReport.pageFooter', { tenant: tenantName, current: i, total: pageCount }), 105, 290, { align: 'center' });
       }
 
       doc.save(`relatorio-executivo-${now.toISOString().split('T')[0]}.pdf`);

@@ -2,6 +2,7 @@ import { Server, Monitor, Download, ArrowRight, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 interface DashboardEmptyStateProps {
   tenantName: string;
@@ -9,6 +10,7 @@ interface DashboardEmptyStateProps {
 
 export function DashboardEmptyState({ tenantName }: DashboardEmptyStateProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -19,7 +21,7 @@ export function DashboardEmptyState({ tenantName }: DashboardEmptyStateProps) {
           </div>
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Painel Principal
+              {t('nav.dashboard')}
             </h1>
             <p className="text-sm text-muted-foreground">{tenantName}</p>
           </div>
@@ -30,13 +32,13 @@ export function DashboardEmptyState({ tenantName }: DashboardEmptyStateProps) {
             <div className="inline-flex p-5 rounded-full bg-primary/10 mb-6">
               <Monitor className="h-14 w-14 text-primary" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-3">Nenhum computador cadastrado ainda</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-3">{t('adminPages.dashboard.emptyState.title')}</h2>
             <p className="text-muted-foreground max-w-md mx-auto mb-8">
-              Para começar a monitorar e proteger seus computadores, instale o agente de proteção nos equipamentos da sua empresa.
+              {t('adminPages.dashboard.emptyState.description')}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button size="lg" onClick={() => navigate('/installer')} className="gap-2">
-                <Download className="h-5 w-5" />Instalar Agente de Proteção<ArrowRight className="h-4 w-4" />
+                <Download className="h-5 w-5" />{t('adminPages.dashboard.emptyState.installButton')}<ArrowRight className="h-4 w-4" />
               </Button>
             </div>
           </CardContent>
@@ -45,15 +47,15 @@ export function DashboardEmptyState({ tenantName }: DashboardEmptyStateProps) {
         <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <Info className="h-5 w-5 text-primary" />Como começar
+              <Info className="h-5 w-5 text-primary" />{t('adminPages.dashboard.emptyState.howToStart')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
-                { step: '1', title: 'Instale o agente', desc: 'Baixe e execute o instalador nos computadores que deseja proteger' },
-                { step: '2', title: 'Aguarde a conexão', desc: 'O agente se conectará automaticamente em poucos minutos' },
-                { step: '3', title: 'Monitore tudo aqui', desc: 'Este painel mostrará o status de proteção em tempo real' },
+                { step: '1', title: t('adminPages.dashboard.emptyState.step1Title'), desc: t('adminPages.dashboard.emptyState.step1Desc') },
+                { step: '2', title: t('adminPages.dashboard.emptyState.step2Title'), desc: t('adminPages.dashboard.emptyState.step2Desc') },
+                { step: '3', title: t('adminPages.dashboard.emptyState.step3Title'), desc: t('adminPages.dashboard.emptyState.step3Desc') },
               ].map(({ step, title, desc }) => (
                 <div key={step} className="flex items-start gap-3">
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">{step}</div>
