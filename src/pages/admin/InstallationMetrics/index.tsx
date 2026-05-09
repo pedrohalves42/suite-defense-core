@@ -49,11 +49,11 @@ export default function InstallationMetrics() {
             </div>
           </CardHeader>
           <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="space-y-1"><span className="text-xs text-muted-foreground">Total Agentes</span><p className="text-lg font-semibold">{healthSummary.total_agents}</p></div>
-            <div className="space-y-1"><span className="text-xs text-muted-foreground">Ativos</span><p className="text-lg font-semibold text-green-600">{healthSummary.active_agents}</p></div>
-            <div className="space-y-1"><span className="text-xs text-muted-foreground">Pendentes</span><p className="text-lg font-semibold text-yellow-600">{healthSummary.pending_agents}</p></div>
-            <div className="space-y-1"><span className="text-xs text-muted-foreground">Travados</span><p className="text-lg font-semibold text-red-600">{healthSummary.stuck_agents}</p></div>
-            <div className="space-y-1"><span className="text-xs text-muted-foreground">Taxa de Ativacao</span><p className="text-lg font-semibold">{healthSummary.activation_rate_pct?.toFixed(1)}%</p></div>
+            <div className="space-y-1"><span className="text-xs text-muted-foreground">{t('adminPages.installationMetrics.totalAgents')}</span><p className="text-lg font-semibold">{healthSummary.total_agents}</p></div>
+            <div className="space-y-1"><span className="text-xs text-muted-foreground">{t('common.active')}</span><p className="text-lg font-semibold text-green-600">{healthSummary.active_agents}</p></div>
+            <div className="space-y-1"><span className="text-xs text-muted-foreground">{t('common.pending')}</span><p className="text-lg font-semibold text-yellow-600">{healthSummary.pending_agents}</p></div>
+            <div className="space-y-1"><span className="text-xs text-muted-foreground">{t('adminPages.installationMetrics.stuck')}</span><p className="text-lg font-semibold text-red-600">{healthSummary.stuck_agents}</p></div>
+            <div className="space-y-1"><span className="text-xs text-muted-foreground">{t('adminPages.installationMetrics.activationRate')}</span><p className="text-lg font-semibold">{healthSummary.activation_rate_pct?.toFixed(1)}%</p></div>
           </CardContent>
         </Card>
       )}
