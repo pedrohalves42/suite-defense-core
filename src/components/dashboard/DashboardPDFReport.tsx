@@ -22,6 +22,7 @@ export function DashboardPDFReport({
   agents, jobs, tenantName, onlinePercentage, successRate,
   offlineCount, failedJobs, alerts, systemState,
 }: DashboardPDFReportProps) {
+  const { t } = useTranslation();
   const [generating, setGenerating] = useState(false);
 
   const generatePDF = async () => {
