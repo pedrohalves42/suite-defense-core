@@ -4,6 +4,7 @@ import { Activity, CheckCircle2, Clock, AlertTriangle, TrendingUp, TrendingDown,
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { useInstallationMetrics } from './useInstallationMetrics';
 import { InstallationCharts } from './components/InstallationCharts';
+import { useTranslation } from 'react-i18next';
 
 export default function InstallationMetrics() {
   const {
