@@ -96,6 +96,7 @@ export interface UnifiedMetrics {
 }
 
 export function useUnifiedMetrics() {
+  const { t } = useTranslation();
   const { tenant, loading: tenantLoading } = useTenant();
   const { data: snapshots, isLoading: snapshotsLoading } = useAgentSnapshots();
   
