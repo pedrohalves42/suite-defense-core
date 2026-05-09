@@ -145,15 +145,15 @@ export function DashboardPDFReport({
       if (y > 240) { doc.addPage(); y = 20; }
       doc.setFontSize(14);
       doc.setTextColor(30, 41, 59);
-      doc.text('Recomendações', 14, y);
+      doc.text(t('adminPages.dashboard.pdfReport.recommendations'), 14, y);
       y += 8;
-
+ 
       const recommendations: string[] = [];
-      if (offlineCount > 0) recommendations.push(`• Verificar ${offlineCount} computador(es) offline e restaurar conectividade.`);
-      if (failedJobs > 0) recommendations.push(`• Investigar ${failedJobs} verificação(ões) com falha nas últimas 24h.`);
-      if (Number(onlinePercentage) < 90) recommendations.push('• Cobertura de proteção abaixo de 90% — considerar ação urgente.');
-      if (alerts > 0) recommendations.push(`• ${alerts} alerta(s) ativo(s) requerem atenção imediata.`);
-      if (recommendations.length === 0) recommendations.push('• Sistema operando dentro dos parâmetros esperados. Nenhuma ação necessária.');
+      if (offlineCount > 0) recommendations.push(t('adminPages.dashboard.pdfReport.recOffline', { count: offlineCount }));
+      if (failedJobs > 0) recommendations.push(t('adminPages.dashboard.pdfReport.recFailed', { count: failedJobs }));
+      if (Number(onlinePercentage) < 90) recommendations.push(t('adminPages.dashboard.pdfReport.recCoverage'));
+      if (alerts > 0) recommendations.push(t('adminPages.dashboard.pdfReport.recAlerts', { count: alerts }));
+      if (recommendations.length === 0) recommendations.push(t('adminPages.dashboard.pdfReport.recHealthy'));
 
       doc.setFontSize(10);
       doc.setTextColor(71, 85, 105);
