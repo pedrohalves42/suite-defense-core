@@ -166,22 +166,26 @@ export async function handleListUsers(supabase: SB, requestId: string, payload: 
   const userId = ctx?.userId;
   if (!userId) return { __status: 401, error: 'Nao autorizado' };
 
-  const [adminCheck, superAdminCheck] = await Promise.all([
-    supabase.rpc('has_role', { _user_id: userId, _role: 'admin' }),
-    supabase.rpc('is_current_super_admin'),
-  ]);
-  if (adminCheck.error || superAdminCheck.error) return { __status: 500, error: 'Falha ao verificar permissoes' };
-  if (!adminCheck.data && !superAdminCheck.data) return { __status: 403, error: 'Acesso negado' };
-
+  const { data: isSuperAdmin } = await supabase.rpc('is_current_super_admin');
+  
   const requestedTenantId = (payload.tenant_id as string) || ctx?.tenantId;
   let targetTenantId: string | null = null;
 
   if (requestedTenantId) {
-    if (superAdminCheck.data) {
+    if (isSuperAdmin) {
       targetTenantId = requestedTenantId;
     } else {
-      const { data: membership } = await supabase.from('user_roles').select('tenant_id').eq('user_id', userId).eq('tenant_id', requestedTenantId).limit(1).maybeSingle();
-      if (!membership?.tenant_id) return { __status: 403, error: 'Acesso negado ao tenant selecionado' };
+      // Security Fix: Check if user has ADMIN role in this specific tenant
+      const { data: membership } = await supabase
+        .from('user_roles')
+        .select('tenant_id')
+        .eq('user_id', userId)
+        .eq('tenant_id', requestedTenantId)
+        .eq('role', 'admin') // MUST be admin in the target tenant
+        .limit(1)
+        .maybeSingle();
+      
+      if (!membership?.tenant_id) return { __status: 403, error: 'Acesso negado: voce precisa ser administrador deste tenant' };
       targetTenantId = membership.tenant_id;
     }
   } else {
