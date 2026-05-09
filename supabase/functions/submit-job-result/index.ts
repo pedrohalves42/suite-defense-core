@@ -86,10 +86,27 @@ serveAgent(async (req, ctx) => {
     const dupeErr = await checkDuplicateSubmission(submitCtx);
     if (dupeErr) return dupeErr;
 
-    // ?? 9. ZERO TRUST: Side effects BEFORE marking completed ??
-    await processSideEffects(submitCtx);
+    // ── 9. ZERO TRUST: Side effects BEFORE marking completed ─────────────────
+    try {
+      await processSideEffects(submitCtx);
+    } catch (sideEffectError) {
+      logger.error('[submit-job-result] CRITICAL: Side effects failed. Blocking job completion to maintain integrity.', {
+        job_id: payload.job_id,
+        error: sideEffectError.message,
+        type: job.type
+      });
+      
+      return new Response(JSON.stringify({ 
+        error: 'SIDE_EFFECT_FAILURE', 
+        message: 'Falha ao processar dados de segurança (integridade comprometida)',
+        details: sideEffectError.message 
+      }), { 
+        status: 500, 
+        headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 
+      });
+    }
 
-    // ?? 10. Execution finalization (audit trail) ??
+    // ── 10. Execution finalization (audit trail) ──────────────────────────────
     const execResult = await finalizeExecution(submitCtx);
 
     // ?? 11. Update job ??
