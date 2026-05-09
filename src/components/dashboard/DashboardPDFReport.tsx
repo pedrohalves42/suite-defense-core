@@ -60,7 +60,7 @@ export function DashboardPDFReport({
       let y = 52;
       doc.setTextColor(30, 41, 59);
       doc.setFontSize(14);
-      doc.text('Indicadores Principais', 14, y);
+      doc.text(t('adminPages.dashboard.pdfReport.mainIndicators'), 14, y);
       y += 8;
 
       const kpis = [
