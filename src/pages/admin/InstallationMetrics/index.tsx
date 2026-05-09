@@ -28,8 +28,8 @@ export default function InstallationMetrics() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Metricas de Instalacao</h1>
-          <p className="text-muted-foreground">Analise consolidada com dados das views SQL otimizadas</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('adminPages.installationMetrics.title')}</h1>
+          <p className="text-muted-foreground">{t('adminPages.installationMetrics.subtitle')}</p>
         </div>
         <Activity className="h-8 w-8 text-primary" />
       </div>
