@@ -47,6 +47,12 @@ serveAgent(async (req, ctx) => {
   const origin = req.headers.get('origin')
   const supabaseUrl = requireEnv('SUPABASE_URL')
 
+  // BUG 23: Guard against missing tenant_id (security and logic consistency)
+  if (!ctx.tenantId) {
+    logger.error('CRITICAL: tenantId missing from context', { traceId });
+    return new Response(JSON.stringify({ error: 'Unauthorized: missing tenant context' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+  }
+
   // Context construction for internal modules
   const agent: AgentContext = {
     id: ctx.agentId,

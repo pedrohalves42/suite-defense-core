@@ -53,14 +53,14 @@ export async function updateAgentStatus(
   }
 
   const incomingMetadataHash = (updateData as any).metadata_hash;
-  const currentMetadataHash = (currentAgent as any)?.metadata_hash;
+  const currentMetadataHash = currentAgent ? (currentAgent as any).metadata_hash : null;
   
   const metadataChanged = !isStale && (incomingMetadataHash 
     ? incomingMetadataHash !== currentMetadataHash
     : Object.entries(updateData)
         .filter(([k]) => k !== 'last_telemetry_at' && k !== 'update_timestamp' && k !== 'last_heartbeat' && k !== 'metadata_hash' && k !== '_current_agent')
         .some(([k, v]) => {
-          const currentVal = (currentAgent as any)?.[k];
+          const currentVal = currentAgent ? (currentAgent as any)[k] : undefined;
           if (v === currentVal) return false;
           if (typeof v === 'object' && v !== null && typeof currentVal === 'object' && currentVal !== null) {
             return JSON.stringify(v) !== JSON.stringify(currentVal);

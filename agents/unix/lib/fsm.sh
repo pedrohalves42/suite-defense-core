@@ -16,12 +16,19 @@ set_agent_state() {
         return 1
     fi
 
-    CURRENT_STATE="$new_state"
-    log "INFO" "[FSM] State transition: $old_state -> $new_state (Reason: $reason)"
+    local old_val=\"$CURRENT_STATE\"
+    CURRENT_STATE=\"$new_state\"
+    log \"INFO\" \"[FSM] State transition: $old_state -> $new_state (Reason: $reason)\"
 
-    cat > "$STATE_PATH" <<EOF
-{"state":"$new_state","previous_state":"$old_state","transition_at":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")","reason":"$reason"}
+    # BUG 16: Ensure state is persisted before confirming transition in memory
+    if ! cat > \"$STATE_PATH\" <<EOF
+{\"state\":\"$new_state\",\"previous_state\":\"$old_state\",\"transition_at\":\"$(date -u +\"%Y-%m-%dT%H:%M:%SZ\")\",\"reason\":\"$reason\"}
 EOF
+    then
+        log \"ERROR\" \"[FSM] Failed to persist state to $STATE_PATH. Reverting to $old_val\"
+        CURRENT_STATE=\"$old_val\"
+        return 1
+    fi
     return 0
 }
 

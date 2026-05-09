@@ -40,7 +40,7 @@ initialize_agent_keys() {
         log "INFO" "[KEYS] Loaded existing keypair (fingerprint: ${SIGNING_FINGERPRINT:0:16}...)"
         return 0
     fi
-    SIGNING_FINGERPRINT=$(generate_signing_keypair)
+    SIGNING_FINGERPRINT=$(generate_signing_keypair | tail -n1)
     [[ -z "$SIGNING_FINGERPRINT" ]] && return 1
     return 0
 }
@@ -61,6 +61,7 @@ register_agent_key() {
 }
 
 sign_execution_result() {
-    local canonical="${1}:${2}:${3}:${4}:${5}"
-    echo -n "$canonical" | openssl dgst -sha256 -sign "$PRIVATE_KEY_PATH" 2>/dev/null | base64 -w0 2>/dev/null || base64 2>/dev/null
+    # BUG 18: Align with BUG 1 separator change (: -> .)
+    local canonical=\"${1}.${2}.${3}.${4}.${5}\"
+    echo -n \"$canonical\" | openssl dgst -sha256 -sign \"$PRIVATE_KEY_PATH\" 2>/dev/null | base64 -w0 2>/dev/null || base64 2>/dev/null
 }
