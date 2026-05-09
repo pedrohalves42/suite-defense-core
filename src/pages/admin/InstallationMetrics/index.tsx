@@ -139,9 +139,9 @@ export default function InstallationMetrics() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Activity className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium">Sem Dados de Metricas</h3>
+            <h3 className="text-lg font-medium">{t('adminPages.installationMetrics.noMetrics')}</h3>
             <p className="text-muted-foreground text-center max-w-md">
-              Ainda nao ha dados de instalacao suficientes. As metricas serao exibidas apos as primeiras instalacoes de agentes.
+              {t('adminPages.installationMetrics.noMetricsDesc')}
             </p>
           </CardContent>
         </Card>
