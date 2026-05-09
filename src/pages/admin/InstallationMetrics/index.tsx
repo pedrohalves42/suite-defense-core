@@ -42,9 +42,9 @@ export default function InstallationMetrics() {
         }>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium">Status de Saude dos Agentes</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('adminPages.installationMetrics.agentHealthStatus')}</CardTitle>
               <Badge variant={healthLevel === 'healthy' ? 'default' : healthLevel === 'unhealthy' ? 'destructive' : 'secondary'}>
-                {healthLevel === 'healthy' ? 'Saudavel' : healthLevel === 'unhealthy' ? 'Critico' : healthLevel === 'warning' ? 'Atencao' : 'Sem Dados'}
+                {healthLevel === 'healthy' ? t('common.healthy') : healthLevel === 'unhealthy' ? t('common.critical') : healthLevel === 'warning' ? t('common.attention') : t('common.noData')}
               </Badge>
             </div>
           </CardHeader>
