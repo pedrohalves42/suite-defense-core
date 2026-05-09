@@ -47,7 +47,7 @@ export function DashboardEmptyState({ tenantName }: DashboardEmptyStateProps) {
         <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <Info className="h-5 w-5 text-primary" />Como começar
+              <Info className="h-5 w-5 text-primary" />{t('adminPages.dashboard.emptyState.howToStart')}
             </CardTitle>
           </CardHeader>
           <CardContent>
