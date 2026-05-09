@@ -92,10 +92,10 @@ export async function requireSuperAdmin(
 
     logger.info(`${logPrefix} [AUTH] User authenticated: ${user.id}`);
 
-    // CRITICAL: Validate super_admin role using RPC (bypasses RLS)
-    const { data: isSuperAdmin, error: roleError } = await supabaseClient.rpc('is_super_admin', {
-      _user_id: user.id,
-    });
+    // CRITICAL: Validate super_admin in the user's ACTIVE tenant only.
+    // Using is_current_super_admin() prevents cross-tenant privilege escalation
+    // (vs tenant-agnostic is_super_admin which would honor super_admin in any tenant).
+    const { data: isSuperAdmin, error: roleError } = await supabaseClient.rpc('is_current_super_admin');
 
     if (roleError) {
       logger.error(`${logPrefix} [SECURITY] Error checking super_admin role:`, roleError);

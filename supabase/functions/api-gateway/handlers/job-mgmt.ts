@@ -23,7 +23,7 @@ export async function handleCreateJob(
   // Role checks
   const { data: hasAdminRole } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
   const { data: hasOperatorRole } = await supabase.rpc('has_role', { _user_id: userId, _role: 'operator' });
-  const { data: hasSuperAdminRole } = await supabase.rpc('is_super_admin', { _user_id: userId });
+  const { data: hasSuperAdminRole } = await supabase.rpc('is_current_super_admin');
 
   if (!hasAdminRole && !hasOperatorRole && !hasSuperAdminRole) {
     if (req) {
