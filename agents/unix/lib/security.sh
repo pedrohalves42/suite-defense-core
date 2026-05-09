@@ -41,7 +41,7 @@ get_security_events() {
 
     # --- New cron jobs (T1053.003: Cron) ---
     local cron_events='[]'
-    local cron_files=(/var/spool/cron/crontabs/* /etc/cron.d/* 2>/dev/null)
+    local cron_files; shopt -s nullglob; cron_files=(/var/spool/cron/crontabs/* /etc/cron.d/*); shopt -u nullglob
     for cf in "${cron_files[@]}"; do
         [[ -f "$cf" ]] || continue
         local mod_epoch
@@ -143,7 +143,7 @@ get_security_events() {
     done
 
     # T1547.004: .bashrc/.profile persistence
-    local shell_files=(/root/.bashrc /root/.bash_profile /home/*/.bashrc /home/*/.bash_profile 2>/dev/null)
+    local shell_files; shopt -s nullglob; shell_files=(/root/.bashrc /root/.bash_profile /home/*/.bashrc /home/*/.bash_profile); shopt -u nullglob
     for sf in "${shell_files[@]}"; do
         [[ -f "$sf" ]] || continue
         local mod_epoch

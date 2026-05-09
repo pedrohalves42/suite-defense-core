@@ -24,7 +24,7 @@ function Set-AgentState {
         "SYNCING"        = @("ENFORCING", "DEGRADED", "SAFE_MODE")
         "ENFORCING"      = @("SYNCING", "DEGRADED", "SAFE_MODE")
         "DEGRADED"       = @("AUTHENTICATING", "SYNCING", "ENFORCING", "SAFE_MODE")
-        "SAFE_MODE"      = @("INITIALIZING", "SYNCING")
+        "SAFE_MODE"      = @("INITIALIZING", "SYNCING", "ENFORCING")
     }
     
     if ($oldState -eq $NewState) {

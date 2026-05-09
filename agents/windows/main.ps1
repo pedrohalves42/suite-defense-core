@@ -109,6 +109,8 @@ try {
                 } catch { }
                 exit 0
             }
+        } catch [System.Threading.AbandonedMutexException] {
+            $acquired = $true
         } catch {
             Write-Host "[$(Get-Date -Format 'o')] [ERROR] Failed to acquire agent mutex: $($_.Exception.Message). Exiting." -ForegroundColor Red
             exit 0
