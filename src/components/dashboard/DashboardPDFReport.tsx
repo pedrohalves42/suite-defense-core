@@ -99,7 +99,7 @@ export function DashboardPDFReport({
 
       (doc as unknown as { autoTable: (...args: unknown[]) => void }).autoTable({
         startY: y,
-        head: [['Status', 'Quantidade', '% do Total']],
+        head: [[t('common.status'), t('common.quantity'), t('common.percentageOfTotal')]],
         body: Object.entries(statusCounts).map(([status, count]) => [
           status, count.toString(), `${((count / Math.max(jobs.length, 1)) * 100).toFixed(1)}%`
         ]),
