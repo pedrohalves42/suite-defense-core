@@ -68,10 +68,19 @@ _apply_forced_update() {
     cp "$temp_script" "$current_script" 2>/dev/null
     rm -f "$temp_script"
 
-    if systemctl is-active cybershield-agent &>/dev/null; then
-        sudo systemctl restart cybershield-agent &
+    # Restart mechanism: favor systemd if available, else re-exec
+    if command -v systemctl &>/dev/null && systemctl is-active cybershield-agent &>/dev/null; then
+        log "INFO" "[FORCE UPDATE] Restarting service via systemd..."
+        systemctl restart cybershield-agent 2>/dev/null &
+        exit 0
     else
-        exec "$current_script" --server-url "$SERVER_URL" --agent-token "$AGENT_TOKEN" --hmac-secret "$HMAC_SECRET" --agent-name "$AGENT_NAME" &
+        log "INFO" "[FORCE UPDATE] Re-executing script..."
+        # Use nohup to survive shell termination during update
+        nohup "$current_script" \
+            --server-url "$SERVER_URL" \
+            --agent-token "$AGENT_TOKEN" \
+            --hmac-secret "$HMAC_SECRET" \
+            --agent-name "$AGENT_NAME" >/dev/null 2>&1 &
+        exit 0
     fi
-    exit 0
 }

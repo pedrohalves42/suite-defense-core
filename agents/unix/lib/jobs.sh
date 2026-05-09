@@ -59,7 +59,23 @@ submit_job_result() {
     prev_hash=$(echo "$result" | jq -r '.previous_execution_hash')
     exec_index=$(echo "$result" | jq -r '.execution_index')
 
-    local payload='{"execution_id":"'"$execution_id"'","job_id":"'"$job_id"'","status":"'"$status"'","output":'"$output"',"output_hash":"'"$output_hash"'","error_message":"'"$error_message"'","finished_at":"'"$finished_at"'","result_signature":"'"$signature"'","execution_hash":"'"$exec_hash"'","previous_execution_hash":"'"$prev_hash"'","execution_index":'"$exec_index"',"agent_version":"'"$AGENT_VERSION"'"}'
+    # SSA-025: Securely build JSON payload using jq
+    local payload
+    payload=$(jq -n \
+        --arg eid "$execution_id" \
+        --arg jid "$job_id" \
+        --arg st "$status" \
+        --argjson out "$output" \
+        --arg oh "$output_hash" \
+        --arg em "$error_message" \
+        --arg fa "$finished_at" \
+        --arg sig "$signature" \
+        --arg eh "$exec_hash" \
+        --arg ph "$prev_hash" \
+        --arg ei "$exec_index" \
+        --arg av "$AGENT_VERSION" \
+        '{execution_id: $eid, job_id: $jid, status: $st, output: $out, output_hash: $oh, error_message: $em, finished_at: $fa, result_signature: $sig, execution_hash: $eh, previous_execution_hash: $ph, execution_index: $ei, agent_version: $av}')
+
     invoke_secure_request "POST" "/functions/v1/submit-job-result" "$payload" 30 3
 }
 

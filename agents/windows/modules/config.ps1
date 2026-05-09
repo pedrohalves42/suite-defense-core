@@ -60,7 +60,14 @@ function Get-SecretValue {
     )
     $filePath = "$script:SecretsDir\$Name"
     if (Test-Path $filePath) {
-        return (Get-Content $filePath -Raw -Encoding UTF8).Trim()
+        try {
+            $val = (Get-Content $filePath -Raw -Encoding UTF8).Trim()
+            if (-not [string]::IsNullOrWhiteSpace($val)) {
+                return $val
+            }
+        } catch {
+            Write-Log "Error reading secret file $Name: $($_.Exception.Message)" "WARN"
+        }
     }
     return $Fallback
 }
