@@ -43,9 +43,9 @@ export function DashboardPDFReport({
       doc.rect(0, 0, 210, 40, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(22);
-      doc.text('CyberShield — Relatório Executivo', 14, 18);
+      doc.text(t('adminPages.dashboard.pdfReport.title'), 14, 18);
       doc.setFontSize(10);
-      doc.text(`${tenantName} • Gerado em ${dateStr} às ${timeStr}`, 14, 28);
+      doc.text(`${tenantName} • ${t('adminPages.dashboard.pdfReport.generatedAt', { date: dateStr, time: timeStr })}`, 14, 28);
 
       // Status badge
       const stateLabel = systemState === 'healthy' ? 'SAUDÁVEL' : systemState === 'critical' ? 'CRÍTICO' : 'ATENÇÃO';
