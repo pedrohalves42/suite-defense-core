@@ -105,6 +105,25 @@ export async function triggerAutoReport(ctx: SubmitContext): Promise<void> {
   if (payload.status !== 'completed' || !job.type || !reportTriggerJobTypes.includes(job.type)) return
   
   try {
+    // Debouncing: check if a report was already generated for this agent/type in the last 30 minutes
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const { data: recentReport } = await supabase
+      .from('generated_reports')
+      .select('id')
+      .eq('agent_id', job.agent_id)
+      .eq('report_type', job.type)
+      .gte('created_at', thirtyMinutesAgo)
+      .limit(1)
+      .maybeSingle();
+
+    if (recentReport) {
+      logger.info('[submit-job-result] Skipping auto-report: recent report already exists (debounced)', { 
+        agent_id: job.agent_id, 
+        job_type: job.type 
+      });
+      return;
+    }
+
     logger.debug('[submit-job-result] Triggering auto-generate-report for job type:', job.type)
     
     const { error: reportError } = await supabase.functions.invoke('auto-generate-report', {

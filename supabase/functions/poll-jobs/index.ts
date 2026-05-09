@@ -60,7 +60,7 @@ serveAgent(async (req, ctx) => {
 }, {
   rateLimit: {
     endpoint: 'poll-jobs',
-    maxRequests: 30, // Relaxed from 3 per min to 30 per min to handle fleet bursts
+    maxRequests: 10, // Optimized: Reduced from 30 to 10 to decrease DB load and costs
     windowMinutes: 1,
     blockMinutes: 5,
   }
