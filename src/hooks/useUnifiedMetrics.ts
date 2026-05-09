@@ -275,9 +275,9 @@ export function useUnifiedMetrics() {
       return { emoji: '🟢', title: t('adminPages.dashboard.allUnderControl'), description: t('adminPages.dashboard.allProtected'), variant: 'success' as const };
     }
     if (securityScore >= 65 && criticalCount <= 2) {
-      return { emoji: '🟡', title: t('adminPages.dashboard.attentionNeeded'), description: t('adminPages.dashboard.itemsReview'), variant: 'warning' as const };
+      return { emoji: '🟡', title: t('adminPages.dashboard.attentionNeeded'), description: t('adminPages.dashboard.someItemsNeedCheck'), variant: 'warning' as const };
     }
-    return { emoji: '🔴', title: t('adminPages.dashboard.urgentAction'), description: t('adminPages.dashboard.highRisk'), variant: 'danger' as const };
+    return { emoji: '🔴', title: t('adminPages.dashboard.urgentAction'), description: t('adminPages.dashboard.riskImpact'), variant: 'danger' as const };
   }, [securityScore, data?.alerts.critical, t]);
 
   const metrics: UnifiedMetrics | null = useMemo(() => {
