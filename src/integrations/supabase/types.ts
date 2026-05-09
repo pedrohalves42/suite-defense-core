@@ -51308,6 +51308,7 @@ export type Database = {
         Args: { p_playbook_id: string; p_target_version: number }
         Returns: Json
       }
+      rotate_hmac_signatures: { Args: never; Returns: undefined }
       run_all_health_checks: {
         Args: never
         Returns: {
