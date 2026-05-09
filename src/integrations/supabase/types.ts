@@ -51543,7 +51543,7 @@ export type Database = {
       try_acquire_rule_lock: { Args: { p_rule_id: string }; Returns: boolean }
       update_agent_heartbeat_atomic: {
         Args: { p_agent_id: string; p_update_data: Json }
-        Returns: undefined
+        Returns: Json
       }
       update_agent_web_consent: {
         Args: { p_agent_id: string; p_enabled: boolean; p_user_id: string }
