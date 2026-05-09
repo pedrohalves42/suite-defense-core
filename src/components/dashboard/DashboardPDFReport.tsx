@@ -116,7 +116,7 @@ export function DashboardPDFReport({
       if (y > 230) { doc.addPage(); y = 20; }
       doc.setFontSize(14);
       doc.setTextColor(30, 41, 59);
-      doc.text('Top 10 Computadores Mais Ativos', 14, y);
+      doc.text(t('adminPages.dashboard.pdfReport.topActiveComputers'), 14, y);
       y += 8;
 
       const agentJobCounts = agents
