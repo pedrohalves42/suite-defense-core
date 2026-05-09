@@ -1,7 +1,8 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAgentDashboardRecords } from '@/lib/agentQueryHelper';
 import { useTenant } from '@/hooks/useTenant';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -54,13 +55,7 @@ export function useAgentManagement() {
     queryKey: ['agents', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
-      const result = await supabase
-        .from('agents')
-        .select('id, agent_name, status, enrolled_at, last_heartbeat, tenant_id, os_type, os_version, hostname, agent_version')
-        .eq('tenant_id', tenant.id)
-        .order('enrolled_at', { ascending: false });
-      if (result.error) throw result.error;
-      return (result.data || []) as Agent[];
+      return (await fetchAgentDashboardRecords(tenant.id)) as Agent[];
     },
     enabled: !!tenant?.id,
     refetchInterval: false,
@@ -70,7 +65,7 @@ export function useAgentManagement() {
 
   // Installation status
   const { data: installationStatus } = useQuery<Record<string, boolean>>({
-    queryKey: ['installation-status', tenant?.id],
+    queryKey: ['installation-status', tenant?.id, agents?.map(a => a.id).join(',') ?? ''],
     queryFn: async () => {
       if (!tenant?.id || !agents) return {};
       const agentIds = agents.map(a => a.id);
@@ -91,7 +86,7 @@ export function useAgentManagement() {
 
   // Fetch metrics
   const { data: agentMetrics } = useQuery<Record<string, AgentMetrics>>({
-    queryKey: ['agent-metrics', tenant?.id],
+    queryKey: ['agent-metrics', tenant?.id, agents?.map(a => a.id).join(',') ?? ''],
     queryFn: async () => {
       if (!tenant?.id || !agents) return {};
       const agentIds = agents.map(a => a.id);
@@ -159,14 +154,15 @@ export function useAgentManagement() {
     if (!agents) return [];
     const term = debouncedSearch.toLowerCase();
     return agents.filter(agent => {
-      if (term && !agent.agent_name.toLowerCase().includes(term) &&
-          !agent.hostname?.toLowerCase().includes(term)) return false;
+      const searchableName = agent.agent_name.toLowerCase();
+      const searchableHost = agent.hostname?.toLowerCase() ?? '';
+      if (term && !searchableName.includes(term) && !searchableHost.includes(term)) return false;
       if (statusFilter !== 'all') { if (getAgentStatus(agent) !== statusFilter) return false; }
       if (versionFilter === 'outdated' && !isVersionOutdated(agent)) return false;
       if (versionFilter === 'current' && isVersionOutdated(agent)) return false;
       return true;
     });
-  }, [agents, debouncedSearch, statusFilter, versionFilter]);
+  }, [agents, debouncedSearch, statusFilter, versionFilter, latestVersions]);
 
   // Stats
   const stats = useMemo<AgentStats>(() => {
@@ -179,7 +175,7 @@ export function useAgentManagement() {
       disabled: agents.filter(a => getAgentStatus(a) === 'disabled').length,
       outdated: agents.filter(a => isVersionOutdated(a)).length,
     };
-  }, [agents]);
+  }, [agents, latestVersions]);
 
   // Mutations
   const deleteAgentMutation = useMutation({

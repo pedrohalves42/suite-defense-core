@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAgentDashboardRecords } from '@/lib/agentQueryHelper';
 import { useTenant } from '@/hooks/useTenant';
 import { getAgentOnlineStatus } from '@/lib/agent-status-constants';
 import { logger } from '@/lib/logger';
@@ -36,21 +37,14 @@ export function useAgentMonitoring() {
     queryKey: ['agents-monitoring', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
-      const { data, error } = await supabase.rpc('get_agents_list', {
-        p_tenant_id: tenant.id,
-        p_include_archived: false,
-      });
-      if (error) throw error;
-      return ((data || []) as unknown as Record<string, unknown>[])
-        .map((agent) => ({
-          id: String(agent.id ?? ''),
-          agent_name: String(agent.agent_name ?? ''),
-          status: String(agent.status ?? ''),
-          last_heartbeat: agent.last_heartbeat ? String(agent.last_heartbeat) : null,
-          enrolled_at: String(agent.enrolled_at ?? ''),
-          agent_state: agent.agent_state ? String(agent.agent_state) : null,
-        }))
-        .sort((a: Agent, b: Agent) => new Date(b.enrolled_at).getTime() - new Date(a.enrolled_at).getTime()) as Agent[];
+      return (await fetchAgentDashboardRecords(tenant.id)).map((agent) => ({
+        id: agent.id,
+        agent_name: agent.agent_name,
+        status: agent.status,
+        last_heartbeat: agent.last_heartbeat,
+        enrolled_at: agent.enrolled_at,
+        agent_state: agent.agent_state ?? undefined,
+      })) as Agent[];
     },
     enabled: !tenantLoading && !!tenant?.id,
   });
@@ -115,19 +109,11 @@ export function useAgentMonitoring() {
     queryKey: ['agent-uptime', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
-      const { data, error } = await supabase.rpc('get_agents_list', {
-        p_tenant_id: tenant.id,
-        p_include_archived: false,
-      });
-      if (error) throw error;
-      return (data || []).map((agent: unknown) => {
-        const a = agent as Record<string, unknown>;
-        return {
-          agent_name: String(a.agent_name ?? ''),
-          last_heartbeat: a.last_heartbeat ? String(a.last_heartbeat) : null,
-          enrolled_at: String(a.enrolled_at ?? ''),
-        };
-      });
+      return (await fetchAgentDashboardRecords(tenant.id)).map((agent) => ({
+        agent_name: agent.agent_name,
+        last_heartbeat: agent.last_heartbeat,
+        enrolled_at: agent.enrolled_at,
+      }));
     },
     enabled: !tenantLoading && !!tenant?.id,
   });
