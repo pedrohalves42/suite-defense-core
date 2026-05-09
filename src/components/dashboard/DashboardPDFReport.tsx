@@ -92,7 +92,7 @@ export function DashboardPDFReport({
       y += 8;
 
       const statusCounts = jobs.reduce((acc, j) => {
-        const label = j.status === 'completed' ? 'Concluída' : j.status === 'failed' ? 'Falha' : j.status === 'queued' ? 'Aguardando' : j.status;
+        const label = j.status === 'completed' ? t('common.completed') : j.status === 'failed' ? t('common.failure') : j.status === 'queued' ? t('common.waiting') : j.status;
         acc[label] = (acc[label] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
