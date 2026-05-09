@@ -51,8 +51,26 @@ if [[ -z "$SERVER_URL" || -z "$AGENT_TOKEN" || -z "$HMAC_SECRET" ]]; then
     exit 1
 fi
 
-SERVER_URL="${SERVER_URL%/}"
-NETWORK_TEST_HOST=$(echo "$SERVER_URL" | sed -E 's|https?://||' | sed 's|/.*||')
+# ============================================
+#  PRE-FLIGHT VALIDATION
+# ============================================
+validate_environment() {
+    local missing=()
+    # macOS includes many of these by default, but jq might be missing
+    for cmd in jq openssl curl sha256sum base64 awk sed grep; do
+        if ! command -v "$cmd" &>/dev/null; then
+            missing+=("$cmd")
+        fi
+    done
+
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        echo "ERROR: Missing required dependencies: ${missing[*]}"
+        echo "Please install them (e.g., brew install jq)"
+        exit 1
+    fi
+}
+
+validate_environment
 
 # Create directories
 mkdir -p "$LOG_DIR" "$EVIDENCE_DIR" "$CONFIG_DIR" "$KEYS_DIR" "$DATA_DIR"
