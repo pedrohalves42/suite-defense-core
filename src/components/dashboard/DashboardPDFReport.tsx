@@ -130,8 +130,8 @@ export function DashboardPDFReport({
 
       (doc as unknown as { autoTable: (...args: unknown[]) => void }).autoTable({
         startY: y,
-        head: [['Computador', 'Verificações', 'Status']],
-        body: agentJobCounts.map(a => [a.name, a.jobs.toString(), a.online ? 'Online' : 'Offline']),
+        head: [[t('adminPages.dashboard.computers'), t('adminPages.dashboard.pdfReport.verifications'), t('common.status')]],
+        body: agentJobCounts.map(a => [a.name, a.jobs.toString(), a.online ? t('dashboard.online') : t('dashboard.offline')]),
         theme: 'grid',
         headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontSize: 10 },
         bodyStyles: { fontSize: 10 },
