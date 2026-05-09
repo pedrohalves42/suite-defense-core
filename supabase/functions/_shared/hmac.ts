@@ -428,12 +428,12 @@ export async function verifyHmacSignature(
     return {
       valid: false,
       errorCode: 'AUTH_TIMESTAMP_OUT_OF_RANGE',
-      errorMessage: `Timestamp expirado (skew: ${closestSkewSeconds.toFixed(1)}s, max: 300s)`,
+      errorMessage: `Timestamp expirado (skew: ${closestSkewSeconds.toFixed(1)}s, max: ${maxDiffMs / 1000}s)`,
       transient: true,
       serverTimeMs,
       skewSeconds: closestSkewSeconds,
       receivedTimestamp: closestTimestamp,
-      maxSkewSeconds: 300,
+      maxSkewSeconds: maxDiffMs / 1000,
     };
   }
 
