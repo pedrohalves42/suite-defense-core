@@ -10,6 +10,7 @@ interface DashboardEmptyStateProps {
 
 export function DashboardEmptyState({ tenantName }: DashboardEmptyStateProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <div className="min-h-screen bg-background p-6">
