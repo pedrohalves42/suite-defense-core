@@ -85,6 +85,14 @@
     "attention": "Atenção",
     "active": "Ativo",
     "pending": "Pendente",
+    "metric": "Métrica",
+    "value": "Valor",
+    "completed": "Concluída",
+    "failure": "Falha",
+    "waiting": "Aguardando",
+    "quantity": "Quantidade",
+    "percentageOfTotal": "% do Total",
+    "locale": "pt-BR",
     "language": "Idioma"
   },
   "sidebar": {
