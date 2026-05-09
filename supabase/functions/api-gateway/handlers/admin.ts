@@ -68,10 +68,12 @@ export async function handleUpdateUserStatus(supabase: SB, requestId: string, pa
   if (user_id === actorId) return { __status: 400, error: 'Nao e possivel desativar sua propria conta' };
 
   if (tenantId || !isSuperAdmin) {
-    const checkTenantId = tenantId || (isSuperAdmin ? null : tenantId);
+    const checkTenantId = tenantId;
     if (checkTenantId) {
       const { data: targetRole } = await supabase.from('user_roles').select('tenant_id').eq('user_id', user_id).eq('tenant_id', checkTenantId).maybeSingle();
-      if (!targetRole) return { __status: 403, error: 'Usuario nao encontrado no seu tenant' };
+      if (!targetRole) return { __status: 403, error: 'Usuario nao encontrado no tenant informado' };
+    } else if (!isSuperAdmin) {
+      return { __status: 403, error: 'Tenant context required' };
     }
   }
 
@@ -164,22 +166,26 @@ export async function handleListUsers(supabase: SB, requestId: string, payload: 
   const userId = ctx?.userId;
   if (!userId) return { __status: 401, error: 'Nao autorizado' };
 
-  const [adminCheck, superAdminCheck] = await Promise.all([
-    supabase.rpc('has_role', { _user_id: userId, _role: 'admin' }),
-    supabase.rpc('is_current_super_admin'),
-  ]);
-  if (adminCheck.error || superAdminCheck.error) return { __status: 500, error: 'Falha ao verificar permissoes' };
-  if (!adminCheck.data && !superAdminCheck.data) return { __status: 403, error: 'Acesso negado' };
-
+  const { data: isSuperAdmin } = await supabase.rpc('is_current_super_admin');
+  
   const requestedTenantId = (payload.tenant_id as string) || ctx?.tenantId;
   let targetTenantId: string | null = null;
 
   if (requestedTenantId) {
-    if (superAdminCheck.data) {
+    if (isSuperAdmin) {
       targetTenantId = requestedTenantId;
     } else {
-      const { data: membership } = await supabase.from('user_roles').select('tenant_id').eq('user_id', userId).eq('tenant_id', requestedTenantId).limit(1).maybeSingle();
-      if (!membership?.tenant_id) return { __status: 403, error: 'Acesso negado ao tenant selecionado' };
+      // Security Fix: Check if user has ADMIN role in this specific tenant
+      const { data: membership } = await supabase
+        .from('user_roles')
+        .select('tenant_id')
+        .eq('user_id', userId)
+        .eq('tenant_id', requestedTenantId)
+        .eq('role', 'admin') // MUST be admin in the target tenant
+        .limit(1)
+        .maybeSingle();
+      
+      if (!membership?.tenant_id) return { __status: 403, error: 'Acesso negado: voce precisa ser administrador deste tenant' };
       targetTenantId = membership.tenant_id;
     }
   } else {
@@ -308,12 +314,10 @@ export async function handleSetActiveTenant(supabase: SB, requestId: string, pay
   const authHeader = ctx?.req?.headers.get('Authorization');
   let existingAppMetadata: Record<string, unknown> = {};
   if (authHeader) {
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-    const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const { createSupabaseClient: cc } = await import('../../_shared/supabase-client.ts');
-    const userClient = cc(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { headers: { Authorization: authHeader } } });
-    const { data: { user } } = await userClient.auth.getUser();
-    existingAppMetadata = user?.app_metadata || {};
+    const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+    if (user) {
+      existingAppMetadata = user.app_metadata || {};
+    }
   }
 
   const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
