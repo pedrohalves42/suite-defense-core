@@ -7,6 +7,7 @@ import { InstallationCharts } from './components/InstallationCharts';
 import { useTranslation } from 'react-i18next';
 
 export default function InstallationMetrics() {
+  const { t } = useTranslation();
   const {
     metrics, errors, isLoading, totalMetrics, totalAttempts,
     successRate, avgInstallTime, platformMetrics,
