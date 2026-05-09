@@ -40,7 +40,7 @@ initialize_agent_keys() {
         log "INFO" "[KEYS] Loaded existing keypair (fingerprint: ${SIGNING_FINGERPRINT:0:16}...)"
         return 0
     fi
-    SIGNING_FINGERPRINT=$(generate_signing_keypair)
+    SIGNING_FINGERPRINT=$(generate_signing_keypair | tail -n1)
     [[ -z "$SIGNING_FINGERPRINT" ]] && return 1
     return 0
 }

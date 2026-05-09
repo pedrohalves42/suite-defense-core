@@ -30,10 +30,10 @@ execute_job() {
     hash_data=$(get_execution_hash "$execution_id" "$job_id" "$EXECUTION_CHAIN_LAST_HASH")
 
     # Dispatch to handler (platform-specific + common)
-    output=$(_dispatch_job "$job_type" "$job")
-    if [[ $? -ne 0 && -z "$output" ]]; then
-        error_message="Unknown job type: $job_type"
-        status="failed"
+    output=$(_dispatch_job \"$job_type\" \"$job\" 2>/dev/null)
+    if [[ $? -ne 0 && -z \"$output\" ]]; then
+        error_message=\"Unknown job type: $job_type\"
+        status=\"failed\"
     fi
 
     local end_time duration output_hash
