@@ -33,9 +33,22 @@ dispatch_job_handler() {
 
 _collect_software_inventory() {
     local list count
-    list=$(dpkg-query -W -f='{"name":"${Package}","version":"${Version}"},\n' 2>/dev/null | sed '$ s/,$//' | tr -d '\n' || echo '{}')
-    count=$(dpkg-query -W 2>/dev/null | wc -l || echo 0)
-    echo '{"software_count":'"$count"',"software_list":['"$list"'],"collected_at":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'"}'
+    # SSA-024: Use jq to build valid JSON instead of manual string concatenation
+    if command -v dpkg-query &>/dev/null; then
+        list=$(dpkg-query -W -f='${Package}\t${Version}\n' 2>/dev/null | \
+               awk -F'\t' '{ printf "%s\t%s\n", $1, $2 }' | \
+               jq -R -s '[split("\n")[] | select(length > 0) | split("\t") | {name: .[0], version: .[1]}]')
+        count=$(echo "$list" | jq '. | length')
+    elif command -v rpm &>/dev/null; then
+        list=$(rpm -qa --queryformat '%{NAME}\t%{VERSION}\n' 2>/dev/null | \
+               jq -R -s '[split("\n")[] | select(length > 0) | split("\t") | {name: .[0], version: .[1]}]')
+        count=$(echo "$list" | jq '. | length')
+    else
+        list='[]'
+        count=0
+    fi
+    
+    echo '{"software_count":'"$count"',"software_list":'"$list"',"collected_at":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'"}'
 }
 
 _collect_antivirus_status() {
