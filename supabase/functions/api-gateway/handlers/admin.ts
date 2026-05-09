@@ -68,10 +68,12 @@ export async function handleUpdateUserStatus(supabase: SB, requestId: string, pa
   if (user_id === actorId) return { __status: 400, error: 'Nao e possivel desativar sua propria conta' };
 
   if (tenantId || !isSuperAdmin) {
-    const checkTenantId = tenantId || (isSuperAdmin ? null : tenantId);
+    const checkTenantId = tenantId;
     if (checkTenantId) {
       const { data: targetRole } = await supabase.from('user_roles').select('tenant_id').eq('user_id', user_id).eq('tenant_id', checkTenantId).maybeSingle();
-      if (!targetRole) return { __status: 403, error: 'Usuario nao encontrado no seu tenant' };
+      if (!targetRole) return { __status: 403, error: 'Usuario nao encontrado no tenant informado' };
+    } else if (!isSuperAdmin) {
+      return { __status: 403, error: 'Tenant context required' };
     }
   }
 
