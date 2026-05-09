@@ -120,11 +120,11 @@ export default function InstallationMetrics() {
                   {platformErrors.map((err, idx) => (
                     <div key={idx} className="text-sm border-l-2 border-destructive/50 pl-3 py-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground truncate max-w-[70%]">{err.error_message || 'Erro desconhecido'}</span>
+                        <span className="text-muted-foreground truncate max-w-[70%]">{err.error_message || t('common.unknownError')}</span>
                         <Badge variant="outline" className="ml-2">{err.error_count}x</Badge>
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        Tipo: {err.event_type} | Ultimo: {err.last_occurrence ? formatBrazilDateTime(err.last_occurrence, 'date') : 'N/A'}
+                        {t('common.type')}: {err.event_type} | {t('common.last')}: {err.last_occurrence ? formatBrazilDateTime(err.last_occurrence, 'date') : t('common.noData')}
                       </span>
                     </div>
                   ))}
