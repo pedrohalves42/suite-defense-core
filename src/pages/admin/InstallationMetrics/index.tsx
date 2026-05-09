@@ -61,42 +61,42 @@ export default function InstallationMetrics() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taxa de Sucesso Global</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('adminPages.installationMetrics.globalSuccessRate')}</CardTitle>
             {parseFloat(successRate) >= 80 ? <TrendingUp className="h-4 w-4 text-green-600" /> : <TrendingDown className="h-4 w-4 text-red-600" />}
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{successRate}%</div>
-            <p className="text-xs text-muted-foreground">{totalMetrics?.successful_events} sucessos de {totalAttempts} eventos</p>
+            <p className="text-xs text-muted-foreground">{totalMetrics?.successful_events} {t('common.success_plural')} {t('common.of')} {totalAttempts} {t('common.events')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tempo Medio</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('adminPages.installationMetrics.avgTime')}</CardTitle>
             <Clock className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{avgInstallTime}s</div>
-            <p className="text-xs text-muted-foreground">{parseFloat(avgInstallTime) < 60 ? "Performance excelente" : "Pode otimizar"}</p>
+            <p className="text-xs text-muted-foreground">{parseFloat(avgInstallTime) < 60 ? t('adminPages.installationMetrics.excellentPerformance') : t('adminPages.installationMetrics.canOptimize')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Eventos com Falha</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('adminPages.installationMetrics.failedEvents')}</CardTitle>
             <AlertTriangle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalMetrics?.failed_events || 0}</div>
-            <p className="text-xs text-muted-foreground">{errors?.length || 0} tipos de erro unicos</p>
+            <p className="text-xs text-muted-foreground">{errors?.length || 0} {t('adminPages.installationMetrics.uniqueErrorTypes')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Instalacoes Completas</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('adminPages.installationMetrics.completeInstallations')}</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalMetrics?.total_installed || 0}</div>
-            <p className="text-xs text-muted-foreground">{totalMetrics?.total_generated || 0} gerados, {totalMetrics?.total_copied || 0} copiados</p>
+            <p className="text-xs text-muted-foreground">{totalMetrics?.total_generated || 0} {t('common.generated')}, {totalMetrics?.total_copied || 0} {t('common.copied')}</p>
           </CardContent>
         </Card>
       </div>
