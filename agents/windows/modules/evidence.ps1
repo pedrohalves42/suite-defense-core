@@ -30,7 +30,26 @@ function Add-EvidenceEntry {
         $Global:EvidenceBuffer.Add($entry) | Out-Null
         
         $journalLine = ($entry | ConvertTo-Json -Compress -Depth 5)
-        Add-Content -Path $Global:EvidenceJournalPath -Value $journalLine -Encoding UTF8 -ErrorAction SilentlyContinue
+        
+        # P3: Robust journal write with retry and error propagation (prevents silent loss)
+        $retryCount = 0
+        $maxRetries = 3
+        $writeSuccess = $false
+        
+        while (-not $writeSuccess -and $retryCount -lt $maxRetries) {
+            try {
+                Add-Content -Path $Global:EvidenceJournalPath -Value $journalLine -Encoding UTF8 -ErrorAction Stop
+                $writeSuccess = $true
+            } catch {
+                $retryCount++
+                Start-Sleep -Milliseconds (100 * $retryCount)
+            }
+        }
+        
+        if (-not $writeSuccess) {
+            Write-Log "[EVIDENCE] CRITICAL: Failed to write to journal after $maxRetries attempts. Memory buffer will grow until next flush." "ERROR"
+        }
+
         
         if ($Global:EvidenceBuffer.Count -ge 10) {
             Invoke-FlushEvidence

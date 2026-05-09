@@ -4291,6 +4291,63 @@ export type Database = {
           },
         ]
       }
+      agent_registration_locks: {
+        Row: {
+          agent_name: string
+          locked_at: string | null
+          locked_by_agent_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          agent_name: string
+          locked_at?: string | null
+          locked_by_agent_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          agent_name?: string
+          locked_at?: string | null
+          locked_by_agent_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_registration_locks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_registration_locks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_registration_locks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "agent_registration_locks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "agent_registration_locks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       agent_releases: {
         Row: {
           channel: string
@@ -39002,6 +39059,72 @@ export type Database = {
           },
         ]
       }
+      tenant_security_policies: {
+        Row: {
+          created_at: string | null
+          enforce_hmac_enrollment: boolean | null
+          id: string
+          max_clock_skew_seconds: number | null
+          tenant_id: string
+          token_expiry_days: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          enforce_hmac_enrollment?: boolean | null
+          id?: string
+          max_clock_skew_seconds?: number | null
+          tenant_id: string
+          token_expiry_days?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          enforce_hmac_enrollment?: boolean | null
+          id?: string
+          max_clock_skew_seconds?: number | null
+          tenant_id?: string
+          token_expiry_days?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_security_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_security_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_security_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_security_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_security_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       tenant_settings: {
         Row: {
           alert_email: string | null
@@ -50367,17 +50490,30 @@ export type Database = {
         Args: { retention_days?: number }
         Returns: undefined
       }
-      enroll_agent_atomic: {
-        Args: {
-          p_agent_name: string
-          p_expires_at: string
-          p_hmac_secret: string
-          p_key_hash: string
-          p_token_hash: string
-          p_token_prefix: string
-        }
-        Returns: Json
-      }
+      enroll_agent_atomic:
+        | {
+            Args: {
+              p_agent_name: string
+              p_expires_at: string
+              p_hmac_secret: string
+              p_key_hash: string
+              p_token_hash: string
+              p_token_prefix: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_agent_name: string
+              p_expires_at: string
+              p_hmac_secret: string
+              p_key_hash: string
+              p_metadata_hash?: string
+              p_token_hash: string
+              p_token_prefix: string
+            }
+            Returns: Json
+          }
       ensure_partition_rls: { Args: never; Returns: undefined }
       ensure_tenant_features: {
         Args: {
@@ -51407,7 +51543,7 @@ export type Database = {
       try_acquire_rule_lock: { Args: { p_rule_id: string }; Returns: boolean }
       update_agent_heartbeat_atomic: {
         Args: { p_agent_id: string; p_update_data: Json }
-        Returns: undefined
+        Returns: Json
       }
       update_agent_web_consent: {
         Args: { p_agent_id: string; p_enabled: boolean; p_user_id: string }

@@ -263,7 +263,19 @@ export async function verifyHmacSignature(
   };
 
   // ── 6. Verification loop — FAST PATH then SLOW PATH ───────
-  const maxDiffMs = 5 * 60 * 1000;
+  // P3: Dynamic skew based on tenant policy (fallback to 5m)
+  let maxDiffMs = 5 * 60 * 1000;
+  if (resolvedTenantId) {
+    const { data: policy } = await supabase
+      .from('tenant_security_policies')
+      .select('max_clock_skew_seconds')
+      .eq('tenant_id', resolvedTenantId)
+      .maybeSingle();
+    if (policy?.max_clock_skew_seconds) {
+      maxDiffMs = policy.max_clock_skew_seconds * 1000;
+    }
+  }
+
   let closestSkewSeconds: number | null = null;
   let closestTimestamp: number | undefined;
   let hasTimestampInRange = false;

@@ -72,7 +72,7 @@ function Invoke-SecureApi {
             }
 
             # Build body JSON
-            $bodyJson = if ($Body.Count -gt 0) { $Body | ConvertTo-Json -Depth 10 } else { "" }
+            $bodyJson = if ($Body.Count -gt 0) { $Body | ConvertTo-Json -Depth 10 -Compress } else { "" }
 
             # Add HMAC signature with nonce (hex-encoded, aligned with Unix)
             if ($bodyJson -and $script:Config.HmacSecret) {
