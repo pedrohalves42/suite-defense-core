@@ -18,6 +18,7 @@ import { useTenant } from '@/hooks/useTenant';
 import { useAgentSnapshots, getAgentStatusCounts } from '@/hooks/useAgentSnapshots';
 import { subDays } from 'date-fns';
 import { useRealtimeQuery } from '@/hooks/useRealtimeQuery';
+import { useTranslation } from 'react-i18next';
 
 // === Modelo de custo REALISTA para PMEs brasileiras ===
 // Valores conservadores baseados em custo médio de suporte técnico local
