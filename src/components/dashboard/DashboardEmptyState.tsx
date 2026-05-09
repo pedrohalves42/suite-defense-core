@@ -53,9 +53,9 @@ export function DashboardEmptyState({ tenantName }: DashboardEmptyStateProps) {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
-                { step: '1', title: 'Instale o agente', desc: 'Baixe e execute o instalador nos computadores que deseja proteger' },
-                { step: '2', title: 'Aguarde a conexão', desc: 'O agente se conectará automaticamente em poucos minutos' },
-                { step: '3', title: 'Monitore tudo aqui', desc: 'Este painel mostrará o status de proteção em tempo real' },
+                { step: '1', title: t('adminPages.dashboard.emptyState.step1Title'), desc: t('adminPages.dashboard.emptyState.step1Desc') },
+                { step: '2', title: t('adminPages.dashboard.emptyState.step2Title'), desc: t('adminPages.dashboard.emptyState.step2Desc') },
+                { step: '3', title: t('adminPages.dashboard.emptyState.step3Title'), desc: t('adminPages.dashboard.emptyState.step3Desc') },
               ].map(({ step, title, desc }) => (
                 <div key={step} className="flex items-start gap-3">
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">{step}</div>
