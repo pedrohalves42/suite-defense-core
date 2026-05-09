@@ -32,13 +32,13 @@ export function DashboardEmptyState({ tenantName }: DashboardEmptyStateProps) {
             <div className="inline-flex p-5 rounded-full bg-primary/10 mb-6">
               <Monitor className="h-14 w-14 text-primary" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-3">Nenhum computador cadastrado ainda</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-3">{t('adminPages.dashboard.emptyState.title')}</h2>
             <p className="text-muted-foreground max-w-md mx-auto mb-8">
-              Para começar a monitorar e proteger seus computadores, instale o agente de proteção nos equipamentos da sua empresa.
+              {t('adminPages.dashboard.emptyState.description')}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button size="lg" onClick={() => navigate('/installer')} className="gap-2">
-                <Download className="h-5 w-5" />Instalar Agente de Proteção<ArrowRight className="h-4 w-4" />
+                <Download className="h-5 w-5" />{t('adminPages.dashboard.emptyState.installButton')}<ArrowRight className="h-4 w-4" />
               </Button>
             </div>
           </CardContent>
