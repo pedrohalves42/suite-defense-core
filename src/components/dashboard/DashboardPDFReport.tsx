@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FileDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import type { DashboardAgent, DashboardJob } from "@/types/dashboard";
 import { logger } from '@/lib/logger';
 
