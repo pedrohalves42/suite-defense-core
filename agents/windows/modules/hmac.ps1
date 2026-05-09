@@ -28,7 +28,9 @@ function Compute-HMAC {
         $Global:CachedHmacSecret = $Secret
     }
 
-    $hash = $Global:CachedHmacObject.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Message))
+    # Use UTF8 without BOM explicitly to ensure cross-platform compatibility
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    $hash = $Global:CachedHmacObject.ComputeHash($utf8NoBom.GetBytes($Message))
     
     # Output as lowercase hex (aligned with Unix agents and backend)
     return ([BitConverter]::ToString($hash) -replace '-', '').ToLower()
