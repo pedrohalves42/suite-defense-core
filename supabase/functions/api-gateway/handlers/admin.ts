@@ -24,7 +24,7 @@ export async function handleGetAdminReleases(supabase: SB, requestId: string, _p
   const userId = ctx?.userId;
   if (!userId) throw new Error('Authentication required');
 
-  const { data: isSuperAdmin, error: roleError } = await supabase.rpc('has_role', { _user_id: userId, _role: 'super_admin' });
+  const { data: isSuperAdmin, error: roleError } = await supabase.rpc('is_current_super_admin');
   if (roleError || !isSuperAdmin) {
     return { __status: 403, error: 'Forbidden - super_admin required' };
   }
@@ -49,7 +49,7 @@ export async function handleUpdateUserStatus(supabase: SB, requestId: string, pa
   const tenantId = ctx?.tenantId;
   if (!actorId) return { __status: 401, error: 'Authentication required' };
 
-  const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: actorId });
+  const { data: isSuperAdmin } = await supabase.rpc('is_current_super_admin');
   
   // Use tenantId if provided (enforced for non-super-admins)
   if (!isSuperAdmin && !tenantId) return { __status: 401, error: 'Tenant context required for admin actions' };
@@ -166,7 +166,7 @@ export async function handleListUsers(supabase: SB, requestId: string, payload: 
 
   const [adminCheck, superAdminCheck] = await Promise.all([
     supabase.rpc('has_role', { _user_id: userId, _role: 'admin' }),
-    supabase.rpc('has_role', { _user_id: userId, _role: 'super_admin' }),
+    supabase.rpc('is_current_super_admin'),
   ]);
   if (adminCheck.error || superAdminCheck.error) return { __status: 500, error: 'Falha ao verificar permissoes' };
   if (!adminCheck.data && !superAdminCheck.data) return { __status: 403, error: 'Acesso negado' };
@@ -243,7 +243,7 @@ export async function handleListAllUsersAdmin(supabase: SB, requestId: string, p
   const userId = ctx?.userId;
   if (!userId) return { __status: 401, error: 'Authentication required' };
 
-  const { data: isSuperAdmin, error: roleError } = await supabase.rpc('is_super_admin', { _user_id: userId });
+  const { data: isSuperAdmin, error: roleError } = await supabase.rpc('is_current_super_admin');
   if (roleError || !isSuperAdmin) return { __status: 403, error: 'Forbidden - super_admin required' };
 
   const limit = Math.min(Number(payload.limit) || 1000, 1000);
@@ -341,7 +341,7 @@ export async function handleUpdateUserRole(supabase: SB, requestId: string, payl
   if (!actorId) return { __status: 401, error: { code: 'UNAUTHORIZED', message: 'Authentication required', requestId } };
   
   // Use tenantId from context (enforced for non-super-admins)
-  const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: actorId });
+  const { data: isSuperAdmin } = await supabase.rpc('is_current_super_admin');
   const targetTenantId = (isSuperAdmin && (payload.tenant_id as string)) || tenantId;
   if (!targetTenantId) return { __status: 400, error: 'Tenant context required' };
 
@@ -397,7 +397,7 @@ export async function handleAdminCreateUser(supabase: SB, requestId: string, pay
 
   const { username, password, full_name, role, tenant_id } = parsed.data;
 
-  const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: userId });
+  const { data: isSuperAdmin } = await supabase.rpc('is_current_super_admin');
   if (!isSuperAdmin) {
     const { data: callerRole } = await supabase.from('user_roles').select('role').eq('user_id', userId).eq('tenant_id', tenant_id).eq('role', 'admin').maybeSingle();
     if (!callerRole) return { __status: 403, success: false, error: 'Forbidden: Admin role required in this tenant' };

@@ -556,7 +556,7 @@ export async function handleCreateStripeProducts(supabase: SB, requestId: string
   logger.info('[CREATE-STRIPE-PRODUCTS] Starting V4 product creation');
 
   const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
-  const { data: isSuperAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'super_admin' });
+  const { data: isSuperAdmin } = await supabase.rpc('is_current_super_admin');
   if (!isAdmin && !isSuperAdmin) return { error: 'Only admins can create Stripe products', __status: 403 };
 
   const { stripe } = await getStripe();
@@ -602,7 +602,7 @@ export async function handleCreateStripeProductsExtended(supabase: SB, requestId
   logger.info('[CREATE-STRIPE-PRODUCTS-EXTENDED] Starting extended period price creation');
 
   const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
-  const { data: isSuperAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'super_admin' });
+  const { data: isSuperAdmin } = await supabase.rpc('is_current_super_admin');
   if (!isAdmin && !isSuperAdmin) return { error: 'Only admins can create Stripe products', __status: 403 };
 
   const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')!;
@@ -670,7 +670,7 @@ export async function handleStripeHealthCheck(supabase: SB, requestId: string, _
   const userId = ctx?.userId;
   if (!userId) return { error: 'Authentication required', __status: 401 };
 
-  const { data: isSuperAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'super_admin' });
+  const { data: isSuperAdmin } = await supabase.rpc('is_current_super_admin');
   if (!isSuperAdmin) {
     const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
     if (!isAdmin) return { error: 'Only admins can access health check', __status: 403 };
