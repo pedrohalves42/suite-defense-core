@@ -314,12 +314,10 @@ export async function handleSetActiveTenant(supabase: SB, requestId: string, pay
   const authHeader = ctx?.req?.headers.get('Authorization');
   let existingAppMetadata: Record<string, unknown> = {};
   if (authHeader) {
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-    const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const { createSupabaseClient: cc } = await import('../../_shared/supabase-client.ts');
-    const userClient = cc(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { headers: { Authorization: authHeader } } });
-    const { data: { user } } = await userClient.auth.getUser();
-    existingAppMetadata = user?.app_metadata || {};
+    const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+    if (user) {
+      existingAppMetadata = user.app_metadata || {};
+    }
   }
 
   const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
