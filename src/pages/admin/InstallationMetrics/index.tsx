@@ -106,8 +106,8 @@ export default function InstallationMetrics() {
       {errors && errors.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Resumo de Erros</CardTitle>
-            <CardDescription>Erros mais comuns agrupados por plataforma</CardDescription>
+            <CardTitle>{t('adminPages.installationMetrics.errorSummary')}</CardTitle>
+            <CardDescription>{t('adminPages.installationMetrics.errorSummaryDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {Object.entries(errorsByPlatform || {}).map(([platform, platformErrors]) => (
