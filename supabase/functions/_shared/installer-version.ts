@@ -7,13 +7,14 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v5.0.14';
-export const INSTALLER_VERSION_LINUX = 'v4.0.1-DNS-POLICY';
-export const INSTALLER_VERSION_MACOS = 'v4.0.1-DNS-POLICY';
-export const LAST_UPDATED = '2026-03-18T00:00:00Z';
+export const INSTALLER_VERSION = 'v6.1.0';
+export const INSTALLER_VERSION_LINUX = 'v5.0.15';
+export const INSTALLER_VERSION_MACOS = 'v5.0.15';
+export const LAST_UPDATED = '2026-05-09T00:00:00Z';
 
 export const CHANGES = [
-  '[v5.0.14] FIX: CPU sampling with 2-second interval + 3 samples average for accurate readings',
+  '[v6.1.0] CRITICAL: Fixed Ed25519 cryptographic logic and removed broken .NET 5+ assumptions in Windows agent',
+  '[v6.1.0] SECURITY: Improved heartbeat performance with atomic database RPC and strict signature checks',
   '[v5.0.14] FIX: WMI fallback (Win32_Processor.LoadPercentage) when Get-Counter fails',
   '[v5.0.14] OPT: CPU info caching ($Global:CachedCpuInfo) to avoid repeated WMI queries',
   '[v5.0.14] FEAT: Added cpu_logical (logical processors count) to metrics payload',
