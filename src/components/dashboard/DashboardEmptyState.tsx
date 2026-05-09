@@ -21,7 +21,7 @@ export function DashboardEmptyState({ tenantName }: DashboardEmptyStateProps) {
           </div>
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Painel Principal
+              {t('nav.dashboard')}
             </h1>
             <p className="text-sm text-muted-foreground">{tenantName}</p>
           </div>
