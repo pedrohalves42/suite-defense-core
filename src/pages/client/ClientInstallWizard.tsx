@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Download, Copy, Check, Terminal, Loader2, Shield, Monitor } from 'lucide-react';
+import { Download, Copy, Check, Terminal, Loader2, Shield, Monitor, Apple } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
+import { buildAgentInstallCommand, getPlatformLabel, type AgentInstallPlatform } from '@/lib/agent-install-command';
 import { cn } from '@/lib/utils';
 
 const ClientInstallWizard = () => {
   const { tenant } = useTenant();
-  const [platform, setPlatform] = useState<'windows' | 'linux'>('windows');
+  const [platform, setPlatform] = useState<AgentInstallPlatform>('windows');
   const [agentName, setAgentName] = useState('');
   const [installCommand, setInstallCommand] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,15 +31,12 @@ const ClientInstallWizard = () => {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const installUrl = `${supabaseUrl}/functions/v1/serve-installer/${data.enrollmentKey}`;
 
-      setInstallCommand(
-        platform === 'windows'
-          ? `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $sp="$env:TEMP\\cs-install-$(Get-Random).ps1"; Invoke-WebRequest -Uri ${installUrl} -OutFile $sp -UseBasicParsing; & $sp; Remove-Item $sp -Force`
-          : `curl -sSL ${installUrl} | bash`
-      );
+      setInstallCommand(buildAgentInstallCommand({ installUrl, platform }));
       setStep('install');
       toast.success('Comando gerado com sucesso!');
     } catch (err) {
-      toast.error('Erro: ' + (err.message || 'Tente novamente'));
+      const message = err instanceof Error ? err.message : 'Tente novamente';
+      toast.error('Erro: ' + message);
     } finally {
       setLoading(false);
     }
@@ -75,8 +72,8 @@ const ClientInstallWizard = () => {
               <CardDescription>Selecione o sistema operacional do computador a proteger</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                {(['windows', 'linux'] as const).map(p => (
+              <div className="grid gap-4 sm:grid-cols-3">
+                {(['windows', 'linux', 'macos'] as const).map(p => (
                   <button
                     key={p}
                     onClick={() => setPlatform(p)}
@@ -87,8 +84,10 @@ const ClientInstallWizard = () => {
                         : "border-border hover:border-primary/40"
                     )}
                   >
-                    <div className="text-4xl mb-2">{p === 'windows' ? '🪟' : '🐧'}</div>
-                    <div className="font-semibold text-foreground">{p === 'windows' ? 'Windows' : 'Linux'}</div>
+                    <div className="flex justify-center mb-2">
+                      {p === 'windows' ? <Monitor className="h-10 w-10" /> : p === 'linux' ? <Terminal className="h-10 w-10" /> : <Apple className="h-10 w-10" />}
+                    </div>
+                    <div className="font-semibold text-foreground">{getPlatformLabel(p)}</div>
                     <div className="text-xs text-muted-foreground mt-1">
                       {p === 'windows' ? 'PowerShell' : 'Terminal Bash'}
                     </div>
@@ -124,7 +123,7 @@ const ClientInstallWizard = () => {
                 Comando de Instalação
               </CardTitle>
               <CardDescription>
-                Abra o {platform === 'windows' ? 'PowerShell como Administrador' : 'Terminal como root'} e cole o comando abaixo
+                Abra o {platform === 'windows' ? 'PowerShell como Administrador' : 'Terminal'} e cole o comando abaixo
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -150,9 +149,9 @@ const ClientInstallWizard = () => {
                   ) : (
                     <>
                       <li>Abra o <strong>Terminal</strong></li>
-                      <li>Execute <code className="bg-muted px-1 rounded">sudo su</code> para elevar privilégios</li>
+                      <li>Confirme que seu usuário pode executar <code className="bg-muted px-1 rounded">sudo</code></li>
                       <li>Cole o comando acima e pressione <strong>Enter</strong></li>
-                      <li>Aguarde a instalação completar</li>
+                      <li>Aguarde a instalação completar no {getPlatformLabel(platform)}</li>
                     </>
                   )}
                 </ol>

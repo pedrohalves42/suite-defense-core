@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { CircuitBreaker, CircuitState } from '@/lib/circuit-breaker';
+import { buildAgentInstallCommand } from '@/lib/agent-install-command';
 import { retryWithBackoff, calculateSha256, trackInstallationEvent, getInstallUrl, validateRequestUrl } from '../utils';
 import type { Platform, PreviewCredentials } from '../types';
 
@@ -66,10 +67,7 @@ export function useAgentCredentials(
       }
 
       const installUrl = getInstallUrl(credentials.enrollmentKey);
-      const command = platform === 'windows'
-        ? `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $sp="$env:TEMP\\cs-install-$(Get-Random).ps1"; Invoke-WebRequest -Uri ${installUrl} -OutFile $sp -UseBasicParsing; & $sp; Remove-Item $sp -Force`
-        : `curl -sL ${installUrl} | sudo bash`;
-      setInstallCommand(command);
+      setInstallCommand(buildAgentInstallCommand({ installUrl, platform }));
 
       trackInstallationEvent({ agent_name: agentName.trim(), event_type: 'generated', platform, installation_method: 'one_click' });
       toast.success('[OK]  Comando gerado!', { description: 'Copie e execute no servidor' });
