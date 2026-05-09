@@ -64,12 +64,12 @@ export function DashboardPDFReport({
       y += 8;
 
       const kpis = [
-        ['Computadores Monitorados', `${agents.length}`],
-        ['Online', `${onlinePercentage}%`],
-        ['Offline', `${offlineCount}`],
-        ['Taxa de Sucesso', `${successRate}%`],
-        ['Alertas Ativos', `${alerts}`],
-        ['Falhas (24h)', `${failedJobs}`],
+        [t('adminPages.dashboard.pdfReport.monitoredComputers'), `${agents.length}`],
+        [t('dashboard.online'), `${onlinePercentage}%`],
+        [t('dashboard.offline'), `${offlineCount}`],
+        [t('adminPages.dashboard.pdfReport.successRate'), `${successRate}%`],
+        [t('adminPages.dashboard.pdfReport.activeAlerts'), `${alerts}`],
+        [t('adminPages.dashboard.pdfReport.failures24h'), `${failedJobs}`],
       ];
 
       (doc as unknown as { autoTable: (...args: unknown[]) => void }).autoTable({
