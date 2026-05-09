@@ -48,7 +48,7 @@ export function DashboardPDFReport({
       doc.text(`${tenantName} • ${t('adminPages.dashboard.pdfReport.generatedAt', { date: dateStr, time: timeStr })}`, 14, 28);
 
       // Status badge
-      const stateLabel = systemState === 'healthy' ? 'SAUDÁVEL' : systemState === 'critical' ? 'CRÍTICO' : 'ATENÇÃO';
+      const stateLabel = systemState === 'healthy' ? t('common.healthy').toUpperCase() : systemState === 'critical' ? t('common.critical').toUpperCase() : t('common.attention').toUpperCase();
       const stateColor: [number, number, number] = systemState === 'healthy' ? [34, 197, 94] : systemState === 'critical' ? [239, 68, 68] : [234, 179, 8];
       doc.setFillColor(...stateColor);
       doc.roundedRect(150, 32, 46, 8, 2, 2, 'F');
