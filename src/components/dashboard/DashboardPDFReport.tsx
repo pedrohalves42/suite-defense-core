@@ -88,7 +88,7 @@ export function DashboardPDFReport({
       // Jobs by status
       doc.setFontSize(14);
       doc.setTextColor(30, 41, 59);
-      doc.text('Distribuição de Verificações', 14, y);
+      doc.text(t('adminPages.dashboard.pdfReport.distribution'), 14, y);
       y += 8;
 
       const statusCounts = jobs.reduce((acc, j) => {
