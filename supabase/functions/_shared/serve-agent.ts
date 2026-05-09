@@ -152,8 +152,10 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
         });
 
         if (!hmacResult.valid) {
+          const { resolveApiLocale, hmacErrorMessage } = await import('./api-i18n.ts');
+          const locale = resolveApiLocale(req.headers.get('Accept-Language'));
           return jsonResponse(
-            { error: 'unauthorized', code: hmacResult.errorCode, message: hmacResult.errorMessage, transient: hmacResult.transient },
+            { error: 'unauthorized', code: hmacResult.errorCode, message: hmacErrorMessage(hmacResult.errorCode, locale, hmacResult.errorMessage), locale, transient: hmacResult.transient },
             401,
             { 'X-Request-ID': requestId },
             origin,

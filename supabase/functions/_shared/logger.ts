@@ -7,7 +7,11 @@
  * PHASE-1: Added tenantId / agentId to LogEntry for indexable observability.
  */
 
-declare const Deno: { env: { get(key: string): string | undefined } } | undefined;
+declare const Deno: {
+  env: { get(key: string): string | undefined };
+  stdout?: { sync?: () => void };
+  stderr?: { sync?: () => void };
+} | undefined;
 
 const isDev = typeof Deno !== 'undefined' ? Deno.env.get('ENVIRONMENT') === 'development' : false;
 const forceLogging = typeof Deno !== 'undefined' ? Deno.env.get('FORCE_LOGGING') === 'true' : false;
@@ -130,6 +134,32 @@ export const loggerWithContext = (ctxOrRequestId: LogContext | string) => {
     elapsed: () => Date.now() - startTime,
   };
 };
+
+
+export async function flushLogSinks(): Promise<void> {
+  const maybeDeno = typeof Deno !== 'undefined' ? Deno : undefined;
+
+  try {
+    const stdout = maybeDeno?.stdout as { sync?: () => void } | undefined;
+    stdout?.sync?.();
+  } catch { /* stdout sync is best-effort */ }
+
+  try {
+    const stderr = maybeDeno?.stderr as { sync?: () => void } | undefined;
+    stderr?.sync?.();
+  } catch { /* stderr sync is best-effort */ }
+
+}
+
+export function scheduleLogFlush(): void {
+  const runtime = (globalThis as { EdgeRuntime?: { waitUntil?: (promise: Promise<unknown>) => void } }).EdgeRuntime;
+  const flushPromise = flushLogSinks();
+  if (runtime?.waitUntil) {
+    runtime.waitUntil(flushPromise);
+  } else {
+    flushPromise.catch(() => undefined);
+  }
+}
 
 export const logger = {
   debug: (message: string, data?: unknown, ctx?: Partial<LogContext>) => {
