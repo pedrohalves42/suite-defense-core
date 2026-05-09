@@ -4,11 +4,16 @@
 #
 
 poll_jobs() {
-    local poll_body='{"agent_name":"'"$AGENT_NAME"'","agent_version":"'"$AGENT_VERSION"'","timestamp":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'"}'
+    local poll_body
+    poll_body=$(jq -n \
+        --arg an \"$AGENT_NAME\" \
+        --arg av \"$AGENT_VERSION\" \
+        --arg ts \"$(date -u +\"%Y-%m-%dT%H:%M:%SZ\")\" \
+        '{agent_name: $an, agent_version: $av, timestamp: $ts}')
     local result
-    result=$(invoke_secure_request "POST" "/functions/v1/poll-jobs" "$poll_body" 15 2)
-    if [[ $? -ne 0 ]]; then echo "[]"; return 1; fi
-    echo "$result"
+    result=$(invoke_secure_request \"POST\" \"/functions/v1/poll-jobs\" \"$poll_body\" 15 2)
+    if [[ $? -ne 0 ]]; then echo \"[]\"; return 1; fi
+    echo \"$result\"
 }
 
 execute_job() {
@@ -79,18 +84,29 @@ submit_job_result() {
     invoke_secure_request "POST" "/functions/v1/submit-job-result" "$payload" 30 3
 }
 
+# Job Dispatcher
+_dispatch_job() {
+    local type=\"$1\" job=\"$2\"
+    case \"$type\" in
+        \"collect_network_info\") collect_network_info ;;
+        \"update_agent\") update_agent_handler ;;
+        \"integration_test_v3\") integration_test_handler ;;
+        *) return 1 ;;
+    esac
+}
+
 # Common job handlers
 collect_network_info() {
     local adapters ip_addresses
     adapters=$(ip -j link show 2>/dev/null | jq -c '[.[] | {name: .ifname, mac: .address, state: .operstate}]' 2>/dev/null || echo '[]')
     ip_addresses=$(ip -j -4 addr show 2>/dev/null | jq -c '[.[] | .addr_info[] | {ip: .local, prefix: .prefixlen}]' 2>/dev/null || echo '[]')
-    echo '{"adapters":'"$adapters"',"ip_addresses":'"$ip_addresses"',"collected_at":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'"}'
+    echo '{\"adapters\":'\"$adapters\"',\"ip_addresses\":'\"$ip_addresses\"',\"collected_at\":\"'\"$(date -u +\"%Y-%m-%dT%H:%M:%SZ\")\"'\"}'
 }
 
 update_agent_handler() {
-    echo '{"success":true,"message":"Update delegated to heartbeat force_update mechanism","agent_version":"'"$AGENT_VERSION"'"}'
+    echo '{\"success\":true,\"message\":\"Update delegated to heartbeat force_update mechanism\",\"agent_version\":\"'\"$AGENT_VERSION\"'\"}'
 }
 
 integration_test_handler() {
-    echo '{"pong":true,"agent_version":"'"$AGENT_VERSION"'","timestamp":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'","hostname":"'"$(hostname)"'"}'
+    echo '{\"pong\":true,\"agent_version\":\"'\"$AGENT_VERSION\"'\",\"timestamp\":\"'\"$(date -u +\"%Y-%m-%dT%H:%M:%SZ\")\"'\",\"hostname\":\"'\"$(hostname)\"'\"}'
 }
