@@ -765,6 +765,25 @@
       "operations": "Operações",
       "quickAccess": "Acesso Rápido"
     },
+    "installationMetrics": {
+      "title": "Métricas de Instalação",
+      "subtitle": "Análise consolidada com dados das views SQL otimizadas",
+      "agentHealthStatus": "Status de Saúde dos Agentes",
+      "totalAgents": "Total Agentes",
+      "stuck": "Travados",
+      "activationRate": "Taxa de Ativação",
+      "globalSuccessRate": "Taxa de Sucesso Global",
+      "avgTime": "Tempo Médio",
+      "excellentPerformance": "Performance excelente",
+      "canOptimize": "Pode otimizar",
+      "failedEvents": "Eventos com Falha",
+      "uniqueErrorTypes": "tipos de erro únicos",
+      "completeInstallations": "Instalações Completas",
+      "errorSummary": "Resumo de Erros",
+      "errorSummaryDesc": "Erros mais comuns agrupados por plataforma",
+      "noMetrics": "Sem Dados de Métricas",
+      "noMetricsDesc": "Ainda não há dados de instalação suficientes. As métricas serão exibidas após as primeiras instalações de agentes."
+    },
     "sidebar": {
       "actionCenter": "Central de Ações",
       "generalPanel": "Painel Geral",
