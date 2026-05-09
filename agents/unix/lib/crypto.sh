@@ -24,7 +24,7 @@ generate_signing_keypair() {
                 echo "$fingerprint" > "$FINGERPRINT_PATH"
                 SIGNING_FINGERPRINT="$fingerprint"
                 log "SUCCESS" "[KEYS] Keypair generated (fingerprint: ${fingerprint:0:16}...)"
-                echo "$fingerprint"
+                printf '%s\n' "$fingerprint"
                 return 0
             fi
         fi

@@ -50,7 +50,10 @@ servePublic(async (req, ctx) => {
     
     // AUDIT-FIX: Fetch tenant policy for token expiration
     const { data: keyInfo } = await supabase.from('enrollment_keys').select('tenant_id').eq('key_hash', enrollmentKeyHash).single();
-    const { data: policy } = await supabase.from('tenant_security_policies').select('token_expiry_days').eq('tenant_id', keyInfo?.tenant_id).maybeSingle();
+    if (!keyInfo?.tenant_id) {
+      return new Response(JSON.stringify({ error: 'Invalid enrollment key', code: 'INVALID_KEY', requestId }), { status: 403, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
+    }
+    const { data: policy } = await supabase.from('tenant_security_policies').select('token_expiry_days').eq('tenant_id', keyInfo.tenant_id).maybeSingle();
     
     const expiryDays = policy?.token_expiry_days || 365;
     const expiresAt = new Date();
@@ -67,7 +70,7 @@ servePublic(async (req, ctx) => {
       p_metadata_hash: metadataHash || null
     });
 
-    if (rpcError || !result.success) {
+    if (rpcError || !result || !result.success) {
       const errorMsg = result?.error || rpcError?.message || 'Enrollment failed';
       const errorCode = result?.error || 'RPC_ERROR';
       

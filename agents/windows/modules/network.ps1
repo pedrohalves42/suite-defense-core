@@ -38,7 +38,7 @@ function Invoke-SecureRequest {
     while ($retryCount -lt $MaxRetries) {
         try {
             $headers = @{
-                "User-Agent"    = "CyberShield-Agent/$Global:AgentVersion"
+                "User-Agent"    = "CyberShield-Agent/$($Global:AgentVersion)"
                 "X-Agent-Token" = $Global:AgentToken
                 "X-Agent-Name"  = $Global:AgentName
                 "Authorization" = "Bearer $Global:AgentToken" # SSA-009: Compatibility with older auth handlers
@@ -77,7 +77,7 @@ function Invoke-SecureRequest {
             }
             
             if ($Body) {
-                $params.Body        = if ($Body -is [string]) { $Body } else { $Body | ConvertTo-Json -Compress -Depth 10 }
+                $params.Body        = $bodyJson
                 $params.ContentType = "application/json; charset=utf-8"
             }
             
@@ -132,20 +132,22 @@ function Test-NetworkConnectivity {
         }
         $uri = [System.Uri]::new($Global:ServerUrl)
         $tcpClient = New-Object System.Net.Sockets.TcpClient
-        $asyncResult = $tcpClient.BeginConnect($uri.Host, 443, $null, $null)
-        $wait = $asyncResult.AsyncWaitHandle.WaitOne(5000, $false)
-        
-        if ($wait -and $tcpClient.Connected) {
-            $tcpClient.Close()
-            $Global:CachedNetworkOk = $true
+        try {
+            $asyncResult = $tcpClient.BeginConnect($uri.Host, 443, $null, $null)
+            $wait = $asyncResult.AsyncWaitHandle.WaitOne(5000, $false)
+            
+            if ($wait -and $tcpClient.Connected) {
+                $Global:CachedNetworkOk = $true
+                $Global:CachedNetworkCheckTime = $now
+                return $true
+            }
+            
+            $Global:CachedNetworkOk = $false
             $Global:CachedNetworkCheckTime = $now
-            return $true
+            return $false
+        } finally {
+            $tcpClient.Close()
         }
-        
-        $tcpClient.Close()
-        $Global:CachedNetworkOk = $false
-        $Global:CachedNetworkCheckTime = $now
-        return $false
         
     } catch {
         $Global:CachedNetworkOk = $false

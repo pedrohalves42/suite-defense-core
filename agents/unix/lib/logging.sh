@@ -22,7 +22,7 @@ log() {
         timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     fi
     local line="[$timestamp] [$level] [$CURRENT_STATE] $message"
-    echo "$line"
+    echo "$line" >&2
 
     LOG_BUFFER+="$line"$'\n'
     LOG_BUFFER_COUNT=$((LOG_BUFFER_COUNT + 1))

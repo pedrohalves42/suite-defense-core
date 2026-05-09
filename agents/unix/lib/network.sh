@@ -28,7 +28,7 @@ invoke_secure_request() {
             local timestamp nonce signature_payload signature
             timestamp=$(date +%s)
             nonce=$(_generate_uuid)
-            signature_payload="${timestamp}:${nonce}:${body:-}"
+            signature_payload="${timestamp}.${nonce}.${body:-}"
             signature=$(echo -n "$signature_payload" | openssl dgst -sha256 -hmac "$HMAC_SECRET" | awk '{print $2}')
             headers+=(
                 -H "X-HMAC-Signature: $signature"

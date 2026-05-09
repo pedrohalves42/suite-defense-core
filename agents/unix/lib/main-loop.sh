@@ -22,7 +22,7 @@ run_main_loop() {
     [[ "$security_degraded" != "true" ]] && set_agent_state "AUTHENTICATING" "Validating credentials"
     if send_heartbeat; then
         CONSECUTIVE_HEARTBEAT_FAILURES=0
-        [[ "$keys_initialized" == "true" ]] && register_agent_key || true
+        [[ "$keys_initialized" == "true" ]] && register_agent_key || set_agent_state "SAFE_MODE" "Key registration failed"
     else
         set_agent_state "DEGRADED" "Heartbeat failed"
         CONSECUTIVE_HEARTBEAT_FAILURES=$((CONSECUTIVE_HEARTBEAT_FAILURES + 1))
@@ -65,9 +65,9 @@ run_main_loop() {
         if [[ $((now - last_job_poll)) -ge $JOB_POLL_INTERVAL && "$network_ok" == "true" ]]; then
             local jobs
             jobs=$(poll_jobs)
-            echo "$jobs" | jq -c '.[]' 2>/dev/null | while read -r job; do
+            while read -r job; do
                 [[ -n "$job" ]] && submit_job_result "$job" "$(execute_job "$job")"
-            done
+            done <<< "$(echo "$jobs" | jq -c '.[]' 2>/dev/null)"
             last_job_poll=$now
         fi
 
