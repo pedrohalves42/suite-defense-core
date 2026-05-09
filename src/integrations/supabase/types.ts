@@ -8322,8 +8322,10 @@ export type Database = {
         Row: {
           created_at: string | null
           expires_at: string | null
+          hit_count: number | null
           id: string
           input_hash: string
+          last_hit_at: string | null
           model_name: string | null
           result_data: Json
           tenant_id: string | null
@@ -8331,8 +8333,10 @@ export type Database = {
         Insert: {
           created_at?: string | null
           expires_at?: string | null
+          hit_count?: number | null
           id?: string
           input_hash: string
+          last_hit_at?: string | null
           model_name?: string | null
           result_data: Json
           tenant_id?: string | null
@@ -8340,8 +8344,10 @@ export type Database = {
         Update: {
           created_at?: string | null
           expires_at?: string | null
+          hit_count?: number | null
           id?: string
           input_hash?: string
+          last_hit_at?: string | null
           model_name?: string | null
           result_data?: Json
           tenant_id?: string | null
@@ -22361,6 +22367,7 @@ export type Database = {
           id: string
           job_id: string | null
           next_action: string | null
+          processing_cost: number | null
           report_data: Json | null
           report_type: string
           risk_level: string | null
@@ -22371,6 +22378,7 @@ export type Database = {
           status: string | null
           tenant_id: string
           title: string
+          token_usage: Json | null
           triggered_by: string | null
           verified_at: string | null
           verified_by: string | null
@@ -22391,6 +22399,7 @@ export type Database = {
           id?: string
           job_id?: string | null
           next_action?: string | null
+          processing_cost?: number | null
           report_data?: Json | null
           report_type: string
           risk_level?: string | null
@@ -22401,6 +22410,7 @@ export type Database = {
           status?: string | null
           tenant_id: string
           title: string
+          token_usage?: Json | null
           triggered_by?: string | null
           verified_at?: string | null
           verified_by?: string | null
@@ -22421,6 +22431,7 @@ export type Database = {
           id?: string
           job_id?: string | null
           next_action?: string | null
+          processing_cost?: number | null
           report_data?: Json | null
           report_type?: string
           risk_level?: string | null
@@ -22431,6 +22442,7 @@ export type Database = {
           status?: string | null
           tenant_id?: string
           title?: string
+          token_usage?: Json | null
           triggered_by?: string | null
           verified_at?: string | null
           verified_by?: string | null
