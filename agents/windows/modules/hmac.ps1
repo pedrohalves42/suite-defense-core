@@ -9,24 +9,31 @@ function Compute-HMAC {
         [string]$Secret
     )
 
-    # Decode secret from hex if valid 64-char hex string, otherwise use UTF-8
-    if ($Secret -match '^[0-9a-fA-F]{64}$') {
-        $keyBytes = [byte[]]::new(32)
-        for ($i = 0; $i -lt 64; $i += 2) {
-            $keyBytes[$i / 2] = [Convert]::ToByte($Secret.Substring($i, 2), 16)
+    # Cache HMAC object and key bytes to optimize IOPS/CPU
+    if ($null -eq $Global:CachedHmacObject -or $Global:CachedHmacSecret -ne $Secret) {
+        if ($Global:CachedHmacObject) { $Global:CachedHmacObject.Dispose() }
+        
+        $keyBytes = if ($Secret -match '^[0-9a-fA-F]{64}$') {
+            $bytes = [byte[]]::new(32)
+            for ($i = 0; $i -lt 64; $i += 2) {
+                $bytes[$i / 2] = [Convert]::ToByte($Secret.Substring($i, 2), 16)
+            }
+            $bytes
+        } else {
+            [System.Text.Encoding]::UTF8.GetBytes($Secret)
         }
-    } else {
-        $keyBytes = [System.Text.Encoding]::UTF8.GetBytes($Secret)
+
+        $Global:CachedHmacObject = New-Object System.Security.Cryptography.HMACSHA256
+        $Global:CachedHmacObject.Key = $keyBytes
+        $Global:CachedHmacSecret = $Secret
     }
 
-    $hmac = New-Object System.Security.Cryptography.HMACSHA256
-    $hmac.Key = $keyBytes
-    $hash = $hmac.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Message))
-    $hmac.Dispose()
-
+    $hash = $Global:CachedHmacObject.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Message))
+    
     # Output as lowercase hex (aligned with Unix agents and backend)
     return ([BitConverter]::ToString($hash) -replace '-', '').ToLower()
 }
+
 
 function New-HmacNonce {
     <#
