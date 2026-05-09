@@ -168,7 +168,7 @@ export function DashboardPDFReport({
         doc.setPage(i);
         doc.setFontSize(8);
         doc.setTextColor(148, 163, 184);
-        doc.text(`CyberShield • ${tenantName} • Página ${i}/${pageCount}`, 105, 290, { align: 'center' });
+        doc.text(t('adminPages.dashboard.pdfReport.pageFooter', { tenant: tenantName, current: i, total: pageCount }), 105, 290, { align: 'center' });
       }
 
       doc.save(`relatorio-executivo-${now.toISOString().split('T')[0]}.pdf`);
