@@ -7,7 +7,7 @@ export function safeMap<T, R>(
   renderItem: (item: T, index: number) => R,
   fallback: any = []
 ): R[] | R {
-  if (!data || !Array.isArray(data) || data.length === 0) {
+  if (!data || !Array.isArray(data)) {
     return fallback;
   }
   return data.map(renderItem);
