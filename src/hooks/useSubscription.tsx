@@ -39,7 +39,8 @@ export const useSubscription = () => {
     },
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
-    refetchInterval: isVisible ? 600_000 : false, // 10 min polling ONLY when visible (ADR-052)
+    // COST-OPT-V9: Polling retained with 10 min interval, paused when browser tab is inactive (ADR-052).
+    refetchInterval: isVisible ? 600_000 : false,
   });
 
   return {
