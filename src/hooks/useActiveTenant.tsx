@@ -184,7 +184,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
         
         const synced = await syncActiveTenantToBackend(activeTenant.id);
         if (synced) {
-          // P-AUDIT: Always refresh session after metadata update to propagate claims
+          // P-AUDIT: Consistent session propagation and cache invalidation.
           const { error: refreshError } = await supabase.auth.refreshSession();
           if (refreshError) {
             logger.error('[useActiveTenant] Sync refresh error', refreshError);
