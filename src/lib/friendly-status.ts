@@ -1,3 +1,5 @@
+import { AGENT_STATUS_THRESHOLDS } from './agent-status-constants';
+
 // Friendly status translations for non-technical users
 
 export const AGENT_STATUS_LABELS: Record<string, { label: string; description: string }> = {
