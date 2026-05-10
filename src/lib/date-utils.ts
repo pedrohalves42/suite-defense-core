@@ -14,7 +14,7 @@ export const BRASILIA_TIMEZONE = 'America/Sao_Paulo';
  */
 export function format(date: Date | string | number, formatStr: string, options?: { locale?: Locale }): string {
   const d = typeof date === 'string' ? new Date(date) : typeof date === 'number' ? new Date(date) : date;
-  if (isNaN(d.getTime())) return '-';
+  if (!d || isNaN(d.getTime())) return '-';
   const zonedDate = toZonedTime(d, BRASILIA_TIMEZONE);
   return formatTz(zonedDate, formatStr, { 
     locale: options?.locale || ptBR,
@@ -27,9 +27,9 @@ export function format(date: Date | string | number, formatStr: string, options?
  */
 export function formatDistanceToNow(date: Date | string | number, options?: { addSuffix?: boolean; locale?: Locale }): string {
   const d = typeof date === 'string' ? new Date(date) : typeof date === 'number' ? new Date(date) : date;
-  if (isNaN(d.getTime())) return '-';
+  if (!d || isNaN(d.getTime())) return '-';
   return fnsFormatDistanceToNow(d, { 
-    addSuffix: options?.addSuffix,
+    addSuffix: options?.addSuffix ?? true, // Default to true for better UI context
     locale: options?.locale || ptBR 
   });
 }
@@ -118,7 +118,7 @@ export function formatBrazilDateTime(
         day: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
-      }).replace(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2})/, '$3-$2-$1_$4$5');
+      }).replace(/(\d{2})\/(\d{2})\/(\d{4})[,\s]+(\d{2}):(\d{2})/, '$3-$2-$1_$4$5');
     case 'day-month':
       return date.toLocaleDateString('pt-BR', {
         ...options,
