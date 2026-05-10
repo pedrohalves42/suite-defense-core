@@ -33,7 +33,7 @@ export function useDashboardMetrics(
       const isActive = hb !== 0 && diff >= 0 && diff < OFFLINE_MS;
       if (isActive) activeCount++;
       // Alert criterion: missing heartbeat OR exceeded threshold
-      if (hb === 0 || diff > OFFLINE_MS) alertCount++;
+      if (hb === 0 || diff >= OFFLINE_MS) alertCount++;
 
       byTenant[a.tenant_id] = (byTenant[a.tenant_id] || 0) + 1;
     }

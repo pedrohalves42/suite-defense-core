@@ -28,7 +28,11 @@ export function useSessionGuard() {
       id: "session-expired",
     });
     // Small delay so the toast is visible
-    setTimeout(() => navigate("/login", { replace: true }), 1500);
+    setTimeout(() => {
+      if (isMountedRef.current) {
+        navigate("/login", { replace: true });
+      }
+    }, 1500);
   }, [navigate, isRedirecting]);
 
   useEffect(() => {
