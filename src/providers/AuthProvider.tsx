@@ -89,9 +89,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setHasHydrated(true);
       isInitialized.current = true;
       
-      // Prevent unnecessary state updates if values are identical
+      // V-FIX: Consistent cache clearing on major auth events to prevent data leakage
+      if (event === 'SIGNED_OUT') {
+        queryClient.clear();
+        setUser(null);
+        setSession(null);
+      }
+      
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
-        // Clear potential loading loops
         setLoading(false);
       }
     });
