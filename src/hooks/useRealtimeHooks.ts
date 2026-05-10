@@ -46,8 +46,8 @@ export function useRealtimeAgents(tenantId: string | undefined, select = 'id, ag
       return data || [];
     },
     realtimeTable: 'agents',
-    realtimeFilter: `tenant_id=eq.${tenantId}`,
-    enabled: !!tenantId,
+    realtimeFilter: tenantId ? `tenant_id=eq.${tenantId}` : undefined,
+    enabled: enabled && !!tenantId,
     staleTime: 300_000,
   });
 }
