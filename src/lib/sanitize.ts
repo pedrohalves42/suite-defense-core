@@ -38,14 +38,24 @@ const MAX_DEPTH = 8;
 
 /**
  * Check if a key name suggests sensitive data
+ * V-FIX: Use exact matching or boundary-aware matching to avoid redacting 
+ * unrelated keys (like "keyboard" because it contains "key")
  */
 function isSensitiveKey(key: string): boolean {
   const lower = key.toLowerCase();
+  
+  // Exact match check
+  if (SENSITIVE_KEYS.has(lower)) {
+    return true;
+  }
+
+  // Boundary-aware check (e.g., "auth_token" or "my_api_key")
   for (const sensitive of SENSITIVE_KEYS) {
-    if (lower.includes(sensitive.toLowerCase())) {
+    if (new RegExp(`(^|_|[^a-z])${sensitive}([^a-z]|_|$)`, 'i').test(lower)) {
       return true;
     }
   }
+
   return false;
 }
 
