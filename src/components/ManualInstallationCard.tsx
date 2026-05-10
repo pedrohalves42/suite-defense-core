@@ -13,7 +13,7 @@ export const ManualInstallationCard = ({ agentName, onDownloadPs1 }: ManualInsta
     <Alert className="border-2 border-orange-500 bg-orange-50 dark:bg-orange-950/30">
       <HelpCircle className="h-5 w-5" />
       <AlertTitle className="text-lg font-bold text-orange-900 dark:text-orange-100">
-        ? Proximos Passos - IMPORTANTE!
+        Próximos Passos - IMPORTANTE!
       </AlertTitle>
       <AlertDescription className="space-y-4 mt-3">
         <p className="font-medium text-orange-900 dark:text-orange-100">
