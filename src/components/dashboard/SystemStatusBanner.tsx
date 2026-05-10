@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 interface SystemStatusBannerProps {
   systemState: 'healthy' | 'warning' | 'critical';
-  onlinePercentage: string;
+  onlinePercentage: number;
   offlineCount: number;
   failedJobs: number;
   tenantsWithIssues: number;

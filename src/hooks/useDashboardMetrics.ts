@@ -57,7 +57,7 @@ export function useDashboardMetrics(
   }, [jobs]);
 
   const successRate = completedJobs + failedJobs > 0
-    ? ((completedJobs / (completedJobs + failedJobs)) * 100).toFixed(0) : '100';
+    ? Math.round((completedJobs / (completedJobs + failedJobs)) * 100) : 100;
 
   // PERF: Temporal trends in single pass — avoids 4x .filter() chains over jobs[]
   const trends = useMemo(() => {
@@ -146,10 +146,11 @@ export function useDashboardMetrics(
   );
 
   const onlinePercentage = agents.length > 0
-    ? ((agentAggregates.activeCount / agents.length) * 100).toFixed(0) : '0';
+    ? Math.round((agentAggregates.activeCount / agents.length) * 100) : 0;
 
   const systemState = useMemo(() => {
     const currentHour = new Date().getHours();
+    // ADR-014: Business hours are 07:00 to 20:00. Outside this, alerts are informational.
     const isBusinessHours = currentHour >= 7 && currentHour < 20;
     const effectiveAlerts = isBusinessHours ? alerts : 0;
 

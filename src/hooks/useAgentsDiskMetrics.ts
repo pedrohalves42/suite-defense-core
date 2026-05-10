@@ -9,7 +9,7 @@ import type { DiskMetric } from '@/components/agent/AgentCard';
 export function useAgentsDiskMetrics(agentIds: string[]) {
   
   return useQuery({
-    queryKey: ['agents-disk-metrics', agentIds.sort().join(',')],
+    queryKey: ['agents-disk-metrics', [...agentIds].sort().join(',')],
     queryFn: async () => {
       if (agentIds.length === 0) return {};
       
