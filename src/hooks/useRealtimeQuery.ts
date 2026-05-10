@@ -62,6 +62,7 @@ export function useRealtimeQuery<T>({
   realtimeEvents = DEFAULT_EVENTS,
   enabled = true,
   staleTime = 300_000,
+  predicate,
 }: UseRealtimeQueryOptions<T>) {
   const queryClient = useQueryClient();
   const isVisible = usePageVisibility();
