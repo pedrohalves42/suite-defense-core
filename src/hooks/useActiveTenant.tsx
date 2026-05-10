@@ -49,24 +49,17 @@ async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), SYNC_TIMEOUT_MS);
 
-    // V-FIX: Centralize gateway call
-    const result = await callGateway('admin', 'set-active-tenant', { tenant_id: tenantId });
-    const error = result && typeof result === 'object' && 'error' in result ? result : null;
-
+    // V-FIX: callGateway throws on error, so we catch it in the outer block
+    await callGateway('admin', 'set-active-tenant', { tenant_id: tenantId });
+    
     clearTimeout(timeoutId);
-
-    if (error) {
-      logger.error('[syncActiveTenantToBackend] Edge function error', error);
-      return false;
-    }
-
     return true;
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
       logger.error('[syncActiveTenantToBackend] Sync timeout after 10s');
-      return false;
+    } else {
+      logger.error('[syncActiveTenantToBackend] Error during sync', err instanceof Error ? err : undefined);
     }
-    logger.error('[syncActiveTenantToBackend] Unexpected error', err instanceof Error ? err : undefined);
     return false;
   }
 }
@@ -190,8 +183,11 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
             logger.error('[useActiveTenant] Sync refresh error', refreshError);
           } else {
             logger.info('[useActiveTenant] Session refreshed after background sync');
-            // P-FIX: Use precise invalidation to clear stale tenant data without total blast
-            queryClient.invalidateQueries({ exact: false });
+            // P-FIX: Targeted invalidation of tenant-specific data
+            queryClient.invalidateQueries({ queryKey: ['agent'] });
+            queryClient.invalidateQueries({ queryKey: ['audit'] });
+            queryClient.invalidateQueries({ queryKey: ['tenant'] });
+            queryClient.invalidateQueries({ queryKey: ['subscription'] });
           }
         }
       } catch (err) {

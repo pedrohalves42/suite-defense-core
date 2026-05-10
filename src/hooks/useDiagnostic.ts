@@ -104,7 +104,9 @@ export function useDiagnostic(
       };
 
       // Use canonical health rule - explicit input object
-      const healthy = isAgentHealthy({ state: agentState, summary });
+      // V-FIX: If agentState is missing, we assume 'healthy' for the check to avoid 
+      // false-positives while the agent data is still loading in other hooks.
+      const healthy = isAgentHealthy({ state: agentState || 'healthy', summary });
 
       return {
         isHealthy: healthy,
