@@ -28,7 +28,7 @@ interface SubscriptionData {
 
 // COST-OPT-V9: Polling retained with 10 min interval, paused when browser tab is inactive.
 export const useSubscription = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const isVisible = usePageVisibility();
 
   const { data: subscription, isLoading, refetch } = useQuery<SubscriptionData>({
