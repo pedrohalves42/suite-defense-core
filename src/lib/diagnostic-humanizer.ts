@@ -359,19 +359,19 @@ export function getConfidenceBadge(confidence: ConfidenceLevel): {
       return { 
         label: 'Alta confiança', 
         variant: 'default',
-        className: 'bg-green-500/10 text-green-600 border-green-500/20 dark:text-green-400'
+        className: 'bg-success/10 text-success border-success/20 hover:bg-success/20'
       };
     case 'medium':
       return { 
         label: 'Confiança média', 
         variant: 'secondary',
-        className: 'bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400'
+        className: 'bg-warning/10 text-warning border-warning/20 hover:bg-warning/20'
       };
     case 'low':
       return { 
         label: 'Baixa confiança', 
         variant: 'outline',
-        className: 'bg-muted/50 text-muted-foreground border-muted'
+        className: 'bg-muted/50 text-muted-foreground border-border hover:bg-muted/70'
       };
   }
 }
