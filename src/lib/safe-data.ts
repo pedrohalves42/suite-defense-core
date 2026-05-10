@@ -6,9 +6,18 @@ export function safeMap<T, R>(
   data: T[] | undefined | null,
   renderItem: (item: T, index: number) => R,
   fallback: any = []
-): R[] | R {
+): R[] {
+  // V-FIX: Ensure we always return an array to avoid breaking UI components expecting an array
   if (!data || !Array.isArray(data)) {
-    return fallback;
+    return Array.isArray(fallback) ? fallback : [];
   }
   return data.map(renderItem);
+}
+
+/**
+ * Safely access nested properties in a potentially null object
+ */
+export function safeGet<T, K extends keyof T>(obj: T | null | undefined, key: K, fallback: T[K]): T[K] {
+  if (obj === null || obj === undefined) return fallback;
+  return obj[key] ?? fallback;
 }
