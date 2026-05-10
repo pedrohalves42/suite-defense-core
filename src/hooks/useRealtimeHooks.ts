@@ -97,6 +97,7 @@ export function useRealtimeAlerts(tenantId: string | undefined, opts?: { activeO
     },
     realtimeTable: 'system_alerts',
     realtimeFilter: tenantId ? `tenant_id=eq.${tenantId}` : undefined,
+    predicate: (alert: any) => !activeOnly || alert.is_active === true,
     enabled: enabled && !!tenantId,
     staleTime: 300_000,
   });
