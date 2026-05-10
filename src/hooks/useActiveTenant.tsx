@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { callGateway } from '@/lib/gateway';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
-import { type AppRole } from '@/types/roles';
+import { type AppRole, ROLE_PRIORITY } from '@/types/roles';
 import { logger } from '@/lib/logger';
 
 interface Tenant {
@@ -102,7 +102,6 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) throw error;
       
-      const { ROLE_PRIORITY } = await import('@/types/roles');
       const uniqueTenants = new Map<string, UserTenantRole>();
       
       (data || []).forEach((item: any) => {
