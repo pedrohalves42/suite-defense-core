@@ -66,7 +66,7 @@ export function useAgentActions() {
       if (!tenantId) throw new Error('Tenant not found');
       // V-5001 FIX: Add tenant_id filter to prevent cross-tenant version unblock
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TS2589 workaround
-      const { error } = await supabase
+      const { error } = await (supabase
         .from('agent_versions')
         .update({
           is_blocked: false,
@@ -75,7 +75,7 @@ export function useAgentActions() {
           blocked_reason: null,
         })
         .eq('id', versionId)
-        .eq('tenant_id', tenantId);
+        .eq('tenant_id', tenantId) as unknown as Promise<{ error: Error | null }>);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -99,11 +99,11 @@ export function useAgentActions() {
       if (!tenantId) throw new Error('Tenant not found');
       // V-5002 FIX: Add tenant_id filter to prevent cross-tenant rule toggle
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TS2589 workaround
-      const { error } = await supabase
+      const { error } = await (supabase
         .from('decision_rules')
         .update({ is_enabled: isEnabled, updated_at: new Date().toISOString() })
         .eq('id', ruleId)
-        .eq('tenant_id', tenantId);
+        .eq('tenant_id', tenantId) as unknown as Promise<{ error: Error | null }>);
       if (error) throw error;
     },
     onSuccess: (_, { isEnabled }) => {
