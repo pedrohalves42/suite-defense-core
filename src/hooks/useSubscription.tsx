@@ -37,9 +37,9 @@ export const useSubscription = () => {
       if (!user) throw new Error('Not authenticated');
       return await callGateway<SubscriptionData>('billing', 'check-subscription');
     },
-    enabled: !!user,
+    enabled: !!user && isVisible,
     staleTime: 5 * 60 * 1000,
-    refetchInterval: false, // COST-OPT-V9: Removed polling, relying on staleTime and manual refresh (ADR-052)
+    refetchInterval: isVisible ? 10 * 60 * 1000 : false, // COST-OPT-V9: Polling reduced to 10 min, active only when visible
   });
 
   return {
