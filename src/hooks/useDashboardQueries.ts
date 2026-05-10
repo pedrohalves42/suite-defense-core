@@ -15,14 +15,16 @@ const REFETCH_INTERVAL = 120_000;
 const STALE_TIME = 60_000;
 
 async function fetchAgents(tenantId: string): Promise<DashboardAgent[]> {
-  const { data, error } = await supabase.rpc('get_agents_list', {
-    p_tenant_id: tenantId, p_include_archived: false,
-  });
+  // PERF-FIX: Use direct table query instead of RPC for dashboard overview.
+  // RPC is heavy and joins unnecessary data for a simple list.
+  const { data, error } = await supabase
+    .from('agents')
+    .select('id, agent_name, status, enrolled_at, last_heartbeat, tenant_id')
+    .eq('tenant_id', tenantId)
+    .order('last_heartbeat', { ascending: false });
+    
   if (error) throw error;
-  return ((data || []) as Array<Record<string, unknown>>).map(a => ({
-    id: a.id as string, agent_name: a.agent_name as string, status: a.status as string,
-    enrolled_at: a.enrolled_at as string, last_heartbeat: a.last_heartbeat as string, tenant_id: a.tenant_id as string,
-  }));
+  return (data || []) as DashboardAgent[];
 }
 
 async function fetchJobs(tenantId: string): Promise<DashboardJob[]> {
@@ -173,7 +175,7 @@ export function useDashboardQueries() {
     staleTime: 600_000,
   });
 
-  const loading = agents.isLoading || jobs.isLoading || reports.isLoading || virusScans.isLoading;
+  const loading = tenantLoading || agents.isLoading || jobs.isLoading || reports.isLoading || virusScans.isLoading;
 
   return {
     agents: agents.data || [],

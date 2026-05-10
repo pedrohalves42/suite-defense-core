@@ -52,13 +52,16 @@ export default function TriggerRemediationDialog() {
     queryKey: ['agents-for-remediation', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
-      const { data } = await supabase.rpc('get_agents_list', {
-        p_tenant_id: tenant.id,
-        p_include_archived: false,
-      });
-      return ((data || []) as unknown as Array<Record<string, unknown>>)
-        .filter(a => a.status === 'active')
-        .map(a => ({ id: String(a.id), agent_name: String(a.agent_name), status: String(a.status) }));
+      
+      // PERF-FIX: Use direct table query instead of get_agents_list RPC
+      const { data, error } = await supabase
+        .from('agents')
+        .select('id, agent_name, status')
+        .eq('tenant_id', tenant.id)
+        .eq('status', 'active');
+        
+      if (error) throw error;
+      return (data || []).map(a => ({ id: String(a.id), agent_name: String(a.agent_name), status: String(a.status) }));
     },
     enabled: !!tenant?.id && open,
   });

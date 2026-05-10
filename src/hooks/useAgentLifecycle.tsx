@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AgentLifecycleState, DashboardAgentCard, LifecycleStage } from '@/types/agent-lifecycle';
+import { AGENT_STATUS_THRESHOLDS } from '@/lib/agent-status-constants';
 
 interface PipelineMetricsData {
   total_generated: number; total_downloaded: number; total_command_copied: number;
@@ -34,8 +35,10 @@ export function useAgentLifecycle(tenantId: string | undefined, loading?: boolea
 }
 
 function transformToCard(state: AgentLifecycleState): DashboardAgentCard {
+  // V-FIX: Synchronize offline threshold with global thresholds
+  const offlineThreshold = AGENT_STATUS_THRESHOLDS.ONLINE_MAX_MINUTES; 
   const is_offline = state.lifecycle_stage === 'installed_offline' || 
-                    (state.minutes_since_heartbeat !== null && state.minutes_since_heartbeat > 5);
+                    (state.minutes_since_heartbeat !== null && state.minutes_since_heartbeat > offlineThreshold);
   const statusBadge = getStatusBadge(state, is_offline);
   
   return {
