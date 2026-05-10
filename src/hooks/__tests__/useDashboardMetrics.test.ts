@@ -16,6 +16,7 @@ const makeAgent = (overrides: Partial<DashboardAgent> = {}): DashboardAgent => (
 const makeJob = (overrides: Partial<DashboardJob> = {}): DashboardJob => ({
   id: crypto.randomUUID(),
   agent_name: "agent-1",
+  tenant_id: "tenant-1",
   type: "scan",
   status: "completed",
   created_at: new Date().toISOString(),

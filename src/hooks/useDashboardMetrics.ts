@@ -121,7 +121,7 @@ export function useDashboardMetrics(
       if (job.status !== 'failed') continue;
       const created = safeTime(job.created_at);
       if (created === 0 || now - created >= last24h) continue;
-      const tid = agentTenantMap.get(job.agent_name);
+      const tid = job.tenant_id;
       if (tid && stats[tid]) {
         stats[tid].failedJobsCount++;
       }

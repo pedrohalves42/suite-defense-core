@@ -38,10 +38,10 @@ async function fetchJobs(tenantId: string): Promise<DashboardJob[]> {
 // P-13003 FIX: Slim select for reports — avoid fetching full content
 async function fetchReports(tenantId: string): Promise<DashboardReport[]> {
   const { data, error } = await supabase.from("reports")
-    .select("id, agent_name, kind, file_path, created_at")
+    .select("id, agent_name, tenant_id, kind, file_path, created_at")
     .eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(100);
   if (error) throw error;
-  return data || [];
+  return (data || []) as DashboardReport[];
 }
 
 // P-13004 FIX: Slim select for tokens — avoid fetching sensitive fields
@@ -74,10 +74,10 @@ async function fetchVirusScans(tenantId: string): Promise<DashboardVirusScan[]> 
 
 async function fetchAuditLogs(tenantId: string): Promise<DashboardAuditLog[]> {
   const { data, error } = await supabase.from("audit_logs")
-    .select("id, action, resource_type, created_at, success, user_id")
+    .select("id, tenant_id, action, resource_type, created_at, success, user_id")
     .eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(50);
   if (error) throw error;
-  return data || [];
+  return (data || []) as DashboardAuditLog[];
 }
 
 async function fetchTenantNames(): Promise<Record<string, string>> {

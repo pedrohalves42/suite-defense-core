@@ -91,17 +91,14 @@ export function getAgentStatusFromSnapshot(snapshot: AgentSnapshot | null | unde
     }
   }
   
-  // Fallback para online calculado
-  if (snapshot.online) return 'online';
-  if (!snapshot.last_heartbeat) return 'never_connected';
-  
-  // Calcular baseado em heartbeat se online estiver falso ou ausente
+  // Fallback para online/heartbeat (alinhado com OFFLINE_THRESHOLD_MS de 1min)
   if (snapshot.online) return 'online';
   if (!snapshot.last_heartbeat) return 'never_connected';
 
   const lastHb = new Date(snapshot.last_heartbeat).getTime();
-  const diffMinutes = (Date.now() - lastHb) / 1000 / 60;
+  const diffMs = Date.now() - lastHb;
   
-  if (diffMinutes < 5) return 'warning';
+  // Alerta se o heartbeat for recente mas a flag online estiver falsa (instabilidade)
+  if (diffMs < 300_000) return 'warning'; // 5min grace period para diagnóstico
   return 'offline';
 }
