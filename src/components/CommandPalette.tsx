@@ -14,6 +14,7 @@ import {
   Plug, Code, CreditCard, Archive, Fingerprint,
 } from 'lucide-react';
 import { useFavorites } from '@/hooks/useFavorites';
+import { useRolePermissions } from '@/hooks/useRolePermissions';
 import { cn } from '@/lib/utils';
 
 interface SearchableItem {
@@ -80,6 +81,7 @@ export const CommandPalette = () => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
+  const { can, loading: permissionsLoading } = useRolePermissions();
 
   useEffect(() => {
     const handleOpen = () => setOpen(true);
@@ -107,12 +109,23 @@ export const CommandPalette = () => {
   const sections = useMemo(() => {
     const map = new Map<string, SearchableItem[]>();
     for (const item of allPages) {
+      // P-AUDIT: Security check - filter pages by permission
+      // Map path to a pseudo-permission key
+      const permissionKey = item.path.replace('/admin/', 'view_').replace('-', '_');
+      
+      // If we don't know the permission, we check if it's generally accessible or require admin
+      const isGenerallyAccessible = !item.path.startsWith('/admin/');
+      
+      if (!permissionsLoading && !isGenerallyAccessible && !can(permissionKey)) {
+        continue;
+      }
+
       const list = map.get(item.section) || [];
       list.push(item);
       map.set(item.section, list);
     }
     return map;
-  }, []);
+  }, [can, permissionsLoading]);
 
   const handleSelect = (path: string) => {
     setOpen(false);
