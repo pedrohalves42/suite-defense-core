@@ -37,7 +37,7 @@ export const useSubscription = () => {
       if (!user) throw new Error('Not authenticated');
       return await callGateway<SubscriptionData>('billing', 'check-subscription');
     },
-    enabled: !!user,
+    enabled: !!user && isVisible,
     staleTime: 5 * 60 * 1000,
     // ADR-052: Polling active ONLY when tab is visible to optimize infra costs (FinOps).
     refetchInterval: isVisible ? 600_000 : false,
