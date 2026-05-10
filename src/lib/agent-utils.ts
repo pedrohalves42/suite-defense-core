@@ -11,14 +11,19 @@ export function getAgentDisplayName(agent: {
   hostname?: string | null;
   agent_name?: string;
 }): string {
-  // SEMPRE retornar agent_name exatamente como definido na instalação
+  // 1. Prioridade máxima: agent_name (definido na instalação)
   if (agent.agent_name && agent.agent_name.trim()) {
     return agent.agent_name;
   }
   
-  // Fallbacks apenas se agent_name não existir
-  if (agent.display_name) {
+  // 2. Segunda prioridade: display_name (definido pelo admin na UI)
+  if (agent.display_name && agent.display_name.trim()) {
     return agent.display_name;
+  }
+
+  // 3. Terceira prioridade: hostname (nome real da máquina)
+  if (agent.hostname && agent.hostname.trim()) {
+    return agent.hostname;
   }
   
   return 'Computador Desconhecido';

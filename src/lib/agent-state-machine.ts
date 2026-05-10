@@ -131,18 +131,9 @@ const UPDATE_WINDOW_MINUTES = 45; // Aumentado para 45min para evitar falsos "of
  * Deriva o estado formal do agente a partir dos dados do banco
  */
 export function deriveAgentState(agent: Partial<Agent>): AgentState {
-  // 1. Verificar se está offline (Prioridade Crítica)
-  // V-FIX: Se o computador sumiu, não importa se estava em safe_mode ou isolado, a info mais urgente é que ele está OFFLINE.
-  if (agent.last_heartbeat) {
-    const lastHeartbeat = new Date(agent.last_heartbeat);
-    const diffMinutes = (Date.now() - lastHeartbeat.getTime()) / (1000 * 60);
-    
-    if (diffMinutes >= OFFLINE_THRESHOLD_MINUTES) {
-      return 'offline';
-    }
-  } else if (agent.status !== 'active' && agent.status !== 'pending') {
-    // Se nunca teve heartbeat e não está ativo/pendente, é offline
-    return 'offline';
+  // 1. Verificar quarentena (prioridade absoluta)
+  if (agent.agent_state === 'quarantined') {
+    return 'quarantined';
   }
 
   // 2. Verificar isolamento (prioridade máxima de segurança para máquinas conectadas)
@@ -150,12 +141,7 @@ export function deriveAgentState(agent: Partial<Agent>): AgentState {
     return 'isolated';
   }
 
-  // 3. Verificar safe mode
-  if (agent.safe_mode_entered_at && agent.safe_mode_reason) {
-    return 'safe_mode';
-  }
-
-  // 3. Verificar se está em processo de atualização forçada (prioridade sobre offline)
+  // 3. Verificar se está em processo de atualização forçada (prioridade sobre offline/degraded)
   if (agent.force_update_version && agent.force_update_at) {
     const forceUpdateTime = new Date(agent.force_update_at);
     const minutesSinceForceUpdate = (Date.now() - forceUpdateTime.getTime()) / (1000 * 60);
@@ -166,27 +152,31 @@ export function deriveAgentState(agent: Partial<Agent>): AgentState {
     }
   }
 
-  // 5. Verificar instabilidade (degraded) baseada em heartbeat
-  if (agent.last_heartbeat) {
-    const lastHeartbeat = new Date(agent.last_heartbeat);
-    const diffMinutes = (Date.now() - lastHeartbeat.getTime()) / (1000 * 60);
-    
-    if (diffMinutes >= WARNING_THRESHOLD_MINUTES) {
-      return 'degraded';
-    }
+  // 4. Verificar batimento cardíaco (heartbeat)
+  const lastHeartbeat = agent.last_heartbeat ? new Date(agent.last_heartbeat) : null;
+  const diffMinutes = lastHeartbeat ? (Date.now() - lastHeartbeat.getTime()) / (1000 * 60) : Infinity;
+
+  // 5. Verificar offline (Prioridade Crítica após checagem de processos ativos como atualização)
+  if (diffMinutes >= OFFLINE_THRESHOLD_MINUTES) {
+    return 'offline';
   }
 
-  // 5. Verificar throttle (degraded)
-  if (agent.is_throttled) {
+  // 6. Verificar safe mode
+  if (agent.safe_mode_entered_at && agent.safe_mode_reason) {
+    return 'safe_mode';
+  }
+
+  // 7. Verificar instabilidade (degraded)
+  if (diffMinutes >= WARNING_THRESHOLD_MINUTES || agent.is_throttled) {
     return 'degraded';
   }
 
-  // 6. Verificar status do agente
+  // 8. Verificar status do agente
   if (agent.status === 'active') {
     return 'healthy';
   }
 
-  // 7. Default para offline se não conseguir determinar
+  // 9. Default para offline se não conseguir determinar
   return 'offline';
 }
 
