@@ -23,7 +23,8 @@ export class EdgeFunctionError extends Error {
 export async function callEdgeFunction<T = unknown>(
   functionName: string,
   payload?: Record<string, unknown>,
-  method: 'GET' | 'POST' = 'POST'
+  method: 'GET' | 'POST' = 'POST',
+  options?: { signal?: AbortSignal; timeoutMs?: number }
 ): Promise<T> {
   const requestId = crypto.randomUUID();
   
