@@ -42,7 +42,7 @@ export function useRealtimeQuery<T>({
   const instanceId = useRef(`hook-${Math.random().toString(36).substring(2, 9)}`).current;
 
   // Use a deep-stable hash for queryKey to avoid re-subscribing on array literals
-  const queryKeyHash = useMemo(() => JSON.stringify(queryKey), [JSON.stringify(queryKey)]);
+  const queryKeyHash = useMemo(() => JSON.stringify(queryKey), [queryKey]);
   const eventsHash = useMemo(() => realtimeEvents.join(','), [realtimeEvents]);
 
   useEffect(() => {
