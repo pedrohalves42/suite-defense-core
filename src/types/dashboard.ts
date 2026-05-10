@@ -15,6 +15,7 @@ export interface DashboardAgent {
 export interface DashboardJob {
   id: string;
   agent_name: string;
+  tenant_id: string;
   type: string;
   status: string;
   created_at: string;
@@ -26,6 +27,7 @@ export interface DashboardJob {
 export interface DashboardReport {
   id: string;
   agent_name: string;
+  tenant_id: string;
   kind: string;
   file_path: string;
   created_at: string;
@@ -45,6 +47,7 @@ export interface DashboardAgentToken {
 
 export interface DashboardRateLimit {
   id: string;
+  tenant_id: string;
   identifier: string;
   endpoint: string;
   request_count: number;
@@ -56,6 +59,7 @@ export interface DashboardRateLimit {
 export interface DashboardVirusScan {
   id: string;
   agent_name: string;
+  tenant_id: string;
   file_path: string;
   file_hash: string;
   is_malicious: boolean | null;
@@ -66,6 +70,7 @@ export interface DashboardVirusScan {
 
 export interface DashboardAuditLog {
   id: string;
+  tenant_id: string;
   action: string;
   resource_type: string;
   created_at: string;
