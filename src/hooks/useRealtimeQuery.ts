@@ -4,6 +4,35 @@ import { usePageVisibility } from './usePageVisibility';
 import { logger } from '@/lib/logger';
 import { realtimeChannelManager } from '@/lib/realtime-manager';
 
+/**
+ * Basic matcher for PostgREST style filters (field=eq.value, field=neq.value)
+ */
+function matchesFilter(item: any, filter: string | undefined): boolean {
+  if (!filter) return true;
+  
+  // Handle common format: "id=eq.123" or "status=eq.active"
+  const parts = filter.split('=');
+  if (parts.length !== 2) return true; // Complex filter, let it pass and let React Query handle it
+
+  const field = parts[0];
+  const condition = parts[1];
+
+  if (condition.startsWith('eq.')) {
+    const value = condition.substring(3);
+    // Handle number strings
+    const itemValue = String(item[field]);
+    return itemValue === value;
+  }
+
+  if (condition.startsWith('neq.')) {
+    const value = condition.substring(4);
+    const itemValue = String(item[field]);
+    return itemValue !== value;
+  }
+
+  return true; // Unknown filter type
+}
+
 interface UseRealtimeQueryOptions<T> {
   queryKey: unknown[];
   queryFn: () => Promise<T>;
