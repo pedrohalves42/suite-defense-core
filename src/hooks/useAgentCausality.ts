@@ -59,14 +59,16 @@ export function useAgentCausality(agentId: string | null, tenantId?: string | nu
     queryFn: async (): Promise<AgentCausality | null> => {
       if (!agentId || !effectiveTenantId) return null;
 
-      // ADR-026 Zero-Gap: Use RPC with explicit tenant_id (bypasses JWT sync issues)
-      const { data: agentsList, error: rpcError } = await supabase.rpc('get_agents_list', {
-        p_tenant_id: effectiveTenantId,
-        p_include_archived: true, // Include archived to get full causality history
-      });
+      // PERF-FIX: Use direct table query instead of fetching all agents via get_agents_list
+      const { data: agent, error: agentError } = await supabase
+        .from('agents')
+        .select('*')
+        .eq('id', agentId)
+        .eq('tenant_id', effectiveTenantId)
+        .maybeSingle();
 
-      if (rpcError) {
-        logger.error('[useAgentCausality] RPC error:', rpcError);
+      if (agentError) {
+        logger.error('[useAgentCausality] Error fetching agent details:', agentError);
         return null;
       }
 
