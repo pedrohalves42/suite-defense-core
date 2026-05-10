@@ -110,7 +110,7 @@ export function useActionCenterEffectivenessStats() {
   );
   
   const resolvedCount = actionsWithEffectiveness.filter(
-    i => i.ai_actions?.some(a => a.effectiveness_status === 'resolved')
+    i => i.ai_actions?.some(a => a.effectiveness_status === 'resolved' || a.effectiveness_status === 'success')
   ).length;
   
   const partialCount = actionsWithEffectiveness.filter(
