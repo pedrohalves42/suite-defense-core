@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { toast } from '@/hooks/use-toast';
@@ -14,6 +15,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -113,9 +115,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setSession(null);
       isInitialized.current = false;
-      // V-FIX: Invalidate all queries on logout to prevent data persistence
-      const { queryClient } = await import('@/lib/gateway').then(() => ({ queryClient: new (require('@tanstack/react-query').QueryClient)() }));
-      // We'll actually use the hook in the component, but here we just clear the refs.
+      // V-FIX: Invalidate and clear all queries on logout to prevent stale data leaking
+      queryClient.clear();
     } catch (error) {
       logger.error('[AuthProvider] Sign out error', error);
     }
