@@ -150,10 +150,10 @@ export function useRealtimeQuery<T>({
   return useQuery({
     queryKey,
     queryFn,
-    enabled: enabled,
+    enabled: enabled && isVisible,
     staleTime,
     refetchInterval: false,
     refetchIntervalInBackground: false,
-    refetchOnWindowFocus: isVisible,
+    refetchOnWindowFocus: true,
   });
 }

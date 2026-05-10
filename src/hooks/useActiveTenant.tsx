@@ -42,6 +42,7 @@ const ActiveTenantContext = createContext<ActiveTenantContextType | undefined>(u
  * V-AUDIT: active_tenant_id is NO LONGER persisted in localStorage (XSS risk).
  */
 async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
+  if (!tenantId) return false;
   const SYNC_TIMEOUT_MS = 10000;
   
   try {
