@@ -39,21 +39,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (error) {
           logger.error('[AuthProvider] Session fetch error', error);
           
-          // Clock skew detection
-          if (error.message.includes('issued in the future')) {
-            const match = error.message.match(/(\d+)\s+(\d+)\s+(\d+)/);
-            let description = 'Detectamos uma diferença significativa entre o relógio do seu computador e o servidor.';
-            if (match) {
-              const [, , current, now] = match.map(Number);
-              const skewMinutes = Math.floor(Math.abs(current - now) / 60);
-              description = `Seu relógio está ${skewMinutes} minutos fora de sincronia. Isso impede o login seguro.`;
-            }
+          // Clock skew detection - Critical for JWT validation
+          if (error.message.includes('issued in the future') || error.message.includes('future')) {
             toast({
               title: 'Relógio do Sistema Dessincronizado',
-              description,
+              description: 'Detectamos uma diferença entre o relógio do seu computador e o servidor. Isso impede o login seguro. Por favor, ajuste o horário do seu sistema.',
               variant: 'destructive',
-              duration: 10000,
+              duration: Infinity, // Persistent until reload
             });
+            // Stop initialization to prevent loops or weird states
+            setLoading(false);
+            setHasHydrated(true);
+            return;
           }
 
           if (retryCount < 2) {
