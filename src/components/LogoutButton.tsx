@@ -20,7 +20,7 @@ export const LogoutButton = () => {
     } else {
       toast({
         title: 'Logout realizado',
-        description: 'Ate logo!',
+        description: 'Até logo!',
       });
       navigate('/login');
     }
