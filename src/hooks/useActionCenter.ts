@@ -143,6 +143,8 @@ export function useExecuteActionItem() {
       toast.success(message);
       queryClient.invalidateQueries({ queryKey: ['action-center', tenant?.id] });
       queryClient.invalidateQueries({ queryKey: ['playbook-executions-pending'] });
+      queryClient.invalidateQueries({ queryKey: ['unified-metrics', tenant?.id] });
+      queryClient.invalidateQueries({ queryKey: ['action-center-history', tenant?.id] });
     },
     onError: (error) => {
       logger.error('Execute action error', error instanceof Error ? error : undefined);
