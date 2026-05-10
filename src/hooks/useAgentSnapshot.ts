@@ -95,9 +95,13 @@ export function getAgentStatusFromSnapshot(snapshot: AgentSnapshot | null | unde
   if (snapshot.online) return 'online';
   if (!snapshot.last_heartbeat) return 'never_connected';
   
-  // Calcular baseado em latência
-  const latencyMinutes = (snapshot.latency_ms || 0) / 1000 / 60;
-  if (latencyMinutes < 2) return 'online';
-  if (latencyMinutes < 5) return 'warning';
+  // Calcular baseado em heartbeat se online estiver falso ou ausente
+  if (snapshot.online) return 'online';
+  if (!snapshot.last_heartbeat) return 'never_connected';
+
+  const lastHb = new Date(snapshot.last_heartbeat).getTime();
+  const diffMinutes = (Date.now() - lastHb) / 1000 / 60;
+  
+  if (diffMinutes < 5) return 'warning';
   return 'offline';
 }
