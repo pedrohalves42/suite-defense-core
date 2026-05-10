@@ -45,8 +45,9 @@ export function useSessionGuard() {
     });
 
     // Check session periodically (every 120s - FinOps optimization)
+    // Only checks when page is visible to avoid unnecessary background calls
     const interval = setInterval(async () => {
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current || document.visibilityState === 'hidden') return;
       
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error || !session) {
