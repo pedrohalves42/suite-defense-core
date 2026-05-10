@@ -59,7 +59,12 @@ export function isSafeHref(href: string | null | undefined): boolean {
   if (!trimmed) return false;
 
   // Relative URLs are safe (same-origin).
-  if (trimmed.startsWith('/') || trimmed.startsWith('#') || trimmed.startsWith('?')) {
+  // V-FIX: Block protocol-relative URLs (starting with //) which can be used for open-redirects/XSS
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) {
+    return true;
+  }
+
+  if (trimmed.startsWith('#') || trimmed.startsWith('?')) {
     return true;
   }
 
