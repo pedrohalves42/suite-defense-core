@@ -154,14 +154,16 @@ export function deriveAgentState(agent: Partial<Agent>): AgentState {
   // 4. Verificar se está offline
   if (agent.last_heartbeat) {
     const lastHeartbeat = new Date(agent.last_heartbeat);
-    const minutesSinceHeartbeat = (Date.now() - lastHeartbeat.getTime()) / (1000 * 60);
+    const diffMs = Date.now() - lastHeartbeat.getTime();
+    const diffMinutes = diffMs / (1000 * 60);
     
-    if (minutesSinceHeartbeat > OFFLINE_THRESHOLD_MINUTES) {
+    // Alerta se exceder o limite absoluto (ex: 60 min)
+    if (diffMinutes >= OFFLINE_THRESHOLD_MINUTES) {
       return 'offline';
     }
     
     // Se estiver entre online e offline, mas marcado como degraded no banco
-    if (minutesSinceHeartbeat > WARNING_THRESHOLD_MINUTES || agent.is_throttled) {
+    if (diffMinutes >= WARNING_THRESHOLD_MINUTES || agent.is_throttled) {
       return 'degraded';
     }
   } else if (agent.status === 'pending') {

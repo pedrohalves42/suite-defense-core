@@ -219,8 +219,9 @@ export function useResolveAlert() {
       return { success: true, alertId };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['non-execution-alerts'] });
-      queryClient.invalidateQueries({ queryKey: ['decision-events'] });
+      queryClient.invalidateQueries({ queryKey: ['non-execution-alerts'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['decision-events'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['unified-metrics'], exact: false });
       toast({
         title: 'Alerta resolvido',
         description: 'O alerta foi marcado como resolvido.'
