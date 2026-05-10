@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AgentLifecycleState, DashboardAgentCard, LifecycleStage } from '@/types/agent-lifecycle';
+import { AGENT_STATUS_THRESHOLDS } from '@/lib/agent-status-constants';
 
 interface PipelineMetricsData {
   total_generated: number; total_downloaded: number; total_command_copied: number;
