@@ -34,7 +34,9 @@ export function useAgentLifecycle(tenantId: string | undefined, loading?: boolea
 }
 
 function transformToCard(state: AgentLifecycleState): DashboardAgentCard {
-  const statusBadge = getStatusBadge(state);
+  const is_offline = state.lifecycle_stage === 'installed_offline' || 
+                    (state.minutes_since_heartbeat !== null && state.minutes_since_heartbeat > 5);
+  const statusBadge = getStatusBadge(state, is_offline);
   
   return {
     agent_id: state.agent_id ?? '',
@@ -59,8 +61,7 @@ function transformToCard(state: AgentLifecycleState): DashboardAgentCard {
     flags: {
       is_stuck: state.is_stuck ?? false,
       has_errors: !!state.last_error_message,
-      is_offline: state.lifecycle_stage === 'installed_offline' || 
-                  (state.minutes_since_heartbeat !== null && state.minutes_since_heartbeat > 5)
+      is_offline: is_offline
     },
     
     actions: {
@@ -71,7 +72,7 @@ function transformToCard(state: AgentLifecycleState): DashboardAgentCard {
   };
 }
 
-function getStatusBadge(state: AgentLifecycleState): DashboardAgentCard['status_badge'] {
+function getStatusBadge(state: AgentLifecycleState, is_offline: boolean): DashboardAgentCard['status_badge'] {
   // Stuck installations (highest priority)
   if (state.is_stuck) {
     return { label: 'Travado', color: 'error' };
@@ -86,7 +87,7 @@ function getStatusBadge(state: AgentLifecycleState): DashboardAgentCard['status_
   const stage = state.lifecycle_stage ?? 'unknown';
   switch (stage) {
     case 'active':
-      return { label: 'Ativo', color: 'success' };
+      return is_offline ? { label: 'Instalado (Offline)', color: 'warning' } : { label: 'Ativo', color: 'success' };
     case 'installed_offline':
       return { label: 'Instalado (Offline)', color: 'warning' };
     case 'installing':
