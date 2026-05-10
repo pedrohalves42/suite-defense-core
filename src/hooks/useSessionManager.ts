@@ -132,7 +132,7 @@ export const useSessionManager = () => {
           abortControllerRef.current.abort();
         }
         events.forEach(event => 
-          document.removeEventListener(event, handleActivity, { capture: false })
+          document.removeEventListener(event, handleActivity)
         );
       };
     } else {

@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { callGateway } from '@/lib/gateway';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
-import { type AppRole } from '@/types/roles';
+import { type AppRole, ROLE_PRIORITY } from '@/types/roles';
 import { logger } from '@/lib/logger';
 
 interface Tenant {
@@ -102,15 +102,17 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) throw error;
       
-      const rolePriority: Record<string, number> = { 'admin': 100, 'technician': 50, 'viewer': 10 };
       const uniqueTenants = new Map<string, UserTenantRole>();
       
       (data || []).forEach((item: any) => {
         if (!item.tenant) return;
         
         const existing = uniqueTenants.get(item.tenant_id);
-        const currentPriority = rolePriority[item.role] || 0;
-        const existingPriority = existing ? (rolePriority[existing.role] || 0) : -1;
+        const currentRole = item.role as AppRole;
+        const currentPriority = ROLE_PRIORITY[currentRole] || 0;
+        
+        const existingRole = existing?.role as AppRole;
+        const existingPriority = existing ? (ROLE_PRIORITY[existingRole] || 0) : -1;
         
         if (currentPriority > existingPriority) {
           uniqueTenants.set(item.tenant_id, {

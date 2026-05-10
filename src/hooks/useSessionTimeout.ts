@@ -7,9 +7,9 @@ import { logger } from '@/lib/logger';
 /**
  * ADR-026 P1.2: Session Timeout Hook
  * Implements automatic session timeout based on user role:
- * - super_admin: 15 minutes
- * - admin: 60 minutes  
- * - user: 480 minutes (8 hours)
+ * - super_admin: 60 minutes
+ * - admin: 480 minutes (8 hours)
+ * - user: 720 minutes (12 hours)
  */
 export const useSessionTimeout = () => {
   const { user } = useAuth();
