@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useTenant } from './useTenant';
 import { logger } from '@/lib/logger';
 import { useEffect } from 'react';
+import { realtimeChannelManager } from '@/lib/realtime-manager';
 
 export interface ActionItem {
   item_id: string;
@@ -53,9 +54,11 @@ export function useActionCenter() {
   const query = useQuery({
     queryKey: ['action-center', tenant?.id],
     queryFn: async (): Promise<ActionCenterFeed> => {
+      if (!tenant?.id) throw new Error('Tenant ID required');
+      
       const data = await callGateway<ActionCenterFeed>('agent', 'action-center-feed', {
         action: 'get-feed',
-        tenant_id: tenant!.id
+        tenant_id: tenant.id
       });
       return data;
     },
@@ -65,52 +68,28 @@ export function useActionCenter() {
     staleTime: 120_000
   });
 
-  // Subscribe to realtime updates for playbook_executions
+  // Subscribe to realtime updates for relevant tables using central manager
   useEffect(() => {
-    if (!tenant?.id) return;
+    if (!tenant?.id || !queryClient) return;
 
-    const channel = supabase
-      .channel('action-center-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'playbook_executions',
-          filter: `tenant_id=eq.${tenant.id}`
-        },
+    const instanceId = `action-center-${tenant.id}`;
+    const tables = ['playbook_executions', 'system_alerts', 'ai_insights'];
+    
+    tables.forEach(table => {
+      realtimeChannelManager.subscribe(
+        instanceId,
+        table,
+        `tenant_id=eq.${tenant.id}`,
         () => {
           queryClient.invalidateQueries({ queryKey: ['action-center', tenant.id] });
         }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'system_alerts',
-          filter: `tenant_id=eq.${tenant.id}`
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['action-center', tenant.id] });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'ai_insights',
-          filter: `tenant_id=eq.${tenant.id}`
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['action-center', tenant.id] });
-        }
-      )
-      .subscribe();
+      );
+    });
 
     return () => {
-      supabase.removeChannel(channel);
+      tables.forEach(table => {
+        realtimeChannelManager.unsubscribe(instanceId, table, `tenant_id=eq.${tenant.id}`);
+      });
     };
   }, [tenant?.id, queryClient]);
 

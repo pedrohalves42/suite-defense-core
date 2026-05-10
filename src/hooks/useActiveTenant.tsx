@@ -42,13 +42,13 @@ const ActiveTenantContext = createContext<ActiveTenantContextType | undefined>(u
  * V-AUDIT: active_tenant_id is NO LONGER persisted in localStorage (XSS risk).
  */
 async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
-  const SYNC_TIMEOUT_MS = 10000; // P2 MED-01: 10 second timeout
+  const SYNC_TIMEOUT_MS = 10000;
   
   try {
-    // P2 MED-01: Create abort controller for timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), SYNC_TIMEOUT_MS);
 
+    // V-FIX: Centralize gateway call
     const result = await callGateway('admin', 'set-active-tenant', { tenant_id: tenantId });
     const error = result && typeof result === 'object' && 'error' in result ? result : null;
 
@@ -59,10 +59,8 @@ async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
       return false;
     }
 
-    // Session refresh moved to caller level for better control and to avoid redundancy
     return true;
   } catch (err) {
-    // P2 MED-01: Handle timeout specifically
     if (err instanceof Error && err.name === 'AbortError') {
       logger.error('[syncActiveTenantToBackend] Sync timeout after 10s');
       return false;
@@ -172,13 +170,16 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
     if (!activeTenant || !user || isSyncingRef.current) return;
 
     const checkJWTAndSync = async () => {
+      // V-FIX: Set syncing ref immediately to prevent race conditions
+      isSyncingRef.current = true;
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const currentJWTTenantId = session?.user?.app_metadata?.active_tenant_id;
         
-        if (currentJWTTenantId === activeTenant.id) return;
-        
-        isSyncingRef.current = true;
+        if (currentJWTTenantId === activeTenant.id) {
+          isSyncingRef.current = false;
+          return;
+        }
         const synced = await syncActiveTenantToBackend(activeTenant.id);
         if (synced) {
           const { error: refreshError } = await supabase.auth.refreshSession();
@@ -199,19 +200,17 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   }, [activeTenant?.id, user?.id, queryClient]);
 
   const setActiveTenant = useCallback(async (tenant: Tenant) => {
-    if (activeTenant?.id === tenant.id) {
+    if (activeTenant?.id === tenant.id || isSyncingRef.current) {
       return;
     }
 
-    // setActiveTenant is already non-blocking relative to provider render
     isSyncingRef.current = true;
     
     try {
-      const result = await callGateway('admin', 'set-active-tenant', { tenant_id: tenant.id });
-      const error = result && typeof result === 'object' && 'error' in result ? result : null;
+      // V-FIX: Reuse centralized sync helper
+      const synced = await syncActiveTenantToBackend(tenant.id);
 
-      if (error) {
-        logger.error('[setActiveTenant] Edge function error', error);
+      if (!synced) {
         toast.error('Erro ao trocar de empresa', {
           description: 'Não foi possível sincronizar com o servidor. Tente novamente.'
         });
