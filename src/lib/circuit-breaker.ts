@@ -45,6 +45,7 @@ export class CircuitBreaker {
       }
       // Transition to HALF_OPEN to test service
       this.state = CircuitState.HALF_OPEN;
+      this.successCount = 0; // V-FIX: Reset success count when starting probe
       logger.info('Circuit breaker transitioning to HALF_OPEN', {
         circuit: this.options.name,
       });

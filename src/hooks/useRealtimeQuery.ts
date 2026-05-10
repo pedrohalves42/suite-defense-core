@@ -123,9 +123,10 @@ export function useRealtimeQuery<T>({
               return oldData;
             });
           } else {
-            // Fallback for complex structures
-            // Fallback for complex structures or events not explicitly handled (like manual RPC updates)
-            queryClient.invalidateQueries({ queryKey, exact: true });
+            // V-FIX: Avoid unnecessary invalidation if data is already handled or null
+            if (queryClient.getQueryData(queryKey)) {
+              queryClient.invalidateQueries({ queryKey, exact: true });
+            }
           }
         }
       },
