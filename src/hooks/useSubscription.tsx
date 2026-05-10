@@ -26,7 +26,7 @@ interface SubscriptionData {
   features?: Record<string, SubscriptionFeature>;
 }
 
-// COST-OPT-V9: Polling retained with 10 min interval, paused when browser tab is inactive.
+// ADR-052: Subscription monitoring with FinOps visibility guards.
 export const useSubscription = () => {
   const { user, loading: authLoading } = useAuth();
   const isVisible = usePageVisibility();
