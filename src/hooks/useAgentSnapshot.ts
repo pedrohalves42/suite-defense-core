@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
 import { logger } from '@/lib/logger';
+import { getAgentOnlineStatus } from '@/lib/agent-status-constants';
 
 /**
  * AgentSnapshot - Contrato da Edge Function canônica
@@ -70,35 +71,8 @@ export function useAgentSnapshot(agentId?: string) {
 export function getAgentStatusFromSnapshot(snapshot: AgentSnapshot | null | undefined): 'online' | 'warning' | 'offline' | 'never_connected' {
   if (!snapshot) return 'never_connected';
   
-  // Priorizar agent_state do banco para consistência
-  if (snapshot.agent_state) {
-    switch (snapshot.agent_state) {
-      case 'healthy':
-      case 'enforcing':
-        return 'online';
-      case 'degraded':
-      case 'recovery':
-        return 'warning';
-      case 'error':
-      case 'shutdown':
-      case 'isolated':
-      case 'quarantined':
-        return 'offline';
-      case 'safe_mode':
-      case 'updating':
-      case 'rollback':
-        return 'warning';
-    }
-  }
-  
-  // Fallback para online/heartbeat (alinhado com OFFLINE_THRESHOLD_MS de 1min)
-  if (snapshot.online) return 'online';
-  if (!snapshot.last_heartbeat) return 'never_connected';
-
-  const lastHb = new Date(snapshot.last_heartbeat).getTime();
-  const diffMs = Date.now() - lastHb;
-  
-  // Alerta se o heartbeat for recente mas a flag online estiver falsa (instabilidade)
-  if (diffMs < 300_000) return 'warning'; // 5min grace period para diagnóstico
-  return 'offline';
+  return getAgentOnlineStatus({
+    last_heartbeat: snapshot.last_heartbeat,
+    agent_state: snapshot.agent_state ?? undefined,
+  });
 }

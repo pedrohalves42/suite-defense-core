@@ -95,9 +95,12 @@ export function getAgentOnlineStatus(
     switch (agent.agent_state) {
       case 'healthy':
       case 'enforcing':
+      case 'syncing':
+      case 'authenticating':
         return 'online';
       case 'degraded':
       case 'recovery':
+      case 'warning':
       case 'safe_mode':
       case 'updating':
       case 'rollback':

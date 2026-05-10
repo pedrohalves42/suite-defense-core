@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
 import type { AgentSnapshot } from './useAgentSnapshot';
 import { logger } from '@/lib/logger';
+import { getAgentOnlineStatus } from '@/lib/agent-status-constants';
 
 
 /**
@@ -60,34 +61,24 @@ export function getAgentStatusCounts(snapshots: AgentSnapshot[] | undefined) {
     (acc, snapshot) => {
       acc.total++;
       
-      if (snapshot.agent_state) {
-        switch (snapshot.agent_state) {
-          case 'healthy':
-          case 'enforcing':
-          case 'syncing':
-          case 'authenticating':
-            acc.online++;
-            break;
-          case 'updating':
-          case 'degraded':
-          case 'recovery':
-          case 'warning':
-            acc.warning++;
-            break;
-          case 'error':
-          case 'shutdown':
-            acc.offline++;
-            break;
-          default:
-            if (snapshot.online) acc.online++;
-            else if (!snapshot.last_heartbeat) acc.never_connected++;
-            else acc.offline++;
-        }
-      } else {
-        // Fallback baseado em online/heartbeat
-        if (snapshot.online) acc.online++;
-        else if (!snapshot.last_heartbeat) acc.never_connected++;
-        else acc.offline++;
+      const status = getAgentOnlineStatus({
+        last_heartbeat: snapshot.last_heartbeat,
+        agent_state: snapshot.agent_state ?? undefined,
+      });
+
+      switch (status) {
+        case 'online':
+          acc.online++;
+          break;
+        case 'warning':
+          acc.warning++;
+          break;
+        case 'offline':
+          acc.offline++;
+          break;
+        case 'never_connected':
+          acc.never_connected++;
+          break;
       }
       
       return acc;
