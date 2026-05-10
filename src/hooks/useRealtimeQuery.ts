@@ -44,6 +44,7 @@ interface UseRealtimeQueryOptions<T> {
   enabled?: boolean;
   staleTime?: number;
   meta?: Record<string, unknown>;
+  predicate?: (item: T) => boolean; // New: Client-side filter for incoming payloads
 }
 
 const DEFAULT_EVENTS: Array<'INSERT' | 'UPDATE' | 'DELETE'> = ['INSERT', 'UPDATE', 'DELETE'];
