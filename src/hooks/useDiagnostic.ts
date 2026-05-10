@@ -112,6 +112,7 @@ export function useDiagnostic(
       };
     },
     enabled: !!agentName && !!tenantId,
-    staleTime: 600_000, // 30 seconds
-    refetchInterval: false,});
+    staleTime: 30_000, // 30 seconds (V-FIX: corrected from comment misalign)
+    refetchInterval: false,
+  });
 }

@@ -109,8 +109,8 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
         const currentRole = item.role as AppRole;
         const currentPriority = ROLE_PRIORITY[currentRole] || 0;
         
-        const existingRole = existing?.role as AppRole;
-        const existingPriority = existing ? (ROLE_PRIORITY[existingRole] || 0) : -1;
+        const existingRole = (existing?.role as AppRole) || null;
+        const existingPriority = existingRole ? (ROLE_PRIORITY[existingRole] || 0) : -1;
         
         if (currentPriority > existingPriority) {
           uniqueTenants.set(item.tenant_id, {
