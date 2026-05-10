@@ -124,7 +124,8 @@ export function useRealtimeQuery<T>({
             });
           } else {
             // Fallback for complex structures
-            queryClient.invalidateQueries({ queryKey });
+            // Fallback for complex structures or events not explicitly handled (like manual RPC updates)
+            queryClient.invalidateQueries({ queryKey, exact: true });
           }
         }
       },
