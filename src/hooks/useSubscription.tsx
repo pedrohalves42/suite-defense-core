@@ -40,8 +40,8 @@ export const useSubscription = () => {
     enabled: !!user && !authLoading,
     staleTime: 5 * 60 * 1000,
     // ADR-052: Polling active ONLY when tab is visible to optimize infra costs (FinOps).
-    // UX FIX: Interval is paused but cache remains enabled to prevent loading flashes.
-    refetchInterval: isVisible ? 600_000 : false,
+    // UX FIX: Small random jitter (30s) prevents synchronized "thundering herd" spikes.
+    refetchInterval: isVisible ? (600_000 + Math.floor(Math.random() * 30000)) : false,
   });
 
   return {
