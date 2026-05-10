@@ -126,7 +126,9 @@ class RealtimeChannelManager {
     const channel = this.channels.get(key);
     if (channel) {
       logger.info(`[RealtimeChannelManager] Removing channel ${key} (no more subscribers)`);
-      supabase.removeChannel(channel);
+      supabase.removeChannel(channel).catch(err => {
+        logger.error(`[RealtimeChannelManager] Error removing channel ${key}`, err);
+      });
       this.channels.delete(key);
     }
   }
