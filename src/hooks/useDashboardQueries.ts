@@ -173,7 +173,7 @@ export function useDashboardQueries() {
     staleTime: 600_000,
   });
 
-  const loading = agents.isLoading || jobs.isLoading || reports.isLoading || virusScans.isLoading;
+  const loading = tenantLoading || agents.isLoading || jobs.isLoading || reports.isLoading || virusScans.isLoading;
 
   return {
     agents: agents.data || [],
