@@ -10,8 +10,8 @@ interface DashboardPDFReportProps {
   agents: DashboardAgent[];
   jobs: DashboardJob[];
   tenantName: string;
-  onlinePercentage: string;
-  successRate: string;
+  onlinePercentage: number;
+  successRate: number;
   offlineCount: number;
   failedJobs: number;
   alerts: number;
@@ -151,7 +151,7 @@ export function DashboardPDFReport({
       const recommendations: string[] = [];
       if (offlineCount > 0) recommendations.push(t('adminPages.dashboard.pdfReport.recOffline', { count: offlineCount }));
       if (failedJobs > 0) recommendations.push(t('adminPages.dashboard.pdfReport.recFailed', { count: failedJobs }));
-      if (Number(onlinePercentage) < 90) recommendations.push(t('adminPages.dashboard.pdfReport.recCoverage'));
+      if (onlinePercentage < 90) recommendations.push(t('adminPages.dashboard.pdfReport.recCoverage'));
       if (alerts > 0) recommendations.push(t('adminPages.dashboard.pdfReport.recAlerts', { count: alerts }));
       if (recommendations.length === 0) recommendations.push(t('adminPages.dashboard.pdfReport.recHealthy'));
 

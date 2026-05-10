@@ -7,10 +7,10 @@ import { useTranslation } from "react-i18next";
 
 interface MetricCardsProps {
   totalAgents: number;
-  onlinePercentage: string;
+  onlinePercentage: number;
   offlineCount: number;
   alerts: number;
-  successRate: string;
+  successRate: number;
   failedJobs: number;
   trends?: {
     failedTrend: number;
