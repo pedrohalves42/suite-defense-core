@@ -32,7 +32,7 @@ async function fetchAlerts(tenantId: string, activeOnly: boolean) {
  * Subscribes to postgres_changes on public.agents filtered by tenant_id.
  * Replaces polling-based queries for agent lists.
  */
-export function useRealtimeAgents(tenantId: string | undefined, select = 'id, agent_name, status, hostname, os_type, last_heartbeat, agent_version, created_at, enrolled_at') {
+export function useRealtimeAgents(tenantId: string | undefined, select = 'id, agent_name, status, hostname, os_type, last_heartbeat, agent_version, created_at, enrolled_at', enabled = true) {
   return useRealtimeQuery({
     queryKey: ['rt-agents', tenantId],
     queryFn: async () => {
@@ -46,8 +46,8 @@ export function useRealtimeAgents(tenantId: string | undefined, select = 'id, ag
       return data || [];
     },
     realtimeTable: 'agents',
-    realtimeFilter: `tenant_id=eq.${tenantId}`,
-    enabled: !!tenantId,
+    realtimeFilter: tenantId ? `tenant_id=eq.${tenantId}` : undefined,
+    enabled: enabled && !!tenantId,
     staleTime: 300_000,
   });
 }
@@ -55,8 +55,8 @@ export function useRealtimeAgents(tenantId: string | undefined, select = 'id, ag
 /**
  * Realtime-powered hook for jobs list.
  */
-export function useRealtimeJobs(tenantId: string | undefined, opts?: { status?: string; limit?: number }) {
-  const { status, limit = 50 } = opts || {};
+export function useRealtimeJobs(tenantId: string | undefined, opts?: { status?: string; limit?: number; enabled?: boolean }) {
+  const { status, limit = 50, enabled = true } = opts || {};
   return useRealtimeQuery({
     queryKey: ['rt-jobs', tenantId, status, limit],
     queryFn: async () => {
@@ -73,8 +73,8 @@ export function useRealtimeJobs(tenantId: string | undefined, opts?: { status?: 
       return data || [];
     },
     realtimeTable: 'jobs',
-    realtimeFilter: `tenant_id=eq.${tenantId}`,
-    enabled: !!tenantId,
+    realtimeFilter: tenantId ? `tenant_id=eq.${tenantId}` : undefined,
+    enabled: enabled && !!tenantId,
     staleTime: 120_000,
   });
 }
@@ -82,8 +82,9 @@ export function useRealtimeJobs(tenantId: string | undefined, opts?: { status?: 
 /**
  * Realtime-powered hook for system alerts.
  */
-export function useRealtimeAlerts(tenantId: string | undefined, opts?: { activeOnly?: boolean }) {
+export function useRealtimeAlerts(tenantId: string | undefined, opts?: { activeOnly?: boolean; enabled?: boolean }) {
   const activeOnly = opts?.activeOnly ?? true;
+  const enabled = opts?.enabled ?? true;
   return useRealtimeQuery({
     queryKey: ['rt-alerts', tenantId, activeOnly],
     queryFn: async (): Promise<SystemAlert[]> => {
@@ -95,8 +96,8 @@ export function useRealtimeAlerts(tenantId: string | undefined, opts?: { activeO
       return (data || []) as SystemAlert[];
     },
     realtimeTable: 'system_alerts',
-    realtimeFilter: `tenant_id=eq.${tenantId}`,
-    enabled: !!tenantId,
+    realtimeFilter: tenantId ? `tenant_id=eq.${tenantId}` : undefined,
+    enabled: enabled && !!tenantId,
     staleTime: 300_000,
   });
 }
