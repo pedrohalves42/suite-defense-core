@@ -24,9 +24,12 @@ type LogContext = Record<string, any>;
 
 // Buffer to batch log entries and avoid excessive network calls
 const LOG_BUFFER: Array<{ level: LogLevel; message: string; context?: LogContext; timestamp: string }> = [];
+const RETRY_BUFFER: typeof LOG_BUFFER = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
+let isFlushing = false;
 const FLUSH_INTERVAL_MS = 10000; // Flush every 10 seconds
 const MAX_BUFFER_SIZE = 20;
+const MAX_RETRY_SIZE = 100;
 
 async function flushLogs() {
   if (LOG_BUFFER.length === 0) return;
