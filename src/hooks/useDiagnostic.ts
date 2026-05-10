@@ -81,7 +81,9 @@ export function useDiagnostic(
       }));
       
       // Validate issues (logs warnings for critical/high without origin)
-      issues.forEach(validateIssue);
+      if (typeof validateIssue === 'function') {
+        issues.forEach(validateIssue);
+      }
       
       // Sort issues by severity
       issues.sort((a, b) => 
