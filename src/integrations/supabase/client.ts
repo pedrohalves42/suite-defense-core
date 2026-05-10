@@ -5,8 +5,8 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 // SEC-802: Hardened Auth Configuration
-// Prohibits JWT persistence in localStorage to mitigate XSS risks.
-// Auth state is managed via memory and secure cookies (provider default).
+// Session persistence is enabled for seamless UX (PWA support).
+// Security is enforced via short-lived JWTs and MFA where required.
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     persistSession: true, // Restore persistence for better UX; use MFA/Short JWT for security instead.

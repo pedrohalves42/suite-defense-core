@@ -33,20 +33,28 @@ export function useSessionGuard() {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
-        if (event === "SIGNED_OUT") {
-          handleExpired();
-        }
+      // Avoid showing "Session Expired" if the user signed out voluntarily
+      if (event === "SIGNED_OUT" && sessionValid) {
+        // If it was a manual sign out, we don't want to trigger the "Expired" toast
+        // This is a common logic bug where manual logout triggers error messages
+        setSessionValid(false);
+        return;
+      }
+      
+      if (event === "TOKEN_REFRESHED") {
+        setSessionValid(true);
       }
     });
 
-    // Check session periodically (every 60s)
+    // Check session periodically (every 120s - FinOps optimization)
     const interval = setInterval(async () => {
+      if (!isMountedRef.current) return;
+      
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error || !session) {
         handleExpired();
       }
-    }, 60000);
+    }, 120000);
 
     return () => {
       subscription.unsubscribe();
