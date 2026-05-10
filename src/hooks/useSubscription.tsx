@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
 import { callGateway } from '@/lib/gateway';
 import { usePageVisibility } from './usePageVisibility';
+import { logger } from '@/lib/logger';
 
 interface SubscriptionFeature {
   enabled: boolean;
