@@ -36,17 +36,16 @@ export function AgentSelector({ value, onValueChange }: AgentSelectorProps) {
     queryFn: async () => {
       if (!activeTenant?.id) return [];
       
-      // ADR-026: Use RPC with explicit tenant_id to bypass JWT sync issues
-      const { data, error } = await supabase.rpc('get_agents_list', {
-        p_tenant_id: activeTenant.id,
-        p_include_archived: false
-      });
+      // PERF-FIX: Use direct table query instead of get_agents_list RPC for selector
+      const { data, error } = await supabase
+        .from('agents')
+        .select('*')
+        .eq('tenant_id', activeTenant.id)
+        .eq('status', 'active');
 
       if (error) throw error;
       
-      // Map RPC jsonb response to Agent interface
-      // RPC returns untyped JSON — cast is required
-      return ((data || []) as Array<Record<string, unknown>>).map((agent): Agent => ({
+      return (data || []).map((agent): Agent => ({
         id: String(agent.id || ''),
         agent_name: String(agent.agent_name || ''),
         status: String(agent.status || ''),
