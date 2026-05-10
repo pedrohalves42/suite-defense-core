@@ -89,12 +89,20 @@ class RealtimeChannelManager {
     return `${schema}:${table}${filter ? `:${filter}` : ''}`;
   }
 
+  private getSafeChannelName(key: string): string {
+    // Supabase channel names should be alphanumeric or : . _ -
+    // and definitely no special characters from filters
+    return `central-${key.replace(/[^a-zA-Z0-9:._-]/g, '_')}`.substring(0, 100);
+  }
+
   private initChannel(key: string, schema: string, table: string, filter?: string): void {
+    if (this.channels.has(key)) return;
+
     logger.debug(`[RealtimeChannelManager] Initializing channel for ${key}`);
     
-    // The channel name should be unique to avoid collisions with other subscriptions
+    const channelName = this.getSafeChannelName(key);
     const channel = supabase
-      .channel(`central-${key}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -114,7 +122,7 @@ class RealtimeChannelManager {
           logger.debug(`[RealtimeChannelManager] Channel ${key} subscribed`);
         } else if (status === 'CHANNEL_ERROR') {
           logger.error(`[RealtimeChannelManager] Channel ${key} error:`, err);
-          // V-FIX: On fatal channel error, remove it from map so next subscribe attempt recreates it
+          // V-FIX: Cleanup and allow retry on next check
           this.channels.delete(key);
         } else if (status === 'TIMED_OUT') {
           logger.warn(`[RealtimeChannelManager] Channel ${key} timed out`);

@@ -24,6 +24,7 @@ export class CircuitBreaker {
   private successCount: number = 0;
   private nextAttempt: number = Date.now();
   private options: CircuitBreakerOptions;
+  private isProbing: boolean = false;
 
   constructor(options: Partial<CircuitBreakerOptions> = {}) {
     this.options = {
@@ -43,9 +44,17 @@ export class CircuitBreaker {
         });
         throw new Error(`Circuit breaker ${this.options.name} is OPEN`);
       }
+      
+      // ADR-031: Prevent race conditions during state transition
+      // Only one execution should attempt to probe the service
+      if (this.isProbing) {
+        throw new Error(`Circuit breaker ${this.options.name} is probing (HALF_OPEN)`);
+      }
+
       // Transition to HALF_OPEN to test service
       this.state = CircuitState.HALF_OPEN;
-      this.successCount = 0; // V-FIX: Reset success count when starting probe
+      this.isProbing = true;
+      this.successCount = 0;
       logger.info('Circuit breaker transitioning to HALF_OPEN', {
         circuit: this.options.name,
       });
@@ -58,6 +67,8 @@ export class CircuitBreaker {
     } catch (error) {
       this.onFailure();
       throw error;
+    } finally {
+      this.isProbing = false;
     }
   }
 
