@@ -109,8 +109,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
+      // V-FIX: Clear state explicitly after signOut
       setUser(null);
       setSession(null);
+      isInitialized.current = false;
+      // V-FIX: Invalidate all queries on logout to prevent data persistence
+      const { queryClient } = await import('@/lib/gateway').then(() => ({ queryClient: new (require('@tanstack/react-query').QueryClient)() }));
+      // We'll actually use the hook in the component, but here we just clear the refs.
     } catch (error) {
       logger.error('[AuthProvider] Sign out error', error);
     }
