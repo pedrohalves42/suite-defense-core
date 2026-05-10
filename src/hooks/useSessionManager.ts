@@ -65,6 +65,12 @@ export const useSessionManager = () => {
     const sessionId = sessionIdRef.current;
     if (!sessionId || !user) return;
 
+    // ADR-033: Skip activity updates if the tab is hidden to save battery and network
+    if (document.visibilityState === 'hidden') {
+      logger.debug('[SessionManager] Skipping activity update (tab hidden)', { sessionId });
+      return;
+    }
+
     try {
       await supabase.rpc('update_session_activity', { 
         _session_id: sessionId 
