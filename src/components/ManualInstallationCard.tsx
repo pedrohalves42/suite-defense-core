@@ -78,7 +78,7 @@ export const ManualInstallationCard = ({ agentName, onDownloadPs1 }: ManualInsta
         {/* Link de troubleshooting */}
         <details className="border-t pt-3">
           <summary className="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-orange-600">
-            [JOB]  Problemas na instalacao? Clique aqui
+            🔍 Problemas na instalação? Clique aqui
           </summary>
           <div className="mt-3 space-y-3 text-sm text-gray-600 dark:text-gray-400 pl-4 border-l-2 border-orange-300">
             <div>
