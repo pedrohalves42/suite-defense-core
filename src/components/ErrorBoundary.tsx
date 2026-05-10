@@ -35,6 +35,19 @@ export class ErrorBoundary extends Component<Props, State> {
     window.location.reload();
   };
 
+  private handleResetAndReload = () => {
+    // V-FIX: Clear all local storage and caches to recover from corrupted state
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+      if ('caches' in window) {
+        caches.keys().then(keys => keys.forEach(key => caches.delete(key)));
+      }
+    } finally {
+      window.location.href = '/';
+    }
+  };
+
   private handleGoHome = () => {
     window.location.href = '/';
   };
