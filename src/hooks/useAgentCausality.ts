@@ -6,6 +6,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { AGENT_STATUS_THRESHOLDS } from '@/lib/agent-status-constants';
 import { AgentState, deriveAgentState, getStateDescription } from '@/lib/agent-state-machine';
 import { formatRelativeTime, formatDuration } from '@/lib/date-utils';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
@@ -186,7 +187,7 @@ export function useAgentCausality(agentId: string | null, tenantId?: string | nu
           break;
         case 'offline':
           causedBy = 'Perda de conexão';
-          reason = 'Computador não se comunica há mais de 10 minutos';
+          reason = `Computador não se comunica há mais de ${AGENT_STATUS_THRESHOLDS.OFFLINE_MIN_MINUTES} minutos`;
           stateSince = (agent.last_heartbeat as string | null);
           break;
         case 'updating':

@@ -135,9 +135,9 @@ export function getOsIcon(osType: string | null): string {
   
   const normalizedType = osType.toLowerCase();
   
-  if (normalizedType === 'windows') return '🪟';
-  if (normalizedType === 'linux') return '🐧';
-  if (normalizedType === 'macos' || normalizedType === 'darwin') return '🍎';
+  if (normalizedType === 'windows' || normalizedType.includes('win')) return '🪟';
+  if (normalizedType === 'linux' || normalizedType.includes('nix') || normalizedType.includes('nux')) return '🐧';
+  if (normalizedType === 'macos' || normalizedType === 'darwin' || normalizedType.includes('apple') || normalizedType.includes('osx')) return '🍎';
   
   return '💻';
 }

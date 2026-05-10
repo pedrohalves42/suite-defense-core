@@ -120,8 +120,31 @@ export function getUserFriendlyMessage(error: unknown): string {
   if (isCyberShieldError(error)) {
     return error.message;
   }
+  
+  // V-FIX: Handle PostgREST/Auth errors from Supabase SDK
+  if (error && typeof error === 'object') {
+    const err = error as any;
+    if (err.message) {
+      // If it's a generic "Database error", try to find a more specific detail
+      if (err.message.includes('Database error') && err.details) {
+        return err.details;
+      }
+      
+      // Translate common Postgres errors
+      if (err.message.includes('duplicate key value violates unique constraint')) {
+        return 'Este registro já existe no sistema.';
+      }
+      if (err.message.includes('violates foreign key constraint')) {
+        return 'Este item não pode ser excluído pois está sendo usado em outro lugar.';
+      }
+      
+      return err.message;
+    }
+  }
+
   if (error instanceof Error) {
     return error.message;
   }
-  return 'An unexpected error occurred. Please try again.';
+  
+  return 'Ocorreu um erro inesperado. Por favor, tente novamente.';
 }

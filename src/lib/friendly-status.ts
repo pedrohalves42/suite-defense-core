@@ -1,3 +1,5 @@
+import { AGENT_STATUS_THRESHOLDS } from './agent-status-constants';
+
 // Friendly status translations for non-technical users
 
 export const AGENT_STATUS_LABELS: Record<string, { label: string; description: string }> = {
@@ -165,8 +167,9 @@ export const TECH_GLOSSARY: Record<string, { term: string; explanation: string }
 };
 
 export function getFriendlyAgentStatus(status: string, lastHeartbeat: string | null): { label: string; description: string } {
-  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-  const isOnline = lastHeartbeat && new Date(lastHeartbeat) > fiveMinutesAgo;
+  const thresholdMinutes = AGENT_STATUS_THRESHOLDS.ONLINE_MAX_MINUTES;
+  const thresholdTime = new Date(Date.now() - thresholdMinutes * 60 * 1000);
+  const isOnline = lastHeartbeat && new Date(lastHeartbeat) > thresholdTime;
   
   if (!isOnline && status === 'active') {
     return AGENT_STATUS_LABELS['offline'];
