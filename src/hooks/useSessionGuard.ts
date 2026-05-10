@@ -34,9 +34,7 @@ export function useSessionGuard() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       // Avoid showing "Session Expired" if the user signed out voluntarily
-      if (event === "SIGNED_OUT" && sessionValid) {
-        // If it was a manual sign out, we don't want to trigger the "Expired" toast
-        // This is a common logic bug where manual logout triggers error messages
+      if (event === "SIGNED_OUT") {
         setSessionValid(false);
         return;
       }

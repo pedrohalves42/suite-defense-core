@@ -112,7 +112,7 @@ export const useSessionTimeout = () => {
     // Activity event listeners
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
     
-    // activity reset.
+    // ADR-026: Passive event listeners for efficient activity monitoring.
     const handleActivity = () => {
       resetTimer();
     };
