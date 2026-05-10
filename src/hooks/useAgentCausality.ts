@@ -72,12 +72,8 @@ export function useAgentCausality(agentId: string | null, tenantId?: string | nu
         return null;
       }
 
-      const agent = (agentsList as unknown as Array<Record<string, unknown>>)?.find(
-        (a) => a.id === agentId
-      ) || null;
-
       if (!agent) {
-        console.info('[useAgentCausality] Agent not found via RPC:', agentId, 'tenant:', effectiveTenantId);
+        logger.info('[useAgentCausality] Agent not found:', agentId, 'tenant:', effectiveTenantId);
         return null;
       }
 
