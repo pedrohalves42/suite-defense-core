@@ -39,7 +39,7 @@ export const useSubscription = () => {
     },
     enabled: !!user && isVisible,
     staleTime: 5 * 60 * 1000,
-    refetchInterval: isVisible ? 10 * 60 * 1000 : false, // COST-OPT-V9: Polling reduced to 10 min, active only when visible
+    refetchInterval: isVisible ? 600_000 : false, // 10 min polling ONLY when visible (ADR-052)
   });
 
   return {
