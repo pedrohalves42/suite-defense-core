@@ -34,7 +34,9 @@ export function useAgentLifecycle(tenantId: string | undefined, loading?: boolea
 }
 
 function transformToCard(state: AgentLifecycleState): DashboardAgentCard {
-  const statusBadge = getStatusBadge(state);
+  const is_offline = state.lifecycle_stage === 'installed_offline' || 
+                    (state.minutes_since_heartbeat !== null && state.minutes_since_heartbeat > 5);
+  const statusBadge = getStatusBadge(state, is_offline);
   const is_offline = state.lifecycle_stage === 'installed_offline' || 
                     (state.minutes_since_heartbeat !== null && state.minutes_since_heartbeat > 5);
   
@@ -73,7 +75,7 @@ function transformToCard(state: AgentLifecycleState): DashboardAgentCard {
   };
 }
 
-function getStatusBadge(state: AgentLifecycleState): DashboardAgentCard['status_badge'] {
+function getStatusBadge(state: AgentLifecycleState, is_offline: boolean): DashboardAgentCard['status_badge'] {
   // Stuck installations (highest priority)
   if (state.is_stuck) {
     return { label: 'Travado', color: 'error' };
