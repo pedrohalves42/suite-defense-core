@@ -57,7 +57,7 @@ export const ISSUE_ACTIONS: Record<string, RecommendedAction> = {
     description: 'Safe mode ativado múltiplas vezes, investigar problema raiz',
   },
 
-  // Isolamento
+  // Isolamento e Quarentena
   'isolated': {
     label: 'Revisar isolamento',
     action_key: 'review_isolation',
@@ -69,6 +69,12 @@ export const ISSUE_ACTIONS: Record<string, RecommendedAction> = {
     action_key: 'remove_isolation',
     requires_confirmation: true,
     description: 'Remover isolamento após verificar que é seguro',
+  },
+  'quarantined': {
+    label: 'Liberar quarentena',
+    action_key: 'remove_quarantine',
+    requires_confirmation: true,
+    description: 'Computador em quarentena requer revisão manual imediata',
   },
 
   // Throttle

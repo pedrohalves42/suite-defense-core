@@ -44,6 +44,7 @@ interface UseRealtimeQueryOptions<T> {
   enabled?: boolean;
   staleTime?: number;
   meta?: Record<string, unknown>;
+  predicate?: (item: T) => boolean; // New: Client-side filter for incoming payloads
 }
 
 const DEFAULT_EVENTS: Array<'INSERT' | 'UPDATE' | 'DELETE'> = ['INSERT', 'UPDATE', 'DELETE'];
@@ -61,6 +62,7 @@ export function useRealtimeQuery<T>({
   realtimeEvents = DEFAULT_EVENTS,
   enabled = true,
   staleTime = 300_000,
+  predicate,
 }: UseRealtimeQueryOptions<T>) {
   const queryClient = useQueryClient();
   const isVisible = usePageVisibility();
@@ -95,8 +97,8 @@ export function useRealtimeQuery<T>({
           });
           
           if (eventType === 'UPDATE' && payload.new) {
-            // Check if updated item still matches filter
-            const stillMatches = matchesFilter(payload.new, realtimeFilter);
+            // Check if updated item still matches filter AND custom predicate
+            const stillMatches = matchesFilter(payload.new, realtimeFilter) && (!predicate || predicate(payload.new));
 
             queryClient.setQueryData(queryKey, (oldData: any) => {
               if (!oldData) return oldData;
@@ -142,8 +144,8 @@ export function useRealtimeQuery<T>({
               return oldData;
             });
           } else if (eventType === 'INSERT' && payload.new) {
-            // V-FIX: Verify item matches filter before inserting into view
-            if (!matchesFilter(payload.new, realtimeFilter)) {
+            // V-FIX: Verify item matches filter AND custom predicate before inserting into view
+            if (!matchesFilter(payload.new, realtimeFilter) || (predicate && !predicate(payload.new))) {
               logger.debug(`[useRealtimeQuery] Skipping INSERT: item does not match filter`, {
                 filter: realtimeFilter,
                 itemId: payload.new.id

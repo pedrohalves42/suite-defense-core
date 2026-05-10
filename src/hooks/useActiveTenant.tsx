@@ -127,24 +127,27 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   const hasMultipleTenants = tenants.length > 1;
 
   const activeTenant = useMemo(() => {
-    if (tenants.length === 0) return null;
+    // V-FIX: While loading, we should NOT return a fallback tenant,
+    // otherwise components will render with the wrong context (usually the first tenant in the list)
+    // before the "real" preference is determined from app_metadata.
+    if (loading || tenants.length === 0) return null;
     
-    // 1. Explicit selection in state
+    // 1. Explicit selection in state (highest priority during session)
     if (activeTenantId) {
       const found = tenants.find(t => t.id === activeTenantId);
       if (found) return found;
     }
 
-    // 2. JWT session preference
+    // 2. JWT session preference (ADR-026: Persistent preference)
     const sessionTenantId = user?.app_metadata?.active_tenant_id;
     if (sessionTenantId) {
       const found = tenants.find(t => t.id === sessionTenantId);
       if (found) return found;
     }
     
-    // 3. Fallback to first
+    // 3. Fallback to first ONLY if we are sure there is no session preference
     return tenants[0];
-  }, [tenants, activeTenantId, user?.app_metadata?.active_tenant_id]);
+  }, [tenants, activeTenantId, user?.app_metadata?.active_tenant_id, loading]);
 
   // CORREÇÃO: Calcular role baseada no tenant ATIVO e no status de super_admin global
   const activeRole = useMemo((): AppRole | null => {

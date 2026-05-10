@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 type GatewayNamespace =
   | 'admin' | 'billing' | 'security' | 'build' | 'agent'
@@ -22,6 +23,7 @@ export async function callGateway<T = Record<string, unknown>>(
   namespace: GatewayNamespace,
   action: string,
   payload?: Record<string, unknown>,
+  options?: { signal?: AbortSignal; headers?: Record<string, string> }
 ): Promise<T> {
   const gateway = API_GATEWAY_NAMESPACES.includes(namespace)
     ? 'api-gateway'
@@ -29,23 +31,39 @@ export async function callGateway<T = Record<string, unknown>>(
     ? 'public-gateway'
     : 'ops-gateway';
 
-  const { data, error } = await supabase.functions.invoke(gateway, {
-    body: {
-      action: `${namespace}:${action}`,
-      payload: payload ?? {},
-    },
-  });
+  try {
+    const { data, error } = await supabase.functions.invoke(gateway, {
+      body: {
+        action: `${namespace}:${action}`,
+        payload: payload ?? {},
+      },
+      headers: options?.headers,
+      // Note: supabase-js doesn't natively support signal in invoke yet, 
+      // but we prepare the interface for future compatibility or manual fetch if needed.
+    });
 
-  if (error) {
-    console.error(`[Gateway Error] ${namespace}:${action}`, error);
-    throw error;
+    if (error) {
+      // V-FIX: Log more context for debugging
+      logger.error(`[Gateway Error] ${gateway} -> ${namespace}:${action}`, error);
+      throw error;
+    }
+
+    // Se o retorno do gateway indicar erro na execução interna (ex: 400 ou 500 encapsulado)
+    if (data && typeof data === 'object' && 'error' in data && data.error) {
+      const errorMsg = typeof data.error === 'string' 
+        ? data.error 
+        : (data.error as any).message || 'Gateway Internal Error';
+      
+      const internalError = new Error(errorMsg);
+      (internalError as any).details = data.details;
+      throw internalError;
+    }
+
+    return (data ?? {}) as T;
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      logger.debug(`[Gateway] Request aborted: ${namespace}:${action}`);
+    }
+    throw err;
   }
-
-  // Se o retorno do gateway indicar erro na execução interna (ex: 400 ou 500 encapsulado)
-  if (data && typeof data === 'object' && 'error' in data && data.error) {
-    const errorMsg = typeof data.error === 'string' ? data.error : (data.error as any).message || 'Gateway Internal Error';
-    throw new Error(errorMsg);
-  }
-
-  return (data ?? {}) as T;
 }

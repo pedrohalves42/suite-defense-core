@@ -35,6 +35,19 @@ export class ErrorBoundary extends Component<Props, State> {
     window.location.reload();
   };
 
+  private handleResetAndReload = () => {
+    // V-FIX: Clear all local storage and caches to recover from corrupted state
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+      if ('caches' in window) {
+        caches.keys().then(keys => keys.forEach(key => caches.delete(key)));
+      }
+    } finally {
+      window.location.href = '/';
+    }
+  };
+
   private handleGoHome = () => {
     window.location.href = '/';
   };
@@ -72,21 +85,31 @@ export class ErrorBoundary extends Component<Props, State> {
                 Voce pode tentar recarregar a pagina ou voltar ao inicio.
               </p>
             </CardContent>
-            <CardFooter className="flex gap-3">
+            <CardFooter className="flex flex-col gap-3">
+              <div className="flex w-full gap-3">
+                <Button 
+                  onClick={this.handleReload} 
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Recarregar
+                </Button>
+                <Button 
+                  onClick={this.handleGoHome}
+                  className="flex-1"
+                >
+                  <Home className="mr-2 h-4 w-4" />
+                  Início
+                </Button>
+              </div>
+              
               <Button 
-                onClick={this.handleReload} 
-                variant="outline"
-                className="flex-1"
+                onClick={this.handleResetAndReload}
+                variant="ghost"
+                className="w-full text-xs text-muted-foreground hover:text-destructive"
               >
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Recarregar
-              </Button>
-              <Button 
-                onClick={this.handleGoHome}
-                className="flex-1"
-              >
-                <Home className="mr-2 h-4 w-4" />
-                Voltar ao Inicio
+                Limpar Cache e Reiniciar App
               </Button>
             </CardFooter>
           </Card>
