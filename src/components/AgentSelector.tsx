@@ -41,7 +41,8 @@ export function AgentSelector({ value, onValueChange }: AgentSelectorProps) {
         .from('agents')
         .select('*')
         .eq('tenant_id', activeTenant.id)
-        .eq('status', 'active');
+        .eq('status', 'active')
+        .is('archived_at', null);
 
       if (error) throw error;
       
