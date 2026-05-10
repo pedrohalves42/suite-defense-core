@@ -38,7 +38,8 @@ export const useTenantFeatures = () => {
   };
 
   const getFeatureQuota = (featureKey: string): { limit: number | null; used: number; remaining: number | null } => {
-    const feature = features?.find(f => f.feature_key === featureKey);
+    const key = featureKey.toLowerCase();
+    const feature = features?.find(f => f.feature_key.toLowerCase() === key);
     if (!feature) {
       return { limit: null, used: 0, remaining: null };
     }
