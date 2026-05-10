@@ -1,5 +1,6 @@
 // Utility functions for agent display names and formatting
 import { getAgentOnlineStatus } from './agent-status-constants';
+import { formatRelativeTime } from './date-utils';
 
 /**
  * Get a user-friendly display name for an agent
@@ -11,7 +12,7 @@ export function getAgentDisplayName(agent: {
   agent_name?: string;
 }): string {
   // SEMPRE retornar agent_name exatamente como definido na instalação
-  if (agent.agent_name) {
+  if (agent.agent_name && agent.agent_name.trim()) {
     return agent.agent_name;
   }
   
@@ -99,23 +100,5 @@ export function getDefaultJobPayload(jobType: string): Record<string, unknown> {
  * Format relative time in Portuguese
  */
 export function formatRelativeTimePt(date: Date | string | null): string {
-  if (!date) return 'Nunca';
-  
-  const now = new Date();
-  const then = new Date(date);
-  const diffMs = now.getTime() - then.getTime();
-  const diffSeconds = Math.floor(diffMs / 1000);
-  const diffMinutes = Math.floor(diffSeconds / 60);
-  const diffHours = Math.floor(diffMinutes / 60);
-  const diffDays = Math.floor(diffHours / 24);
-  
-  if (diffSeconds < 60) return 'Agora mesmo';
-  if (diffMinutes < 60) return `${diffMinutes} min atrás`;
-  if (diffHours < 24) return `${diffHours}h atrás`;
-  if (diffDays < 7) return `${diffDays} dias atrás`;
-  
-  return then.toLocaleDateString('pt-BR', { 
-    day: '2-digit', 
-    month: 'short' 
-  });
+  return formatRelativeTime(date);
 }

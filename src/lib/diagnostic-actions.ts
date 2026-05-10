@@ -205,6 +205,7 @@ export function getAllActions(): Record<string, RecommendedAction> {
 const BLOCKING_ISSUE_TYPES = [
   'isolated',
   'agent_isolated',
+  'quarantined', // V-FIX: Quarantined agents are also blocked
   'no_token',
   'version_blocked',
   'token_expired',
