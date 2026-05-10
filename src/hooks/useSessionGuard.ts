@@ -44,8 +44,8 @@ export function useSessionGuard() {
       }
     });
 
-    // Check session periodically (every 120s - FinOps optimization)
-    // Only checks when page is visible to avoid unnecessary background calls
+    // V-FIX: Periodic session health check (120s interval).
+    // FinOps: Guarded by document.visibilityState to prevent useless background API calls.
     const interval = setInterval(async () => {
       if (!isMountedRef.current || document.visibilityState === 'hidden') return;
       
