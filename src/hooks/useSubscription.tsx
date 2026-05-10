@@ -28,7 +28,7 @@ interface SubscriptionData {
 
 // COST-OPT-V9: Polling retained with 10 min interval, paused when browser tab is inactive.
 export const useSubscription = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const isVisible = usePageVisibility();
 
   const { data: subscription, isLoading, refetch } = useQuery<SubscriptionData>({
@@ -37,7 +37,7 @@ export const useSubscription = () => {
       if (!user) throw new Error('Not authenticated');
       return await callGateway<SubscriptionData>('billing', 'check-subscription');
     },
-    enabled: !!user,
+    enabled: !!user && !authLoading,
     staleTime: 5 * 60 * 1000,
     // ADR-052: Polling active ONLY when tab is visible to optimize infra costs (FinOps).
     // UX FIX: Added a small random jitter to avoid thundering herd on concurrent sessions.
