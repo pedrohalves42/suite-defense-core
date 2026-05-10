@@ -184,32 +184,29 @@ export function useResolveAlert() {
       // 5. Create decision_event for critical alerts
       // V-1027 FIX: Use validated tenant.id instead of alert.tenant_id
       if (alert.severity === 'critical') {
-        await supabase.from('decision_events').insert({
-          tenant_id: tenant.id,
-          rule_code: 'CRITICAL_ALERT_RESOLUTION',
-          action: 'resolve_critical_alert',
-          evidence: {
-            alert_id: alertId,
-            severity: alert.severity,
-            resolution_notes: resolutionNotes,
-            resolved_by: user.id,
-            user_email: user.email
-          },
-          decision_source: 'human',
-          decision_type: 'alert_resolution'
-        });
-
-        // 6. Update the alert with decision_event reference
-        const { data: decisionEvent } = await supabase
+        const { data: decisionEvent, error: decisionError } = await supabase
           .from('decision_events')
+          .insert({
+            tenant_id: tenant.id,
+            rule_code: 'CRITICAL_ALERT_RESOLUTION',
+            action: 'resolve_critical_alert',
+            evidence: {
+              alert_id: alertId,
+              severity: alert.severity,
+              resolution_notes: resolutionNotes,
+              resolved_by: user.id,
+              user_email: user.email
+            },
+            decision_source: 'human',
+            decision_type: 'alert_resolution'
+          })
           .select('id')
-          .eq('tenant_id', tenant.id)
-          .eq('rule_code', 'CRITICAL_ALERT_RESOLUTION')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .single();
 
-        if (decisionEvent) {
+        if (decisionError) {
+          logger.error('Failed to log critical decision event', decisionError);
+        } else if (decisionEvent) {
+          // 6. Update the alert with specific decision_event reference
           await supabase
             .from('system_alerts')
             .update({ decision_event_id: decisionEvent.id })

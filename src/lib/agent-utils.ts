@@ -3,7 +3,7 @@ import { getAgentOnlineStatus } from './agent-status-constants';
 
 /**
  * Get a user-friendly display name for an agent
- * Priority: display_name > hostname > cleaned agent_name
+ * Priority: agent_name (installation name) > display_name > hostname
  */
 export function getAgentDisplayName(agent: {
   display_name?: string | null;
