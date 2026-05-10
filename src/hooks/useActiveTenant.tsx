@@ -63,7 +63,6 @@ async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
     return false;
   }
 }
-}
 
 export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
