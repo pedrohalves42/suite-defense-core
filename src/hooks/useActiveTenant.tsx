@@ -181,13 +181,17 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
           isSyncingRef.current = false;
           return;
         }
+        
         const synced = await syncActiveTenantToBackend(activeTenant.id);
         if (synced) {
+          // P-AUDIT: Always refresh session after metadata update to propagate claims
           const { error: refreshError } = await supabase.auth.refreshSession();
           if (refreshError) {
             logger.error('[useActiveTenant] Sync refresh error', refreshError);
           } else {
             logger.info('[useActiveTenant] Session refreshed after background sync');
+            // Force query invalidation after sync to clear stale tenant data
+            queryClient.invalidateQueries();
           }
         }
       } catch (err) {
