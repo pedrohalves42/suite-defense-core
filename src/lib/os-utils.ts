@@ -87,14 +87,14 @@ export function getOsDisplayName(osType: string | null, osVersion: string | null
   
   const normalizedType = osType.toLowerCase();
   
-  if (normalizedType === 'windows') {
+  if (normalizedType === 'windows' || normalizedType.includes('win')) {
     if (osVersion) {
       return getWindowsVersion(osVersion);
     }
     return 'Windows';
   }
   
-  if (normalizedType === 'linux') {
+  if (normalizedType === 'linux' || normalizedType.includes('nix') || normalizedType.includes('nux')) {
     if (osVersion) {
       // Linux usually reports distribution name
       return osVersion;
@@ -102,10 +102,11 @@ export function getOsDisplayName(osType: string | null, osVersion: string | null
     return 'Linux';
   }
   
-  if (normalizedType === 'macos' || normalizedType === 'darwin') {
+  if (normalizedType === 'macos' || normalizedType === 'darwin' || normalizedType.includes('apple') || normalizedType.includes('osx')) {
     if (osVersion) {
       // macOS version mapping
       const macVersions: Record<string, string> = {
+        '15': 'macOS Sequoia',
         '14': 'macOS Sonoma',
         '13': 'macOS Ventura',
         '12': 'macOS Monterey',
