@@ -112,18 +112,9 @@ export const useSessionTimeout = () => {
     // Activity event listeners
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
     
-    // BUG FIX: Ensure the timer doesn't run if no user is present
-    // and correctly cleanup debounced activity reset.
-    let activityDebounce: ReturnType<typeof setTimeout> | null = null;
-    
+    // activity reset.
     const handleActivity = () => {
-      if (activityDebounce) {
-        clearTimeout(activityDebounce);
-      }
-      activityDebounce = setTimeout(() => {
-        resetTimer();
-        activityDebounce = null;
-      }, 1000);
+      resetTimer();
     };
 
     events.forEach(event => 
@@ -140,7 +131,7 @@ export const useSessionTimeout = () => {
 
     return () => {
       events.forEach(event => 
-        document.removeEventListener(event, handleActivity, { capture: false })
+        document.removeEventListener(event, handleActivity)
       );
       if (timeoutRef.current) {
         clearInterval(timeoutRef.current);

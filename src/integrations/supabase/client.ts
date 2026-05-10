@@ -9,7 +9,7 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 // Security is enforced via short-lived JWTs and MFA where required.
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    persistSession: true, // Restore persistence for better UX; use MFA/Short JWT for security instead.
+    persistSession: true, // UX: PWA/Mobile support. Hardened via short JWT + MFA policies.
     autoRefreshToken: true,
     detectSessionInUrl: true,
   }
