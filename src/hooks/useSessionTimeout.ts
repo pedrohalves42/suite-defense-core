@@ -136,9 +136,6 @@ export const useSessionTimeout = () => {
       if (timeoutRef.current) {
         clearInterval(timeoutRef.current);
       }
-      if (activityDebounce) {
-        clearTimeout(activityDebounce);
-      }
     };
   }, [user, resetTimer, checkTimeout, getTimeoutMinutes]);
 
