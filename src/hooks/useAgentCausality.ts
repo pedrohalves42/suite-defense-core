@@ -73,7 +73,7 @@ export function useAgentCausality(agentId: string | null, tenantId?: string | nu
       }
 
       if (!agent) {
-        logger.info('[useAgentCausality] Agent not found:', agentId, 'tenant:', effectiveTenantId);
+        logger.info(`[useAgentCausality] Agent not found: ${agentId} tenant: ${effectiveTenantId}`);
         return null;
       }
 
