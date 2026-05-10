@@ -36,7 +36,7 @@ export function useRealtimeQuery<T>({
   const queryClient = useQueryClient();
   const isVisible = usePageVisibility();
   
-  // PERF-FIX: Use a unique ID for this specific hook instance
+  // ADR-026: Instance tracking for O(1) connection reference counting.
   // This ensures that multiple components using the same queryKey don't conflict
   // when unmounting (the manager uses this ID for reference counting).
   const instanceId = useRef(`hook-${Math.random().toString(36).substring(2, 9)}`).current;
