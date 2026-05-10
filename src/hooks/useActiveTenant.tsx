@@ -1,4 +1,4 @@
-// v2: provider rewritten to use AuthProvider context
+// ADR-026: Multi-tenant context provider with JWT claim synchronization.
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -125,7 +125,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
       return Array.from(uniqueTenants.values());
     },
     enabled: !!user,
-    staleTime: 60 * 1000, // Reduced from 10m to 1m for faster access propagation (SEC-004)
+    staleTime: 60 * 1000, // Reduced from 10m to 1m for faster access propagation (ADR-026)
   });
 
   const loading = authLoading || queryLoading;

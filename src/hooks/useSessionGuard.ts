@@ -44,7 +44,7 @@ export function useSessionGuard() {
       }
     });
 
-    // V-FIX: Periodic session health check (120s interval).
+    // ADR-026: Periodic session health check (120s interval).
     // FinOps: Guarded by document.visibilityState to prevent useless background API calls.
     const interval = setInterval(async () => {
       if (!isMountedRef.current || document.visibilityState === 'hidden') return;
