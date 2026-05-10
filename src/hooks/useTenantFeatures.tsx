@@ -67,7 +67,7 @@ export const useTenantFeatures = () => {
   };
 
   const isNearQuota = (featureKey: string, threshold: number = 90): boolean => {
-    const feature = features?.find(f => f.feature_key === featureKey);
+    const feature = features?.find(f => f.feature_key.toLowerCase() === featureKey.toLowerCase());
     if (!feature?.quota_limit) return false;
 
     const percentage = (feature.quota_used / feature.quota_limit) * 100;
