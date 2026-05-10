@@ -65,9 +65,9 @@ async function flushLogs() {
 
 function scheduleFlush() {
   if (flushTimer) return;
-  flushTimer = setTimeout(() => {
+  flushTimer = setTimeout(async () => {
     flushTimer = null;
-    flushLogs();
+    await flushLogs();
   }, FLUSH_INTERVAL_MS);
 }
 
