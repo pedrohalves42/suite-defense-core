@@ -121,8 +121,8 @@ export async function callEdgeFunction<T = unknown>(
     }
     
     // Network errors
-    if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      throw new EdgeFunctionError('Erro de conexao. Verifique sua internet e tente novamente.', 0, functionName);
+    if (error instanceof Error && error.name === 'TypeError' && error.message.includes('fetch')) {
+      throw new EdgeFunctionError('Erro de conexão. Verifique sua internet e tente novamente.', 0, functionName);
     }
     
     // Generic

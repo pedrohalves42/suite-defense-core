@@ -57,12 +57,13 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   // Only redirect if both useAuth and second chance confirm no session
+  // ADR-026: If second chance found a session, wait for useAuth state to hydrate
   if (!user && hasValidSession === false) {
     return <Navigate to="/login" replace />;
   }
 
-  // Still waiting for second chance check
-  if (!user && hasValidSession === null) {
+  // Still waiting for second chance check or for useAuth to sync with found session
+  if (!user && (hasValidSession === null || hasValidSession === true)) {
     return <DashboardSkeleton />;
   }
 
