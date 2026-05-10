@@ -26,7 +26,7 @@ interface SubscriptionData {
   features?: Record<string, SubscriptionFeature>;
 }
 
-// COST-OPT-V9: Only hook that retains polling (10 min, paused when hidden)
+// COST-OPT-V9: Polling retained with 10 min interval, paused when browser tab is inactive.
 export const useSubscription = () => {
   const { user } = useAuth();
   const isVisible = usePageVisibility();
@@ -37,7 +37,7 @@ export const useSubscription = () => {
       if (!user) throw new Error('Not authenticated');
       return await callGateway<SubscriptionData>('billing', 'check-subscription');
     },
-    enabled: !!user && isVisible,
+    enabled: !!user,
     staleTime: 5 * 60 * 1000,
     refetchInterval: isVisible ? 600_000 : false, // 10 min polling ONLY when visible (ADR-052)
   });
