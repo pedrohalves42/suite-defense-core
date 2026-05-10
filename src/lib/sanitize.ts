@@ -82,7 +82,8 @@ export function sanitizeForLog(obj: unknown, depth: number = 0): unknown {
     const sanitized: Record<string, unknown> = {};
     const entries = Object.entries(obj as Record<string, unknown>);
 
-    for (const [key, value] of entries.slice(0, 50)) {
+    // SEC-803: Limit object size for logging to prevent OOM but increase to 100 for better context
+    for (const [key, value] of entries.slice(0, 100)) {
       if (isSensitiveKey(key)) {
         sanitized[key] = REDACTED;
       } else {

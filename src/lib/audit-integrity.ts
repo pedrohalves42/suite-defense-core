@@ -84,7 +84,8 @@ export async function exportAuditLogsWithIntegrity(
     .eq('tenant_id', tenantId)
     .gte('created_at', startDate.toISOString())
     .lte('created_at', endDate.toISOString())
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true }); // V-FIX: Tie-breaker for logs with identical timestamp to maintain chain order
 
   if (error) throw error;
 
@@ -102,13 +103,23 @@ export async function exportAuditLogsWithIntegrity(
 
   // Calculate export hash
   const exportTimestamp = new Date().toISOString();
-  const exportData = JSON.stringify({
+  // V-FIX: Sort keys to ensure deterministic hashing (JSON.stringify is order-dependent)
+  const sortObject = (o: any): any => {
+    if (o === null || typeof o !== 'object') return o;
+    if (Array.isArray(o)) return o.map(sortObject);
+    return Object.keys(o).sort().reduce((acc: any, key) => {
+      acc[key] = sortObject(o[key]);
+      return acc;
+    }, {});
+  };
+
+  const exportData = JSON.stringify(sortObject({
     logs,
     exported_at: exportTimestamp,
     tenant_id: tenantId,
     start_date: startDate.toISOString(),
     end_date: endDate.toISOString(),
-  });
+  }));
   
   const exportHash = await sha256(exportData);
 
