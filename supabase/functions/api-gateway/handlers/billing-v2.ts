@@ -92,6 +92,9 @@ export async function handleCohortAnalysisV2(supabase: SupabaseClient, requestId
   return await useCase.getCohortAnalysis(requestId);
 }
 
+// V2 alias for backward-compatible routing in api-gateway (delegates to canonical handler).
+export { handleUnitEconomics as handleUnitEconomicsV2 } from './billing.ts';
+
 export async function handleRevenueProjectionsV2(supabase: SupabaseClient, requestId: string, _payload: Record<string, unknown>, ctx?: HandlerContext) {
   // CRITICAL: Protect global analytics from unauthorized access
   const userId = ctx?.userId;
