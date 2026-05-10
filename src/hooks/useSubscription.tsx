@@ -26,7 +26,7 @@ interface SubscriptionData {
   features?: Record<string, SubscriptionFeature>;
 }
 
-// ADR-052: Subscription monitoring with FinOps visibility guards.
+// ADR-052: Managed subscription lifecycle with visibility-aware polling (FinOps).
 export const useSubscription = () => {
   const { user, loading: authLoading } = useAuth();
   const isVisible = usePageVisibility();
