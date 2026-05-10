@@ -80,10 +80,9 @@ const DENIED_ACTIONS: Partial<Record<AppRole, string[]>> = {
  * Ações que requerem Two-Man-Rule (segregação de funções)
  */
 const SEGREGATED_ACTIONS = [
-  'role_change',
-  'agent_delete', 
-  'policy_deploy',
-  'tenant_settings_change',
+  'approve_role_change',
+  'approve_agent_delete', 
+  'approve_policy_deploy',
 ] as const;
 
 export type SegregatedAction = typeof SEGREGATED_ACTIONS[number];
@@ -168,8 +167,8 @@ export const useRolePermissions = (): RolePermissions => {
     /**
      * Verifica se uma ação requer aprovação (Two-Man-Rule)
      */
-    const requiresApproval = (action: SegregatedAction): boolean => {
-      return SEGREGATED_ACTIONS.includes(action);
+    const requiresApproval = (action: string): boolean => {
+      return (SEGREGATED_ACTIONS as readonly string[]).includes(action);
     };
 
     return {
