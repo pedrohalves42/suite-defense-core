@@ -262,7 +262,7 @@ export function useUnifiedMetrics() {
     score -= Math.min((data?.vulnerabilities.critical || 0) * 5, 25);
     
     // Bonus for contained incidents (resilience factor)
-    const bonus = Math.min((data?.evidence.incidentsContained || 0) * 2, 5);
+    const bonus = Math.min((data?.evidence.incidentsContained || 0) * 5, 10);
     score += bonus;
 
     return Math.max(0, Math.min(100, score));
