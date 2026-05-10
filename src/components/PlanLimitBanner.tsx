@@ -9,21 +9,29 @@ import { Button } from '@/components/ui/button';
  * Displays contextually: warning at 80%+, blocking at 100%.
  */
 export function PlanLimitBanner() {
-  const { subscription } = useSubscription();
+  const { subscription, isLoading } = useSubscription();
   const navigate = useNavigate();
 
-  if (!subscription) return null;
+  // V-FIX: Guard against null or incomplete subscription data
+  if (isLoading || !subscription || !subscription.subscribed) return null;
 
-  const { installed_agents = 0, max_devices = 2, plan_name = 'free', available_slots = 0 } = subscription;
+  const { 
+    installed_agents = 0, 
+    max_devices = 0, 
+    plan_name = 'free', 
+    available_slots = 0 
+  } = subscription;
 
   // Don't show for enterprise/unlimited plans
-  if (plan_name === 'enterprise' || max_devices >= 999) return null;
+  if (plan_name.toLowerCase() === 'enterprise' || max_devices >= 999) return null;
 
+  // V-FIX: Correct usage calculation with zero-division guard
   const usagePercent = max_devices > 0 ? (installed_agents / max_devices) * 100 : 0;
 
-  if (usagePercent < 80) return null;
+  // ADR-052: Threshold-based display logic
+  if (usagePercent < 80 && available_slots > 1) return null;
 
-  const isAtLimit = available_slots <= 0;
+  const isAtLimit = available_slots <= 0 || installed_agents >= max_devices;
   const planLabel = plan_name === 'free' ? 'Gratuito' : plan_name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
   return (

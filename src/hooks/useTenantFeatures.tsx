@@ -32,12 +32,14 @@ export const useTenantFeatures = () => {
   });
 
   const hasFeature = (featureKey: string): boolean => {
-    const feature = features?.find(f => f.feature_key === featureKey);
+    // V-FIX: Use case-insensitive matching for feature keys
+    const feature = features?.find(f => f.feature_key.toLowerCase() === featureKey.toLowerCase());
     return feature?.enabled ?? false;
   };
 
   const getFeatureQuota = (featureKey: string): { limit: number | null; used: number; remaining: number | null } => {
-    const feature = features?.find(f => f.feature_key === featureKey);
+    const key = featureKey.toLowerCase();
+    const feature = features?.find(f => f.feature_key.toLowerCase() === key);
     if (!feature) {
       return { limit: null, used: 0, remaining: null };
     }
@@ -54,7 +56,7 @@ export const useTenantFeatures = () => {
   };
 
   const canUseFeature = (featureKey: string): boolean => {
-    const feature = features?.find(f => f.feature_key === featureKey);
+    const feature = features?.find(f => f.feature_key.toLowerCase() === featureKey.toLowerCase());
     if (!feature?.enabled) return false;
 
     // If no quota limit, feature is available
@@ -65,7 +67,7 @@ export const useTenantFeatures = () => {
   };
 
   const isNearQuota = (featureKey: string, threshold: number = 90): boolean => {
-    const feature = features?.find(f => f.feature_key === featureKey);
+    const feature = features?.find(f => f.feature_key.toLowerCase() === featureKey.toLowerCase());
     if (!feature?.quota_limit) return false;
 
     const percentage = (feature.quota_used / feature.quota_limit) * 100;

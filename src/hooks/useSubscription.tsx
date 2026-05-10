@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
 import { callGateway } from '@/lib/gateway';
 import { usePageVisibility } from './usePageVisibility';
+import { logger } from '@/lib/logger';
 
 interface SubscriptionFeature {
   enabled: boolean;
@@ -35,13 +36,23 @@ export const useSubscription = () => {
     queryKey: ['subscription', user?.id],
     queryFn: async () => {
       if (!user) throw new Error('Not authenticated');
-      return await callGateway<SubscriptionData>('billing', 'check-subscription');
+      
+      // FINOPS-FIX: Wrap with circuit breaker or add retry logic to prevent billing failures from blocking UI
+      try {
+        return await callGateway<SubscriptionData>('billing', 'check-subscription');
+      } catch (err) {
+        logger.error('[useSubscription] Failed to fetch subscription', err);
+        throw err;
+      }
     },
     enabled: !!user && !authLoading,
     staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000, // ADR-052: Persistent cache for smoother transitions
     // ADR-052: Polling active ONLY when tab is visible to optimize infra costs (FinOps).
     // UX FIX: Small random jitter (30s) prevents synchronized "thundering herd" spikes.
     refetchInterval: isVisible ? (600_000 + Math.floor(Math.random() * 30000)) : false,
+    retry: 1,
+    refetchOnWindowFocus: true
   });
 
   return {
