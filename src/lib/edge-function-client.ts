@@ -52,39 +52,35 @@ export async function callEdgeFunction<T = unknown>(
   // Get active tenant from JWT metadata (not localStorage - V-802 security fix)
   const activeTenantId = session.user?.app_metadata?.active_tenant_id ?? null;
 
+  const headers: Record<string, string> = {
+    'Authorization': `Bearer ${session.access_token}`,
+    'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY!,
+    'Content-Type': 'application/json',
+  };
+
+  if (activeTenantId) {
+    headers['x-tenant-id'] = activeTenantId;
+  }
+
+  const timeoutMs = options?.timeoutMs ?? 30000;
+  const controller = new AbortController();
+  const signal = options?.signal ?? controller.signal;
+  
+  let timeoutId: any = null;
+  if (!options?.signal) {
+    timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  }
+
   try {
-    const headers: Record<string, string> = {
-      'Authorization': `Bearer ${session.access_token}`,
-      'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY!,
-      'Content-Type': 'application/json',
-    };
+    const response = await fetch(url, {
+      method,
+      headers,
+      body: payload ? JSON.stringify(payload) : undefined,
+      signal
+    });
 
-    // Add tenant header if available (for multi-tenant users)
-    if (activeTenantId) {
-      headers['x-tenant-id'] = activeTenantId;
-    }
+    if (timeoutId) clearTimeout(timeoutId);
 
-    // ADR-033: Implement timeout handling
-    const timeoutMs = options?.timeoutMs ?? 30000;
-    const controller = new AbortController();
-    const signal = options?.signal ?? controller.signal;
-    
-    let timeoutId: any = null;
-    if (!options?.signal) {
-      timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    }
-
-    try {
-      const response = await fetch(url, {
-        method,
-        headers,
-        body: payload ? JSON.stringify(payload) : undefined,
-        signal
-      });
-
-      if (timeoutId) clearTimeout(timeoutId);
-
-    // Log da resposta
     logger.info(`[${requestId}] Resposta recebida`, {
       status: response.status,
       statusText: response.statusText,
@@ -103,7 +99,6 @@ export async function callEdgeFunction<T = unknown>(
 
       const errorMessage = errorData.error?.message || errorData.message || `HTTP ${response.status}`;
       
-      // Mensagens amigaveis por status
       const friendlyMessages: Record<number, string> = {
         400: `Requisicao invalida: ${errorMessage}`,
         401: 'Nao autorizado. Faca login novamente.',
@@ -119,28 +114,29 @@ export async function callEdgeFunction<T = unknown>(
     }
 
     const data = await response.json();
-    
     logger.info(`[${requestId}] Edge Function executada com sucesso`);
-    
     return data as T;
   } catch (error) {
+    if (timeoutId) clearTimeout(timeoutId);
+
     logger.error(`[${requestId}] Erro ao chamar Edge Function`, {
       function: functionName,
       error: error.message,
       stack: error.stack
     });
     
-    // Re-throw our own typed errors directly
     if (error instanceof EdgeFunctionError) {
       throw error;
     }
     
-    // Network errors
+    if (error.name === 'AbortError') {
+      throw new EdgeFunctionError('A operação expirou (timeout). Tente novamente.', 408, functionName);
+    }
+    
     if (error instanceof Error && error.name === 'TypeError' && error.message.includes('fetch')) {
       throw new EdgeFunctionError('Erro de conexão. Verifique sua internet e tente novamente.', 0, functionName);
     }
     
-    // Generic
     throw new EdgeFunctionError(`Erro ao executar ${functionName}: ${error.message}`, 0, functionName);
   }
 }
