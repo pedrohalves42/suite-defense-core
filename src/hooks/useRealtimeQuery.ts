@@ -154,6 +154,6 @@ export function useRealtimeQuery<T>({
     staleTime,
     refetchInterval: false,
     refetchIntervalInBackground: false,
-    refetchOnWindowFocus: isVisible,
+    refetchOnWindowFocus: true,
   });
 }
