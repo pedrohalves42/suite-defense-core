@@ -29,14 +29,19 @@ export function useAgentDetailsDrawer(agentId: string | null, tenantId?: string)
     queryKey: ['agent-firewall-skip', effectiveTenantId, agentId],
     queryFn: async () => {
       if (!agentId || !effectiveTenantId) return null;
-      const { data, error } = await supabase.rpc('get_agents_list', {
-        p_tenant_id: effectiveTenantId,
-        p_include_archived: true,
-      });
+      if (!agentId || !effectiveTenantId) return null;
+      
+      // PERF-FIX: Query table directly instead of fetching all agents via RPC
+      const { data: agent, error } = await supabase
+        .from('agents')
+        .select('skip_firewall_remediation')
+        .eq('id', agentId)
+        .eq('tenant_id', effectiveTenantId)
+        .maybeSingle();
+
       if (error) throw error;
-      const agents = (data as Array<Record<string, unknown>> | null) ?? [];
-      const agent = agents.find((item) => item.id === agentId);
       if (!agent) throw new Error('Agente não encontrado para o tenant atual');
+      
       return { skip_firewall_remediation: Boolean(agent.skip_firewall_remediation) };
     },
     enabled: !!agentId && !!effectiveTenantId,
