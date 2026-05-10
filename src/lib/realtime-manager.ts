@@ -114,8 +114,11 @@ class RealtimeChannelManager {
           logger.debug(`[RealtimeChannelManager] Channel ${key} subscribed`);
         } else if (status === 'CHANNEL_ERROR') {
           logger.error(`[RealtimeChannelManager] Channel ${key} error:`, err);
+          // V-FIX: On fatal channel error, remove it from map so next subscribe attempt recreates it
+          this.channels.delete(key);
         } else if (status === 'TIMED_OUT') {
           logger.warn(`[RealtimeChannelManager] Channel ${key} timed out`);
+          this.channels.delete(key);
         }
       });
 

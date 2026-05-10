@@ -85,8 +85,10 @@ export function getAgentOnlineStatus(
   agent: { last_heartbeat?: string | null; status?: string; agent_state?: string }
 ): 'online' | 'warning' | 'offline' | 'never_connected' {
   // 1. Fallback para cálculo por heartbeat (Real-time connectivity)
-  const hasFreshHeartbeat = agent.last_heartbeat && 
-    (Date.now() - new Date(agent.last_heartbeat).getTime()) / (1000 * 60) <= AGENT_STATUS_THRESHOLDS.ONLINE_MAX_MINUTES;
+  // V-FIX: Handle null/undefined heartbeats explicitly to avoid Date(0) comparisons
+  const lastHeartbeatMs = agent.last_heartbeat ? new Date(agent.last_heartbeat).getTime() : 0;
+  const minutesSinceHeartbeat = lastHeartbeatMs > 0 ? (Date.now() - lastHeartbeatMs) / (1000 * 60) : Infinity;
+  const hasFreshHeartbeat = minutesSinceHeartbeat <= AGENT_STATUS_THRESHOLDS.ONLINE_MAX_MINUTES;
 
   // 2. Priorizar agent_state do banco (Specialized states)
   if (agent.agent_state) {
