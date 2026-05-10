@@ -124,7 +124,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
       return Array.from(uniqueTenants.values());
     },
     enabled: !!user,
-    staleTime: 10 * 60 * 1000,
+    staleTime: 60 * 1000, // Reduced from 10m to 1m for faster access propagation (SEC-004)
   });
 
   const loading = authLoading || queryLoading;
