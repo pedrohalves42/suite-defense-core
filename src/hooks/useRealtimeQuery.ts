@@ -144,8 +144,8 @@ export function useRealtimeQuery<T>({
               return oldData;
             });
           } else if (eventType === 'INSERT' && payload.new) {
-            // V-FIX: Verify item matches filter before inserting into view
-            if (!matchesFilter(payload.new, realtimeFilter)) {
+            // V-FIX: Verify item matches filter AND custom predicate before inserting into view
+            if (!matchesFilter(payload.new, realtimeFilter) || (predicate && !predicate(payload.new))) {
               logger.debug(`[useRealtimeQuery] Skipping INSERT: item does not match filter`, {
                 filter: realtimeFilter,
                 itemId: payload.new.id
