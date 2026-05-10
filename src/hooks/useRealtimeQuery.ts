@@ -97,8 +97,8 @@ export function useRealtimeQuery<T>({
           });
           
           if (eventType === 'UPDATE' && payload.new) {
-            // Check if updated item still matches filter
-            const stillMatches = matchesFilter(payload.new, realtimeFilter);
+            // Check if updated item still matches filter AND custom predicate
+            const stillMatches = matchesFilter(payload.new, realtimeFilter) && (!predicate || predicate(payload.new));
 
             queryClient.setQueryData(queryKey, (oldData: any) => {
               if (!oldData) return oldData;
