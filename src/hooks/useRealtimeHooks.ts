@@ -41,6 +41,7 @@ export function useRealtimeAgents(tenantId: string | undefined, select = 'id, ag
         .from('agents')
         .select(select)
         .eq('tenant_id', tenantId)
+        .is('archived_at', null)
         .order('last_heartbeat', { ascending: false });
       if (error) throw error;
       return data || [];

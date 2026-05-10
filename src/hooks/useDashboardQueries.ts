@@ -21,6 +21,7 @@ async function fetchAgents(tenantId: string): Promise<DashboardAgent[]> {
     .from('agents')
     .select('id, agent_name, status, enrolled_at, last_heartbeat, tenant_id')
     .eq('tenant_id', tenantId)
+    .is('archived_at', null)
     .order('last_heartbeat', { ascending: false });
     
   if (error) throw error;
