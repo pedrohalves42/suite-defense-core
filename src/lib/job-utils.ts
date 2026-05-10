@@ -8,9 +8,20 @@
 
 /**
  * Calculates SHA-256 hash of a payload (matches database trigger logic)
+ * V-FIX: Uses deterministic serialization to ensure consistent hashes regardless of key order.
  */
 export async function calculatePayloadHash(payload: unknown): Promise<string> {
-  const payloadJson = JSON.stringify(payload ?? {});
+  // ADR-031: Sort keys to ensure deterministic hashing
+  const sortObject = (o: any): any => {
+    if (o === null || typeof o !== 'object') return o;
+    if (Array.isArray(o)) return o.map(sortObject);
+    return Object.keys(o).sort().reduce((acc: any, key) => {
+      acc[key] = sortObject(o[key]);
+      return acc;
+    }, {});
+  };
+
+  const payloadJson = JSON.stringify(sortObject(payload ?? {}));
   const encoder = new TextEncoder();
   const data = encoder.encode(payloadJson);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
