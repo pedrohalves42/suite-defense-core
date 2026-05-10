@@ -32,7 +32,8 @@ export const useTenantFeatures = () => {
   });
 
   const hasFeature = (featureKey: string): boolean => {
-    const feature = features?.find(f => f.feature_key === featureKey);
+    // V-FIX: Use case-insensitive matching for feature keys
+    const feature = features?.find(f => f.feature_key.toLowerCase() === featureKey.toLowerCase());
     return feature?.enabled ?? false;
   };
 
