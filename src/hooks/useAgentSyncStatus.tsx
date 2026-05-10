@@ -34,7 +34,7 @@ export function useAgentSyncStatus() {
       }
 
       const now = new Date();
-      const offlineThreshold = new Date(now.getTime() - (AGENT_STATUS_THRESHOLDS?.OFFLINE_MIN_MINUTES || 10) * 60 * 1000);
+      const offlineThreshold = new Date(now.getTime() - (AGENT_STATUS_THRESHOLDS?.OFFLINE_MIN_MINUTES || 30) * 60 * 1000);
       const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
       // RPC returns jsonb objects, map to expected interface
