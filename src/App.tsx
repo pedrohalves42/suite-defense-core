@@ -90,6 +90,7 @@ const RolloutPolicies = lazy(() => import("./pages/super-admin/RolloutPolicies")
 const TenantSuspensionManager = lazy(() => import("./pages/admin/TenantSuspensionManager"));
 const StripeSetup = lazy(() => import("./pages/admin/StripeSetup"));
 const DiagnosticsCenter = lazy(() => import("./pages/admin/DiagnosticsCenter"));
+const RuntimeDiagnostics = lazy(() => import("./pages/admin/RuntimeDiagnostics"));
 const BuildHealthDashboard = lazy(() => import("./pages/admin/BuildHealthDashboard"));
 const SystemLogs = lazy(() => import("./pages/admin/SystemLogs"));
 const Installations = lazy(() => import("./pages/admin/Installations"));
@@ -223,6 +224,7 @@ const App = () => (
                 <Route path="agent-center" element={<AgentCenter />} />
                 <Route path="agent-health" element={<Navigate to="/admin/agent-center?tab=health" replace />} />
                 <Route path="diagnostics" element={<DiagnosticsCenter />} />
+                <Route path="runtime-diagnostics" element={<RouteErrorBoundary route="Runtime Diagnostics"><RuntimeDiagnostics /></RouteErrorBoundary>} />
                 
                 {/* Hub Routes */}
                 <Route path="compliance-hub" element={<ComplianceHub />} />
