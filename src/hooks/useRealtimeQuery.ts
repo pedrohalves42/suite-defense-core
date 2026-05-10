@@ -150,7 +150,7 @@ export function useRealtimeQuery<T>({
   return useQuery({
     queryKey,
     queryFn,
-    enabled,
+    enabled: enabled && isVisible,
     staleTime,
     refetchInterval: false,
     refetchIntervalInBackground: false,

@@ -32,7 +32,7 @@ async function fetchAlerts(tenantId: string, activeOnly: boolean) {
  * Subscribes to postgres_changes on public.agents filtered by tenant_id.
  * Replaces polling-based queries for agent lists.
  */
-export function useRealtimeAgents(tenantId: string | undefined, select = 'id, agent_name, status, hostname, os_type, last_heartbeat, agent_version, created_at') {
+export function useRealtimeAgents(tenantId: string | undefined, select = 'id, agent_name, status, hostname, os_type, last_heartbeat, agent_version, created_at, enrolled_at') {
   return useRealtimeQuery({
     queryKey: ['rt-agents', tenantId],
     queryFn: async () => {
