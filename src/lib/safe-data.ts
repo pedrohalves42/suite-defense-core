@@ -19,5 +19,26 @@ export function safeMap<T, R>(
  */
 export function safeGet<T, K extends keyof T>(obj: T | null | undefined, key: K, fallback: T[K]): T[K] {
   if (obj === null || obj === undefined) return fallback;
-  return obj[key] ?? fallback;
+  const value = obj[key];
+  return (value === undefined || value === null) ? fallback : value;
+}
+
+/**
+ * Safely parse JSON with fallback
+ */
+export function safeJsonParse<T>(json: string | null | undefined, fallback: T): T {
+  if (!json) return fallback;
+  try {
+    return JSON.parse(json) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * Safely convert to number
+ */
+export function safeNumber(value: any, fallback: number = 0): number {
+  const num = Number(value);
+  return isNaN(num) ? fallback : num;
 }

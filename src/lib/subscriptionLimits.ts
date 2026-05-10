@@ -49,11 +49,16 @@ export function getMemberLimit(
 
   const planId = planIdRaw.toLowerCase();
 
-  // Mapeamento de nomes amigáveis para chaves de limites
-  if (planId.includes('enterprise')) return PLAN_MEMBER_LIMITS.enterprise;
-  if (planId.includes('pro')) return PLAN_MEMBER_LIMITS.pro;
-  if (planId.includes('starter') || planId.includes('basic')) return PLAN_MEMBER_LIMITS.starter;
-  if (planId.includes('free')) return PLAN_MEMBER_LIMITS.free;
+  // V-FIX: Robust plan matching using word boundaries or exact matches
+  const isPlan = (key: string) => 
+    planId === key || 
+    planId.startsWith(`${key}_`) || 
+    new RegExp(`\\b${key}\\b`).test(planId);
+
+  if (isPlan('enterprise')) return PLAN_MEMBER_LIMITS.enterprise;
+  if (isPlan('pro') || isPlan('premium')) return PLAN_MEMBER_LIMITS.pro;
+  if (isPlan('starter') || isPlan('basic')) return PLAN_MEMBER_LIMITS.starter;
+  if (isPlan('free')) return PLAN_MEMBER_LIMITS.free;
 
   // 3) Se não reconheceu o nome mas tem device_quantity alto, pode ser um plano customizado
   if ((subscription.device_quantity ?? 0) > 20) return PLAN_MEMBER_LIMITS.pro;
