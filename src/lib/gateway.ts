@@ -36,6 +36,16 @@ export async function callGateway<T = Record<string, unknown>>(
     },
   });
 
-  if (error) throw error;
+  if (error) {
+    console.error(`[Gateway Error] ${namespace}:${action}`, error);
+    throw error;
+  }
+
+  // Se o retorno do gateway indicar erro na execução interna (ex: 400 ou 500 encapsulado)
+  if (data && typeof data === 'object' && 'error' in data && data.error) {
+    const errorMsg = typeof data.error === 'string' ? data.error : (data.error as any).message || 'Gateway Internal Error';
+    throw new Error(errorMsg);
+  }
+
   return (data ?? {}) as T;
 }
