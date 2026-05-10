@@ -41,7 +41,7 @@ export function useRealtimeQuery<T>({
   // when unmounting (the manager uses this ID for reference counting).
   const instanceId = useRef(`hook-${Math.random().toString(36).substring(2, 9)}`).current;
 
-  // Use a deep-stable hash for queryKey to avoid re-subscribing on array literals
+  // Use a stable hash for queryKey to avoid re-subscribing on array literals
   const queryKeyHash = useMemo(() => JSON.stringify(queryKey), [queryKey]);
   const eventsHash = useMemo(() => realtimeEvents.join(','), [realtimeEvents]);
 
