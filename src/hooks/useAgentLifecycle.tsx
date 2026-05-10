@@ -37,9 +37,6 @@ function transformToCard(state: AgentLifecycleState): DashboardAgentCard {
   const is_offline = state.lifecycle_stage === 'installed_offline' || 
                     (state.minutes_since_heartbeat !== null && state.minutes_since_heartbeat > 5);
   const statusBadge = getStatusBadge(state, is_offline);
-  const is_offline = state.lifecycle_stage === 'installed_offline' || 
-                    (state.minutes_since_heartbeat !== null && state.minutes_since_heartbeat > 5);
-  
   
   return {
     agent_id: state.agent_id ?? '',
