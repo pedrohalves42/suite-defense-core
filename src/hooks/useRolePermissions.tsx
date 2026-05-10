@@ -168,6 +168,8 @@ export const useRolePermissions = (): RolePermissions => {
      * Verifica se uma ação requer aprovação (Two-Man-Rule)
      */
     const requiresApproval = (action: string): boolean => {
+      // Super admin can bypass any segregation of duties for maintenance
+      if (currentRole === 'super_admin') return false;
       return (SEGREGATED_ACTIONS as readonly string[]).includes(action);
     };
 
