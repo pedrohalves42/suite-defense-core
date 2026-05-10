@@ -34,8 +34,10 @@ export function useAgentLifecycle(tenantId: string | undefined, loading?: boolea
 }
 
 function transformToCard(state: AgentLifecycleState): DashboardAgentCard {
+  // V-FIX: Synchronize offline threshold with global AGENT_STATUS_THRESHOLDS.ONLINE_MAX_MINUTES
+  const OFFLINE_MINUTES = 15; 
   const is_offline = state.lifecycle_stage === 'installed_offline' || 
-                    (state.minutes_since_heartbeat !== null && state.minutes_since_heartbeat > 5);
+                    (state.minutes_since_heartbeat !== null && state.minutes_since_heartbeat > OFFLINE_MINUTES);
   const statusBadge = getStatusBadge(state, is_offline);
   
   return {
