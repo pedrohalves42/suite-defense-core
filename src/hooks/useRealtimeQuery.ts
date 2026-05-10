@@ -95,27 +95,36 @@ export function useRealtimeQuery<T>({
           });
           
           if (eventType === 'UPDATE' && payload.new) {
+            // Check if updated item still matches filter
+            const stillMatches = matchesFilter(payload.new, realtimeFilter);
+
             queryClient.setQueryData(queryKey, (oldData: any) => {
               if (!oldData) return oldData;
               
               const updateItem = (item: any) => 
                 item.id === payload.new.id ? { ...item, ...payload.new } : item;
 
+              const filterOutOfView = (item: any) => item.id !== payload.new.id;
+
               // 1. Array of objects
               if (Array.isArray(oldData)) {
+                if (!stillMatches) return oldData.filter(filterOutOfView);
                 return oldData.map(updateItem);
               }
               
               // 2. Paginated object or complex structure with .items or .data
               if (oldData.items && Array.isArray(oldData.items)) {
+                if (!stillMatches) return { ...oldData, items: oldData.items.filter(filterOutOfView) };
                 return { ...oldData, items: oldData.items.map(updateItem) };
               }
               if (oldData.data && Array.isArray(oldData.data)) {
+                if (!stillMatches) return { ...oldData, data: oldData.data.filter(filterOutOfView) };
                 return { ...oldData, data: oldData.data.map(updateItem) };
               }
               
               // 3. Single object
               if (oldData.id === payload.new.id) {
+                if (!stillMatches) return null; // Or handle as needed
                 return { ...oldData, ...payload.new };
               }
               
@@ -133,6 +142,15 @@ export function useRealtimeQuery<T>({
               return oldData;
             });
           } else if (eventType === 'INSERT' && payload.new) {
+            // V-FIX: Verify item matches filter before inserting into view
+            if (!matchesFilter(payload.new, realtimeFilter)) {
+              logger.debug(`[useRealtimeQuery] Skipping INSERT: item does not match filter`, {
+                filter: realtimeFilter,
+                itemId: payload.new.id
+              });
+              return;
+            }
+
             queryClient.setQueryData(queryKey, (oldData: any) => {
               if (!oldData) return oldData;
               const exists = (list: any[]) => list.some((item: any) => item.id === payload.new.id);
