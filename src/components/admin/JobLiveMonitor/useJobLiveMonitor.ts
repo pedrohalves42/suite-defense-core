@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
+import { realtimeChannelManager } from '@/lib/realtime-manager';
 
 export interface LiveJob {
   id: string;
@@ -18,7 +19,7 @@ export interface LiveJob {
 export function useJobLiveMonitor(maxJobs: number) {
   const { tenant } = useTenant();
   const [realtimeJobs, setRealtimeJobs] = useState<LiveJob[]>([]);
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  // V-FIX: Manager handles subscriptions centrally
 
   const { data: initialJobs = [], refetch } = useQuery({
     queryKey: ['live-jobs', tenant?.id],
@@ -52,24 +53,24 @@ export function useJobLiveMonitor(maxJobs: number) {
 
   useEffect(() => {
     if (!tenant?.id) return;
-    const channel = supabase
-      .channel(`jobs-live-${tenant.id}`)
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'jobs',
-        filter: `tenant_id=eq.${tenant.id}`,
-      }, (payload) => {
+    
+    const instanceId = `job-live-monitor-${tenant.id}`;
+    
+    realtimeChannelManager.subscribe(
+      instanceId,
+      'jobs',
+      `tenant_id=eq.${tenant.id}`,
+      (payload) => {
         const newJob = payload.new as LiveJob;
         setRealtimeJobs(prev => {
           const filtered = prev.filter(j => j.id !== newJob.id);
           return [newJob, ...filtered].slice(0, maxJobs);
         });
-      })
-      .subscribe();
-    channelRef.current = channel;
+      }
+    );
+
     return () => {
-      // PERF/MEMORY: removeChannel garante cleanup completo no client Supabase.
-      supabase.removeChannel(channel);
-      channelRef.current = null;
+      realtimeChannelManager.unsubscribe(instanceId, 'jobs', `tenant_id=eq.${tenant.id}`);
     };
   }, [tenant?.id, maxJobs]);
 

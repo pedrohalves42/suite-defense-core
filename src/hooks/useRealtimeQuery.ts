@@ -144,8 +144,7 @@ export function useRealtimeQuery<T>({
     isVisible,
     queryClient,
     queryKeyHash,
-    eventsHash,
-    realtimeEvents
+    eventsHash
   ]);
 
   return useQuery({
