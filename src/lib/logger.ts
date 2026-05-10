@@ -32,19 +32,23 @@ const MAX_BUFFER_SIZE = 20;
 const MAX_RETRY_SIZE = 100;
 
 async function flushLogs() {
-  if (LOG_BUFFER.length === 0) return;
+  if (isFlushing || (LOG_BUFFER.length === 0 && RETRY_BUFFER.length === 0)) return;
+  
+  isFlushing = true;
 
   const sbPromise = getSupabase();
   if (!sbPromise) {
     LOG_BUFFER.length = 0;
+    isFlushing = false;
     return;
   }
 
-  const entries = LOG_BUFFER.splice(0, MAX_BUFFER_SIZE);
+  // Combine fresh logs and retries
+  const entries = [...RETRY_BUFFER.splice(0, MAX_BUFFER_SIZE), ...LOG_BUFFER.splice(0, MAX_BUFFER_SIZE)].slice(0, MAX_BUFFER_SIZE);
 
   try {
     const { supabase } = await sbPromise;
-    await supabase.functions.invoke('ops-gateway', {
+    const { error } = await supabase.functions.invoke('ops-gateway', {
       body: {
         action: 'sync:log-domain-event',
         payload: entries.map((entry) => ({
@@ -61,8 +65,18 @@ async function flushLogs() {
         })),
       },
     });
-  } catch {
-    // Best-effort — don't crash the app if logging fails
+
+    if (error) throw error;
+  } catch (err) {
+    // ADR-032: Keep logs in retry buffer if network or function fails
+    if (RETRY_BUFFER.length < MAX_RETRY_SIZE) {
+      RETRY_BUFFER.push(...entries);
+    }
+  } finally {
+    isFlushing = false;
+    if (LOG_BUFFER.length > 0 || RETRY_BUFFER.length > 0) {
+      scheduleFlush();
+    }
   }
 }
 
