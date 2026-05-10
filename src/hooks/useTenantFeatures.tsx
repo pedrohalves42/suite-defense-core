@@ -56,7 +56,7 @@ export const useTenantFeatures = () => {
   };
 
   const canUseFeature = (featureKey: string): boolean => {
-    const feature = features?.find(f => f.feature_key === featureKey);
+    const feature = features?.find(f => f.feature_key.toLowerCase() === featureKey.toLowerCase());
     if (!feature?.enabled) return false;
 
     // If no quota limit, feature is available
