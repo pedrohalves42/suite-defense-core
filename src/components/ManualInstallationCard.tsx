@@ -46,7 +46,7 @@ export const ManualInstallationCard = ({ agentName, onDownloadPs1 }: ManualInsta
             </code>
           </p>
           <p className="text-xs text-red-600 dark:text-red-400 ml-8 font-semibold">
-            [WARN] ? Privilegios de administrador sao necessarios para instalar o agente!
+            ⚠️ Privilégios de administrador são necessários para instalar o agente!
           </p>
         </div>
 
