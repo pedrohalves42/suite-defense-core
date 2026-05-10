@@ -113,7 +113,7 @@ export const STATE_TRANSITIONS: Record<AgentState, AgentState[]> = {
   safe_mode: ['healthy', 'updating', 'offline', 'quarantined'],
   updating: ['healthy', 'rollback', 'offline'],
   rollback: ['healthy', 'safe_mode', 'offline', 'quarantined'],
-  isolated: ['healthy', 'quarantined'],
+  isolated: ['healthy', 'quarantined', 'offline'], // V-FIX: Allow isolated agents to go offline
   offline: ['healthy', 'degraded', 'safe_mode', 'isolated'],
   quarantined: ['healthy'],
   shutdown: []  // Terminal - sem saídas permitidas
@@ -123,19 +123,34 @@ import { AGENT_STATUS_THRESHOLDS } from './agent-status-constants';
 
 // Usa thresholds centralizados para consistência absoluta
 const OFFLINE_THRESHOLD_MINUTES = AGENT_STATUS_THRESHOLDS.OFFLINE_MIN_MINUTES;
-const WARNING_THRESHOLD_MINUTES = AGENT_STATUS_THRESHOLDS.WARNING_MAX_MINUTES;
+const WARNING_THRESHOLD_MINUTES = AGENT_STATUS_THRESHOLDS.ONLINE_MAX_MINUTES; // Corrigido: Usar ONLINE_MAX como base para alerta
+
 const UPDATE_WINDOW_MINUTES = 45; // Aumentado para 45min para evitar falsos "offline" durante builds lentos
 
 /**
  * Deriva o estado formal do agente a partir dos dados do banco
  */
 export function deriveAgentState(agent: Partial<Agent>): AgentState {
-  // 1. Verificar isolamento (prioridade máxima de segurança)
+  // 1. Verificar se está offline (Prioridade Crítica)
+  // V-FIX: Se o computador sumiu, não importa se estava em safe_mode ou isolado, a info mais urgente é que ele está OFFLINE.
+  if (agent.last_heartbeat) {
+    const lastHeartbeat = new Date(agent.last_heartbeat);
+    const diffMinutes = (Date.now() - lastHeartbeat.getTime()) / (1000 * 60);
+    
+    if (diffMinutes >= OFFLINE_THRESHOLD_MINUTES) {
+      return 'offline';
+    }
+  } else if (agent.status !== 'active' && agent.status !== 'pending') {
+    // Se nunca teve heartbeat e não está ativo/pendente, é offline
+    return 'offline';
+  }
+
+  // 2. Verificar isolamento (prioridade máxima de segurança para máquinas conectadas)
   if (agent.is_isolated) {
     return 'isolated';
   }
 
-  // 2. Verificar safe mode
+  // 3. Verificar safe mode
   if (agent.safe_mode_entered_at && agent.safe_mode_reason) {
     return 'safe_mode';
   }
@@ -151,23 +166,14 @@ export function deriveAgentState(agent: Partial<Agent>): AgentState {
     }
   }
 
-  // 4. Verificar se está offline
+  // 5. Verificar instabilidade (degraded) baseada em heartbeat
   if (agent.last_heartbeat) {
     const lastHeartbeat = new Date(agent.last_heartbeat);
-    const diffMs = Date.now() - lastHeartbeat.getTime();
-    const diffMinutes = diffMs / (1000 * 60);
+    const diffMinutes = (Date.now() - lastHeartbeat.getTime()) / (1000 * 60);
     
-    // Alerta se exceder o limite absoluto (ex: 60 min)
-    if (diffMinutes >= OFFLINE_THRESHOLD_MINUTES) {
-      return 'offline';
-    }
-    
-    // Se estiver entre online e offline, mas marcado como degraded no banco
-    if (diffMinutes >= WARNING_THRESHOLD_MINUTES || agent.is_throttled) {
+    if (diffMinutes >= WARNING_THRESHOLD_MINUTES) {
       return 'degraded';
     }
-  } else if (agent.status === 'pending') {
-    return 'offline';
   }
 
   // 5. Verificar throttle (degraded)

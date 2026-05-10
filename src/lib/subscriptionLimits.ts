@@ -39,20 +39,25 @@ export function getMemberLimit(
     return quotaFromFeature;
   }
 
-  // 2) Caso contrario, usa o limite do plano
+  // 2) Caso contrário, tenta identificar o plano por nome ou ID
+  // V-FIX: Se for um UUID ou valor desconhecido, não assume 'free' imediatamente se houver indícios de plano superior
   const planIdRaw =
     subscription.plan_name ||
     subscription.plan_id ||
     subscription.plan?.id ||
-    fallbackPlan;
+    '';
 
-  const planId = (planIdRaw || fallbackPlan).toLowerCase() as PlanKey;
+  const planId = planIdRaw.toLowerCase();
 
-  if (planId in PLAN_MEMBER_LIMITS) {
-    return PLAN_MEMBER_LIMITS[planId];
-  }
+  // Mapeamento de nomes amigáveis para chaves de limites
+  if (planId.includes('enterprise')) return PLAN_MEMBER_LIMITS.enterprise;
+  if (planId.includes('pro')) return PLAN_MEMBER_LIMITS.pro;
+  if (planId.includes('starter') || planId.includes('basic')) return PLAN_MEMBER_LIMITS.starter;
+  if (planId.includes('free')) return PLAN_MEMBER_LIMITS.free;
 
-  // 3) Se cair aqui, usa fallback
+  // 3) Se não reconheceu o nome mas tem device_quantity alto, pode ser um plano customizado
+  if ((subscription.device_quantity ?? 0) > 20) return PLAN_MEMBER_LIMITS.pro;
+
   return PLAN_MEMBER_LIMITS[fallbackPlan];
 }
 
