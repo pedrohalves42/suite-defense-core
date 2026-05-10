@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { logger } from '@/lib/logger';
+import { logger, setLogCorrelation } from '@/lib/logger';
 
 // SEC: Session ID kept in memory only (useRef), never persisted to localStorage
 
@@ -51,6 +51,7 @@ export const useSessionManager = () => {
 
       if (sessionId) {
         sessionIdRef.current = sessionId;
+        setLogCorrelation({ sessionId });
         logger.info('[SessionManager] Session started', { sessionId });
       }
 

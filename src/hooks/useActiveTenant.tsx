@@ -6,7 +6,7 @@ import { callGateway } from '@/lib/gateway';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 import { type AppRole, ROLE_PRIORITY } from '@/types/roles';
-import { logger } from '@/lib/logger';
+import { logger, setLogCorrelation } from '@/lib/logger';
 
 interface Tenant {
   id: string;
@@ -203,46 +203,83 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
     checkJWTAndSync();
   }, [activeTenant?.id, user?.id, queryClient]);
 
+  // V-DIAG: Keep logger correlation in sync for cross-cutting diagnostics
+  useEffect(() => {
+    setLogCorrelation({
+      userId: user?.id,
+      tenantId: activeTenant?.id,
+    });
+  }, [user?.id, activeTenant?.id]);
+
   const setActiveTenant = useCallback(async (tenant: Tenant) => {
     if (activeTenant?.id === tenant.id || isSyncingRef.current) {
       return;
     }
 
+    const previousTenantId = activeTenant?.id;
     isSyncingRef.current = true;
-    
+
+    // V-DIAG: Safety timeout — never let isSyncingRef stay locked forever
+    const safetyTimer = setTimeout(() => {
+      if (isSyncingRef.current) {
+        logger.log('warn', 'tenant-sync', 'Safety timeout released sync lock', {
+          previousTenantId,
+          targetTenantId: tenant.id,
+        });
+        isSyncingRef.current = false;
+      }
+    }, 15_000);
+
+    const startedAt = performance.now();
+    logger.log('info', 'tenant-sync', 'sync-start', { previousTenantId, targetTenantId: tenant.id });
+
     try {
-      // V-FIX: Centralized sync helper
+      logger.log('debug', 'tenant-sync', 'gateway-call', { targetTenantId: tenant.id });
       const synced = await syncActiveTenantToBackend(tenant.id);
 
       if (!synced) {
+        logger.log('error', 'tenant-sync', 'gateway-fail', { targetTenantId: tenant.id });
         toast.error('Erro ao trocar de empresa', {
           description: 'Não foi possível sincronizar com o servidor. Tente novamente.'
         });
-        isSyncingRef.current = false;
         return;
       }
+      logger.log('debug', 'tenant-sync', 'gateway-ok', { targetTenantId: tenant.id });
 
       const { error: refreshError } = await supabase.auth.refreshSession();
       if (refreshError) {
-        logger.warn('[setActiveTenant] Session refresh warning', refreshError);
+        logger.log('warn', 'tenant-sync', 'refresh-session warning', {
+          error: refreshError.message,
+        });
+      } else {
+        logger.log('debug', 'tenant-sync', 'refresh-session-ok');
       }
 
       setActiveTenantId(tenant.id);
-      
-      // P-AUDIT: Invalidate queries ATOMICALLY and immediately after session refresh
-      // We use a small delay or await to ensure the query client has processed the refresh
+
+      // P-AUDIT: Atomic invalidation only after session refresh
       await queryClient.invalidateQueries();
+      logger.log('debug', 'tenant-sync', 'invalidate-cache-done');
 
       toast.success(`Alterado para ${tenant.name}`, {
         description: 'Dados atualizados para a nova empresa'
       });
     } catch (err) {
-      logger.error('[setActiveTenant] Unexpected error', err instanceof Error ? err : undefined);
+      logger.log('error', 'tenant-sync', 'unexpected-error', {
+        error: err instanceof Error ? err.message : String(err),
+      });
       toast.error('Erro ao trocar de empresa', {
         description: 'Erro inesperado. Tente novamente.'
       });
     } finally {
-      // Small delay to ensure all components have reacted to state changes before allowing next sync
+      clearTimeout(safetyTimer);
+      const durationMs = Math.round(performance.now() - startedAt);
+      logger.log('info', 'tenant-sync', 'sync-end', {
+        previousTenantId,
+        targetTenantId: tenant.id,
+        durationMs,
+      });
+      // Brief release delay so dependent components react before next sync may start
       setTimeout(() => {
         isSyncingRef.current = false;
       }, 500);

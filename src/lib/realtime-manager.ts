@@ -12,15 +12,39 @@ interface Subscription {
   callback: EventCallback;
 }
 
+export type ChannelStatus = 'idle' | 'subscribing' | 'subscribed' | 'error' | 'timeout' | 'retrying';
+
+export interface ChannelDiagnostic {
+  key: string;
+  schema: string;
+  table: string;
+  filter?: string;
+  status: ChannelStatus;
+  subscribers: string[];
+  errorCount: number;
+  lastError?: { ts: string; message: string };
+  lastSubscribedAt?: string;
+  retryAttempt: number;
+  nextRetryAt?: string;
+}
+
+interface ChannelMeta extends ChannelDiagnostic {
+  retryTimer?: ReturnType<typeof setTimeout>;
+}
+
+const RETRY_BASE_MS = 1000;
+const RETRY_MAX_MS = 30_000;
+
 /**
  * RealtimeChannelManager handles Supabase Realtime connections centrally.
- * It reuses a single channel per table/schema (and optionally filter) to avoid
- * exceeding the maximum number of concurrent connections.
+ * V-DIAG: Tracks per-channel diagnostics and applies exponential backoff
+ * with jitter when channels enter ERROR/TIMED_OUT states.
  */
 class RealtimeChannelManager {
   private static instance: RealtimeChannelManager;
   private channels: Map<string, RealtimeChannel> = new Map();
   private subscribers: Map<string, Subscription[]> = new Map();
+  private meta: Map<string, ChannelMeta> = new Map();
 
   private constructor() {}
 
@@ -31,10 +55,6 @@ class RealtimeChannelManager {
     return RealtimeChannelManager.instance;
   }
 
-  /**
-   * Subscribe to changes on a specific table.
-   * Reuses existing channel if available.
-   */
   public subscribe(
     id: string,
     table: string,
@@ -43,46 +63,66 @@ class RealtimeChannelManager {
     schema: string = 'public'
   ): void {
     const channelKey = this.getChannelKey(schema, table, filter);
-    
-    // Track the subscriber
     const currentSubscribers = this.subscribers.get(channelKey) || [];
-    
-    // Check if this specific instance ID is already registered to avoid duplicates
-    if (currentSubscribers.some(s => s.id === id)) {
-      logger.debug(`[RealtimeChannelManager] ID ${id} already subscribed to ${channelKey}`);
+
+    if (currentSubscribers.some((s) => s.id === id)) {
+      logger.log('debug', 'realtime', `ID ${id} already subscribed to ${channelKey}`);
       return;
     }
-    
+
     currentSubscribers.push({ id, schema, table, filter, callback });
     this.subscribers.set(channelKey, currentSubscribers);
 
-    // Create or reuse channel
     if (!this.channels.has(channelKey)) {
       this.initChannel(channelKey, schema, table, filter);
     } else {
-      logger.debug(`[RealtimeChannelManager] Reusing channel for ${channelKey}. Total subscribers: ${currentSubscribers.length}`);
+      logger.log('debug', 'realtime', `Reusing channel ${channelKey}`, {
+        subscribers: currentSubscribers.length,
+      });
+      const m = this.meta.get(channelKey);
+      if (m) m.subscribers = currentSubscribers.map((s) => s.id);
     }
   }
 
-  /**
-   * Unsubscribe from changes. 
-   * Removes the channel if no more subscribers are left.
-   */
   public unsubscribe(id: string, table: string, filter?: string, schema: string = 'public'): void {
     const channelKey = this.getChannelKey(schema, table, filter);
     const currentSubscribers = this.subscribers.get(channelKey) || [];
-    
-    const filteredSubscribers = currentSubscribers.filter(s => s.id !== id);
-    
+    const filteredSubscribers = currentSubscribers.filter((s) => s.id !== id);
+
     if (filteredSubscribers.length === 0) {
       if (currentSubscribers.length > 0) {
         this.cleanupChannel(channelKey);
       }
       this.subscribers.delete(channelKey);
+      this.meta.delete(channelKey);
     } else {
       this.subscribers.set(channelKey, filteredSubscribers);
-      logger.debug(`[RealtimeChannelManager] Unsubscribed ${id} from ${channelKey}. Remaining: ${filteredSubscribers.length}`);
+      const m = this.meta.get(channelKey);
+      if (m) m.subscribers = filteredSubscribers.map((s) => s.id);
+      logger.log('debug', 'realtime', `Unsubscribed ${id} from ${channelKey}`, {
+        remaining: filteredSubscribers.length,
+      });
     }
+  }
+
+  /** V-DIAG: Snapshot of all channels and their health metrics. */
+  public getDiagnostics(): ChannelDiagnostic[] {
+    return Array.from(this.meta.values()).map(({ retryTimer: _t, ...rest }) => rest);
+  }
+
+  /** V-DIAG: Force a channel to reset and reconnect. */
+  public forceReconnect(channelKey: string): boolean {
+    const m = this.meta.get(channelKey);
+    if (!m) return false;
+    if (m.retryTimer) {
+      clearTimeout(m.retryTimer);
+      m.retryTimer = undefined;
+    }
+    m.retryAttempt = 0;
+    m.nextRetryAt = undefined;
+    this.cleanupChannel(channelKey);
+    this.initChannel(channelKey, m.schema, m.table, m.filter);
+    return true;
   }
 
   private getChannelKey(schema: string, table: string, filter?: string): string {
@@ -90,45 +130,109 @@ class RealtimeChannelManager {
   }
 
   private getSafeChannelName(key: string): string {
-    // Supabase channel names should be alphanumeric or : . _ -
-    // and definitely no special characters from filters
     return `central-${key.replace(/[^a-zA-Z0-9:._-]/g, '_')}`.substring(0, 100);
+  }
+
+  private ensureMeta(key: string, schema: string, table: string, filter?: string): ChannelMeta {
+    let m = this.meta.get(key);
+    if (!m) {
+      m = {
+        key,
+        schema,
+        table,
+        filter,
+        status: 'idle',
+        subscribers: [],
+        errorCount: 0,
+        retryAttempt: 0,
+      };
+      this.meta.set(key, m);
+    }
+    return m;
+  }
+
+  private emitGlobalError(key: string, message: string) {
+    if (typeof window === 'undefined') return;
+    try {
+      window.dispatchEvent(
+        new CustomEvent('cybershield:realtime-error', { detail: { channelKey: key, message } })
+      );
+    } catch { /* noop */ }
+  }
+
+  private scheduleRetry(key: string) {
+    const m = this.meta.get(key);
+    if (!m) return;
+    if (m.retryTimer) return;
+    m.retryAttempt += 1;
+    const delay = Math.min(RETRY_MAX_MS, RETRY_BASE_MS * 2 ** (m.retryAttempt - 1)) + Math.random() * 500;
+    m.status = 'retrying';
+    m.nextRetryAt = new Date(Date.now() + delay).toISOString();
+    logger.log('warn', 'realtime', `Scheduling retry for ${key}`, {
+      attempt: m.retryAttempt,
+      delayMs: Math.round(delay),
+    });
+    m.retryTimer = setTimeout(() => {
+      m.retryTimer = undefined;
+      // Only retry if we still have subscribers
+      const subs = this.subscribers.get(key);
+      if (!subs || subs.length === 0) return;
+      this.initChannel(key, m.schema, m.table, m.filter);
+    }, delay);
   }
 
   private initChannel(key: string, schema: string, table: string, filter?: string): void {
     if (this.channels.has(key)) return;
 
-    logger.debug(`[RealtimeChannelManager] Initializing channel for ${key}`);
-    
+    const m = this.ensureMeta(key, schema, table, filter);
+    m.status = 'subscribing';
+    m.subscribers = (this.subscribers.get(key) || []).map((s) => s.id);
+
+    logger.log('info', 'realtime', `Initializing channel ${key}`);
+
     const channelName = this.getSafeChannelName(key);
     const channel = supabase
       .channel(channelName)
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: schema,
-          table: table,
-          filter: filter,
-        },
+        { event: '*', schema, table, filter },
         (payload) => {
-          logger.debug(`[RealtimeChannelManager] Event on ${key}: ${payload.eventType}`);
+          logger.log('debug', 'realtime', `Event on ${key}: ${payload.eventType}`);
           const subs = this.subscribers.get(key) || [];
-          subs.forEach(s => s.callback(payload));
+          subs.forEach((s) => {
+            try { s.callback(payload); } catch (err) {
+              logger.log('error', 'realtime', `Subscriber callback failed for ${key}`, {
+                subscriberId: s.id,
+                error: err instanceof Error ? err.message : String(err),
+              });
+            }
+          });
         }
       )
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
-          logger.debug(`[RealtimeChannelManager] Channel ${key} subscribed`);
+          m.status = 'subscribed';
+          m.lastSubscribedAt = new Date().toISOString();
+          m.retryAttempt = 0;
+          m.nextRetryAt = undefined;
+          logger.log('info', 'realtime', `Channel ${key} subscribed`);
         } else if (status === 'CHANNEL_ERROR') {
-          logger.error(`[RealtimeChannelManager] Channel ${key} error:`, err);
-          // V-FIX: Cleanup and allow retry on next check. 
-          // We also log the error properly to help debugging connection issues.
-          logger.error(`[RealtimeChannelManager] Channel ${key} error:`, err);
+          const message = err instanceof Error ? err.message : String(err ?? 'unknown channel error');
+          m.status = 'error';
+          m.errorCount += 1;
+          m.lastError = { ts: new Date().toISOString(), message };
+          logger.log('error', 'realtime', `Channel ${key} error`, { message });
+          this.emitGlobalError(key, message);
           this.cleanupChannel(key);
+          this.scheduleRetry(key);
         } else if (status === 'TIMED_OUT') {
-          logger.warn(`[RealtimeChannelManager] Channel ${key} timed out. Cleaning up.`);
+          m.status = 'timeout';
+          m.errorCount += 1;
+          m.lastError = { ts: new Date().toISOString(), message: 'subscription timed out' };
+          logger.log('warn', 'realtime', `Channel ${key} timed out`);
+          this.emitGlobalError(key, 'timed out');
           this.cleanupChannel(key);
+          this.scheduleRetry(key);
         }
       });
 
@@ -138,9 +242,11 @@ class RealtimeChannelManager {
   private cleanupChannel(key: string): void {
     const channel = this.channels.get(key);
     if (channel) {
-      logger.info(`[RealtimeChannelManager] Removing channel ${key} (no more subscribers)`);
-      supabase.removeChannel(channel).catch(err => {
-        logger.error(`[RealtimeChannelManager] Error removing channel ${key}`, err);
+      logger.log('info', 'realtime', `Removing channel ${key}`);
+      supabase.removeChannel(channel).catch((err) => {
+        logger.log('error', 'realtime', `Error removing channel ${key}`, {
+          error: err instanceof Error ? err.message : String(err),
+        });
       });
       this.channels.delete(key);
     }
