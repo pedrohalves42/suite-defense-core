@@ -211,24 +211,27 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
     isSyncingRef.current = true;
     
     try {
-      // V-FIX: Reuse centralized sync helper
+      // V-FIX: Centralized sync helper
       const synced = await syncActiveTenantToBackend(tenant.id);
 
       if (!synced) {
         toast.error('Erro ao trocar de empresa', {
           description: 'Não foi possível sincronizar com o servidor. Tente novamente.'
         });
+        isSyncingRef.current = false;
         return;
       }
 
       const { error: refreshError } = await supabase.auth.refreshSession();
       if (refreshError) {
-        logger.warn('[setActiveTenant] Session refresh warning');
+        logger.warn('[setActiveTenant] Session refresh warning', refreshError);
       }
 
       setActiveTenantId(tenant.id);
-      // P-AUDIT: Invalidate queries instead of removing for smoother transitions
-      queryClient.invalidateQueries({ exact: false });
+      
+      // P-AUDIT: Invalidate queries ATOMICALLY and immediately after session refresh
+      // We use a small delay or await to ensure the query client has processed the refresh
+      await queryClient.invalidateQueries();
 
       toast.success(`Alterado para ${tenant.name}`, {
         description: 'Dados atualizados para a nova empresa'
@@ -239,7 +242,10 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
         description: 'Erro inesperado. Tente novamente.'
       });
     } finally {
-      isSyncingRef.current = false;
+      // Small delay to ensure all components have reacted to state changes before allowing next sync
+      setTimeout(() => {
+        isSyncingRef.current = false;
+      }, 500);
     }
   }, [activeTenant?.id, queryClient]);
 

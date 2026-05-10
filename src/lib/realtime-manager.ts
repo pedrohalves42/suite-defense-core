@@ -122,11 +122,13 @@ class RealtimeChannelManager {
           logger.debug(`[RealtimeChannelManager] Channel ${key} subscribed`);
         } else if (status === 'CHANNEL_ERROR') {
           logger.error(`[RealtimeChannelManager] Channel ${key} error:`, err);
-          // V-FIX: Cleanup and allow retry on next check
-          this.channels.delete(key);
+          // V-FIX: Cleanup and allow retry on next check. 
+          // We also log the error properly to help debugging connection issues.
+          logger.error(`[RealtimeChannelManager] Channel ${key} error:`, err);
+          this.cleanupChannel(key);
         } else if (status === 'TIMED_OUT') {
-          logger.warn(`[RealtimeChannelManager] Channel ${key} timed out`);
-          this.channels.delete(key);
+          logger.warn(`[RealtimeChannelManager] Channel ${key} timed out. Cleaning up.`);
+          this.cleanupChannel(key);
         }
       });
 
