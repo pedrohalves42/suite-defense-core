@@ -150,7 +150,7 @@ export function useDashboardMetrics(
 
   const systemState = useMemo(() => {
     const currentHour = new Date().getHours();
-    // ADR-014: Business hours are 07:00 to 20:00. Outside this, alerts are informational.
+    // ADR-014: Business hours are 07:00 to 20:00 (BRT/Local). Outside this, system alerts are filtered to reduce noise.
     const isBusinessHours = currentHour >= 7 && currentHour < 20;
     const effectiveAlerts = isBusinessHours ? alerts : 0;
 
