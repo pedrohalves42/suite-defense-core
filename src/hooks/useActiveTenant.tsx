@@ -190,8 +190,8 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
             logger.error('[useActiveTenant] Sync refresh error', refreshError);
           } else {
             logger.info('[useActiveTenant] Session refreshed after background sync');
-            // Force query invalidation after sync to clear stale tenant data
-            queryClient.invalidateQueries();
+            // P-FIX: Use precise invalidation to clear stale tenant data without total blast
+            queryClient.invalidateQueries({ exact: false });
           }
         }
       } catch (err) {
