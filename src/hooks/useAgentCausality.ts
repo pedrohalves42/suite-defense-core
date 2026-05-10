@@ -79,27 +79,30 @@ export function useAgentCausality(agentId: string | null, tenantId?: string | nu
         return null;
       }
 
-      // Buscar últimos decision_events
+      // Buscar últimos decision_events com filtro de tenant para segurança RLS (V-AUDIT)
       const { data: decisionEvents } = await supabase
         .from('decision_events')
         .select('id, agent_id, decision_type, rule_code, action, evidence, created_at')
         .eq('agent_id', agentId)
+        .eq('tenant_id', effectiveTenantId)
         .order('created_at', { ascending: false })
         .limit(10);
 
-      // Buscar últimos rollback_events
+      // Buscar últimos rollback_events (V-AUDIT: added tenant filter)
       const { data: rollbackEvents } = await supabase
         .from('agent_rollback_events')
         .select('id, agent_id, from_version, to_version, reason, created_at')
         .eq('agent_id', agentId)
+        .eq('tenant_id', effectiveTenantId)
         .order('created_at', { ascending: false })
         .limit(5);
 
-      // Buscar últimos safe_mode_events
+      // Buscar últimos safe_mode_events (V-AUDIT: added tenant filter)
       const { data: safeModeEvents } = await supabase
         .from('agent_safe_mode_events')
         .select('id, agent_id, reason, entered_at, resolved_at, resolved_by, created_at')
         .eq('agent_id', agentId)
+        .eq('tenant_id', effectiveTenantId)
         .order('created_at', { ascending: false })
         .limit(5);
 
@@ -221,7 +224,7 @@ export function useAgentCausality(agentId: string | null, tenantId?: string | nu
     },
     enabled: !!agentId && !tenantLoading && !!effectiveTenantId,
     refetchInterval: false,
-    staleTime: 600_000,
+    staleTime: 30_000, // 30 segundos (V-FIX: reduced from 10m for incident response)
     refetchOnWindowFocus: false,
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000)
