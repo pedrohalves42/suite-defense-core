@@ -65,13 +65,13 @@ export const ManualInstallationCard = ({ agentName, onDownloadPs1 }: ManualInsta
             <li>Iniciar o agente automaticamente</li>
           </ul>
           <p className="text-xs text-gray-500 ml-8 mt-2">
-            ?? Tempo estimado: 30-60 segundos
+            ⏱️ Tempo estimado: 30-60 segundos
           </p>
         </div>
 
         <div className="bg-green-50 dark:bg-green-950 p-3 rounded border border-green-500">
           <p className="text-sm font-medium text-green-800 dark:text-green-200">
-            [OK]  Apos a instalacao, o agente aparecera neste dashboard em ate 2 minutos.
+            ✅ Após a instalação, o agente aparecerá neste dashboard em até 2 minutos.
           </p>
         </div>
 
