@@ -64,11 +64,25 @@ export async function callEdgeFunction<T = unknown>(
       headers['x-tenant-id'] = activeTenantId;
     }
 
-    const response = await fetch(url, {
-      method,
-      headers,
-      body: payload ? JSON.stringify(payload) : undefined,
-    });
+    // ADR-033: Implement timeout handling
+    const timeoutMs = options?.timeoutMs ?? 30000;
+    const controller = new AbortController();
+    const signal = options?.signal ?? controller.signal;
+    
+    let timeoutId: any = null;
+    if (!options?.signal) {
+      timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    }
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers,
+        body: payload ? JSON.stringify(payload) : undefined,
+        signal
+      });
+
+      if (timeoutId) clearTimeout(timeoutId);
 
     // Log da resposta
     logger.info(`[${requestId}] Resposta recebida`, {
