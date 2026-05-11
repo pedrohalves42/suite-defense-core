@@ -49,7 +49,7 @@ async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), SYNC_TIMEOUT_MS);
 
-    logger.info('[syncActiveTenantToBackend] Attempting sync for tenant:', tenantId);
+    logger.info('[syncActiveTenantToBackend] Attempting sync for tenant', { tenantId });
     
     // V-FIX: callGateway throws on error, so we catch it in the outer block
     const result = await callGateway<any>('admin', 'set-active-tenant', { tenant_id: tenantId });
@@ -57,7 +57,7 @@ async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
     clearTimeout(timeoutId);
     
     if (result?.success) {
-      logger.info('[syncActiveTenantToBackend] Sync successful for tenant:', tenantId);
+      logger.info('[syncActiveTenantToBackend] Sync successful for tenant', { tenantId });
       return true;
     }
     
@@ -65,12 +65,9 @@ async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
     return false;
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
-      logger.error('[syncActiveTenantToBackend] Sync timeout after 10s');
+      logger.error('[syncActiveTenantToBackend] Sync timeout after 10s', { tenantId });
     } else {
-      logger.error('[syncActiveTenantToBackend] Error during sync', {
-        error: err instanceof Error ? err.message : String(err),
-        tenantId
-      });
+      logger.error('[syncActiveTenantToBackend] Error during sync', err, { tenantId });
     }
     return false;
   }
