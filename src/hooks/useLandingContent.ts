@@ -14,184 +14,129 @@ import {
 export function useLandingContent() {
   const { t } = useTranslation();
 
-  return useMemo(() => ({
-    hero: {
-      badge: t('landing.hero.badge'),
-      title1: t('landing.hero.title1'),
-      title2: t('landing.hero.title2'),
-      description: t('landing.hero.description'),
-      descriptionBold: t('landing.hero.descriptionBold'),
-      ctaButton: t('landing.hero.ctaButton'),
-      ctaSecondary: t('landing.hero.ctaSecondary'),
-      reassurance: t('landing.hero.reassurance'),
-      stats: [
-        { value: t('landing.hero.stats.0.value'), label: t('landing.hero.stats.0.label') },
-        { value: t('landing.hero.stats.1.value'), label: t('landing.hero.stats.1.label') },
-        { value: t('landing.hero.stats.2.value'), label: t('landing.hero.stats.2.label') },
-      ],
-      benefits: [
-        t('landing.hero.benefits.0'),
-        t('landing.hero.benefits.1'),
-        t('landing.hero.benefits.2'),
-        t('landing.hero.benefits.3'),
-      ],
-    },
-    painPoints: {
-      badge: t('landing.painPoints.badge'),
-      title: t('landing.painPoints.title'),
-      text: t('landing.painPoints.text'),
-      questions: [
-        t('landing.painPoints.questions.0'),
-        t('landing.painPoints.questions.1'),
-        t('landing.painPoints.questions.2'),
-        t('landing.painPoints.questions.3'),
-      ],
-      conclusion: t('landing.painPoints.conclusion'),
-      stats: [
-        { emoji: t('landing.painPoints.stats.0.emoji'), title: t('landing.painPoints.stats.0.title'), description: t('landing.painPoints.stats.0.description') },
-        { emoji: t('landing.painPoints.stats.1.emoji'), title: t('landing.painPoints.stats.1.title'), description: t('landing.painPoints.stats.1.description') },
-        { emoji: t('landing.painPoints.stats.2.emoji'), title: t('landing.painPoints.stats.2.title'), description: t('landing.painPoints.stats.2.description') },
-        { emoji: t('landing.painPoints.stats.3.emoji'), title: t('landing.painPoints.stats.3.title'), description: t('landing.painPoints.stats.3.description') },
-      ],
-      cta: t('landing.painPoints.cta'),
-    },
-    valueProp: {
-      title: t('landing.valueProp.title'),
-      text: t('landing.valueProp.text'),
-      tagline: t('landing.valueProp.tagline'),
-    },
-    howItWorks: {
-      title: t('landing.howItWorks.title'),
-      subtitle: t('landing.howItWorks.subtitle'),
-      steps: (() => {
-        const stepsObj = t('landing.howItWorks.steps', { returnObjects: true });
-        if (!stepsObj || typeof stepsObj !== 'object') return [];
-        const stepsArray = Array.isArray(stepsObj) ? stepsObj : Object.values(stepsObj);
-        return stepsArray.map((step: any, i: number) => ({
-          number: i + 1,
+  return useMemo(() => {
+    // Helper to get translated items safely
+    const getItems = (key: string) => {
+      const val = t(key, { returnObjects: true });
+      if (!val) return [];
+      return Array.isArray(val) ? val : Object.values(val);
+    };
+
+    return {
+      hero: {
+        badge: t('landing.hero.badge'),
+        title1: t('landing.hero.title1'),
+        title2: t('landing.hero.title2'),
+        description: t('landing.hero.description'),
+        descriptionBold: t('landing.hero.descriptionBold'),
+        ctaButton: t('landing.hero.ctaButton'),
+        ctaSecondary: t('landing.hero.ctaSecondary'),
+        reassurance: t('landing.hero.reassurance'),
+        stats: [
+          { value: t('landing.hero.stats.0.value'), label: t('landing.hero.stats.0.label') },
+          { value: t('landing.hero.stats.1.value'), label: t('landing.hero.stats.1.label') },
+          { value: t('landing.hero.stats.2.value'), label: t('landing.hero.stats.2.label') },
+        ],
+        benefits: getItems('landing.hero.benefits'),
+      },
+      painPoints: {
+        badge: t('landing.painPoints.badge'),
+        title: t('landing.painPoints.title'),
+        text: t('landing.painPoints.text'),
+        questions: getItems('landing.painPoints.questions'),
+        conclusion: t('landing.painPoints.conclusion'),
+        stats: getItems('landing.painPoints.stats'),
+        cta: t('landing.painPoints.cta'),
+      },
+      valueProp: {
+        title: t('landing.valueProp.title'),
+        text: t('landing.valueProp.text'),
+        tagline: t('landing.valueProp.tagline'),
+      },
+      howItWorks: {
+        title: t('landing.howItWorks.title'),
+        subtitle: t('landing.howItWorks.subtitle'),
+        steps: getItems('landing.howItWorks.steps').map((step: any, i: number) => ({
+          number: step.number || i + 1,
           ...step
-        }));
-      })(),
-    },
-    assessment: {
-      title: t('landing.assessment.title'),
-      text: t('landing.assessment.text'),
-      items: (() => {
-        const itemsObj = t('landing.assessment.items', { returnObjects: true });
-        if (!itemsObj || typeof itemsObj !== 'object') return [];
-        return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj);
-      })(),
-      cta: t('landing.assessment.cta'),
-    },
-    benefits: {
-      title: t('landing.benefits.title'),
-      subtitle: t('landing.benefits.subtitle'),
-      cards: (() => {
-        const cardsObj = t('landing.benefits.cards', { returnObjects: true });
-        if (!cardsObj || typeof cardsObj !== 'object') return [];
-        const cardsArray = Array.isArray(cardsObj) ? cardsObj : Object.values(cardsObj);
-        return cardsArray.map((card: any, i: number) => ({
+        })),
+      },
+      assessment: {
+        title: t('landing.assessment.title'),
+        text: t('landing.assessment.text'),
+        items: getItems('landing.assessment.items'),
+        cta: t('landing.assessment.cta'),
+      },
+      benefits: {
+        title: t('landing.benefits.title'),
+        subtitle: t('landing.benefits.subtitle'),
+        cards: getItems('landing.benefits.cards').map((card: any, i: number) => ({
           icon: [Zap, Activity, BarChart, ShieldCheck][i] || ShieldCheck,
           ...card
-        }));
-      })(),
-    },
-    features: {
-      title: t('landing.features.title'),
-      subtitle: t('landing.features.subtitle'),
-      items: (() => {
-        const itemsObj = t('landing.features.items', { returnObjects: true });
-        if (!itemsObj || typeof itemsObj !== 'object') return [];
-        const itemsArray = Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj);
-        return itemsArray.map((item: any, i: number) => ({
+        })),
+      },
+      features: {
+        title: t('landing.features.title'),
+        subtitle: t('landing.features.subtitle'),
+        items: getItems('landing.features.items').map((item: any, i: number) => ({
           icon: [Server, Shield, Zap, FileCheck, Users, Clock][i] || Shield,
           ...item
-        }));
-      })(),
-    },
-    targetAudience: {
-      title: t('landing.targetAudience.title'),
-      subtitle: t('landing.targetAudience.subtitle'),
-      segments: (() => {
-        const segmentsObj = t('landing.targetAudience.segments', { returnObjects: true });
-        if (!segmentsObj || typeof segmentsObj !== 'object') return [];
-        const segmentsArray = Array.isArray(segmentsObj) ? segmentsObj : Object.values(segmentsObj);
-        return segmentsArray.map((segment: any, i: number) => ({
+        })),
+      },
+      targetAudience: {
+        title: t('landing.targetAudience.title'),
+        subtitle: t('landing.targetAudience.subtitle'),
+        segments: getItems('landing.targetAudience.segments').map((segment: any, i: number) => ({
           icon: [Building2, Laptop, Stethoscope, Scale][i] || Building2,
           ...segment
-        }));
-      })(),
-    },
-    trustProof: {
-      title: t('landing.trustProof.title'),
-      text: t('landing.trustProof.text'),
-      blocks: (() => {
-        const blocksObj = t('landing.trustProof.blocks', { returnObjects: true });
-        if (!blocksObj || typeof blocksObj !== 'object') return [];
-        const blocksArray = Array.isArray(blocksObj) ? blocksObj : Object.values(blocksObj);
-        return blocksArray.map((block: any, i: number) => ({
+        })),
+      },
+      trustProof: {
+        title: t('landing.trustProof.title'),
+        text: t('landing.trustProof.text'),
+        blocks: getItems('landing.trustProof.blocks').map((block: any, i: number) => ({
           icon: [Lock, Eye, FileText, CheckCircle][i] || Lock,
           ...block
-        }));
-      })(),
-    },
-    comparison: {
-      title: t('landing.comparison.title'),
-      text: t('landing.comparison.text'),
-      before: {
-        label: t('landing.comparison.before.label'),
-        items: (() => {
-          const itemsObj = t('landing.comparison.before.items', { returnObjects: true });
-          if (!itemsObj || typeof itemsObj !== 'object') return [];
-          return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj);
-        })(),
+        })),
       },
-      after: {
-        label: t('landing.comparison.after.label'),
-        items: (() => {
-          const itemsObj = t('landing.comparison.after.items', { returnObjects: true });
-          if (!itemsObj || typeof itemsObj !== 'object') return [];
-          return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj);
-        })(),
+      comparison: {
+        title: t('landing.comparison.title'),
+        text: t('landing.comparison.text'),
+        before: {
+          label: t('landing.comparison.before.label'),
+          items: getItems('landing.comparison.before.items'),
+        },
+        after: {
+          label: t('landing.comparison.after.label'),
+          items: getItems('landing.comparison.after.items'),
+        },
       },
-    },
-    offer: {
-      title: t('landing.offer.title'),
-      text: t('landing.offer.text'),
-      items: (() => {
-        const itemsObj = t('landing.offer.items', { returnObjects: true });
-        if (!itemsObj || typeof itemsObj !== 'object') return [];
-        return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj);
-      })(),
-      cta: t('landing.offer.cta'),
-      microcopy: t('landing.offer.microcopy'),
-    },
-    faq: {
-      title: t('landing.faq.title'),
-      subtitle: t('landing.faq.subtitle'),
-      items: (() => {
-        const itemsObj = t('landing.faq.items', { returnObjects: true });
-        if (!itemsObj || typeof itemsObj !== 'object') return [];
-        return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj);
-      })(),
-    },
-    ctaFinal: {
-      title: t('landing.ctaFinal.title'),
-      subtitle: t('landing.ctaFinal.subtitle'),
-      cta: t('landing.ctaFinal.cta'),
-      ctaSecondary: t('landing.ctaFinal.ctaSecondary'),
-    },
-    contact: {
-      title: t('landing.contact.title'),
-    },
-    differentiators: {
-      title: t('landing.differentiators.title'),
-      subtitle: t('landing.differentiators.subtitle'),
-      items: (() => {
-        const itemsObj = t('landing.differentiators.items', { returnObjects: true });
-        if (!itemsObj || typeof itemsObj !== 'object') return [];
-        return Array.isArray(itemsObj) ? itemsObj : Object.values(itemsObj);
-      })(),
-    },
-  }), [t]);
+      offer: {
+        title: t('landing.offer.title'),
+        text: t('landing.offer.text'),
+        items: getItems('landing.offer.items'),
+        cta: t('landing.offer.cta'),
+        microcopy: t('landing.offer.microcopy'),
+      },
+      faq: {
+        title: t('landing.faq.title'),
+        subtitle: t('landing.faq.subtitle'),
+        items: getItems('landing.faq.items'),
+      },
+      ctaFinal: {
+        title: t('landing.ctaFinal.title'),
+        subtitle: t('landing.ctaFinal.subtitle'),
+        cta: t('landing.ctaFinal.cta'),
+        ctaSecondary: t('landing.ctaFinal.ctaSecondary'),
+      },
+      contact: {
+        title: t('landing.contact.title'),
+      },
+      differentiators: {
+        title: t('landing.differentiators.title'),
+        subtitle: t('landing.differentiators.subtitle'),
+        items: getItems('landing.differentiators.items'),
+      },
+    };
+  }, [t]);
 }
