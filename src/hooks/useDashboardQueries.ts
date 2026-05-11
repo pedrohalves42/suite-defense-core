@@ -190,6 +190,7 @@ export function useDashboardQueries() {
   });
 
   const loading = tenantLoading || agents.isLoading || jobs.isLoading || reports.isLoading || virusScans.isLoading;
+  const error = agents.error || jobs.error || reports.error || virusScans.error;
 
   return {
     agents: agents.data || [],
@@ -200,6 +201,7 @@ export function useDashboardQueries() {
     virusScans: virusScans.data || [],
     auditLogs: auditLogs.data || [],
     loading,
+    error,
     tenant,
     tenantLoading,
     tenantNames: tenantNames.data || {},
