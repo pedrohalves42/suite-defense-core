@@ -84,63 +84,61 @@ export function GamificationHub() {
             Clique em qualquer conquista, desafio ou posição do ranking para abrir a área correspondente.
           </p>
 
-          <AnimatePresence mode="wait">
-            {activeTab === 'overview' && (
-              <motion.div
-                key="overview"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <TabsContent value="overview" className="mt-0" forceMount>
+          <div className="relative overflow-hidden">
+            <AnimatePresence mode="wait" initial={false}>
+              {activeTab === 'overview' && (
+                <motion.div
+                  key="overview"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="w-full"
+                >
                   <SecurityAchievements />
-                </TabsContent>
-              </motion.div>
-            )}
+                </motion.div>
+              )}
 
-            {activeTab === 'challenges' && (
-              <motion.div
-                key="challenges"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <TabsContent value="challenges" className="mt-0" forceMount>
+              {activeTab === 'challenges' && (
+                <motion.div
+                  key="challenges"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="w-full"
+                >
                   <WeeklyChallenges />
-                </TabsContent>
-              </motion.div>
-            )}
+                </motion.div>
+              )}
 
-            {activeTab === 'ranking' && (
-              <motion.div
-                key="ranking"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <TabsContent value="ranking" className="mt-0" forceMount>
+              {activeTab === 'ranking' && (
+                <motion.div
+                  key="ranking"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="w-full"
+                >
                   <Leaderboard />
-                </TabsContent>
-              </motion.div>
-            )}
+                </motion.div>
+              )}
 
-            {activeTab === 'history' && (
-              <motion.div
-                key="history"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <TabsContent value="history" className="mt-0" forceMount>
+              {activeTab === 'history' && (
+                <motion.div
+                  key="history"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="w-full"
+                >
                   <XPHistoryList history={xpHistory} />
-                </TabsContent>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </Tabs>
       </CardContent>
     </Card>

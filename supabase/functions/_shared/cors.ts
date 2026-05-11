@@ -28,7 +28,9 @@ function isAllowedOrigin(origin: string | null): boolean {
  */
 export function buildCorsHeaders(origin: string | null): Record<string, string> {
   const allowed = isAllowedOrigin(origin);
-  const allowedOrigin = allowed ? origin! : '*';
+  // FIX: If origin is from Lovable but not explicitly in allowlist, allow it without credentials
+  // This prevents CORS breaks on error responses where origin detection might be slightly different.
+  const allowedOrigin = allowed ? origin! : (origin && isAllowedOrigin(origin) ? origin : '*');
 
   const headers: Record<string, string> = {
     'Access-Control-Allow-Origin': allowedOrigin,

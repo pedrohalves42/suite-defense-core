@@ -1435,7 +1435,15 @@
     "securityTimeline": "Timeline de Segurança",
     "loadingData": "Carregando dados...",
     "realTimeUpdate": "Este painel monitora a saúde global do sistema em tempo real (atualiza a cada 10s).",
-    "criticalAlert": "Se algo crítico surgir, você será alertado automaticamente."
+    "criticalAlert": "Se algo crítico surgir, você será alertado automaticamente.",
+    "footer": {
+      "productName": "CyberShield",
+      "description": "A plataforma unificada que transforma segurança cibernética em vantagem competitiva através de automação inteligente e compliance matemático.",
+      "platform": "Plataforma",
+      "legal": "Jurídico",
+      "copyright": "CyberShield Operational Security. Registros auditáveis e integridade de dados garantidos.",
+      "systemStatus": "Status do Sistema: Ótimo"
+    }
   },
   "hubs": {
     "compliance": {
