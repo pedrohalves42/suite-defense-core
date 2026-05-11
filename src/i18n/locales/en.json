@@ -1333,6 +1333,14 @@
     "securityTimeline": "Security Timeline",
     "loadingData": "Loading data...",
     "realTimeUpdate": "This dashboard monitors global system health in real time (updates every 10s).",
-    "criticalAlert": "If something critical arises, you will be alerted automatically."
+    "criticalAlert": "If something critical arises, you will be alerted automatically.",
+    "footer": {
+      "productName": "CyberShield",
+      "description": "The unified platform that transforms cybersecurity into competitive advantage through intelligent automation and mathematical compliance.",
+      "platform": "Platform",
+      "legal": "Legal",
+      "copyright": "CyberShield Operational Security. Auditable records and data integrity guaranteed.",
+      "systemStatus": "System Status: Optimal"
+    }
   }
 }
