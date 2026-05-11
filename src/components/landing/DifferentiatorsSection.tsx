@@ -1,7 +1,7 @@
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { Shield, Link2, Brain, Zap, Fingerprint, Layers } from "lucide-react";
+import { Shield, Link2, Brain, Zap, Fingerprint, Layers, LucideIcon } from "lucide-react";
 import { safeMap } from "@/lib/safe-data";
 
 const ICONS = [Shield, Link2, Brain, Zap, Fingerprint, Layers];
@@ -40,7 +40,7 @@ export function DifferentiatorsSection() {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {safeMap(differentiators.items, (item: { title: string; description: string; metric: string; metricLabel: string }, index: number) => {
-            const Icon = ICONS[index] || Shield;
+            const Icon = (ICONS[index] || Shield) as LucideIcon;
             return (
               <motion.div
                 key={index}

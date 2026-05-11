@@ -1,6 +1,7 @@
 import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 import { motion } from "framer-motion";
+import { LucideIcon } from "lucide-react";
 
 export function TrustProofSection() {
   const { trustProof } = useLandingContent();
@@ -28,8 +29,8 @@ export function TrustProofSection() {
         </motion.div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto stagger-visible">
-          {trustProof.blocks.map((block, index) => {
-            const Icon = block.icon;
+          {trustProof.blocks.map((block: any, index: number) => {
+            const Icon = block.icon as LucideIcon;
             return (
               <motion.div
                 key={index}
