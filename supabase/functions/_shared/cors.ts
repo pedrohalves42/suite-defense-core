@@ -11,7 +11,7 @@ const ALLOWED_ORIGINS = [
 
 /**
  * Check if an origin is allowed.
- * Accepts exact matches from the allowlist plus any *.lovable.app subdomain.
+ * Accepts exact matches from the allowlist plus any *.lovable.app/project.com/dev subdomain.
  */
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
@@ -25,24 +25,31 @@ function isAllowedOrigin(origin: string | null): boolean {
 
 /**
  * Build CORS + security headers for a given request origin.
- * Falls back to the primary production domain if the origin is not allowlisted.
  */
 export function buildCorsHeaders(origin: string | null): Record<string, string> {
-  const allowedOrigin = isAllowedOrigin(origin) ? origin! : ALLOWED_ORIGINS[0];
+  const allowed = isAllowedOrigin(origin);
+  const allowedOrigin = allowed ? origin! : '*';
 
-  return {
+  const headers: Record<string, string> = {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-agent-token, x-hmac-signature, x-hmac-timestamp, x-hmac-nonce, x-timestamp, x-nonce, x-request-id, x-trace-id, x-tenant-id, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Expose-Headers': 'X-Request-ID, X-Trace-ID, X-Response-Time',
-    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Max-Age': '600',
     'Vary': 'Origin',
     ...securityHeaders,
   };
+
+  // Only use credentials if origin is specifically allowed (required by browsers for wildcard)
+  if (allowed) {
+    headers['Access-Control-Allow-Credentials'] = 'true';
+  }
+
+  return headers;
 }
 
 /**
  * Static corsHeaders kept for backward compatibility.
+ * Now defaults to '*' which is safer for error responses from unknown origins.
  */
-export const corsHeaders = buildCorsHeaders(ALLOWED_ORIGINS[0]);
+export const corsHeaders = buildCorsHeaders(null);

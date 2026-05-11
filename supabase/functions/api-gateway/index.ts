@@ -221,7 +221,7 @@ servePublic(async (req, ctx) => {
 
     const parsed = RouterSchema.safeParse(body);
     if (!parsed.success) {
-      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Invalid request', 400, requestId);
+      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Invalid request', 400, requestId, origin);
     }
 
     const { action, payload } = parsed.data;
@@ -266,6 +266,7 @@ servePublic(async (req, ctx) => {
           errMessage,
           __status,
           requestId,
+          origin,
         );
       }
       return jsonRes(rest, __status, origin);
@@ -276,7 +277,7 @@ servePublic(async (req, ctx) => {
     return handleExceptionWithContext(err, requestId, 'api-gateway', startedAt, {
       operation: 'dispatch',
       tenantId: (body as any)?.payload?.tenant_id
-    });
+    }, origin);
   }
 }, {
   rateLimit: {

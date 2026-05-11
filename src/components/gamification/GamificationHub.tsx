@@ -85,21 +85,61 @@ export function GamificationHub() {
           </p>
 
           <AnimatePresence mode="wait">
-            <TabsContent value="overview" className="mt-0">
-              <SecurityAchievements />
-            </TabsContent>
+            {activeTab === 'overview' && (
+              <motion.div
+                key="overview"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <TabsContent value="overview" className="mt-0" forceMount>
+                  <SecurityAchievements />
+                </TabsContent>
+              </motion.div>
+            )}
 
-            <TabsContent value="challenges" className="mt-0">
-              <WeeklyChallenges />
-            </TabsContent>
+            {activeTab === 'challenges' && (
+              <motion.div
+                key="challenges"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <TabsContent value="challenges" className="mt-0" forceMount>
+                  <WeeklyChallenges />
+                </TabsContent>
+              </motion.div>
+            )}
 
-            <TabsContent value="ranking" className="mt-0">
-              <Leaderboard />
-            </TabsContent>
+            {activeTab === 'ranking' && (
+              <motion.div
+                key="ranking"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <TabsContent value="ranking" className="mt-0" forceMount>
+                  <Leaderboard />
+                </TabsContent>
+              </motion.div>
+            )}
 
-            <TabsContent value="history" className="mt-0">
-              <XPHistoryList history={xpHistory} />
-            </TabsContent>
+            {activeTab === 'history' && (
+              <motion.div
+                key="history"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <TabsContent value="history" className="mt-0" forceMount>
+                  <XPHistoryList history={xpHistory} />
+                </TabsContent>
+              </motion.div>
+            )}
           </AnimatePresence>
         </Tabs>
       </CardContent>
