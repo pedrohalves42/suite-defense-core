@@ -80,13 +80,16 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   // ADR-026 FIX: Validate tenant association
   // PATCH #4: Wait for both loading AND isFetched before making redirect decision
   // This prevents flash of /no-tenant during initial fetch
-  if (!tenantLoading && isFetched && tenants !== undefined) {
+  if (isFetched && !tenantLoading && tenants !== undefined) {
     const isSuperAdmin = user?.app_metadata?.is_super_admin === true;
     const hasTenant = (Array.isArray(tenants) && tenants.length > 0) || isSuperAdmin;
     
     // User has no tenant and is not on allowed pages
     if (!hasTenant && !isOnNoTenantPage && !isOnForcePasswordPage) {
-      logger.warn('ProtectedRoute: User has no associated tenant, redirecting to /no-tenant', { tenantsCount: tenants?.length });
+      logger.warn('ProtectedRoute: User has no associated tenant after fetch, redirecting to /no-tenant', { 
+        tenantsCount: tenants?.length,
+        isSuperAdmin 
+      });
       return <Navigate to="/no-tenant" replace />;
     }
     
