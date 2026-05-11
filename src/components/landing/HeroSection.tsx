@@ -1,6 +1,6 @@
 import { ArrowRight, CheckCircle } from "lucide-react";
-import cybershieldLogo from "@/assets/logo-cybshield-new.webp";
-import heroBanner from "@/assets/cybershield-hero-banner.webp";
+import cybershieldLogo from "../../assets/logo-cybshield-new.webp";
+import heroBanner from "../../assets/cybershield-hero-banner.webp";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useLandingContent } from "@/hooks/useLandingContent";
