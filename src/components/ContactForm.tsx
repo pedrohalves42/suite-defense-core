@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
 import { Loader2 } from "lucide-react";
-import logoImage from '@/assets/logo-cybshield-new.webp';
+import logoImage from "@/assets/logo-cybshield-new.webp";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
 

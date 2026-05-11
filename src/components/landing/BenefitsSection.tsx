@@ -2,6 +2,7 @@ import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 import { motion } from "framer-motion";
 import { safeMap } from "@/lib/safe-data";
+import { LucideIcon } from "lucide-react";
 
 export function BenefitsSection() {
   const { benefits } = useLandingContent();
@@ -20,8 +21,8 @@ export function BenefitsSection() {
         />
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto stagger-visible">
-          {safeMap(benefits.cards, (card, index) => {
-            const Icon = card.icon;
+          {safeMap(benefits.cards, (card: any, index: number) => {
+            const Icon = card.icon as LucideIcon;
             return (
               <motion.div 
                 key={index}

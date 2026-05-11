@@ -2,6 +2,7 @@ import { useLandingContent } from "@/hooks/useLandingContent";
 import { SectionHeader } from "./shared/SectionHeader";
 import { motion } from "framer-motion";
 import { safeMap } from "@/lib/safe-data";
+import { LucideIcon } from "lucide-react";
 
 export function TargetAudienceSection() {
   const { targetAudience } = useLandingContent();
@@ -14,8 +15,8 @@ export function TargetAudienceSection() {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader title={targetAudience.title} subtitle={targetAudience.subtitle} />
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-          {safeMap(targetAudience.segments, (segment, index) => {
-            const Icon = segment.icon;
+          {safeMap(targetAudience.segments, (segment: any, index: number) => {
+            const Icon = segment.icon as LucideIcon;
             return (
               <motion.div key={index} className="group p-8 rounded-2xl bg-card border border-border hover:border-info/30 transition-all" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.1 }}>
                 <div className="w-14 h-14 bg-info/10 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-info/15 transition-colors">
