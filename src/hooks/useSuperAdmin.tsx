@@ -25,17 +25,29 @@ export const useSuperAdmin = () => {
         return;
       }
 
+      // V-FIX: Prefer JWT claim if available to avoid unnecessary RPC
+      if (user.app_metadata?.is_super_admin === true) {
+        setIsSuperAdmin(true);
+        setLoading(false);
+        return;
+      }
+
       try {
         const { data, error } = await supabase.rpc('is_super_admin', {
           _user_id: user.id
         });
 
         if (error) {
+          // If 403, might be a stale session or RLS lag, we check app_metadata again
+          if (error.code === '42501' && user.app_metadata?.is_super_admin === true) {
+            setIsSuperAdmin(true);
+            setLoading(false);
+            return;
+          }
           logger.error('RPC is_super_admin failed', error);
           throw new Error(`Failed to verify super admin status: ${error.message}`);
         }
         
-        // CORRECAO: So atualiza se nao foi cancelado
         if (!isCancelled) {
           setIsSuperAdmin(data === true);
           setError(null);

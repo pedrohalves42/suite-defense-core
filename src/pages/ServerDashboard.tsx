@@ -31,13 +31,15 @@ const ServerDashboard = () => {
 
   const {
     agents, jobs, reports, agentTokens, rateLimits, virusScans, auditLogs,
-    loading, tenant, tenantLoading, tenantNames,
+    loading, tenant, tenantLoading, tenantNames, refresh
   } = useDashboardQueries();
 
   const {
     offlineCount, failedJobs, alerts, agentsByTenant,
     sortedTenantsByGravity, tenantsWithIssues, onlinePercentage, systemState, successRate, trends,
   } = useDashboardMetrics(agents, jobs, tenantNames);
+
+  const hasDataError = !loading && !tenantLoading && tenant && agents.length === 0 && jobs.length === 0;
 
   // Loading state
   if (tenantLoading || !tenant) {
@@ -51,8 +53,32 @@ const ServerDashboard = () => {
     );
   }
 
-  // Empty state
+  // Empty state or RLS Data Error
   if (!loading && agents.length === 0) {
+    if (hasDataError) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center p-6">
+          <Card className="max-w-md w-full border-destructive/20 bg-destructive/5">
+            <CardContent className="pt-8 pb-8 text-center space-y-4">
+              <div className="p-3 bg-destructive/10 rounded-full w-fit mx-auto">
+                <Info className="h-8 w-8 text-destructive" />
+              </div>
+              <h2 className="text-xl font-bold text-white">Erro de Sincronização</h2>
+              <p className="text-muted-foreground text-sm">
+                Não conseguimos carregar os dados da empresa <strong>{tenant.name}</strong>. 
+                Isso geralmente ocorre quando a permissão de acesso ainda está sendo propagada.
+              </p>
+              <button 
+                onClick={() => refresh()}
+                className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors"
+              >
+                Tentar Recarregar
+              </button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
     return <DashboardEmptyState tenantName={tenant.name} />;
   }
 
