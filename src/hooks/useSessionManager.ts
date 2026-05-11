@@ -117,10 +117,12 @@ export const useSessionManager = () => {
       
       activityIntervalRef.current = setInterval(updateActivity, 5 * 60 * 1000);
       
-      const events = ['mousedown', 'keydown'];
+      // ADR-033: Add touch and scroll events for better mobile/modern browser activity detection
+      const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
       let lastUpdate = Date.now();
       
       const handleActivity = () => {
+        // Debounce activity updates to once per minute to save database calls
         if (Date.now() - lastUpdate > 60000) {
           lastUpdate = Date.now();
           updateActivity();

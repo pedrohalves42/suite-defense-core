@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useActiveTenant } from './useActiveTenant';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 
@@ -13,6 +14,7 @@ import { logger } from '@/lib/logger';
  */
 export const useSessionTimeout = () => {
   const { user } = useAuth();
+  const { activeRole } = useActiveTenant();
   const lastActivityRef = useRef(Date.now());
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const warningShownRef = useRef(false);
@@ -27,16 +29,13 @@ export const useSessionTimeout = () => {
     const isSuperAdmin = appMetadata.is_super_admin === true;
     isSuperAdminRef.current = isSuperAdmin;
     
-    // Check tenants for admin role
-    const tenants = appMetadata.tenants || [];
-    const activeTenantId = appMetadata.active_tenant_id;
-    const activeTenant = tenants.find((t: { id: string }) => t.id === activeTenantId);
-    const role = activeTenant?.role || 'user';
+    // ADR-026 FIX: Use role directly from useActiveTenant for more reliable timeout calculation
+    const role = activeRole || 'user';
     
     if (isSuperAdmin) return 60;      // was 15 → now 1 hour
     if (role === 'admin') return 480;   // was 60 → now 8 hours
     return 720;                         // was 480 → now 12 hours
-  }, [user]);
+  }, [user, activeRole]);
 
   const resetTimer = useCallback(() => {
     lastActivityRef.current = Date.now();

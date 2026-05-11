@@ -131,16 +131,16 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
     if (loading || !isFetched) return null;
     if (tenants.length === 0) return null;
     
-    // 1. JWT session preference (Highest priority for persistence across reloads)
-    const sessionTenantId = user?.app_metadata?.active_tenant_id;
-    if (sessionTenantId) {
-      const found = tenants.find(t => t.id === sessionTenantId);
+    // 1. Explicit selection in state (Highest priority for the current session)
+    if (activeTenantId) {
+      const found = tenants.find(t => t.id === activeTenantId);
       if (found) return found;
     }
 
-    // 2. Explicit selection in state (Overrides for the current session if different from JWT)
-    if (activeTenantId) {
-      const found = tenants.find(t => t.id === activeTenantId);
+    // 2. JWT session preference (Second priority for persistence across reloads)
+    const sessionTenantId = user?.app_metadata?.active_tenant_id;
+    if (sessionTenantId) {
+      const found = tenants.find(t => t.id === sessionTenantId);
       if (found) return found;
     }
     
@@ -185,11 +185,9 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
             logger.error('[useActiveTenant] Sync refresh error', refreshError);
           } else {
             logger.info('[useActiveTenant] Session refreshed after background sync');
-            // P-FIX: Targeted invalidation of tenant-specific data
-            queryClient.invalidateQueries({ queryKey: ['agent'] });
-            queryClient.invalidateQueries({ queryKey: ['audit'] });
-            queryClient.invalidateQueries({ queryKey: ['tenant'] });
-            queryClient.invalidateQueries({ queryKey: ['subscription'] });
+            // P-FIX: Broad invalidation to ensure all tenant-scoped data is refreshed
+            await queryClient.invalidateQueries();
+            logger.info('[useActiveTenant] Queries invalidated after background sync');
           }
         }
       } catch (err) {
