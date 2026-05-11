@@ -1,5 +1,5 @@
 // Enhanced error handler with standardized responses and CORS support
-import { corsHeaders } from './cors.ts';
+import { buildCorsHeaders, corsHeaders } from './cors.ts';
 import { ZodError } from 'https://esm.sh/zod@3.23.8';
 import { logger } from './logger.ts';
 
@@ -57,20 +57,25 @@ export function createStandardError(
 
 export function createErrorResponse(
   error: StandardError,
-  status?: number
+  status?: number,
+  origin?: string | null
 ): Response;
 export function createErrorResponse(
   code: ErrorCode | string,
   message: string,
   status: number,
-  requestId?: string
+  requestId?: string,
+  origin?: string | null
 ): Response;
 export function createErrorResponse(
   errorOrCode: StandardError | ErrorCode | string,
   statusOrMessage?: number | string,
   status?: number,
-  requestId?: string
+  requestId?: string,
+  origin?: string | null
 ): Response {
+  const headers = buildCorsHeaders(origin || null);
+
   // New signature: createErrorResponse(error, status)
   if (typeof errorOrCode === 'object' && 'error' in errorOrCode) {
     const error = errorOrCode;
@@ -79,7 +84,7 @@ export function createErrorResponse(
       JSON.stringify(error),
       {
         status: statusCode,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...headers, 'Content-Type': 'application/json' }
       }
     );
   }
@@ -94,7 +99,7 @@ export function createErrorResponse(
     JSON.stringify(standardError),
     {
       status: statusCode,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...headers, 'Content-Type': 'application/json' }
     }
   );
 }
@@ -103,8 +108,11 @@ export function handleException(
   error: unknown,
   requestId: string,
   functionName: string,
-  context?: ErrorContext
+  context?: ErrorContext,
+  origin?: string | null
 ): Response {
+  const headers = buildCorsHeaders(origin || null);
+
   // Always log the full error internally for observability
   logger.error(`[${requestId}] [${functionName}] [${context?.operation || 'unknown'}] Exception:`, error, {
     requestId,
@@ -138,7 +146,7 @@ export function handleException(
     JSON.stringify(standardError),
     {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...headers, 'Content-Type': 'application/json' }
     }
   );
 }
@@ -148,7 +156,8 @@ export function handleExceptionWithContext(
   requestId: string,
   functionName: string,
   startTime: number,
-  overrides?: Partial<ErrorContext>
+  overrides?: Partial<ErrorContext>,
+  origin?: string | null
 ): Response {
   const latency = Date.now() - startTime;
   const context: ErrorContext = {
@@ -157,14 +166,17 @@ export function handleExceptionWithContext(
     traceId: requestId,
     ...overrides
   };
-  return handleException(error, requestId, functionName, context);
+  return handleException(error, requestId, functionName, context, origin);
 }
 
 export function createValidationError(
   message: string | ZodError,
   details?: unknown,
-  requestId?: string
+  requestId?: string,
+  origin?: string | null
 ): Response {
+  const headers = buildCorsHeaders(origin || null);
+
   let errorMessage: string;
   let errorDetails: unknown;
 
@@ -187,7 +199,7 @@ export function createValidationError(
     JSON.stringify(error),
     {
       status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...headers, 'Content-Type': 'application/json' }
     }
   );
 }
@@ -197,8 +209,11 @@ export const handleValidationError = createValidationError;
 
 export function createAuthError(
   message: string = 'Authentication required',
-  requestId?: string
+  requestId?: string,
+  origin?: string | null
 ): Response {
+  const headers = buildCorsHeaders(origin || null);
+
   const error = createStandardError(
     'AUTH_ERROR',
     message,
@@ -209,15 +224,18 @@ export function createAuthError(
     JSON.stringify(error),
     {
       status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...headers, 'Content-Type': 'application/json' }
     }
   );
 }
 
 export function createNotFoundError(
   resource: string,
-  requestId?: string
+  requestId?: string,
+  origin?: string | null
 ): Response {
+  const headers = buildCorsHeaders(origin || null);
+
   const error = createStandardError(
     'NOT_FOUND',
     `${resource} not found`,
@@ -228,7 +246,7 @@ export function createNotFoundError(
     JSON.stringify(error),
     {
       status: 404,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...headers, 'Content-Type': 'application/json' }
     }
   );
 }

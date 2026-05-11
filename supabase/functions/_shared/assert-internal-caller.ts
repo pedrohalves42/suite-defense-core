@@ -18,7 +18,7 @@
  *   });
  */
 
-import { corsHeaders } from './cors.ts';
+import { buildCorsHeaders, corsHeaders } from './cors.ts';
 import { timingSafeEqual } from './crypto-utils.ts';
 import { logger } from './logger.ts';
 
@@ -31,6 +31,9 @@ export async function assertInternalCaller(
     returnContext?: boolean;
   }
 ): Promise<Response | { userId: string | null; tenantId: string | null; isInternal: boolean } | null> {
+  const origin = req.headers.get('Origin') || req.headers.get('origin');
+  const headers = buildCorsHeaders(origin);
+
   const internalSecret = req.headers.get('X-Internal-Secret') || req.headers.get('x-internal-secret');
   const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
   const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
@@ -78,7 +81,7 @@ export async function assertInternalCaller(
     } else {
       return authResult.response || new Response(
         JSON.stringify({ error: 'Unauthorized: Access restricted' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...headers, 'Content-Type': 'application/json' } }
       );
     }
   }
@@ -98,6 +101,6 @@ export async function assertInternalCaller(
 
   return new Response(
     JSON.stringify({ error: 'Unauthorized: Access restricted to system or super_admin' }),
-    { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    { status: 401, headers: { ...headers, 'Content-Type': 'application/json' } }
   );
 }

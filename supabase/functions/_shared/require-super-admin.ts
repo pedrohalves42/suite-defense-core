@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders } from './cors.ts';
+import { buildCorsHeaders, corsHeaders } from './cors.ts';
 import { logger } from './logger.ts';
 
 export interface SuperAdminAuthResult {
@@ -32,6 +32,9 @@ export async function requireSuperAdmin(
   requestId?: string
 ): Promise<SuperAdminAuthResult> {
   const logPrefix = requestId ? `[${requestId}]` : '';
+  const origin = req.headers.get('Origin') || req.headers.get('origin');
+  const headers = buildCorsHeaders(origin);
+
   
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -46,7 +49,7 @@ export async function requireSuperAdmin(
           JSON.stringify({ error: 'Internal server configuration error' }),
           {
             status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            headers: { ...headers, 'Content-Type': 'application/json' },
           }
         ),
       };
@@ -63,7 +66,7 @@ export async function requireSuperAdmin(
           JSON.stringify({ error: 'Unauthorized: Missing Authorization header' }),
           {
             status: 401,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            headers: { ...headers, 'Content-Type': 'application/json' },
           }
         ),
       };
@@ -84,7 +87,7 @@ export async function requireSuperAdmin(
           JSON.stringify({ error: 'Unauthorized: Invalid or expired token' }),
           {
             status: 401,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            headers: { ...headers, 'Content-Type': 'application/json' },
           }
         ),
       };
@@ -106,7 +109,7 @@ export async function requireSuperAdmin(
           JSON.stringify({ error: 'Failed to verify permissions' }),
           {
             status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            headers: { ...headers, 'Content-Type': 'application/json' },
           }
         ),
       };
@@ -124,7 +127,7 @@ export async function requireSuperAdmin(
           }),
           {
             status: 403,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            headers: { ...headers, 'Content-Type': 'application/json' },
           }
         ),
       };
@@ -146,7 +149,7 @@ export async function requireSuperAdmin(
         JSON.stringify({ error: 'Internal authentication error' }),
         {
           status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...headers, 'Content-Type': 'application/json' },
         }
       ),
     };
