@@ -18,7 +18,7 @@ export function useLandingContent() {
     // Helper to get translated items safely
     const getItems = (key: string) => {
       const val = t(key, { returnObjects: true });
-      if (!val) return [];
+      if (!val || typeof val === 'string') return [];
       return Array.isArray(val) ? val : Object.values(val);
     };
 

@@ -256,11 +256,10 @@ servePublic(async (req, ctx) => {
     if (typeof resultObj?.__status === 'number') {
       const { __status, ...rest } = resultObj;
       if (__status >= 400) {
-        // Fix: correct arg order is (code, message, status, requestId)
         const errMessage =
           typeof rest.error === 'string'
             ? rest.error
-            : (rest.message as string) || 'Error';
+            : (rest.message as string) || 'Internal Gateway Error';
         return createErrorResponse(
           ErrorCode.INTERNAL_ERROR,
           errMessage,
