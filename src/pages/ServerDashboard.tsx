@@ -1,6 +1,7 @@
 import { Server, Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -41,8 +42,8 @@ const ServerDashboard = () => {
 
   const hasDataError = (!loading && !tenantLoading && tenant && agents.length === 0 && jobs.length === 0) || !!error;
 
-  // Loading state
-  if (tenantLoading || !tenant) {
+  // 1. Loading state (stricter check)
+  if (tenantLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -53,9 +54,32 @@ const ServerDashboard = () => {
     );
   }
 
-  // Empty state or RLS Data Error
+  // 2. No tenant found state (Crucial fix for stuck loader)
+  if (!tenant) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <Card className="max-w-md w-full border-warning/20 bg-warning/5">
+          <CardContent className="pt-8 pb-8 text-center space-y-4">
+            <div className="p-3 bg-warning/10 rounded-full w-fit mx-auto">
+              <Info className="h-8 w-8 text-warning" />
+            </div>
+            <h2 className="text-xl font-bold text-white">Nenhuma Empresa Ativa</h2>
+            <p className="text-muted-foreground text-sm">
+              Você não possui acesso a nenhuma empresa ou seu acesso ainda está sendo processado.
+            </p>
+            <Button onClick={() => window.location.href = '/installer'} className="w-full">
+              Configurar Primeiro Agente
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // 3. Error or Empty state
   if (!loading && agents.length === 0) {
-    if (hasDataError) {
+    // Only show "Error" if we actually have an error object OR if we expected data (complex heuristic)
+    if (!!error) {
       return (
         <div className="min-h-screen bg-background flex items-center justify-center p-6">
           <Card className="max-w-md w-full border-destructive/20 bg-destructive/5">
@@ -66,7 +90,7 @@ const ServerDashboard = () => {
               <h2 className="text-xl font-bold text-white">Erro de Sincronização</h2>
               <p className="text-muted-foreground text-sm">
                 Não conseguimos carregar os dados da empresa <strong>{tenant.name}</strong>. 
-                Isso geralmente ocorre quando a permissão de acesso ainda está sendo propagada.
+                Isso pode ser uma oscilação temporária na conexão.
               </p>
               <button 
                 onClick={() => refresh()}
@@ -79,6 +103,7 @@ const ServerDashboard = () => {
         </div>
       );
     }
+    // Default to empty state if no agents, instead of showing "Sync Error" card automatically
     return <DashboardEmptyState tenantName={tenant.name} />;
   }
 

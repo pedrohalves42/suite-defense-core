@@ -14,9 +14,9 @@ import type {
 const REFETCH_INTERVAL = 120_000;
 const STALE_TIME = 60_000;
 
-async function fetchAgents(tenantId: string): Promise<DashboardAgent[]> {
-  // PERF-FIX: Use direct table query instead of RPC for dashboard overview.
-  // RPC is heavy and joins unnecessary data for a simple list.
+async function fetchAgents(tenantId: string | undefined): Promise<DashboardAgent[]> {
+  if (!tenantId) return [];
+  
   try {
     const { data, error } = await supabase
       .from('agents')
@@ -28,10 +28,6 @@ async function fetchAgents(tenantId: string): Promise<DashboardAgent[]> {
     if (error) {
       logger.error('[fetchAgents] Error fetching agents', error, { tenantId });
       throw error;
-    }
-    
-    if (!data || data.length === 0) {
-      logger.info('[fetchAgents] No agents found for tenant', { tenantId });
     }
     
     return (data || []) as DashboardAgent[];
@@ -121,8 +117,8 @@ export function useDashboardQueries() {
   // Agents & Jobs use Realtime (tables already have publications)
   const agents = useRealtimeQuery<DashboardAgent[]>({
     queryKey: ["dashboard", "agents", tenantId],
-    queryFn: () => fetchAgents(tenantId!),
-    enabled,
+    queryFn: () => fetchAgents(tenantId),
+    enabled: enabled && !!tenantId,
     staleTime: STALE_TIME,
     realtimeTable: 'agents',
     realtimeFilter: tenantId ? `tenant_id=eq.${tenantId}` : undefined,
