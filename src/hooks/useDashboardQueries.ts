@@ -17,15 +17,28 @@ const STALE_TIME = 60_000;
 async function fetchAgents(tenantId: string): Promise<DashboardAgent[]> {
   // PERF-FIX: Use direct table query instead of RPC for dashboard overview.
   // RPC is heavy and joins unnecessary data for a simple list.
-  const { data, error } = await supabase
-    .from('agents')
-    .select('id, agent_name, status, enrolled_at, last_heartbeat, tenant_id')
-    .eq('tenant_id', tenantId)
-    .is('archived_at', null)
-    .order('last_heartbeat', { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from('agents')
+      .select('id, agent_name, status, enrolled_at, last_heartbeat, tenant_id')
+      .eq('tenant_id', tenantId)
+      .is('archived_at', null)
+      .order('last_heartbeat', { ascending: false });
+      
+    if (error) {
+      logger.error('[fetchAgents] Error fetching agents', error, { tenantId });
+      throw error;
+    }
     
-  if (error) throw error;
-  return (data || []) as DashboardAgent[];
+    if (!data || data.length === 0) {
+      logger.info('[fetchAgents] No agents found for tenant', { tenantId });
+    }
+    
+    return (data || []) as DashboardAgent[];
+  } catch (err) {
+    logger.error('[fetchAgents] Unexpected error', err, { tenantId });
+    throw err;
+  }
 }
 
 async function fetchJobs(tenantId: string): Promise<DashboardJob[]> {
@@ -177,6 +190,7 @@ export function useDashboardQueries() {
   });
 
   const loading = tenantLoading || agents.isLoading || jobs.isLoading || reports.isLoading || virusScans.isLoading;
+  const error = agents.error || jobs.error || reports.error || virusScans.error;
 
   return {
     agents: agents.data || [],
@@ -187,6 +201,7 @@ export function useDashboardQueries() {
     virusScans: virusScans.data || [],
     auditLogs: auditLogs.data || [],
     loading,
+    error,
     tenant,
     tenantLoading,
     tenantNames: tenantNames.data || {},

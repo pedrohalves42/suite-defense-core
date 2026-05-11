@@ -31,7 +31,7 @@ const ServerDashboard = () => {
 
   const {
     agents, jobs, reports, agentTokens, rateLimits, virusScans, auditLogs,
-    loading, tenant, tenantLoading, tenantNames, refresh
+    loading, error, tenant, tenantLoading, tenantNames, refresh
   } = useDashboardQueries();
 
   const {
@@ -39,7 +39,7 @@ const ServerDashboard = () => {
     sortedTenantsByGravity, tenantsWithIssues, onlinePercentage, systemState, successRate, trends,
   } = useDashboardMetrics(agents, jobs, tenantNames);
 
-  const hasDataError = !loading && !tenantLoading && tenant && agents.length === 0 && jobs.length === 0;
+  const hasDataError = (!loading && !tenantLoading && tenant && agents.length === 0 && jobs.length === 0) || !!error;
 
   // Loading state
   if (tenantLoading || !tenant) {
