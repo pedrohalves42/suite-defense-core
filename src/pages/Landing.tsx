@@ -3,6 +3,7 @@ import { SectionSkeleton } from "@/components/landing/SectionSkeleton";
 import { SEOHead } from "@/components/SEOHead";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
+import { useTranslation } from "react-i18next";
 
 // Eager load critical above-fold components for better LCP
 import { PainPointsSection } from "@/components/landing/PainPointsSection";
@@ -51,6 +52,7 @@ const LANDING_JSON_LD = {
 };
 
 const Landing = () => {
+  const { t } = useTranslation();
   return (
     <>
       <SEOHead 
