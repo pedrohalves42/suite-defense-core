@@ -50189,6 +50189,10 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: Json
       }
+      check_tenant_suspension: {
+        Args: { p_tenant_id: string }
+        Returns: boolean
+      }
       claim_event_buffer_batch: {
         Args: { p_batch_id: string; p_limit?: number }
         Returns: number
