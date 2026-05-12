@@ -342,6 +342,8 @@ const UpdateRoleSchema = z.object({
 }).refine(data => data.userId || data.user_id, { message: 'Either userId or user_id is required' });
 
 export async function handleUpdateUserRole(supabase: SB, requestId: string, payload: Record<string, unknown>, ctx?: HandlerContext) {
+  const actorId = ctx?.userId;
+  const tenantId = ctx?.tenantId;
   if (!actorId) return { __status: 401, error: { code: 'UNAUTHORIZED', message: 'Authentication required', requestId } };
   
   // Use tenantId from context (enforced for non-super-admins)
@@ -349,13 +351,13 @@ export async function handleUpdateUserRole(supabase: SB, requestId: string, payl
   const targetTenantId = (isSuperAdmin && (payload.tenant_id as string)) || tenantId;
   if (!targetTenantId) return { __status: 400, error: 'Tenant context required' };
 
-  const { data: actorRole, error: roleError } = await supabase.from('user_roles').select('role, tenant_id').eq('user_id', actorId).eq('tenant_id', tenantId).maybeSingle();
+  const { data: actorRole, error: roleError } = await supabase.from('user_roles').select('role, tenant_id').eq('user_id', actorId).eq('tenant_id', targetTenantId).maybeSingle();
   if (roleError || !actorRole || !['admin', 'super_admin'].includes(actorRole.role)) {
-    await supabase.from('audit_logs').insert({ tenant_id: tenantId, user_id: actorId, action: 'update_role', resource_type: 'user', success: false, details: { reason: 'Insufficient permissions', actor_role: actorRole?.role } });
+    await supabase.from('audit_logs').insert({ tenant_id: targetTenantId, user_id: actorId, action: 'update_role', resource_type: 'user', success: false, details: { reason: 'Insufficient permissions', actor_role: actorRole?.role } });
     return { __status: 403, error: { code: 'NOT_ALLOWED', message: 'Only admins can update user roles', requestId } };
   }
 
-  const rateLimitResult = await checkRateLimit(supabase, `tenant:${tenantId}`, 'update-user-role', { maxRequests: 10, windowMinutes: 1 });
+  const rateLimitResult = await checkRateLimit(supabase, `tenant:${targetTenantId}`, 'update-user-role', { maxRequests: 10, windowMinutes: 1 });
   if (!rateLimitResult.allowed) return { __status: 429, error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Rate limit exceeded', requestId } };
 
   const validation = UpdateRoleSchema.safeParse(payload);
@@ -365,15 +367,14 @@ export async function handleUpdateUserRole(supabase: SB, requestId: string, payl
   const targetUserId = userIdCamel || userIdSnake!;
   if (targetUserId === actorId) return { __status: 400, error: { code: 'BAD_REQUEST', message: 'Cannot change your own role', requestId } };
 
-  const { data: targetUserRole } = await supabase.from('user_roles').select('role, tenant_id').eq('user_id', targetUserId).maybeSingle();
-  if (!targetUserRole) return { __status: 404, error: { code: 'NOT_FOUND', message: 'User not found', requestId } };
-  if (targetUserRole.tenant_id !== tenantId) return { __status: 403, error: { code: 'NOT_ALLOWED', message: 'Cannot update users from different tenants', requestId } };
+  const { data: targetUserRole } = await supabase.from('user_roles').select('role, tenant_id').eq('user_id', targetUserId).eq('tenant_id', targetTenantId).maybeSingle();
+  if (!targetUserRole) return { __status: 404, error: { code: 'NOT_FOUND', message: 'User not found in the target tenant', requestId } };
 
   const newRole = newRoles[0];
   if (newRoles.length === 1 && newRoles[0] === targetUserRole.role) return { updated: false, message: 'Role unchanged' };
 
   if (targetUserRole.role === 'admin' && newRole !== 'admin') {
-    const { count } = await supabase.from('user_roles').select('*', { count: 'exact', head: true }).eq('role', 'admin').eq('tenant_id', tenantId);
+    const { count } = await supabase.from('user_roles').select('*', { count: 'exact', head: true }).eq('role', 'admin').eq('tenant_id', targetTenantId);
     if (count === 1) return { __status: 400, error: { code: 'BAD_REQUEST', message: 'Cannot demote the last admin', requestId } };
   }
 
