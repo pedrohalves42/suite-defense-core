@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
+import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { ChevronLeft, ChevronRight, Mail, UserCheck, UserX, Users as UsersIcon, Filter } from 'lucide-react';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { Link } from 'react-router-dom';
