@@ -50,6 +50,16 @@ interface UseRealtimeQueryOptions<T> {
 const DEFAULT_EVENTS: Array<'INSERT' | 'UPDATE' | 'DELETE'> = ['INSERT', 'UPDATE', 'DELETE'];
 
 /**
+ * Utility to hash query keys for stable comparisons
+ */
+function hashQueryKey(queryKey: any): string {
+  if (Array.isArray(queryKey)) {
+    return queryKey.map(k => (typeof k === 'object' && k !== null ? JSON.stringify(k) : String(k))).join('|');
+  }
+  return String(queryKey);
+}
+
+/**
  * Combines React Query with Supabase Realtime subscriptions.
  * Reuses channels via RealtimeChannelManager.
  */
@@ -72,8 +82,8 @@ export function useRealtimeQuery<T>({
   // when unmounting (the manager uses this ID for reference counting).
   const instanceId = useRef(`hook-${Math.random().toString(36).substring(2, 9)}`).current;
 
-  // Use a stable hash for queryKey to avoid re-subscribing on array literals
-  const queryKeyHash = useMemo(() => JSON.stringify(queryKey), [queryKey]);
+  // Use a stable custom hash for queryKey to avoid re-subscribing on object literals inside arrays
+  const queryKeyHash = useMemo(() => hashQueryKey(queryKey), [queryKey]);
   const eventsHash = useMemo(() => realtimeEvents.join(','), [realtimeEvents]);
 
   useEffect(() => {
@@ -88,8 +98,9 @@ export function useRealtimeQuery<T>({
       const eventType = payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE';
       
       if (realtimeEvents.includes(eventType)) {
-        logger.debug(`[useRealtimeQuery] ${realtimeTable} ${eventType}, applying optimistic update for ${queryKeyHash}`, {
+        logger.debug(`[useRealtimeQuery] ${realtimeTable} ${eventType}, applying optimistic update`, {
           instanceId,
+          queryKey: queryKeyHash
         });
           
           if (eventType === 'UPDATE' && payload.new) {
