@@ -178,6 +178,8 @@ export function useRealtimeQuery<T>({
             }
           }
         }
+      };
+
     realtimeChannelManager.subscribe(
       instanceId,
       realtimeTable,
