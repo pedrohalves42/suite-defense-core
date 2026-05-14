@@ -46,6 +46,14 @@ const ROUTE_LABELS: Record<string, string> = {
   "siem-export": "Exportar Logs",
   "rollout-policies": "Distribuição Gradual",
   "sales-pipeline": "Funil de Vendas",
+  "system-audit": "Histórico de Ações",
+  invites: "Convites",
+  "compliance-timeline": "Linha do Tempo",
+  "ai-feedback": "Feedback IA",
+  "decision-audit": "Auditoria de Decisões",
+  "insight-triage": "Triagem de Insights",
+  "confidence-gap": "Gap de Confiança",
+  "software-knowledge-base": "Base de Conhecimento",
 };
 
 export function Breadcrumbs({ className }: { className?: string }) {

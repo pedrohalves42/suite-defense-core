@@ -1,5 +1,7 @@
-import { Building2, ChevronDown, Check, Globe } from 'lucide-react';
+import { Building2, ChevronDown, Check, Globe, LayoutDashboard } from 'lucide-react';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -17,6 +19,8 @@ interface SidebarTenantSelectorProps {
 
 export const SidebarTenantSelector = ({ collapsed = false }: SidebarTenantSelectorProps) => {
   const { tenants, activeTenant, setActiveTenant, hasMultipleTenants, loading } = useActiveTenant();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -108,8 +112,16 @@ export const SidebarTenantSelector = ({ collapsed = false }: SidebarTenantSelect
           align={collapsed ? "start" : "center"} 
           className="w-64 glass-card border-white/10 p-2 rounded-2xl animate-in fade-in zoom-in-95 duration-200"
         >
-          <div className="px-3 py-2 mb-1">
+          <div className="px-3 py-2 mb-1 flex items-center justify-between">
             <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">Empresas Conectadas</p>
+            {user?.app_metadata?.is_super_admin && (
+              <DropdownMenuItem
+                onClick={() => navigate('/super-admin/tenants')}
+                className="p-1 hover:bg-white/5 rounded-md text-white/20 hover:text-white transition-colors cursor-pointer"
+              >
+                <LayoutDashboard className="h-3 w-3" />
+              </DropdownMenuItem>
+            )}
           </div>
           {tenants.map((tenant) => (
             <DropdownMenuItem

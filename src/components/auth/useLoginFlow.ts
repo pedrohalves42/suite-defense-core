@@ -9,11 +9,13 @@ import { logger } from '@/lib/logger';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { useTranslation } from 'react-i18next';
 import { loginSchema, getLoginEmail } from './loginSchema';
+import { useQueryClient } from '@tanstack/react-query';
 
 export function useLoginFlow() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -108,6 +110,7 @@ export function useLoginFlow() {
     setVerifyingSession(true);
 
     await callGateway('security', 'clear-failed-logins').catch(() => {});
+    queryClient.clear(); // V-FIX: Clear cache on successful login to prevent stale data contamination
 
     const { data: { user } } = await supabase.auth.getUser();
 
