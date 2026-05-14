@@ -43,13 +43,8 @@ export default function Users() {
       const result = await callGateway<any>('admin', 'list-users');
       return Array.isArray(result) ? result : (result.users || []);
     },
-      
-      // Both endpoints may return { users: [] } or array directly
-      return Array.isArray(data) ? data : (data.users || []);
-    },
   });
 
-  // CORRECAO: Memoizacao de filtros complexos para performance
   const filteredUsers = useMemo(() => {
     if (!usersData) return [];
     
@@ -70,25 +65,21 @@ export default function Users() {
   }, [filteredUsers, page]);
 
   const totalCount = filteredUsers.length;
-
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   const updateRole = useMutation({
     mutationFn: async ({ userId, newRole }: { userId: string; newRole: AppRole }) => {
-      // CORRECAO: Validacao de role em runtime
       assertValidRole(newRole, 'newRole');
       // API contract: admin:update-user-role with payload { userId, roles: [...] }
       return await callGateway<any>('admin', 'update-user-role', { userId, roles: [newRole] });
     },
-      return result;
-    },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       
-      if (data.updated) {
+      if (data?.updated) {
         toast({ title: 'Role atualizada com sucesso!' });
       } else {
-        toast({ title: 'Role ja estava definida', variant: 'default' });
+        toast({ title: 'Role já estava definida', variant: 'default' });
       }
     },
     onError: (error: Error) => {
@@ -104,10 +95,9 @@ export default function Users() {
     mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
       await callGateway('admin', 'update-user-status', { user_id: userId, is_active: isActive });
     },
-    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast({ title: 'Status do usuario atualizado!' });
+      toast({ title: 'Status do usuário atualizado!' });
       setStatusDialogOpen(false);
       setSelectedUser(null);
     },
@@ -115,8 +105,6 @@ export default function Users() {
       toast({ title: error.message || 'Erro ao atualizar status', variant: 'destructive' });
     },
   });
-
-  // CORRECAO: Funcao movida para src/lib/badges.ts (centralizada)
 
   const handleStatusChange = (user: any) => {
     setSelectedUser(user);
@@ -179,7 +167,7 @@ export default function Users() {
           <div className="text-center py-8 text-muted-foreground/70">Carregando...</div>
         ) : (
           <>
-              <Table>
+            <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
@@ -188,7 +176,7 @@ export default function Users() {
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Cadastrado em</TableHead>
-                  <TableHead className="text-right">Acoes</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -217,7 +205,6 @@ export default function Users() {
                         <Select
                           value={user.role}
                           onValueChange={(value) => {
-                            // CORRECAO: Validacao antes de mutation
                             if (isValidRole(value)) {
                               updateRole.mutate({ 
                                 userId: user.user_id, 
@@ -229,7 +216,7 @@ export default function Users() {
                           <SelectTrigger className="w-32">
                             <SelectValue />
                           </SelectTrigger>
-                           <SelectContent>
+                          <SelectContent>
                             <SelectItem value="admin">Admin</SelectItem>
                             <SelectItem value="operator">Operator</SelectItem>
                             <SelectItem value="viewer">Viewer</SelectItem>
@@ -265,7 +252,7 @@ export default function Users() {
                   Anterior
                 </Button>
                 <span className="text-sm text-muted-foreground">
-                  Pagina {page + 1} de {totalPages}
+                  Página {page + 1} de {totalPages}
                 </span>
                 <Button
                   variant="outline"
@@ -273,7 +260,7 @@ export default function Users() {
                   onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                   disabled={page >= totalPages - 1}
                 >
-                  Proxima
+                  Próxima
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
@@ -285,8 +272,8 @@ export default function Users() {
       <ConfirmDialog
         open={statusDialogOpen}
         onOpenChange={setStatusDialogOpen}
-        title={`${selectedUser?.is_active ? 'Desativar' : 'Ativar'} Usuario`}
-        description={`Tem certeza que deseja ${selectedUser?.is_active ? 'desativar' : 'ativar'} o usuario ${selectedUser?.email}?${selectedUser?.is_active ? ' O usuario nao podera mais acessar o sistema.' : ''}`}
+        title={`${selectedUser?.is_active ? 'Desativar' : 'Ativar'} Usuário`}
+        description={`Tem certeza que deseja ${selectedUser?.is_active ? 'desativar' : 'ativar'} o usuário ${selectedUser?.email}?${selectedUser?.is_active ? ' O usuário não poderá mais acessar o sistema.' : ''}`}
         confirmLabel="Confirmar"
         destructive={!!selectedUser?.is_active}
         loading={updateUserStatus.isPending}
