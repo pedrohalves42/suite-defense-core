@@ -157,7 +157,8 @@ export function useRealtimeQuery<T>({
               // V-FIX: If oldData is empty but we have a valid INSERT, initialize it as a single-item array
               // This fixes edge cases where realtime event arrives before initial fetch finishes
               if (!oldData) return [payload.new];
-              const exists = (list: any[]) => list.some((item: any) => item.id === payload.new.id);
+              // V-FIX: Ensure we are dealing with an array before checking exists
+              const exists = (list: any) => Array.isArray(list) && list.some((item: any) => item.id === payload.new.id);
 
               if (Array.isArray(oldData)) {
                 if (exists(oldData)) return oldData;
@@ -174,8 +175,9 @@ export function useRealtimeQuery<T>({
               return oldData;
             });
           } else {
-            // V-FIX: Avoid unnecessary invalidation if data is already handled or null
-            if (queryClient.getQueryData(queryKey)) {
+            // V-FIX: Safely check for data existence before invalidating to avoid unnecessary refetching
+            const currentData = queryClient.getQueryData(queryKey);
+            if (currentData !== undefined && currentData !== null) {
               queryClient.invalidateQueries({ queryKey, exact: true });
             }
           }

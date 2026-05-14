@@ -110,6 +110,7 @@ export default function AuditLogs() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Data/Hora {TIMEZONE_INDICATOR}</TableHead>
+                      <TableHead>Empresa</TableHead>
                       <TableHead>Usuário</TableHead>
                       <TableHead>Ação</TableHead>
                       <TableHead>O que foi alterado</TableHead>
@@ -122,6 +123,7 @@ export default function AuditLogs() {
                     {logs?.data?.map((log: any) => (
                       <TableRow key={log.id} className="hover:bg-muted/50">
                         <TableCell className="text-sm font-mono">{formatBrazilDateTime(log.created_at, 'full')}</TableCell>
+                        <TableCell className="font-medium">{log.tenant?.name || activeTenant?.name || '-'}</TableCell>
                         <TableCell className="font-medium">{log.actor?.full_name || 'Sistema Automático'}</TableCell>
                         <TableCell><Badge variant="outline" className="font-normal">{getActionLabel(log.action)}</Badge></TableCell>
                         <TableCell>
