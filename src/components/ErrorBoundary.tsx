@@ -1,5 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, Home, RotateCcw } from 'lucide-react';
+import { AlertTriangle, Home, RotateCcw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { logger } from '@/lib/logger';
@@ -109,6 +109,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 variant="ghost"
                 className="w-full text-xs text-muted-foreground hover:text-destructive"
               >
+                <Trash2 className="mr-2 h-3 w-3" />
                 Limpar Cache e Reiniciar App
               </Button>
             </CardFooter>

@@ -91,7 +91,7 @@ export const AppLayout = () => {
               mobileMenuOpen={mobileMenuOpen}
               onMobileMenuClick={() => setMobileMenuOpen(true)} 
             />
-            <div className="pt-14">
+            <div className="pt-14" role="status" aria-live="polite">
               <GlobalKillSwitchBanner />
             </div>
             <main className={cn(
