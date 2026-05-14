@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -33,34 +34,17 @@ export default function Users() {
   const { data: usersData, isLoading } = useQuery({
     queryKey: ['admin-users', isSuperAdmin],
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
       // Super admin sees ALL users from ALL tenants
-      const endpoint = isSuperAdmin 
-        ? 'list-all-users-admin' 
-        : 'list-users';
+      if (isSuperAdmin) {
+        const result = await callGateway<any>('admin', 'list-all-users-admin');
+        return Array.isArray(result) ? result : (result.users || []);
+      }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${endpoint}`,
-        {
-          method: isSuperAdmin ? 'POST' : 'GET',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok) throw new Error('Failed to fetch users');
-      const data = await response.json();
-      
-      // Both endpoints may return { users: [] } or array directly
-      return Array.isArray(data) ? data : (data.users || []);
+      const result = await callGateway<any>('admin', 'list-users');
+      return Array.isArray(result) ? result : (result.users || []);
     },
   });
 
-  // CORRECAO: Memoizacao de filtros complexos para performance
   const filteredUsers = useMemo(() => {
     if (!usersData) return [];
     
@@ -81,44 +65,21 @@ export default function Users() {
   }, [filteredUsers, page]);
 
   const totalCount = filteredUsers.length;
-
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   const updateRole = useMutation({
     mutationFn: async ({ userId, newRole }: { userId: string; newRole: AppRole }) => {
-      // CORRECAO: Validacao de role em runtime
       assertValidRole(newRole, 'newRole');
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
-      // API contract: POST /functions/v1/update-user-role with body { userId, roles: [...] }
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user-role`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId, roles: [newRole] }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to update user role');
-      }
-
-      const result = await response.json();
-      return result;
+      // API contract: admin:update-user-role with payload { userId, roles: [...] }
+      return await callGateway<any>('admin', 'update-user-role', { userId, roles: [newRole] });
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       
-      if (data.updated) {
+      if (data?.updated) {
         toast({ title: 'Role atualizada com sucesso!' });
       } else {
-        toast({ title: 'Role ja estava definida', variant: 'default' });
+        toast({ title: 'Role já estava definida', variant: 'default' });
       }
     },
     onError: (error: Error) => {
@@ -132,26 +93,11 @@ export default function Users() {
 
   const updateUserStatus = useMutation({
     mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user-status`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ user_id: userId, is_active: isActive }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to update user status');
-      }
+      await callGateway('admin', 'update-user-status', { user_id: userId, is_active: isActive });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast({ title: 'Status do usuario atualizado!' });
+      toast({ title: 'Status do usuário atualizado!' });
       setStatusDialogOpen(false);
       setSelectedUser(null);
     },
@@ -159,8 +105,6 @@ export default function Users() {
       toast({ title: error.message || 'Erro ao atualizar status', variant: 'destructive' });
     },
   });
-
-  // CORRECAO: Funcao movida para src/lib/badges.ts (centralizada)
 
   const handleStatusChange = (user: any) => {
     setSelectedUser(user);
@@ -223,7 +167,7 @@ export default function Users() {
           <div className="text-center py-8 text-muted-foreground/70">Carregando...</div>
         ) : (
           <>
-              <Table>
+            <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
@@ -232,7 +176,7 @@ export default function Users() {
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Cadastrado em</TableHead>
-                  <TableHead className="text-right">Acoes</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -261,7 +205,6 @@ export default function Users() {
                         <Select
                           value={user.role}
                           onValueChange={(value) => {
-                            // CORRECAO: Validacao antes de mutation
                             if (isValidRole(value)) {
                               updateRole.mutate({ 
                                 userId: user.user_id, 
@@ -273,7 +216,7 @@ export default function Users() {
                           <SelectTrigger className="w-32">
                             <SelectValue />
                           </SelectTrigger>
-                           <SelectContent>
+                          <SelectContent>
                             <SelectItem value="admin">Admin</SelectItem>
                             <SelectItem value="operator">Operator</SelectItem>
                             <SelectItem value="viewer">Viewer</SelectItem>
@@ -309,7 +252,7 @@ export default function Users() {
                   Anterior
                 </Button>
                 <span className="text-sm text-muted-foreground">
-                  Pagina {page + 1} de {totalPages}
+                  Página {page + 1} de {totalPages}
                 </span>
                 <Button
                   variant="outline"
@@ -317,7 +260,7 @@ export default function Users() {
                   onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                   disabled={page >= totalPages - 1}
                 >
-                  Proxima
+                  Próxima
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
@@ -329,8 +272,8 @@ export default function Users() {
       <ConfirmDialog
         open={statusDialogOpen}
         onOpenChange={setStatusDialogOpen}
-        title={`${selectedUser?.is_active ? 'Desativar' : 'Ativar'} Usuario`}
-        description={`Tem certeza que deseja ${selectedUser?.is_active ? 'desativar' : 'ativar'} o usuario ${selectedUser?.email}?${selectedUser?.is_active ? ' O usuario nao podera mais acessar o sistema.' : ''}`}
+        title={`${selectedUser?.is_active ? 'Desativar' : 'Ativar'} Usuário`}
+        description={`Tem certeza que deseja ${selectedUser?.is_active ? 'desativar' : 'ativar'} o usuário ${selectedUser?.email}?${selectedUser?.is_active ? ' O usuário não poderá mais acessar o sistema.' : ''}`}
         confirmLabel="Confirmar"
         destructive={!!selectedUser?.is_active}
         loading={updateUserStatus.isPending}
