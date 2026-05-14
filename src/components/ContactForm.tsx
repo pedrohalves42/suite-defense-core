@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/lib/logger";
 
 import { Loader2 } from "lucide-react";
 import logoImage from "@/assets/logo-cybshield-new.webp";

@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 interface TopBarProps {
   isMobile: boolean;
+  sidebarCollapsed: boolean;
   mobileMenuOpen?: boolean;
   onMobileMenuClick: () => void;
 }
