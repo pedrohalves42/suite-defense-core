@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
+import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { ChevronLeft, ChevronRight, Mail, UserCheck, UserX, Users as UsersIcon, Filter } from 'lucide-react';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { Link } from 'react-router-dom';
@@ -23,6 +24,7 @@ const ITEMS_PER_PAGE = 10;
 
 export default function Users() {
   const { toast } = useToast();
+  const { activeTenant } = useActiveTenant();
   const queryClient = useQueryClient();
   const { isSuperAdmin } = useSuperAdmin();
   const [page, setPage] = useState(0);
@@ -32,7 +34,7 @@ export default function Users() {
   const [selectedUser, setSelectedUser] = useState<UserWithDetails | null>(null);
 
   const { data: usersData, isLoading } = useQuery({
-    queryKey: ['admin-users', isSuperAdmin],
+    queryKey: ['admin-users', isSuperAdmin, activeTenant?.id],
     queryFn: async () => {
       // Super admin sees ALL users from ALL tenants
       if (isSuperAdmin) {

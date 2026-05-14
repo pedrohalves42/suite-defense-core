@@ -146,8 +146,11 @@ export function deriveAgentState(agent: Partial<Agent>): AgentState {
     const forceUpdateTime = new Date(agent.force_update_at);
     const minutesSinceForceUpdate = (Date.now() - forceUpdateTime.getTime()) / (1000 * 60);
     
-    // Se a atualização foi solicitada recentemente, considera "atualizando"
-    if (minutesSinceForceUpdate < UPDATE_WINDOW_MINUTES) {
+    // V-FIX: Only consider "updating" if versions still don't match 
+    // to avoid stuck state after completion
+    const versionMatches = agent.agent_version === agent.force_update_version;
+    
+    if (minutesSinceForceUpdate < UPDATE_WINDOW_MINUTES && !versionMatches) {
       return 'updating';
     }
   }
