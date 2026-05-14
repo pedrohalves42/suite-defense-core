@@ -14,7 +14,7 @@ interface IntegrityBadgeProps {
   loading?: boolean;  // V-504: Guard para sincronização de tenant
 }
 
-export function IntegrityBadge({ tenantId, startDate, endDate, className, loading }: IntegrityBadgeProps) {
+export function IntegrityBadge({ tenantId, startDate, endDate, className, loading = false }: IntegrityBadgeProps) {
   const { data: verification, isLoading, error } = useQuery({
     queryKey: ['audit-integrity', tenantId, startDate?.toISOString(), endDate?.toISOString()],
     queryFn: () => verifyAuditLogChain(tenantId, startDate, endDate),
