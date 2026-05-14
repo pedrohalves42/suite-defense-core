@@ -82,7 +82,7 @@ export interface InstallationTelemetryPayload {
   // Error details (when success = false)
   error_type?: '401_unauthorized' | 'tls_error' | 'proxy_error' | 'script_error' | 'network_timeout' | 'unknown';
   error_message?: string;
-  error_details?: Record<string, any>;
+  error_details?: Record<string, unknown>;
   
   // System info
   system_info?: {
@@ -159,5 +159,5 @@ export interface InstallationLogEntry {
   error_message: string | null;
   installation_time_seconds: number | null;
   network_connectivity: boolean | null;
-  metadata: Record<string, any> | null;
+  metadata: Record<string, unknown> | null;
 }

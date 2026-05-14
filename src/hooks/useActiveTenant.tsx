@@ -222,7 +222,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const previousTenantId = activeTenant?.id;
+    const previousTenantId = activeTenantId || activeTenant?.id;
     isSyncingRef.current = true;
 
     // V-DIAG: Safety timeout — never let isSyncingRef stay locked forever
@@ -245,6 +245,12 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
 
       if (!synced) {
         logger.log('error', 'tenant-sync', 'gateway-fail', { targetTenantId: tenant.id });
+        
+        // Revert to previous ID if sync failed
+        if (previousTenantId) {
+          setActiveTenantId(previousTenantId);
+        }
+        
         toast.error('Erro ao trocar de empresa', {
           description: 'Não foi possível sincronizar com o servidor. Tente novamente.'
         });

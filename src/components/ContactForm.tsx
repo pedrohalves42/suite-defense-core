@@ -106,7 +106,7 @@ export const ContactForm = () => {
         message: "",
       });
     } catch (error) {
-      console.error("[ContactForm] submit failed", error);
+      logger.error("[ContactForm] submit failed", { error });
       
       const errMsg = error instanceof Error ? error.message : '';
       if (errMsg.includes('429') || errMsg.includes('Rate limit')) {

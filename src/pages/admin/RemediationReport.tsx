@@ -24,7 +24,7 @@ const fetchSecurityHeaders = async () => {
     // Se o browser omitir headers por segurança, marcamos como auditado via gateway
     return headers;
   } catch (error) {
-    console.error('Failed to fetch headers:', error);
+    logger.error('Failed to fetch headers', { error });
     return null;
   }
 };
@@ -241,7 +241,7 @@ export default function RemediationReport() {
       doc.save(`CyberShield_Remediation_${new Date().toISOString().split('T')[0]}.pdf`);
       toast.success('Relatório de Auditoria exportado com sucesso!');
     } catch (error) {
-      console.error('Error generating PDF:', error);
+      logger.error('Error generating PDF', { error });
       toast.error('Erro ao gerar PDF');
     }
   };

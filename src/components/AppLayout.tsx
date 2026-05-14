@@ -88,6 +88,7 @@ export const AppLayout = () => {
             <TopBar 
               isMobile={isMobile} 
               sidebarCollapsed={collapsed} 
+              mobileMenuOpen={mobileMenuOpen}
               onMobileMenuClick={() => setMobileMenuOpen(true)} 
             />
             <div className="pt-14">

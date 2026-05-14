@@ -6,11 +6,11 @@ import { cn } from "@/lib/utils";
 
 interface TopBarProps {
   isMobile: boolean;
-  sidebarCollapsed: boolean;
+  mobileMenuOpen?: boolean;
   onMobileMenuClick: () => void;
 }
 
-export const TopBar = memo(({ isMobile, sidebarCollapsed, onMobileMenuClick }: TopBarProps) => {
+export const TopBar = memo(({ isMobile, sidebarCollapsed, mobileMenuOpen, onMobileMenuClick }: TopBarProps) => {
   return (
     <header className={cn(
       "fixed top-0 right-0 z-30 h-16 border-b border-white/5 bg-[#020203]/70 backdrop-blur-2xl flex items-center justify-between px-6 md:px-10 shadow-sm",
@@ -25,7 +25,7 @@ export const TopBar = memo(({ isMobile, sidebarCollapsed, onMobileMenuClick }: T
             onClick={onMobileMenuClick} 
             className="h-9 w-9 interactive-hover" 
             aria-label="Abrir menu lateral"
-            aria-expanded="false"
+            aria-expanded={mobileMenuOpen}
           >
             <Menu className="h-5 w-5" />
           </Button>
