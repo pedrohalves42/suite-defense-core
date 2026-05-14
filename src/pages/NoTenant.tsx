@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Building2, LogOut, RefreshCw, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
  */
 export default function NoTenant() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -27,8 +28,9 @@ export default function NoTenant() {
       const { error } = await supabase.auth.refreshSession();
       if (error) throw error;
       
-      // Redirect to dashboard - ProtectedRoute will re-evaluate
-      navigate('/dashboard');
+      // Redirect back - ProtectedRoute will re-evaluate with state persistence
+      const destination = location.state?.from?.pathname || '/dashboard';
+      navigate(destination, { replace: true });
       toast({
         title: "Sessão atualizada",
         description: "Verificando associação de empresa...",

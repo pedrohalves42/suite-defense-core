@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useCallback } from 'react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { usePageVisibility } from './usePageVisibility';
 import { logger } from '@/lib/logger';
@@ -50,6 +50,16 @@ interface UseRealtimeQueryOptions<T> {
 const DEFAULT_EVENTS: Array<'INSERT' | 'UPDATE' | 'DELETE'> = ['INSERT', 'UPDATE', 'DELETE'];
 
 /**
+ * Utility to hash query keys for stable comparisons
+ */
+function hashQueryKey(queryKey: any): string {
+  if (Array.isArray(queryKey)) {
+    return queryKey.map(k => (typeof k === 'object' && k !== null ? JSON.stringify(k) : String(k))).join('|');
+  }
+  return String(queryKey);
+}
+
+/**
  * Combines React Query with Supabase Realtime subscriptions.
  * Reuses channels via RealtimeChannelManager.
  */
@@ -72,29 +82,26 @@ export function useRealtimeQuery<T>({
   // when unmounting (the manager uses this ID for reference counting).
   const instanceId = useRef(`hook-${Math.random().toString(36).substring(2, 9)}`).current;
 
-  // Use a stable hash for queryKey to avoid re-subscribing on array literals
-  const queryKeyHash = useMemo(() => JSON.stringify(queryKey), [queryKey]);
+  // Use a stable custom hash for queryKey to avoid re-subscribing on object literals inside arrays
+  const queryKeyHash = useMemo(() => hashQueryKey(queryKey), [queryKey]);
   const eventsHash = useMemo(() => realtimeEvents.join(','), [realtimeEvents]);
 
   useEffect(() => {
     if (!realtimeTable || !enabled || !isVisible) return;
 
     logger.debug(`[useRealtimeQuery] Subscribing instance ${instanceId} to ${realtimeSchema}.${realtimeTable}`, {
-      queryKey: queryKey[0],
+      queryKey: queryKeyHash,
       filter: realtimeFilter
     });
 
-    realtimeChannelManager.subscribe(
-      instanceId,
-      realtimeTable,
-      realtimeFilter,
-      (payload) => {
-        const eventType = payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE';
-        
-        if (realtimeEvents.includes(eventType)) {
-          logger.debug(`[useRealtimeQuery] ${realtimeTable} ${eventType}, applying optimistic update for ${queryKey[0]}`, {
-            instanceId,
-          });
+    const handleRealtimeEvent = (payload: any) => {
+      const eventType = payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE';
+      
+      if (realtimeEvents.includes(eventType)) {
+        logger.debug(`[useRealtimeQuery] ${realtimeTable} ${eventType}, applying optimistic update`, {
+          instanceId,
+          queryKey: queryKeyHash
+        });
           
           if (eventType === 'UPDATE' && payload.new) {
             // Check if updated item still matches filter AND custom predicate
@@ -154,8 +161,11 @@ export function useRealtimeQuery<T>({
             }
 
             queryClient.setQueryData(queryKey, (oldData: any) => {
-              if (!oldData) return oldData;
-              const exists = (list: any[]) => list.some((item: any) => item.id === payload.new.id);
+              // V-FIX: If oldData is empty but we have a valid INSERT, initialize it as a single-item array
+              // This fixes edge cases where realtime event arrives before initial fetch finishes
+              if (!oldData) return [payload.new];
+              // V-FIX: Ensure we are dealing with an array before checking exists
+              const exists = (list: any) => Array.isArray(list) && list.some((item: any) => item.id === payload.new.id);
 
               if (Array.isArray(oldData)) {
                 if (exists(oldData)) return oldData;
@@ -172,13 +182,20 @@ export function useRealtimeQuery<T>({
               return oldData;
             });
           } else {
-            // V-FIX: Avoid unnecessary invalidation if data is already handled or null
-            if (queryClient.getQueryData(queryKey)) {
+            // V-FIX: Safely check for data existence before invalidating to avoid unnecessary refetching
+            const currentData = queryClient.getQueryData(queryKey);
+            if (currentData !== undefined && currentData !== null) {
               queryClient.invalidateQueries({ queryKey, exact: true });
             }
           }
         }
-      },
+      };
+
+    realtimeChannelManager.subscribe(
+      instanceId,
+      realtimeTable,
+      realtimeFilter,
+      handleRealtimeEvent,
       realtimeSchema
     );
 
@@ -196,7 +213,8 @@ export function useRealtimeQuery<T>({
     queryClient,
     queryKeyHash,
     eventsHash,
-    predicate
+    predicate,
+    realtimeEvents,
   ]);
 
   return useQuery({

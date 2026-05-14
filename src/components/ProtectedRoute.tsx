@@ -90,12 +90,13 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         tenantsCount: tenants?.length,
         isSuperAdmin 
       });
-      return <Navigate to="/no-tenant" replace />;
+      return <Navigate to="/no-tenant" state={{ from: location }} replace />;
     }
     
-    // User has tenant but is on no-tenant page - redirect to dashboard
+    // User has tenant but is on no-tenant page - redirect to dashboard or original destination
     if (hasTenant && isOnNoTenantPage) {
-      return <Navigate to="/dashboard" replace />;
+      const destination = location.state?.from?.pathname || '/dashboard';
+      return <Navigate to={destination} replace />;
     }
   }
 

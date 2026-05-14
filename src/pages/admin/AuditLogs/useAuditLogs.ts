@@ -52,7 +52,7 @@ export function useAuditLogs() {
       
       let query = supabase
         .from('audit_logs')
-        .select('*, actor:profiles!audit_logs_actor_id_fkey(full_name)', { count: 'exact' })
+        .select('*, actor:profiles!audit_logs_actor_id_fkey(full_name), tenant:tenants(name)', { count: 'exact' })
         .eq('tenant_id', activeTenant.id)
         .order('created_at', { ascending: false })
         .range(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE - 1);
@@ -85,7 +85,7 @@ export function useAuditLogs() {
       
       let query = supabase
         .from('audit_logs')
-        .select('*, actor:profiles!audit_logs_actor_id_fkey(full_name)')
+        .select('*, actor:profiles!audit_logs_actor_id_fkey(full_name), tenant:tenants(name)')
         .eq('tenant_id', activeTenant.id)
         .order('created_at', { ascending: false })
         .limit(1000);
@@ -97,9 +97,10 @@ export function useAuditLogs() {
       const { data, error } = await query;
       if (error) throw error;
 
-      const headers = ['Data/Hora', 'Usuário', 'Ação', 'Recurso', 'ID Recurso', 'Resultado', 'IP'];
+      const headers = ['Data/Hora', 'Empresa', 'Usuário', 'Ação', 'Recurso', 'ID Recurso', 'Resultado', 'IP'];
       const rows = (data || []).map((log: any) => [
         formatBrazilDateTime(log.created_at, 'full'),
+        log.tenant?.name || activeTenant?.name || 'N/A',
         log.actor?.full_name || 'Sistema',
         getActionLabel(log.action),
         getResourceLabel(log.resource_type),

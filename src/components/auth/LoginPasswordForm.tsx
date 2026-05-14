@@ -60,12 +60,12 @@ export const LoginPasswordForm = ({
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-cta-positive transition-all duration-500" />
             <Input
               id="email"
-              type="text"
+              type="email"
               placeholder={t('loginPage.emailPlaceholder')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              autoComplete="username"
+              autoComplete="email"
               maxLength={255}
               className="pl-12 h-14 border-white/5 focus:border-cta-positive/30 focus:ring-0 transition-all duration-500 bg-white/[0.02] hover:bg-white/[0.04] text-white rounded-2xl placeholder:text-white/10"
             />
