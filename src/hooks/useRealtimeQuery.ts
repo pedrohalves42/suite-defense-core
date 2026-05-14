@@ -154,7 +154,9 @@ export function useRealtimeQuery<T>({
             }
 
             queryClient.setQueryData(queryKey, (oldData: any) => {
-              if (!oldData) return oldData;
+              // V-FIX: If oldData is empty but we have a valid INSERT, initialize it as a single-item array
+              // This fixes edge cases where realtime event arrives before initial fetch finishes
+              if (!oldData) return [payload.new];
               const exists = (list: any[]) => list.some((item: any) => item.id === payload.new.id);
 
               if (Array.isArray(oldData)) {
