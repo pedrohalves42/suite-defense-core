@@ -34,22 +34,24 @@ interface HoneypotHourlyStat {
  * Realtime subscription that invalidates honeypot queries on new interactions.
  * Replaces 30s/60s polling with event-driven updates (FinOps: ~0 req overhead).
  */
-function useHoneypotRealtime() {
+function useHoneypotRealtime(tenantId?: string) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    // Only subscribe if we have a tenant context or we're specifically looking for global data
     const channel = supabase
-      .channel('honeypot-realtime')
+      .channel(`honeypot-realtime-${tenantId || 'global'}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'honeypot_interactions',
+          filter: tenantId ? `tenant_id=eq.${tenantId}` : undefined,
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['honeypot-interactions-recent'] });
-          queryClient.invalidateQueries({ queryKey: ['honeypot-stats'] });
+          queryClient.invalidateQueries({ queryKey: ['honeypot-stats', tenantId] });
         }
       )
       .subscribe();
@@ -57,11 +59,11 @@ function useHoneypotRealtime() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, [queryClient, tenantId]);
 }
 
 export function useHoneypotStats(tenantId?: string) {
-  useHoneypotRealtime();
+  useHoneypotRealtime(tenantId);
 
   return useQuery({
     queryKey: ['honeypot-stats', tenantId],
