@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useQuery } from '@tanstack/react-query';
