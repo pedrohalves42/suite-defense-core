@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useCallback } from 'react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { usePageVisibility } from './usePageVisibility';
 import { logger } from '@/lib/logger';
@@ -80,21 +80,17 @@ export function useRealtimeQuery<T>({
     if (!realtimeTable || !enabled || !isVisible) return;
 
     logger.debug(`[useRealtimeQuery] Subscribing instance ${instanceId} to ${realtimeSchema}.${realtimeTable}`, {
-      queryKey: queryKey[0],
+      queryKey: queryKeyHash,
       filter: realtimeFilter
     });
 
-    realtimeChannelManager.subscribe(
-      instanceId,
-      realtimeTable,
-      realtimeFilter,
-      (payload) => {
-        const eventType = payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE';
-        
-        if (realtimeEvents.includes(eventType)) {
-          logger.debug(`[useRealtimeQuery] ${realtimeTable} ${eventType}, applying optimistic update for ${queryKey[0]}`, {
-            instanceId,
-          });
+    const handleRealtimeEvent = (payload: any) => {
+      const eventType = payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE';
+      
+      if (realtimeEvents.includes(eventType)) {
+        logger.debug(`[useRealtimeQuery] ${realtimeTable} ${eventType}, applying optimistic update for ${queryKeyHash}`, {
+          instanceId,
+        });
           
           if (eventType === 'UPDATE' && payload.new) {
             // Check if updated item still matches filter AND custom predicate
@@ -182,7 +178,11 @@ export function useRealtimeQuery<T>({
             }
           }
         }
-      },
+    realtimeChannelManager.subscribe(
+      instanceId,
+      realtimeTable,
+      realtimeFilter,
+      handleRealtimeEvent,
       realtimeSchema
     );
 
