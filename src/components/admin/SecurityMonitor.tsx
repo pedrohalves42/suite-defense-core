@@ -62,9 +62,9 @@ const SecurityMonitor = () => {
       }
     };
 
-    checkHeaders();
-    const interval = setInterval(checkHeaders, 60000);
-    return () => clearInterval(interval);
+    // Security headers rarely change during a session, check once and on specific triggers
+    // interval removed to save resources (ADR-032)
+    return () => {};
   }, []);
 
   return (

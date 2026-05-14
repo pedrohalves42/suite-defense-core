@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useQuery } from '@tanstack/react-query';
@@ -24,7 +25,7 @@ const fetchSecurityHeaders = async () => {
     // Se o browser omitir headers por segurança, marcamos como auditado via gateway
     return headers;
   } catch (error) {
-    console.error('Failed to fetch headers:', error);
+    logger.error('Failed to fetch headers', { error });
     return null;
   }
 };
@@ -241,7 +242,7 @@ export default function RemediationReport() {
       doc.save(`CyberShield_Remediation_${new Date().toISOString().split('T')[0]}.pdf`);
       toast.success('Relatório de Auditoria exportado com sucesso!');
     } catch (error) {
-      console.error('Error generating PDF:', error);
+      logger.error('Error generating PDF', { error });
       toast.error('Erro ao gerar PDF');
     }
   };
