@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { callGateway } from '@/lib/gateway';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -33,27 +34,15 @@ export default function Users() {
   const { data: usersData, isLoading } = useQuery({
     queryKey: ['admin-users', isSuperAdmin],
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
       // Super admin sees ALL users from ALL tenants
-      const endpoint = isSuperAdmin 
-        ? 'list-all-users-admin' 
-        : 'list-users';
+      if (isSuperAdmin) {
+        const result = await callGateway<any>('admin', 'list-all-users-admin');
+        return Array.isArray(result) ? result : (result.users || []);
+      }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${endpoint}`,
-        {
-          method: isSuperAdmin ? 'POST' : 'GET',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok) throw new Error('Failed to fetch users');
-      const data = await response.json();
+      const result = await callGateway<any>('admin', 'list-users');
+      return Array.isArray(result) ? result : (result.users || []);
+    },
       
       // Both endpoints may return { users: [] } or array directly
       return Array.isArray(data) ? data : (data.users || []);
@@ -88,28 +77,9 @@ export default function Users() {
     mutationFn: async ({ userId, newRole }: { userId: string; newRole: AppRole }) => {
       // CORRECAO: Validacao de role em runtime
       assertValidRole(newRole, 'newRole');
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
-      // API contract: POST /functions/v1/update-user-role with body { userId, roles: [...] }
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user-role`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId, roles: [newRole] }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to update user role');
-      }
-
-      const result = await response.json();
+      // API contract: admin:update-user-role with payload { userId, roles: [...] }
+      return await callGateway<any>('admin', 'update-user-role', { userId, roles: [newRole] });
+    },
       return result;
     },
     onSuccess: (data) => {
@@ -132,22 +102,8 @@ export default function Users() {
 
   const updateUserStatus = useMutation({
     mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user-status`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ user_id: userId, is_active: isActive }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to update user status');
-      }
+      await callGateway('admin', 'update-user-status', { user_id: userId, is_active: isActive });
+    },
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });

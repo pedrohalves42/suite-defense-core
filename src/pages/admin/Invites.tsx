@@ -39,23 +39,7 @@ export default function Invites() {
 
   const sendInvite = useMutation({
     mutationFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ops-gateway`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ action: 'notify:invite', payload: { email, role } }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to send invite');
-      }
-      return response.json();
+      return await callGateway('notify', 'invite', { email, role });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invites'] });
