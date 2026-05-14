@@ -202,7 +202,8 @@ export function useRealtimeQuery<T>({
     queryClient,
     queryKeyHash,
     eventsHash,
-    predicate
+    predicate,
+    realtimeEvents,
   ]);
 
   return useQuery({
