@@ -35,6 +35,7 @@ async function fetchAlerts(tenantId: string, activeOnly: boolean) {
 export function useRealtimeAgents(tenantId: string | undefined, select = 'id, agent_name, status, hostname, os_type, last_heartbeat, agent_version, created_at, enrolled_at', enabled = true) {
   return useRealtimeQuery({
     queryKey: ['rt-agents', tenantId],
+    tenantId, // Repassando tenantId para isolamento de canal
     queryFn: async () => {
       if (!tenantId) return [];
       const { data, error } = await supabase
