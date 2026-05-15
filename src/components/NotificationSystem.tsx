@@ -113,7 +113,7 @@ export const NotificationSystem = () => {
       `tenant_id=eq.${tenant.id}`,
       (payload) => {
         if (payload.eventType !== 'UPDATE') return;
-        const oldAgent = oldAgentRef.current.get(payload.old.id) || payload.old as Agent;
+        const oldAgent = payload.old as Agent;
         const newAgent = payload.new as Agent;
         const oldState = deriveAgentState(oldAgent);
         const newState = deriveAgentState(newAgent);
