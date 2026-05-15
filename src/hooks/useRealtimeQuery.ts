@@ -109,8 +109,13 @@ export function useRealtimeQuery<T>({
 
     // Correção F-003: Prefixo de tenant obrigatório para canais (Isolation Enforcement)
     const channelTable = tenantId ? `tenant:${tenantId}:${realtimeTable}` : realtimeTable;
+    
+    // Note: O Supabase Realtime não usa o nome da tabela no método .channel(), 
+    // mas sim no objeto de configuração do .on('postgres_changes', ...).
+    // O prefixo 'tenant:' deve ser usado no NOME DO CANAL para isolamento.
+    const channelName = tenantId ? `tenant:${tenantId}:${realtimeTable}` : `public:${realtimeTable}`;
 
-    logger.debug(`[useRealtimeQuery] Subscribing instance ${instanceId} to ${realtimeSchema}.${channelTable}`, {
+    logger.debug(`[useRealtimeQuery] Subscribing instance ${instanceId} to channel ${channelName}`, {
       queryKey: queryKeyHash,
       filter: realtimeFilter
     });
