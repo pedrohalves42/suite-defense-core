@@ -220,12 +220,13 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   }, [user?.id, activeTenant?.id]);
 
   const setActiveTenant = useCallback(async (tenant: Tenant) => {
-    if (activeTenant?.id === tenant.id || isSyncingRef.current) {
+    if (activeTenant?.id === tenant.id || isSyncingRef.current || isSwitching) {
       return;
     }
 
     const previousTenantId = activeTenantId || activeTenant?.id;
     isSyncingRef.current = true;
+    setIsSwitching(true); // Ativa trava de interface
 
     // V-DIAG: Safety timeout — never let isSyncingRef stay locked forever
     const safetyTimer = setTimeout(() => {
