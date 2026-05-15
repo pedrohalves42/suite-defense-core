@@ -66,6 +66,7 @@ export function useRansomwareIndicators() {
     enabled: !!tenant?.id,
     realtimeTable: 'ransomware_indicators',
     realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
+    tenantId: tenant?.id, // Correção F-003
     realtimeEvents: ['INSERT', 'UPDATE'],
     staleTime: 120_000,
   });
