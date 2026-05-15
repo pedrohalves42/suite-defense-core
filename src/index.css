@@ -177,14 +177,15 @@
 @layer utilities {
   /* === Transitions & Interactions === */
   .interactive-hover {
-    transition: transform 0.4s var(--ease-premium), box-shadow 0.4s var(--ease-premium), filter 0.4s var(--ease-premium), border-color 0.4s var(--ease-premium);
+    transition: transform 0.3s var(--ease-premium), box-shadow 0.3s var(--ease-premium);
+    will-change: transform; /* Optimization for GPU acceleration */
   }
   .interactive-hover:hover {
-    transform: translateY(-4px) scale(1.01);
-    box-shadow: 0 20px 40px -10px rgba(16, 185, 129, 0.2);
+    transform: translateY(-2px) scale(1.01); /* Reduced from -4px for stability */
+    box-shadow: 0 12px 24px -10px rgba(16, 185, 129, 0.15);
   }
   .interactive-hover:active {
-    transform: translateY(-1px) scale(0.99);
+    transform: translateY(0) scale(0.98);
   }
 
   .glass-effect {
@@ -194,8 +195,8 @@
 
   .glass-card {
     background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(12px); /* Reduced from 20px for performance */
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--glass-border);
     box-shadow: var(--shadow-premium);
   }

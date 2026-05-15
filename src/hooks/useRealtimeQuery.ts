@@ -1,8 +1,22 @@
-import { useEffect, useMemo, useRef, useCallback } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { usePageVisibility } from './usePageVisibility';
 import { logger } from '@/lib/logger';
 import { realtimeChannelManager } from '@/lib/realtime-manager';
+
+/**
+ * Throttle function to limit execution frequency
+ */
+function throttle(func: Function, limit: number) {
+  let inThrottle: boolean;
+  return function(this: any, ...args: any[]) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+}
 
 /**
  * Basic matcher for PostgREST style filters (field=eq.value, field=neq.value)
@@ -96,14 +110,20 @@ export function useRealtimeQuery<T>({
       filter: realtimeFilter
     });
 
+    const throttledInvalidate = useMemo(() => 
+      throttle((key: unknown[]) => {
+        logger.debug(`[useRealtimeQuery] Throttled invalidation for ${realtimeTable}`, { queryKey: key });
+        queryClient.invalidateQueries({ queryKey: key, exact: true });
+      }, 1000), 
+    [queryClient, realtimeTable]);
+
     const handleRealtimeEvent = (payload: any) => {
       const eventType = payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE';
       
       if (realtimeEvents.includes(eventType)) {
-        logger.debug(`[useRealtimeQuery] ${realtimeTable} ${eventType}, applying optimistic update`, {
-          instanceId,
-          queryKey: queryKeyHash
-        });
+        // PERF-FIX: If it's a high-frequency insert/update, we might want to just invalidate instead of manual setQueryData
+        // if the manual update logic is too complex or slow.
+        // For now, we keep manual updates for speed, but throttle full invalidations.
           
           if (eventType === 'UPDATE' && payload.new) {
             // Check if updated item still matches filter AND custom predicate
@@ -187,7 +207,7 @@ export function useRealtimeQuery<T>({
             // V-FIX: Safely check for data existence before invalidating to avoid unnecessary refetching
             const currentData = queryClient.getQueryData(queryKey);
             if (currentData !== undefined && currentData !== null) {
-              queryClient.invalidateQueries({ queryKey, exact: true });
+              throttledInvalidate(queryKey);
             }
           }
         }

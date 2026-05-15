@@ -8,16 +8,22 @@ interface NavLinkProps {
   activeClassName?: string;
   end?: boolean;
   onClick?: () => void;
+  onMouseEnter?: () => void;
 }
 
-export const NavLink = ({ to, children, className, activeClassName, end = false, onClick }: NavLinkProps) => {
+export const NavLink = ({ to, children, className, activeClassName, end = false, onClick, onMouseEnter }: NavLinkProps) => {
   const location = useLocation();
   const isActive = end 
     ? location.pathname === to 
     : location.pathname.startsWith(to);
 
   return (
-    <Link to={to} onClick={onClick} className={cn(className, isActive && activeClassName)}>
+    <Link 
+      to={to} 
+      onClick={onClick} 
+      onMouseEnter={onMouseEnter}
+      className={cn(className, isActive && activeClassName)}
+    >
       {children}
     </Link>
   );

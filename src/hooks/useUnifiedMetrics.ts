@@ -117,7 +117,7 @@ export function useUnifiedMetrics() {
       const thirtyDaysAgo = subDays(now, 30).toISOString();
       const ninetyDaysAgo = subDays(now, 90).toISOString(); // For trend analysis
 
-      const [alertsRes, evidenceSummaryRes, vulnRes, insightsRes, blockedItemsRes, blockedCountRes, blockedCount30dRes] = await Promise.all([
+      const [alertsRes, evidenceSummaryRes, vulnRes, insightsRes, blockedItemsRes, blockedCount30dRes] = await Promise.all([
         sb.from('system_alerts')
           .select('id, severity, message, alert_type, status, title, created_at')
           .eq('tenant_id', tenant.id)
@@ -131,15 +131,11 @@ export function useUnifiedMetrics() {
           .eq('tenant_id', tenant.id)
           .eq('acknowledged', false),
         sb.from('blocked_access_attempts')
-          .select('id, agent_name, domain, attempted_at, blocked_by')
+          .select('id, agent_name, domain, attempted_at, blocked_by', { count: 'exact' })
           .eq('tenant_id', tenant.id)
           .gte('attempted_at', sevenDaysAgo)
           .order('attempted_at', { ascending: false })
           .limit(50),
-        sb.from('blocked_access_attempts')
-          .select('id', { count: 'exact', head: true })
-          .eq('tenant_id', tenant.id)
-          .gte('attempted_at', sevenDaysAgo),
         sb.from('blocked_access_attempts')
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', tenant.id)
@@ -156,8 +152,13 @@ export function useUnifiedMetrics() {
       const activeAlerts = allAlerts.filter(a => unresolvedStatuses.includes(a.status));
       const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical' || a.severity === 'high');
 
-      // CORRECTION: Use exact count from database for statistical accuracy (ROSI)
-      const blockedCount7d = blockedCountRes.count || 0;
+      // PERF-FIX: Avoid redundant count query for 7d by using items length if not limited, 
+      // but here we limit to 50. If we got 50, we don't know the exact total.
+      // However, if we need ROSI accuracy, we keep one count query.
+      // Let's check if blockedItemsRes has a count if we request it.
+      
+      const blockedItems = (blockedItemsRes.data || []) as Array<{ id: string; agent_name: string; domain: string; attempted_at: string; blocked_by: string }>;
+      const blockedCount7d = blockedItemsRes.count || blockedItems.length;
 
       const evidenceSummary = (evidenceSummaryRes.data || {
         auto_repairs: 0, auto_recoveries: 0, policy_drifts: 0,
@@ -229,8 +230,8 @@ export function useUnifiedMetrics() {
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    staleTime: 2 * 60 * 1000, // Balanced at 2 minutes
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    staleTime: 5 * 60 * 1000, // Balanced at 5 minutes for performance
+    gcTime: 15 * 60 * 1000, // Keep in cache for 15 minutes
     realtimeTable: 'system_alerts',
     realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });

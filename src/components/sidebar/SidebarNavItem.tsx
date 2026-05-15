@@ -4,6 +4,7 @@ import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import { itemVariants } from './constants';
 import { useLocation } from 'react-router-dom';
+import { useRoutePrefetch } from '@/hooks/useRoutePrefetch';
 import type { MenuItem } from './menuItems';
 
 interface SidebarNavItemProps {
@@ -15,15 +16,23 @@ interface SidebarNavItemProps {
 
 export const SidebarNavItem = ({ item, variant = 'default', isCollapsed, onNavigate }: SidebarNavItemProps) => {
   const location = useLocation();
+  const prefetch = useRoutePrefetch();
   const Icon = item.icon;
   const isSuper = variant === 'super';
   const isActive = location.pathname === item.to || (item.to !== '/admin/dashboard' && location.pathname.startsWith(item.to));
+
+  const handleMouseEnter = () => {
+    if (item.prefetch) {
+      prefetch(item.prefetch);
+    }
+  };
 
   const navContent = (
     <NavLink
       to={item.to}
       end={item.end}
       onClick={onNavigate}
+      onMouseEnter={handleMouseEnter}
       className={cn(
         "sidebar-item-neon flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group/item",
         isSuper && "sidebar-item-neon-super",
