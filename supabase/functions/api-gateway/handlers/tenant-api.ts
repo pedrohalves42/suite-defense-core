@@ -5,6 +5,7 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
 import { hashToken } from '../../_shared/token-hash.ts';
+import { createAuditLog } from '../../_shared/audit.ts'; // Importando helper de auditoria
 import type { HandlerContext } from './admin.ts';
 
 // Simplified API key auth for inlined context
@@ -13,8 +14,6 @@ async function authenticateApiKeyInline(
   apiKey: string,
   requestId: string,
 ): Promise<{ success: boolean; tenantId?: string; apiKeyId?: string; scopes?: string[]; error?: string }> {
-  // Use timing-safe hash if possible, otherwise use standard match. 
-  // API keys should ideally be hashed with SHA-256 for storage.
   const hashedKey = await hashToken(apiKey);
   const { data, error } = await supabase
     .from('api_keys')
@@ -62,6 +61,18 @@ export async function handleTenantFeatures(
   if (!auth.success) return { __status: 401, error: auth.error };
   if (!hasScope(auth.scopes!, 'read')) return { __status: 403, error: 'Insufficient permissions' };
 
+  // Correção F-006: Registro de Auditoria para acesso via API externa
+  await createAuditLog({
+    supabase,
+    userId: null, // Acesso via API Key não possui userId direto
+    tenantId: auth.tenantId!,
+    action: 'api_access_features',
+    resourceType: 'tenant_features',
+    resourceId: auth.tenantId!,
+    details: { api_key_id: auth.apiKeyId, scopes: auth.scopes },
+    request: ctx?.req
+  });
+
   const { data: features, error } = await supabase
     .from('tenant_features')
     .select('feature_key, enabled, quota_limit, quota_used, metadata')
@@ -84,6 +95,18 @@ export async function handleTenantInfo(
   const auth = await authenticateApiKeyInline(supabase, apiKey, requestId);
   if (!auth.success) return { __status: 401, error: auth.error };
   if (!hasScope(auth.scopes!, 'read')) return { __status: 403, error: 'Insufficient permissions' };
+
+  // Correção F-006: Registro de Auditoria
+  await createAuditLog({
+    supabase,
+    userId: null,
+    tenantId: auth.tenantId!,
+    action: 'api_access_info',
+    resourceType: 'tenant',
+    resourceId: auth.tenantId!,
+    details: { api_key_id: auth.apiKeyId },
+    request: ctx?.req
+  });
 
   const { data: tenant, error } = await supabase
     .from('tenants_safe')
@@ -109,6 +132,18 @@ export async function handleTenantStats(
   if (!hasScope(auth.scopes!, 'read')) return { __status: 403, error: 'Insufficient permissions' };
 
   const tenantId = auth.tenantId!;
+
+  // Correção F-006: Registro de Auditoria
+  await createAuditLog({
+    supabase,
+    userId: null,
+    tenantId,
+    action: 'api_access_stats',
+    resourceType: 'tenant_stats',
+    resourceId: tenantId,
+    details: { api_key_id: auth.apiKeyId },
+    request: ctx?.req
+  });
 
   const [
     { count: agentCount },
