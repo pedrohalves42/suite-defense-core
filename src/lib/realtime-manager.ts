@@ -132,7 +132,8 @@ class RealtimeChannelManager {
   }
 
   private getSafeChannelName(key: string): string {
-    return `central-${key.replace(/[^a-zA-Z0-9:._-]/g, '_')}`.substring(0, 100);
+    // Se a chave já começa com 'tenant:', mantemos para identificação no servidor
+    return key.replace(/[^a-zA-Z0-9:._-]/g, '_').substring(0, 100);
   }
 
   private ensureMeta(key: string, schema: string, table: string, filter?: string): ChannelMeta {
