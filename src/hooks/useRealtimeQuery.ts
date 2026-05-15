@@ -106,7 +106,10 @@ export function useRealtimeQuery<T>({
   useEffect(() => {
     if (!realtimeTable || !enabled || !isVisible) return;
 
-    logger.debug(`[useRealtimeQuery] Subscribing instance ${instanceId} to ${realtimeSchema}.${realtimeTable}`, {
+    // Correção F-003: Prefixo de tenant obrigatório para canais (Isolation Enforcement)
+    const channelTable = tenantId ? `tenant:${tenantId}:${realtimeTable}` : realtimeTable;
+
+    logger.debug(`[useRealtimeQuery] Subscribing instance ${instanceId} to ${realtimeSchema}.${channelTable}`, {
       queryKey: queryKeyHash,
       filter: realtimeFilter
     });
