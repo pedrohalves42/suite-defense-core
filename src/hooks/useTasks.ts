@@ -106,6 +106,7 @@ export function useTasks(filters?: TaskFilters) {
     enabled: !loading && !!tenant?.id,
     realtimeTable: 'tasks',
     realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
+    tenantId: tenant?.id, // Correção F-003
   });
 }
 
