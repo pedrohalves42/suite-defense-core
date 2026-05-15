@@ -243,11 +243,14 @@ class RealtimeChannelManager {
     const channel = this.channels.get(key);
     if (channel) {
       logger.log('info', 'realtime', `Removing channel ${key}`);
-      supabase.removeChannel(channel).catch((err) => {
-        logger.log('error', 'realtime', `Error removing channel ${key}`, {
-          error: err instanceof Error ? err.message : String(err),
+      const promise = supabase.removeChannel(channel);
+      if (promise && typeof promise.catch === 'function') {
+        promise.catch((err) => {
+          logger.log('error', 'realtime', `Error removing channel ${key}`, {
+            error: err instanceof Error ? err.message : String(err),
+          });
         });
-      });
+      }
       this.channels.delete(key);
     }
   }
