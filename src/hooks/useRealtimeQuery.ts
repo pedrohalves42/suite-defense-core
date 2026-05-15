@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useCallback } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { usePageVisibility } from './usePageVisibility';
 import { logger } from '@/lib/logger';
 import { realtimeChannelManager } from '@/lib/realtime-manager';
+import { throttle } from 'lodash';
 
 /**
  * Basic matcher for PostgREST style filters (field=eq.value, field=neq.value)
