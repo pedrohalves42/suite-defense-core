@@ -46,6 +46,7 @@ const Forbidden = lazy(() => import("./pages/Forbidden"));
 const ExeBuild = lazy(() => import("./pages/docs/ExeBuild"));
 const ClientOnboarding = lazy(() => import("./pages/docs/ClientOnboarding"));
 const DocsExport = lazy(() => import("./pages/docs/DocsExport"));
+const SystemArchitecture = lazy(() => import("./pages/docs/SystemArchitecture"));
 
 // ─── Debug ───
 const AuthDebug = lazy(() => import("./pages/debug/AuthDebug"));
@@ -191,7 +192,8 @@ const App = () => (
             <Route path="/docs/onboarding" element={<ClientOnboarding />} />
             <Route path="/docs/installation" element={<ClientOnboarding />} />
             <Route path="/docs/export" element={<DocsExport />} />
-            
+            <Route path="/docs/architecture" element={<SystemArchitecture />} />
+
             {/* Debug Routes - Protected */}
             <Route path="/debug/auth" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
             
