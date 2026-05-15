@@ -148,6 +148,7 @@ export function useNotifications() {
       'public',
       tenant.id
     );
+    return () => {
       logger.debug('[useNotifications] Cleaning up realtime subscriptions');
       realtimeChannelManager.unsubscribe(`${instanceId}-jobs`, 'jobs', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
       realtimeChannelManager.unsubscribe(`${instanceId}-scans`, 'virus_scans', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);

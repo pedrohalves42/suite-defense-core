@@ -77,7 +77,9 @@ export const GlobalJobWatcher = () => {
             }
           });
         }
-      }
+      },
+      'public',
+      currentTenantId
     );
 
     // Cleanup notified jobs set periodically to prevent memory leak
@@ -92,7 +94,7 @@ export const GlobalJobWatcher = () => {
     }, 300000); // Every 5 minutes
 
     return () => {
-      realtimeChannelManager.unsubscribe(instanceId, 'jobs', `tenant_id=eq.${currentTenantId}`);
+      realtimeChannelManager.unsubscribe(instanceId, 'jobs', `tenant_id=eq.${currentTenantId}`, 'public', currentTenantId);
       clearInterval(cleanupInterval);
     };
   }, [tenant?.id, navigate]);
