@@ -230,8 +230,8 @@ export function useUnifiedMetrics() {
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    staleTime: 2 * 60 * 1000, // Balanced at 2 minutes
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    staleTime: 5 * 60 * 1000, // Balanced at 5 minutes for performance
+    gcTime: 15 * 60 * 1000, // Keep in cache for 15 minutes
     realtimeTable: 'system_alerts',
     realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
