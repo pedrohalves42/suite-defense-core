@@ -189,6 +189,11 @@ export function useAgentMonitoring() {
       realtimeChannelManager.unsubscribe(`${instanceIdBase}-agents`, 'agents', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
       realtimeChannelManager.unsubscribe(`${instanceIdBase}-jobs`, 'jobs', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
     };
+    return () => {
+      logger.debug('[useAgentMonitoring] Cleaning up realtime subscriptions');
+      realtimeChannelManager.unsubscribe(`${instanceIdBase}-agents`, 'agents', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
+      realtimeChannelManager.unsubscribe(`${instanceIdBase}-jobs`, 'jobs', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
+    };
   }, [tenant?.id, instanceId]);
 
   // Metrics
