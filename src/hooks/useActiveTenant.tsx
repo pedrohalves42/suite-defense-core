@@ -78,6 +78,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const [activeTenantId, setActiveTenantId] = useState<string | null>(null);
+  const [isSwitching, setIsSwitching] = useState(false);
   const isSyncingRef = useRef(false);
 
   // Sync state between current user and selection
