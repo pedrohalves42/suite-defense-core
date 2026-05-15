@@ -61,6 +61,7 @@ export function useRealtimeJobs(tenantId: string | undefined, opts?: { status?: 
   const { status, limit = 50, enabled = true } = opts || {};
   return useRealtimeQuery({
     queryKey: ['rt-jobs', tenantId, status, limit],
+    tenantId,
     queryFn: async () => {
       if (!tenantId) return [];
       let query = supabase
