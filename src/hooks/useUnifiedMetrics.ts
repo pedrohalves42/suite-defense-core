@@ -158,9 +158,7 @@ export function useUnifiedMetrics() {
       // Let's check if blockedItemsRes has a count if we request it.
       
       const blockedItems = (blockedItemsRes.data || []) as Array<{ id: string; agent_name: string; domain: string; attempted_at: string; blocked_by: string }>;
-      const blockedCount7d = blockedItems.length; // Approximate if > 50, but usually enough for quick display.
-      // If we want exact count and items, we can use one query:
-      // sb.from('...').select('...', { count: 'exact' }).limit(50)
+      const blockedCount7d = blockedItemsRes.count || blockedItems.length;
 
       const evidenceSummary = (evidenceSummaryRes.data || {
         auto_repairs: 0, auto_recoveries: 0, policy_drifts: 0,
