@@ -62,7 +62,7 @@ export const enrollAgentSchema = z.object({
 export const createJobSchema = z.object({
   agentName: z.string().min(1),
   type: z.string().min(1),
-  payload: z.record(z.unknown()).optional().default({}),
+  payload: z.record(z.string(), z.unknown()).optional().default({}),
   approved: z.boolean().default(true),
   scheduledAt: z.string().datetime().optional(),
   isRecurring: z.boolean().default(false),
