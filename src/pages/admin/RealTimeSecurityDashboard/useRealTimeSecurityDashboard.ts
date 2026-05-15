@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { isAgentOnline } from '@/lib/agent-status-constants';
+import { realtimeChannelManager } from '@/lib/realtime-manager';
+import { logger } from '@/lib/logger';
 import { type SecurityEvent, getEventInfo, extractFriendlyDetails } from './security-event-utils';
 
 export function useRealTimeSecurityDashboard() {
@@ -107,12 +109,21 @@ export function useRealTimeSecurityDashboard() {
   // Realtime
   useEffect(() => {
     if (!tenant?.id || !isLive) return;
-    const channel = supabase
-      .channel('realtime-security-dashboard')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'security_logs', filter: `tenant_id=eq.${tenant.id}` }, (payload) => {
+    
+    const instanceId = `rt-security-dashboard-${tenant.id}`;
+    
+    // Subscribe to security logs for new events
+    realtimeChannelManager.subscribe(
+      instanceId,
+      'security_logs',
+      `tenant_id=eq.${tenant.id}`,
+      (payload) => {
+        if (payload.eventType !== 'INSERT') return;
+        
         const log = payload.new as Record<string, unknown>;
         const info = getEventInfo(String(log.attack_type || ''));
         const details = extractFriendlyDetails(log.details);
+        
         setEvents(prev => [{
           id: String(log.id), type: String(log.attack_type || 'info'),
           severity: String(log.severity || 'info') as SecurityEvent['severity'],
@@ -120,13 +131,33 @@ export function useRealTimeSecurityDashboard() {
           computer: details.computer, ip: details.ip, extra: details.extra,
           timestamp: String(log.created_at),
         } satisfies SecurityEvent, ...prev].slice(0, 20));
-        refetchPlaybooks(); refetchBlocked();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'approval_requests', filter: `tenant_id=eq.${tenant.id}` }, () => refetchApprovals())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'playbook_executions', filter: `tenant_id=eq.${tenant.id}` }, () => refetchPlaybooks())
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'agents', filter: `tenant_id=eq.${tenant.id}` }, () => refetchAgents())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+        
+        refetchPlaybooks(); 
+        refetchBlocked();
+      }
+    );
+
+    // Subscribe to other tables for stat updates
+    const statTables = ['approval_requests', 'playbook_executions', 'agents'];
+    statTables.forEach(table => {
+      realtimeChannelManager.subscribe(
+        instanceId,
+        table,
+        `tenant_id=eq.${tenant.id}`,
+        () => {
+          if (table === 'approval_requests') refetchApprovals();
+          if (table === 'playbook_executions') refetchPlaybooks();
+          if (table === 'agents') refetchAgents();
+        }
+      );
+    });
+
+    return () => { 
+      realtimeChannelManager.unsubscribe(instanceId, 'security_logs', `tenant_id=eq.${tenant.id}`);
+      statTables.forEach(table => {
+        realtimeChannelManager.unsubscribe(instanceId, table, `tenant_id=eq.${tenant.id}`);
+      });
+    };
   }, [tenant?.id, isLive, refetchPlaybooks, refetchBlocked, refetchApprovals, refetchAgents]);
 
   const refreshAll = () => { refetchPlaybooks(); refetchBlocked(); refetchApprovals(); refetchAgents(); };
