@@ -18,19 +18,18 @@ async function fetchAgents(tenantId: string | undefined): Promise<DashboardAgent
   if (!tenantId) return [];
   
   try {
-    const { data, error } = await supabase
-      .from('agents')
-      .select('id, agent_name, status, enrolled_at, last_heartbeat, tenant_id')
-      .eq('tenant_id', tenantId)
-      .is('archived_at', null)
-      .order('last_heartbeat', { ascending: false });
-      
-    if (error) {
-      logger.error('[fetchAgents] Error fetching agents', error, { tenantId });
-      throw error;
-    }
+    const { fetchAgentsByTenant } = await import('@/lib/agentQueryHelper');
+    const data = await fetchAgentsByTenant(tenantId, false);
     
-    return (data || []) as DashboardAgent[];
+    // Adapt RPC AgentRecord to DashboardAgent
+    return data.map(a => ({
+      id: a.id,
+      agent_name: a.agent_name,
+      status: String(a.status || 'offline'),
+      enrolled_at: String(a.enrolled_at || ''),
+      last_heartbeat: String(a.last_heartbeat || ''),
+      tenant_id: String(a.tenant_id || '')
+    })) as DashboardAgent[];
   } catch (err) {
     logger.error('[fetchAgents] Unexpected error', err, { tenantId });
     throw err;

@@ -134,7 +134,13 @@
     "softwareInventory": "Software Inventory",
     "notifications": "Notifications",
     "governance": "Governance",
-    "tasks": "Tasks"
+    "tasks": "Tasks",
+    "outdatedBanner": {
+      "title": "{{count}} agent{{plural}} require{{verb}} manual reinstallation",
+      "description": "Agents on version v3.10.21 or earlier have a bootstrap issue that prevents auto-update. A one-time manual reinstallation is required.",
+      "generateKey": "Generate New Enrollment Key",
+      "viewProcedure": "View Full Procedure"
+    }
   },
   "dashboard": {
     "totalComputers": "Total Computers",

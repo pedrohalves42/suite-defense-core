@@ -126,6 +126,8 @@ export const AppSidebar = memo(({ mobile = false, onNavigate }: AppSidebarProps)
       </motion.aside>
     </TooltipProvider>
   );
+}, (prev, next) => {
+  return prev.mobile === next.mobile;
 });
 
 AppSidebar.displayName = 'AppSidebar';

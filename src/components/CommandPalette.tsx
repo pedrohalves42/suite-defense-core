@@ -84,7 +84,7 @@ export const CommandPalette = () => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
-  const { can, loading: permissionsLoading } = useRolePermissions();
+  const { can, loading: permissionsLoading, role } = useRolePermissions();
 
   useEffect(() => {
     const handleOpen = () => setOpen(true);
@@ -107,9 +107,9 @@ export const CommandPalette = () => {
   // P-AUDIT: Filter pages by explicit RBAC permission. Items without
   // a `permission` field are visible to all authenticated users.
   const visiblePages = useMemo(() => {
-    if (permissionsLoading) return allPages;
+    if (permissionsLoading || !role) return [];
     return allPages.filter((p) => !p.permission || can(p.permission));
-  }, [can, permissionsLoading]);
+  }, [can, permissionsLoading, role]);
 
   const favoriteItems = useMemo(
     () => visiblePages.filter(p => favorites.includes(p.path)),
@@ -135,7 +135,14 @@ export const CommandPalette = () => {
     <CommandDialog open={open} onOpenChange={setOpen}>
       <CommandInput placeholder="Buscar páginas, recursos, ações..." />
       <CommandList>
-        <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
+        <CommandEmpty>
+          {permissionsLoading ? (
+            <div className="flex items-center justify-center p-4">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent mr-2" />
+              <span>Validando permissões...</span>
+            </div>
+          ) : "Nenhum resultado encontrado."}
+        </CommandEmpty>
 
         {favoriteItems.length > 0 && (
           <>

@@ -44,6 +44,7 @@ interface UseRealtimeQueryOptions<T> {
   enabled?: boolean;
   staleTime?: number;
   meta?: Record<string, unknown>;
+  gcTime?: number;
   predicate?: (item: T) => boolean; // New: Client-side filter for incoming payloads
 }
 
@@ -72,6 +73,7 @@ export function useRealtimeQuery<T>({
   realtimeEvents = DEFAULT_EVENTS,
   enabled = true,
   staleTime = 300_000,
+  gcTime,
   predicate,
 }: UseRealtimeQueryOptions<T>) {
   const queryClient = useQueryClient();
@@ -222,6 +224,7 @@ export function useRealtimeQuery<T>({
     queryFn,
     enabled: enabled,
     staleTime,
+    gcTime,
     refetchInterval: false,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: isVisible,

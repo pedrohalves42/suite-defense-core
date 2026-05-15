@@ -35,9 +35,11 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         if (isMounted) setVerifyingSession(true);
         
         try {
-          const { data: { session } } = await supabase.auth.getSession();
-          setHasValidSession(!!session?.user);
-          logger.debug('ProtectedRoute: Second chance result', { hasSession: !!session?.user });
+          const { data, error } = await supabase.auth.getSession();
+          if (error) throw error;
+          
+          setHasValidSession(!!data.session?.user);
+          logger.debug('ProtectedRoute: Second chance result', { hasSession: !!data.session?.user });
         } catch (error) {
           logger.error('ProtectedRoute: Session verification failed', error);
           setHasValidSession(false);
