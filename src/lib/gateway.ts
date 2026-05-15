@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
+import { validateDispatch } from '../../supabase/functions/_shared/schemas/registry'; // Correção F-002: Pre-flight validation
 
 type GatewayNamespace =
   | 'admin' | 'billing' | 'security' | 'build' | 'agent'
