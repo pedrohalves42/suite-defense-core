@@ -60,9 +60,10 @@ class RealtimeChannelManager {
     table: string,
     filter: string | undefined,
     callback: EventCallback,
-    schema: string = 'public'
+    schema: string = 'public',
+    tenantId?: string // Correção F-003
   ): void {
-    const channelKey = this.getChannelKey(schema, table, filter);
+    const channelKey = this.getChannelKey(schema, table, filter, tenantId);
     const currentSubscribers = this.subscribers.get(channelKey) || [];
 
     if (currentSubscribers.some((s) => s.id === id)) {
