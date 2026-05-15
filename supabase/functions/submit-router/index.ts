@@ -30,7 +30,7 @@ import { handleProcesses } from '../_shared/submit-handlers/processes.ts';
 
 const SubmitRouterSchema = z.object({
   type: z.string().min(1).max(50),
-}).passthrough();
+}); // Removido .passthrough() para evitar injeção de campos não validados (Correção F-002)
 
 type SubmitHandler = (
   supabase: import('https://esm.sh/@supabase/supabase-js@2.74.0').SupabaseClient,
