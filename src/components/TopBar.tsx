@@ -31,8 +31,8 @@ export const TopBar = memo(({ isMobile, sidebarCollapsed, mobileMenuOpen, onMobi
             <Menu className="h-5 w-5" />
           </Button>
         )}
-        <div className="flex items-center gap-2 group cursor-default">
-          <img src={cybershieldLogo} alt="CyberShield" className="h-7 w-7 object-contain transition-transform duration-300 group-hover:rotate-12" />
+        <div className="flex items-center gap-2 group cursor-default" aria-hidden="true">
+          <img src={cybershieldLogo} alt="" className="h-7 w-7 object-contain transition-transform duration-300 group-hover:rotate-12" />
           <span className="font-semibold text-sm text-foreground hidden sm:inline tracking-tight">CyberShield</span>
         </div>
       </div>

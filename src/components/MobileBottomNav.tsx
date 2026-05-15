@@ -26,7 +26,7 @@ export const MobileBottomNav = ({ onMenuClick, alertCount = 0 }: MobileBottomNav
         {navItems.map((item) => {
           const isMenu = item.path === '__menu__';
           const isActive = !isMenu && location.pathname.startsWith(item.path);
-          const isAlerts = item.path === '/admin/security-monitoring';
+          const isAlerts = item.path === '/admin/threat-center';
 
           return (
             <button
