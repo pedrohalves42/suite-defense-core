@@ -16,9 +16,16 @@ interface SidebarNavItemProps {
 
 export const SidebarNavItem = ({ item, variant = 'default', isCollapsed, onNavigate }: SidebarNavItemProps) => {
   const location = useLocation();
+  const prefetch = useRoutePrefetch();
   const Icon = item.icon;
   const isSuper = variant === 'super';
   const isActive = location.pathname === item.to || (item.to !== '/admin/dashboard' && location.pathname.startsWith(item.to));
+
+  const handleMouseEnter = () => {
+    if (item.prefetch) {
+      prefetch(item.prefetch);
+    }
+  };
 
   const navContent = (
     <NavLink
