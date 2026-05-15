@@ -33,12 +33,12 @@ export function getOverviewItems(urgentCount: number): MenuItem[] {
 }
 
 export const securityItems: MenuItem[] = [
-  { icon: AlertTriangle, label: 'Alertas de Segurança', to: '/admin/threat-center' },
-  { icon: ShieldCheck, label: 'Pontos Fracos', to: '/admin/vulnerability-center' },
-  { icon: Globe, label: 'Internet e Navegação', to: '/admin/network-security' },
-  { icon: AppWindow, label: 'Programas e Dispositivos', to: '/admin/asset-security' },
-  { icon: AlertCircle, label: 'Alertas', to: '/quarantine' },
-  { icon: ShieldAlert, label: 'Monitoramento Contínuo', to: '/admin/realtime-security' },
+  { icon: AlertTriangle, label: 'Alertas de Segurança', to: '/admin/threat-center', prefetch: () => import("@/pages/admin/ThreatCenter") },
+  { icon: ShieldCheck, label: 'Pontos Fracos', to: '/admin/vulnerability-center', prefetch: () => import("@/pages/admin/VulnerabilityCenter") },
+  { icon: Globe, label: 'Internet e Navegação', to: '/admin/network-security', prefetch: () => import("@/pages/admin/NetworkSecurityCenter") },
+  { icon: AppWindow, label: 'Programas e Dispositivos', to: '/admin/asset-security', prefetch: () => import("@/pages/admin/AssetSecurityCenter") },
+  { icon: AlertCircle, label: 'Alertas', to: '/quarantine', prefetch: () => import("@/pages/Quarantine") },
+  { icon: ShieldAlert, label: 'Monitoramento Contínuo', to: '/admin/realtime-security', prefetch: () => import("@/pages/admin/RealTimeSecurityDashboard") },
 ];
 
 export const managementItems: MenuItem[] = [
