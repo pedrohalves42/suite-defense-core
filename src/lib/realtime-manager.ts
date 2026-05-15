@@ -85,8 +85,8 @@ class RealtimeChannelManager {
     }
   }
 
-  public unsubscribe(id: string, table: string, filter?: string, schema: string = 'public'): void {
-    const channelKey = this.getChannelKey(schema, table, filter);
+  public unsubscribe(id: string, table: string, filter?: string, schema: string = 'public', tenantId?: string): void {
+    const channelKey = this.getChannelKey(schema, table, filter, tenantId);
     const currentSubscribers = this.subscribers.get(channelKey) || [];
     const filteredSubscribers = currentSubscribers.filter((s) => s.id !== id);
 
