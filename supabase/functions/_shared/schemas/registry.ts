@@ -15,6 +15,15 @@ export const DISPATCH_REGISTRY: Record<string, z.ZodObject<any> | z.ZodEffects<a
   'admin:remove-member': schemas.removeMemberSchema,
   'admin:set-active-tenant': schemas.setTenantSchema,
   'admin:create-user': schemas.createUserSchema,
+  'admin:update-user-role': schemas.createUserSchema, // Reaproveita campos de role
+  'admin:list-users': z.object({
+    tenant_id: z.string().uuid().optional(),
+    limit: z.coerce.number().optional(),
+    offset: z.coerce.number().optional(),
+  }),
+  'admin:rate-limit-stats': z.object({
+    hours_back: z.coerce.number().min(1).max(720).default(24)
+  }),
   
   // Convites
   'admin:send-invite': schemas.sendInviteSchema,
