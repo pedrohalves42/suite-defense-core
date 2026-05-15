@@ -309,6 +309,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
         activeRole, // CORREÇÃO: expor role do tenant ativo
         setActiveTenant, 
         loading,
+        isSwitching,
         hasMultipleTenants,
         isFetched,
       }}
