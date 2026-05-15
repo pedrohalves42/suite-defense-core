@@ -7227,6 +7227,7 @@ export type Database = {
           agent_version_code: number | null
           archived_at: string | null
           archived_reason: string | null
+          created_at: string | null
           display_name: string | null
           ed25519_supported: boolean | null
           enrolled_at: string
@@ -7279,6 +7280,7 @@ export type Database = {
           tenant_id: string
           throttle_reason: string | null
           throttled_at: string | null
+          updated_at: string | null
           version: number | null
           web_activity_consent_at: string | null
           web_activity_consent_by: string | null
@@ -7294,6 +7296,7 @@ export type Database = {
           agent_version_code?: number | null
           archived_at?: string | null
           archived_reason?: string | null
+          created_at?: string | null
           display_name?: string | null
           ed25519_supported?: boolean | null
           enrolled_at?: string
@@ -7346,6 +7349,7 @@ export type Database = {
           tenant_id: string
           throttle_reason?: string | null
           throttled_at?: string | null
+          updated_at?: string | null
           version?: number | null
           web_activity_consent_at?: string | null
           web_activity_consent_by?: string | null
@@ -7361,6 +7365,7 @@ export type Database = {
           agent_version_code?: number | null
           archived_at?: string | null
           archived_reason?: string | null
+          created_at?: string | null
           display_name?: string | null
           ed25519_supported?: boolean | null
           enrolled_at?: string
@@ -7413,6 +7418,7 @@ export type Database = {
           tenant_id?: string
           throttle_reason?: string | null
           throttled_at?: string | null
+          updated_at?: string | null
           version?: number | null
           web_activity_consent_at?: string | null
           web_activity_consent_by?: string | null
