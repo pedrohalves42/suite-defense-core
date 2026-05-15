@@ -1,40 +1,39 @@
 # Backlog de Remediação Arquitetural - CyberShield
 
-Este documento lista as ações necessárias para sanar as vulnerabilidades e inconsistências identificadas pela auditoria baseline do Dr. Viktor Hale.
+Este documento lista as ações necessárias para sanar as vulnerabilidades e inconsistências identificadas pela auditoria baseline e ciclo 2 do Dr. Viktor Hale.
 
 ## Prioridade P0 - Crítico (Correção Imediata)
 
 ### 1. Hardening de Segurança de Banco de Dados
 - **Ação**: Atualizar todas as funções `SECURITY DEFINER` para incluir `SET search_path = public`.
-- **Risco de Regressão**: Baixo.
-- **Dono**: DB Admin / SecOps.
 - **Finding Relacionado**: [F-001](./findings/F-001-security-definer-search-path.md)
 
-### 2. Revogação de Acesso Público a Funções de RLS
-- **Ação**: Garantir que funções como `get_active_tenant_id()` e `is_current_super_admin()` tenham `REVOKE EXECUTE ON FUNCTION ... FROM public, anon`.
-- **Risco de Regressão**: Baixo (já mapeado em algumas migrations, mas inconsistente no ambiente atual).
+### 2. Isolamento de Buckets de Storage
+- **Ação**: Reimplementar RLS em `storage.objects` para validar propriedade baseada no `tenant_id` (via folder prefix ou metadata). Revogar acesso `authenticated` global.
+- **Finding Relacionado**: [F-004](./findings/F-004-storage-tenant-leak.md)
 
 ## Prioridade P1 - Alto (Segurança e Integridade)
 
 ### 3. Centralização e Enrijecimento de Validações Zod
-- **Ação**: Mover schemas para `_shared`, remover `.passthrough()` dos routers e implementar validação estrita em todos os pontos de entrada das Edge Functions.
-- **Risco de Regressão**: Médio (pode quebrar agentes antigos enviando payloads incompletos).
+- **Ação**: Mover schemas para `_shared`, remover `.passthrough()` dos routers e implementar validação estrita.
 - **Finding Relacionado**: [F-002](./findings/F-002-zod-passthrough-bypass.md)
 
-### 4. Sincronização Atômica de Contexto Multi-Tenant
-- **Ação**: Refatorar `useActiveTenant` para garantir que a mudança de estado no frontend aguarde a confirmação de atualização do JWT (`refreshSession`) e invalidar o cache de forma atômica para evitar o estado "split-brain".
-- **Risco de Regressão**: Médio (impacta a percepção de performance na troca de tenant).
+### 4. Fechamento de Loophole de Jobs (Sunset Legado)
+- **Ação**: Impedir que jobs críticos sejam finalizados via `ack-job`. Implementar triggers de integridade que exijam side-effects para conclusão.
+- **Finding Relacionado**: [F-005](./findings/F-005-job-integrity-bypass.md)
+
+### 5. Sincronização Atômica de Contexto Multi-Tenant
+- **Ação**: Refatorar `useActiveTenant` para aguardar `refreshSession` e invalidar cache de forma atômica.
 
 ## Prioridade P2 - Médio (Melhoria de Arquitetura)
 
-### 5. Isolamento de Canais Realtime
-- **Ação**: Implementar prefixos de tenant em nomes de canais e validar permissões na assinatura.
-- **Risco de Regressão**: Médio (requer atualização simultânea de todos os hooks de realtime).
+### 6. Isolamento de Canais Realtime
+- **Ação**: Implementar prefixos de tenant em nomes de canais.
 - **Finding Relacionado**: [F-003](./findings/F-003-realtime-filter-spoofing.md)
 
-### 6. Auditoria de Código Morto e Refatoração de Routers
-- **Ação**: Eliminar redundância entre `api-gateway` e `ops-gateway`. Simplificar a arquitetura de roteamento para reduzir a superfície de ataque.
-- **Risco de Regressão**: Alto (requer testes de integração completos).
+### 7. Auditoria de Handlers de API Externa
+- **Ação**: Integrar `createAuditLog` em todos os handlers autenticados via API Key.
+- **Finding Relacionado**: [F-006](./findings/F-006-missing-audit-external-api.md)
 
 ---
 *Assinado: Dr. Viktor Hale, Auditor Sistêmico*
