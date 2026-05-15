@@ -110,14 +110,20 @@ export function useRealtimeQuery<T>({
       filter: realtimeFilter
     });
 
+    const throttledInvalidate = useMemo(() => 
+      throttle((key: unknown[]) => {
+        logger.debug(`[useRealtimeQuery] Throttled invalidation for ${realtimeTable}`, { queryKey: key });
+        queryClient.invalidateQueries({ queryKey: key, exact: true });
+      }, 1000), 
+    [queryClient, realtimeTable]);
+
     const handleRealtimeEvent = (payload: any) => {
       const eventType = payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE';
       
       if (realtimeEvents.includes(eventType)) {
-        logger.debug(`[useRealtimeQuery] ${realtimeTable} ${eventType}, applying optimistic update`, {
-          instanceId,
-          queryKey: queryKeyHash
-        });
+        // PERF-FIX: If it's a high-frequency insert/update, we might want to just invalidate instead of manual setQueryData
+        // if the manual update logic is too complex or slow.
+        // For now, we keep manual updates for speed, but throttle full invalidations.
           
           if (eventType === 'UPDATE' && payload.new) {
             // Check if updated item still matches filter AND custom predicate
