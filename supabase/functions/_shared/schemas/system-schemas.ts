@@ -1,8 +1,9 @@
-import { z } from 'https://esm.sh/zod@3.23.8';
+import { z } from 'zod';
 
 /**
  * Mapeamento e Validação Ponta a Ponta do CyberShield
  * Este arquivo é a fonte de verdade para contratos entre Frontend e Edge Functions.
+ * COMPATÍVEL COM VITE E DENO (Sem URLs esm.sh diretas aqui).
  */
 
 // --- 1. Autenticação e Usuários ---
