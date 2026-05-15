@@ -123,6 +123,7 @@ export function useNonExecutionAlerts() {
     staleTime: 300_000,
     realtimeTable: 'system_alerts',
     realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
+    tenantId: tenant?.id, // Correção F-003
   });
 }
 
