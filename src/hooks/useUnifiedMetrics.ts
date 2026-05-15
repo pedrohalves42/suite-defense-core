@@ -236,12 +236,14 @@ export function useUnifiedMetrics() {
     realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
 
+  const instanceIdRef = useRef(`unified-metrics-sync-${Math.random().toString(36).substring(2, 9)}`);
+
   // ADR-026: Multi-table realtime synchronization for unified metrics.
   // This ensures the dashboard reacts to any security or operational event.
   useEffect(() => {
     if (!tenant?.id || !queryClient) return;
 
-    const instanceId = `unified-metrics-sync-${tenant.id}`;
+    const instanceId = instanceIdRef.current;
     const tables = ['blocked_access_attempts', 'ai_insights', 'vuln_findings'];
     
     tables.forEach(table => {
