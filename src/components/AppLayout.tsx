@@ -22,9 +22,11 @@ export const AppLayout = () => {
   const isMobile = useIsMobile();
   const { urgentCount } = useActionCenterCount();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // PERF-FIX: Avoid repeated localStorage access during render.
   const [collapsed, setCollapsed] = useState(() => {
-    const saved = localStorage.getItem('sidebar-collapsed');
-    return saved === 'true';
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('sidebar-collapsed') === 'true';
   });
 
   useEffect(() => {
