@@ -119,6 +119,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isInitialized.current = false;
       // V-FIX: Invalidate and clear all queries on logout to prevent stale data leaking
       queryClient.clear();
+      // V-FIX: Clear localStorage to remove cached preferences/UI states
+      localStorage.clear();
+      sessionStorage.clear();
     } catch (error) {
       logger.error('[AuthProvider] Sign out error', error);
     }
