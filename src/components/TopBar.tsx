@@ -45,11 +45,15 @@ export const TopBar = memo(({ isMobile, sidebarCollapsed, mobileMenuOpen, onMobi
           aria-label="Ver notificações"
         >
           <Bell className="h-4 w-4" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border-2 border-background" aria-hidden="true" />
+          <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border-2 border-background animate-pulse" aria-hidden="true" />
         </Button>
       </div>
     </header>
   );
+}, (prev, next) => {
+  return prev.isMobile === next.isMobile && 
+         prev.sidebarCollapsed === next.sidebarCollapsed && 
+         prev.mobileMenuOpen === next.mobileMenuOpen;
 });
 
 TopBar.displayName = 'TopBar';

@@ -229,7 +229,8 @@ export function useUnifiedMetrics() {
       };
     },
     enabled: !tenantLoading && !!tenant?.id,
-    staleTime: 5 * 60 * 1000, // Increased to 5 minutes to reduce refetching costs
+    staleTime: 2 * 60 * 1000, // Balanced at 2 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
     realtimeTable: 'system_alerts',
     realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
