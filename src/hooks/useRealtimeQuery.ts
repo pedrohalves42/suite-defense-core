@@ -3,7 +3,20 @@ import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { usePageVisibility } from './usePageVisibility';
 import { logger } from '@/lib/logger';
 import { realtimeChannelManager } from '@/lib/realtime-manager';
-import { throttle } from 'lodash';
+
+/**
+ * Throttle function to limit execution frequency
+ */
+function throttle(func: Function, limit: number) {
+  let inThrottle: boolean;
+  return function(this: any, ...args: any[]) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+}
 
 /**
  * Basic matcher for PostgREST style filters (field=eq.value, field=neq.value)
