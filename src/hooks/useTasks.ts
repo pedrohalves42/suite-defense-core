@@ -299,6 +299,7 @@ export function useOpenTasksCount() {
     enabled: !loading && !!tenant?.id,
     realtimeTable: 'tasks',
     realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
+    tenantId: tenant?.id, // Correção F-003
     staleTime: 30000,
   });
 }
