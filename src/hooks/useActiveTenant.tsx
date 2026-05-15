@@ -297,6 +297,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
       // Brief release delay so dependent components react before next sync may start
       setTimeout(() => {
         isSyncingRef.current = false;
+        setIsSwitching(false); // Libera trava de interface
       }, 500);
     }
   }, [activeTenant?.id, queryClient]);
