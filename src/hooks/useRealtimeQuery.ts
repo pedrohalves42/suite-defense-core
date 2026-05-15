@@ -228,12 +228,13 @@ export function useRealtimeQuery<T>({
       realtimeTable,
       realtimeFilter,
       handleRealtimeEvent,
-      realtimeSchema
+      realtimeSchema,
+      tenantId // Passando o tenantId para o manager
     );
 
     return () => {
       logger.debug(`[useRealtimeQuery] Unsubscribing instance ${instanceId} from ${realtimeSchema}.${realtimeTable}`);
-      realtimeChannelManager.unsubscribe(instanceId, realtimeTable, realtimeFilter, realtimeSchema);
+      realtimeChannelManager.unsubscribe(instanceId, realtimeTable, realtimeFilter, realtimeSchema, tenantId);
     };
   }, [
     instanceId,
