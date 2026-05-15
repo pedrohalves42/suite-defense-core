@@ -45,6 +45,7 @@ export const TenantSelector = () => {
       <DropdownMenuTrigger asChild>
         <Button 
           variant="outline" 
+          disabled={isSwitching}
           className="flex items-center gap-2 bg-card border-border hover:bg-muted"
         >
           <Building2 className="h-4 w-4 text-primary" />
