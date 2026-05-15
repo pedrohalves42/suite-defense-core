@@ -59,6 +59,7 @@ export function useDecisionEvents(options: UseDecisionEventsOptions = {}) {
     staleTime: 300_000,
     realtimeTable: 'decision_events',
     realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
+    tenantId: tenant?.id, // Correção F-003
   });
 }
 
