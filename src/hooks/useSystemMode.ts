@@ -53,6 +53,7 @@ export function useSystemMode() {
     },
     staleTime: 120_000,
     realtimeTable: 'system_global_state',
+    // SystemMode é global, mas mantemos o padrão de tenantId se houver contexto
   });
 }
 
