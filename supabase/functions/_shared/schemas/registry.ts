@@ -29,17 +29,39 @@ export const DISPATCH_REGISTRY: Record<string, z.ZodObject<any> | z.ZodEffects<a
 };
 
 /**
+ * Submit Registry — Mapeia tipos de submissão de agentes para seus schemas.
+ */
+export const SUBMIT_REGISTRY: Record<string, z.ZodObject<any>> = {
+  // Telemetria base
+  'agent-enrollment': schemas.enrollAgentSchema,
+};
+
+/**
  * Validador Central de Dispatch
- * Retorna o payload validado ou lança erro se a ação não for reconhecida ou o payload for inválido.
  */
 export function validateDispatch(action: string, payload: unknown) {
   const schema = DISPATCH_REGISTRY[action];
   
   if (!schema) {
-    // Se não houver schema definido, usamos um objeto genérico mas estrito (sem passthrough)
-    // para evitar injeção de campos desconhecidos em ações legadas.
+    // Fail-closed para ações administrativas novas sem schema
+    if (action.startsWith('admin:')) {
+      throw new Error(`Critical: Action ${action} requires a registered schema for security enforcement.`);
+    }
+    // Ações legadas ou operacionais genéricas
     return z.record(z.string(), z.unknown()).parse(payload);
   }
   
+  return schema.parse(payload);
+}
+
+/**
+ * Validador Central de Telemetria (Agentes)
+ */
+export function validateSubmit(type: string, payload: unknown) {
+  const schema = SUBMIT_REGISTRY[type];
+  if (!schema) {
+    // Permitir flexibilidade para telemetria mas com log de tipos desconhecidos
+    return z.record(z.string(), z.unknown()).parse(payload);
+  }
   return schema.parse(payload);
 }
