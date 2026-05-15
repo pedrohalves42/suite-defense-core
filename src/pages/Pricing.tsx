@@ -64,7 +64,7 @@ export default function Pricing() {
             <Link to="/login">
               <Button variant="ghost">{t('pricingPage.login')}</Button>
             </Link>
-            <Link to="/register">
+            <Link to="/signup">
               <Button>{t('pricingPage.createAccount')}</Button>
             </Link>
           </div>
@@ -152,7 +152,7 @@ export default function Pricing() {
                         {cta}
                       </Button>
                     ) : (
-                      <Link to="/register" className="w-full">
+                      <Link to="/signup" className="w-full">
                         <Button className="w-full" variant={plan.ctaVariant}>
                           {cta}
                           <ArrowRight className="h-4 w-4 ml-2" />
@@ -197,7 +197,7 @@ export default function Pricing() {
           <p className="text-muted-foreground mb-6">
             {t('pricingPage.annualDiscountDesc')}
           </p>
-          <Link to="/register">
+          <Link to="/signup">
             <Button size="lg">
               {t('pricingPage.startDiagnostic')}
               <ArrowRight className="h-4 w-4 ml-2" />

@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import logoImage from '@/assets/logo-cybshield-new.webp';
@@ -93,9 +92,9 @@ export default function Signup() {
           </Link>
           <div className="space-y-3">
             <CardTitle className="text-4xl font-extrabold tracking-tight text-white leading-tight">
-              Trial 15 Dias
+              {t('signupPage.trialTitle', 'Trial 15 Dias')}
             </CardTitle>
-            <p className="text-white/60">Até 2 endpoints inclusos</p>
+            <p className="text-white/60">{t('signupPage.trialSubtitle', 'Até 2 endpoints inclusos')}</p>
           </div>
         </CardHeader>
 
@@ -149,7 +148,7 @@ export default function Signup() {
               className="w-full h-14 bg-white text-black hover:bg-white/90 font-bold rounded-2xl" 
               disabled={loading}
             >
-              {loading ? <Loader2 className="animate-spin" /> : 'Começar Trial Grátis'}
+              {loading ? <Loader2 className="animate-spin" /> : (t('signupPage.submitButton') || 'Começar Trial Grátis')}
             </Button>
             <p className="text-center text-white/40 text-sm">
               Já tem conta? <Link to="/login" className="text-white hover:underline">Entre aqui</Link>
