@@ -90,6 +90,7 @@ export function useRealtimeQuery<T>({
   staleTime = 300_000,
   gcTime,
   predicate,
+  tenantId,
 }: UseRealtimeQueryOptions<T>) {
   const queryClient = useQueryClient();
   const isVisible = usePageVisibility();
