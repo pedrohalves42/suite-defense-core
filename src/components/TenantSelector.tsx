@@ -12,7 +12,7 @@ import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { Badge } from '@/components/ui/badge';
 
 export const TenantSelector = () => {
-  const { tenants, activeTenant, setActiveTenant, hasMultipleTenants, loading } = useActiveTenant();
+  const { tenants, activeTenant, setActiveTenant, hasMultipleTenants, loading, isSwitching } = useActiveTenant();
 
   if (loading) {
     return (
