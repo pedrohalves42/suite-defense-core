@@ -17,6 +17,7 @@ export interface MenuItem {
   to: string;
   end?: boolean;
   badge?: number;
+  prefetch?: () => Promise<any>;
 }
 
 export function getOverviewItems(urgentCount: number): MenuItem[] {
