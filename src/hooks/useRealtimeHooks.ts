@@ -90,6 +90,7 @@ export function useRealtimeAlerts(tenantId: string | undefined, opts?: { activeO
   const enabled = opts?.enabled ?? true;
   return useRealtimeQuery({
     queryKey: ['rt-alerts', tenantId, activeOnly],
+    tenantId,
     queryFn: async (): Promise<SystemAlert[]> => {
       if (!tenantId) return [];
       // TS2589: system_alerts has excessive FK relationships causing infinite type recursion.
