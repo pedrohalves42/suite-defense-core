@@ -30,7 +30,7 @@ vi.mock('@/hooks/useTenant', () => ({
 }));
 
 vi.mock('@/lib/logger', () => ({
-  logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
+  logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn(), log: vi.fn() },
 }));
 
 import { useDashboardQueries } from '../useDashboardQueries';
