@@ -168,20 +168,17 @@ export function useAgentMonitoring() {
       'jobs',
       `tenant_id=eq.${tenant.id}`,
       (payload) => {
-        logger.debug('Job change via manager', { payload });
-        if (payload.eventType === 'INSERT') {
-          setRecentJobs(prev => [payload.new as Job, ...prev].slice(0, 10));
-        } else if (payload.eventType === 'UPDATE') {
-          setRecentJobs(prev => prev.map(j => j.id === payload.new.id ? payload.new as Job : j));
-        }
+...
         setLastUpdate(new Date());
-      }
+      },
+      'public',
+      tenant.id
     );
 
     return () => {
       logger.debug('[useAgentMonitoring] Cleaning up realtime subscriptions');
-      realtimeChannelManager.unsubscribe(`${instanceId}-agents`, 'agents', `tenant_id=eq.${tenant.id}`);
-      realtimeChannelManager.unsubscribe(`${instanceId}-jobs`, 'jobs', `tenant_id=eq.${tenant.id}`);
+      realtimeChannelManager.unsubscribe(`${instanceId}-agents`, 'agents', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
+      realtimeChannelManager.unsubscribe(`${instanceId}-jobs`, 'jobs', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
     };
   }, [tenant?.id, instanceId]);
 

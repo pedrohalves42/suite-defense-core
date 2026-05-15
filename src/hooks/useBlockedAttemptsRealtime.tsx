@@ -55,12 +55,14 @@ export function useBlockedAttemptsRealtime(enabled = true) {
       instanceId,
       'blocked_access_attempts',
       `tenant_id=eq.${tenant.id}`,
-      handleNewAttempt
+      handleNewAttempt,
+      'public',
+      tenant.id
     );
 
     return () => {
       logger.debug('[useBlockedAttemptsRealtime] Unsubscribing via manager', { tenantId: tenant.id });
-      realtimeChannelManager.unsubscribe(instanceId, 'blocked_access_attempts', `tenant_id=eq.${tenant.id}`);
+      realtimeChannelManager.unsubscribe(instanceId, 'blocked_access_attempts', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
     };
   }, [enabled, tenant?.id, handleNewAttempt, instanceId]);
 }

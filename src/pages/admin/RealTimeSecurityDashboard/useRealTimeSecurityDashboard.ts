@@ -150,14 +150,16 @@ export function useRealTimeSecurityDashboard() {
           if (table === 'approval_requests') refetchApprovals();
           if (table === 'playbook_executions') refetchPlaybooks();
           if (table === 'agents') refetchAgents();
-        }
+        },
+        'public',
+        tenant.id
       );
     });
 
     return () => { 
-      realtimeChannelManager.unsubscribe(instanceId, 'security_logs', `tenant_id=eq.${tenant.id}`);
+      realtimeChannelManager.unsubscribe(instanceId, 'security_logs', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
       statTables.forEach(table => {
-        realtimeChannelManager.unsubscribe(instanceId, table, `tenant_id=eq.${tenant.id}`);
+        realtimeChannelManager.unsubscribe(instanceId, table, `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
       });
     };
   }, [tenant?.id, isLive, refetchPlaybooks, refetchBlocked, refetchApprovals, refetchAgents]);

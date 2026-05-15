@@ -66,11 +66,13 @@ export function useJobLiveMonitor(maxJobs: number) {
           const filtered = prev.filter(j => j.id !== newJob.id);
           return [newJob, ...filtered].slice(0, maxJobs);
         });
-      }
+      },
+      'public',
+      tenant.id
     );
 
     return () => {
-      realtimeChannelManager.unsubscribe(instanceId, 'jobs', `tenant_id=eq.${tenant.id}`);
+      realtimeChannelManager.unsubscribe(instanceId, 'jobs', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
     };
   }, [tenant?.id, maxJobs]);
 
