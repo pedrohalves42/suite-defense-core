@@ -91,5 +91,5 @@ export const brandingSchema = z.object({
 
 export const gatewayRequestSchema = z.object({
   action: z.string().min(1).max(80), // Formato: "namespace:action"
-  payload: z.record(z.unknown()).optional().default({}),
+  payload: z.record(z.string(), z.unknown()).optional().default({}),
 });
