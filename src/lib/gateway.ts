@@ -32,11 +32,20 @@ export async function callGateway<T = Record<string, unknown>>(
     ? 'public-gateway'
     : 'ops-gateway';
 
+  // Correção F-002: Validação prévia (pre-flight) no frontend
+  let validatedPayload = payload;
+  try {
+    validatedPayload = validateDispatch(`${namespace}:${action}`, payload ?? {}) as Record<string, unknown>;
+  } catch (err) {
+    logger.error(`[Gateway Pre-flight] Validation failed for ${namespace}:${action}`, err);
+    throw err;
+  }
+
   try {
     const { data, error } = await supabase.functions.invoke(gateway, {
       body: {
         action: `${namespace}:${action}`,
-        payload: payload ?? {},
+        payload: validatedPayload,
       },
       headers: options?.headers,
       // Note: supabase-js doesn't natively support signal in invoke yet, 
