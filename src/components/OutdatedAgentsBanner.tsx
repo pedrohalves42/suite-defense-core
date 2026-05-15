@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { Link } from 'react-router-dom';
 import { logger } from '@/lib/logger';
+import { useTranslation } from 'react-i18next';
 
 interface OutdatedAgent {
   agent_name: string;
@@ -12,6 +13,7 @@ interface OutdatedAgent {
 }
 
 export const OutdatedAgentsBanner = () => {
+  const { t } = useTranslation();
   const { activeTenant: tenant, loading: tenantLoading } = useActiveTenant();
   const [outdatedAgents, setOutdatedAgents] = useState<OutdatedAgent[]>([]);
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
@@ -88,11 +90,14 @@ export const OutdatedAgentsBanner = () => {
       <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
       <div className="flex-1 min-w-0">
         <h4 className="font-semibold text-warning-foreground">
-          {outdatedAgents.length} agente{outdatedAgents.length > 1 ? 's' : ''} precisa{outdatedAgents.length > 1 ? 'm' : ''} de reinstalação manual
+          {t('adminPages.outdatedBanner.title', { 
+            count: outdatedAgents.length,
+            plural: outdatedAgents.length > 1 ? 's' : '',
+            verb: outdatedAgents.length > 1 ? 'm' : ''
+          })}
         </h4>
         <p className="text-sm text-muted-foreground mt-1">
-          Agentes na versão v3.10.21 ou anterior possuem um problema de bootstrap que impede auto-atualização.
-          É necessária uma reinstalação única para corrigir.
+          {t('adminPages.outdatedBanner.description')}
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
           {outdatedAgents.slice(0, 5).map(agent => (
@@ -106,7 +111,7 @@ export const OutdatedAgentsBanner = () => {
           ))}
           {outdatedAgents.length > 5 && (
             <span className="inline-flex items-center px-2 py-1 rounded-md bg-muted text-xs font-medium">
-              +{outdatedAgents.length - 5} mais
+              +{outdatedAgents.length - 5} {t('common.more')}
             </span>
           )}
         </div>
@@ -114,12 +119,12 @@ export const OutdatedAgentsBanner = () => {
           <Button asChild size="sm" variant="outline" className="gap-1">
             <Link to="/admin/agent-installer">
               <RefreshCw className="h-3 w-3" />
-              Gerar Nova Enrollment Key
+              {t('adminPages.outdatedBanner.generateKey')}
             </Link>
           </Button>
           <Button asChild size="sm" variant="ghost" className="gap-1 text-xs">
             <a href="https://github.com/your-repo/docs/REINSTALL_PROCEDURE_V3.md" target="_blank" rel="noopener noreferrer">
-              Ver Procedimento Completo
+              {t('adminPages.outdatedBanner.viewProcedure')}
             </a>
           </Button>
         </div>
