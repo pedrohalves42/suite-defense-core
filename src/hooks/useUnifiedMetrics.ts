@@ -12,7 +12,7 @@
  * React Query cuida do cache — múltiplas páginas usando o mesmo queryKey
  * compartilham automaticamente os mesmos dados.
  */
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { realtimeChannelManager } from '@/lib/realtime-manager';
