@@ -131,7 +131,7 @@ export function useUnifiedMetrics() {
           .eq('tenant_id', tenant.id)
           .eq('acknowledged', false),
         sb.from('blocked_access_attempts')
-          .select('id, agent_name, domain, attempted_at, blocked_by')
+          .select('id, agent_name, domain, attempted_at, blocked_by', { count: 'exact' })
           .eq('tenant_id', tenant.id)
           .gte('attempted_at', sevenDaysAgo)
           .order('attempted_at', { ascending: false })
