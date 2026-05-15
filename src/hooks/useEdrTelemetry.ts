@@ -213,6 +213,7 @@ export function useTelemetryStats() {
     enabled: !loading && !!activeTenant?.id,
     realtimeTable: 'endpoint_detection_events',
     realtimeFilter: `tenant_id=eq.${activeTenant?.id}`,
+    tenantId: activeTenant?.id, // Correção F-003
     staleTime: 300_000,
   });
 }
