@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { useRetryFetch } from '@/hooks/useRetryFetch';
+import { useTenant } from '@/hooks/useTenant';
 import { useBuildRealtime, BuildStatus } from '@/hooks/useBuildRealtime';
 import { storage } from '@/lib/storage';
 import { retryWithBackoff, calculateSha256, validateRequestUrl } from '../utils';
@@ -16,6 +17,7 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
   const githubActionsUrlRef = useRef<string | null>(null);
   const handleBuildExeRef = useRef<() => Promise<void>>();
   const { retryFetch } = useRetryFetch();
+  const { tenant } = useTenant();
   const [exeBuildStatus, setExeBuildStatus] = useState<ExeBuildStatus>('idle');
   const [exeBuildId, setExeBuildId] = useState<string | null>(null);
   const [exeDownloadUrl, setExeDownloadUrl] = useState<string | null>(null);
@@ -164,6 +166,7 @@ export function useAgentBuild(agentName: string, lastEnrollmentKey: string | nul
 
   const { fetchStatus: fetchBuildStatus, cleanup: cleanupRealtime } = useBuildRealtime({
     buildId: exeBuildId,
+    tenantId: tenant?.id,
     onStatusChange: handleBuildStatusChange,
     onError: () => { startPollingFallback(); },
   });

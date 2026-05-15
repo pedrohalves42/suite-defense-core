@@ -327,7 +327,17 @@ export async function handleSetActiveTenant(supabase: SB, requestId: string, pay
 
   const previousTenantId = existingAppMetadata.active_tenant_id;
   if (previousTenantId !== tenant_id) {
-    try { await supabase.from('audit_logs').insert({ tenant_id, user_id: userId, action: 'tenant_switched', target_type: 'tenant', target_id: tenant_id, details: { previous_tenant_id: previousTenantId, new_tenant_id: tenant_id, timestamp: new Date().toISOString(), atomic_switch: true } }); } catch {}
+    await createAuditLog({
+      supabase,
+      userId,
+      tenantId: tenant_id,
+      action: 'tenant_switched',
+      resourceType: 'tenant',
+      resourceId: tenant_id,
+      details: { previous_tenant_id: previousTenantId, new_tenant_id: tenant_id, atomic_switch: true },
+      request: ctx?.req!,
+      success: true
+    });
   }
 
   return { success: true, active_tenant_id: switchResult.active_tenant_id, tenants: switchResult.tenants, is_super_admin: switchResult.is_super_admin, tenant_count: switchResult.tenant_count };
@@ -380,6 +390,18 @@ export async function handleUpdateUserRole(supabase: SB, requestId: string, payl
 
   const { data: rpcResult, error: rpcError } = await supabase.rpc('update_user_role_rpc', { p_user_id: targetUserId, p_new_role: newRole });
   if (rpcError) return { __status: 500, error: { code: 'INTERNAL', message: 'Failed to update user role', requestId } };
+
+  await createAuditLog({
+    supabase,
+    userId: actorId,
+    tenantId: targetTenantId,
+    action: 'user_role_updated',
+    resourceType: 'user',
+    resourceId: targetUserId,
+    details: { target_user_id: targetUserId, old_role: targetUserRole.role, new_role: newRole, is_rpc: true },
+    request: ctx?.req!,
+    success: true
+  });
 
   return { updated: true, message: 'User role updated successfully', data: rpcResult };
 }

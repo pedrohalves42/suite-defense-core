@@ -144,9 +144,11 @@ export function useAgentMonitoring() {
 
     logger.debug('[useAgentMonitoring] Setting up realtime subscriptions via manager');
 
+    const instanceIdBase = `${instanceId}-${tenant.id}`;
+
     // Subscribe to Agents
     realtimeChannelManager.subscribe(
-      `${instanceId}-agents`,
+      `${instanceIdBase}-agents`,
       'agents',
       `tenant_id=eq.${tenant.id}`,
       (payload) => {
@@ -159,12 +161,14 @@ export function useAgentMonitoring() {
           setAgents(prev => prev.filter(a => a.id !== payload.old.id));
         }
         setLastUpdate(new Date());
-      }
+      },
+      'public',
+      tenant.id
     );
 
     // Subscribe to Jobs
     realtimeChannelManager.subscribe(
-      `${instanceId}-jobs`,
+      `${instanceIdBase}-jobs`,
       'jobs',
       `tenant_id=eq.${tenant.id}`,
       (payload) => {
@@ -175,13 +179,15 @@ export function useAgentMonitoring() {
           setRecentJobs(prev => prev.map(j => j.id === payload.new.id ? payload.new as Job : j));
         }
         setLastUpdate(new Date());
-      }
+      },
+      'public',
+      tenant.id
     );
 
     return () => {
       logger.debug('[useAgentMonitoring] Cleaning up realtime subscriptions');
-      realtimeChannelManager.unsubscribe(`${instanceId}-agents`, 'agents', `tenant_id=eq.${tenant.id}`);
-      realtimeChannelManager.unsubscribe(`${instanceId}-jobs`, 'jobs', `tenant_id=eq.${tenant.id}`);
+      realtimeChannelManager.unsubscribe(`${instanceIdBase}-agents`, 'agents', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
+      realtimeChannelManager.unsubscribe(`${instanceIdBase}-jobs`, 'jobs', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
     };
   }, [tenant?.id, instanceId]);
 

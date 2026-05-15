@@ -82,7 +82,9 @@ export const NotificationSystem = () => {
           });
         }
         setQuarantineCount(prev => prev + 1);
-      }
+      },
+      'public',
+      tenant.id
     );
 
     realtimeChannelManager.subscribe(
@@ -99,7 +101,9 @@ export const NotificationSystem = () => {
             duration: 8000
           });
         }
-      }
+      },
+      'public',
+      tenant.id
     );
 
     // Channel 2: Operations (agent state changes + failed jobs)
@@ -138,7 +142,9 @@ export const NotificationSystem = () => {
             tag: `agent-state-${newAgent.agent_name}`,
           });
         }
-      }
+      },
+      'public',
+      tenant.id
     );
 
     realtimeChannelManager.subscribe(
@@ -155,14 +161,16 @@ export const NotificationSystem = () => {
             duration: 6000
           });
         }
-      }
+      },
+      'public',
+      tenant.id
     );
 
     return () => {
-      realtimeChannelManager.unsubscribe(securityId, 'quarantined_files', `tenant_id=eq.${tenant.id}`);
-      realtimeChannelManager.unsubscribe(`virus-scan-notif-${tenant.id}`, 'virus_scans', `tenant_id=eq.${tenant.id}`);
-      realtimeChannelManager.unsubscribe(`agent-state-notif-${tenant.id}`, 'agents', `tenant_id=eq.${tenant.id}`);
-      realtimeChannelManager.unsubscribe(`job-status-notif-${tenant.id}`, 'jobs', `tenant_id=eq.${tenant.id}`);
+      realtimeChannelManager.unsubscribe(securityId, 'quarantined_files', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
+      realtimeChannelManager.unsubscribe(`virus-scan-notif-${tenant.id}`, 'virus_scans', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
+      realtimeChannelManager.unsubscribe(`agent-state-notif-${tenant.id}`, 'agents', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
+      realtimeChannelManager.unsubscribe(`job-status-notif-${tenant.id}`, 'jobs', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
     };
   }, [tenant?.id, loading, isGranted, showNotification]);
 

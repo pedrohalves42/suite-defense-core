@@ -255,13 +255,15 @@ export function useUnifiedMetrics() {
         () => {
           logger.debug(`[useUnifiedMetrics] Invalidation triggered by ${table}`);
           queryClient.invalidateQueries({ queryKey: ['unified-metrics', tenant.id] });
-        }
+        },
+        'public',
+        tenant.id
       );
     });
 
     return () => {
       tables.forEach(table => {
-        realtimeChannelManager.unsubscribe(instanceId, table, `tenant_id=eq.${tenant.id}`);
+        realtimeChannelManager.unsubscribe(instanceId, table, `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
       });
     };
   }, [tenant?.id, queryClient]);

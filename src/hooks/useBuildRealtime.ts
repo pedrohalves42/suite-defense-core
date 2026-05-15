@@ -15,6 +15,7 @@ export interface BuildStatus {
 
 interface UseBuildRealtimeOptions {
   buildId: string | null;
+  tenantId?: string; // F-003: Tenant Isolation
   onStatusChange: (status: BuildStatus) => void;
   onError?: (error: Error) => void;
 }
@@ -23,7 +24,7 @@ interface UseBuildRealtimeOptions {
  * Hook para monitorar status de build via Realtime
  * Reutiliza canais via RealtimeChannelManager
  */
-export function useBuildRealtime({ buildId, onStatusChange, onError }: UseBuildRealtimeOptions) {
+export function useBuildRealtime({ buildId, tenantId, onStatusChange, onError }: UseBuildRealtimeOptions) {
   const instanceId = useRef(`build-${Math.random().toString(36).substring(2, 9)}`).current;
 
   useEffect(() => {
@@ -55,18 +56,20 @@ export function useBuildRealtime({ buildId, onStatusChange, onError }: UseBuildR
           build_duration_seconds: newData.build_duration_seconds,
           github_run_url: newData.github_run_url
         });
-      }
+      },
+      'public',
+      tenantId
     );
 
     return () => {
       logger.info('[useBuildRealtime] Unsubscribing via manager', { buildId, instanceId });
-      realtimeChannelManager.unsubscribe(instanceId, 'agent_builds', `id=eq.${buildId}`);
+      realtimeChannelManager.unsubscribe(instanceId, 'agent_builds', `id=eq.${buildId}`, 'public', tenantId);
     };
   }, [buildId, onStatusChange, instanceId]);
 
   const cleanup = useCallback(() => {
     if (buildId) {
-      realtimeChannelManager.unsubscribe(instanceId, 'agent_builds', `id=eq.${buildId}`);
+      realtimeChannelManager.unsubscribe(instanceId, 'agent_builds', `id=eq.${buildId}`, 'public', tenantId);
     }
   }, [instanceId, buildId]);
 

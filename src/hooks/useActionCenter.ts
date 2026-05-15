@@ -82,13 +82,15 @@ export function useActionCenter() {
         `tenant_id=eq.${tenant.id}`,
         () => {
           queryClient.invalidateQueries({ queryKey: ['action-center', tenant.id] });
-        }
+        },
+        'public',
+        tenant.id
       );
     });
 
     return () => {
       tables.forEach(table => {
-        realtimeChannelManager.unsubscribe(instanceId, table, `tenant_id=eq.${tenant.id}`);
+        realtimeChannelManager.unsubscribe(instanceId, table, `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
       });
     };
   }, [tenant?.id, queryClient]);
