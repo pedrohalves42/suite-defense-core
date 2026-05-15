@@ -56,7 +56,9 @@ export function useBuildRealtime({ buildId, tenantId, onStatusChange, onError }:
           build_duration_seconds: newData.build_duration_seconds,
           github_run_url: newData.github_run_url
         });
-      }
+      },
+      'public',
+      tenantId
     );
 
     return () => {

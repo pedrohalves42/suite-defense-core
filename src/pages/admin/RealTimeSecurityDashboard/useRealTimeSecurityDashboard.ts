@@ -136,7 +136,9 @@ export function useRealTimeSecurityDashboard() {
         
         refetchPlaybooks(); 
         refetchBlocked();
-      }
+      },
+      'public',
+      tenant.id
     );
 
     // Subscribe to other tables for stat updates
