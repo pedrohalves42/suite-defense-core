@@ -61,6 +61,7 @@ export function useCorrelatedIncidents(options?: { status?: string; limit?: numb
     enabled: !loading && !!activeTenant?.id,
     realtimeTable: 'correlated_incidents',
     realtimeFilter: activeTenant?.id ? `tenant_id=eq.${activeTenant.id}` : undefined,
+    tenantId: activeTenant?.id, // Correção F-003
     staleTime: 120_000,
   });
 }

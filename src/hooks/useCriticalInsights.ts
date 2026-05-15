@@ -28,6 +28,7 @@ export function useCriticalInsights() {
     enabled: !loading && !!activeTenant?.id,
     realtimeTable: 'ai_insights',
     realtimeFilter: `tenant_id=eq.${activeTenant?.id}`,
+    tenantId: activeTenant?.id, // Correção F-003
     staleTime: 300_000,
   });
 }

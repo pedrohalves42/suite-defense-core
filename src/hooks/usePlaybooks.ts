@@ -110,6 +110,7 @@ export function usePendingPlaybookExecutions() {
     enabled: !!tenant?.id,
     realtimeTable: 'playbook_executions',
     realtimeFilter: `tenant_id=eq.${tenant?.id}`,
+    tenantId: tenant?.id, // Correção F-003
     staleTime: 300_000,
   });
 }

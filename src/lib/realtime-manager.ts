@@ -60,9 +60,10 @@ class RealtimeChannelManager {
     table: string,
     filter: string | undefined,
     callback: EventCallback,
-    schema: string = 'public'
+    schema: string = 'public',
+    tenantId?: string // Correção F-003
   ): void {
-    const channelKey = this.getChannelKey(schema, table, filter);
+    const channelKey = this.getChannelKey(schema, table, filter, tenantId);
     const currentSubscribers = this.subscribers.get(channelKey) || [];
 
     if (currentSubscribers.some((s) => s.id === id)) {
@@ -84,8 +85,8 @@ class RealtimeChannelManager {
     }
   }
 
-  public unsubscribe(id: string, table: string, filter?: string, schema: string = 'public'): void {
-    const channelKey = this.getChannelKey(schema, table, filter);
+  public unsubscribe(id: string, table: string, filter?: string, schema: string = 'public', tenantId?: string): void {
+    const channelKey = this.getChannelKey(schema, table, filter, tenantId);
     const currentSubscribers = this.subscribers.get(channelKey) || [];
     const filteredSubscribers = currentSubscribers.filter((s) => s.id !== id);
 
@@ -125,12 +126,14 @@ class RealtimeChannelManager {
     return true;
   }
 
-  private getChannelKey(schema: string, table: string, filter?: string): string {
-    return `${schema}:${table}${filter ? `:${filter}` : ''}`;
+  private getChannelKey(schema: string, table: string, filter?: string, tenantId?: string): string {
+    const prefix = tenantId ? `tenant:${tenantId}:` : '';
+    return `${prefix}${schema}:${table}${filter ? `:${filter}` : ''}`;
   }
 
   private getSafeChannelName(key: string): string {
-    return `central-${key.replace(/[^a-zA-Z0-9:._-]/g, '_')}`.substring(0, 100);
+    // Se a chave já começa com 'tenant:', mantemos para identificação no servidor
+    return key.replace(/[^a-zA-Z0-9:._-]/g, '_').substring(0, 100);
   }
 
   private ensureMeta(key: string, schema: string, table: string, filter?: string): ChannelMeta {

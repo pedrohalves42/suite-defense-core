@@ -70,6 +70,7 @@ export function useBackupStatus() {
     enabled: !!tenant?.id,
     realtimeTable: 'backup_status',
     realtimeFilter: `tenant_id=eq.${tenant?.id}`,
+    tenantId: tenant?.id, // Correção F-003
     staleTime: 300_000,
   });
 }

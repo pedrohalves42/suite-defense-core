@@ -45,5 +45,6 @@ export function useAgentMetricsHistory(daysBack: number = 7) {
     realtimeEvents: ['INSERT'],
     fallbackInterval: 300_000,
     staleTime: 30_000,
+    tenantId: activeTenant?.id, // Correção F-003
   });
 }

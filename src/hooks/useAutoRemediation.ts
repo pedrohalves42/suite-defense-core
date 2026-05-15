@@ -66,6 +66,7 @@ export const useAutoRemediation = () => {
     realtimeTable: 'auto_remediation_actions',
     realtimeFilter: `tenant_id=eq.${tenant?.id}`,
     staleTime: 300_000,
+    tenantId: tenant?.id, // Correção F-003
   });
 
   const executeRemediation = useMutation({

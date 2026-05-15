@@ -70,6 +70,7 @@ export function usePendingApprovalRequests() {
     staleTime: 300_000,
     realtimeTable: 'approval_requests',
     realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
+    tenantId: tenant?.id, // Correção F-003
   });
 
   // Realtime subscription handled by useRealtimeQuery

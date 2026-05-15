@@ -75,6 +75,7 @@ export function useDataExposure() {
     enabled: !!tenant?.id,
     realtimeTable: 'data_exposure_findings',
     realtimeFilter: `tenant_id=eq.${tenant?.id}`,
+    tenantId: tenant?.id, // Correção F-003
     staleTime: 300_000,
   });
 

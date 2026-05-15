@@ -51,15 +51,16 @@ interface UseRealtimeQueryOptions<T> {
   queryKey: unknown[];
   queryFn: () => Promise<T>;
   realtimeTable?: string;
-  realtimeSchema?: string; // New option
+  realtimeSchema?: string;
   realtimeFilter?: string;
+  tenantId?: string; // Correção F-003: Prefixo de tenant obrigatório para canais
   realtimeEvents?: Array<'INSERT' | 'UPDATE' | 'DELETE'>;
   fallbackInterval?: number;
   enabled?: boolean;
   staleTime?: number;
   meta?: Record<string, unknown>;
   gcTime?: number;
-  predicate?: (item: T) => boolean; // New: Client-side filter for incoming payloads
+  predicate?: (item: T) => boolean;
 }
 
 const DEFAULT_EVENTS: Array<'INSERT' | 'UPDATE' | 'DELETE'> = ['INSERT', 'UPDATE', 'DELETE'];
@@ -89,6 +90,7 @@ export function useRealtimeQuery<T>({
   staleTime = 300_000,
   gcTime,
   predicate,
+  tenantId,
 }: UseRealtimeQueryOptions<T>) {
   const queryClient = useQueryClient();
   const isVisible = usePageVisibility();
@@ -105,7 +107,15 @@ export function useRealtimeQuery<T>({
   useEffect(() => {
     if (!realtimeTable || !enabled || !isVisible) return;
 
-    logger.debug(`[useRealtimeQuery] Subscribing instance ${instanceId} to ${realtimeSchema}.${realtimeTable}`, {
+    // Correção F-003: Prefixo de tenant obrigatório para canais (Isolation Enforcement)
+    const channelTable = tenantId ? `tenant:${tenantId}:${realtimeTable}` : realtimeTable;
+    
+    // Note: O Supabase Realtime não usa o nome da tabela no método .channel(), 
+    // mas sim no objeto de configuração do .on('postgres_changes', ...).
+    // O prefixo 'tenant:' deve ser usado no NOME DO CANAL para isolamento.
+    const channelName = tenantId ? `tenant:${tenantId}:${realtimeTable}` : `public:${realtimeTable}`;
+
+    logger.debug(`[useRealtimeQuery] Subscribing instance ${instanceId} to channel ${channelName}`, {
       queryKey: queryKeyHash,
       filter: realtimeFilter
     });
@@ -218,12 +228,13 @@ export function useRealtimeQuery<T>({
       realtimeTable,
       realtimeFilter,
       handleRealtimeEvent,
-      realtimeSchema
+      realtimeSchema,
+      tenantId // Passando o tenantId para o manager
     );
 
     return () => {
       logger.debug(`[useRealtimeQuery] Unsubscribing instance ${instanceId} from ${realtimeSchema}.${realtimeTable}`);
-      realtimeChannelManager.unsubscribe(instanceId, realtimeTable, realtimeFilter, realtimeSchema);
+      realtimeChannelManager.unsubscribe(instanceId, realtimeTable, realtimeFilter, realtimeSchema, tenantId);
     };
   }, [
     instanceId,

@@ -121,6 +121,7 @@ export function useDashboardQueries() {
     staleTime: STALE_TIME,
     realtimeTable: 'agents',
     realtimeFilter: tenantId ? `tenant_id=eq.${tenantId}` : undefined,
+    tenantId, // Correção F-003
   });
 
   const jobs = useRealtimeQuery<DashboardJob[]>({
@@ -130,6 +131,7 @@ export function useDashboardQueries() {
     staleTime: STALE_TIME,
     realtimeTable: 'jobs',
     realtimeFilter: tenantId ? `tenant_id=eq.${tenantId}` : undefined,
+    tenantId, // Correção F-003
   });
 
   // Virus scans — no Realtime publication, use adaptive polling
