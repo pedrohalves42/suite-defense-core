@@ -42,7 +42,7 @@ export function AgentFilters({
           <Select value={statusFilter} onValueChange={(v) => onStatusFilter(v as StatusFilter)}>
             <SelectTrigger className="w-full md:w-[180px]">
               <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder={t('agentManagementPage.status', 'Status')} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('agentManagementPage.allStatus')}</SelectItem>
@@ -55,7 +55,7 @@ export function AgentFilters({
           <Select value={versionFilter} onValueChange={(v) => onVersionFilter(v as VersionFilter)}>
             <SelectTrigger className="w-full md:w-[180px]">
               <Shield className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Versão" />
+              <SelectValue placeholder={t('agentManagementPage.version', 'Versão')} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('agentManagementPage.allVersions')}</SelectItem>
@@ -70,7 +70,7 @@ export function AgentFilters({
             className="w-full md:w-auto"
           >
             {generatingGroupReport ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
-            {generatingGroupReport ? 'Gerando...' : `Relatório Forense (${filteredCount})`}
+            {generatingGroupReport ? t('common.generating', 'Gerando...') : `${t('agentManagementPage.forensicReport', 'Relatório Forense')} (${filteredCount})`}
           </Button>
         </div>
       </CardContent>

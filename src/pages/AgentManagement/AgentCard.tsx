@@ -99,7 +99,7 @@ export const AgentCard = memo(({
               </Badge>
               {outdated && (
                 <Badge className="bg-amber-500/10 text-amber-500 text-xs">
-                  <ArrowUpCircle className="h-3 w-3 mr-1" /> Atualização disponível
+                  <ArrowUpCircle className="h-3 w-3 mr-1" /> {t('agentManagementPage.updateAvailable', 'Atualização disponível')}
                 </Badge>
               )}
             </div>
@@ -116,19 +116,19 @@ export const AgentCard = memo(({
 
           {/* Registration */}
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Registrado:</span>
+            <span className="text-muted-foreground">{t('agentManagementPage.registered', 'Registrado')}:</span>
             <span>{formatBrazilDateTime(agent.enrolled_at, 'date')}</span>
           </div>
 
           {/* Protection */}
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Proteção:</span>
+            <span className="text-muted-foreground">{t('agentManagementPage.protection', 'Proteção')}:</span>
             {status === 'online' && !outdated ? (
-              <span className="flex items-center gap-1 text-green-500"><ShieldCheck className="h-4 w-4" /> Protegido</span>
+              <span className="flex items-center gap-1 text-green-500"><ShieldCheck className="h-4 w-4" /> {t('agentManagementPage.protected', 'Protegido')}</span>
             ) : status === 'online' && outdated ? (
-              <span className="flex items-center gap-1 text-amber-500"><ShieldAlert className="h-4 w-4" /> Parcial</span>
+              <span className="flex items-center gap-1 text-amber-500"><ShieldAlert className="h-4 w-4" /> {t('agentManagementPage.partial', 'Parcial')}</span>
             ) : (
-              <span className="flex items-center gap-1 text-muted-foreground"><Shield className="h-4 w-4" /> Inativo</span>
+              <span className="flex items-center gap-1 text-muted-foreground"><Shield className="h-4 w-4" /> {t('agentManagementPage.inactive', 'Inativo')}</span>
             )}
           </div>
 
@@ -142,7 +142,7 @@ export const AgentCard = memo(({
           )}
 
           {!metrics && status === 'online' && (
-            <div className="text-xs text-muted-foreground text-center py-2 border-t">Aguardando métricas...</div>
+            <div className="text-xs text-muted-foreground text-center py-2 border-t">{t('agentManagementPage.waitingMetrics', 'Aguardando métricas...')}</div>
           )}
 
           {status === 'pending' && (
