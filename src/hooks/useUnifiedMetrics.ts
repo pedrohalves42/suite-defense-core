@@ -12,8 +12,10 @@
  * React Query cuida do cache — múltiplas páginas usando o mesmo queryKey
  * compartilham automaticamente os mesmos dados.
  */
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { realtimeChannelManager } from '@/lib/realtime-manager';
 import { useTenant } from '@/hooks/useTenant';
 import { useAgentSnapshots, getAgentStatusCounts } from '@/hooks/useAgentSnapshots';
 import { subDays } from 'date-fns';
@@ -98,6 +100,7 @@ export interface UnifiedMetrics {
 export function useUnifiedMetrics() {
   const { t } = useTranslation();
   const { tenant, loading: tenantLoading } = useTenant();
+  const queryClient = useQueryClient();
   const { data: snapshots, isLoading: snapshotsLoading } = useAgentSnapshots();
   
   // PERF-FIX: Memoize agent status counts
@@ -229,6 +232,33 @@ export function useUnifiedMetrics() {
     realtimeTable: 'system_alerts',
     realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
   });
+
+  // ADR-026: Multi-table realtime synchronization for unified metrics.
+  // This ensures the dashboard reacts to any security or operational event.
+  useEffect(() => {
+    if (!tenant?.id || !queryClient) return;
+
+    const instanceId = `unified-metrics-sync-${tenant.id}`;
+    const tables = ['blocked_access_attempts', 'ai_insights', 'vuln_findings'];
+    
+    tables.forEach(table => {
+      realtimeChannelManager.subscribe(
+        instanceId,
+        table,
+        `tenant_id=eq.${tenant.id}`,
+        () => {
+          logger.debug(`[useUnifiedMetrics] Invalidation triggered by ${table}`);
+          queryClient.invalidateQueries({ queryKey: ['unified-metrics', tenant.id] });
+        }
+      );
+    });
+
+    return () => {
+      tables.forEach(table => {
+        realtimeChannelManager.unsubscribe(instanceId, table, `tenant_id=eq.${tenant.id}`);
+      });
+    };
+  }, [tenant?.id, queryClient]);
 
   // PERF-FIX: Memoize agent-dependent computed values to prevent re-render cascade
   const agents = useMemo(() => {
