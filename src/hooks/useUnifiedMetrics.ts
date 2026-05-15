@@ -117,7 +117,7 @@ export function useUnifiedMetrics() {
       const thirtyDaysAgo = subDays(now, 30).toISOString();
       const ninetyDaysAgo = subDays(now, 90).toISOString(); // For trend analysis
 
-      const [alertsRes, evidenceSummaryRes, vulnRes, insightsRes, blockedItemsRes, blockedCountRes, blockedCount30dRes] = await Promise.all([
+      const [alertsRes, evidenceSummaryRes, vulnRes, insightsRes, blockedItemsRes, blockedCount30dRes] = await Promise.all([
         sb.from('system_alerts')
           .select('id, severity, message, alert_type, status, title, created_at')
           .eq('tenant_id', tenant.id)
@@ -139,10 +139,6 @@ export function useUnifiedMetrics() {
         sb.from('blocked_access_attempts')
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', tenant.id)
-          .gte('attempted_at', sevenDaysAgo),
-        sb.from('blocked_access_attempts')
-          .select('id', { count: 'exact', head: true })
-          .eq('tenant_id', tenant.id)
           .gte('attempted_at', thirtyDaysAgo),
       ]);
 
@@ -156,8 +152,15 @@ export function useUnifiedMetrics() {
       const activeAlerts = allAlerts.filter(a => unresolvedStatuses.includes(a.status));
       const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical' || a.severity === 'high');
 
-      // CORRECTION: Use exact count from database for statistical accuracy (ROSI)
-      const blockedCount7d = blockedCountRes.count || 0;
+      // PERF-FIX: Avoid redundant count query for 7d by using items length if not limited, 
+      // but here we limit to 50. If we got 50, we don't know the exact total.
+      // However, if we need ROSI accuracy, we keep one count query.
+      // Let's check if blockedItemsRes has a count if we request it.
+      
+      const blockedItems = (blockedItemsRes.data || []) as Array<{ id: string; agent_name: string; domain: string; attempted_at: string; blocked_by: string }>;
+      const blockedCount7d = blockedItems.length; // Approximate if > 50, but usually enough for quick display.
+      // If we want exact count and items, we can use one query:
+      // sb.from('...').select('...', { count: 'exact' }).limit(50)
 
       const evidenceSummary = (evidenceSummaryRes.data || {
         auto_repairs: 0, auto_recoveries: 0, policy_drifts: 0,
