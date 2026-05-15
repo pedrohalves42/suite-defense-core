@@ -121,6 +121,7 @@ export function useDashboardQueries() {
     staleTime: STALE_TIME,
     realtimeTable: 'agents',
     realtimeFilter: tenantId ? `tenant_id=eq.${tenantId}` : undefined,
+    tenantId, // Correção F-003
   });
 
   const jobs = useRealtimeQuery<DashboardJob[]>({
