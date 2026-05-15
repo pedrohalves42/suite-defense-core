@@ -29,6 +29,7 @@ interface ActiveTenantContextType {
   activeRole: AppRole | null; // CORREÇÃO: role do usuário no tenant ativo
   setActiveTenant: (tenant: Tenant) => Promise<void>;
   loading: boolean;
+  isSwitching: boolean; // Novo estado de trava de interface
   hasMultipleTenants: boolean;
   isFetched: boolean;
 }
