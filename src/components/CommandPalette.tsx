@@ -135,7 +135,14 @@ export const CommandPalette = () => {
     <CommandDialog open={open} onOpenChange={setOpen}>
       <CommandInput placeholder="Buscar páginas, recursos, ações..." />
       <CommandList>
-        <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
+        <CommandEmpty>
+          {permissionsLoading ? (
+            <div className="flex items-center justify-center p-4">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent mr-2" />
+              <span>Validando permissões...</span>
+            </div>
+          ) : "Nenhum resultado encontrado."}
+        </CommandEmpty>
 
         {favoriteItems.length > 0 && (
           <>
