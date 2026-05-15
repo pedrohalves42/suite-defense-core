@@ -62,15 +62,20 @@ const HANDLERS: Record<string, SubmitHandler> = {
 serveAgent(async (_req, ctx) => {
   const { supabase, agentId, agentName, tenantId, requestId, body } = ctx;
 
-  const parsed = SubmitRouterSchema.safeParse(body);
-  if (!parsed.success) {
+  // Validação estrita do campo de controle 'type'
+  const typeValidation = z.object({
+    type: z.string().min(1).max(50),
+  }).safeParse(body);
+
+  if (!typeValidation.success) {
     return new Response(
-      JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors, available: Object.keys(HANDLERS).filter(k => k.includes('-')) }),
+      JSON.stringify({ error: 'Invalid payload: missing or invalid "type"', issues: typeValidation.error.flatten().fieldErrors }),
       { status: 400, headers: { 'Content-Type': 'application/json' } },
     );
   }
-  const payload = parsed.data as Record<string, unknown>;
-  const type = parsed.data.type;
+  
+  const type = typeValidation.data.type;
+  const payload = body as Record<string, unknown>; // Handlers farão a validação específica do payload
 
   const handler = HANDLERS[type];
   if (!handler) {
