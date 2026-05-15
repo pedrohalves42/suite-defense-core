@@ -123,7 +123,7 @@ export default function AgentManagement() {
               </p>
             </div>
             {(searchTerm || statusFilter !== 'all' || versionFilter !== 'all') && (
-              <Button variant="outline" onClick={clearFilters}>Limpar Filtros</Button>
+              <Button variant="outline" onClick={clearFilters}>{t('common.clearFilters', 'Limpar Filtros')}</Button>
             )}
           </div>
         </Card>

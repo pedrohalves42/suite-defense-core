@@ -3,7 +3,7 @@
  * Evita duplicacao e garante consistencia em todo o codebase
  */
 
-export const APP_ROLES = ['viewer', 'operator', 'analyst', 'admin', 'super_admin'] as const;
+export const APP_ROLES = ['viewer', 'operator', 'analyst', 'admin', 'super_admin', 'member'] as const;
 export type AppRole = typeof APP_ROLES[number];
 
 /**
@@ -19,6 +19,7 @@ export function isValidRole(value: unknown): value is AppRole {
  */
 export const ROLE_PRIORITY: Record<AppRole, number> = {
   viewer: 1,
+  member: 1, // Same as viewer for now
   operator: 2,
   analyst: 3,
   admin: 4,
@@ -30,6 +31,7 @@ export const ROLE_PRIORITY: Record<AppRole, number> = {
  */
 export const ROLE_LABELS: Record<AppRole, string> = {
   viewer: 'Visualizador',
+  member: 'Membro',
   operator: 'Operador',
   analyst: 'Analista',
   admin: 'Admin',

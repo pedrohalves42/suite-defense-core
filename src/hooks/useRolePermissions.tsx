@@ -8,9 +8,9 @@ import { APP_ROLES, type AppRole } from '@/types/roles';
  */
 const PERMISSION_MATRIX: Record<string, AppRole[]> = {
   // Visualização
-  view_dashboard: ['viewer', 'operator', 'analyst', 'admin', 'super_admin'],
-  view_reports: ['viewer', 'operator', 'analyst', 'admin', 'super_admin'],
-  view_agents: ['viewer', 'operator', 'analyst', 'admin', 'super_admin'],
+  view_dashboard: ['viewer', 'operator', 'analyst', 'admin', 'super_admin', 'member'],
+  view_reports: ['viewer', 'operator', 'analyst', 'admin', 'super_admin', 'member'],
+  view_agents: ['viewer', 'operator', 'analyst', 'admin', 'super_admin', 'member'],
   view_audit_logs: ['analyst', 'admin', 'super_admin'],
   view_ai_decisions: ['analyst', 'admin', 'super_admin'],
   view_all_tenants: ['super_admin'],
@@ -56,7 +56,19 @@ const DENIED_ACTIONS: Partial<Record<AppRole, string[]>> = {
   ],
   viewer: [
     'manage_users',
-    'manage_roles',
+    'manage_roles', 
+    'manage_policies',
+    'manage_agents',
+    'execute_playbooks',
+    'manage_jobs',
+    'create_user',
+    'delete_user',
+    'change_mfa_policy',
+    'manage_tenant_settings',
+  ],
+  member: [
+    'manage_users',
+    'manage_roles', 
     'manage_policies',
     'manage_agents',
     'execute_playbooks',

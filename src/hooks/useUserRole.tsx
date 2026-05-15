@@ -19,7 +19,7 @@ export const useUserRole = () => {
     const isAdmin = role === 'admin';
     const isAnalyst = role === 'analyst';
     const isOperator = role === 'operator';
-    const isViewer = role === 'viewer';
+    const isViewer = role === 'viewer' || role === 'member';
     const canWrite = isSuperAdmin || isAdmin || isAnalyst || isOperator;
 
     return { role, isSuperAdmin, isAdmin, isAnalyst, isOperator, isViewer, canWrite };
