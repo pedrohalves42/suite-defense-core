@@ -30,7 +30,8 @@ import {
   handleUpdateMemberRole, handleRemoveMember,
   handleListUsers, handleListAllUsersAdmin,
   handleSetActiveTenant, handleUpdateUserRole,
-  handleAdminCreateUser, handleGetRateLimitStats,
+  handleAdminCreateUser, handleAdminCreateUser as handleAdminCreateUserLocal,
+  handleGetRateLimitStats,
   type HandlerContext,
 } from './handlers/admin.ts';
 import {
@@ -44,7 +45,7 @@ import {
 } from './handlers/security-intel.ts';
 import {
   handleActivateAgentHoneypot, handleRevertAgentHoneypot,
-} from './handlers/honeypot.ts';
+} from './honeypot.ts';
 import {
   handleAgentSnapshot, handleCheckAgentNameAvailability,
   handleDiagnoseAgent, handleGetAgentTimeline,
@@ -75,9 +76,10 @@ import { handleCalculateCompliance } from './handlers/compliance.ts';
 import { handleExportEvidenceBundle } from './handlers/evidence-bundle.ts';
 import { handleTenantFeatures, handleTenantInfo, handleTenantStats } from './handlers/tenant-api.ts';
 
-const FETCH_TIMEOUT_MS = 20000; // Lower than middleware timeout (25s) to allow gateway to return a clean 504/error
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+// Initialize Hexagonal Components
+import { SupabaseRouterAdapter } from './infrastructure/router/adapters/supabase-router-adapter.ts';
+import { ActionDispatcherUseCase } from './domain/router/use-cases/action-dispatcher.ts';
+import { validateDispatch } from '../_shared/schemas/registry.ts'; // Correção F-002: Validador de perímetro
 
 // Configuration for the Router Adapter
 const ACTION_TO_FUNCTION: Record<string, string> = {
@@ -166,21 +168,13 @@ const INLINED_HANDLERS: Record<string, any> = {
   'admin:tenant-stats': handleTenantStats,
 };
 
-// Initialize Hexagonal Components
-import { SupabaseRouterAdapter } from './infrastructure/router/adapters/supabase-router-adapter.ts';
-import { ActionDispatcherUseCase } from './domain/router/use-cases/action-dispatcher.ts';
-
 const routerAdapter = new SupabaseRouterAdapter(ACTION_TO_FUNCTION, INLINED_HANDLERS);
 const actionDispatcher = new ActionDispatcherUseCase(routerAdapter);
-
-// ALL_VALID_ACTIONS Set is derived from keys of ACTION_TO_FUNCTION and INLINED_HANDLERS
-// and is checked inside the actionDispatcher logic.
-// Keeping it here for backward compatibility if any middleware uses it.
 
 // Correção F-002: Validação estrita do envelope de requisição do gateway
 const RouterSchema = z.object({
   action: z.string().min(1).max(80),
-  payload: z.record(z.string(), z.unknown()).default({}), // Garantindo chaves de string e valor desconhecido, mas validado pelos handlers
+  payload: z.record(z.string(), z.unknown()).default({}), 
 });
 
 function jsonRes(data: unknown, status: number, origin: string | null) {
@@ -189,8 +183,6 @@ function jsonRes(data: unknown, status: number, origin: string | null) {
     headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' },
   });
 }
-
-// Removed duplicate Set definition
 
 const FORWARDED_HEADERS = [
   'Authorization', 'apikey', 'X-Internal-Secret', 'X-Agent-Token',
@@ -222,12 +214,27 @@ servePublic(async (req, ctx) => {
 
     const parsed = RouterSchema.safeParse(body);
     if (!parsed.success) {
-      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Invalid request', 400, requestId, origin);
+      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Invalid request envelope', 400, requestId, origin);
     }
 
-    const { action, payload } = parsed.data;
+    const { action, payload: rawPayload } = parsed.data;
 
-    // Use Hexagonal Dispatcher - It will handle the action check internally and return 400 if unknown
+    // Correção F-002: Validação profunda do payload ANTES do despacho
+    let validatedPayload: any;
+    try {
+      validatedPayload = validateDispatch(action, rawPayload);
+    } catch (validationErr) {
+      logger.error(`[api-gateway] Payload validation failed for ${action}`, validationErr);
+      return createErrorResponse(
+        ErrorCode.BAD_REQUEST, 
+        `Validation failed for ${action}: ${validationErr.message}`, 
+        400, 
+        requestId, 
+        origin
+      );
+    }
+
+    // Use Hexagonal Dispatcher
     const dispatchContext = {
       supabase: supabaseAny,
       requestId,
@@ -237,10 +244,7 @@ servePublic(async (req, ctx) => {
       forwardHeaders
     };
 
-    // Override the router's default proxy fetch with our retry-enabled httpJson if needed
-    // But since the dispatcher is internal, we should ensure the adapter/use-case uses the right tool.
-    // For now, we handle the result.
-    const result = await actionDispatcher.dispatch(action, payload, dispatchContext);
+    const result = await actionDispatcher.dispatch(action, validatedPayload, dispatchContext);
 
     const elapsed = Date.now() - startedAt;
 
@@ -257,13 +261,9 @@ servePublic(async (req, ctx) => {
     if (typeof resultObj?.__status === 'number') {
       const { __status, ...rest } = resultObj;
       if (__status >= 400) {
-        const errMessage =
-          typeof rest.error === 'string'
-            ? rest.error
-            : (rest.message as string) || 'Internal Gateway Error';
         return createErrorResponse(
           ErrorCode.INTERNAL_ERROR,
-          errMessage,
+          typeof rest.error === 'string' ? rest.error : (rest.message as string) || 'Internal Error',
           __status,
           requestId,
           origin,

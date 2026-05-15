@@ -90,7 +90,25 @@ export const brandingSchema = z.object({
 
 // --- 5. Contratos de API Gateway (Payloads) ---
 
+export const updateStatusSchema = z.object({
+  user_id: z.string().uuid(),
+  is_active: z.boolean(),
+});
+
+export const updateMemberRoleSchema = z.object({
+  user_role_id: z.string().uuid(),
+  new_role: z.enum(['admin', 'operator', 'viewer']),
+});
+
+export const removeMemberSchema = z.object({ 
+  member_id: z.string().uuid() 
+});
+
+export const setTenantSchema = z.object({ 
+  tenant_id: z.string().uuid() 
+});
+
 export const gatewayRequestSchema = z.object({
   action: z.string().min(1).max(80), // Formato: "namespace:action"
-  payload: z.record(z.string(), z.unknown()).optional().default({}),
+  payload: z.record(z.string(), z.unknown()).default({}),
 });
