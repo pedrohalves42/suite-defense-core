@@ -169,6 +169,7 @@ const INLINED_HANDLERS: Record<string, any> = {
 // Initialize Hexagonal Components
 import { SupabaseRouterAdapter } from './infrastructure/router/adapters/supabase-router-adapter.ts';
 import { ActionDispatcherUseCase } from './domain/router/use-cases/action-dispatcher.ts';
+import { validateDispatch } from '../_shared/schemas/registry.ts'; // Correção F-002: Validador de perímetro
 
 const routerAdapter = new SupabaseRouterAdapter(ACTION_TO_FUNCTION, INLINED_HANDLERS);
 const actionDispatcher = new ActionDispatcherUseCase(routerAdapter);
