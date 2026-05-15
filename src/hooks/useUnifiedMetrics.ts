@@ -234,6 +234,7 @@ export function useUnifiedMetrics() {
     gcTime: 15 * 60 * 1000, // Keep in cache for 15 minutes
     realtimeTable: 'system_alerts',
     realtimeFilter: tenant?.id ? `tenant_id=eq.${tenant.id}` : undefined,
+    tenantId: tenant?.id, // Correção F-003
   });
 
   const instanceIdRef = useRef(`unified-metrics-sync-${Math.random().toString(36).substring(2, 9)}`);
