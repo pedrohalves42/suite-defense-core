@@ -82,8 +82,8 @@ export const tenantSettingsSchema = z.object({
 export const brandingSchema = z.object({
   company_name: z.string().min(1).max(255),
   company_cnpj: z.string().max(20).optional(),
-  primary_color: z.string().regex(/^#[0-9A-F]{6}$/i),
-  secondary_color: z.string().regex(/^#[0-9A-F]{6}$/i),
+  primary_color: z.string().regex(/^#[0-9A-F]{6}$/i, 'Cor inválida'),
+  secondary_color: z.string().regex(/^#[0-9A-F]{6}$/i, 'Cor inválida'),
   logo_url: z.string().url().optional().or(z.literal('')),
 });
 
