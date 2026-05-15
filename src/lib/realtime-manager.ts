@@ -61,7 +61,7 @@ class RealtimeChannelManager {
     filter: string | undefined,
     callback: EventCallback,
     schema: string = 'public',
-    tenantId?: string // Correção F-003
+    tenantId: string | undefined = undefined // F-003: Tenant Isolation is now priority
   ): void {
     const channelKey = this.getChannelKey(schema, table, filter, tenantId);
     const currentSubscribers = this.subscribers.get(channelKey) || [];

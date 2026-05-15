@@ -92,7 +92,9 @@ export function useNotifications() {
             type: payload.eventType === 'INSERT' ? "critical" : "warning",
           });
         }
-      }
+      },
+      'public',
+      tenant.id
     );
 
     // Subscribe to Virus Scans
@@ -110,7 +112,9 @@ export function useNotifications() {
             type: "critical",
           });
         }
-      }
+      },
+      'public',
+      tenant.id
     );
 
     // Subscribe to Agents
@@ -140,14 +144,14 @@ export function useNotifications() {
             type: "critical",
           });
         }
-      }
+      },
+      'public',
+      tenant.id
     );
-
-    return () => {
       logger.debug('[useNotifications] Cleaning up realtime subscriptions');
-      realtimeChannelManager.unsubscribe(`${instanceId}-jobs`, 'jobs', `tenant_id=eq.${tenant.id}`);
-      realtimeChannelManager.unsubscribe(`${instanceId}-scans`, 'virus_scans', `tenant_id=eq.${tenant.id}`);
-      realtimeChannelManager.unsubscribe(`${instanceId}-agents`, 'agents', `tenant_id=eq.${tenant.id}`);
+      realtimeChannelManager.unsubscribe(`${instanceId}-jobs`, 'jobs', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
+      realtimeChannelManager.unsubscribe(`${instanceId}-scans`, 'virus_scans', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
+      realtimeChannelManager.unsubscribe(`${instanceId}-agents`, 'agents', `tenant_id=eq.${tenant.id}`, 'public', tenant.id);
     };
   }, [tenant?.id, addNotification, instanceId]);
 
