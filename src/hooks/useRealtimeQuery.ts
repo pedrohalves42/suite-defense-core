@@ -207,7 +207,7 @@ export function useRealtimeQuery<T>({
             // V-FIX: Safely check for data existence before invalidating to avoid unnecessary refetching
             const currentData = queryClient.getQueryData(queryKey);
             if (currentData !== undefined && currentData !== null) {
-              queryClient.invalidateQueries({ queryKey, exact: true });
+              throttledInvalidate(queryKey);
             }
           }
         }
