@@ -15,9 +15,12 @@ import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs';
+import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
+import { useActionCenterCount } from '@/hooks/useActionCenter';
 
 export const AppLayout = () => {
   const isMobile = useIsMobile();
+  const { urgentCount } = useActionCenterCount();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
@@ -103,7 +106,9 @@ export const AppLayout = () => {
                 <nav aria-label="Caminho de navegação">
                   <Breadcrumbs />
                 </nav>
-                <Outlet />
+                <RouteErrorBoundary route="App Content">
+                  <Outlet />
+                </RouteErrorBoundary>
               </div>
             </main>
           </div>
@@ -111,7 +116,7 @@ export const AppLayout = () => {
           {/* Mobile bottom navigation */}
           {isMobile && (
             <nav aria-label="Navegação móvel inferior">
-              <MobileBottomNav onMenuClick={() => setMobileMenuOpen(true)} />
+              <MobileBottomNav onMenuClick={() => setMobileMenuOpen(true)} alertCount={urgentCount} />
             </nav>
           )}
 
