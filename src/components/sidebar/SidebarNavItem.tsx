@@ -4,6 +4,7 @@ import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import { itemVariants } from './constants';
 import { useLocation } from 'react-router-dom';
+import { useRoutePrefetch } from '@/hooks/useRoutePrefetch';
 import type { MenuItem } from './menuItems';
 
 interface SidebarNavItemProps {
