@@ -39,9 +39,15 @@ export async function handleNetworkInfo(
     );
   }
 
-  await supabase.from('agent_network_info').delete()
-    .eq('agent_id', agentId)
-    .lt('collected_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+  // Retention cleanup is sampled to reduce write IOPS on high-frequency telemetry.
+  if (Math.random() < 0.02) {
+    const cleanup = supabase.from('agent_network_info').delete()
+      .eq('agent_id', agentId)
+      .lt('collected_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+    const runtime = (globalThis as { EdgeRuntime?: { waitUntil?: (promise: Promise<unknown>) => void } }).EdgeRuntime;
+    if (runtime?.waitUntil) runtime.waitUntil(cleanup);
+    else cleanup.catch((error: unknown) => logger.warn(`[${requestId}] Deferred network cleanup failed`, error));
+  }
 
   logger.info(`[${requestId}] Network info saved for agent ${agentId}`);
   return { success: true };

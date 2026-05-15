@@ -1,8 +1,8 @@
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from './logger.ts';
+import { timingSafeEqual } from './crypto-utils.ts';
 
 // Timing-safe comparison for strings
-export { timingSafeEqual } from './crypto-utils.ts';
+export { timingSafeEqual };
 
 export interface HmacVerificationResult {
   valid: boolean;
@@ -59,15 +59,9 @@ function parseTimestampToMs(rawTimestamp: string): number | null {
 
 interface PayloadVariant {
   payload: string;
-  sep: ':' | '.';
-  fmt: 'raw' | 'compact';
-  mode: string;
-}
-
-interface CachedFormat {
-  key_encoding: string;
-  separator: string;
-  body_format: string;
+  sep: ':';
+  fmt: 'raw';
+  mode: 'strict_colon_raw';
 }
 
 // ── In-memory CryptoKey cache (avoids re-importing same key material) ──
@@ -133,11 +127,8 @@ async function computeHmacHex(cryptoKey: CryptoKey, message: string): Promise<st
     .join('');
 }
 
-/**
- * Legacy wrapper for hex comparison
- */
-function timingSafeHexCompare(a: string, b: string): boolean {
-  return timingSafeEqual(a.toLowerCase(), b.toLowerCase());
+async function timingSafeHexCompare(a: string, b: string): Promise<boolean> {
+  return await timingSafeEqual(a.toLowerCase(), b.toLowerCase());
 }
 
 /**
@@ -162,14 +153,8 @@ export async function verifyHmacSignature(
   const signatureRaw = request.headers.get('X-HMAC-Signature')?.trim();
   const signature = signatureRaw?.toLowerCase();
 
-  const timestampCandidates = uniqueNonEmpty([
-    request.headers.get('X-HMAC-Timestamp'),
-    request.headers.get('X-Timestamp'),
-  ]);
-  const nonceCandidates = uniqueNonEmpty([
-    request.headers.get('X-HMAC-Nonce'),
-    request.headers.get('X-Nonce'),
-  ]);
+  const timestampCandidates = uniqueNonEmpty([request.headers.get('X-HMAC-Timestamp')]);
+  const nonceCandidates = uniqueNonEmpty([request.headers.get('X-HMAC-Nonce')]);
 
   const serverTimeMs = Date.now();
 
@@ -177,7 +162,7 @@ export async function verifyHmacSignature(
     return {
       valid: false,
       errorCode: 'AUTH_MISSING_HEADERS',
-      errorMessage: 'Headers HMAC ausentes (X-HMAC-Signature, X-HMAC-Timestamp|X-Timestamp, X-HMAC-Nonce|X-Nonce)',
+      errorMessage: 'Missing strict HMAC headers (X-HMAC-Signature, X-HMAC-Timestamp, X-HMAC-Nonce)',
       transient: false,
       serverTimeMs,
     };
@@ -193,74 +178,31 @@ export async function verifyHmacSignature(
     body = '';
   }
 
-  let compactBody = body;
-  const trimmedBody = body.trim();
-  if (trimmedBody.startsWith('{') || trimmedBody.startsWith('[')) {
-    try {
-      compactBody = JSON.stringify(JSON.parse(trimmedBody));
-    } catch {
-      compactBody = body;
-    }
-  }
-
   // ── 3. Build key material ─────────────────────────────────
-  const encoder = new TextEncoder();
   const keyVariants: { name: string; data: Uint8Array }[] = [];
   try {
     keyVariants.push({ name: 'hex', data: hexToBytes(hmacSecret) });
   } catch {
-    // hex decode failed — will use utf8 only
+    // Strict mode rejects non-HEX secrets instead of trying UTF-8 fallbacks.
   }
-  keyVariants.push({ name: 'utf8', data: encoder.encode(hmacSecret) });
 
   if (keyVariants.length === 0) {
     return {
       valid: false,
       errorCode: 'AUTH_INVALID_SECRET_FORMAT',
-      errorMessage: 'HMAC secret invalido. Agente deve ser reinstalado com secret HEX valido.',
+      errorMessage: 'Invalid HMAC secret. Agent must be reinstalled with a valid 64-character HEX secret.',
       transient: false,
     };
   }
 
-  // ── 4. Load format cache (single DB call) ─────────────────
-  let cachedFormat: CachedFormat | null = null;
-  let resolvedTenantId: string | null = context?.tenantId ?? null;
-
-  if (context?.agentId) {
-    if (!resolvedTenantId) {
-      const { data: agentRow } = await supabase
-        .from('agents')
-        .select('tenant_id')
-        .eq('id', context.agentId)
-        .maybeSingle();
-      resolvedTenantId = agentRow?.tenant_id ?? null;
-    }
-
-    const { data: cache } = await supabase
-      .from('agent_hmac_format_cache')
-      .select('key_encoding, separator, body_format')
-      .eq('agent_id', context.agentId)
-      .maybeSingle();
-    if (cache) cachedFormat = cache;
-  }
-
+  // ── 4. Strict payload format: `${timestamp}:${nonce}:${rawBody}` only.
   // ── 5. Build payload variant generator ────────────────────
-  const buildPayloadVariants = (
-    timestamp: string,
-    nonce: string,
-  ): PayloadVariant[] => {
-    const variants: PayloadVariant[] = [
-      { payload: `${timestamp}:${nonce}:${body}`, sep: ':', fmt: 'raw', mode: 'strict_colon_raw' },
-    ];
-    if (compactBody !== body) {
-      variants.push({ payload: `${timestamp}:${nonce}:${compactBody}`, sep: ':', fmt: 'compact', mode: 'colon_compact' });
-    }
-    variants.push({ payload: `${timestamp}.${nonce}.${body}`, sep: '.', fmt: 'raw', mode: 'dot_raw_legacy' });
-    if (compactBody !== body) {
-      variants.push({ payload: `${timestamp}.${nonce}.${compactBody}`, sep: '.', fmt: 'compact', mode: 'dot_compact_legacy' });
-    }
-    return variants;
-  };
+  const buildPayloadVariant = (timestamp: string, nonce: string): PayloadVariant => ({
+    payload: `${timestamp}:${nonce}:${body}`,
+    sep: ':',
+    fmt: 'raw',
+    mode: 'strict_colon_raw',
+  });
 
   // ── 6. Verification loop — FAST PATH then SLOW PATH ───────
   // P3: Dynamic skew based on tenant policy (fallback to 5m)
@@ -288,8 +230,6 @@ export async function verifyHmacSignature(
     }))
   );
 
-  // Determine fast-path: if cache exists, try ONLY cached combo first
-  // This reduces worst-case from 16 crypto ops to 1 for known agents
   const onMatch = async (keyName: string, variant: PayloadVariant): Promise<HmacVerificationResult> => {
     // Atomic replay protection: check + insert in one DB call (eliminates TOCTOU)
     const { data: recorded, error: rpcError } = await supabase.rpc('hmac_check_and_record', {
@@ -320,34 +260,10 @@ export async function verifyHmacSignature(
       };
     }
 
-    // Update format cache (fire-and-forget)
-    if (context?.agentId && resolvedTenantId) {
-      const updateCache = async () => {
-        try {
-          const { error } = await supabase.from('agent_hmac_format_cache').upsert(
-            {
-              agent_id: context.agentId,
-              tenant_id: resolvedTenantId,
-              key_encoding: keyName,
-              separator: variant.sep,
-              body_format: variant.fmt,
-              last_verified_at: new Date().toISOString(),
-              hit_count: 1,
-            },
-            { onConflict: 'agent_id' },
-          );
-          if (error) logger.warn('[HMAC] Cache update failed', { error: error.message });
-        } catch (e: any) {
-          logger.error('[HMAC] Cache update promise rejected', { error: e.message });
-        }
-      };
-      // In Deno Deploy / Edge Functions, we should not use un-awaited async functions 
-      // without waitUntil or similar, but since this is called within a context that 
-      // often uses EdgeRuntime.waitUntil, it's generally safe.
-      updateCache();
-    }
+    // Strict mode avoids per-request HMAC format-cache writes; replay protection remains atomic.
 
-    return { valid: true, rawBody: body, modeUsed: variant.mode };
+
+    return { valid: true, rawBody: body, modeUsed: 'strict_colon_raw' };
   };
 
   for (const timestamp of timestampCandidates) {
@@ -366,44 +282,10 @@ export async function verifyHmacSignature(
     hasTimestampInRange = true;
 
     for (const nonce of nonceCandidates) {
-      // ── FAST PATH: try cached format only (1 crypto op) ───
-      if (cachedFormat) {
-        const cachedKey = importedKeys.find((k) => k.name === cachedFormat!.key_encoding);
-        if (cachedKey) {
-          const cachedSep = cachedFormat.separator as ':' | '.';
-          const cachedFmt = cachedFormat.body_format as 'raw' | 'compact';
-          const bodyForVariant = cachedFmt === 'compact' ? compactBody : body;
-          const cachedPayload = `${timestamp}${cachedSep}${nonce}${cachedSep}${bodyForVariant}`;
-          const cachedVariant: PayloadVariant = {
-            payload: cachedPayload,
-            sep: cachedSep,
-            fmt: cachedFmt,
-            mode: `cached_${cachedSep === ':' ? 'colon' : 'dot'}_${cachedFmt}`,
-          };
-
-          if (await tryVariant(cachedKey.key, cachedVariant, signature)) {
-            return await onMatch(cachedKey.name, cachedVariant);
-          }
-        }
-        // Cache miss — agent may have changed format. Fall through to slow path.
-      }
-
-      // ── SLOW PATH: try all variants (existing agents without cache, or cache miss)
-      const allVariants = buildPayloadVariants(timestamp, nonce);
-
+      const variant = buildPayloadVariant(timestamp, nonce);
       for (const ik of importedKeys) {
-        for (const variant of allVariants) {
-          // Skip the combo we already tried in fast path
-          if (cachedFormat &&
-              ik.name === cachedFormat.key_encoding &&
-              variant.sep === cachedFormat.separator &&
-              variant.fmt === cachedFormat.body_format) {
-            continue;
-          }
-
-          if (await tryVariant(ik.key, variant, signature)) {
-            return await onMatch(ik.name, variant);
-          }
+        if (await tryVariant(ik.key, variant, signature)) {
+          return await onMatch(ik.name, variant);
         }
       }
     }
@@ -441,18 +323,16 @@ export async function verifyHmacSignature(
     agent: agentName,
     error_code: 'AUTH_INVALID_SIGNATURE',
     has_timestamp_hmac: !!request.headers.get('X-HMAC-Timestamp'),
-    has_timestamp_legacy: !!request.headers.get('X-Timestamp'),
     has_nonce_hmac: !!request.headers.get('X-HMAC-Nonce'),
-    has_nonce_legacy: !!request.headers.get('X-Nonce'),
     bodyLength: body.length,
-    mode: cachedFormat ? 'cache_miss_all_variants' : 'no_cache_all_variants',
+    mode: 'strict_colon_raw',
   });
 
   return {
     valid: false,
     rawBody: body,
     errorCode: 'AUTH_INVALID_SIGNATURE',
-    errorMessage: 'Assinatura HMAC invalida (payload/secret/header mismatch)',
+    errorMessage: 'Invalid strict HMAC signature (payload/secret/header mismatch)',
     transient: false,
     serverTimeMs,
   };

@@ -1,7 +1,7 @@
 // Enhanced error handler with standardized responses and CORS support
 import { buildCorsHeaders, corsHeaders } from './cors.ts';
 import { ZodError } from 'https://esm.sh/zod@3.23.8';
-import { logger } from './logger.ts';
+import { logger, scheduleLogFlush } from './logger.ts';
 
 export { corsHeaders };
 
@@ -121,6 +121,7 @@ export function handleException(
     agentId: context?.agentId,
     stack: error instanceof Error ? error.stack : undefined
   });
+  scheduleLogFlush();
   
   const env = Deno.env.get('ENV') || Deno.env.get('ENVIRONMENT');
   const isProduction = env === 'production';

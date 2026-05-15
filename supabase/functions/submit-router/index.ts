@@ -2,15 +2,14 @@
 /**
  * submit-router -- Consolidated agent telemetry submission endpoint
  * 
- * Consolidates non-HMAC submit-* functions that use serveAgent middleware.
- * HMAC functions use submit-hmac-router instead.
+ * Consolidates agent telemetry submission functions behind strict HMAC verification.
  * 
  * Usage: POST /submit-router
  * Body: { "type": "backup-status" | "data-exposure" | "endpoint-events" | "network-info" | 
  *         "process-lineage" | "ransomware-indicator" | "agent-evidence" | "processes", ...payload }
- * Headers: X-Agent-Token
+ * Headers: X-Agent-Token plus strict X-HMAC-Signature, X-HMAC-Timestamp, X-HMAC-Nonce
  * 
- * Auth: Agent token (X-Agent-Token via serveAgent, no HMAC required)
+ * Auth: Agent token + mandatory HMAC via serveAgent
  */
 
 import { serveAgent } from '../_shared/serve-tenant.ts';
@@ -87,4 +86,7 @@ serveAgent(async (_req, ctx) => {
   return new Response(JSON.stringify(result), {
     status: 200, headers: { 'Content-Type': 'application/json' },
   });
+}, {
+  hmacVerify: true,
+  rateLimit: { endpoint: 'submit-router', maxRequests: 120, windowMinutes: 1, blockMinutes: 5 },
 });
