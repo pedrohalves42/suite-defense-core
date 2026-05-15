@@ -126,8 +126,9 @@ class RealtimeChannelManager {
     return true;
   }
 
-  private getChannelKey(schema: string, table: string, filter?: string): string {
-    return `${schema}:${table}${filter ? `:${filter}` : ''}`;
+  private getChannelKey(schema: string, table: string, filter?: string, tenantId?: string): string {
+    const prefix = tenantId ? `tenant:${tenantId}:` : '';
+    return `${prefix}${schema}:${table}${filter ? `:${filter}` : ''}`;
   }
 
   private getSafeChannelName(key: string): string {
