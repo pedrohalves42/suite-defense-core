@@ -51,15 +51,16 @@ interface UseRealtimeQueryOptions<T> {
   queryKey: unknown[];
   queryFn: () => Promise<T>;
   realtimeTable?: string;
-  realtimeSchema?: string; // New option
+  realtimeSchema?: string;
   realtimeFilter?: string;
+  tenantId?: string; // Correção F-003: Prefixo de tenant obrigatório para canais
   realtimeEvents?: Array<'INSERT' | 'UPDATE' | 'DELETE'>;
   fallbackInterval?: number;
   enabled?: boolean;
   staleTime?: number;
   meta?: Record<string, unknown>;
   gcTime?: number;
-  predicate?: (item: T) => boolean; // New: Client-side filter for incoming payloads
+  predicate?: (item: T) => boolean;
 }
 
 const DEFAULT_EVENTS: Array<'INSERT' | 'UPDATE' | 'DELETE'> = ['INSERT', 'UPDATE', 'DELETE'];
