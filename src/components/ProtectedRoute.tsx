@@ -103,5 +103,20 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   // ADR-026: Wrap children with SessionProvider for session timeout and tracking
-  return <SessionProvider>{children}</SessionProvider>;
+  return (
+    <SessionProvider>
+      {isSwitching && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm transition-all animate-in fade-in">
+          <div className="flex flex-col items-center gap-4 p-8 rounded-xl bg-card border shadow-2xl">
+            <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+            <div className="text-center space-y-1">
+              <h3 className="font-bold text-lg tracking-tight">Sincronizando Empresa</h3>
+              <p className="text-sm text-muted-foreground animate-pulse">Atualizando contexto de segurança e cache...</p>
+            </div>
+          </div>
+        </div>
+      )}
+      {children}
+    </SessionProvider>
+  );
 };
