@@ -16,6 +16,7 @@ import { useMemo, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { realtimeChannelManager } from '@/lib/realtime-manager';
+import { logger } from '@/lib/logger';
 import { useTenant } from '@/hooks/useTenant';
 import { useAgentSnapshots, getAgentStatusCounts } from '@/hooks/useAgentSnapshots';
 import { subDays } from 'date-fns';
