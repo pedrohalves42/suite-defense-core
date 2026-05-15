@@ -18,7 +18,12 @@ export const NavLink = ({ to, children, className, activeClassName, end = false,
     : location.pathname.startsWith(to);
 
   return (
-    <Link to={to} onClick={onClick} className={cn(className, isActive && activeClassName)}>
+    <Link 
+      to={to} 
+      onClick={onClick} 
+      onMouseEnter={onMouseEnter}
+      className={cn(className, isActive && activeClassName)}
+    >
       {children}
     </Link>
   );
