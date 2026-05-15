@@ -21,8 +21,8 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [hasValidSession, setHasValidSession] = useState<boolean | null>(null);
   
   // ADR-026 FIX: Get tenant info for validation
-  // PATCH #4: Include isFetched to prevent premature redirects
-  const { tenants, loading: tenantLoading, isFetched } = useActiveTenant();
+  // PATCH #5: Incluído isSwitching para trava de interface durante troca de contexto
+  const { tenants, loading: tenantLoading, isFetched, isSwitching } = useActiveTenant();
 
   // Second chance: verify session directly if useAuth says no user
   useEffect(() => {
