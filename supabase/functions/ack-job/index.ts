@@ -59,6 +59,19 @@ serveAgent(async (req, ctx) => {
     );
   }
 
+  // Correção F-005: Bloquear encerramento de jobs críticos via endpoint legado (ack-job)
+  const CRITICAL_JOB_TYPES = ['security_scan', 'software_inventory', 'web_activity', 'collect_web_activity', 'scan_vulnerabilities'];
+  if (CRITICAL_JOB_TYPES.includes(existingJob.type)) {
+    logger.error(`[ACK_BYPASS_ATTEMPT] Bloqueada tentativa de finalizar job crítico ${existingJob.type} via ack-job legado. Agente: ${agentName}`);
+    return new Response(
+      JSON.stringify({ 
+        error: 'INTEGRITY_VIOLATION', 
+        message: `Jobs do tipo ${existingJob.type} devem usar /submit-job-result para garantir a integridade da telemetria.` 
+      }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   // Verify job belongs to this agent
   if (existingJob.agent_name !== agentName) {
     return new Response(
