@@ -29,6 +29,7 @@ interface ActiveTenantContextType {
   activeRole: AppRole | null; // CORREÇÃO: role do usuário no tenant ativo
   setActiveTenant: (tenant: Tenant) => Promise<void>;
   loading: boolean;
+  isSwitching: boolean; // Novo estado de trava de interface
   hasMultipleTenants: boolean;
   isFetched: boolean;
 }
@@ -77,6 +78,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const [activeTenantId, setActiveTenantId] = useState<string | null>(null);
+  const [isSwitching, setIsSwitching] = useState(false);
   const isSyncingRef = useRef(false);
 
   // Sync state between current user and selection
@@ -218,12 +220,13 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   }, [user?.id, activeTenant?.id]);
 
   const setActiveTenant = useCallback(async (tenant: Tenant) => {
-    if (activeTenant?.id === tenant.id || isSyncingRef.current) {
+    if (activeTenant?.id === tenant.id || isSyncingRef.current || isSwitching) {
       return;
     }
 
     const previousTenantId = activeTenantId || activeTenant?.id;
     isSyncingRef.current = true;
+    setIsSwitching(true); // Ativa trava de interface
 
     // V-DIAG: Safety timeout — never let isSyncingRef stay locked forever
     const safetyTimer = setTimeout(() => {
@@ -294,6 +297,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
       // Brief release delay so dependent components react before next sync may start
       setTimeout(() => {
         isSyncingRef.current = false;
+        setIsSwitching(false); // Libera trava de interface
       }, 500);
     }
   }, [activeTenant?.id, queryClient]);
@@ -306,6 +310,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
         activeRole, // CORREÇÃO: expor role do tenant ativo
         setActiveTenant, 
         loading,
+        isSwitching,
         hasMultipleTenants,
         isFetched,
       }}

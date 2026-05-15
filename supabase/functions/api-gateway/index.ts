@@ -177,9 +177,10 @@ const actionDispatcher = new ActionDispatcherUseCase(routerAdapter);
 // and is checked inside the actionDispatcher logic.
 // Keeping it here for backward compatibility if any middleware uses it.
 
+// Correção F-002: Validação estrita do envelope de requisição do gateway
 const RouterSchema = z.object({
   action: z.string().min(1).max(80),
-  payload: z.record(z.unknown()).optional().default({}),
+  payload: z.record(z.string(), z.unknown()).default({}), // Garantindo chaves de string e valor desconhecido, mas validado pelos handlers
 });
 
 function jsonRes(data: unknown, status: number, origin: string | null) {
