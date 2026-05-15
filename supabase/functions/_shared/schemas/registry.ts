@@ -5,7 +5,7 @@ import * as schemas from './system-schemas.ts';
  * Dispatch Registry — Mapeia ações do gateway para seus schemas de validação.
  * F-002: Impede o bypass de validação exigindo um contrato para cada ação.
  */
-export const DISPATCH_REGISTRY: Record<string, z.ZodObject<any> | z.ZodEffects<any>> = {
+export const DISPATCH_REGISTRY: Record<string, z.ZodType<any>> = {
   // Autenticação
   'admin:change-password': schemas.changePasswordSchema,
   
