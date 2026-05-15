@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
@@ -106,11 +106,13 @@ export function useRealTimeSecurityDashboard() {
     setEvents(transformed.slice(0, 20));
   }, [recentLogs]);
 
+  const instanceIdRef = useRef(`rt-security-dashboard-${Math.random().toString(36).substring(2, 9)}`);
+
   // Realtime
   useEffect(() => {
     if (!tenant?.id || !isLive) return;
     
-    const instanceId = `rt-security-dashboard-${tenant.id}`;
+    const instanceId = instanceIdRef.current;
     
     // Subscribe to security logs for new events
     realtimeChannelManager.subscribe(

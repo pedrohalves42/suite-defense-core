@@ -16,7 +16,6 @@ import { logger } from '@/lib/logger';
 export const GlobalJobWatcher = () => {
   const navigate = useNavigate();
   const { tenant } = useTenant();
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   // Track jobs we've already notified about to avoid duplicates
   const notifiedJobsRef = useRef<Set<string>>(new Set());
 

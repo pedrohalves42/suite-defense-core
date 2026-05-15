@@ -60,7 +60,6 @@ export default function Signup() {
         data: {
           full_name: validation.data.fullName,
           trial_signup: true,
-          endpoints_limit: 2,
         },
       },
     });
