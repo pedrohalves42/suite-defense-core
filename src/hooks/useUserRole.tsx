@@ -1,29 +1,68 @@
-import { useMemo } from 'react';
-import { useActiveTenant } from './useActiveTenant';
-import { type AppRole } from '@/types/roles';
+import { useState, useEffect } from 'react';
+import { useAuth } from './useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { AppRole } from '@/types/roles';
+import { logger } from '@/lib/logger';
 
-/**
- * V-701 FIX: useUserRole now delegates to useActiveTenant's activeRole
- * This ensures the role is ALWAYS scoped to the active tenant context,
- * preventing cross-tenant privilege escalation.
- * 
- * Previously used global get_user_roles RPC which returned the highest
- * priority role across ALL tenants — violating INV-006.
- */
-export const useUserRole = () => {
-  const { activeRole, loading } = useActiveTenant();
+export function useUserRole() {
+  const { user, loading: authLoading } = useAuth();
+  const [role, setRole] = useState<AppRole | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const derived = useMemo(() => {
-    const role = activeRole;
-    const isSuperAdmin = role === 'super_admin';
-    const isAdmin = role === 'admin';
-    const isAnalyst = role === 'analyst';
-    const isOperator = role === 'operator';
-    const isViewer = role === 'viewer' || role === 'member';
-    const canWrite = isSuperAdmin || isAdmin || isAnalyst || isOperator;
+  useEffect(() => {
+    async function fetchRole() {
+      if (authLoading) return;
+      if (!user) {
+        setRole(null);
+        setLoading(false);
+        return;
+      }
 
-    return { role, isSuperAdmin, isAdmin, isAnalyst, isOperator, isViewer, canWrite };
-  }, [activeRole]);
+      // Check global super_admin first
+      if (user.app_metadata?.is_super_admin === true) {
+        setRole('super_admin');
+        setLoading(false);
+        return;
+      }
 
-  return { ...derived, loading };
-};
+      try {
+        const activeTenantId = user.app_metadata?.active_tenant_id;
+        if (!activeTenantId) {
+          setRole(null);
+          setLoading(false);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('tenant_id', activeTenantId)
+          .single();
+
+        if (error) {
+          if (error.code !== 'PGRST116') { // Not found is okay
+            logger.error('[useUserRole] Error fetching role', error);
+          }
+          setRole(null);
+        } else {
+          setRole(data?.role as AppRole);
+        }
+      } catch (err) {
+        logger.error('[useUserRole] Unexpected error', err);
+        setRole(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchRole();
+  }, [user, authLoading]);
+
+  return {
+    role,
+    isAdmin: role === 'admin' || role === 'super_admin',
+    isSuperAdmin: role === 'super_admin',
+    loading: authLoading || loading,
+  };
+}
