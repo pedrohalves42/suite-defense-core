@@ -63,6 +63,10 @@ export function useUserRole() {
     role,
     isAdmin: role === 'admin' || role === 'super_admin',
     isSuperAdmin: role === 'super_admin',
+    isAnalyst: role === 'analyst' || role === 'admin' || role === 'super_admin',
+    isOperator: role === 'operator' || role === 'admin' || role === 'super_admin',
+    isViewer: role === 'viewer' || role === 'member' || role === 'operator' || role === 'analyst' || role === 'admin' || role === 'super_admin',
+    canWrite: role === 'admin' || role === 'super_admin' || role === 'operator' || role === 'analyst',
     loading: authLoading || loading,
   };
 }
