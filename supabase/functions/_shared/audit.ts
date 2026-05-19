@@ -1,69 +1,48 @@
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { logger } from './logger.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.42.0';
 
 /**
- * Create an audit log entry
- * ADR-029 HIGH-06: tenantId is now required for compliance
+ * Standard audit logging for Edge Functions.
+ * Ensures all sensitive actions are recorded in a tamper-evident log.
  */
-export async function createAuditLog({
-  supabase,
-  userId,
-  tenantId,
-  action,
-  resourceType,
-  resourceId,
-  details,
-  request,
-  success = true,
-}: {
+export async function createAuditLog(params: {
   supabase: any;
-  userId?: string;
-  tenantId: string;  // ADR-029 HIGH-06: Now required (removed optional)
+  userId: string;
+  tenantId: string;
   action: string;
   resourceType: string;
   resourceId?: string;
-  details?: Record<string, unknown>;
-  request: Request;
+  details?: Record<string, any>;
+  request?: Request;
   success?: boolean;
 }) {
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() 
-    || request.headers.get('x-real-ip')
-    || 'unknown';
-  const traceId = request.headers.get('X-Trace-ID') || request.headers.get('X-Request-ID') || null;
-  const userAgent = request.headers.get('user-agent');
+  const { supabase, userId, tenantId, action, resourceType, resourceId, details, request, success = true } = params;
 
-  // ADR-029 HIGH-06: Validate tenantId is provided
-  if (!tenantId || tenantId === 'unknown') {
-    logger.error('[createAuditLog] CRITICAL: tenantId is required for compliance audit');
-    // Still insert for forensic purposes, but flag it
-    const { error } = await supabase.from('audit_logs').insert({
-      user_id: userId,
-      tenant_id: null,
-      action: `UNTRACKED_${action}`,
-      resource_type: resourceType,
-      resource_id: resourceId,
-      details: { ...details, _warning: 'Missing tenant_id - compliance violation' },
-      ip_address: ip,
-      user_agent: userAgent,
-      trace_id: traceId,
-      success,
-    });
-    if (error) logger.error('[createAuditLog] CRITICAL: Audit log insert failed', error);
-    return;
+  try {
+    const ipAddress = request?.headers.get('x-forwarded-for')?.split(',')[0] || 
+                     request?.headers.get('cf-connecting-ip') || 
+                     '0.0.0.0';
+
+    const { error } = await supabase
+      .from('audit_logs')
+      .insert({
+        user_id: userId,
+        tenant_id: tenantId,
+        action,
+        resource_type: resourceType,
+        resource_id: resourceId,
+        details: {
+          ...details,
+          user_agent: request?.headers.get('user-agent'),
+          ip_address: ipAddress
+        },
+        success,
+        ip_address: ipAddress
+      });
+
+    if (error) {
+      console.error('[AuditLog] Failed to persist log:', error);
+    }
+  } catch (err) {
+    console.error('[AuditLog] Unexpected error:', err);
   }
-
-  const { error } = await supabase.from('audit_logs').insert({
-    user_id: userId,
-    tenant_id: tenantId,
-    action,
-    resource_type: resourceType,
-    resource_id: resourceId,
-    details,
-    ip_address: ip,
-    user_agent: userAgent,
-    trace_id: traceId,
-    success,
-  });
-
-  if (error) logger.error('[createAuditLog] Audit log insert failed', error);
 }

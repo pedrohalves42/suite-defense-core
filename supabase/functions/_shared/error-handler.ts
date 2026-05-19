@@ -127,7 +127,7 @@ export function handleException(
   
   // In production, mask internal details to prevent information leakage
   const message = isProduction 
-    ? 'Internal server error' 
+    ? (error instanceof Error && error.message.includes('Tenant isolation') ? error.message : 'Internal server error')
     : (error instanceof Error ? error.message : 'Unknown error occurred');
     
   const errorDetails = isProduction 
