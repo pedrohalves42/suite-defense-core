@@ -16,10 +16,8 @@ const SecurityMonitor = () => {
   const [cspVersion, setCspVersion] = useState<string>('Detectando...');
 
   useEffect(() => {
-    // @ts-ignore
-    setSecurityEnv(window.__SECURITY_ENV || 'Desconhecido');
-    // @ts-ignore
-    setCspVersion(window.__SECURITY_CSP_VERSION || 'Padrão');
+    setSecurityEnv((window as any).__SECURITY_ENV || 'Desconhecido');
+    setCspVersion((window as any).__SECURITY_CSP_VERSION || 'Padrão');
 
     const checkHeaders = async () => {
       try {
