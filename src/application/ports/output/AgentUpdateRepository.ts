@@ -5,6 +5,9 @@ import { AgentId } from '@/domain/value-objects/AgentId';
  * Output port: Persistence abstraction for AgentUpdate entities.
  */
 export interface AgentUpdateRepository {
+  /**
+   * Find an update by its unique identifier.
+   */
   findById(id: string): Promise<AgentUpdate | null>;
 
   /**
@@ -12,5 +15,8 @@ export interface AgentUpdateRepository {
    */
   findActiveByAgentId(agentId: AgentId): Promise<AgentUpdate | null>;
 
+  /**
+   * Persist or update an AgentUpdate entity.
+   */
   save(update: AgentUpdate): Promise<void>;
 }
