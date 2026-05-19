@@ -65,7 +65,9 @@ export async function callGateway<T = Record<string, unknown>>(
         : (data.error as any).message || 'Gateway Internal Error';
       
       const internalError = new Error(errorMsg);
-      (internalError as any).details = data.details;
+      const dataObj = data as Record<string, any>;
+      (internalError as any).details = dataObj.details;
+      (internalError as any).code = dataObj.code;
       throw internalError;
     }
 
