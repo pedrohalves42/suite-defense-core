@@ -87,7 +87,7 @@ const ACTION_TO_FUNCTION: Record<string, string> = {
 
 const RouterSchema = z.object({
   action: z.string().min(1).max(80),
-  payload: z.record(z.unknown()).optional().default({}),
+  payload: z.record(z.string(), z.unknown()).default({}),
 });
 
 function forwardHeaders(req: Request, requestId: string): Record<string, string> {

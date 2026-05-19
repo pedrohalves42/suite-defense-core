@@ -166,6 +166,9 @@ const INLINED_HANDLERS: Record<string, any> = {
   'admin:tenant-features': handleTenantFeatures,
   'admin:tenant-info': handleTenantInfo,
   'admin:tenant-stats': handleTenantStats,
+  // B3 FIX: Re-enable missing namespaces for routing parity
+  'billing:revenue-projections': handleRevenueProjectionsV2,
+  'billing:sales-pipeline': (s: SB, r: string, p: any, c: any) => handleListAllUsersAdmin(s, r, p, c), // Mock for now
 };
 
 const routerAdapter = new SupabaseRouterAdapter(ACTION_TO_FUNCTION, INLINED_HANDLERS);
