@@ -201,6 +201,31 @@ export const UI_SENTENCES = {
   filterByComputer: 'Filtrar por computador',
 } as const;
 
+export const STATUS_MESSAGES = {
+  allGood: {
+    title: 'Seu ambiente está protegido',
+    description: 'O CyberShield está monitorando seus computadores e agindo automaticamente quando algo foge do normal.',
+  },
+  attention: {
+    title: 'Atenção necessária',
+    description: 'Identificamos comportamentos incomuns em alguns computadores. O sistema já tomou medidas preventivas.',
+  },
+  urgent: {
+    title: 'Ação urgente',
+    description: 'Existe risco que pode impactar sua operação. Revise os alertas abaixo.',
+  },
+} as const;
+
+export const getStatusMessage = (securityScore: number, criticalAlerts: number) => {
+  if (securityScore >= 80 && criticalAlerts === 0) {
+    return STATUS_MESSAGES.allGood;
+  }
+  if (securityScore >= 60 || criticalAlerts <= 2) {
+    return STATUS_MESSAGES.attention;
+  }
+  return STATUS_MESSAGES.urgent;
+};
+
 export type UISentenceKey = keyof typeof UI_SENTENCES;
 
 export function t(key: UITermKey): string {
