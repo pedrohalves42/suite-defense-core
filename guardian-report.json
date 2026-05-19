@@ -1,68 +1,262 @@
 {
-  "startedAt": "2025-12-07T22:23:58.443Z",
-  "finishedAt": "2025-12-07T22:24:27.213Z",
+  "startedAt": "2026-05-19T18:34:23.524Z",
+  "finishedAt": "2026-05-19T18:35:10.373Z",
   "issues": [
     {
       "severity": "error",
-      "file": "public/agent-scripts/cybershield-agent-windows-v3.ps1",
-      "line": 462,
-      "rule": "no-non-ascii-in-sensitive-files",
-      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
-      "snippet": "# OTIMIZACAO: Usar ArrayList em vez de += para melhor performance O(n) vs O(n²)"
+      "file": "public/agent-scripts/cybershield-agent-windows-v5.ps1",
+      "line": 3344,
+      "rule": "no-invalid-variable-reference-drive",
+      "message": "Pattern ': $_' found. This causes InvalidVariableReferenceWithDrive in PowerShell 5.1. Use $($_.Exception.Message) or another form.",
+      "snippet": "Write-Log \"[JOB] DNS blocks collection failed: $_\" \"WARN\""
     },
     {
       "severity": "error",
-      "file": "public/agent-scripts/cybershield-agent-windows-v3.ps1",
-      "line": 706,
+      "file": "public/agent-scripts/cybershield-agent-windows-v5.ps1",
+      "line": 5638,
+      "rule": "no-invalid-variable-reference-drive",
+      "message": "Pattern ': $_' found. This causes InvalidVariableReferenceWithDrive in PowerShell 5.1. Use $($_.Exception.Message) or another form.",
+      "snippet": "Write-Log \"[CONFIG] Could not persist firewall flag: $_\" \"WARN\""
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 383,
       "rule": "no-non-ascii-in-sensitive-files",
       "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
-      "snippet": "# OTIMIZACAO: Usar ArrayList em vez de += para melhor performance O(n) vs O(n²)"
+      "snippet": "# Ed25519 public key (SPKI, Base64-encoded) — embedded for offline verification"
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 386,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "# RSA-2048 public key (SPKI, Base64-encoded) — fallback for .NET 4.x"
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 648,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "# Ed25519 failed — don't fall through to RSA (signature mismatch = reject)"
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 649,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "Write-Log \"[CRYPTO] Ed25519 verification failed — not falling through to RSA\" \"ERROR\""
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 666,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "# No verification possible — check if we have any keys at all"
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 668,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "Write-Log \"[CRYPTO] No cryptographic keys configured — fail-open (audit-only)\" \"WARN\""
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 674,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "Write-Log \"[CRYPTO] No signatures provided — UNSIGNED\" \"WARN\""
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 678,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "Write-Log \"[CRYPTO] Signature verification failed — no compatible algorithm available\" \"ERROR\""
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 1094,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "# Office → suspicious child"
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 1109,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "# --- T1189: Browser → executable child ---"
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 1124,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "# --- T1036: Masquerading — system binary from wrong path ---"
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 3490,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "# Signature provided — must verify"
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 3503,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "# No public key configured — audit-only mode (accept with warning)"
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 3507,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "# Ed25519 not available on this runtime (.NET < 5) — accept with warning"
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 3512,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "# No signature but Ed25519 is configured — reject unsigned updates (fail-closed)"
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 3519,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "# Legacy mode: no signature, no Ed25519 configured — accept with SHA-256 only"
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 3662,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "# Apply server-driven heartbeat interval (v6 migration: 60s → 120s)"
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 354,
+      "rule": "no-invalid-variable-reference-drive",
+      "message": "Pattern ': $_' found. This causes InvalidVariableReferenceWithDrive in PowerShell 5.1. Use $($_.Exception.Message) or another form.",
+      "snippet": "Write-Log \"API call failed with $statusCode (non-retryable): $_\" -Level \"ERROR\""
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 359,
+      "rule": "no-invalid-variable-reference-drive",
+      "message": "Pattern ': $_' found. This causes InvalidVariableReferenceWithDrive in PowerShell 5.1. Use $($_.Exception.Message) or another form.",
+      "snippet": "Write-Log \"API call failed after $($MaxRetries + 1) attempts: $_\" -Level \"ERROR\""
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows.ps1",
+      "line": 2269,
+      "rule": "no-invalid-variable-reference-drive",
+      "message": "Pattern ': $_' found. This causes InvalidVariableReferenceWithDrive in PowerShell 5.1. Use $($_.Exception.Message) or another form.",
+      "snippet": "} catch { Write-Log \"[JOB] DNS blocks collection failed: $_\" \"WARN\"; return @{ blocked_domains = @(); source = \"error\"; error = $_.ToString(); collected_at = (Get-Date -Format \"yyyy-MM-ddTHH:mm:ssZ\") } }"
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-scripts/cybershield-agent-windows-v5.ps1",
+      "line": 3347,
+      "rule": "no-invalid-variable-reference-drive",
+      "message": "Pattern ': $_' found. This causes InvalidVariableReferenceWithDrive in PowerShell 5.1. Use $($_.Exception.Message) or another form.",
+      "snippet": "Write-Log \"[JOB] DNS blocks collection failed: $_\" \"WARN\""
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-scripts/cybershield-agent-windows-v5.ps1",
+      "line": 5641,
+      "rule": "no-invalid-variable-reference-drive",
+      "message": "Pattern ': $_' found. This causes InvalidVariableReferenceWithDrive in PowerShell 5.1. Use $($_.Exception.Message) or another form.",
+      "snippet": "Write-Log \"[CONFIG] Could not persist firewall flag: $_\" \"WARN\""
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/handlers/diagnostic-script.ts",
+      "line": 53,
+      "rule": "no-invalid-variable-reference-drive",
+      "message": "Pattern ': $_' found. This causes InvalidVariableReferenceWithDrive in PowerShell 5.1. Use $($_.Exception.Message) or another form.",
+      "snippet": "Write-Fail \"Failed to get OS info: $_\""
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/handlers/diagnostic-script.ts",
+      "line": 146,
+      "rule": "no-invalid-variable-reference-drive",
+      "message": "Pattern ': $_' found. This causes InvalidVariableReferenceWithDrive in PowerShell 5.1. Use $($_.Exception.Message) or another form.",
+      "snippet": "Write-Warn \"Could not check firewall: $_\""
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/handlers/diagnostic-script.ts",
+      "line": 238,
+      "rule": "no-invalid-variable-reference-drive",
+      "message": "Pattern ': $_' found. This causes InvalidVariableReferenceWithDrive in PowerShell 5.1. Use $($_.Exception.Message) or another form.",
+      "snippet": "Write-Warn \"Could not check Scheduled Task: $_\""
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/hotfix/toctou-integrity.ts",
+      "line": 209,
+      "rule": "no-invalid-variable-reference-drive",
+      "message": "Pattern ': $_' found. This causes InvalidVariableReferenceWithDrive in PowerShell 5.1. Use $($_.Exception.Message) or another form.",
+      "snippet": "Write-Log \"[INTEGRITY] Hash cache upgrade failed (non-fatal): $_\" \"WARN\""
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/hotfix/toctou-integrity.ts",
+      "line": 259,
+      "rule": "no-invalid-variable-reference-drive",
+      "message": "Pattern ': $_' found. This causes InvalidVariableReferenceWithDrive in PowerShell 5.1. Use $($_.Exception.Message) or another form.",
+      "snippet": "Write-Log \"[INTEGRITY] Dual-hash evaluation failed: $_ - continuing in degraded mode\" \"WARN\""
     },
     {
       "severity": "error",
       "file": "supabase/functions/_shared/agent-script-windows-content.ts",
-      "line": 470,
-      "rule": "no-non-ascii-in-sensitive-files",
-      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
-      "snippet": "# OTIMIZACAO: Usar ArrayList em vez de += para melhor performance O(n) vs O(n²)"
+      "rule": "missing-agent-script",
+      "message": "agent-script-windows-content.ts not found. Cannot validate embedded agent."
     },
     {
       "severity": "error",
-      "file": "supabase/functions/_shared/agent-script-windows-content.ts",
-      "line": 714,
-      "rule": "no-non-ascii-in-sensitive-files",
-      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
-      "snippet": "# OTIMIZACAO: Usar ArrayList em vez de += para melhor performance O(n) vs O(n²)"
+      "file": "supabase/functions/_shared/installer-template.ts",
+      "rule": "installer-missing-agent-script-placeholder",
+      "message": "AGENT_SCRIPT_CONTENT placeholder not found in installer template. Agent script may not be injected."
     },
     {
       "severity": "warn",
-      "file": "supabase/migrations/20251119024342_4058858b-eb9b-4ef3-96f5-ce6efa8f2a17.sql",
-      "rule": "jobs-migration-missing-column",
-      "message": "Migration that alters jobs table does not mention column \"output\"."
+      "file": "supabase/migrations",
+      "rule": "jobs-migration-not-found",
+      "message": "No migration found that alters jobs table. Ensure jobs v3 columns have migrations."
     },
     {
-      "severity": "warn",
-      "file": "supabase/migrations/20251119024342_4058858b-eb9b-4ef3-96f5-ce6efa8f2a17.sql",
-      "rule": "jobs-migration-missing-column",
-      "message": "Migration that alters jobs table does not mention column \"error_message\"."
-    },
-    {
-      "severity": "warn",
-      "file": "supabase/migrations/20251119024342_4058858b-eb9b-4ef3-96f5-ce6efa8f2a17.sql",
-      "rule": "jobs-migration-missing-column",
-      "message": "Migration that alters jobs table does not mention column \"started_at\"."
-    },
-    {
-      "severity": "warn",
-      "file": "supabase/migrations/20251119024342_4058858b-eb9b-4ef3-96f5-ce6efa8f2a17.sql",
-      "rule": "jobs-migration-missing-column",
-      "message": "Migration that alters jobs table does not mention column \"finished_at\"."
-    },
-    {
-      "severity": "warn",
-      "file": "supabase/migrations/20251119024342_4058858b-eb9b-4ef3-96f5-ce6efa8f2a17.sql",
-      "rule": "jobs-migration-missing-column",
-      "message": "Migration that alters jobs table does not mention column \"execution_time_seconds\"."
+      "severity": "error",
+      "file": "supabase/functions/serve-installer/index.ts",
+      "rule": "serve-installer-missing-template",
+      "message": "serve-installer does not reference WINDOWS_INSTALLER_TEMPLATE."
     },
     {
       "severity": "error",
@@ -73,12 +267,18 @@
     {
       "severity": "error",
       "file": "<process>",
+      "rule": "command:test",
+      "message": "Command \"npm run test\" failed: Command failed: npm run test"
+    },
+    {
+      "severity": "error",
+      "file": "<process>",
       "rule": "command:validate:all",
       "message": "Command \"npm run validate:all\" failed: Command failed: npm run validate:all"
     }
   ],
   "summary": {
-    "errors": 6,
-    "warnings": 5
+    "errors": 35,
+    "warnings": 1
   }
 }
