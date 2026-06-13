@@ -5023,75 +5023,6 @@ export type Database = {
           },
         ]
       }
-      agent_system_metrics_2026_03: {
-        Row: {
-          agent_id: string
-          collected_at: string
-          cpu_cores: number | null
-          cpu_name: string | null
-          cpu_usage_percent: number | null
-          created_at: string
-          disk_free_gb: number | null
-          disk_total_gb: number | null
-          disk_usage_percent: number | null
-          disk_used_gb: number | null
-          id: string
-          last_boot_time: string | null
-          memory_free_gb: number | null
-          memory_total_gb: number | null
-          memory_usage_percent: number | null
-          memory_used_gb: number | null
-          network_bytes_received: number | null
-          network_bytes_sent: number | null
-          tenant_id: string
-          uptime_seconds: number | null
-        }
-        Insert: {
-          agent_id: string
-          collected_at?: string
-          cpu_cores?: number | null
-          cpu_name?: string | null
-          cpu_usage_percent?: number | null
-          created_at?: string
-          disk_free_gb?: number | null
-          disk_total_gb?: number | null
-          disk_usage_percent?: number | null
-          disk_used_gb?: number | null
-          id?: string
-          last_boot_time?: string | null
-          memory_free_gb?: number | null
-          memory_total_gb?: number | null
-          memory_usage_percent?: number | null
-          memory_used_gb?: number | null
-          network_bytes_received?: number | null
-          network_bytes_sent?: number | null
-          tenant_id: string
-          uptime_seconds?: number | null
-        }
-        Update: {
-          agent_id?: string
-          collected_at?: string
-          cpu_cores?: number | null
-          cpu_name?: string | null
-          cpu_usage_percent?: number | null
-          created_at?: string
-          disk_free_gb?: number | null
-          disk_total_gb?: number | null
-          disk_usage_percent?: number | null
-          disk_used_gb?: number | null
-          id?: string
-          last_boot_time?: string | null
-          memory_free_gb?: number | null
-          memory_total_gb?: number | null
-          memory_usage_percent?: number | null
-          memory_used_gb?: number | null
-          network_bytes_received?: number | null
-          network_bytes_sent?: number | null
-          tenant_id?: string
-          uptime_seconds?: number | null
-        }
-        Relationships: []
-      }
       agent_system_metrics_2026_04: {
         Row: {
           agent_id: string
@@ -5231,6 +5162,75 @@ export type Database = {
         Relationships: []
       }
       agent_system_metrics_2026_06: {
+        Row: {
+          agent_id: string
+          collected_at: string
+          cpu_cores: number | null
+          cpu_name: string | null
+          cpu_usage_percent: number | null
+          created_at: string
+          disk_free_gb: number | null
+          disk_total_gb: number | null
+          disk_usage_percent: number | null
+          disk_used_gb: number | null
+          id: string
+          last_boot_time: string | null
+          memory_free_gb: number | null
+          memory_total_gb: number | null
+          memory_usage_percent: number | null
+          memory_used_gb: number | null
+          network_bytes_received: number | null
+          network_bytes_sent: number | null
+          tenant_id: string
+          uptime_seconds: number | null
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id: string
+          uptime_seconds?: number | null
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id?: string
+          uptime_seconds?: number | null
+        }
+        Relationships: []
+      }
+      agent_system_metrics_2026_07: {
         Row: {
           agent_id: string
           collected_at: string
@@ -19174,81 +19174,6 @@ export type Database = {
         }
         Relationships: []
       }
-      endpoint_network_events_partitioned_2026_03: {
-        Row: {
-          agent_id: string
-          bytes_received: number | null
-          bytes_sent: number | null
-          created_at: string
-          detection_tags: string[] | null
-          direction: string | null
-          dns_query_type: string | null
-          dns_response: string | null
-          domain: string | null
-          event_time: string
-          event_type: string
-          geo_country: string | null
-          id: string
-          is_suspicious: boolean | null
-          local_address: string | null
-          local_port: number | null
-          process_name: string | null
-          process_pid: number | null
-          protocol: string | null
-          remote_address: string | null
-          remote_port: number | null
-          tenant_id: string
-        }
-        Insert: {
-          agent_id: string
-          bytes_received?: number | null
-          bytes_sent?: number | null
-          created_at?: string
-          detection_tags?: string[] | null
-          direction?: string | null
-          dns_query_type?: string | null
-          dns_response?: string | null
-          domain?: string | null
-          event_time?: string
-          event_type?: string
-          geo_country?: string | null
-          id?: string
-          is_suspicious?: boolean | null
-          local_address?: string | null
-          local_port?: number | null
-          process_name?: string | null
-          process_pid?: number | null
-          protocol?: string | null
-          remote_address?: string | null
-          remote_port?: number | null
-          tenant_id: string
-        }
-        Update: {
-          agent_id?: string
-          bytes_received?: number | null
-          bytes_sent?: number | null
-          created_at?: string
-          detection_tags?: string[] | null
-          direction?: string | null
-          dns_query_type?: string | null
-          dns_response?: string | null
-          domain?: string | null
-          event_time?: string
-          event_type?: string
-          geo_country?: string | null
-          id?: string
-          is_suspicious?: boolean | null
-          local_address?: string | null
-          local_port?: number | null
-          process_name?: string | null
-          process_pid?: number | null
-          protocol?: string | null
-          remote_address?: string | null
-          remote_port?: number | null
-          tenant_id?: string
-        }
-        Relationships: []
-      }
       endpoint_network_events_partitioned_2026_04: {
         Row: {
           agent_id: string
@@ -22962,27 +22887,6 @@ export type Database = {
         ]
       }
       hmac_signatures: {
-        Row: {
-          agent_name: string
-          id: string
-          signature: string
-          used_at: string
-        }
-        Insert: {
-          agent_name: string
-          id?: string
-          signature: string
-          used_at?: string
-        }
-        Update: {
-          agent_name?: string
-          id?: string
-          signature?: string
-          used_at?: string
-        }
-        Relationships: []
-      }
-      hmac_signatures_2026_03: {
         Row: {
           agent_name: string
           id: string
