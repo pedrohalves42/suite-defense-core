@@ -34,10 +34,26 @@ function Write-Log {
     $tracePrefix = if ($tid) { " [trace:$tid]" } else { "" }
     "$timestamp [$Level]$tracePrefix $Message" | Out-File -FilePath $script:LogFile -Append -Encoding UTF8
 
-    switch ($Level) {
-        "ERROR" { Write-Host "[ERROR]$tracePrefix $Message" -ForegroundColor Red }
-        "WARN"  { Write-Host "[WARN]$tracePrefix $Message" -ForegroundColor Yellow }
-        default { Write-Host "[INFO]$tracePrefix $Message" -ForegroundColor Green }
+    # Console output only when running interactively. When the agent runs as a
+    # Windows service Write-Host is swallowed (no host UI), so we route through
+    # the hexagonal FileLogger if the container is wired, and silently skip
+    # otherwise — the file sink above is always authoritative.
+    if ($script:Agent -and $script:Agent.Logger) {
+        try {
+            switch ($Level) {
+                "ERROR" { $script:Agent.Logger.Error($Message, @{ trace=$tid }); return }
+                "WARN"  { $script:Agent.Logger.Warn($Message,  @{ trace=$tid }); return }
+                default { $script:Agent.Logger.Info($Message,  @{ trace=$tid }); return }
+            }
+        } catch { }
+    }
+
+    if ([Environment]::UserInteractive -and $Host.Name -ne 'ServerRemoteHost') {
+        switch ($Level) {
+            "ERROR" { Write-Host "[ERROR]$tracePrefix $Message" -ForegroundColor Red }
+            "WARN"  { Write-Host "[WARN]$tracePrefix $Message" -ForegroundColor Yellow }
+            default { Write-Host "[INFO]$tracePrefix $Message" -ForegroundColor Green }
+        }
     }
 }
 
