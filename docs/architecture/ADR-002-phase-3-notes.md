@@ -105,3 +105,56 @@ Windows-only APIs.
   `PSAvoidGlobalVars` to `Error`.
 - Add `ISigner` port so `SubmitJobResultUseCase` no longer reaches
   for `Get-Command Invoke-SignResult`.
+
+## Validation Report — End-to-End Audit
+
+Audit performed after Phase 3 implementation. Walk: domain → use cases → wiring → main.ps1.
+
+### Defects found and remediated in this pass
+
+| # | File | Severity | Defect | Fix |
+|---|------|----------|--------|-----|
+| 1 | `composition/UseCaseWiring.ps1` | **High** | Scriptblocks stored in `$Container.UseCases` did not capture `$Container` lexically. Invoking `& $Agent.UseCases.PollJobs` from `main.ps1` or a legacy module would fail with "Container is null" because PowerShell scriptblocks resolve free variables dynamically. | Wrapped every scriptblock with `.GetNewClosure()`. |
+| 2 | `application/use-cases/SendHeartbeatUseCase.ps1` | Medium | Event-bus publish for `heartbeat.interval.changed` read `from = $cfg.PollInterval` **after** mutating it, so `from` and `to` were always identical, defeating observability. | Captured previous interval into `$prev` before mutation. |
+| 3 | `domain/BlocklistEntry.ps1` | Medium | Parameter `$Host` shadowed PowerShell's automatic `$Host` variable (PSScriptAnalyzer `PSAvoidAssignmentToAutomaticVariable`). | Renamed parameter to `$HostName` with `[Alias('Host')]` to preserve backward compatibility. |
+
+### Phase 2 retro-checks (confirmed no gaps)
+
+- All 8 adapters wired and asserted against ports (`Assert-I*`).
+- `HttpClientAdapter` enforces HMAC fail-closed + TLS pinning + jittered backoff.
+- `WindowsServiceAdapter` protects 12 critical services from `Stop`.
+- `HostsFileAdapter` sanitizes CR/LF/control chars.
+- `DpapiSecretStore` has cross-platform in-memory fallback for tests.
+
+### Phase 3 invariants confirmed in code
+
+- Domain layer has **zero** `$Global:*` references (`rg -n '\$Global:' agents/windows/domain/` → 0 hits).
+- Application layer has **zero** `$Global:*` references (`rg -n '\$Global:' agents/windows/application/` → 0 hits).
+- `ExecuteJobUseCase` blocks `stop_service` and `restart_service` for protected services via adapter (`$Container.Services.IsProtected`).
+- `CheckForUpdateUseCase` enforces SHA-256 BOM-safe verification *before* atomic install.
+- `PerformSelfHealUseCase` distinguishes `Initialized` / `Healed` / `IntegrityViolation` states.
+- `PollJobsUseCase` resets `ConsecutivePollErrors` on success; increments on failure.
+
+### Test coverage map (use-cases.Tests.ps1)
+
+| Describe block | It count | Notes |
+|----------------|---------:|-------|
+| Domain :: HeartbeatPayload | 2 | required fields + shape |
+| Domain :: JobDescriptor    | 3 | normalize, whitelist, malformed |
+| Domain :: UpdateDecision   | 4 | version comparator cases |
+| Domain :: BlocklistEntry   | 3 | CRLF reject, lowercase, bulk skip |
+| UseCase :: SendHeartbeat   | 2 | interval change + transient error |
+| UseCase :: PollJobs        | 2 | normalized descriptors + error counter |
+| UseCase :: ExecuteJob      | 4 | unknown / collect_info / protected / stop allowed |
+| UseCase :: SubmitJobResult | 1 | payload sent |
+| UseCase :: CheckForUpdate  | 2 | up-to-date + hash mismatch |
+| UseCase :: SyncBlocklist   | 1 | sanitize/persist/apply |
+| UseCase :: SelfHeal        | 2 | baseline + violation |
+| **Total**                  | **26** | |
+
+### Status
+
+Phase 3 is **complete and validated**. Three defects were found during this audit
+and all three were fixed in the same pass. Ready to proceed to Phase 4 (cutover:
+replace legacy loop bodies in `heartbeat.ps1` / `job-runner.ps1` with
+`$Agent.UseCases.*` calls and delete `CompatShims.ps1`).
