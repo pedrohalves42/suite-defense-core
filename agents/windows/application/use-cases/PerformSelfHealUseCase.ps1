@@ -52,7 +52,7 @@ function Invoke-PerformSelfHealUseCase {
 
     if (-not $expected) {
         # Initial baseline
-        $fs.WriteText($CachePath, (@{ hash=$actual; updated=$Container.Clock.IsoNow() } | ConvertTo-Json))
+        $fs.Write($CachePath, (@{ hash=$actual; updated=$Container.Clock.IsoNow() } | ConvertTo-Json))
         $state.BootScriptHash = $actual
         return @{ IntegrityOk=$true; Initialized=$true; Hash=$actual }
     }
@@ -63,7 +63,7 @@ function Invoke-PerformSelfHealUseCase {
 
     if ($state.BootScriptHash -and $actual -eq $state.BootScriptHash) {
         if ($log) { $log.Warn('[UC:SelfHeal] hash differs but matches boot — self-healing cache') }
-        $fs.WriteText($CachePath, (@{ hash=$actual; updated=$Container.Clock.IsoNow() } | ConvertTo-Json))
+        $fs.Write($CachePath, (@{ hash=$actual; updated=$Container.Clock.IsoNow() } | ConvertTo-Json))
         return @{ IntegrityOk=$true; Healed=$true; Hash=$actual }
     }
 

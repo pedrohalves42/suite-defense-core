@@ -27,7 +27,7 @@ function Invoke-PollJobsUseCase {
     }
 
     $resp = $http.Invoke(@{
-        Path = '/functions/v1/poll-jobs'; Method='POST'; Body=$body; Timeout=15; MaxRetries=2
+        Path='/functions/v1/poll-jobs'; Method='POST'; Body=$body; TimeoutSec=15; MaxRetries=2
     })
 
     if (-not $resp.Success) {
@@ -40,7 +40,8 @@ function Invoke-PollJobsUseCase {
 
     $state.ConsecutivePollErrors = 0
 
-    $raw = $resp.Body
+    $raw = $null
+    if ($resp.Content) { try { $raw = $resp.Content | ConvertFrom-Json } catch { $raw = $null } }
     $rawJobs = @()
     if ($raw -is [System.Array]) {
         $rawJobs = @($raw)

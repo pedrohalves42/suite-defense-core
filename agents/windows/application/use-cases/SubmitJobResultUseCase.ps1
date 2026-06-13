@@ -48,7 +48,7 @@ function Invoke-SubmitJobResultUseCase {
     }
 
     $resp = $http.Invoke(@{
-        Path='/functions/v1/submit-job-result'; Method='POST'; Body=$payload; Timeout=30; MaxRetries=3
+        Path='/functions/v1/submit-job-result'; Method='POST'; Body=$payload; TimeoutSec=30; MaxRetries=3
     })
 
     if ($resp.Success) {

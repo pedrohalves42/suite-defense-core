@@ -28,13 +28,14 @@ function Invoke-CheckForUpdateUseCase {
     if (-not $http) { return @{ Success=$false; Error='IHttpClient not wired' } }
 
     $resp = $http.Invoke(@{
-        Path='/functions/v1/serve-agent-update'; Method='GET'; Timeout=60; MaxRetries=2
+        Path='/functions/v1/serve-agent-update'; Method='GET'; TimeoutSec=60; MaxRetries=2
     })
     if (-not $resp.Success) {
         return @{ Success=$false; Error=$resp.Error; UpdateStaged=$false }
     }
 
-    $body = $resp.Body
+    $body = $null
+    if ($resp.Content) { try { $body = $resp.Content | ConvertFrom-Json } catch { $body = $null } }
     if (-not $body -or -not $body.PSObject.Properties['latest_version']) {
         return @{ Success=$true; UpdateStaged=$false; Reason='no-version-in-response' }
     }
@@ -52,12 +53,13 @@ function Invoke-CheckForUpdateUseCase {
         $ScriptPath = Join-Path $cfg.BaseDir 'agent.ps1'
     }
 
-    $tmp = "$ScriptPath.staged.$(Get-Random)"
+    # Stage to sibling temp; verify hash; then Fs.Write performs the atomic move.
+    $stagedTmp = "$ScriptPath.staged.$([Guid]::NewGuid().ToString('N'))"
     try {
-        $fs.WriteText($tmp, [string]$body.script_content)
+        [System.IO.File]::WriteAllText($stagedTmp, [string]$body.script_content, (New-Object System.Text.UTF8Encoding $false))
 
         if ($body.PSObject.Properties['script_hash'] -and $body.script_hash) {
-            $bytes = [System.IO.File]::ReadAllBytes($tmp)
+            $bytes = [System.IO.File]::ReadAllBytes($stagedTmp)
             if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
                 $bytes = $bytes[3..($bytes.Length - 1)]
             }
@@ -66,21 +68,22 @@ function Invoke-CheckForUpdateUseCase {
             finally { $sha.Dispose() }
 
             if ($actual -ne ([string]$body.script_hash).ToLower()) {
-                $fs.Delete($tmp)
+                Remove-Item -LiteralPath $stagedTmp -Force -ErrorAction SilentlyContinue
                 if ($log) { $log.Error('[UC:CheckForUpdate] hash mismatch', @{ expected=$body.script_hash; actual=$actual }) }
                 return @{ Success=$false; UpdateStaged=$false; Error='hash mismatch' }
             }
         }
 
-        # Atomic swap
-        $fs.AtomicReplace($ScriptPath, $tmp)
+        # Atomic install via Fs.Write (writes via temp + Move-Item -Force)
+        $fs.Write($ScriptPath, [string]$body.script_content)
+        Remove-Item -LiteralPath $stagedTmp -Force -ErrorAction SilentlyContinue
         $state.RestartRequested = $true
 
         if ($log) { $log.Info('[UC:CheckForUpdate] staged update', @{ version=$body.latest_version }) }
         return @{ Success=$true; UpdateStaged=$true; LatestVersion=$body.latest_version }
     }
     catch {
-        try { $fs.Delete($tmp) } catch { }
+        if (Test-Path -LiteralPath $stagedTmp) { Remove-Item -LiteralPath $stagedTmp -Force -ErrorAction SilentlyContinue }
         if ($log) { $log.Error('[UC:CheckForUpdate] failure', @{ error=$_.Exception.Message }) }
         return @{ Success=$false; UpdateStaged=$false; Error=$_.Exception.Message }
     }

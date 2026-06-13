@@ -36,10 +36,10 @@ function Invoke-SendHeartbeatUseCase {
     if ($log) { $log.Info('[UC:Heartbeat] sending', @{ events = @($SecurityEvents).Count }) }
 
     $resp = $http.Invoke(@{
-        Path    = '/functions/v1/heartbeat'
-        Method  = 'POST'
-        Body    = $payload
-        Timeout = 30
+        Path       = '/functions/v1/heartbeat'
+        Method     = 'POST'
+        Body       = $payload
+        TimeoutSec = 30
         MaxRetries = 2
     })
 
@@ -48,7 +48,8 @@ function Invoke-SendHeartbeatUseCase {
         return @{ Success=$false; Error=$resp.Error; Transient=$resp.Transient }
     }
 
-    $body = $resp.Body
+    $body = $null
+    if ($resp.Content) { try { $body = $resp.Content | ConvertFrom-Json } catch { $body = $null } }
     $result = @{
         Success         = $true
         Response        = $body

@@ -30,11 +30,11 @@ function Invoke-SyncBlocklistUseCase {
     $entries = ConvertTo-BlocklistEntries -Raw $rawEntries
     $rejected = (@($rawEntries).Count - $entries.Count)
 
-    # Persist canonical JSON (atomic)
+    # Persist canonical JSON (atomic via Fs.Write)
     if ($fs -and $cfg.DnsBlocklistPath) {
         try {
             $json = ($entries | ConvertTo-Json -Depth 4 -Compress)
-            $fs.WriteText($cfg.DnsBlocklistPath, $json)
+            $fs.Write($cfg.DnsBlocklistPath, $json)
         } catch {
             if ($log) { $log.Warn('[UC:SyncBlocklist] persist failed', @{ error=$_.Exception.Message }) }
         }
@@ -43,7 +43,9 @@ function Invoke-SyncBlocklistUseCase {
     $applied = 0
     if ($hosts) {
         try {
-            $applied = $hosts.ApplyBlock(@($entries | ForEach-Object { $_.Host }))
+            # HostsFileAdapter expects entries with Ip + Hostname — bind all to 0.0.0.0
+            $hostsEntries = @($entries | ForEach-Object { [PSCustomObject]@{ Ip='0.0.0.0'; Hostname=$_.Host } })
+            $applied = $hosts.ApplyBlock($hostsEntries)
         } catch {
             if ($log) { $log.Error('[UC:SyncBlocklist] hosts apply failed', @{ error=$_.Exception.Message }) }
             return @{ success=$false; error=$_.Exception.Message; applied=0; rejected=$rejected }
