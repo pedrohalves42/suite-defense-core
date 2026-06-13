@@ -28,14 +28,16 @@ function Initialize-AgentUseCases {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Container)
 
+    # GetNewClosure() captures $Container so the scriptblocks resolve it
+    # when invoked from caller scopes (e.g. legacy modules in Phase 4).
     $uc = @{
-        SendHeartbeat   = { param($telemetry,$events) Invoke-SendHeartbeatUseCase   -Container $Container -Telemetry $telemetry -SecurityEvents $events }
-        PollJobs        = {                              Invoke-PollJobsUseCase        -Container $Container }
-        ExecuteJob      = { param($job)                  Invoke-ExecuteJobUseCase      -Container $Container -Job $job }
-        SubmitJobResult = { param($job,$result)          Invoke-SubmitJobResultUseCase -Container $Container -Job $job -Result $result }
-        CheckForUpdate  = { param($scriptPath)           Invoke-CheckForUpdateUseCase  -Container $Container -ScriptPath $scriptPath }
-        SyncBlocklist   = { param($payload)              Invoke-SyncBlocklistUseCase   -Container $Container -Payload $payload }
-        SelfHeal        = { param($scriptPath,$cache)    Invoke-PerformSelfHealUseCase -Container $Container -ScriptPath $scriptPath -CachePath $cache }
+        SendHeartbeat   = { param($telemetry,$events) Invoke-SendHeartbeatUseCase   -Container $Container -Telemetry $telemetry -SecurityEvents $events }.GetNewClosure()
+        PollJobs        = {                              Invoke-PollJobsUseCase        -Container $Container }.GetNewClosure()
+        ExecuteJob      = { param($job)                  Invoke-ExecuteJobUseCase      -Container $Container -Job $job }.GetNewClosure()
+        SubmitJobResult = { param($job,$result)          Invoke-SubmitJobResultUseCase -Container $Container -Job $job -Result $result }.GetNewClosure()
+        CheckForUpdate  = { param($scriptPath)           Invoke-CheckForUpdateUseCase  -Container $Container -ScriptPath $scriptPath }.GetNewClosure()
+        SyncBlocklist   = { param($payload)              Invoke-SyncBlocklistUseCase   -Container $Container -Payload $payload }.GetNewClosure()
+        SelfHeal        = { param($scriptPath,$cache)    Invoke-PerformSelfHealUseCase -Container $Container -ScriptPath $scriptPath -CachePath $cache }.GetNewClosure()
     }
 
     $Container | Add-Member -NotePropertyName UseCases -NotePropertyValue $uc -Force
