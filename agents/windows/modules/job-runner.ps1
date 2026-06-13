@@ -27,7 +27,15 @@ function Start-HeartbeatLoop {
     }
 
     while ($true) {
+        # Hexagonal Phase 1: keep container's State mirror in sync with any
+        # $Global:* mutations made by legacy modules during the previous tick.
+        # Removed in Phase 4 when the loop itself migrates to application/.
+        if ($script:Agent -and (Get-Command Sync-GlobalsToContainer -ErrorAction SilentlyContinue)) {
+            try { Sync-GlobalsToContainer -Container $script:Agent } catch { }
+        }
+
         try {
+
             if ($script:CircuitBreakerOpen) {
                 Write-Log "Circuit breaker open - waiting cooldown" "WARN"
                 Start-Sleep -Seconds $script:CircuitBreakerCooldown
