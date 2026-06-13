@@ -11,15 +11,17 @@
 function New-BlocklistEntry {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$Host,
+        # NOTE: parameter renamed from $Host to avoid clobbering PowerShell's
+        # automatic $Host variable (PSAvoidAssignmentToAutomaticVariable).
+        [Parameter(Mandatory)][Alias('Host')][string]$HostName,
         [string]$Reason = ''
     )
 
-    $h = $Host.Trim().ToLowerInvariant()
-    if ([string]::IsNullOrWhiteSpace($h)) { throw [System.ArgumentException]::new('Host is required') }
-    if ($h -match '[\r\n\t ]')           { throw [System.ArgumentException]::new("Host contains whitespace/control: '$Host'") }
-    if ($h -notmatch '^[a-z0-9\.\-]+$')   { throw [System.ArgumentException]::new("Host contains invalid chars: '$Host'") }
-    if ($h.Length -gt 253)                { throw [System.ArgumentException]::new("Host too long: '$Host'") }
+    $h = $HostName.Trim().ToLowerInvariant()
+    if ([string]::IsNullOrWhiteSpace($h)) { throw [System.ArgumentException]::new('HostName is required') }
+    if ($h -match '[\r\n\t ]')            { throw [System.ArgumentException]::new("Host contains whitespace/control: '$HostName'") }
+    if ($h -notmatch '^[a-z0-9\.\-]+$')   { throw [System.ArgumentException]::new("Host contains invalid chars: '$HostName'") }
+    if ($h.Length -gt 253)                { throw [System.ArgumentException]::new("Host too long: '$HostName'") }
 
     return [PSCustomObject]@{
         Host   = $h
@@ -36,10 +38,10 @@ function ConvertTo-BlocklistEntries {
         if (-not $item) { continue }
         try {
             if ($item -is [string]) {
-                $out.Add((New-BlocklistEntry -Host $item)) | Out-Null
+                $out.Add((New-BlocklistEntry -HostName $item)) | Out-Null
             } elseif ($item.PSObject.Properties['host']) {
                 $reason = if ($item.PSObject.Properties['reason']) { [string]$item.reason } else { '' }
-                $out.Add((New-BlocklistEntry -Host ([string]$item.host) -Reason $reason)) | Out-Null
+                $out.Add((New-BlocklistEntry -HostName ([string]$item.host) -Reason $reason)) | Out-Null
             }
         } catch {
             # Skip invalid entries — caller decides whether to log
