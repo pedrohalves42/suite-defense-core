@@ -56,7 +56,19 @@ function Poll-Jobs {
             return @()
         }
 
-        
+        $Global:ConsecutivePollErrors = 0
+
+        $jobsList = @()
+        try {
+            if ($result.Content) {
+                $parsed = $result.Content | ConvertFrom-Json -ErrorAction Stop
+                if ($parsed -and $parsed.jobs) { $jobsList = @($parsed.jobs) }
+            }
+        } catch {
+            Write-Log "[POLL-JOBS] Failed to parse jobs payload: $($_.Exception.Message)" "WARN"
+            return @()
+        }
+
         if ($jobsList -and $jobsList.Count -gt 0) {
             foreach ($job in $jobsList) {
                 if ($job -and (-not $job.job_type) -and $job.type) {
@@ -66,9 +78,9 @@ function Poll-Jobs {
             Write-Log "[POLL-JOBS] Received $($jobsList.Count) job(s)" "INFO"
             return $jobsList
         }
-        
+
         return @()
-        
+
     } catch {
         Write-Log "[POLL-JOBS] Error: $($_.Exception.Message)" "ERROR"
         return @()
