@@ -7,22 +7,47 @@
 #>
 
 function Poll-Jobs {
+    # Phase 4 cutover: prefer hexagonal use case when wired.
+    if ($script:Agent -and $script:Agent.UseCases -and $script:Agent.UseCases.PollJobs) {
+        try {
+            $r = & $script:Agent.UseCases.PollJobs
+            if ($r -and $r.Success) {
+                # Map JobDescriptor[] back to the legacy psobject shape expected by the dispatcher.
+                $out = @()
+                foreach ($jd in @($r.Jobs)) {
+                    $out += [PSCustomObject]@{
+                        id            = $jd.Id
+                        execution_id  = $jd.ExecutionId
+                        job_type      = $jd.Type
+                        type          = $jd.Type
+                        payload       = $jd.Payload
+                        timeout_seconds = $jd.TimeoutSec
+                    }
+                }
+                return $out
+            }
+            return @()
+        } catch {
+            Write-Log "[POLL-JOBS] Use-case path threw ($($_.Exception.Message)); falling back to legacy" "WARN"
+        }
+    }
+
     try {
-        Write-Log "[POLL-JOBS] Checking for pending jobs..." "DEBUG"
-        
+        Write-Log "[POLL-JOBS] Checking for pending jobs (legacy path)..." "DEBUG"
+
         $body = @{
             agent_name    = $Global:AgentName
             agent_version = $Global:AgentVersion
             timestamp     = [DateTime]::UtcNow.ToString("o")
         }
-        
+
         $result = Invoke-SecureRequest `
             -Path "/functions/v1/poll-jobs" `
             -Method "POST" `
             -Body $body `
             -MaxRetries 2 `
             -TimeoutSec 15
-        
+
         if (-not $result.Success) {
             $Global:ConsecutivePollErrors++
             if ($Global:ConsecutivePollErrors % 10 -eq 1) {
@@ -30,27 +55,7 @@ function Poll-Jobs {
             }
             return @()
         }
-        
-        $Global:ConsecutivePollErrors = 0
-        $response = $result.Content | ConvertFrom-Json
-        
-        $jobsList = $null
-        $jobsPropPoll = $response.PSObject.Properties['jobs']
-        if ($response.PSObject -and $jobsPropPoll) {
-            $jobsList = @($jobsPropPoll.Value)
-            $pollIntervalProp = $response.PSObject.Properties['poll_interval_seconds']
-            if ($pollIntervalProp -and $pollIntervalProp.Value -and $pollIntervalProp.Value -ge 10) {
-                $newInterval = [int]$pollIntervalProp.Value
-                if ($newInterval -ne $Global:JobPollIntervalSeconds) {
-                    Write-Log "[POLL-JOBS] Server adjusted job poll interval: $($Global:JobPollIntervalSeconds)s -> ${newInterval}s" "INFO"
-                    $Global:JobPollIntervalSeconds = $newInterval
-                }
-            }
-        } elseif ($response -is [System.Array]) {
-            $jobsList = @($response)
-        } else {
-            $jobsList = @()
-        }
+
         
         if ($jobsList -and $jobsList.Count -gt 0) {
             foreach ($job in $jobsList) {
