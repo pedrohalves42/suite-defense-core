@@ -11,12 +11,12 @@
 function Invoke-SyncBlockedWebsites {
     param([object]$Payload)
 
-    # Phase 4 cutover: prefer use case path.
+    # Phase 4 cutover: prefer use case path (sanitization + atomic adapter writes).
     if ($script:Agent -and $script:Agent.UseCases -and $script:Agent.UseCases.SyncBlocklist) {
         try {
             $r = & $script:Agent.UseCases.SyncBlocklist $Payload
-            if ($r -and $r.Success) {
-                return @{ success = $true; blocked_count = $r.Applied; blocked_domains = $r.Entries; method = "use_case"; synced_at = (Get-Date).ToString("o") }
+            if ($r -and $r.success) {
+                return @{ success = $true; blocked_count = $r.applied; rejected = $r.rejected; method = "use_case"; synced_at = (Get-Date).ToString("o") }
             }
             Write-Log "[SYNC-BLOCKED] Use-case path returned no-op, falling back to legacy" "DEBUG"
         } catch {
