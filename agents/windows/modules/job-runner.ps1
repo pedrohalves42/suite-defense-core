@@ -47,13 +47,35 @@ function Start-HeartbeatLoop {
             $telemetry = Get-SystemTelemetry
             $securityEvents = Get-SecurityEvents -Hours 1
 
-            $payload = @{
-                telemetry       = $telemetry
-                security_events = $securityEvents
-                agent_version   = $Global:AgentVersion
+            # ----------------------------------------------------------------
+            # Phase 4 cutover: prefer hexagonal SendHeartbeat use case.
+            # Legacy Invoke-SecureApi("heartbeat", ...) remains as fallback
+            # for rolling upgrades where the container did not initialize.
+            # ----------------------------------------------------------------
+            $response = $null
+            $useCases = $null
+            if ($script:Agent) { $useCases = $script:Agent.UseCases }
+
+            if ($useCases -and $useCases.SendHeartbeat) {
+                $hb = & $useCases.SendHeartbeat $telemetry $securityEvents
+                if (-not $hb -or -not $hb.Success) {
+                    $errMsg = if ($hb -and $hb.Error) { $hb.Error } else { "heartbeat use case returned no result" }
+                    throw $errMsg
+                }
+                $response = $hb.Response
+                if ($hb.IntervalChanged -and $hb.NewInterval) {
+                    Write-Log "[HEARTBEAT] Server adjusted interval -> $($hb.NewInterval)s" "INFO"
+                    $script:Config.HeartbeatInterval = $hb.NewInterval
+                }
+            } else {
+                $payload = @{
+                    telemetry       = $telemetry
+                    security_events = $securityEvents
+                    agent_version   = $Global:AgentVersion
+                }
+                $response = Invoke-SecureApi -Endpoint "heartbeat" -Method "POST" -Body $payload
             }
 
-            $response = Invoke-SecureApi -Endpoint "heartbeat" -Method "POST" -Body $payload
             $script:ConsecutiveFailures = 0
 
             # Extract Ed25519 public key from heartbeat response (server-driven key distribution)
@@ -61,7 +83,6 @@ function Start-HeartbeatLoop {
                 $newKey = $response.ed25519_public_key
                 if ($newKey -ne $Global:Ed25519PublicKeyBase64) {
                     $Global:Ed25519PublicKeyBase64 = $newKey
-                    # Persist for offline resilience
                     try {
                         $keyPath = "$script:BaseDir\ed25519_pubkey"
                         $newKey | Out-File -FilePath $keyPath -Encoding UTF8 -Force -NoNewline
@@ -72,7 +93,7 @@ function Start-HeartbeatLoop {
                 }
             }
 
-            # Apply server-driven heartbeat interval (v6 migration: 60s → 120s)
+            # Apply server-driven heartbeat interval (legacy field, in case use case path didn't already)
             if ($response -and $response.PSObject -and $response.PSObject.Properties['heartbeat_interval_seconds']) {
                 $serverInterval = [int]$response.heartbeat_interval_seconds
                 if ($serverInterval -ge 10 -and $serverInterval -ne $script:Config.HeartbeatInterval) {
@@ -106,14 +127,33 @@ function Start-HeartbeatLoop {
                 }
             }
 
-            # Check for updates
+            # Check for updates — prefer use case path when present
+            $updateAvailable = $false
             if ($response -and $response.PSObject -and $response.PSObject.Properties['update_available'] -and $response.update_available) {
-                Invoke-CheckForUpdate
+                $updateAvailable = $true
+            }
+            if ($updateAvailable) {
+                if ($useCases -and $useCases.CheckForUpdate) {
+                    try {
+                        $upd = & $useCases.CheckForUpdate $null
+                        if ($upd -and $upd.UpdateStaged) {
+                            $Global:RestartRequested = $true
+                            Write-Log "Update staged via use case (v$($upd.LatestVersion)) - exiting heartbeat loop" "INFO"
+                            break
+                        }
+                    } catch {
+                        Write-Log "[UPDATE] Use-case path threw, falling back to legacy: $($_.Exception.Message)" "WARN"
+                        Invoke-CheckForUpdate
+                    }
+                } else {
+                    Invoke-CheckForUpdate
+                }
                 if ($Global:RestartRequested) {
                     Write-Log "Update restart requested - exiting heartbeat loop" "INFO"
                     break
                 }
             }
+
         }
         catch {
             $script:ConsecutiveFailures++
