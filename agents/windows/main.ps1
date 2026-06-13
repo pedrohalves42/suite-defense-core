@@ -164,6 +164,7 @@ $hexRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 . "$hexRoot\ports\IEventBus.ps1"
 . "$hexRoot\composition\Container.ps1"
 . "$hexRoot\composition\CompatShims.ps1"
+. "$hexRoot\composition\AdapterWiring.ps1"
 
 function Main {
     Write-Log "CyberShield Agent v6.0 starting" "INFO"
@@ -191,7 +192,8 @@ function Main {
             EvidenceJournalPath  = $Global:EvidenceJournalPath
         }
         Sync-ContainerToGlobals -Container $script:Agent
-        Write-Log "Hexagonal container initialized (Phase 1 shim mode)" "INFO"
+        Initialize-AgentAdapters -Container $script:Agent | Out-Null
+        Write-Log "Hexagonal container initialized (Phase 2 adapters wired)" "INFO"
 
         # 2. Validate HMAC secret (fail-closed: agent cannot operate without it)
         if (-not $Global:HmacSecret) {
