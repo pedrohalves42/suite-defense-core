@@ -152,6 +152,19 @@ $modulePath = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "modul
 . "$modulePath\update.ps1"
 . "$modulePath\job-runner.ps1"
 
+# --- Hexagonal layer (ADR-002 Phase 1) ---
+# Container coexists with legacy $Global:* via compat shims.
+# Use cases will progressively migrate from globals to $script:Agent.
+$hexRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+. "$hexRoot\ports\IHttpClient.ps1"
+. "$hexRoot\ports\ISecretStore.ps1"
+. "$hexRoot\ports\ILogger.ps1"
+. "$hexRoot\ports\IClock.ps1"
+. "$hexRoot\ports\IFileSystem.ps1"
+. "$hexRoot\ports\IEventBus.ps1"
+. "$hexRoot\composition\Container.ps1"
+. "$hexRoot\composition\CompatShims.ps1"
+
 function Main {
     Write-Log "CyberShield Agent v6.0 starting" "INFO"
 
@@ -163,6 +176,23 @@ function Main {
         $Global:ServerUrl = $script:Config.ApiEndpoint
         Write-Log "Configuration loaded" "INFO"
 
+        # 1b. Build hexagonal container from current config and sync to globals
+        # so legacy modules see the same values. (Phase 1: shim mode.)
+        $script:Agent = New-AgentContainer -Config @{
+            AgentName            = $Global:AgentName
+            AgentVersion         = $Global:AgentVersion
+            AgentToken           = $Global:AgentToken
+            HmacSecret           = $Global:HmacSecret
+            ApiEndpoint          = $Global:ServerUrl
+            PollInterval         = $Global:JobPollIntervalSeconds
+            TlsPinnedThumbprint  = $Global:TlsPinnedThumbprint
+            StatePath            = $Global:StatePath
+            DnsBlocklistPath     = $Global:DnsBlocklistPath
+            EvidenceJournalPath  = $Global:EvidenceJournalPath
+        }
+        Sync-ContainerToGlobals -Container $script:Agent
+        Write-Log "Hexagonal container initialized (Phase 1 shim mode)" "INFO"
+
         # 2. Validate HMAC secret (fail-closed: agent cannot operate without it)
         if (-not $Global:HmacSecret) {
             Write-Log "SECURITY: HmacSecret not configured - agent cannot authenticate. Aborting." "ERROR"
@@ -172,7 +202,9 @@ function Main {
 
         # 3. Load persisted state
         Import-PersistedState
+        Sync-GlobalsToContainer -Container $script:Agent
         Write-Log "State loaded" "INFO"
+
 
         # 4. Watchdog or agent mode
         if ($env:CYBERSHIELD_WATCHDOG -eq "true") {
