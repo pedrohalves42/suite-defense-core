@@ -40,6 +40,11 @@ function Start-Watchdog {
     Write-Log "Watchdog started (interval: $($script:Config.WatchdogInterval)s)" "INFO"
 
     while ($true) {
+        # Hexagonal Phase 1: mirror legacy globals into container each tick.
+        if ($script:Agent -and (Get-Command Sync-GlobalsToContainer -ErrorAction SilentlyContinue)) {
+            try { Sync-GlobalsToContainer -Container $script:Agent } catch { }
+        }
+
         try {
             # Skip integrity check during legitimate updates (TOCTOU guard)
             if ($Global:UpdateInProgress) {

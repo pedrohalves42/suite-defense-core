@@ -71,3 +71,34 @@ Real implementations of every port, including:
 - `WindowsServiceAdapter` with **parity protection for Restart**.
 - `HostsFileAdapter` with atomic backup + domain sanitization.
 - `DpapiSecretStore`, `FileLogger` (no more `Write-Host`).
+
+---
+
+## Patch — Loop sync gap closed
+
+**Status:** Resolved.
+
+After initial Phase 1 ship, the loop-iteration sync called for in ADR-002
+was missing. Closed end-to-end:
+
+1. **`Start-HeartbeatLoop`** (`modules/job-runner.ps1`): calls
+   `Sync-GlobalsToContainer` at the top of every iteration, guarded by
+   `Get-Command` so it is a no-op when the container is not loaded
+   (preserves test isolation and backwards compat for the bundle build).
+
+2. **`Start-Watchdog`** (`modules/self-heal.ps1`): same hook in the
+   watchdog loop so update/integrity state stays mirrored.
+
+3. **`Sync-GlobalsToContainer`** (`composition/CompatShims.ps1`):
+   widened to also pull server-driven Config overrides
+   (`JobPollInterval`, `TlsPinnedThumbprint`, rotated `AgentToken`,
+   rotated `HmacSecret`, `ServerUrl`) — not just runtime State. This
+   matters because the backend pushes new poll intervals in heartbeat
+   responses and legacy code writes them to `$Global:JobPollIntervalSeconds`.
+
+4. **`container.Tests.ps1`**: +4 tests cover the widened sync
+   (poll interval rotation, TLS pin rotation, credential rotation,
+   idempotency).
+
+Both `try { … } catch { }` wrappers make the sync calls fail-safe — a
+shim bug can never crash the loop.

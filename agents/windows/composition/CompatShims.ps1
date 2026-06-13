@@ -48,13 +48,26 @@ function Sync-GlobalsToContainer {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Container)
 
-    $st = $Container.State
+    $st  = $Container.State
+    $cfg = $Container.Config
+
+    # --- mutable runtime state -----------------------------------------
     if (Get-Variable -Name 'CurrentState'           -Scope Global -ErrorAction SilentlyContinue) { $st.CurrentState           = $Global:CurrentState }
     if (Get-Variable -Name 'BootScriptHash'         -Scope Global -ErrorAction SilentlyContinue) { $st.BootScriptHash         = $Global:BootScriptHash }
     if (Get-Variable -Name 'UpdateInProgress'       -Scope Global -ErrorAction SilentlyContinue) { $st.UpdateInProgress       = $Global:UpdateInProgress }
     if (Get-Variable -Name 'ConsecutivePollErrors'  -Scope Global -ErrorAction SilentlyContinue) { $st.ConsecutivePollErrors  = $Global:ConsecutivePollErrors }
     if (Get-Variable -Name 'RestartRequested'       -Scope Global -ErrorAction SilentlyContinue) { $st.RestartRequested       = $Global:RestartRequested }
     if (Get-Variable -Name 'LoopTimestamp'          -Scope Global -ErrorAction SilentlyContinue) { $st.LoopTimestamp          = $Global:LoopTimestamp }
+
+    # --- server-driven configuration overrides --------------------------
+    # The backend may push new poll intervals, TLS pins, or rotate the
+    # Ed25519 public key inside legacy modules. Pull those back into
+    # the container so use cases in Phase 3+ see the latest values.
+    if (Get-Variable -Name 'JobPollIntervalSeconds' -Scope Global -ErrorAction SilentlyContinue) { $cfg.JobPollInterval       = $Global:JobPollIntervalSeconds }
+    if (Get-Variable -Name 'TlsPinnedThumbprint'    -Scope Global -ErrorAction SilentlyContinue) { $cfg.TlsPinnedThumbprint   = $Global:TlsPinnedThumbprint }
+    if (Get-Variable -Name 'AgentToken'             -Scope Global -ErrorAction SilentlyContinue) { $cfg.AgentToken            = $Global:AgentToken }
+    if (Get-Variable -Name 'HmacSecret'             -Scope Global -ErrorAction SilentlyContinue) { $cfg.HmacSecret            = $Global:HmacSecret }
+    if (Get-Variable -Name 'ServerUrl'              -Scope Global -ErrorAction SilentlyContinue) { $cfg.ServerUrl             = $Global:ServerUrl }
 }
 
 function Get-GlobalAllowlist { return $script:GlobalAllowlist }
