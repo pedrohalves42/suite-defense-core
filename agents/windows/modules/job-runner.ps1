@@ -183,6 +183,33 @@ function Invoke-AgentJob {
 
     Write-Log "Dispatching job $JobId type=$JobType (timeout: ${Timeout}s)" "INFO"
 
+    # Phase 4 cutover: prefer hexagonal ExecuteJob use case when available.
+    if ($script:Agent -and $script:Agent.UseCases -and $script:Agent.UseCases.ExecuteJob) {
+        try {
+            $jd = [PSCustomObject]@{
+                Id          = $JobId
+                ExecutionId = $JobId
+                Type        = $JobType
+                Payload     = $Payload
+                TimeoutSec  = $Timeout
+                IsKnown     = $true
+            }
+            $jr = & $script:Agent.UseCases.ExecuteJob $jd
+            if ($jr) {
+                if ($jr.Output -is [hashtable]) { return $jr.Output }
+                return @{
+                    success                = [bool]$jr.Success
+                    output                 = $jr.Output
+                    error                  = $jr.ErrorMessage
+                    exit_code              = [int]$jr.ExitCode
+                    execution_time_seconds = [double]$jr.ExecutionSeconds
+                }
+            }
+        } catch {
+            Write-Log "[DISPATCH] Use-case path threw ($($_.Exception.Message)); falling back to legacy switch" "WARN"
+        }
+    }
+
     try {
         $result = switch ($JobType) {
             # === Collection jobs (collection.ps1) ===
