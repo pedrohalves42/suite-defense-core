@@ -145,7 +145,7 @@ function Invoke-StopServiceViaAdapter {
         return @{ success=$false; error="Refused: $name is protected"; exit_code=-1 }
     }
     $ok = $Container.Services.Stop($name)
-    return @{ success=$ok; service=$name; action='stop'; exit_code= (if ($ok) { 0 } else { -1 }) }
+    return @{ success=$ok; service=$name; action='stop'; exit_code= $(if ($ok) { 0 } else { -1 }) }
 }
 
 function Invoke-DisableServiceViaAdapter {
@@ -154,7 +154,7 @@ function Invoke-DisableServiceViaAdapter {
     if (-not $name) { return @{ success=$false; error='service_name required'; exit_code=-1 } }
     $stopped = $Container.Services.Stop($name)
     $disabled = $Container.Services.SetStartupType($name, 'Disabled')
-    return @{ success=($stopped -and $disabled); service=$name; action='disable'; stopped=$stopped; disabled=$disabled; exit_code= (if ($stopped -and $disabled) { 0 } else { -1 }) }
+    return @{ success=($stopped -and $disabled); service=$name; action='disable'; stopped=$stopped; disabled=$disabled; exit_code= $(if ($stopped -and $disabled) { 0 } else { -1 }) }
 }
 
 function Invoke-RestartServiceViaAdapter {
@@ -167,5 +167,5 @@ function Invoke-RestartServiceViaAdapter {
     $stopped = $Container.Services.Stop($name)
     Start-Sleep -Milliseconds 500
     $started = $Container.Services.Start($name)
-    return @{ success=$started; service=$name; action='restart'; stopped=$stopped; started=$started; exit_code= (if ($started) { 0 } else { -1 }) }
+    return @{ success=$started; service=$name; action='restart'; stopped=$stopped; started=$started; exit_code= $(if ($started) { 0 } else { -1 }) }
 }
