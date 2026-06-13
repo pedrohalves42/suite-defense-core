@@ -61,10 +61,11 @@ function Invoke-SendHeartbeatUseCase {
     if ($body -and $body.PSObject.Properties['heartbeat_interval_seconds']) {
         $new = [int]$body.heartbeat_interval_seconds
         if ($new -ge 10 -and $new -ne $cfg.PollInterval) {
+            $prev = $cfg.PollInterval
             $result.IntervalChanged = $true
             $result.NewInterval     = $new
             $cfg.PollInterval       = $new
-            if ($bus) { $bus.Publish('heartbeat.interval.changed', @{ from = $cfg.PollInterval; to = $new }) }
+            if ($bus) { $bus.Publish('heartbeat.interval.changed', @{ from = $prev; to = $new }) }
         }
     }
 
