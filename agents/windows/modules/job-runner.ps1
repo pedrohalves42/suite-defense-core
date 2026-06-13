@@ -239,10 +239,10 @@ function Invoke-AgentJob {
             "apply_security_patch"       { Invoke-JobWithTimeout -JobId $JobId -Timeout $Timeout -Handler { Invoke-ApplySecurityPatch -Payload $Payload } }
 
             # === Lifecycle jobs (inline - minimal logic) ===
-            "update_agent"               { @{ success = $true; message = \"Update delegated to heartbeat force_update mechanism\"; agent_version = $Global:AgentVersion } }
-            \"reinstall_agent\"            { @{ success = $true; message = \"Reinstall delegated to force_update mechanism\" } }
-            \"collect_info\"               { @{ hostname = $env:COMPUTERNAME; os_version = [System.Environment]::OSVersion.VersionString; architecture = $env:PROCESSOR_ARCHITECTURE; agent_version = $Global:AgentVersion } }
-            \"integration_test_v3\"        { @{ pong = $true; agent_version = $Global:AgentVersion; timestamp = (Get-Date -Format \"o\"); hostname = $env:COMPUTERNAME } }
+            "update_agent"               { @{ success = $true; message = "Update delegated to heartbeat force_update mechanism"; agent_version = $Global:AgentVersion } }
+            "reinstall_agent"            { @{ success = $true; message = "Reinstall delegated to force_update mechanism" } }
+            "collect_info"               { @{ hostname = $env:COMPUTERNAME; os_version = [System.Environment]::OSVersion.VersionString; architecture = $env:PROCESSOR_ARCHITECTURE; agent_version = $Global:AgentVersion } }
+            "integration_test_v3"        { @{ pong = $true; agent_version = $Global:AgentVersion; timestamp = (Get-Date -Format "o"); hostname = $env:COMPUTERNAME } }
 
             default {
                 Write-Log "SECURITY: Rejected unknown job type '$JobType' for job $JobId" "WARN"
