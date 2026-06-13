@@ -125,4 +125,39 @@ Describe "Compat shims" {
         $list           | Should -Contain 'AgentVersion'
         $list.Count     | Should -Be 1
     }
+
+    It "Sync-GlobalsToContainer pulls server-driven JobPollInterval back into Config" {
+        $c = New-AgentContainer -Config @{ PollInterval = 60 }
+        $c.Config.JobPollInterval | Should -Be 30  # default
+        $Global:JobPollIntervalSeconds = 120
+        Sync-GlobalsToContainer -Container $c
+        $c.Config.JobPollInterval | Should -Be 120
+        Remove-Variable -Name 'JobPollIntervalSeconds' -Scope Global -Force
+    }
+
+    It "Sync-GlobalsToContainer pulls rotated TlsPinnedThumbprint back into Config" {
+        $c = New-AgentContainer
+        $Global:TlsPinnedThumbprint = 'AABBCCDDEEFF00112233'
+        Sync-GlobalsToContainer -Container $c
+        $c.Config.TlsPinnedThumbprint | Should -Be 'AABBCCDDEEFF00112233'
+        Remove-Variable -Name 'TlsPinnedThumbprint' -Scope Global -Force
+    }
+
+    It "Sync-GlobalsToContainer pulls rotated AgentToken / HmacSecret back into Config" {
+        $c = New-AgentContainer -Config @{ AgentToken = 'old'; HmacSecret = 'old' }
+        $Global:AgentToken = 'rotated-token'
+        $Global:HmacSecret = 'rotated-secret'
+        Sync-GlobalsToContainer -Container $c
+        $c.Config.AgentToken | Should -Be 'rotated-token'
+        $c.Config.HmacSecret | Should -Be 'rotated-secret'
+    }
+
+    It "is idempotent: calling sync N times yields the same state" {
+        $c = New-AgentContainer
+        $Global:CurrentState           = 'ENFORCING'
+        $Global:ConsecutivePollErrors  = 2
+        1..5 | ForEach-Object { Sync-GlobalsToContainer -Container $c }
+        $c.State.CurrentState          | Should -Be 'ENFORCING'
+        $c.State.ConsecutivePollErrors | Should -Be 2
+    }
 }
