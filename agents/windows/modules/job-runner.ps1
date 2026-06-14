@@ -48,9 +48,8 @@ function Start-HeartbeatLoop {
             $securityEvents = Get-SecurityEvents -Hours 1
 
             # ----------------------------------------------------------------
-            # Phase 4 cutover: prefer hexagonal SendHeartbeat use case.
-            # Legacy Invoke-SecureApi("heartbeat", ...) remains as fallback
-            # for rolling upgrades where the container did not initialize.
+            # Phase 5 hard cutover: hexagonal SendHeartbeat use case REQUIRED.
+            # Emergency rollback: $env:CYBERSHIELD_LEGACY_FALLBACK = '1'.
             # ----------------------------------------------------------------
             $response = $null
             $useCases = $null
@@ -67,13 +66,16 @@ function Start-HeartbeatLoop {
                     Write-Log "[HEARTBEAT] Server adjusted interval -> $($hb.NewInterval)s" "INFO"
                     $script:Config.HeartbeatInterval = $hb.NewInterval
                 }
-            } else {
+            } elseif ($env:CYBERSHIELD_LEGACY_FALLBACK -eq '1') {
+                Write-Log "[HEARTBEAT] LEGACY FALLBACK ENABLED" "WARN"
                 $payload = @{
                     telemetry       = $telemetry
                     security_events = $securityEvents
                     agent_version   = $Global:AgentVersion
                 }
                 $response = Invoke-SecureApi -Endpoint "heartbeat" -Method "POST" -Body $payload
+            } else {
+                throw "Hexagonal container not wired and CYBERSHIELD_LEGACY_FALLBACK not set; refusing to heartbeat."
             }
 
             $script:ConsecutiveFailures = 0
