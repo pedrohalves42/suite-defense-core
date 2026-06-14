@@ -1,6 +1,6 @@
 # ADR-002: Hexagonal Refactor of the Windows PowerShell Agent
 
-**Status:** In Progress (Phase 0 — Baseline)
+**Status:** Accepted (Phase 5 closed 2026-06-14 — see `ADR-002-phase-5-notes.md`)
 **Date:** 2026-06-13
 **Supersedes:** N/A
 **Related:** ADR-001 (Hexagonal Architecture for Agent Update System)
