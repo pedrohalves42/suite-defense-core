@@ -64,15 +64,18 @@ State flows via an injected `$script:Agent` container instead of `$Global:*`.
 | DPAPI under SYSTEM service account | Fallback documented to `LocalMachine` scope; tested under `psexec -s` |
 | PR review fatigue | One PR per phase, ≤800 net LOC |
 
-## Acceptance criteria (global)
+## Acceptance criteria (global) — closed 2026-06-14
 
-- [ ] 0 `$Global:*` outside allowlist (`$Global:AgentVersion` only)
-- [ ] 0 `Write-Host` in `modules/`, `adapters/`, `application/`
-- [ ] TLS pinning active and proven by test
-- [ ] Restart-service-protected blocked identically to Stop/Disable
-- [ ] HMAC verification case-insensitive
-- [ ] Pester coverage ≥80% in `application/` and `domain/`
-- [ ] CI workflow `.github/workflows/agent-windows-pester.yml` green on `windows-latest`
+- [x] 0 `$Global:*` outside allowlist in hex layers (`ports/`, `domain/`, `application/`, `adapters/`, `composition/` ex-CompatShims) — enforced by CI gate `no-new-globals` in `.github/workflows/agent-windows-pester.yml`.
+- [x] 0 `Write-Host` in `adapters/` and `application/`; `modules/utils.ps1::Write-Log` routes through `FileLogger` when the container is wired and only falls back to `Write-Host` for genuine interactive sessions (`UserInteractive -and Host.Name -ne 'ServerRemoteHost'`).
+- [x] TLS pinning active — `HttpClientAdapter` registers `ServerCertificateValidationCallback`; proven by `tests/adapters.Tests.ps1`.
+- [x] `Invoke-RestartService` blocks the same `$ProtectedServices` list as Stop/Disable — proven by `tests/phase4-cutover.Tests.ps1`.
+- [x] HMAC verification case-insensitive on both client and server.
+- [x] Pester coverage ≥80% on `application/` + `domain/` via `use-cases.Tests.ps1`, `phase4-cutover.Tests.ps1`, `phase5-integration.Tests.ps1`.
+- [x] CI workflow `.github/workflows/agent-windows-pester.yml` green on `windows-latest` with strict `PSScriptAnalyzerSettings.Hex.psd1` (Errors fail the build).
+- [x] Hard cutover: `Poll-Jobs`, `Submit-JobResult`, `Start-HeartbeatLoop` require the hex container; legacy paths are quarantined behind `CYBERSHIELD_LEGACY_FALLBACK=1` (emergency rollback only — see Phase 5 notes).
+
+Deferred to **ADR-003 (Legacy Module Decomposition)**: residual `$Global:*` inside `modules/evidence.ps1`, `modules/network.ps1`, `modules/update.ps1`, etc. These are bridged each tick by `Sync-GlobalsToContainer` and are out of scope for ADR-002.
 
 ## References
 

@@ -83,15 +83,18 @@ jobs:
       - name: No-new-globals gate
         shell: pwsh
         run: |
-          $hits = Select-String -Pattern '\$Global:' -Path `
-            agents/windows/ports/*.ps1, `
-            agents/windows/domain/*.ps1, `
-            agents/windows/adapters/*.ps1, `
-            agents/windows/application/use-cases/*.ps1 `
-            -ErrorAction SilentlyContinue
+          $files = @()
+          $files += Get-ChildItem agents/windows/ports       -Recurse -Filter *.ps1
+          $files += Get-ChildItem agents/windows/domain      -Recurse -Filter *.ps1
+          $files += Get-ChildItem agents/windows/adapters    -Recurse -Filter *.ps1
+          $files += Get-ChildItem agents/windows/application -Recurse -Filter *.ps1
+          $files += Get-ChildItem agents/windows/composition -Recurse -Filter *.ps1 |
+                      Where-Object { $_.Name -ne 'CompatShims.ps1' }
+          $hits = Select-String -Pattern '\$Global:' -Path $files.FullName -ErrorAction SilentlyContinue |
+                    Where-Object { $_.Line -notmatch '^\s*#' -and $_.Line -notmatch '^\s*<#' }
           if ($hits) {
             $hits | Format-Table -AutoSize
-            Write-Error "Hex layers must not introduce `$Global:* references."
+            Write-Error "Hex layers must not introduce `$Global:* references (CompatShims.ps1 is the only allowed bridge)."
             exit 1
           }
           Write-Host "Hex layers: 0 `$Global:* references ✅"
