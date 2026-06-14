@@ -1,0 +1,97 @@
+name: agent-windows-pester
+
+on:
+  push:
+    paths:
+      - 'agents/windows/**'
+      - '.github/workflows/agent-windows-pester.yml'
+  pull_request:
+    paths:
+      - 'agents/windows/**'
+
+jobs:
+  pester:
+    name: Pester + PSScriptAnalyzer
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Pester + PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module Pester              -RequiredVersion 5.5.0 -Force -SkipPublisherCheck
+          Install-Module PSScriptAnalyzer    -RequiredVersion 1.21.0 -Force -SkipPublisherCheck
+
+      - name: PSScriptAnalyzer — hexagonal layers (strict / Error)
+        shell: pwsh
+        run: |
+          $paths = @(
+            'agents/windows/ports',
+            'agents/windows/domain',
+            'agents/windows/application',
+            'agents/windows/adapters'
+          )
+          $r = Invoke-ScriptAnalyzer -Path $paths -Recurse `
+                  -Settings agents/windows/PSScriptAnalyzerSettings.Hex.psd1
+          if ($r) {
+            $r | Format-Table -AutoSize
+            $errs = $r | Where-Object Severity -eq 'Error'
+            if ($errs) { Write-Error "Hex layer Errors: $($errs.Count)"; exit 1 }
+          }
+
+      - name: PSScriptAnalyzer — composition (hex strict, excludes CompatShims)
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem agents/windows/composition -Filter *.ps1 |
+                    Where-Object { $_.Name -ne 'CompatShims.ps1' }
+          $r = Invoke-ScriptAnalyzer -Path $files.FullName `
+                  -Settings agents/windows/PSScriptAnalyzerSettings.Hex.psd1
+          if ($r) {
+            $r | Format-Table -AutoSize
+            $errs = $r | Where-Object Severity -eq 'Error'
+            if ($errs) { Write-Error "Composition Errors: $($errs.Count)"; exit 1 }
+          }
+
+      - name: PSScriptAnalyzer — legacy modules (Warning, baseline only)
+        shell: pwsh
+        run: |
+          $r = Invoke-ScriptAnalyzer -Path agents/windows/modules -Recurse `
+                  -Settings agents/windows/PSScriptAnalyzerSettings.psd1
+          if ($r) { $r | Format-Table -AutoSize }
+          # non-blocking — captured for trend analysis only
+          exit 0
+
+      - name: Pester — full suite
+        shell: pwsh
+        run: |
+          $cfg = New-PesterConfiguration
+          $cfg.Run.Path = 'agents/windows/tests'
+          $cfg.Run.Exit = $true
+          $cfg.TestResult.Enabled = $true
+          $cfg.TestResult.OutputPath = 'pester-results.xml'
+          $cfg.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $cfg
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pester-results
+          path: pester-results.xml
+
+      - name: No-new-globals gate
+        shell: pwsh
+        run: |
+          $hits = Select-String -Pattern '\$Global:' -Path `
+            agents/windows/ports/*.ps1, `
+            agents/windows/domain/*.ps1, `
+            agents/windows/adapters/*.ps1, `
+            agents/windows/application/use-cases/*.ps1 `
+            -ErrorAction SilentlyContinue
+          if ($hits) {
+            $hits | Format-Table -AutoSize
+            Write-Error "Hex layers must not introduce `$Global:* references."
+            exit 1
+          }
+          Write-Host "Hex layers: 0 `$Global:* references ✅"
