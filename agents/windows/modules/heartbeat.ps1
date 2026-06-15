@@ -11,7 +11,12 @@ function Poll-Jobs {
     # Legacy fallback is removed; container must be initialized by main.ps1.
     # Emergency rollback: set $env:CYBERSHIELD_LEGACY_FALLBACK = '1' to re-enable.
     if (-not ($script:Agent -and $script:Agent.UseCases -and $script:Agent.UseCases.PollJobs)) {
-        if ($env:CYBERSHIELD_LEGACY_FALLBACK -ne '1') {
+        if (Get-Command Test-LegacyFallbackAllowed -ErrorAction SilentlyContinue) {
+            if (-not (Test-LegacyFallbackAllowed -Caller 'POLL-JOBS')) {
+                Write-Log "[POLL-JOBS] FATAL: hexagonal container not wired; aborting poll" "ERROR"
+                return @()
+            }
+        } elseif ($env:CYBERSHIELD_LEGACY_FALLBACK -ne '1') {
             Write-Log "[POLL-JOBS] FATAL: hexagonal container not wired; aborting poll" "ERROR"
             return @()
         }
@@ -78,7 +83,12 @@ function Submit-JobResult {
 
     # Phase 5 hard cutover: hexagonal use case is REQUIRED.
     if (-not ($script:Agent -and $script:Agent.UseCases -and $script:Agent.UseCases.SubmitJobResult)) {
-        if ($env:CYBERSHIELD_LEGACY_FALLBACK -ne '1') {
+        if (Get-Command Test-LegacyFallbackAllowed -ErrorAction SilentlyContinue) {
+            if (-not (Test-LegacyFallbackAllowed -Caller 'SUBMIT')) {
+                Write-Log "[SUBMIT] FATAL: hexagonal container not wired; submission aborted for job $($Job.id)" "ERROR"
+                return $false
+            }
+        } elseif ($env:CYBERSHIELD_LEGACY_FALLBACK -ne '1') {
             Write-Log "[SUBMIT] FATAL: hexagonal container not wired; submission aborted for job $($Job.id)" "ERROR"
             return $false
         }

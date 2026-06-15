@@ -66,7 +66,16 @@ function Start-HeartbeatLoop {
                     Write-Log "[HEARTBEAT] Server adjusted interval -> $($hb.NewInterval)s" "INFO"
                     $script:Config.HeartbeatInterval = $hb.NewInterval
                 }
-            } elseif ($env:CYBERSHIELD_LEGACY_FALLBACK -eq '1') {
+            } else {
+                $fallbackOk = $false
+                if (Get-Command Test-LegacyFallbackAllowed -ErrorAction SilentlyContinue) {
+                    $fallbackOk = Test-LegacyFallbackAllowed -Caller 'HEARTBEAT'
+                } elseif ($env:CYBERSHIELD_LEGACY_FALLBACK -eq '1') {
+                    $fallbackOk = $true
+                }
+                if (-not $fallbackOk) {
+                    throw "Hexagonal container not wired and CYBERSHIELD_LEGACY_FALLBACK not honored; refusing to heartbeat."
+                }
                 Write-Log "[HEARTBEAT] LEGACY FALLBACK ENABLED" "WARN"
                 $payload = @{
                     telemetry       = $telemetry
@@ -74,8 +83,6 @@ function Start-HeartbeatLoop {
                     agent_version   = $Global:AgentVersion
                 }
                 $response = Invoke-SecureApi -Endpoint "heartbeat" -Method "POST" -Body $payload
-            } else {
-                throw "Hexagonal container not wired and CYBERSHIELD_LEGACY_FALLBACK not set; refusing to heartbeat."
             }
 
             $script:ConsecutiveFailures = 0

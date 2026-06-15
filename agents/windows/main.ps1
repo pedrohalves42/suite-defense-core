@@ -145,6 +145,7 @@ $modulePath = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "modul
 # --- Domain layer (depends on infrastructure) ---
 . "$modulePath\collection.ps1"
 . "$modulePath\remediation.ps1"
+. "$modulePath\legacy-fallback.ps1"
 . "$modulePath\heartbeat.ps1"
 
 # --- Orchestration layer (depends on all above) ---
