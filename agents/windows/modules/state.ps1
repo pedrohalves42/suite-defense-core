@@ -95,7 +95,7 @@ function Get-SavedAgentState {
 
 function Get-RollbackState {
     try {
-        $statePath = $Global:RollbackPaths.RollbackState
+        $statePath = $script:RollbackStatePath
         if ($statePath -and (Test-Path $statePath)) {
             return Get-Content $statePath -Raw | ConvertFrom-Json
         }
@@ -116,7 +116,7 @@ function Save-RollbackState {
         $State
     )
     try {
-        $statePath = $Global:RollbackPaths.RollbackState
+        $statePath = $script:RollbackStatePath
         if ($statePath) {
             $State | ConvertTo-Json -Depth 5 | Out-File $statePath -Encoding UTF8 -Force
         }
