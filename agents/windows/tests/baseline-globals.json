@@ -1,7 +1,7 @@
 {
-  "phase": "6.2",
+  "phase": "6.3",
   "captured_at": "2026-06-18",
-  "total_globals": 153,
+  "total_globals": 144,
   "per_module": {
     "collection.ps1": 4,
     "config.ps1": 7,
@@ -12,7 +12,7 @@
     "job-runner.ps1": 8,
     "legacy-fallback.ps1": 0,
     "network.ps1": 27,
-    "notification.ps1": 12,
+    "notification.ps1": 3,
     "remediation.ps1": 0,
     "security.ps1": 0,
     "self-heal.ps1": 10,
