@@ -4,7 +4,38 @@
 .DESCRIPTION
     Manages agent state transitions, rollback state persistence.
     Depends on: utils.ps1 (Write-Log)
+
+.NOTES
+    Phase 6.4 (ADR-003): the rollback-state file path is module-private
+    ($script:RollbackStatePath). Callers set it via Set-RollbackStatePath
+    (main.ps1 does this at boot) and read it via Get-RollbackStatePath.
+    Default value is the same path main.ps1 used previously, so the
+    module is safe to load even before Set-RollbackStatePath is invoked.
 #>
+
+# --- Module-private rollback state path (Phase 6.4) ---------------------
+$script:RollbackStatePath = "$env:ProgramData\CyberShield\data\rollback_state.json"
+
+function Set-RollbackStatePath {
+    <#
+    .SYNOPSIS
+        Configure the rollback-state JSON file location.
+    #>
+    param([Parameter(Mandatory)][string]$Path)
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        throw "RollbackStatePath cannot be empty"
+    }
+    $script:RollbackStatePath = $Path
+}
+
+function Get-RollbackStatePath {
+    <#
+    .SYNOPSIS
+        Return the currently configured rollback-state path.
+    #>
+    return $script:RollbackStatePath
+}
+
 
 function Set-AgentState {
     param(
