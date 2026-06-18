@@ -65,7 +65,8 @@ Describe "Get-SavedAgentState" {
 
 Describe "Get-RollbackState / Save-RollbackState" {
     It "Returns defaults when no rollback file" {
-        Remove-Item $Global:RollbackPaths.RollbackState -Force -ErrorAction SilentlyContinue
+        Remove-Item (Get-RollbackStatePath) -Force -ErrorAction SilentlyContinue
+
         $state = Get-RollbackState
         $state.safe_mode | Should -BeFalse
         $state.rollback_count | Should -Be 0
