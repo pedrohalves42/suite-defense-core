@@ -34,6 +34,11 @@ jobs:
       - name: Install dependencies
         timeout-minutes: 3
         run: npm ci
+
+      - name: Bootstrap lockfile — verify pinned tool versions (Phase 6.6)
+        timeout-minutes: 2
+        shell: pwsh
+        run: pwsh -NoProfile -File agents/windows/bootstrap.ps1 -Verify
       
       - name: Validate system before build
         timeout-minutes: 5
