@@ -29,7 +29,7 @@ serveTenant(async (req, ctx) => {
 
   // Fetch action
   const { data: action, error: actionError } = await supabase
-    .from('ai_actions').select('*, ai_insights(*)').eq('id', action_id).single();
+    .from('ai_actions').select('*, ai_insights(*)').eq('id', action_id).maybeSingle();
   if (actionError || !action) throw new Error('Action not found');
 
   // Verify admin role

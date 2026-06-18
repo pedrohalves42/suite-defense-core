@@ -66,7 +66,7 @@ export async function validateUpdateAgentVersion(ctx: SubmitContext): Promise<vo
     .from('agents')
     .select('agent_version')
     .eq('id', agent.id)
-    .single()
+    .maybeSingle()
   
   const legacyVersions = ['3.10.37', '3.10.39', '3.10.14']
   const currentVersion = currentAgent?.agent_version || ''

@@ -231,7 +231,7 @@ export async function checkPayloadTampering(ctx: SubmitContext): Promise<Respons
         error: 'PAYLOAD_TAMPERED',
         message: 'Job payload integrity check failed'
       }),
-      { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 409, headers: { ...buildCorsHeaders(ctx.origin), 'Content-Type': 'application/json' } }
     )
   }
   
@@ -278,7 +278,7 @@ export async function checkDuplicateSubmission(ctx: SubmitContext): Promise<Resp
         message: 'Job ja estava concluido',
         job_id: payload.job_id
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...buildCorsHeaders(ctx.origin), 'Content-Type': 'application/json' } }
     )
   }
   
