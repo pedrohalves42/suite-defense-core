@@ -35,8 +35,10 @@ function computeStatus(
   hasAnyAgents: boolean,
 ): { status: PipelineFreshnessStatus; minutesAgo: number | null } {
   if (!lastSeenAt) {
-    // No data at all — if no agents exist it's expected, not critical
-    return { status: hasAnyAgents ? 'no_data' : 'no_data', minutesAgo: null };
+    // Wave 4 - B41: previously both branches returned 'no_data'. Distinguish the
+    // "tenant has no agents yet" case (disabled-like) from "agents exist but
+    // never sent this signal" (no_data) so the UI can render the right hint.
+    return { status: hasAnyAgents ? 'no_data' : 'disabled', minutesAgo: null };
   }
 
   const minutesAgo = (Date.now() - new Date(lastSeenAt).getTime()) / (1000 * 60);
