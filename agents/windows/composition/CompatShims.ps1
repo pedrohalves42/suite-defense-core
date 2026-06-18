@@ -42,6 +42,16 @@ function Sync-ContainerToGlobals {
     $Global:ConsecutivePollErrors  = $st.ConsecutivePollErrors
     $Global:RestartRequested       = $st.RestartRequested
     $Global:LoopTimestamp          = $st.LoopTimestamp
+
+    # Phase 6.5: propagate into modules/state.ps1 script-private store
+    # so state.ps1 internals (Set-AgentState, Get-SavedAgentState, ...)
+    # stay aligned with the container's view of the world.
+    if (Get-Command -Name Set-AgentCurrentState -ErrorAction SilentlyContinue) {
+        if ($st.CurrentState) { Set-AgentCurrentState -State $st.CurrentState }
+    }
+    if (Get-Command -Name Set-StatePath -ErrorAction SilentlyContinue) {
+        if ($cfg.StatePath) { Set-StatePath -Path $cfg.StatePath }
+    }
 }
 
 function Sync-GlobalsToContainer {
@@ -50,6 +60,18 @@ function Sync-GlobalsToContainer {
 
     $st  = $Container.State
     $cfg = $Container.Config
+
+    # Phase 6.5: if modules/state.ps1 has mutated CurrentState via Set-AgentState,
+    # the legacy global mirror is stale. Refresh it from the accessor first so
+    # the rest of this function still works through the global bridge.
+    if (Get-Command -Name Get-AgentCurrentState -ErrorAction SilentlyContinue) {
+        $accState = Get-AgentCurrentState
+        if ($accState) { $Global:CurrentState = $accState }
+    }
+    if (Get-Command -Name Get-StatePath -ErrorAction SilentlyContinue) {
+        $accPath = Get-StatePath
+        if ($accPath) { $Global:StatePath = $accPath }
+    }
 
     # --- mutable runtime state -----------------------------------------
     if (Get-Variable -Name 'CurrentState'           -Scope Global -ErrorAction SilentlyContinue) { $st.CurrentState           = $Global:CurrentState }
@@ -60,9 +82,6 @@ function Sync-GlobalsToContainer {
     if (Get-Variable -Name 'LoopTimestamp'          -Scope Global -ErrorAction SilentlyContinue) { $st.LoopTimestamp          = $Global:LoopTimestamp }
 
     # --- server-driven configuration overrides --------------------------
-    # The backend may push new poll intervals, TLS pins, or rotate the
-    # Ed25519 public key inside legacy modules. Pull those back into
-    # the container so use cases in Phase 3+ see the latest values.
     if (Get-Variable -Name 'JobPollIntervalSeconds' -Scope Global -ErrorAction SilentlyContinue) { $cfg.JobPollInterval       = $Global:JobPollIntervalSeconds }
     if (Get-Variable -Name 'TlsPinnedThumbprint'    -Scope Global -ErrorAction SilentlyContinue) { $cfg.TlsPinnedThumbprint   = $Global:TlsPinnedThumbprint }
     if (Get-Variable -Name 'AgentToken'             -Scope Global -ErrorAction SilentlyContinue) { $cfg.AgentToken            = $Global:AgentToken }
