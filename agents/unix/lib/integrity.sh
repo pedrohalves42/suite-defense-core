@@ -22,9 +22,12 @@ test_runtime_integrity() {
     fi
     [[ -z "$expected_hash" || ${#expected_hash} -ne 64 ]] && return 0
 
-    local current_hash
+    local current_hash expected_lc
     current_hash=$(sha256sum "$0" 2>/dev/null | cut -d' ' -f1)
-    if [[ "$current_hash" != "${expected_hash,,}" ]]; then
+    [[ -z "$current_hash" ]] && current_hash=$(shasum -a 256 "$0" 2>/dev/null | cut -d' ' -f1)
+    expected_lc=$(printf '%s' "$expected_hash" | tr 'A-F' 'a-f')
+    current_hash=$(printf '%s' "$current_hash" | tr 'A-F' 'a-f')
+    if [[ "$current_hash" != "$expected_lc" ]]; then
         TOCTOU_CONSECUTIVE_FAILURES=$((TOCTOU_CONSECUTIVE_FAILURES + 1))
         if [[ $TOCTOU_CONSECUTIVE_FAILURES -ge 3 ]]; then
             log "ERROR" "[INTEGRITY] TOCTOU VIOLATION: 3 consecutive mismatches - fail-closed"

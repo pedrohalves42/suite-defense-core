@@ -8,20 +8,27 @@ _get_cpu_percent() {
 }
 
 _get_system_metrics() {
-    local cpu_percent mem_total mem_free mem_used mem_percent
+    local cpu_percent mem_total mem_free mem_used mem_percent mem_total_gb
     cpu_percent=$(_get_cpu_percent)
     mem_total=$(awk '/MemTotal/ {print $2 * 1024}' /proc/meminfo 2>/dev/null || echo 0)
     mem_free=$(awk '/MemAvailable/ {print $2 * 1024}' /proc/meminfo 2>/dev/null || echo 0)
-    mem_used=$((mem_total - mem_free))
-    mem_percent=$(echo "scale=2; $mem_used * 100 / $mem_total" | bc 2>/dev/null || echo 0)
+    if [[ "${mem_total:-0}" -gt 0 ]]; then
+        mem_used=$((mem_total - mem_free))
+        mem_percent=$(echo "scale=2; $mem_used * 100 / $mem_total" | bc 2>/dev/null || echo 0)
+        mem_total_gb=$(echo "scale=2; $mem_total / 1073741824" | bc 2>/dev/null || echo 0)
+    else
+        mem_percent=0
+        mem_total_gb=0
+    fi
 
-    local disk_info disk_total disk_used disk_percent uptime_seconds
-    disk_info=$(df / | tail -1)
+    local disk_info disk_total disk_percent uptime_seconds
+    disk_info=$(df / 2>/dev/null | tail -1)
     disk_total=$(echo "$disk_info" | awk '{print $2}')
     disk_percent=$(echo "$disk_info" | awk '{print $5}' | tr -d '%')
+    [[ -z "$disk_percent" ]] && disk_percent=0
     uptime_seconds=$(awk '{print int($1)}' /proc/uptime 2>/dev/null || echo 0)
 
-    echo '{"cpu_percent":'"$cpu_percent"',"memory_total_gb":'$(echo "scale=2; $mem_total / 1073741824" | bc 2>/dev/null || echo 0)',"memory_used_percent":'"$mem_percent"',"disk_used_percent":'"$disk_percent"',"uptime_seconds":'"$uptime_seconds"'}'
+    echo '{"cpu_percent":'"${cpu_percent:-0}"',"memory_total_gb":'"${mem_total_gb:-0}"',"memory_used_percent":'"${mem_percent:-0}"',"disk_used_percent":'"${disk_percent:-0}"',"uptime_seconds":'"${uptime_seconds:-0}"'}'
 }
 
 _get_top_processes() {

@@ -31,9 +31,11 @@ dispatch_job_handler() {
 }
 
 _collect_software_inventory() {
-    local list count
-    # macOS uses system_profiler for software list
-    count=$(system_profiler SPApplicationsDataType 2>/dev/null | grep -c "Location:" || echo 0)
+    local count
+    # macOS uses system_profiler for software list. grep -c emits "0" on no match
+    # but ALSO returns exit 1, so we redirect stderr and force-default to 0.
+    count=$(system_profiler SPApplicationsDataType 2>/dev/null | grep -c "Location:" 2>/dev/null)
+    [[ -z "$count" || ! "$count" =~ ^[0-9]+$ ]] && count=0
     echo '{"software_count":'"$count"',"collected_at":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'","source":"system_profiler"}'
 }
 
