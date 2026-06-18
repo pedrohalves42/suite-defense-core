@@ -7,20 +7,27 @@
 
 .NOTES
     Phase 6.4 (ADR-003): the rollback-state file path is module-private
-    ($script:RollbackStatePath). Callers set it via Set-RollbackStatePath
-    (main.ps1 does this at boot) and read it via Get-RollbackStatePath.
-    Default value is the same path main.ps1 used previously, so the
-    module is safe to load even before Set-RollbackStatePath is invoked.
+    (script:RollbackStatePath). Set via Set-RollbackStatePath / read via
+    Get-RollbackStatePath.
+
+    Phase 6.5 (ADR-003): the FSM current state and persisted-state path
+    are also module-private now (script:CurrentState / script:StatePath).
+    Accessors:
+      Get-AgentCurrentState / Set-AgentCurrentState
+      Get-StatePath        / Set-StatePath
+    Set-AgentState (FSM transitions) is the only validated mutator.
+    Defaults are baked in so the module is safe to load before main.ps1
+    invokes the setters.
 #>
+
+# --- Module-private state (Phase 6.5) -----------------------------------
+$script:CurrentState      = 'INITIALIZING'
+$script:StatePath         = "$env:ProgramData\CyberShield\data\agent_state.json"
 
 # --- Module-private rollback state path (Phase 6.4) ---------------------
 $script:RollbackStatePath = "$env:ProgramData\CyberShield\data\rollback_state.json"
 
 function Set-RollbackStatePath {
-    <#
-    .SYNOPSIS
-        Configure the rollback-state JSON file location.
-    #>
     param([Parameter(Mandatory)][string]$Path)
     if ([string]::IsNullOrWhiteSpace($Path)) {
         throw "RollbackStatePath cannot be empty"
@@ -29,25 +36,44 @@ function Set-RollbackStatePath {
 }
 
 function Get-RollbackStatePath {
-    <#
-    .SYNOPSIS
-        Return the currently configured rollback-state path.
-    #>
     return $script:RollbackStatePath
 }
 
+function Set-StatePath {
+    param([Parameter(Mandatory)][string]$Path)
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        throw "StatePath cannot be empty"
+    }
+    $script:StatePath = $Path
+}
+
+function Get-StatePath {
+    return $script:StatePath
+}
+
+function Get-AgentCurrentState {
+    return $script:CurrentState
+}
+
+function Set-AgentCurrentState {
+    param([Parameter(Mandatory)][string]$State)
+    if ([string]::IsNullOrWhiteSpace($State)) {
+        throw "CurrentState cannot be empty"
+    }
+    $script:CurrentState = $State
+}
 
 function Set-AgentState {
     param(
         [Parameter(Mandatory = $true)]
         [ValidateSet("INITIALIZING", "AUTHENTICATING", "SYNCING", "ENFORCING", "DEGRADED", "SAFE_MODE")]
         [string]$NewState,
-        
+
         [Parameter(Mandatory = $false)]
         [string]$Reason = ""
     )
-    
-    $oldState = $Global:CurrentState
+
+    $oldState = $script:CurrentState
 
     $validTransitions = @{
         "INITIALIZING"   = @("AUTHENTICATING", "DEGRADED", "SAFE_MODE", "SYNCING")
@@ -57,36 +83,36 @@ function Set-AgentState {
         "DEGRADED"       = @("AUTHENTICATING", "SYNCING", "ENFORCING", "SAFE_MODE")
         "SAFE_MODE"      = @("INITIALIZING", "SYNCING", "ENFORCING")
     }
-    
+
     if ($oldState -eq $NewState) {
         return $true
     }
-    
+
     if ($NewState -notin $validTransitions[$oldState]) {
         Write-Log "[FSM] Invalid transition: $oldState -> $NewState" "ERROR"
         return $false
     }
-    
-    $Global:CurrentState = $NewState
-    
+
+    $script:CurrentState = $NewState
+
     Write-Log "[FSM] State transition: $oldState -> $NewState (Reason: $Reason)" "INFO"
-    
+
     try {
         @{
             state          = $NewState
             previous_state = $oldState
             transition_at  = (Get-Date).ToString("o")
             reason         = $Reason
-        } | ConvertTo-Json | Out-File $Global:StatePath -Encoding UTF8
+        } | ConvertTo-Json | Out-File $script:StatePath -Encoding UTF8
     } catch { }
-    
+
     return $true
 }
 
 function Get-SavedAgentState {
     try {
-        if (Test-Path $Global:StatePath) {
-            $saved = Get-Content $Global:StatePath -Raw | ConvertFrom-Json
+        if (Test-Path $script:StatePath) {
+            $saved = Get-Content $script:StatePath -Raw | ConvertFrom-Json
             return $saved.state
         }
     } catch { }

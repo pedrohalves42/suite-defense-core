@@ -9,7 +9,8 @@ Describe "CyberShield Agent v6.0 Module Integration" {
         # Initialize globals required before module loading (mirrors main.ps1)
         $Global:UpdateInProgress = $false
         $Global:BootScriptHash = $null
-        $Global:CurrentState = "INITIALIZING"
+        # CurrentState lives inside modules/state.ps1 since Phase 6.5 (ADR-003).
+        # Configured post-load via Set-AgentCurrentState below.
         $Global:AgentName = "test-agent"
         $Global:AgentVersion = "6.0.0"
         $Global:AgentToken = "test-token"
@@ -20,7 +21,8 @@ Describe "CyberShield Agent v6.0 Module Integration" {
         $Global:ConsecutivePollErrors = 0
         $Global:JobPollIntervalSeconds = 30
         $Global:LoopTimestamp = $null
-        $Global:StatePath = "$env:TEMP\CyberShield\test-integration\agent_state.json"
+        # StatePath lives inside modules/state.ps1 since Phase 6.5 (ADR-003).
+        # Configured post-load via Set-StatePath below.
         $Global:DnsBlocklistPath = "$env:TEMP\CyberShield\test-integration\dns_blocklist.json"
         $Global:EvidenceJournalPath = "$env:TEMP\CyberShield\test-integration\evidence_journal.jsonl"
         $Global:EvidenceBuffer = [System.Collections.ArrayList]::new()
@@ -61,6 +63,8 @@ Describe "CyberShield Agent v6.0 Module Integration" {
         . "$modulePath\network.ps1"
         . "$modulePath\state.ps1"
         Set-RollbackStatePath -Path "$env:TEMP\CyberShield\test-integration\rollback_state.json"
+        Set-StatePath -Path "$env:TEMP\CyberShield\test-integration\agent_state.json"
+        Set-AgentCurrentState -State "INITIALIZING"
 
         . "$modulePath\evidence.ps1"
         . "$modulePath\notification.ps1"
@@ -163,7 +167,7 @@ Describe "CyberShield Agent v6.0 Module Integration" {
         }
 
         It "State machine validates transitions" {
-            $Global:CurrentState = "INITIALIZING"
+            Set-AgentCurrentState -State "INITIALIZING"
             Set-AgentState -NewState "AUTHENTICATING" -Reason "test" | Should -BeTrue
             Set-AgentState -NewState "INITIALIZING" -Reason "test" | Should -BeFalse
         }
