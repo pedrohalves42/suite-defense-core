@@ -187,14 +187,17 @@ export const useJobsHealth = () => {
   });
 
   // Compute operational metrics
+  // Wave 4 - B33: use semantic version compare, not lexical string compare.
+  // Previously `"3.10.9" > "3.9.0"` was false, breaking outdated detection.
   const agents = agentOpsQuery.data || [];
   const pausedAgents = agents.filter(a => a.scheduling_paused);
   const latestVersion = agents.reduce((max, a) => {
     if (!a.agent_version) return max;
-    return a.agent_version > max ? a.agent_version : max;
+    if (!max) return a.agent_version;
+    return compareVersions(a.agent_version, max) > 0 ? a.agent_version : max;
   }, '');
-  const outdatedAgents = latestVersion 
-    ? agents.filter(a => a.status === 'active' && a.agent_version && a.agent_version < latestVersion)
+  const outdatedAgents = latestVersion
+    ? agents.filter(a => a.status === 'active' && isOlderVersion(a.agent_version, latestVersion))
     : [];
 
   // Calculate summary from metrics
