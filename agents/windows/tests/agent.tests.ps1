@@ -167,7 +167,7 @@ Describe "CyberShield Agent v6.0 Module Integration" {
         }
 
         It "State machine validates transitions" {
-            $Global:CurrentState = "INITIALIZING"
+            Set-AgentCurrentState -State "INITIALIZING"
             Set-AgentState -NewState "AUTHENTICATING" -Reason "test" | Should -BeTrue
             Set-AgentState -NewState "INITIALIZING" -Reason "test" | Should -BeFalse
         }
