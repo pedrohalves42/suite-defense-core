@@ -136,6 +136,9 @@ export function useJobCleanup() {
         blockedByExecutions
       };
     },
+    // Wave 4 - B39: don't query without a tenant; this prevented an unnecessary
+    // RLS-blocked round trip on initial mount and avoided a stale-cache flash.
+    enabled: !!tenant?.id,
     staleTime: 30000,
   });
 
