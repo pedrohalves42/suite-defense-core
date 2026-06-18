@@ -41,9 +41,10 @@ $Global:StatePath = "$env:ProgramData\CyberShield\data\agent_state.json"
 $Global:DnsBlocklistPath = "$env:ProgramData\CyberShield\data\dns_blocklist.json"
 $Global:EvidenceJournalPath = "$env:ProgramData\CyberShield\data\evidence_journal.jsonl"
 $Global:EvidenceBuffer = [System.Collections.ArrayList]::new()
-$Global:RollbackPaths = @{
-    RollbackState = "$env:ProgramData\CyberShield\data\rollback_state.json"
-}
+# Rollback state path is owned by modules/state.ps1 since Phase 6.4 (ADR-003).
+# main.ps1 reconfigures it via Set-RollbackStatePath after the module loads
+# (see the post-load block further down). Default value is already correct.
+
 
 # Aggregation defaults
 $Global:AggregationEnabled = $true

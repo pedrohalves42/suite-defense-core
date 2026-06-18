@@ -2,16 +2,17 @@ BeforeAll {
     function Write-Log { param([string]$Message, [string]$Level) }
 
     $Global:CurrentState = "INITIALIZING"
-    $Global:StatePath = "$env:TEMP\CyberShield\test-state\agent_state.json"
-    $Global:RollbackPaths = @{
-        RollbackState = "$env:TEMP\CyberShield\test-state\rollback_state.json"
-    }
+    $Global:StatePath    = "$env:TEMP\CyberShield\test-state\agent_state.json"
 
     $testDir = "$env:TEMP\CyberShield\test-state"
     if (-not (Test-Path $testDir)) { New-Item -ItemType Directory -Path $testDir -Force | Out-Null }
 
     . "$PSScriptRoot\..\modules\state.ps1"
+
+    # Phase 6.4: rollback path is module-private; configure via accessor.
+    Set-RollbackStatePath -Path "$testDir\rollback_state.json"
 }
+
 
 Describe "Set-AgentState" {
     BeforeEach {
@@ -64,7 +65,8 @@ Describe "Get-SavedAgentState" {
 
 Describe "Get-RollbackState / Save-RollbackState" {
     It "Returns defaults when no rollback file" {
-        Remove-Item $Global:RollbackPaths.RollbackState -Force -ErrorAction SilentlyContinue
+        Remove-Item (Get-RollbackStatePath) -Force -ErrorAction SilentlyContinue
+
         $state = Get-RollbackState
         $state.safe_mode | Should -BeFalse
         $state.rollback_count | Should -Be 0
@@ -79,6 +81,22 @@ Describe "Get-RollbackState / Save-RollbackState" {
         $restored.rollback_count | Should -Be 2
     }
 }
+
+Describe "Phase 6.4 — RollbackPaths migration" {
+    It "exposes path via accessor (not via `$Global:RollbackPaths)" {
+        (Get-RollbackStatePath) | Should -Not -BeNullOrEmpty
+    }
+
+    It "Set-RollbackStatePath rejects empty input" {
+        { Set-RollbackStatePath -Path '' } | Should -Throw
+    }
+
+    It "does not leak `$Global:RollbackPaths" {
+        (Get-Variable -Name 'RollbackPaths' -Scope Global -ErrorAction SilentlyContinue) |
+            Should -BeNullOrEmpty -Because 'Phase 6.4 moved this to $script:RollbackStatePath inside state.ps1'
+    }
+}
+
 
 AfterAll {
     Remove-Item "$env:TEMP\CyberShield\test-state" -Recurse -Force -ErrorAction SilentlyContinue

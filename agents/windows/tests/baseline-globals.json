@@ -1,8 +1,8 @@
 {
-  "phase": "6.3",
+  "phase": "6.4",
   "captured_at": "2026-06-18",
   "counting_method": "PowerShell Parser tokenizer, $Global:* refs in code only (comments stripped). Must match the CI gate exactly.",
-  "total_globals": 154,
+  "total_globals": 152,
   "per_module": {
     "collection.ps1": 4,
     "config.ps1": 7,
@@ -17,7 +17,7 @@
     "remediation.ps1": 0,
     "security.ps1": 0,
     "self-heal.ps1": 11,
-    "state.ps1": 7,
+    "state.ps1": 5,
     "telemetry.ps1": 0,
     "update.ps1": 9,
     "utils.ps1": 0
