@@ -90,16 +90,17 @@ serveAgent(async (req, ctx) => {
     try {
       await processSideEffects(submitCtx);
     } catch (sideEffectError) {
+      const sideErrMsg = sideEffectError instanceof Error ? sideEffectError.message : String(sideEffectError);
       logger.error('[submit-job-result] CRITICAL: Side effects failed. Blocking job completion to maintain integrity.', {
         job_id: payload.job_id,
-        error: sideEffectError.message,
+        error: sideErrMsg,
         type: job.type
       });
       
       return new Response(JSON.stringify({ 
         error: 'SIDE_EFFECT_FAILURE', 
         message: 'Falha ao processar dados de segurança (integridade comprometida)',
-        details: sideEffectError.message 
+        details: sideErrMsg 
       }), { 
         status: 500, 
         headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } 

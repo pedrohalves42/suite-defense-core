@@ -48,7 +48,7 @@ export async function updateAgentStatus(
   // FETCH current state from DB for dirty-checking if not provided in context
   let currentAgent = (updateData as any)._current_agent; 
   if (!currentAgent && (updateData as any).metadata_hash) {
-     const { data } = await supabase.from('agents').select('metadata_hash, version').eq('id', agentId).single();
+     const { data } = await supabase.from('agents').select('metadata_hash, version').eq('id', agentId).maybeSingle();
      currentAgent = data;
   }
 
@@ -98,7 +98,7 @@ export async function updateAgentStatus(
           .from('agents')
           .select('version, last_heartbeat')
           .eq('id', agentId)
-          .single();
+          .maybeSingle();
         currentAgent = data;
     }
 
