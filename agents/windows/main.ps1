@@ -84,8 +84,9 @@ $Global:AgentRsaKey = $null
 $Global:AgentSigningAlgorithm = $null
 $Global:KeyFingerprint = $null
 
-# Process baseline (HashSet for O(1) lookups)
-$Global:ProcessBaselineSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+# Process baseline (HashSet for O(1) lookups) — owned by modules/security.ps1
+# since Phase 6.2 (ADR-003); accessors: Add-ProcessToBaseline / Clear-ProcessBaseline.
+
 
 if ($AgentName) {
     $env:CYBERSHIELD_AGENT_NAME = $AgentName
