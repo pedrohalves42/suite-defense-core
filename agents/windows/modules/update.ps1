@@ -4,7 +4,16 @@
     v7.0: Added Ed25519 signature verification (SSA-004).
     v6.0: TOCTOU guard via $Global:UpdateInProgress, BOM-safe hashing,
     ASCII safety check, atomic replace.
+
+.NOTES
+    Phase 6.1 (ADR-003): the TOCTOU failure counter is module-private
+    ($script:ToctouFailures) — it was never read outside this file, so
+    moving it off the global surface is a no-op for callers.
 #>
+
+# Module-private TOCTOU failure counter (Phase 6.1)
+$script:ToctouFailures = 0
+
 
 function Test-AgentVersion {
     <#
