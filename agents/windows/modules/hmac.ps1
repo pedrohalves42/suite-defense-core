@@ -1,7 +1,18 @@
 <#
 .SYNOPSIS
     HMAC computation and verification -- HEX output (aligned with Unix agents)
+
+.NOTES
+    Phase 6.1 (ADR-003): cache state moved from $Global:CachedHmacObject /
+    $Global:CachedHmacSecret to module-private $script: scope. The cache is
+    purely internal to this module — no other module reads it — so the
+    refactor is invisible to callers and removes 6 globals from the legacy
+    surface tracked by the no-new-globals gate.
 #>
+
+# Module-private HMAC cache (Phase 6.1)
+$script:CachedHmacObject = $null
+$script:CachedHmacSecret = $null
 
 function Compute-HMAC {
     param(
@@ -10,9 +21,9 @@ function Compute-HMAC {
     )
 
     # Cache HMAC object and key bytes to optimize IOPS/CPU
-    if ($null -eq $Global:CachedHmacObject -or $Global:CachedHmacSecret -ne $Secret) {
-        if ($Global:CachedHmacObject) { $Global:CachedHmacObject.Dispose() }
-        
+    if ($null -eq $script:CachedHmacObject -or $script:CachedHmacSecret -ne $Secret) {
+        if ($script:CachedHmacObject) { $script:CachedHmacObject.Dispose() }
+
         $keyBytes = if ($Secret -match '^[0-9a-fA-F]{64}$') {
             $bytes = [byte[]]::new(32)
             for ($i = 0; $i -lt 64; $i += 2) {
@@ -23,15 +34,15 @@ function Compute-HMAC {
             [System.Text.Encoding]::UTF8.GetBytes($Secret)
         }
 
-        $Global:CachedHmacObject = New-Object System.Security.Cryptography.HMACSHA256
-        $Global:CachedHmacObject.Key = $keyBytes
-        $Global:CachedHmacSecret = $Secret
+        $script:CachedHmacObject = New-Object System.Security.Cryptography.HMACSHA256
+        $script:CachedHmacObject.Key = $keyBytes
+        $script:CachedHmacSecret = $Secret
     }
 
     # Use UTF8 without BOM explicitly to ensure cross-platform compatibility
     $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-    $hash = $Global:CachedHmacObject.ComputeHash($utf8NoBom.GetBytes($Message))
-    
+    $hash = $script:CachedHmacObject.ComputeHash($utf8NoBom.GetBytes($Message))
+
     # Output as lowercase hex (aligned with Unix agents and backend)
     return ([BitConverter]::ToString($hash) -replace '-', '').ToLower()
 }
