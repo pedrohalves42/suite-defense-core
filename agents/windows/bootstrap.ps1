@@ -53,7 +53,11 @@ function ConvertTo-NormalVersion {
     if ([string]::IsNullOrWhiteSpace($Raw)) { return $null }
     $m = [regex]::Match($Raw, '\d+(\.\d+){1,3}')
     if (-not $m.Success) { return $null }
-    try { return [Version]$m.Value } catch { return $null }
+    # B6 fix: pad to 4 components so [Version]"7.4.6" compares equal to
+    # [Version]"7.4.6.0" (the default Revision=-1 makes them unequal in .NET).
+    $parts = $m.Value.Split('.')
+    while ($parts.Count -lt 4) { $parts += '0' }
+    try { return [Version]($parts -join '.') } catch { return $null }
 }
 
 function Get-ToolVersion {
@@ -84,11 +88,17 @@ function Get-WingetVersion {
         $out = & winget list --id $Id --exact --accept-source-agreements 2>$null | Out-String
         $line = ($out -split "`r?`n" | Where-Object { $_ -match [regex]::Escape($Id) } | Select-Object -First 1)
         if (-not $line) { return $null }
+        # B7 fix: winget table layout is "Name Id Version Available Source".
+        # The previous code returned $cols[1] (the Id) instead of the version.
+        # Use the first column that parses as a dotted version number.
         $cols = ($line -split '\s{2,}') | Where-Object { $_ }
-        if ($cols.Count -ge 2) { return $cols[1].Trim() }
+        foreach ($c in $cols) {
+            if ($c -match '^\d+(\.\d+){1,3}$') { return $c.Trim() }
+        }
     } catch { return $null }
     return $null
 }
+
 
 function Test-Pin {
     <#

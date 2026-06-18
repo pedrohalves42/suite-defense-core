@@ -102,26 +102,49 @@ function Set-AgentState {
     Write-Log "[FSM] State transition: $oldState -> $NewState (Reason: $Reason)" "INFO"
 
     try {
-        @{
+        # B5 fix: atomic write via temp + Move-Item to avoid leaving the state
+        # file truncated/half-written if the process is killed mid-write.
+        $payload = @{
             state          = $NewState
             previous_state = $oldState
             transition_at  = (Get-Date).ToString("o")
             reason         = $Reason
-        } | ConvertTo-Json | Out-File $script:StatePath -Encoding UTF8
-    } catch { }
+        } | ConvertTo-Json
+
+        $stateDir = Split-Path -Parent $script:StatePath
+        if ($stateDir -and -not (Test-Path -LiteralPath $stateDir)) {
+            New-Item -ItemType Directory -Path $stateDir -Force | Out-Null
+        }
+        $tmpPath = "$($script:StatePath).tmp"
+        $payload | Out-File -LiteralPath $tmpPath -Encoding UTF8 -Force
+        Move-Item -LiteralPath $tmpPath -Destination $script:StatePath -Force
+    } catch {
+        Write-Log "[FSM] Failed to persist state '$NewState' to '$script:StatePath': $($_.Exception.Message)" "WARN"
+    }
 
     return $true
 }
 
 function Get-SavedAgentState {
+    if (-not (Test-Path -LiteralPath $script:StatePath)) { return $null }
     try {
-        if (Test-Path $script:StatePath) {
-            $saved = Get-Content $script:StatePath -Raw | ConvertFrom-Json
-            return $saved.state
+        $saved = Get-Content -LiteralPath $script:StatePath -Raw -Encoding UTF8 | ConvertFrom-Json
+        return $saved.state
+    } catch {
+        # B4 fix: surface corruption (silent catch was hiding state-file rot).
+        # Quarantine the bad file so a fresh boot can rebuild from scratch
+        # without retriggering the same parse error on every start.
+        Write-Log "[FSM] State file is unreadable/corrupt at '$script:StatePath': $($_.Exception.Message). Quarantining." "WARN"
+        try {
+            $quarantine = "$($script:StatePath).corrupt-$(Get-Date -Format 'yyyyMMddHHmmss')"
+            Move-Item -LiteralPath $script:StatePath -Destination $quarantine -Force -ErrorAction Stop
+        } catch {
+            Write-Log "[FSM] Failed to quarantine corrupt state file: $($_.Exception.Message)" "WARN"
         }
-    } catch { }
-    return $null
+        return $null
+    }
 }
+
 
 function Get-RollbackState {
     try {
