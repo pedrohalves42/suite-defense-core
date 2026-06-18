@@ -60,6 +60,8 @@ Describe "CyberShield Agent v6.0 Module Integration" {
         . "$modulePath\security.ps1"
         . "$modulePath\network.ps1"
         . "$modulePath\state.ps1"
+        Set-RollbackStatePath -Path "$env:TEMP\CyberShield\test-integration\rollback_state.json"
+
         . "$modulePath\evidence.ps1"
         . "$modulePath\notification.ps1"
         . "$modulePath\collection.ps1"
