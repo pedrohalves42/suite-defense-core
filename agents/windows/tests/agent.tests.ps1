@@ -39,10 +39,10 @@ Describe "CyberShield Agent v6.0 Module Integration" {
         $Global:ProtectedServices = @("wininit", "lsass", "services")
         $Global:DiskCleanupThresholdPercent = 90
         $Global:HighCpuThresholdPercent = 90
-        $Global:AlertCooldownTracker = @{}
-        $Global:AlertCooldownSeconds = 60
-        $Global:LocalDetectionStats = @{ alerts_sent = 0 }
-        $Global:BurntToastAvailable = $null
+        # Notification state lives inside modules/notification.ps1 since Phase 6.3 (ADR-003).
+        # The module self-initializes on load; integration tests use Reset-NotificationState
+        # and Set-AlertCooldownSeconds if they need to influence cooldown behaviour.
+
         $Global:CachedNetworkOk = $false
         $Global:CachedNetworkCheckTime = [datetime]::MinValue
 
