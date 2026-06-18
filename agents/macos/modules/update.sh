@@ -17,9 +17,10 @@ _apply_forced_update() {
     echo "$base64_content" | base64 -D > "$temp_script" 2>/dev/null || echo "$base64_content" | base64 -d > "$temp_script" 2>/dev/null
     [[ ! -s "$temp_script" ]] && { rm -f "$temp_script"; return 1; }
 
-    local actual_hash
-    actual_hash=$(shasum -a 256 "$temp_script" | awk '{print $1}')
-    [[ "${actual_hash,,}" != "${expected_hash,,}" ]] && { rm -f "$temp_script"; return 1; }
+    local actual_hash expected_lc
+    actual_hash=$(shasum -a 256 "$temp_script" | awk '{print $1}' | tr 'A-F' 'a-f')
+    expected_lc=$(printf '%s' "$expected_hash" | tr 'A-F' 'a-f')
+    [[ "$actual_hash" != "$expected_lc" ]] && { rm -f "$temp_script"; return 1; }
 
     # SSA-004: Verify Ed25519 signature on update payload
     local update_signature

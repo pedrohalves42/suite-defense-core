@@ -4,7 +4,12 @@
 #
 
 _get_cpu_percent() {
-    top -l 1 -n 0 2>/dev/null | awk '/CPU usage/ {gsub(/%/,""); print $3}' | head -1 || echo 0
+    # macOS `top -l 1 -n 0` returns "CPU usage: 5.42% user, ..." - take user+sys as int
+    local user sys total
+    user=$(top -l 1 -n 0 2>/dev/null | awk '/CPU usage/ {gsub(/%/,""); print $3}' | head -1)
+    sys=$(top -l 1 -n 0 2>/dev/null | awk '/CPU usage/ {gsub(/%/,""); print $5}' | head -1)
+    total=$(awk -v u="${user:-0}" -v s="${sys:-0}" 'BEGIN { printf "%d", u + s }')
+    echo "${total:-0}"
 }
 
 _get_system_metrics() {
