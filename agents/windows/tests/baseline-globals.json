@@ -1,7 +1,7 @@
 {
-  "phase": "6.0",
+  "phase": "6.2",
   "captured_at": "2026-06-18",
-  "total_globals": 155,
+  "total_globals": 153,
   "per_module": {
     "collection.ps1": 4,
     "config.ps1": 7,
@@ -14,7 +14,7 @@
     "network.ps1": 27,
     "notification.ps1": 12,
     "remediation.ps1": 0,
-    "security.ps1": 2,
+    "security.ps1": 0,
     "self-heal.ps1": 10,
     "state.ps1": 7,
     "telemetry.ps1": 0,
