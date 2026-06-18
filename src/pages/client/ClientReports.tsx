@@ -176,7 +176,7 @@ export const ClientReports = () => {
 
       {reports && reports.length > 0 ? (
         <div className="space-y-4">
-          {reports.map((report: any, index: number) => (
+          {reports.map((report: ClientReport, index: number) => (
             <motion.div
               key={report.id}
               initial={{ opacity: 0, y: 10 }}
