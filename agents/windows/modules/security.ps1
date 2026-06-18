@@ -2,7 +2,42 @@
 .SYNOPSIS
     Security detection (EDR events, anomaly detection)
     Note: Antivirus collection is handled by collection.ps1 (Invoke-CollectAntivirusStatus)
+
+.NOTES
+    Phase 6.2 (ADR-003): the process baseline set is module-private
+    ($script:ProcessBaselineSet). External callers interact through
+    Add-ProcessToBaseline / Clear-ProcessBaseline / Get-ProcessBaselineCount
+    accessors instead of touching a global directly.
 #>
+
+# Module-private process baseline (Phase 6.2)
+$script:ProcessBaselineSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+
+function Add-ProcessToBaseline {
+    <#
+    .SYNOPSIS
+        Add a process name to the trusted baseline. Idempotent.
+    #>
+    param([Parameter(Mandatory)][string]$ProcessName)
+    [void]$script:ProcessBaselineSet.Add($ProcessName)
+}
+
+function Clear-ProcessBaseline {
+    <#
+    .SYNOPSIS
+        Reset the baseline (used by tests and re-bootstrap flows).
+    #>
+    $script:ProcessBaselineSet.Clear()
+}
+
+function Get-ProcessBaselineCount {
+    <#
+    .SYNOPSIS
+        Return the current baseline size — used by health probes and tests.
+    #>
+    return $script:ProcessBaselineSet.Count
+}
+
 
 function Get-SecurityEvents {
     param([int]$Hours = 1)
