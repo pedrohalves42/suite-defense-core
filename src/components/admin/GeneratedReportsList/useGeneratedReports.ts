@@ -13,33 +13,40 @@ export function useGeneratedReports() {
   const [modalOpen, setModalOpen] = useState(false);
 
   const { data: reports, isLoading, refetch } = useQuery({
-    queryKey: ["generated-reports"],
+    queryKey: ["generated-reports", activeTenant?.id],
     queryFn: async () => {
+      // Wave 4 - B34: enforce tenant filter; RLS alone was leaking when user
+      // had multiple tenants visible and queryKey was tenant-agnostic.
+      if (!activeTenant?.id) return [] as GeneratedReport[];
       const { data, error } = await supabase
         .from("generated_reports")
         .select("id, tenant_id, agent_id, agent_name, report_type, title, risk_score, risk_level, statistics, report_data, status, triggered_by, created_at, expires_at, sales_status, commercial_priority, next_action, commercial_summary, contacted_at, follow_up_at")
+        .eq("tenant_id", activeTenant.id)
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw error;
-      return data as GeneratedReport[];
+      return (data || []) as GeneratedReport[];
     },
+    enabled: !!activeTenant?.id,
   });
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ reportId, updates }: { reportId: string; updates: Partial<GeneratedReport> }) => {
+      // Wave 4 - B34: guard against undefined tenant on mutations.
+      if (!activeTenant?.id) throw new Error("Tenant não selecionado");
       const { error } = await supabase
         .from("generated_reports")
         .update(updates)
         .eq("id", reportId)
-        .eq("tenant_id", activeTenant?.id);
+        .eq("tenant_id", activeTenant.id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["generated-reports"] });
       toast.success("Status atualizado!");
     },
-    onError: () => {
-      toast.error("Erro ao atualizar status");
+    onError: (err: Error) => {
+      toast.error(err?.message ? `Erro ao atualizar: ${err.message}` : "Erro ao atualizar status");
     },
   });
 
