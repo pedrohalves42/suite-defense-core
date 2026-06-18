@@ -132,9 +132,9 @@ export async function listUsers(
   const count = Math.min(parseInt(params.get('count') || '100'), 200);
   const filter = params.get('filter');
 
-  const { data: roles, error } = await supabase
+  const { data: roles, error, count: total } = await supabase
     .from('user_roles')
-    .select('user_id, role')
+    .select('user_id, role', { count: 'exact' })
     .eq('tenant_id', tenantId)
     .range(startIndex - 1, startIndex + count - 2);
 
@@ -172,7 +172,7 @@ export async function listUsers(
 
   return new Response(JSON.stringify({
     schemas: [SCIM_SCHEMAS.LIST_RESPONSE],
-    totalResults: resources.length,
+    totalResults: filter ? resources.length : (total ?? resources.length),
     startIndex,
     itemsPerPage: resources.length,
     Resources: resources,
