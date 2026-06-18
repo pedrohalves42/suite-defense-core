@@ -82,6 +82,22 @@ Describe "Get-RollbackState / Save-RollbackState" {
     }
 }
 
+Describe "Phase 6.4 — RollbackPaths migration" {
+    It "exposes path via accessor (not via `$Global:RollbackPaths)" {
+        (Get-RollbackStatePath) | Should -Not -BeNullOrEmpty
+    }
+
+    It "Set-RollbackStatePath rejects empty input" {
+        { Set-RollbackStatePath -Path '' } | Should -Throw
+    }
+
+    It "does not leak `$Global:RollbackPaths" {
+        (Get-Variable -Name 'RollbackPaths' -Scope Global -ErrorAction SilentlyContinue) |
+            Should -BeNullOrEmpty -Because 'Phase 6.4 moved this to $script:RollbackStatePath inside state.ps1'
+    }
+}
+
+
 AfterAll {
     Remove-Item "$env:TEMP\CyberShield\test-state" -Recurse -Force -ErrorAction SilentlyContinue
 }
