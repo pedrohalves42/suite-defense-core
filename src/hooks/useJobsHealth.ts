@@ -119,7 +119,8 @@ export const useJobsHealth = () => {
       return data || [];
     },
     enabled: !loading && !!tenantId,
-    refetchInterval: false,});
+    refetchInterval: false,
+  });
 
   // Operational: paused agents & outdated versions
   const agentOpsQuery = useQuery({
