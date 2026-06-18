@@ -66,9 +66,13 @@ serveTenant(async (req, ctx) => {
   }
 
   // Fetch execution with tenant filter
+  // B25: actions_snapshot, playbook_snapshot, evidence_ids and notes were missing from
+  // the projection — the handler then read execution.actions_snapshot (undefined) and
+  // always returned "No actions found in snapshot". Added the snapshot/evidence columns
+  // (the only fields actually consumed below) without going to SELECT *.
   const { data: execution, error: execError } = await supabase
     .from('playbook_executions')
-    .select('id, playbook_id, tenant_id, agent_id, trigger_source, trigger_context, status, actions_taken, triggered_at, started_at, completed_at')
+    .select('id, playbook_id, tenant_id, agent_id, trigger_source, trigger_context, status, actions_taken, actions_snapshot, playbook_snapshot, evidence_ids, notes, triggered_at, started_at, completed_at')
     .eq('id', execution_id)
     .eq('tenant_id', tenantId)
     .single();
