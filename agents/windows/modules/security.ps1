@@ -494,6 +494,6 @@ function Test-ProcessInBaseline {
     #>
     param([string]$ProcessName)
 
-    if ($Global:ProcessBaselineSet.Count -eq 0) { return $true }  # No baseline = assume OK
-    return $Global:ProcessBaselineSet.Contains($ProcessName)
+    if ($script:ProcessBaselineSet.Count -eq 0) { return $true }  # No baseline = assume OK
+    return $script:ProcessBaselineSet.Contains($ProcessName)
 }
