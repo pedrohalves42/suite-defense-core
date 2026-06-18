@@ -92,6 +92,24 @@ export const ClientReports = () => {
     );
   }
 
+  // Wave 4 - B36: surface query errors instead of rendering empty silently.
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Meus Relatórios</h1>
+        </div>
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardContent className="py-8 text-center space-y-3">
+            <AlertTriangle className="h-8 w-8 mx-auto text-destructive" />
+            <p className="text-sm">Não foi possível carregar seus relatórios.</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>Tentar novamente</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -100,6 +118,7 @@ export const ClientReports = () => {
           Relatórios de segurança dos seus computadores
         </p>
       </div>
+
 
       {/* Evolution Chart */}
       {chartData.length > 1 ? (
