@@ -21,14 +21,16 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, Area
 export const ClientReports = () => {
   const { tenant } = useTenant();
 
-  const { data: reports, isLoading } = useQuery({
+  const { data: reports, isLoading, error, refetch } = useQuery({
     queryKey: ['client-reports', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
 
       const { data, error } = await supabase
         .from('generated_reports')
-        .select('id, tenant_id, report_type, risk_level, risk_score, created_at, expires_at, file_url, agent_name, commercial_priority')
+        // Wave 4 - B36: include `title` (was being read in the UI but never selected,
+        // leaving every card showing "undefined").
+        .select('id, tenant_id, title, report_type, risk_level, risk_score, created_at, expires_at, file_url, agent_name, commercial_priority')
         .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false })
         .limit(50);
@@ -36,11 +38,14 @@ export const ClientReports = () => {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!tenant?.id
+    enabled: !!tenant?.id,
+    staleTime: 60_000,
   });
 
+  type ClientReport = NonNullable<typeof reports>[number];
+
   // Prepare chart data (last 30 days of risk scores)
-  const chartData = reports?.slice(0, 30).reverse().map((report, index: number) => ({
+  const chartData = reports?.slice(0, 30).reverse().map((report) => ({
     name: formatBrazilDateTime(report.created_at, 'day-month'),
     score: report.risk_score || 0
   })) || [];
