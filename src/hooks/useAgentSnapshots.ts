@@ -25,15 +25,19 @@ export function useAgentSnapshots() {
   return useQuery({
     queryKey: ['agent-snapshots-list', tenant?.id],
     queryFn: async (): Promise<AgentSnapshot[]> => {
-      const { data, error } = await supabase.rpc('get_agents_snapshots_list', { 
-        p_tenant_id: tenant?.id 
+      // Wave 4 - B40: defensive guard. `enabled` already blocks execution, but
+      // a manual `refetch()` from a stale tenant context could still slip through.
+      if (!tenant?.id) return [];
+
+      const { data, error } = await supabase.rpc('get_agents_snapshots_list', {
+        p_tenant_id: tenant.id,
       });
-      
+
       if (error) {
         logger.error('[useAgentSnapshots] Error:', error);
         throw new Error(error.message || 'Failed to fetch agent snapshots list');
       }
-      
+
       return (data || []) as unknown as AgentSnapshot[];
     },
     enabled: !tenantLoading && !!tenant?.id,
