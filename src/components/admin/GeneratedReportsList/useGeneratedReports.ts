@@ -75,72 +75,104 @@ export function useGeneratedReports() {
   };
 
   const handleDownloadJSON = (report: GeneratedReport) => {
-    const blob = new Blob([JSON.stringify(report.report_data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `laudo-${report.report_type}-${report.agent_name || 'todos'}-${new Date(report.created_at).toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Laudo baixado com sucesso!");
+    try {
+      const payload = report.report_data ?? {};
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `laudo-${report.report_type}-${report.agent_name || 'todos'}-${new Date(report.created_at).toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Laudo baixado com sucesso!");
+    } catch (err) {
+      logger.error("Error exporting report JSON:", err);
+      toast.error("Erro ao gerar arquivo JSON");
+    }
   };
 
   const handleDownloadCSV = (report: GeneratedReport) => {
-    let csvContent = "";
-    const data = report.report_data;
+    try {
+      let csvContent = "";
+      const data = (report.report_data ?? {}) as Record<string, unknown>;
 
-    if (data.software_inventory && data.software_inventory.length > 0) {
-      csvContent += "INVENTÁRIO DE SOFTWARE\n";
-      csvContent += "Nome,Versão,Fornecedor,Risco\n";
-      csvContent += "\n";
-    }
-    if (data.vulnerabilities && data.vulnerabilities.length > 0) {
-      csvContent += "VULNERABILIDADES\n";
-      csvContent += "Severidade,Título,Descrição\n";
-      data.vulnerabilities.forEach((vuln: Record<string, unknown>) => {
-        csvContent += `"${vuln.severity || ''}","${vuln.title || vuln.check_key || ''}","${String(vuln.description || '').replace(/"/g, '""')}"\n`;
-      });
-      csvContent += "\n";
-    }
-    if (data.antivirus_status && data.antivirus_status.length > 0) {
-      csvContent += "STATUS ANTIVÍRUS\n";
-      csvContent += "Engine,Versão,Status,Ameaças\n";
-      data.antivirus_status.forEach((av: Record<string, unknown>) => {
-        csvContent += `"${av.engine_name || ''}","${av.engine_version || ''}","${av.status || ''}","${av.threats_found || 0}"\n`;
-      });
-      csvContent += "\n";
-    }
-    if (data.web_activity && data.web_activity.length > 0) {
-      csvContent += "ATIVIDADE WEB\n";
-      csvContent += "Domínio,Fonte,Data\n";
-      data.web_activity.forEach((web: Record<string, unknown>) => {
-        csvContent += `"${web.domain || ''}","${web.source || ''}","${web.visited_at || ''}"\n`;
-      });
-    }
+      const inventory = Array.isArray(data.software_inventory) ? data.software_inventory as Record<string, unknown>[] : [];
+      if (inventory.length > 0) {
+        csvContent += "INVENTÁRIO DE SOFTWARE\n";
+        csvContent += "Nome,Versão,Fornecedor,Risco\n";
+        // Wave 4 - B35: previously the loop was missing; only the header was emitted.
+        inventory.forEach((sw) => {
+          csvContent += `"${sw.name || ''}","${sw.version || ''}","${sw.vendor || sw.publisher || ''}","${sw.risk_level || ''}"\n`;
+        });
+        csvContent += "\n";
+      }
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `laudo-${report.report_type}-${report.agent_name || 'todos'}-${new Date(report.created_at).toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Laudo CSV baixado com sucesso!");
+      const vulnerabilities = Array.isArray(data.vulnerabilities) ? data.vulnerabilities as Record<string, unknown>[] : [];
+      if (vulnerabilities.length > 0) {
+        csvContent += "VULNERABILIDADES\n";
+        csvContent += "Severidade,Título,Descrição\n";
+        vulnerabilities.forEach((vuln) => {
+          csvContent += `"${vuln.severity || ''}","${vuln.title || vuln.check_key || ''}","${String(vuln.description || '').replace(/"/g, '""')}"\n`;
+        });
+        csvContent += "\n";
+      }
+
+      const avEntries = Array.isArray(data.antivirus_status) ? data.antivirus_status as Record<string, unknown>[] : [];
+      if (avEntries.length > 0) {
+        csvContent += "STATUS ANTIVÍRUS\n";
+        csvContent += "Engine,Versão,Status,Ameaças\n";
+        avEntries.forEach((av) => {
+          csvContent += `"${av.engine_name || ''}","${av.engine_version || ''}","${av.status || ''}","${av.threats_found || 0}"\n`;
+        });
+        csvContent += "\n";
+      }
+
+      const webEntries = Array.isArray(data.web_activity) ? data.web_activity as Record<string, unknown>[] : [];
+      if (webEntries.length > 0) {
+        csvContent += "ATIVIDADE WEB\n";
+        csvContent += "Domínio,Fonte,Data\n";
+        webEntries.forEach((web) => {
+          csvContent += `"${web.domain || ''}","${web.source || ''}","${web.visited_at || ''}"\n`;
+        });
+      }
+
+      if (!csvContent) {
+        toast.info("Este laudo não possui dados tabulares para exportar em CSV");
+        return;
+      }
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `laudo-${report.report_type}-${report.agent_name || 'todos'}-${new Date(report.created_at).toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Laudo CSV baixado com sucesso!");
+    } catch (err) {
+      logger.error("Error exporting report CSV:", err);
+      toast.error("Erro ao gerar arquivo CSV");
+    }
   };
 
   const handleDelete = async (reportId: string) => {
     try {
+      // Wave 4 - B34: prevent silent eq(undefined) when tenant not loaded.
+      if (!activeTenant?.id) {
+        toast.error("Tenant não selecionado");
+        return;
+      }
       const { error } = await supabase
         .from("generated_reports")
         .delete()
         .eq("id", reportId)
-        .eq("tenant_id", activeTenant?.id);
+        .eq("tenant_id", activeTenant.id);
       if (error) throw error;
       toast.success("Laudo excluído com sucesso!");
       refetch();
     } catch (error) {
       logger.error("Error deleting report:", error);
-      toast.error("Erro ao excluir laudo");
+      toast.error(error instanceof Error ? `Erro ao excluir laudo: ${error.message}` : "Erro ao excluir laudo");
     }
   };
 
