@@ -196,7 +196,9 @@ export const ClientReports = () => {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h3 className="font-medium">{report.title}</h3>
+                          <h3 className="font-medium">
+                            {report.title || `Relatório ${report.report_type || ''}`.trim() || 'Relatório'}
+                          </h3>
                           {isCritical(report.risk_score) && (
                             <Badge variant="destructive" className="text-xs">
                               URGENTE
