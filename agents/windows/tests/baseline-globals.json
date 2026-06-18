@@ -1,0 +1,25 @@
+{
+  "phase": "6.0",
+  "captured_at": "2026-06-18",
+  "total_globals": 155,
+  "per_module": {
+    "collection.ps1": 4,
+    "config.ps1": 7,
+    "crypto.ps1": 10,
+    "evidence.ps1": 49,
+    "heartbeat.ps1": 7,
+    "hmac.ps1": 2,
+    "job-runner.ps1": 8,
+    "legacy-fallback.ps1": 0,
+    "network.ps1": 27,
+    "notification.ps1": 12,
+    "remediation.ps1": 0,
+    "security.ps1": 2,
+    "self-heal.ps1": 10,
+    "state.ps1": 7,
+    "telemetry.ps1": 0,
+    "update.ps1": 10,
+    "utils.ps1": 0
+  },
+  "rule": "No per-module count may increase. Each Phase 6.x sub-phase commits a strictly lower snapshot."
+}
