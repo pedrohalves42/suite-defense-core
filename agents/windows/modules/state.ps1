@@ -16,8 +16,12 @@
       Get-AgentCurrentState / Set-AgentCurrentState
       Get-StatePath        / Set-StatePath
     Set-AgentState (FSM transitions) is the only validated mutator.
-    Defaults are baked in so the module is safe to load before main.ps1
-    invokes the setters.
+    Defaults are baked in so the module is safe to load before any
+    setter is invoked. In the current boot sequence, reconfiguration
+    happens INDIRECTLY via Sync-ContainerToGlobals -> Set-StatePath
+    (composition/CompatShims.ps1). main.ps1 does NOT call Set-StatePath
+    directly today — when CompatShims is retired in Phase 7, main.ps1
+    must take over that call.
 #>
 
 # --- Module-private state (Phase 6.5) -----------------------------------
