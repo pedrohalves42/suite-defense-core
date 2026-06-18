@@ -10,23 +10,32 @@ set_agent_state() {
 
     [[ "$old_state" == "$new_state" ]] && return 0
 
-    local allowed="${STATE_TRANSITIONS[$old_state]}"
-    if [[ ! " $allowed " =~ " $new_state " ]]; then
-        log "ERROR" "[FSM] Invalid transition: $old_state -> $new_state (allowed: $allowed)"
+    local allowed="${STATE_TRANSITIONS[$old_state]:-}"
+    if [[ -z "$allowed" ]] || [[ ! " $allowed " == *" $new_state "* ]]; then
+        log "ERROR" "[FSM] Invalid transition: $old_state -> $new_state (allowed: ${allowed:-<none>})"
         return 1
     fi
 
-    local old_val=\"$CURRENT_STATE\"
-    CURRENT_STATE=\"$new_state\"
-    log \"INFO\" \"[FSM] State transition: $old_state -> $new_state (Reason: $reason)\"
+    CURRENT_STATE="$new_state"
+    log "INFO" "[FSM] State transition: $old_state -> $new_state (Reason: $reason)"
 
-    # BUG 16: Ensure state is persisted before confirming transition in memory
-    if ! cat > \"$STATE_PATH\" <<EOF
-{\"state\":\"$new_state\",\"previous_state\":\"$old_state\",\"transition_at\":\"$(date -u +\"%Y-%m-%dT%H:%M:%SZ\")\",\"reason\":\"$reason\"}
+    # Persist state atomically. On failure revert in-memory transition.
+    local tmp_path="${STATE_PATH}.tmp.$$"
+    local now
+    now=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "")
+    if ! cat > "$tmp_path" <<EOF
+{"state":"$new_state","previous_state":"$old_state","transition_at":"$now","reason":"$reason"}
 EOF
     then
-        log \"ERROR\" \"[FSM] Failed to persist state to $STATE_PATH. Reverting to $old_val\"
-        CURRENT_STATE=\"$old_val\"
+        log "ERROR" "[FSM] Failed to write state tmp file. Reverting to $old_state"
+        rm -f "$tmp_path" 2>/dev/null || true
+        CURRENT_STATE="$old_state"
+        return 1
+    fi
+    if ! mv -f "$tmp_path" "$STATE_PATH" 2>/dev/null; then
+        log "ERROR" "[FSM] Failed to persist state to $STATE_PATH. Reverting to $old_state"
+        rm -f "$tmp_path" 2>/dev/null || true
+        CURRENT_STATE="$old_state"
         return 1
     fi
     return 0
