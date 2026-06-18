@@ -25,7 +25,8 @@ $ErrorActionPreference = "Stop"
 # ============================================
 $Global:UpdateInProgress = $false
 $Global:BootScriptHash = $null
-$Global:CurrentState = "INITIALIZING"
+# CurrentState moved to modules/state.ps1 since Phase 6.5 (ADR-003).
+# Accessors: Get-AgentCurrentState / Set-AgentCurrentState / Set-AgentState (FSM).
 $Global:AgentName = if ($AgentName) { $AgentName } else { $env:CYBERSHIELD_AGENT_NAME }
 $Global:AgentVersion = "6.0.0"
 $Global:AgentToken = $null
@@ -37,13 +38,13 @@ $Global:ConsecutivePollErrors = 0
 $Global:JobPollIntervalSeconds = if ($PollInterval -ge 10) { $PollInterval } else { 60 }
 $Global:RestartRequested = $false
 $Global:LoopTimestamp = $null
-$Global:StatePath = "$env:ProgramData\CyberShield\data\agent_state.json"
+# StatePath moved to modules/state.ps1 since Phase 6.5 (ADR-003).
+# main.ps1 reconfigures it via Set-StatePath after the module loads.
 $Global:DnsBlocklistPath = "$env:ProgramData\CyberShield\data\dns_blocklist.json"
 $Global:EvidenceJournalPath = "$env:ProgramData\CyberShield\data\evidence_journal.jsonl"
 $Global:EvidenceBuffer = [System.Collections.ArrayList]::new()
 # Rollback state path is owned by modules/state.ps1 since Phase 6.4 (ADR-003).
-# main.ps1 reconfigures it via Set-RollbackStatePath after the module loads
-# (see the post-load block further down). Default value is already correct.
+# Default value is already correct; override via Set-RollbackStatePath if needed.
 
 
 # Aggregation defaults
