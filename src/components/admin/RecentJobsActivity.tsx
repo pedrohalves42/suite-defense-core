@@ -10,7 +10,7 @@ interface RecentJobsActivityProps {
 }
 
 export function RecentJobsActivity({ tenantId, loading }: RecentJobsActivityProps) {
-  const { data: jobs = [] } = useQuery({
+  const { data: jobs = [], isError, error, isLoading } = useQuery({
     queryKey: ['recent-jobs', tenantId],
     queryFn: async () => {
       if (!tenantId) return [];
@@ -21,9 +21,10 @@ export function RecentJobsActivity({ tenantId, loading }: RecentJobsActivityProp
         .order('created_at', { ascending: false })
         .limit(10);
       if (error) throw error;
-      return data;
+      return data ?? [];
     },
-    enabled: !loading && !!tenantId,  // V-502: Só executar após sincronização
+    enabled: !loading && !!tenantId,
+    staleTime: 30_000,
   });
 
   const statusColors = {
@@ -36,7 +37,16 @@ export function RecentJobsActivity({ tenantId, loading }: RecentJobsActivityProp
 
   return (
     <div className="space-y-2">
-      {jobs.length === 0 && (
+      {/* Wave 4 - B37: distinguish loading / error / empty states */}
+      {(isLoading || loading) && (
+        <p className="text-sm text-muted-foreground">Carregando jobs recentes…</p>
+      )}
+      {isError && (
+        <p className="text-sm text-destructive">
+          Erro ao carregar jobs: {error instanceof Error ? error.message : 'desconhecido'}
+        </p>
+      )}
+      {!isLoading && !isError && jobs.length === 0 && (
         <p className="text-sm text-muted-foreground">Nenhum job recente</p>
       )}
       {jobs.map((job) => (

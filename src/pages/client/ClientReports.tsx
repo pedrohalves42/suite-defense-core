@@ -21,14 +21,16 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, Area
 export const ClientReports = () => {
   const { tenant } = useTenant();
 
-  const { data: reports, isLoading } = useQuery({
+  const { data: reports, isLoading, error, refetch } = useQuery({
     queryKey: ['client-reports', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
 
       const { data, error } = await supabase
         .from('generated_reports')
-        .select('id, tenant_id, report_type, risk_level, risk_score, created_at, expires_at, file_url, agent_name, commercial_priority')
+        // Wave 4 - B36: include `title` (was being read in the UI but never selected,
+        // leaving every card showing "undefined").
+        .select('id, tenant_id, title, report_type, risk_level, risk_score, created_at, expires_at, file_url, agent_name, commercial_priority')
         .eq('tenant_id', tenant.id)
         .order('created_at', { ascending: false })
         .limit(50);
@@ -36,11 +38,14 @@ export const ClientReports = () => {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!tenant?.id
+    enabled: !!tenant?.id,
+    staleTime: 60_000,
   });
 
+  type ClientReport = NonNullable<typeof reports>[number];
+
   // Prepare chart data (last 30 days of risk scores)
-  const chartData = reports?.slice(0, 30).reverse().map((report, index: number) => ({
+  const chartData = reports?.slice(0, 30).reverse().map((report) => ({
     name: formatBrazilDateTime(report.created_at, 'day-month'),
     score: report.risk_score || 0
   })) || [];
@@ -87,6 +92,24 @@ export const ClientReports = () => {
     );
   }
 
+  // Wave 4 - B36: surface query errors instead of rendering empty silently.
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Meus Relatórios</h1>
+        </div>
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardContent className="py-8 text-center space-y-3">
+            <AlertTriangle className="h-8 w-8 mx-auto text-destructive" />
+            <p className="text-sm">Não foi possível carregar seus relatórios.</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>Tentar novamente</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -95,6 +118,7 @@ export const ClientReports = () => {
           Relatórios de segurança dos seus computadores
         </p>
       </div>
+
 
       {/* Evolution Chart */}
       {chartData.length > 1 ? (
@@ -171,7 +195,7 @@ export const ClientReports = () => {
 
       {reports && reports.length > 0 ? (
         <div className="space-y-4">
-          {reports.map((report: any, index: number) => (
+          {reports.map((report: ClientReport, index: number) => (
             <motion.div
               key={report.id}
               initial={{ opacity: 0, y: 10 }}
@@ -191,7 +215,9 @@ export const ClientReports = () => {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h3 className="font-medium">{report.title}</h3>
+                          <h3 className="font-medium">
+                            {report.title || `Relatório ${report.report_type || ''}`.trim() || 'Relatório'}
+                          </h3>
                           {isCritical(report.risk_score) && (
                             <Badge variant="destructive" className="text-xs">
                               URGENTE
