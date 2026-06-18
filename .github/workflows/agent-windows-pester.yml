@@ -83,6 +83,22 @@ jobs:
       - name: No-new-globals gate
         shell: pwsh
         run: |
+          # Strip ALL PowerShell comments (line + block <#...#>) via the
+          # tokenizer, then count $Global:* references on the remaining code.
+          # Avoids false positives from doctrings that legitimately mention
+          # `$Global:*` in prose (e.g. ADR notes inside <# ... #> blocks).
+          function Get-CodeOnly([string]$Path) {
+              $src = Get-Content -Raw -LiteralPath $Path
+              $tokens = $null; $errors = $null
+              [void][System.Management.Automation.Language.Parser]::ParseInput(
+                  $src, [ref]$tokens, [ref]$errors)
+              ($tokens | Where-Object { $_.Kind -ne 'Comment' } |
+                  ForEach-Object { $_.Text }) -join ' '
+          }
+          function Count-Globals([string]$Path) {
+              ([regex]::Matches((Get-CodeOnly $Path), '\$Global:')).Count
+          }
+
           $files = @()
           $files += Get-ChildItem agents/windows/ports       -Recurse -Filter *.ps1
           $files += Get-ChildItem agents/windows/domain      -Recurse -Filter *.ps1
@@ -90,22 +106,37 @@ jobs:
           $files += Get-ChildItem agents/windows/application -Recurse -Filter *.ps1
           $files += Get-ChildItem agents/windows/composition -Recurse -Filter *.ps1 |
                       Where-Object { $_.Name -ne 'CompatShims.ps1' }
-          $hits = Select-String -Pattern '\$Global:' -Path $files.FullName -ErrorAction SilentlyContinue |
-                    Where-Object { $_.Line -notmatch '^\s*#' -and $_.Line -notmatch '^\s*<#' }
-          if ($hits) {
-            $hits | Format-Table -AutoSize
-            Write-Error "Hex layers must not introduce `$Global:* references (CompatShims.ps1 is the only allowed bridge)."
-            exit 1
+          $offenders = @()
+          foreach ($f in $files) {
+              $n = Count-Globals $f.FullName
+              if ($n -gt 0) { $offenders += [pscustomobject]@{ File=$f.FullName; Count=$n } }
           }
-          Write-Host "Hex layers: 0 `$Global:* references"
+          if ($offenders) {
+              $offenders | Format-Table -AutoSize
+              Write-Error "Hex layers must not introduce `$Global:* references (CompatShims.ps1 is the only allowed bridge)."
+              exit 1
+          }
+          Write-Host "Hex layers: 0 `$Global:* references (comment-stripped scan)"
 
       - name: Legacy modules — monotonic-decrease baseline gate (ADR-003 / Phase 6)
         shell: pwsh
         run: |
+          function Get-CodeOnly([string]$Path) {
+              $src = Get-Content -Raw -LiteralPath $Path
+              $tokens = $null; $errors = $null
+              [void][System.Management.Automation.Language.Parser]::ParseInput(
+                  $src, [ref]$tokens, [ref]$errors)
+              ($tokens | Where-Object { $_.Kind -ne 'Comment' } |
+                  ForEach-Object { $_.Text }) -join ' '
+          }
+          function Count-Globals([string]$Path) {
+              ([regex]::Matches((Get-CodeOnly $Path), '\$Global:')).Count
+          }
+
           $baselinePath = 'agents/windows/tests/baseline-globals.json'
           if (-not (Test-Path $baselinePath)) {
-            Write-Error "Baseline file missing: $baselinePath"
-            exit 1
+              Write-Error "Baseline file missing: $baselinePath"
+              exit 1
           }
           $baseline = (Get-Content $baselinePath -Raw | ConvertFrom-Json).per_module
           $baselineMap = @{}
@@ -114,25 +145,25 @@ jobs:
           $regressions = @()
           $improvements = @()
           Get-ChildItem agents/windows/modules -Filter *.ps1 | ForEach-Object {
-            $count = (Select-String -Path $_.FullName -Pattern '\$Global:' -AllMatches |
-                      Where-Object { $_.Line -notmatch '^\s*#' -and $_.Line -notmatch '^\s*<#' }).Count
-            $base = if ($baselineMap.ContainsKey($_.Name)) { $baselineMap[$_.Name] } else { 0 }
-            if ($count -gt $base) {
-              $regressions += [pscustomobject]@{ Module=$_.Name; Baseline=$base; Current=$count; Delta=($count - $base) }
-            } elseif ($count -lt $base) {
-              $improvements += [pscustomobject]@{ Module=$_.Name; Baseline=$base; Current=$count; Delta=($count - $base) }
-            }
+              $count = Count-Globals $_.FullName
+              $base  = if ($baselineMap.ContainsKey($_.Name)) { $baselineMap[$_.Name] } else { 0 }
+              if ($count -gt $base) {
+                  $regressions  += [pscustomobject]@{ Module=$_.Name; Baseline=$base; Current=$count; Delta=($count - $base) }
+              } elseif ($count -lt $base) {
+                  $improvements += [pscustomobject]@{ Module=$_.Name; Baseline=$base; Current=$count; Delta=($count - $base) }
+              }
           }
 
           if ($improvements) {
-            Write-Host "Improvements (refresh baseline-globals.json in the same PR):"
-            $improvements | Format-Table -AutoSize
+              Write-Host "Improvements (refresh baseline-globals.json in the same PR):"
+              $improvements | Format-Table -AutoSize
           }
           if ($regressions) {
-            Write-Host "REGRESSIONS — new `$Global:* introduced in legacy modules:"
-            $regressions | Format-Table -AutoSize
-            Write-Error "ADR-003 monotonic-decrease gate violated. Either remove the new globals or justify in an ADR amendment."
-            exit 1
+              Write-Host "REGRESSIONS — new `$Global:* introduced in legacy modules:"
+              $regressions | Format-Table -AutoSize
+              Write-Error "ADR-003 monotonic-decrease gate violated. Either remove the new globals or justify in an ADR amendment."
+              exit 1
           }
           Write-Host "Legacy modules: no `$Global:* regressions vs Phase 6 baseline."
+
 
