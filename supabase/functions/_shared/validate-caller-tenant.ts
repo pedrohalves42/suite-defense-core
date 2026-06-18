@@ -64,12 +64,31 @@ export async function validateCallerTenant(
   }
 
   // Verify user belongs to the requested tenant
-  const { data: userRole } = await supabase
+  // B26: previously discarded the error from .maybeSingle(). A transient DB error
+  // (e.g. statement timeout, RLS misconfig) was indistinguishable from "no row" and
+  // returned a generic 403 with no log line. Capture and surface 503 on infra errors.
+  const { data: userRole, error: roleError } = await supabase
     .from('user_roles')
     .select('role')
     .eq('user_id', user.id)
     .eq('tenant_id', tenantId)
     .maybeSingle();
+
+  if (roleError) {
+    logger.error('[validateCallerTenant] user_roles lookup failed', {
+      user_id: user.id,
+      tenant_id: tenantId,
+      code: roleError.code,
+      message: roleError.message,
+    });
+    return {
+      authorized: false,
+      isInternalCall: false,
+      userId: user.id,
+      error: 'Tenant validation temporarily unavailable',
+      statusCode: 503,
+    };
+  }
 
   if (!userRole) {
     logger.warn(`[SECURITY] User ${user.id} attempted access to unauthorized tenant ${tenantId}`);
