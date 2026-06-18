@@ -47,21 +47,34 @@ initialize_agent_keys() {
 
 register_agent_key() {
     local public_key_b64
-    public_key_b64=$(base64 -w0 "$PUBLIC_KEY_PATH" 2>/dev/null || base64 "$PUBLIC_KEY_PATH" 2>/dev/null)
+    public_key_b64=$(base64 -w0 "$PUBLIC_KEY_PATH" 2>/dev/null || base64 "$PUBLIC_KEY_PATH" 2>/dev/null | tr -d '\n')
+    if [[ -z "$public_key_b64" ]]; then
+        log "ERROR" "[KEYS] Failed to encode public key for registration"
+        return 1
+    fi
     local body='{"public_key":"'"$public_key_b64"'","key_fingerprint":"'"$SIGNING_FINGERPRINT"'","algorithm":"ECDSA-P256-SHA256"}'
-    local result
+    local result rc
     result=$(invoke_secure_request "POST" "/functions/v1/register-agent-key" "$body" 30)
-    if [[ $? -eq 0 ]]; then
-        KEY_VERSION=$(echo "$result" | jq -r '.version // 1' 2>/dev/null)
+    rc=$?
+    if [[ $rc -eq 0 ]]; then
+        KEY_VERSION=$(echo "$result" | jq -r '.version // 1' 2>/dev/null || echo 1)
         log "SUCCESS" "[KEYS] Public key registered (version: $KEY_VERSION)"
         return 0
     fi
-    log "WARN" "[KEYS] Failed to register public key"
+    log "WARN" "[KEYS] Failed to register public key (rc=$rc)"
     return 1
 }
 
 sign_execution_result() {
-    # BUG 18: Align with BUG 1 separator change (: -> .)
-    local canonical=\"${1}.${2}.${3}.${4}.${5}\"
-    echo -n \"$canonical\" | openssl dgst -sha256 -sign \"$PRIVATE_KEY_PATH\" 2>/dev/null | base64 -w0 2>/dev/null || base64 2>/dev/null
+    # Build canonical string from positional args, sign with ECDSA P-256.
+    # Returns base64 signature on stdout, empty string on failure.
+    local canonical="${1}.${2}.${3}.${4}.${5}"
+    if [[ ! -f "$PRIVATE_KEY_PATH" ]]; then
+        printf ''
+        return 1
+    fi
+    local sig
+    sig=$(printf '%s' "$canonical" | openssl dgst -sha256 -sign "$PRIVATE_KEY_PATH" 2>/dev/null | base64 -w0 2>/dev/null) \
+        || sig=$(printf '%s' "$canonical" | openssl dgst -sha256 -sign "$PRIVATE_KEY_PATH" 2>/dev/null | base64 2>/dev/null | tr -d '\n')
+    printf '%s' "${sig:-}"
 }
