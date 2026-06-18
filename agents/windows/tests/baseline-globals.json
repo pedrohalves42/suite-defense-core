@@ -1,8 +1,8 @@
 {
-  "phase": "6.5",
+  "phase": "6.5-audit",
   "captured_at": "2026-06-18",
-  "counting_method": "PowerShell Parser tokenizer, $Global:* refs in code only (comments stripped). Must match the CI gate exactly.",
-  "total_globals": 147,
+  "counting_method": "PowerShell Parser tokenizer, $Global:* refs in code only (comments stripped). Must match the CI gate exactly. Scan is now recursive across modules/ to cover modules/remediation/* (Phase 6 audit fix B1).",
+  "total_globals": 163,
   "per_module": {
     "collection.ps1": 4,
     "config.ps1": 7,
@@ -20,7 +20,12 @@
     "state.ps1": 0,
     "telemetry.ps1": 0,
     "update.ps1": 9,
-    "utils.ps1": 0
+    "utils.ps1": 0,
+    "Diagnostics.ps1": 4,
+    "HostsFile.ps1": 2,
+    "ProcessControl.ps1": 6,
+    "Quarantine.ps1": 1,
+    "ServiceControl.ps1": 3
   },
-  "rule": "No per-module count may increase. Each Phase 6.x sub-phase commits a strictly lower snapshot."
+  "rule": "No per-module count may increase. Each Phase 6.x sub-phase commits a strictly lower snapshot. Recursive scan covers modules/ and modules/remediation/."
 }

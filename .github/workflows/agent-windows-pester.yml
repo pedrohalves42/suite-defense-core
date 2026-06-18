@@ -144,7 +144,7 @@ jobs:
 
           $regressions = @()
           $improvements = @()
-          Get-ChildItem agents/windows/modules -Filter *.ps1 | ForEach-Object {
+          Get-ChildItem agents/windows/modules -Recurse -Filter *.ps1 | ForEach-Object {
               $count = Count-Globals $_.FullName
               $base  = if ($baselineMap.ContainsKey($_.Name)) { $baselineMap[$_.Name] } else { 0 }
               if ($count -gt $base) {
