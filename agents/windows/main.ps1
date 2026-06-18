@@ -192,7 +192,7 @@ function Main {
             ApiEndpoint          = $Global:ServerUrl
             PollInterval         = $Global:JobPollIntervalSeconds
             TlsPinnedThumbprint  = $Global:TlsPinnedThumbprint
-            StatePath            = $Global:StatePath
+            StatePath            = (Get-StatePath)
             DnsBlocklistPath     = $Global:DnsBlocklistPath
             EvidenceJournalPath  = $Global:EvidenceJournalPath
         }
