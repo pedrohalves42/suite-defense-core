@@ -24,6 +24,11 @@ jobs:
           Install-Module Pester              -RequiredVersion 5.5.0 -Force -SkipPublisherCheck
           Install-Module PSScriptAnalyzer    -RequiredVersion 1.21.0 -Force -SkipPublisherCheck
 
+      - name: Bootstrap lockfile — verify pinned tool/module versions (Phase 6.6)
+        shell: pwsh
+        run: pwsh -NoProfile -File agents/windows/bootstrap.ps1 -Verify
+
+
       - name: PSScriptAnalyzer — hexagonal layers (strict / Error)
         shell: pwsh
         run: |
