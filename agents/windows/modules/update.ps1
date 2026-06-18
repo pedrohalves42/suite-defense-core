@@ -194,7 +194,7 @@ function Install-AgentUpdate {
             if ($actualHash -ne $Hash.ToLower()) {
                 Write-Log "Update hash mismatch (expected: $Hash, got: $actualHash) - ABORTED" "ERROR"
                 Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
-                $Global:ToctouFailures = ($Global:ToctouFailures -as [int]) + 1
+                $script:ToctouFailures = ($script:ToctouFailures -as [int]) + 1
                 return $false
             }
             Write-Log "Update hash verified" "INFO"
@@ -208,7 +208,7 @@ function Install-AgentUpdate {
             if ($actualHash -ne $ExpectedSha256.ToLower()) {
                 Write-Log "FATAL: expected_sha256 from server does NOT match downloaded content hash! Possible MITM or replay attack. (server=$ExpectedSha256, local=$actualHash) - ABORTED" "ERROR"
                 Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
-                $Global:ToctouFailures = ($Global:ToctouFailures -as [int]) + 1
+                $script:ToctouFailures = ($script:ToctouFailures -as [int]) + 1
                 return $false
             }
             Write-Log "Phase 3: expected_sha256 cross-validated OK" "INFO"
@@ -223,7 +223,7 @@ function Install-AgentUpdate {
                 if (-not $sigValid) {
                     Write-Log "Update REJECTED - Ed25519 signature INVALID! Possible supply chain attack. Hash: $actualHash" "ERROR"
                     Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
-                    $Global:ToctouFailures = ($Global:ToctouFailures -as [int]) + 1
+                    $script:ToctouFailures = ($script:ToctouFailures -as [int]) + 1
                     return $false
                 }
                 Write-Log "Ed25519 signature verified for update v$Version" "INFO"
@@ -241,7 +241,7 @@ function Install-AgentUpdate {
             # No signature but Ed25519 is configured — reject unsigned updates (fail-closed)
             Write-Log "Update REJECTED - No cryptographic signature on update payload. Unsigned updates blocked (SSA-004)." "ERROR"
             Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
-            $Global:ToctouFailures = ($Global:ToctouFailures -as [int]) + 1
+            $script:ToctouFailures = ($script:ToctouFailures -as [int]) + 1
             return $false
         }
         else {
@@ -261,7 +261,7 @@ function Install-AgentUpdate {
                         if ($sigTime -le $lastTime) {
                             Write-Log "Phase 3: STALE signature detected (sig=$sigTime <= lastUpdate=$lastTime). Possible replay attack - ABORTED" "ERROR"
                             Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
-                            $Global:ToctouFailures = ($Global:ToctouFailures -as [int]) + 1
+                            $script:ToctouFailures = ($script:ToctouFailures -as [int]) + 1
                             return $false
                         }
                     }
@@ -302,7 +302,7 @@ function Install-AgentUpdate {
             @{ timestamp = (Get-Date).ToUniversalTime().ToString("o"); version = $Version; sha256 = $newHash } | ConvertTo-Json | Out-File "$script:DataDir\last_successful_update.json" -Encoding UTF8 -Force
 
             # Reset TOCTOU failure counter on success
-            $Global:ToctouFailures = 0
+            $script:ToctouFailures = 0
 
             Write-Log "Agent updated to v$Version" "INFO"
             return $true
