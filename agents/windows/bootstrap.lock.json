@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Pinned tool versions for the CyberShield Windows agent build/test bootstrap. Consumed by agents/windows/bootstrap.ps1 in CI and dev to guarantee reproducible builds (ADR-003 / Phase 6.6).",
+  "generated_at": "2026-06-18T00:00:00Z",
+  "tools": {
+    "node":   { "exact": "20.18.0", "min": "20.0.0", "max": "21.0.0" },
+    "npm":    { "exact": "10.8.2",  "min": "10.0.0" },
+    "pwsh":   { "exact": "7.4.6",   "min": "7.4.0" },
+    "dotnet": { "exact": "8.0.404", "min": "8.0.0" }
+  },
+  "powershell_modules": {
+    "ps2exe":           { "exact": "0.5.0.31", "min": "0.5.0.0" },
+    "Pester":           { "exact": "5.6.1",    "min": "5.5.0" },
+    "PSScriptAnalyzer": { "exact": "1.23.0",   "min": "1.22.0" }
+  },
+  "winget_packages": {
+    "Microsoft.PowerShell":   { "exact": "7.4.6.0",  "optional": true },
+    "OpenJS.NodeJS.LTS":      { "exact": "20.18.0",  "optional": true },
+    "Microsoft.DotNet.SDK.8": { "exact": "8.0.404",  "optional": true }
+  },
+  "npm_lockfile": "package-lock.json",
+  "gates": {
+    "fail_on_missing_tool":   true,
+    "fail_on_version_drift":  true,
+    "winget_strict":          false
+  }
+}
