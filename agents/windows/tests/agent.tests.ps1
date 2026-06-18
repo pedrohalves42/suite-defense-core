@@ -24,7 +24,7 @@ Describe "CyberShield Agent v6.0 Module Integration" {
         $Global:DnsBlocklistPath = "$env:TEMP\CyberShield\test-integration\dns_blocklist.json"
         $Global:EvidenceJournalPath = "$env:TEMP\CyberShield\test-integration\evidence_journal.jsonl"
         $Global:EvidenceBuffer = [System.Collections.ArrayList]::new()
-        $Global:RollbackPaths = @{ RollbackState = "$env:TEMP\CyberShield\test-integration\rollback_state.json" }
+        # Rollback path is configured post-load via Set-RollbackStatePath (Phase 6.4).
         $Global:AggregationEnabled = $true
         $Global:AggregationWindowSeconds = 10
         $Global:AggregationFileThreshold = 50
