@@ -97,4 +97,42 @@ jobs:
             Write-Error "Hex layers must not introduce `$Global:* references (CompatShims.ps1 is the only allowed bridge)."
             exit 1
           }
-          Write-Host "Hex layers: 0 `$Global:* references ✅"
+          Write-Host "Hex layers: 0 `$Global:* references"
+
+      - name: Legacy modules — monotonic-decrease baseline gate (ADR-003 / Phase 6)
+        shell: pwsh
+        run: |
+          $baselinePath = 'agents/windows/tests/baseline-globals.json'
+          if (-not (Test-Path $baselinePath)) {
+            Write-Error "Baseline file missing: $baselinePath"
+            exit 1
+          }
+          $baseline = (Get-Content $baselinePath -Raw | ConvertFrom-Json).per_module
+          $baselineMap = @{}
+          $baseline.PSObject.Properties | ForEach-Object { $baselineMap[$_.Name] = [int]$_.Value }
+
+          $regressions = @()
+          $improvements = @()
+          Get-ChildItem agents/windows/modules -Filter *.ps1 | ForEach-Object {
+            $count = (Select-String -Path $_.FullName -Pattern '\$Global:' -AllMatches |
+                      Where-Object { $_.Line -notmatch '^\s*#' -and $_.Line -notmatch '^\s*<#' }).Count
+            $base = if ($baselineMap.ContainsKey($_.Name)) { $baselineMap[$_.Name] } else { 0 }
+            if ($count -gt $base) {
+              $regressions += [pscustomobject]@{ Module=$_.Name; Baseline=$base; Current=$count; Delta=($count - $base) }
+            } elseif ($count -lt $base) {
+              $improvements += [pscustomobject]@{ Module=$_.Name; Baseline=$base; Current=$count; Delta=($count - $base) }
+            }
+          }
+
+          if ($improvements) {
+            Write-Host "Improvements (refresh baseline-globals.json in the same PR):"
+            $improvements | Format-Table -AutoSize
+          }
+          if ($regressions) {
+            Write-Host "REGRESSIONS — new `$Global:* introduced in legacy modules:"
+            $regressions | Format-Table -AutoSize
+            Write-Error "ADR-003 monotonic-decrease gate violated. Either remove the new globals or justify in an ADR amendment."
+            exit 1
+          }
+          Write-Host "Legacy modules: no `$Global:* regressions vs Phase 6 baseline."
+
