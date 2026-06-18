@@ -33,7 +33,9 @@ export interface DLQResult {
  */
 export function calculateNextRetry(currentRetry: number): string {
   const delays = [30, 120, 600, 1800, 3600]; // seconds
-  const delay = delays[Math.min(currentRetry, delays.length - 1)];
+  // B23: clamp index so negative / NaN / overflow inputs never yield undefined or negative delay
+  const safeRetry = Number.isFinite(currentRetry) ? Math.max(0, Math.floor(currentRetry)) : 0;
+  const delay = delays[Math.min(safeRetry, delays.length - 1)];
   const jitter = Math.floor(Math.random() * 10); // Add 0-10s jitter to prevent thundering herd
   return new Date(Date.now() + (delay + jitter) * 1000).toISOString();
 }
@@ -210,9 +212,13 @@ export async function getDLQEntriesForRetry(
   supabase: any,
   limit: number = 10
 ): Promise<Record<string, unknown>[]> {
+  // B24: previous query selected columns that do not exist on failed_jobs_dlq
+  // (original_job_type, original_payload, priority). PostgREST returned an error
+  // and the function silently fell through to `return []`, so DLQ retries never ran.
+  // Real schema: job_type, payload; priority lives inside metadata jsonb.
   const { data, error } = await supabase
     .from('failed_jobs_dlq')
-    .select('id, original_job_id, original_job_type, original_payload, tenant_id, agent_id, error_message, retry_count, max_retries, next_retry_at, status, priority, created_at')
+    .select('id, original_job_id, job_type, payload, tenant_id, agent_id, agent_name, error_message, retry_count, max_retries, next_retry_at, status, metadata, created_at')
     .eq('status', 'pending')
     .lte('next_retry_at', new Date().toISOString())
     .order('next_retry_at', { ascending: true })
