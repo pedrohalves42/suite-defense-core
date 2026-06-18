@@ -2,16 +2,17 @@ BeforeAll {
     function Write-Log { param([string]$Message, [string]$Level) }
 
     $Global:CurrentState = "INITIALIZING"
-    $Global:StatePath = "$env:TEMP\CyberShield\test-state\agent_state.json"
-    $Global:RollbackPaths = @{
-        RollbackState = "$env:TEMP\CyberShield\test-state\rollback_state.json"
-    }
+    $Global:StatePath    = "$env:TEMP\CyberShield\test-state\agent_state.json"
 
     $testDir = "$env:TEMP\CyberShield\test-state"
     if (-not (Test-Path $testDir)) { New-Item -ItemType Directory -Path $testDir -Force | Out-Null }
 
     . "$PSScriptRoot\..\modules\state.ps1"
+
+    # Phase 6.4: rollback path is module-private; configure via accessor.
+    Set-RollbackStatePath -Path "$testDir\rollback_state.json"
 }
+
 
 Describe "Set-AgentState" {
     BeforeEach {
