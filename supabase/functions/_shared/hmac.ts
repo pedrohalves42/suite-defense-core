@@ -1,5 +1,29 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from './logger.ts';
+import { isFeatureEnabled } from './feature-flags.ts';
+import {
+  enqueueFormatCacheUpsert,
+  inlineFormatCacheUpsert,
+} from './hmac-success-coalescer.ts';
+
+// PP02-A: feature-flag cache for the coalescer. Default fail-OPEN to the
+// inline (current) behaviour so any flag-table outage cannot regress writes.
+let _coalesceFlagCache: { value: boolean; ts: number } | null = null;
+const COALESCE_FLAG_TTL_MS = 30_000;
+async function isHmacCoalescingEnabled(supabase: any): Promise<boolean> {
+  const now = Date.now();
+  if (_coalesceFlagCache && now - _coalesceFlagCache.ts < COALESCE_FLAG_TTL_MS) {
+    return _coalesceFlagCache.value;
+  }
+  const enabled = await isFeatureEnabled(
+    supabase,
+    'hmac_success_coalescing',
+    undefined,
+    { defaultOnError: false },
+  );
+  _coalesceFlagCache = { value: enabled, ts: now };
+  return enabled;
+}
 
 // Timing-safe comparison for strings
 export { timingSafeEqual } from './crypto-utils.ts';
