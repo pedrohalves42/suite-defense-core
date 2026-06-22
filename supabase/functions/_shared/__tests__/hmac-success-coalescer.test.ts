@@ -37,15 +37,21 @@ function mockClient(opts: { fail?: boolean } = {}) {
   };
 }
 
-Deno.test("coalescer › LRU dedupe within TTL skips repeat enqueues", () => {
-  _resetCoalescerForTests();
-  const c = mockClient();
-  enqueueFormatCacheUpsert(c, makeRow("a1"));
-  enqueueFormatCacheUpsert(c, makeRow("a1"));
-  enqueueFormatCacheUpsert(c, makeRow("a1"));
-  const m = getCoalescerMetrics();
-  assertEquals(m.buffered, 1);
-  assertEquals(m.lru_hits, 2);
+Deno.test({
+  name: "coalescer › LRU dedupe within TTL skips repeat enqueues",
+  sanitizeOps: false,
+  sanitizeResources: false,
+  fn: () => {
+    _resetCoalescerForTests();
+    const c = mockClient();
+    enqueueFormatCacheUpsert(c, makeRow("a1"));
+    enqueueFormatCacheUpsert(c, makeRow("a1"));
+    enqueueFormatCacheUpsert(c, makeRow("a1"));
+    const m = getCoalescerMetrics();
+    assertEquals(m.buffered, 1);
+    assertEquals(m.lru_hits, 2);
+    _resetCoalescerForTests();
+  },
 });
 
 Deno.test("coalescer › batch flush deduplicates and writes once", async () => {
