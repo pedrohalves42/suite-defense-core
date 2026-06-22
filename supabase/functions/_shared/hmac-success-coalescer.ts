@@ -29,7 +29,7 @@
 
 import { logger } from './logger.ts';
 
-export interface FormatCacheUpsertRow {
+export interface FormatCacheUpsertRow extends Record<string, unknown> {
   agent_id: string;
   tenant_id: string;
   key_encoding: string;
