@@ -7,15 +7,16 @@ import { realtimeChannelManager } from '@/lib/realtime-manager';
 /**
  * Throttle function to limit execution frequency
  */
-function throttle(func: Function, limit: number) {
-  let inThrottle: boolean;
-  return function(this: any, ...args: any[]) {
+type AnyFn = (...args: unknown[]) => void;
+function throttle<T extends AnyFn>(func: T, limit: number): T {
+  let inThrottle = false;
+  return (function (this: unknown, ...args: unknown[]) {
     if (!inThrottle) {
       func.apply(this, args);
       inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
+      setTimeout(() => { inThrottle = false; }, limit);
     }
-  };
+  }) as T;
 }
 
 /**
@@ -104,28 +105,28 @@ export function useRealtimeQuery<T>({
   const queryKeyHash = useMemo(() => hashQueryKey(queryKey), [queryKey]);
   const eventsHash = useMemo(() => realtimeEvents.join(','), [realtimeEvents]);
 
+  // P0-Q1 (Rules of Hooks): throttled invalidator must live at hook root, not inside useEffect.
+  // Previously throttle state was reset on every re-subscribe (effectively disabled).
+  const throttledInvalidate = useMemo(
+    () =>
+      throttle((...args: unknown[]) => {
+        const key = args[0] as unknown[];
+        logger.debug(`[useRealtimeQuery] Throttled invalidation for ${realtimeTable}`, { queryKey: key });
+        queryClient.invalidateQueries({ queryKey: key, exact: true });
+      }, 1000),
+    [queryClient, realtimeTable]
+  );
+
   useEffect(() => {
     if (!realtimeTable || !enabled || !isVisible) return;
 
     // Correção F-003: Prefixo de tenant obrigatório para canais (Isolation Enforcement)
-    const channelTable = tenantId ? `tenant:${tenantId}:${realtimeTable}` : realtimeTable;
-    
-    // Note: O Supabase Realtime não usa o nome da tabela no método .channel(), 
-    // mas sim no objeto de configuração do .on('postgres_changes', ...).
-    // O prefixo 'tenant:' deve ser usado no NOME DO CANAL para isolamento.
     const channelName = tenantId ? `tenant:${tenantId}:${realtimeTable}` : `public:${realtimeTable}`;
 
     logger.debug(`[useRealtimeQuery] Subscribing instance ${instanceId} to channel ${channelName}`, {
       queryKey: queryKeyHash,
       filter: realtimeFilter
     });
-
-    const throttledInvalidate = useMemo(() => 
-      throttle((key: unknown[]) => {
-        logger.debug(`[useRealtimeQuery] Throttled invalidation for ${realtimeTable}`, { queryKey: key });
-        queryClient.invalidateQueries({ queryKey: key, exact: true });
-      }, 1000), 
-    [queryClient, realtimeTable]);
 
     const handleRealtimeEvent = (payload: any) => {
       const eventType = payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE';
