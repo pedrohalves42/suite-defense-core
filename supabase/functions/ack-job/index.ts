@@ -153,6 +153,7 @@ serveAgent(async (req, ctx) => {
   return {
     ok: true,
     message: 'Job acknowledged (v1 - DEPRECATED)',
+    evidence_hash: evidenceHash,
     deprecation_warning: 'This endpoint will be removed on 2026-06-01. Migrate to submit-job-result',
   };
 }, {
