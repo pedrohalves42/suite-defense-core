@@ -89,10 +89,34 @@ serveAgent(async (req, ctx) => {
     };
   }
 
+  // S-P0.5 — Evidência de auditoria/rollback: hash determinístico do ack
+  const completedAt = new Date().toISOString();
+  const statusBefore = existingJob.status as string;
+  const evidencePayload = {
+    job_id: validatedJobId,
+    agent_name: agentName,
+    tenant_id: existingJob.tenant_id,
+    job_type: existingJob.type,
+    status_before: statusBefore,
+    status_after: 'completed',
+    completed_at: completedAt,
+    request_id: requestId,
+    endpoint: 'ack-job',
+    endpoint_version: 'v1-deprecated',
+  };
+  const evidenceJson = JSON.stringify(evidencePayload);
+  const evidenceHashBuf = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(evidenceJson),
+  );
+  const evidenceHash = Array.from(new Uint8Array(evidenceHashBuf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+
   // Update job status
   const { error: updateError } = await supabase
     .from('jobs')
-    .update({ status: 'completed', completed_at: new Date().toISOString() })
+    .update({ status: 'completed', completed_at: completedAt })
     .eq('id', validatedJobId)
     .eq('agent_name', agentName);
 
@@ -104,7 +128,27 @@ serveAgent(async (req, ctx) => {
     );
   }
 
-  logger.info('[ACK] Job confirmado com sucesso:', validatedJobId);
+  // Registrar evidência imutável (best-effort: não falha o ack se o insert falhar)
+  const { error: evidenceError } = await supabase
+    .from('agent_evidence_logs')
+    .insert({
+      tenant_id: existingJob.tenant_id,
+      agent_id: existingJob.agent_id,
+      agent_name: agentName,
+      event_type: 'job_ack_legacy',
+      event_data: evidencePayload,
+      evidence_hash: evidenceHash,
+      state_before: statusBefore,
+      state_after: 'completed',
+      severity: 'info',
+      trace_id: requestId,
+    });
+
+  if (evidenceError) {
+    logger.error('[ACK] Falha ao registrar evidência (não-fatal):', evidenceError);
+  }
+
+  logger.info('[ACK] Job confirmado com sucesso:', validatedJobId, 'evidence:', evidenceHash.slice(0, 12));
 
   return {
     ok: true,
