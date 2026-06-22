@@ -344,31 +344,32 @@ export async function verifyHmacSignature(
       };
     }
 
-    // Update format cache (fire-and-forget)
+    // PP02-A: Success-path side effect (format cache upsert) goes through the
+    // coalescer when the feature flag is on; otherwise we keep the existing
+    // inline fire-and-forget upsert. Replay protection above is untouched.
     if (context?.agentId && resolvedTenantId) {
-      const updateCache = async () => {
+      const row = {
+        agent_id: context.agentId,
+        tenant_id: resolvedTenantId,
+        key_encoding: keyName,
+        separator: variant.sep,
+        body_format: variant.fmt,
+        last_verified_at: new Date().toISOString(),
+        hit_count: 1,
+      };
+      const dispatch = async () => {
         try {
-          const { error } = await supabase.from('agent_hmac_format_cache').upsert(
-            {
-              agent_id: context.agentId,
-              tenant_id: resolvedTenantId,
-              key_encoding: keyName,
-              separator: variant.sep,
-              body_format: variant.fmt,
-              last_verified_at: new Date().toISOString(),
-              hit_count: 1,
-            },
-            { onConflict: 'agent_id' },
-          );
-          if (error) logger.warn('[HMAC] Cache update failed', { error: error.message });
+          const useCoalescer = await isHmacCoalescingEnabled(supabase);
+          if (useCoalescer) {
+            enqueueFormatCacheUpsert(supabase, row);
+          } else {
+            await inlineFormatCacheUpsert(supabase, row);
+          }
         } catch (e: any) {
-          logger.error('[HMAC] Cache update promise rejected', { error: e.message });
+          logger.error('[HMAC] Cache dispatch failed', { error: e?.message });
         }
       };
-      // In Deno Deploy / Edge Functions, we should not use un-awaited async functions 
-      // without waitUntil or similar, but since this is called within a context that 
-      // often uses EdgeRuntime.waitUntil, it's generally safe.
-      updateCache();
+      dispatch();
     }
 
     return { valid: true, rawBody: body, modeUsed: variant.mode };
