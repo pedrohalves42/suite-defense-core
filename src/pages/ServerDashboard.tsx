@@ -40,7 +40,8 @@ const ServerDashboard = () => {
     sortedTenantsByGravity, tenantsWithIssues, onlinePercentage, systemState, successRate, trends,
   } = useDashboardMetrics(agents, jobs, tenantNames);
 
-  const hasDataError = (!loading && !tenantLoading && tenant && agents.length === 0 && jobs.length === 0) || !!error;
+  // B2 fix: removida variável `hasDataError` morta (calculada e nunca lida).
+  // A lógica de erro vive direto no bloco condicional abaixo.
 
   // 1. Loading state (stricter check)
   if (tenantLoading) {
@@ -79,7 +80,7 @@ const ServerDashboard = () => {
   // 3. Error or Empty state
   if (!loading && agents.length === 0) {
     // Only show "Error" if we actually have an error object OR if we expected data (complex heuristic)
-    if (!!error) {
+    if (error) {
       return (
         <div className="min-h-screen bg-background flex items-center justify-center p-6">
           <Card className="max-w-md w-full border-destructive/20 bg-destructive/5">
