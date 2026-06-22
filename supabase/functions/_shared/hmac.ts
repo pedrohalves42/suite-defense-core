@@ -64,7 +64,8 @@ async function isHmacCoalescingEnabled(
 }
 
 // Timing-safe comparison for strings
-export { timingSafeEqual } from './crypto-utils.ts';
+import { timingSafeEqual } from './crypto-utils.ts';
+export { timingSafeEqual };
 
 export interface HmacVerificationResult {
   valid: boolean;
