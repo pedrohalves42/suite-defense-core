@@ -111,16 +111,48 @@ serveAgent(async (req, ctx) => {
     const execResult = await finalizeExecution(submitCtx);
 
     // ?? 11. Update job ??
+    const completedAtIso = new Date().toISOString();
     const updateData: Record<string, unknown> = {
       status: payload.status,
-      finished_at: payload.finished_at || new Date().toISOString(),
-      completed_at: new Date().toISOString(),
+      finished_at: payload.finished_at || completedAtIso,
+      completed_at: completedAtIso,
       current_execution_id: null,
     };
     if (payload.started_at) updateData.started_at = payload.started_at;
-    if (payload.output !== undefined) updateData.output = sanitizeJobOutput(payload.output);
+    const sanitizedOutput = payload.output !== undefined ? sanitizeJobOutput(payload.output) : undefined;
     if (payload.error_message) updateData.error_message = sanitizeErrorMessage(payload.error_message);
     if (payload.execution_time_seconds !== undefined) updateData.execution_time_seconds = payload.execution_time_seconds;
+
+    // S-P0.5b: stamp deterministic evidence_hash so DB trigger rule (1) is
+    // satisfied independently of side-effect tables. Hash binds job id,
+    // agent identity, tenant, type, status transition, completion timestamp,
+    // request id, endpoint, and side-effect summary.
+    const evidencePayload = {
+      job_id: payload.job_id,
+      agent_name: agentName,
+      tenant_id: tenantId,
+      job_type: job.type,
+      status_before: job.status,
+      status_after: payload.status,
+      completed_at: completedAtIso,
+      request_id: requestId,
+      endpoint: 'submit-job-result',
+      side_effects_inserted: submitCtx.sideEffects.inserted,
+      side_effects_count: submitCtx.sideEffects.recordCount ?? 0,
+    };
+    const evidenceHashBuf = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(JSON.stringify(evidencePayload)),
+    );
+    const evidenceHash = Array.from(new Uint8Array(evidenceHashBuf))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    const outputWithEvidence: Record<string, unknown> =
+      sanitizedOutput && typeof sanitizedOutput === 'object' && !Array.isArray(sanitizedOutput)
+        ? { ...(sanitizedOutput as Record<string, unknown>), evidence_hash: evidenceHash }
+        : { value: sanitizedOutput ?? null, evidence_hash: evidenceHash };
+    updateData.output = outputWithEvidence;
 
     // ?? 12. Governance validation ??
     await validateGovernance(submitCtx, updateData);
