@@ -7,7 +7,15 @@ import {
   Zap, Eye, Clock, Users,
 } from "lucide-react";
 
-type LandingItem = Record<string, string>;
+type LandingItem = {
+  title?: string;
+  description?: string;
+  number?: string | number;
+  label?: string;
+  value?: string;
+  text?: string;
+  [k: string]: unknown;
+};
 
 /**
  * Hook that returns LANDING_CONTENT translated via i18n.

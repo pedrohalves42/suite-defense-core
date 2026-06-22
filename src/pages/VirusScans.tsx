@@ -27,8 +27,9 @@ type VirusScanRow = {
   total_engines?: number | null;
   total_scans?: number | null;
   virustotal_permalink?: string | null;
-  scan_result?: Record<string, unknown> | null;
+  scan_result?: unknown;
   scan_details?: unknown;
+  tenant_id?: string;
 };
 
 const ITEMS_PER_PAGE = 15;
