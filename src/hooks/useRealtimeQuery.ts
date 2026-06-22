@@ -19,12 +19,19 @@ function throttle<T extends AnyFn>(func: T, limit: number): T {
   }) as T;
 }
 
+type RealtimeRecord = Record<string, unknown> & { id?: string | number };
+type RealtimePayload = {
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+  new?: RealtimeRecord;
+  old?: RealtimeRecord;
+};
+
 /**
  * Basic matcher for PostgREST style filters (field=eq.value, field=neq.value)
  */
-function matchesFilter(item: any, filter: string | undefined): boolean {
+function matchesFilter(item: RealtimeRecord, filter: string | undefined): boolean {
   if (!filter) return true;
-  
+
   // Handle common format: "id=eq.123" or "status=eq.active"
   const parts = filter.split('=');
   if (parts.length !== 2) return true; // Complex filter, let it pass and let React Query handle it
@@ -34,7 +41,6 @@ function matchesFilter(item: any, filter: string | undefined): boolean {
 
   if (condition.startsWith('eq.')) {
     const value = condition.substring(3);
-    // Handle number strings
     const itemValue = String(item[field]);
     return itemValue === value;
   }
@@ -69,9 +75,9 @@ const DEFAULT_EVENTS: Array<'INSERT' | 'UPDATE' | 'DELETE'> = ['INSERT', 'UPDATE
 /**
  * Utility to hash query keys for stable comparisons
  */
-function hashQueryKey(queryKey: any): string {
+function hashQueryKey(queryKey: unknown): string {
   if (Array.isArray(queryKey)) {
-    return queryKey.map(k => (typeof k === 'object' && k !== null ? JSON.stringify(k) : String(k))).join('|');
+    return queryKey.map((k) => (typeof k === 'object' && k !== null ? JSON.stringify(k) : String(k))).join('|');
   }
   return String(queryKey);
 }
@@ -128,94 +134,89 @@ export function useRealtimeQuery<T>({
       filter: realtimeFilter
     });
 
-    const handleRealtimeEvent = (payload: any) => {
-      const eventType = payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE';
-      
+    const handleRealtimeEvent = (payload: RealtimePayload) => {
+      const eventType = payload.eventType;
+
       if (realtimeEvents.includes(eventType)) {
-        // PERF-FIX: If it's a high-frequency insert/update, we might want to just invalidate instead of manual setQueryData
-        // if the manual update logic is too complex or slow.
-        // For now, we keep manual updates for speed, but throttle full invalidations.
-          
           if (eventType === 'UPDATE' && payload.new) {
-            // Check if updated item still matches filter AND custom predicate
-            const stillMatches = matchesFilter(payload.new, realtimeFilter) && (!predicate || predicate(payload.new));
+            const newRow = payload.new as RealtimeRecord;
+            const stillMatches = matchesFilter(newRow, realtimeFilter) && (!predicate || predicate(newRow as unknown as T));
 
-            queryClient.setQueryData(queryKey, (oldData: any) => {
+            queryClient.setQueryData(queryKey, (oldData: unknown) => {
               if (!oldData) return oldData;
-              
-              const updateItem = (item: any) => 
-                item.id === payload.new.id ? { ...item, ...payload.new } : item;
 
-              const filterOutOfView = (item: any) => item.id !== payload.new.id;
+              const updateItem = (item: RealtimeRecord) =>
+                item.id === newRow.id ? { ...item, ...newRow } : item;
 
-              // 1. Array of objects
+              const filterOutOfView = (item: RealtimeRecord) => item.id !== newRow.id;
+
               if (Array.isArray(oldData)) {
-                if (!stillMatches) return oldData.filter(filterOutOfView);
-                return oldData.map(updateItem);
+                if (!stillMatches) return (oldData as RealtimeRecord[]).filter(filterOutOfView);
+                return (oldData as RealtimeRecord[]).map(updateItem);
               }
-              
-              // 2. Paginated object or complex structure with .items or .data
-              if (oldData.items && Array.isArray(oldData.items)) {
-                if (!stillMatches) return { ...oldData, items: oldData.items.filter(filterOutOfView) };
-                return { ...oldData, items: oldData.items.map(updateItem) };
+
+              const oldObj = oldData as { items?: RealtimeRecord[]; data?: RealtimeRecord[]; id?: unknown };
+
+              if (oldObj.items && Array.isArray(oldObj.items)) {
+                if (!stillMatches) return { ...oldObj, items: oldObj.items.filter(filterOutOfView) };
+                return { ...oldObj, items: oldObj.items.map(updateItem) };
               }
-              if (oldData.data && Array.isArray(oldData.data)) {
-                if (!stillMatches) return { ...oldData, data: oldData.data.filter(filterOutOfView) };
-                return { ...oldData, data: oldData.data.map(updateItem) };
+              if (oldObj.data && Array.isArray(oldObj.data)) {
+                if (!stillMatches) return { ...oldObj, data: oldObj.data.filter(filterOutOfView) };
+                return { ...oldObj, data: oldObj.data.map(updateItem) };
               }
-              
-              // 3. Single object
-              if (oldData.id === payload.new.id) {
-                if (!stillMatches) return null; // Or handle as needed
-                return { ...oldData, ...payload.new };
+
+              if (oldObj.id === newRow.id) {
+                if (!stillMatches) return null;
+                return { ...oldObj, ...newRow };
               }
-              
+
               return oldData;
             });
           } else if (eventType === 'DELETE' && payload.old) {
-            queryClient.setQueryData(queryKey, (oldData: any) => {
+            const oldRow = payload.old as RealtimeRecord;
+            queryClient.setQueryData(queryKey, (oldData: unknown) => {
               if (!oldData) return oldData;
-              const filterItem = (item: any) => item.id !== payload.old.id;
+              const filterItem = (item: RealtimeRecord) => item.id !== oldRow.id;
 
-              if (Array.isArray(oldData)) return oldData.filter(filterItem);
-              if (oldData.items && Array.isArray(oldData.items)) return { ...oldData, items: oldData.items.filter(filterItem) };
-              if (oldData.data && Array.isArray(oldData.data)) return { ...oldData, data: oldData.data.filter(filterItem) };
-              
+              if (Array.isArray(oldData)) return (oldData as RealtimeRecord[]).filter(filterItem);
+              const oldObj = oldData as { items?: RealtimeRecord[]; data?: RealtimeRecord[] };
+              if (oldObj.items && Array.isArray(oldObj.items)) return { ...oldObj, items: oldObj.items.filter(filterItem) };
+              if (oldObj.data && Array.isArray(oldObj.data)) return { ...oldObj, data: oldObj.data.filter(filterItem) };
+
               return oldData;
             });
           } else if (eventType === 'INSERT' && payload.new) {
-            // V-FIX: Verify item matches filter AND custom predicate before inserting into view
-            if (!matchesFilter(payload.new, realtimeFilter) || (predicate && !predicate(payload.new))) {
+            const newRow = payload.new as RealtimeRecord;
+            if (!matchesFilter(newRow, realtimeFilter) || (predicate && !predicate(newRow as unknown as T))) {
               logger.debug(`[useRealtimeQuery] Skipping INSERT: item does not match filter`, {
                 filter: realtimeFilter,
-                itemId: payload.new.id
+                itemId: newRow.id,
               });
               return;
             }
 
-            queryClient.setQueryData(queryKey, (oldData: any) => {
-              // V-FIX: If oldData is empty but we have a valid INSERT, initialize it as a single-item array
-              // This fixes edge cases where realtime event arrives before initial fetch finishes
-              if (!oldData) return [payload.new];
-              // V-FIX: Ensure we are dealing with an array before checking exists
-              const exists = (list: any) => Array.isArray(list) && list.some((item: any) => item.id === payload.new.id);
+            queryClient.setQueryData(queryKey, (oldData: unknown) => {
+              if (!oldData) return [newRow];
+              const exists = (list: unknown) =>
+                Array.isArray(list) && (list as RealtimeRecord[]).some((item) => item.id === newRow.id);
 
               if (Array.isArray(oldData)) {
                 if (exists(oldData)) return oldData;
-                return [payload.new, ...oldData];
+                return [newRow, ...(oldData as RealtimeRecord[])];
               }
-              if (oldData.items && Array.isArray(oldData.items)) {
-                if (exists(oldData.items)) return oldData;
-                return { ...oldData, items: [payload.new, ...oldData.items] };
+              const oldObj = oldData as { items?: RealtimeRecord[]; data?: RealtimeRecord[] };
+              if (oldObj.items && Array.isArray(oldObj.items)) {
+                if (exists(oldObj.items)) return oldData;
+                return { ...oldObj, items: [newRow, ...oldObj.items] };
               }
-              if (oldData.data && Array.isArray(oldData.data)) {
-                if (exists(oldData.data)) return oldData;
-                return { ...oldData, data: [payload.new, ...oldData.data] };
+              if (oldObj.data && Array.isArray(oldObj.data)) {
+                if (exists(oldObj.data)) return oldData;
+                return { ...oldObj, data: [newRow, ...oldObj.data] };
               }
               return oldData;
             });
           } else {
-            // V-FIX: Safely check for data existence before invalidating to avoid unnecessary refetching
             const currentData = queryClient.getQueryData(queryKey);
             if (currentData !== undefined && currentData !== null) {
               throttledInvalidate(queryKey);

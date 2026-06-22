@@ -1,26 +1,12 @@
-import { useState, useMemo, memo } from 'react';
-import { 
-  Users, Search, Filter, RefreshCw, Trash2, 
-  ShieldAlert, ShieldCheck, Download, MoreHorizontal,
-  ChevronRight, Laptop, Activity, Server, Database, Loader2
-} from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { RefreshCw, Trash2, Server, Loader2 } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
-  DropdownMenuTrigger, DropdownMenuSeparator 
-} from '@/components/ui/dropdown-menu';
 import { useAgentManagement } from './useAgentManagement';
 import { StatsCards } from './StatsCards';
 import { AgentFilters } from './AgentFilters';
 import { AgentCard } from './AgentCard';
 import { ConfirmationDialogs } from './ConfirmationDialogs';
 import { ProcessControlSection } from './ProcessControlSection';
-import { cn } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
 import { AnimatePresence } from 'framer-motion';
 
 export default function AgentManagement() {

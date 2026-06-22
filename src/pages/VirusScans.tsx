@@ -11,12 +11,26 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ChevronLeft, ChevronRight, ExternalLink, Shield, AlertTriangle, CheckCircle2, FileSearch, TrendingUp } from 'lucide-react';
-import { subDays } from 'date-fns';
+import { ChevronLeft, ChevronRight, ExternalLink, Shield, AlertTriangle, CheckCircle2, FileSearch } from 'lucide-react';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { ScanFileDialog } from '@/components/ScanFileDialog';
 import { SystemScanButton } from '@/components/SystemScanButton';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+type VirusScanRow = {
+  id: string;
+  scanned_at: string;
+  agent_name: string;
+  file_path: string;
+  file_hash?: string | null;
+  is_malicious: boolean | null;
+  positives: number | null;
+  total_engines?: number | null;
+  total_scans?: number | null;
+  virustotal_permalink?: string | null;
+  scan_result?: unknown;
+  scan_details?: unknown;
+  tenant_id?: string;
+};
 
 const ITEMS_PER_PAGE = 15;
 
@@ -98,35 +112,8 @@ export default function VirusScans() {
 
   const totalPages = scans?.count ? Math.ceil(scans.count / ITEMS_PER_PAGE) : 0;
 
-  const { data: trendData } = useQuery({
-    queryKey: ['scan-trend', tenant?.id],
-    queryFn: async () => {
-      if (!tenant?.id) return [];
-      
-      const last7Days = subDays(new Date(), 7);
-      const { data, error } = await supabase
-        .from('virus_scans')
-        .select('scanned_at, is_malicious')
-        .eq('tenant_id', tenant.id)
-        .gte('scanned_at', last7Days.toISOString())
-        .order('scanned_at');
-      
-      if (error) throw error;
 
-      const grouped = data.reduce((acc, scan) => {
-        const date = new Date(scan.scanned_at).toISOString().split('T')[0];
-        if (!acc[date]) {
-          acc[date] = { date, total: 0, malicious: 0 };
-        }
-        acc[date].total++;
-        if (scan.is_malicious) acc[date].malicious++;
-        return acc;
-      }, {} as Record<string, { date: string; total: number; malicious: number }>);
 
-      return Object.values(grouped).sort((a, b) => a.date.localeCompare(b.date));
-    },
-    enabled: !!tenant?.id
-  });
 
 
   const getStatusBadge = (ismalicious: boolean | null, positives: number | null) => {
@@ -139,7 +126,7 @@ export default function VirusScans() {
     return { variant: 'default' as const, icon: CheckCircle2, text: t('virusScansPage.clean') };
   };
 
-  const ScanDetailsDialog = ({ scan }: { scan: any }) => {
+  const ScanDetailsDialog = ({ scan }: { scan: VirusScanRow }) => {
     const status = getStatusBadge(scan.is_malicious, scan.positives);
     const StatusIcon = status.icon;
 
@@ -366,7 +353,7 @@ export default function VirusScans() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {scans?.data?.map((scan: any) => {
+                    {scans?.data?.map((scan: VirusScanRow) => {
                       const status = getStatusBadge(scan.is_malicious, scan.positives);
                       const StatusIcon = status.icon;
                       return (
