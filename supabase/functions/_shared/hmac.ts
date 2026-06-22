@@ -397,7 +397,7 @@ export async function verifyHmacSignature(
       };
       const dispatch = async () => {
         try {
-          const useCoalescer = await isHmacCoalescingEnabled(supabase);
+          const useCoalescer = await isHmacCoalescingEnabled(supabase, resolvedTenantId);
           if (useCoalescer) {
             enqueueFormatCacheUpsert(supabase, row);
           } else {
