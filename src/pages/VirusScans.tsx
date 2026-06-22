@@ -25,6 +25,9 @@ type VirusScanRow = {
   is_malicious: boolean | null;
   positives: number | null;
   total_engines?: number | null;
+  total_scans?: number | null;
+  virustotal_permalink?: string | null;
+  scan_result?: Record<string, unknown> | null;
   scan_details?: unknown;
 };
 
