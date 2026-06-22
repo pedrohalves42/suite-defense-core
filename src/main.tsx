@@ -12,6 +12,13 @@ import { HelmetProvider } from "react-helmet-async";
 import { ActiveTenantProvider } from "@/hooks/useActiveTenant";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { startStorageCleanup } from "@/lib/storage";
+import { logger } from "@/lib/logger";
+import {
+  queryCache,
+  mutationCache,
+  shouldRetry,
+  retryDelay,
+} from "@/lib/query-error-handlers";
 import App from "./App";
 import PublicApp from "./PublicApp";
 
@@ -100,17 +107,46 @@ clearLegacyPWAArtifacts();
 installBootstrapRecoveryHandlers();
 
 const queryClient = new QueryClient({
+  queryCache,
+  mutationCache,
   defaultOptions: {
     queries: {
       // FinOps: aumentar staleTime para reduzir refetches automáticos
-      staleTime: 15 * 60 * 1000, // 15 min (era 10 min)
-      gcTime: 30 * 60 * 1000,    // 30 min (era 15 min)
-      refetchOnWindowFocus: false, // FinOps: evitar refetch ao focar a aba
+      staleTime: 15 * 60 * 1000, // 15 min
+      gcTime: 30 * 60 * 1000, // 30 min
+      refetchOnWindowFocus: false,
       refetchOnReconnect: true,
-      retry: 1,
+      retry: shouldRetry,
+      retryDelay,
+    },
+    mutations: {
+      retry: shouldRetry,
+      retryDelay,
     },
   },
 });
+
+// P0 — Captura erros não tratados globalmente (rejeições de promise, scripts)
+if (typeof window !== "undefined") {
+  window.addEventListener("unhandledrejection", (event) => {
+    const reason = event.reason;
+    logger.error(
+      "[window] unhandledrejection",
+      reason instanceof Error ? reason : new Error(String(reason)),
+      { kind: "unhandledrejection" }
+    );
+  });
+  window.addEventListener("error", (event) => {
+    // Ignora erros de carregamento de asset (já tratados pelo bootstrap recovery)
+    if (event.target && event.target !== window) return;
+    logger.error(
+      "[window] uncaught error",
+      event.error instanceof Error ? event.error : new Error(event.message),
+      { kind: "uncaught", filename: event.filename, lineno: event.lineno }
+    );
+  });
+}
+
 
 const rootElement = document.getElementById("root");
 if (rootElement) {
