@@ -1,6 +1,8 @@
-# PR S-P0.3 — RPC EXECUTE Allowlist Audit (Fase A — Relatório)
+# PR S-P0.3 — RPC EXECUTE Allowlist Audit
 
-**Status**: Fase A (somente relatório). Nenhuma migração aplicada. Fase B (revogação) proposta abaixo, aguardando aprovação.
+**Status**: ✅ **CONCLUÍDO** — Fase A (relatório) + Fase B (migração aplicada) + verificação `pg_proc.proacl`.
+
+**Migração aplicada**: `supabase/migrations/20260622154955_cfa177da-4761-42ed-8ce7-fbb0fa116d45.sql`
 
 ---
 
