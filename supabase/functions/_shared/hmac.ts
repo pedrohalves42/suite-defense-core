@@ -1,5 +1,29 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from './logger.ts';
+import { isFeatureEnabled } from './feature-flags.ts';
+import {
+  enqueueFormatCacheUpsert,
+  inlineFormatCacheUpsert,
+} from './hmac-success-coalescer.ts';
+
+// PP02-A: feature-flag cache for the coalescer. Default fail-OPEN to the
+// inline (current) behaviour so any flag-table outage cannot regress writes.
+let _coalesceFlagCache: { value: boolean; ts: number } | null = null;
+const COALESCE_FLAG_TTL_MS = 30_000;
+async function isHmacCoalescingEnabled(supabase: any): Promise<boolean> {
+  const now = Date.now();
+  if (_coalesceFlagCache && now - _coalesceFlagCache.ts < COALESCE_FLAG_TTL_MS) {
+    return _coalesceFlagCache.value;
+  }
+  const enabled = await isFeatureEnabled(
+    supabase,
+    'hmac_success_coalescing',
+    undefined,
+    { defaultOnError: false },
+  );
+  _coalesceFlagCache = { value: enabled, ts: now };
+  return enabled;
+}
 
 // Timing-safe comparison for strings
 export { timingSafeEqual } from './crypto-utils.ts';
@@ -320,31 +344,32 @@ export async function verifyHmacSignature(
       };
     }
 
-    // Update format cache (fire-and-forget)
+    // PP02-A: Success-path side effect (format cache upsert) goes through the
+    // coalescer when the feature flag is on; otherwise we keep the existing
+    // inline fire-and-forget upsert. Replay protection above is untouched.
     if (context?.agentId && resolvedTenantId) {
-      const updateCache = async () => {
+      const row = {
+        agent_id: context.agentId,
+        tenant_id: resolvedTenantId,
+        key_encoding: keyName,
+        separator: variant.sep,
+        body_format: variant.fmt,
+        last_verified_at: new Date().toISOString(),
+        hit_count: 1,
+      };
+      const dispatch = async () => {
         try {
-          const { error } = await supabase.from('agent_hmac_format_cache').upsert(
-            {
-              agent_id: context.agentId,
-              tenant_id: resolvedTenantId,
-              key_encoding: keyName,
-              separator: variant.sep,
-              body_format: variant.fmt,
-              last_verified_at: new Date().toISOString(),
-              hit_count: 1,
-            },
-            { onConflict: 'agent_id' },
-          );
-          if (error) logger.warn('[HMAC] Cache update failed', { error: error.message });
+          const useCoalescer = await isHmacCoalescingEnabled(supabase);
+          if (useCoalescer) {
+            enqueueFormatCacheUpsert(supabase, row);
+          } else {
+            await inlineFormatCacheUpsert(supabase, row);
+          }
         } catch (e: any) {
-          logger.error('[HMAC] Cache update promise rejected', { error: e.message });
+          logger.error('[HMAC] Cache dispatch failed', { error: e?.message });
         }
       };
-      // In Deno Deploy / Edge Functions, we should not use un-awaited async functions 
-      // without waitUntil or similar, but since this is called within a context that 
-      // often uses EdgeRuntime.waitUntil, it's generally safe.
-      updateCache();
+      dispatch();
     }
 
     return { valid: true, rawBody: body, modeUsed: variant.mode };
