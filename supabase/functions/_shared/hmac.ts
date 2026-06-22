@@ -1,28 +1,66 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from './logger.ts';
-import { isFeatureEnabled } from './feature-flags.ts';
 import {
   enqueueFormatCacheUpsert,
   inlineFormatCacheUpsert,
 } from './hmac-success-coalescer.ts';
 
-// PP02-A: feature-flag cache for the coalescer. Default fail-OPEN to the
-// inline (current) behaviour so any flag-table outage cannot regress writes.
-let _coalesceFlagCache: { value: boolean; ts: number } | null = null;
+// PP02-A: per-tenant canary-aware feature flag for the success-path coalescer.
+//
+// The generic `is_feature_enabled` RPC treats a global row with `enabled=false`
+// as a kill switch (deny for all tenants), which makes per-tenant canaries
+// impossible. The coalescer is a non-security side-effect optimisation, so we
+// gate it with a tiny canary-aware reader that does:
+//   1. tenant row exists  -> use tenant.enabled
+//   2. global row exists  -> use global.enabled
+//   3. neither / error    -> false (fail-closed: keep inline upsert)
+// Cached for 30 s per tenant (and per global) inside each edge instance.
 const COALESCE_FLAG_TTL_MS = 30_000;
-async function isHmacCoalescingEnabled(supabase: any): Promise<boolean> {
+const COALESCE_FLAG_KEY = 'hmac_success_coalescing';
+const _coalesceFlagCache = new Map<string, { value: boolean; ts: number }>();
+async function isHmacCoalescingEnabled(
+  supabase: any,
+  tenantId?: string | null,
+): Promise<boolean> {
+  const cacheKey = tenantId ?? '__global__';
   const now = Date.now();
-  if (_coalesceFlagCache && now - _coalesceFlagCache.ts < COALESCE_FLAG_TTL_MS) {
-    return _coalesceFlagCache.value;
+  const cached = _coalesceFlagCache.get(cacheKey);
+  if (cached && now - cached.ts < COALESCE_FLAG_TTL_MS) {
+    return cached.value;
   }
-  const enabled = await isFeatureEnabled(
-    supabase,
-    'hmac_success_coalescing',
-    undefined,
-    { defaultOnError: false },
-  );
-  _coalesceFlagCache = { value: enabled, ts: now };
-  return enabled;
+  let value = false;
+  try {
+    if (tenantId) {
+      const { data: tenantRow, error: tenantErr } = await supabase
+        .from('feature_flags')
+        .select('enabled')
+        .eq('key', COALESCE_FLAG_KEY)
+        .eq('tenant_id', tenantId)
+        .maybeSingle();
+      if (tenantErr) throw tenantErr;
+      if (tenantRow) {
+        value = tenantRow.enabled === true;
+        _coalesceFlagCache.set(cacheKey, { value, ts: now });
+        return value;
+      }
+    }
+    const { data: globalRow, error: globalErr } = await supabase
+      .from('feature_flags')
+      .select('enabled')
+      .eq('key', COALESCE_FLAG_KEY)
+      .is('tenant_id', null)
+      .maybeSingle();
+    if (globalErr) throw globalErr;
+    value = globalRow?.enabled === true;
+  } catch (e: any) {
+    logger.warn('[hmac-coalescer] flag read failed, defaulting to disabled', {
+      message: e?.message,
+      tenantId: tenantId ?? null,
+    });
+    value = false;
+  }
+  _coalesceFlagCache.set(cacheKey, { value, ts: now });
+  return value;
 }
 
 // Timing-safe comparison for strings
