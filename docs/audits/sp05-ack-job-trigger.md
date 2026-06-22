@@ -1,6 +1,6 @@
 # S-P0.5 — Defense-in-depth DB trigger for critical job completion
 
-**Status:** ✅ APPLIED
+**Status:** ✅ CLOSED (S-P0 closed in pp02a-hmac-success-coalescing.md)
 **Migration:** `20260622_*_enforce_critical_job_evidence` (this turn)
 
 ## Goal
