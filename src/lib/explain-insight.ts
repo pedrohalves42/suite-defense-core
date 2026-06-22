@@ -167,12 +167,13 @@ export function explainEffectiveness(
   if (status === 'resolved') {
     switch (insightType) {
       case 'dns_malicious_activity':
-      case 'dns_c2_communication':
+      case 'dns_c2_communication': {
         const domain = evidence?.domain;
         specificText = domain 
           ? `Nenhuma nova tentativa de acesso ao domínio ${domain} foi detectada após o bloqueio.`
           : 'Nenhuma nova tentativa de comunicação maliciosa foi detectada.';
         break;
+      }
       case 'antivirus_disabled':
         specificText = `O antivírus ${evidence?.product || ''} está ativo e funcionando.`;
         break;
@@ -186,12 +187,13 @@ export function explainEffectiveness(
         specificText = 'O agente voltou a ficar online e está reportando normalmente.';
         break;
       case 'vulnerability_critical':
-      case 'vulnerability_high':
+      case 'vulnerability_high': {
         const cve = evidence?.cve_id;
         specificText = cve 
           ? `A vulnerabilidade ${cve} não está mais presente no sistema.`
           : 'A vulnerabilidade foi corrigida com sucesso.';
         break;
+      }
       default:
         specificText = reason || 'O problema foi resolvido conforme esperado.';
     }

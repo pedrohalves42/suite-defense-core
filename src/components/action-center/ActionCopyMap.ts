@@ -242,7 +242,7 @@ export function generateDynamicContent(
   let whyUrgent = baseCopy.whyUrgentTemplate || baseCopy.impact;
 
   switch (triggerType) {
-    case 'high_cpu_usage':
+    case 'high_cpu_usage': {
       const cpuPercent = typeof ctx.cpu_percent === 'number' ? Math.round(ctx.cpu_percent) : null;
       const cpuDuration = ctx.duration || ctx.hours_offline;
       if (cpuPercent) {
@@ -255,16 +255,18 @@ export function generateDynamicContent(
         description += ` Processo principal: ${ctx.process_name}`;
       }
       break;
+    }
 
-    case 'high_memory_usage':
+    case 'high_memory_usage': {
       const memPercent = typeof ctx.memory_percent === 'number' ? Math.round(ctx.memory_percent) : null;
       if (memPercent) {
         title = `Memória em ${memPercent}% em ${agent}`;
         description = `A memória está em ${memPercent}%, o que pode causar lentidão ou travamento.`;
       }
       break;
+    }
 
-    case 'high_disk_usage':
+    case 'high_disk_usage': {
       const diskPercent = typeof ctx.disk_percent === 'number' ? Math.round(ctx.disk_percent) : null;
       const diskFreeGb = typeof ctx.disk_free_gb === 'number' ? ctx.disk_free_gb.toFixed(1) : null;
       if (diskPercent) {
@@ -274,9 +276,10 @@ export function generateDynamicContent(
           : `O disco está ${diskPercent}% cheio, espaço crítico.`;
       }
       break;
+    }
 
     case 'agent_offline':
-    case 'agent_offline_suspicious':
+    case 'agent_offline_suspicious': {
       const duration = ctx.duration || '';
       const offlineReason = ctx.offline_reason;
       title = `${agent} offline ${duration ? `há ${duration}` : 'de forma inesperada'}`;
@@ -287,9 +290,10 @@ export function generateDynamicContent(
         whyUrgent = 'Este agente tem histórico recente de alertas. O offline pode ser tentativa de evasão.';
       }
       break;
+    }
 
     case 'anomaly_detection':
-    case 'anomaly':
+    case 'anomaly': {
       const anomalyType = ctx.anomaly_type || ctx.insight_type || 'comportamento';
       title = `Anomalia de ${anomalyType} em ${agent}`;
       if (ctx.evidence && typeof ctx.evidence === 'object') {
@@ -299,28 +303,32 @@ export function generateDynamicContent(
         }
       }
       break;
+    }
 
-    case 'suspicious_process':
+    case 'suspicious_process': {
       const processName = ctx.process_name || ctx.process || 'desconhecido';
       title = `Processo suspeito "${processName}" em ${agent}`;
       description = `O processo ${processName} não faz parte do comportamento normal desta máquina.`;
       cta = 'Encerrar processo';
       break;
+    }
 
-    case 'multiple_malicious_access':
+    case 'multiple_malicious_access': {
       const blockedCount = ctx.blocked_requests || ctx.count || 'múltiplas';
       const domain = ctx.domain || 'malicioso';
       title = `${blockedCount} tentativas de acesso a ${domain}`;
       description = `Este computador tentou acessar domínios maliciosos ${blockedCount} vezes.`;
       whyUrgent = 'Múltiplas tentativas indicam malware ativo tentando se comunicar com servidores de controle.';
       break;
+    }
 
-    case 'vulnerability_critical':
+    case 'vulnerability_critical': {
       const vulnName = ctx.vulnerability_name || ctx.cve || '';
       if (vulnName) {
         title = `Vulnerabilidade crítica ${vulnName} em ${agent}`;
       }
       break;
+    }
 
     case 'antivirus_disabled':
       title = `Antivírus desativado em ${agent}`;
