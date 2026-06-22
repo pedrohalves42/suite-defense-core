@@ -197,10 +197,13 @@ async function computeHmacHex(cryptoKey: CryptoKey, message: string): Promise<st
 }
 
 /**
- * Legacy wrapper for hex comparison
+ * Legacy wrapper for hex comparison.
+ * `timingSafeEqual` from crypto-utils is async, so this MUST be async too —
+ * otherwise it returns a Promise that is always truthy and every signature
+ * verifies (auth bypass). Fixed together with the missing import in PP02-A-hotfix.
  */
-function timingSafeHexCompare(a: string, b: string): boolean {
-  return timingSafeEqual(a.toLowerCase(), b.toLowerCase());
+async function timingSafeHexCompare(a: string, b: string): Promise<boolean> {
+  return await timingSafeEqual(a.toLowerCase(), b.toLowerCase());
 }
 
 /**
