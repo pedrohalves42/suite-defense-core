@@ -3,26 +3,24 @@
  * Exibe o status de conformidade para auditoria SOC 2 Type I
  */
 
-import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Shield, FileText, CheckCircle2, Clock, Building2, Link2, Database, Code, AlertTriangle, Download, Loader2, Package } from 'lucide-react';
+import { Shield, FileText, CheckCircle2, Link2, Database, Code, Loader2, Package } from 'lucide-react';
 import { useSOC2Readiness, calculateOverallScore } from '@/hooks/useSOC2Readiness';
-import { SOC2_TRUST_CRITERIA, COMPLIANCE_POLICIES } from '@/types/soc2-compliance';
+import { SOC2_TRUST_CRITERIA } from '@/types/soc2-compliance';
 import { PolicyApprovalWorkflow } from '@/components/soc2/PolicyApprovalWorkflow';
 import { VendorRiskRegistry } from '@/components/soc2/VendorRiskRegistry';
 import { AlertResolutionPanel } from '@/components/soc2/AlertResolutionPanel';
 import { SOC2PolicyWizard } from '@/components/soc2/SOC2PolicyWizard';
 import { SLAMonitoringPanel } from '@/components/soc2/SLAMonitoringPanel';
-import { useExportEvidenceBundle, useEvidenceBundles, formatBytes, BUNDLE_TYPE_LABELS } from '@/hooks/useEvidenceBundle';
-import { toast } from 'sonner';
+import { useExportEvidenceBundle, useEvidenceBundles } from '@/hooks/useEvidenceBundle';
 
 export default function SOC2Dashboard() {
-  const { data: readinessData, isLoading } = useSOC2Readiness();
+  const { data: readinessData } = useSOC2Readiness();
   const overallScore = readinessData ? calculateOverallScore(readinessData) : 0;
   const exportBundle = useExportEvidenceBundle();
   const { data: bundles } = useEvidenceBundles();

@@ -4,9 +4,10 @@ import {
   Shield, Building2, Scale, Stethoscope, Laptop,
   BarChart, FileText, CheckCircle,
   FileCheck, Server, ShieldCheck, Lock, Activity,
-  Package, Cpu, HardDrive, Globe2, Zap, Eye, Clock, Users,
-  Link2, Brain, Fingerprint, Layers
+  Zap, Eye, Clock, Users,
 } from "lucide-react";
+
+type LandingItem = Record<string, unknown>;
 
 /**
  * Hook that returns LANDING_CONTENT translated via i18n.
@@ -56,7 +57,7 @@ export function useLandingContent() {
       howItWorks: {
         title: t('landing.howItWorks.title'),
         subtitle: t('landing.howItWorks.subtitle'),
-        steps: getItems('landing.howItWorks.steps').map((step: any, i: number) => ({
+        steps: (getItems('landing.howItWorks.steps') as LandingItem[]).map((step, i) => ({
           number: step.number || i + 1,
           ...step
         })),
@@ -70,7 +71,7 @@ export function useLandingContent() {
       benefits: {
         title: t('landing.benefits.title'),
         subtitle: t('landing.benefits.subtitle'),
-        cards: getItems('landing.benefits.cards').map((card: any, i: number) => ({
+        cards: (getItems('landing.benefits.cards') as LandingItem[]).map((card, i) => ({
           icon: [Zap, Activity, BarChart, ShieldCheck][i] || ShieldCheck,
           ...card
         })),
@@ -78,7 +79,7 @@ export function useLandingContent() {
       features: {
         title: t('landing.features.title'),
         subtitle: t('landing.features.subtitle'),
-        items: getItems('landing.features.items').map((item: any, i: number) => ({
+        items: (getItems('landing.features.items') as LandingItem[]).map((item, i) => ({
           icon: [Server, Shield, Zap, FileCheck, Users, Clock][i] || Shield,
           ...item
         })),
@@ -86,7 +87,7 @@ export function useLandingContent() {
       targetAudience: {
         title: t('landing.targetAudience.title'),
         subtitle: t('landing.targetAudience.subtitle'),
-        segments: getItems('landing.targetAudience.segments').map((segment: any, i: number) => ({
+        segments: (getItems('landing.targetAudience.segments') as LandingItem[]).map((segment, i) => ({
           icon: [Building2, Laptop, Stethoscope, Scale][i] || Building2,
           ...segment
         })),
@@ -94,7 +95,7 @@ export function useLandingContent() {
       trustProof: {
         title: t('landing.trustProof.title'),
         text: t('landing.trustProof.text'),
-        blocks: getItems('landing.trustProof.blocks').map((block: any, i: number) => ({
+        blocks: (getItems('landing.trustProof.blocks') as LandingItem[]).map((block, i) => ({
           icon: [Lock, Eye, FileText, CheckCircle][i] || Lock,
           ...block
         })),
