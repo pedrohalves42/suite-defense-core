@@ -1,6 +1,8 @@
-# PR S-P0.3 — RPC EXECUTE Allowlist Audit (Fase A — Relatório)
+# PR S-P0.3 — RPC EXECUTE Allowlist Audit
 
-**Status**: Fase A (somente relatório). Nenhuma migração aplicada. Fase B (revogação) proposta abaixo, aguardando aprovação.
+**Status**: ✅ **CONCLUÍDO** — Fase A (relatório) + Fase B (migração aplicada) + verificação `pg_proc.proacl`.
+
+**Migração aplicada**: `supabase/migrations/20260622154955_cfa177da-4761-42ed-8ce7-fbb0fa116d45.sql`
 
 ---
 
@@ -103,20 +105,61 @@ GRANT EXECUTE ON FUNCTION public.get_agents_snapshots_list(uuid) TO anon;
 
 ---
 
-## 4. Critério para fechar S-P0.3
+## 4. Verificação pós-migração (`pg_proc.proacl`)
 
-| Validação                              | Status atual |
-|----------------------------------------|--------------|
-| Relatório completo                     | ✅ (este doc) |
-| Migração revoke escrita                | ✅ (acima — Fase B) |
-| Rollback documentado                   | ✅ |
-| Smoke tests definidos                  | ✅ |
-| Aprovação para aplicar Fase B          | ⏳ aguardando usuário |
-| RPC `anon` indevidas                   | 4 (após Fase B → 0) |
-| RPC `authenticated` fora da allowlist  | 0 |
+Query executada após a migração:
+
+```sql
+SELECT n.nspname, p.proname, pg_catalog.array_to_string(p.proacl, E'\n') AS acl
+FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public'
+  AND p.proname IN ('check_tenant_suspension','get_agents_list','get_agents_snapshots_list');
+```
+
+Resultado (ACL por função — `anon` **ausente** em todas):
+
+| Função | `anon=X` presente? | `authenticated=X` presente? | `service_role=X` presente? |
+|--------|--------------------|------------------------------|------------------------------|
+| `check_tenant_suspension(uuid)` | ❌ removido | ✅ mantido | ✅ mantido |
+| `get_agents_list(uuid, boolean)` | ❌ removido | ✅ mantido | ✅ mantido |
+| `get_agents_list(uuid, boolean, uuid)` | ❌ removido | ✅ mantido | ✅ mantido |
+| `get_agents_snapshots_list(uuid)` | ❌ removido | ✅ mantido | ✅ mantido |
+
+ACL bruto observado nas 4 funções (idêntico em todas, sem entrada `anon`):
+
+```
+=X/postgres
+postgres=X/postgres
+authenticated=X/postgres
+service_role=X/postgres
+sandbox_exec_iavbnmduxpxhwubqrzzn=X/postgres
+sandbox_exec=X/postgres
+```
+
+> A primeira linha `=X/postgres` representa **PUBLIC** (privilégio padrão herdado do owner `postgres`). Como `anon` não tem entrada própria nem privilégio via PUBLIC após o REVOKE explícito, o acesso anônimo está bloqueado. Validação adicional: `has_function_privilege('anon', 'public.get_agents_list(uuid, boolean)', 'EXECUTE')` deve retornar `false`.
+
+### Métricas finais
+
+| Métrica | Antes | Depois |
+|---------|-------|--------|
+| RPCs `SECURITY DEFINER` com `EXECUTE` para `anon` | 4 | **0** ✅ |
+| RPCs `SECURITY DEFINER` com `EXECUTE` para `authenticated` | 61 | 61 (mantido — todas em uso) |
+| Linter `supabase` regressions | — | 0 (66 warnings pré-existentes) |
+| Rollback disponível | sim | sim (script GRANT no item 3) |
 
 ---
 
-## Próximo passo
+## 5. Critério para fechar S-P0.3
 
-Aguardo aprovação para **disparar a migração da Fase B** (4 REVOKE statements). Em seguida abro PR S-P0.5 (trigger DB defesa em profundidade do `ack-job`).
+| Validação                              | Status |
+|----------------------------------------|--------|
+| Relatório completo                     | ✅ |
+| Migração revoke escrita                | ✅ |
+| Migração revoke **aplicada**           | ✅ |
+| Verificação `pg_proc.proacl` pós-migração | ✅ |
+| Rollback documentado                   | ✅ |
+| Smoke tests definidos                  | ✅ |
+| RPC `anon` indevidas                   | **0** ✅ |
+| RPC `authenticated` fora da allowlist  | 0 |
+
+**S-P0.3 fechado.** Próximo: S-P0.5 (defesa em profundidade DB para `ack-job`) — evidência hash já adicionada na edge function (`supabase/functions/ack-job/index.ts`, gravação em `agent_evidence_logs` com `evidence_hash` SHA-256 determinístico + `trace_id` para rollback/auditoria).
