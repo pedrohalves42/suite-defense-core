@@ -75,21 +75,79 @@ so they surface in edge function logs and can be plotted from the
   (`_shared/hmac.ts → verifyHmacSignature`) is the same path covered by
   the contract tests under `contracts/`.
 
-## Rollback
+## Canary rollout — 2026-06-22
 
-1. **Instant (no migration):** disable the flag.
+The generic `is_feature_enabled` RPC treats a global `enabled=false` row as a
+kill switch (deny for every tenant), so a tenant-row override is impossible
+through that RPC. Because the coalescer is a non-security side-effect
+optimisation, the gating in `_shared/hmac.ts` was switched to a tiny
+canary-aware reader that queries `feature_flags` directly:
+
+| precedence | source | behaviour |
+|---|---|---|
+| 1 | row `(tenant_id = X, key = 'hmac_success_coalescing')` | uses `enabled` for tenant X |
+| 2 | row `(tenant_id IS NULL, key = ...)` | uses `enabled` globally |
+| 3 | no row / DB error | `false` (fail-closed, inline upsert) |
+
+Result cached 30 s per `tenantId` per edge instance.
+
+### Active canary
+
+- **Tenant:** `Genial Cred` (`2584d2cd-8b99-4ca7-a8e2-b61256e82b3e`) —
+  internal tenant with live agent traffic.
+- **Global row:** `enabled=false` (unchanged) — every other tenant keeps the
+  inline path.
+- **Window:** 30–60 min from migration timestamp.
+
+### What to watch (30–60 min)
+
+In edge function logs (`_shared/hmac.ts` callsites — `heartbeat`,
+`poll-jobs`, `submit-job-result`, `ack-job`, etc.):
+
+- `[hmac-coalescer] flushed` events with `metrics.lru_hits > 0`,
+  `flush_batches > 0`, `flush_errors = 0`, `fallback_errors = 0`.
+- `metrics.bypass_disabled` should drop for traffic from the canary tenant
+  (its requests now take the coalescer path) and stay high for other tenants.
+
+In `agent_hmac_format_cache`: visible reduction of repeat upserts for the
+canary tenant's agents (rows for a given `agent_id` get touched in batches
+rather than once per request).
+
+In `heartbeat` / auth signals:
+- heartbeat success rate stable, no new 401/403 spike,
+- no new `AUTH_INVALID_SIGNATURE` / `AUTH_REPLAY_DETECTED` logs above the
+  pre-canary baseline.
+
+### Go / no-go criteria
+
+Advance (consider widening) only if all are true:
+- `flush_errors == 0`
+- `fallback_errors == 0`
+- heartbeat stable for the canary tenant
+- no increase in 401/403
+- `lru_hits > 0` and the format-cache upsert volume for the canary tenant
+  measurably decreased
+
+### Rollback
+
+1. **Instant (canary off, no migration):**
    ```sql
    UPDATE public.feature_flags
-   SET enabled = false
-   WHERE tenant_id IS NULL AND key = 'hmac_success_coalescing';
+   SET enabled = false, updated_at = now()
+   WHERE tenant_id = '2584d2cd-8b99-4ca7-a8e2-b61256e82b3e'
+     AND key = 'hmac_success_coalescing';
    ```
-   Within ≤ 30 s every edge instance re-reads the flag and reverts to
-   the inline upsert path. No data migration, no agent restart.
+   Within ≤ 30 s every edge instance re-reads the row for that tenant and
+   reverts to the inline upsert. No data migration, no agent restart.
 
-2. **Hard rollback (revert code):** the only callsite is `_shared/hmac.ts`
+2. **Full kill (all tenants):** keep the global row at `enabled=false`
+   (already the case) and set the canary tenant row to `false` per (1).
+
+3. **Hard rollback (revert code):** the only callsite is `_shared/hmac.ts`
    around `onMatch`. Revert that block to the previous `updateCache`
    fire-and-forget closure and delete `hmac-success-coalescer.ts` + its
-   test. The feature flag row can be left in place (harmless).
+   test. The feature flag rows can be left in place (harmless).
+
 
 ## Expected impact
 
