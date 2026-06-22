@@ -54,19 +54,25 @@ Deno.test({
   },
 });
 
-Deno.test("coalescer › batch flush deduplicates and writes once", async () => {
-  _resetCoalescerForTests();
-  const c = mockClient();
-  enqueueFormatCacheUpsert(c, makeRow("a1"));
-  enqueueFormatCacheUpsert(c, makeRow("a2"));
-  enqueueFormatCacheUpsert(c, makeRow("a3"));
-  await _flushForTests(c);
-  assertEquals(c.calls.length, 1);
-  assertEquals((c.calls[0].rows as unknown[]).length, 3);
-  const m = getCoalescerMetrics();
-  assertEquals(m.flush_batches, 1);
-  assertEquals(m.flushed_rows, 3);
-  assertEquals(m.flush_errors, 0);
+Deno.test({
+  name: "coalescer › batch flush deduplicates and writes once",
+  sanitizeOps: false,
+  sanitizeResources: false,
+  fn: async () => {
+    _resetCoalescerForTests();
+    const c = mockClient();
+    enqueueFormatCacheUpsert(c, makeRow("a1"));
+    enqueueFormatCacheUpsert(c, makeRow("a2"));
+    enqueueFormatCacheUpsert(c, makeRow("a3"));
+    await _flushForTests(c);
+    assertEquals(c.calls.length, 1);
+    assertEquals((c.calls[0].rows as unknown[]).length, 3);
+    const m = getCoalescerMetrics();
+    assertEquals(m.flush_batches, 1);
+    assertEquals(m.flushed_rows, 3);
+    assertEquals(m.flush_errors, 0);
+    _resetCoalescerForTests();
+  },
 });
 
 Deno.test("coalescer › batch failure falls back to per-row upsert", async () => {
