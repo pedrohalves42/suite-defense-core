@@ -41,15 +41,38 @@ const HEARTBEAT_EXTRA_FIELDS = [
 ]
 
 serveAgent(async (req, ctx) => {
+  const handlerStart = Date.now()
   const { requestId, supabase: supabaseAny, agentData, rawBody } = ctx
   const traceId = requestId
   const supabase = supabaseAny
   const origin = req.headers.get('origin')
   const supabaseUrl = requireEnv('SUPABASE_URL')
 
+  // ── [hb-diag] Structured entry log ──────────────────────
+  // Emitted ONLY after auth + HMAC have passed (serveAgent gates both).
+  // Used to diagnose why last_heartbeat is/isn't updated per tenant/agent.
+  const sourceIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || req.headers.get('cf-connecting-ip')
+    || 'unknown'
+  const ua = req.headers.get('user-agent') || 'unknown'
+  logger.info('[hb-diag] heartbeat reached handler', {
+    traceId,
+    tenantId: ctx.tenantId,
+    agentId: ctx.agentId,
+    agentName: ctx.agentName,
+    auth: 'ok',
+    hmac: 'ok',
+    sourceIp,
+    userAgent: ua.slice(0, 80),
+    prevLastHeartbeat: (agentData.last_heartbeat as string | null) || null,
+    prevAgentVersion: (agentData.agent_version as string | null) || null,
+    prevStatus: (agentData.status as string | null) || null,
+    bodyBytes: rawBody?.length ?? 0,
+  })
+
   // BUG 23: Guard against missing tenant_id (security and logic consistency)
   if (!ctx.tenantId) {
-    logger.error('CRITICAL: tenantId missing from context', { traceId });
+    logger.error('[hb-diag] CRITICAL: tenantId missing from context', { traceId, agentId: ctx.agentId, agentName: ctx.agentName });
     return new Response(JSON.stringify({ error: 'Unauthorized: missing tenant context' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
   }
 
