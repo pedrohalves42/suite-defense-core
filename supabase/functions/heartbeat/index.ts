@@ -171,6 +171,14 @@ serveAgent(async (req, ctx) => {
     await bgWork
   }
 
+  logger.info('[hb-diag] heartbeat completed', {
+    traceId,
+    tenantId: agent.tenant_id,
+    agentId: agent.id,
+    agentName: agent.agent_name,
+    durationMs: Date.now() - handlerStart,
+    forceUpdate: false,
+  })
   return response
 }, {
   extraAgentFields: HEARTBEAT_EXTRA_FIELDS,
