@@ -153,7 +153,17 @@ serveAgent(async (req, ctx) => {
   const forceResult = await processForceUpdate(
     supabase, agent, updateData, osInfo.agent_version, platform, origin, supabaseUrl,
   )
-  if (forceResult.handled && forceResult.response) return forceResult.response
+  if (forceResult.handled && forceResult.response) {
+    logger.info('[hb-diag] heartbeat completed (force-update path)', {
+      traceId,
+      tenantId: agent.tenant_id,
+      agentId: agent.id,
+      agentName: agent.agent_name,
+      durationMs: Date.now() - handlerStart,
+      forceUpdate: true,
+    })
+    return forceResult.response
+  }
 
   // ── 5. Build response ───────────────────────────────────
   const response = await buildNormalResponse(
