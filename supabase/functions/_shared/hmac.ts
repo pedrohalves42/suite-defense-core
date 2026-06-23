@@ -408,10 +408,36 @@ export async function verifyHmacSignature(
             await inlineFormatCacheUpsert(supabase, row);
           }
         } catch (e: any) {
-          logger.error('[HMAC] Cache dispatch failed', { error: e?.message });
+          logger.error('[HMAC] Cache dispatch failed', {
+            error: e?.message,
+            tenant_id: resolvedTenantId,
+            agent_id: row.agent_id,
+          });
         }
       };
-      dispatch();
+      // HF-HMAC-02: ensure dispatch survives past Response return.
+      // Without waitUntil the isolate may cancel the orphan promise, losing
+      // the coalescer upsert + error logs and contaminating PP02-A metrics.
+      const promise = dispatch();
+      try {
+        // deno-lint-ignore no-explicit-any
+        const runtime: any = (globalThis as any).EdgeRuntime;
+        if (runtime && typeof runtime.waitUntil === 'function') {
+          runtime.waitUntil(promise);
+        } else {
+          // Safe fallback: attach a catch so an unhandled rejection cannot
+          // crash the isolate if the runtime cancels the promise early.
+          promise.catch((e: any) => {
+            logger.error('[HMAC] Cache dispatch fallback rejected', {
+              error: e?.message,
+              tenant_id: resolvedTenantId,
+              agent_id: row.agent_id,
+            });
+          });
+        }
+      } catch (e: any) {
+        logger.error('[HMAC] waitUntil scheduling failed', { error: e?.message });
+      }
     }
 
     return { valid: true, rawBody: body, modeUsed: variant.mode };
