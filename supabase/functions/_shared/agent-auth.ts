@@ -37,6 +37,58 @@ export interface AuthenticateAgentOptions {
  * 
  * @param options.extraAgentFields - Additional agent columns to fetch (e.g. ['status', 'agent_version'])
  */
+// Declare EdgeRuntime for Deno/Supabase environment
+declare const EdgeRuntime: { waitUntil?: (promise: Promise<unknown>) => void } | undefined;
+
+/**
+ * Fire-and-forget audit insert into token_validation_failures.
+ * Closes the observability gap on agent 401/403: every rejection is recorded
+ * with token prefix, detected reason, IP and UA. Best-effort; never throws.
+ */
+function recordTokenFailure(
+  supabase: any,
+  req: Request,
+  endpoint: string,
+  tokenPrefix: string,
+  reason: string,
+  extra?: Record<string, unknown>,
+): void {
+  try {
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || req.headers.get('cf-connecting-ip')
+      || null;
+    const ua = (req.headers.get('user-agent') || '').slice(0, 240) || null;
+    const reasonPayload = JSON.stringify({
+      endpoint,
+      reason,
+      ...(extra || {}),
+    });
+    const work = supabase
+      .from('token_validation_failures')
+      .insert({
+        token_hash_prefix: tokenPrefix || 'unknown',
+        failure_reason: reasonPayload,
+        client_ip: clientIp,
+        user_agent: ua,
+      })
+      .then((res: any) => {
+        if (res?.error) {
+          logger.warn(`[${endpoint}] token_validation_failures insert failed`, { message: res.error.message });
+        }
+      })
+      .catch((e: any) => {
+        logger.warn(`[${endpoint}] token_validation_failures insert threw`, { message: e?.message });
+      });
+
+    if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+      EdgeRuntime.waitUntil(work);
+    }
+    // else: local/dev — drop the promise; we already logged via logger.warn above.
+  } catch (e) {
+    logger.warn(`[${endpoint}] recordTokenFailure threw`, { message: (e as Error)?.message });
+  }
+}
+
 export async function authenticateAgent(
   supabase: any,
   req: Request,
@@ -54,6 +106,7 @@ export async function authenticateAgent(
   }
 
   if (!agentToken) {
+    recordTokenFailure(supabase, req, endpoint, 'none', 'missing_token_header');
     return {
       success: false,
       response: new Response(
@@ -63,9 +116,12 @@ export async function authenticateAgent(
     };
   }
 
+  const tokenPrefix = agentToken.substring(0, 8);
+
   // Optimization: Skip hashing if it's clearly a JWT (hashing is CPU intensive)
   if (agentToken.split('.').length === 3) {
     logger.debug(`[${endpoint}] Token looks like a JWT, skipping hash lookup for agent_tokens`);
+    recordTokenFailure(supabase, req, endpoint, tokenPrefix, 'jwt_token_rejected');
     return {
       success: false,
       response: new Response(
@@ -91,10 +147,29 @@ export async function authenticateAgent(
     .eq('is_active', true)
     .maybeSingle();
 
-  const token = tokenRaw as { agents?: unknown; expires_at?: string | null } | null;
+  const token = tokenRaw as { agent_id?: string; agents?: unknown; expires_at?: string | null } | null;
 
   if (tokenError || !token?.agents) {
-    logger.warn(`[${endpoint}] Invalid agent token attempt, prefix: ${agentToken.substring(0, 8)}`);
+    logger.warn(`[${endpoint}] Invalid agent token attempt, prefix: ${tokenPrefix}`);
+    // Best-effort: try to resolve agent_id from any matching token row (inactive included)
+    let resolvedAgentId: string | null = null;
+    let tokenState: string = 'not_found';
+    try {
+      const { data: anyTok } = await supabase
+        .from('agent_tokens')
+        .select('agent_id, is_active, expires_at')
+        .eq('token_hash', tokenHash)
+        .maybeSingle();
+      if (anyTok) {
+        resolvedAgentId = (anyTok as any).agent_id ?? null;
+        tokenState = (anyTok as any).is_active === false ? 'inactive' : 'hash_mismatch_or_inactive';
+      }
+    } catch { /* ignore */ }
+    recordTokenFailure(supabase, req, endpoint, tokenPrefix, 'invalid_or_inactive_token', {
+      agent_id: resolvedAgentId,
+      token_state: tokenState,
+      db_error: tokenError?.message || null,
+    });
     return {
       success: false,
       response: new Response(
@@ -110,7 +185,13 @@ export async function authenticateAgent(
     const expiryDate = new Date(expiresAt);
     const LEEWAY_MS = 60000; // 60 seconds leeway for clock drift
     if (expiryDate.getTime() + LEEWAY_MS < Date.now()) {
-      logger.warn(`[${endpoint}] Expired agent token, prefix: ${agentToken.substring(0, 8)}, expired: ${expiresAt}`);
+      logger.warn(`[${endpoint}] Expired agent token, prefix: ${tokenPrefix}, expired: ${expiresAt}`);
+      const agentForExpired = Array.isArray(token.agents) ? (token.agents as any)[0] : (token.agents as any);
+      recordTokenFailure(supabase, req, endpoint, tokenPrefix, 'token_expired', {
+        agent_id: agentForExpired?.id ?? token.agent_id ?? null,
+        tenant_id: agentForExpired?.tenant_id ?? null,
+        expires_at: expiresAt,
+      });
       return {
         success: false,
         response: new Response(
@@ -127,6 +208,11 @@ export async function authenticateAgent(
   const status = agent.status as string | null;
   if (status === 'retired' || status === 'blocked' || status === 'suspended') {
     logger.error(`[${endpoint}] Blocked agent access attempt. Name: ${agent.agent_name}, Status: ${status}`);
+    recordTokenFailure(supabase, req, endpoint, tokenPrefix, `agent_blocked:${status}`, {
+      agent_id: (agent as any).id ?? null,
+      tenant_id: (agent as any).tenant_id ?? null,
+      agent_name: (agent as any).agent_name ?? null,
+    });
     return {
       success: false,
       response: new Response(
@@ -135,6 +221,7 @@ export async function authenticateAgent(
       ),
     };
   }
+
 
   // Extract extra fields into agentData (everything beyond the base 6, including honeypot_mode)
   const agentObj = (agent || {}) as Record<string, unknown>;
