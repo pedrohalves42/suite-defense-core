@@ -31,13 +31,16 @@ import { buildNormalResponse } from './response-builder.ts'
 import type { AgentContext } from './types.ts'
 
 // Extra agent fields needed for delta-updates and force-update logic
+// HOTFIX-AUTH-01: 'metadata_hash' removed — column does not exist on public.agents
+// and was causing PostgREST to fail the agent_tokens → agents!inner join with a
+// "column agents_1.metadata_hash does not exist" error, surfacing as false 401s.
 const HEARTBEAT_EXTRA_FIELDS = [
   'status', 'skip_firewall_remediation', 'agent_version', 'hostname', 'os_type', 'os_version',
   'state', 'agent_state', 'ed25519_supported', 'signature_mode',
   'force_update_version', 'force_update_reason', 'force_update_at',
   'force_update_override_safe_mode', 'force_update_override_safe_mode_expires_at',
   'force_update_delivered_count', 'force_update_first_delivered_at',
-  'last_forced_update_applied', 'last_telemetry_at', 'last_heartbeat', 'metadata_hash',
+  'last_forced_update_applied', 'last_telemetry_at', 'last_heartbeat',
 ]
 
 serveAgent(async (req, ctx) => {
