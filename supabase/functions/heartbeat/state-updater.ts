@@ -45,28 +45,28 @@ export async function updateAgentStatus(
   // we skip metadata updates to prevent overwriting with stale state.
   const isStale = incomingTime < lastUpdate;
   
-  // FETCH current state from DB for dirty-checking if not provided in context
-  let currentAgent = (updateData as any)._current_agent; 
-  if (!currentAgent && (updateData as any).metadata_hash) {
-     const { data } = await supabase.from('agents').select('metadata_hash, version').eq('id', agentId).maybeSingle();
+  // FETCH current state from DB for dirty-checking if not provided in context.
+  // HOTFIX-AUTH-01: metadata_hash column does not exist on public.agents.
+  // Strip it from updateData and fall back to per-field diff for change detection.
+  if ('metadata_hash' in (updateData as any)) {
+    delete (updateData as any).metadata_hash;
+  }
+  let currentAgent = (updateData as any)._current_agent;
+  if (!currentAgent) {
+     const { data } = await supabase.from('agents').select('version, last_heartbeat').eq('id', agentId).maybeSingle();
      currentAgent = data;
   }
 
-  const incomingMetadataHash = (updateData as any).metadata_hash;
-  const currentMetadataHash = currentAgent ? (currentAgent as any).metadata_hash : null;
-  
-  const metadataChanged = !isStale && (incomingMetadataHash 
-    ? incomingMetadataHash !== currentMetadataHash
-    : Object.entries(updateData)
-        .filter(([k]) => k !== 'last_telemetry_at' && k !== 'update_timestamp' && k !== 'last_heartbeat' && k !== 'metadata_hash' && k !== '_current_agent')
-        .some(([k, v]) => {
-          const currentVal = currentAgent ? (currentAgent as any)[k] : undefined;
-          if (v === currentVal) return false;
-          if (typeof v === 'object' && v !== null && typeof currentVal === 'object' && currentVal !== null) {
-            return JSON.stringify(v) !== JSON.stringify(currentVal);
-          }
-          return v !== currentVal;
-        }));
+  const metadataChanged = !isStale && Object.entries(updateData)
+    .filter(([k]) => k !== 'last_telemetry_at' && k !== 'update_timestamp' && k !== 'last_heartbeat' && k !== '_current_agent')
+    .some(([k, v]) => {
+      const currentVal = currentAgent ? (currentAgent as any)[k] : undefined;
+      if (v === currentVal) return false;
+      if (typeof v === 'object' && v !== null && typeof currentVal === 'object' && currentVal !== null) {
+        return JSON.stringify(v) !== JSON.stringify(currentVal);
+      }
+      return v !== currentVal;
+    });
 
   if (!metadataChanged && !isStale && (now.getTime() - lastUpdate) < HEARTBEAT_WRITE_THROTTLE_MS) {
     logger.debug('Skipping redundant agent heartbeat (throttled)', { agentName });
