@@ -105,7 +105,7 @@ serveAgent(async (req, ctx) => {
     last_heartbeat: (agentData.last_heartbeat as string | null) || null,
     state: (agentData.state as string | null) || null,
     agent_state: (agentData.agent_state as string | null) || null,
-    metadata_hash: (agentData.metadata_hash as string | null) || null,
+    metadata_hash: null, // HOTFIX-AUTH-01: column not persisted; echoed from incoming payload only
     version: (agentData.version as number) || 1,
   }
 
