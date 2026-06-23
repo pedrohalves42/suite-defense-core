@@ -138,6 +138,16 @@ serveAgent(async (req, ctx) => {
   (updateData as any)._current_agent = agentData; // Pass current state for efficient dirty-checking
 
   await updateAgentStatus(supabase, agent.id, agent.agent_name, updateData, agent.last_heartbeat)
+  logger.info('[hb-diag] agent status updated', {
+    traceId,
+    tenantId: agent.tenant_id,
+    agentId: agent.id,
+    agentName: agent.agent_name,
+    telemetryInserted: shouldInsertTelemetry,
+    telemetryTimestamp,
+    platform,
+    newAgentVersion: osInfo.agent_version || null,
+  })
 
   // ── 4. Force-update check (critical path) ───────────────
   const forceResult = await processForceUpdate(
