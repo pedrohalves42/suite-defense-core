@@ -128,9 +128,9 @@ export function buildAgentUpdate(
     updateData.signature_mode = osInfo.signature_mode
   }
 
-  if (osInfo.metadata_hash) {
-    updateData.metadata_hash = osInfo.metadata_hash;
-  }
+  // HOTFIX-AUTH-01: agents.metadata_hash column does not exist.
+  // We accept the field from the payload (forward-compat) but do not persist it.
+  // The response builder still echoes osInfo.metadata_hash back to the agent.
 
   return updateData
 }
