@@ -37,6 +37,58 @@ export interface AuthenticateAgentOptions {
  * 
  * @param options.extraAgentFields - Additional agent columns to fetch (e.g. ['status', 'agent_version'])
  */
+// Declare EdgeRuntime for Deno/Supabase environment
+declare const EdgeRuntime: { waitUntil?: (promise: Promise<unknown>) => void } | undefined;
+
+/**
+ * Fire-and-forget audit insert into token_validation_failures.
+ * Closes the observability gap on agent 401/403: every rejection is recorded
+ * with token prefix, detected reason, IP and UA. Best-effort; never throws.
+ */
+function recordTokenFailure(
+  supabase: any,
+  req: Request,
+  endpoint: string,
+  tokenPrefix: string,
+  reason: string,
+  extra?: Record<string, unknown>,
+): void {
+  try {
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || req.headers.get('cf-connecting-ip')
+      || null;
+    const ua = (req.headers.get('user-agent') || '').slice(0, 240) || null;
+    const reasonPayload = JSON.stringify({
+      endpoint,
+      reason,
+      ...(extra || {}),
+    });
+    const work = supabase
+      .from('token_validation_failures')
+      .insert({
+        token_hash_prefix: tokenPrefix || 'unknown',
+        failure_reason: reasonPayload,
+        client_ip: clientIp,
+        user_agent: ua,
+      })
+      .then((res: any) => {
+        if (res?.error) {
+          logger.warn(`[${endpoint}] token_validation_failures insert failed`, { message: res.error.message });
+        }
+      })
+      .catch((e: any) => {
+        logger.warn(`[${endpoint}] token_validation_failures insert threw`, { message: e?.message });
+      });
+
+    if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+      EdgeRuntime.waitUntil(work);
+    }
+    // else: local/dev — drop the promise; we already logged via logger.warn above.
+  } catch (e) {
+    logger.warn(`[${endpoint}] recordTokenFailure threw`, { message: (e as Error)?.message });
+  }
+}
+
 export async function authenticateAgent(
   supabase: any,
   req: Request,
@@ -54,6 +106,7 @@ export async function authenticateAgent(
   }
 
   if (!agentToken) {
+    recordTokenFailure(supabase, req, endpoint, 'none', 'missing_token_header');
     return {
       success: false,
       response: new Response(
