@@ -31162,6 +31162,66 @@ export type Database = {
           },
         ]
       }
+      pp02b_canary_snapshots: {
+        Row: {
+          canary_agent_id: string | null
+          canary_heartbeat_age_seconds: number | null
+          canary_last_heartbeat: string | null
+          coalescer_distinct_agents: number
+          coalescer_rows_written: number
+          coalescer_total_hit_count: number
+          created_at: string
+          id: string
+          label: string
+          notes: Json
+          tenant_id: string
+          token_validation_failures: number
+          verdict_auth: string
+          verdict_coalescer: string
+          verdict_heartbeat: string
+          window_end: string
+          window_start: string
+        }
+        Insert: {
+          canary_agent_id?: string | null
+          canary_heartbeat_age_seconds?: number | null
+          canary_last_heartbeat?: string | null
+          coalescer_distinct_agents: number
+          coalescer_rows_written: number
+          coalescer_total_hit_count: number
+          created_at?: string
+          id?: string
+          label: string
+          notes?: Json
+          tenant_id: string
+          token_validation_failures: number
+          verdict_auth: string
+          verdict_coalescer: string
+          verdict_heartbeat: string
+          window_end: string
+          window_start: string
+        }
+        Update: {
+          canary_agent_id?: string | null
+          canary_heartbeat_age_seconds?: number | null
+          canary_last_heartbeat?: string | null
+          coalescer_distinct_agents?: number
+          coalescer_rows_written?: number
+          coalescer_total_hit_count?: number
+          created_at?: string
+          id?: string
+          label?: string
+          notes?: Json
+          tenant_id?: string
+          token_validation_failures?: number
+          verdict_auth?: string
+          verdict_coalescer?: string
+          verdict_heartbeat?: string
+          window_end?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -51533,6 +51593,34 @@ export type Database = {
         Returns: boolean
       }
       snapshot_mitre_coverage: { Args: { tenant_uuid: string }; Returns: Json }
+      snapshot_pp02b_canary: {
+        Args: { p_label: string }
+        Returns: {
+          canary_agent_id: string | null
+          canary_heartbeat_age_seconds: number | null
+          canary_last_heartbeat: string | null
+          coalescer_distinct_agents: number
+          coalescer_rows_written: number
+          coalescer_total_hit_count: number
+          created_at: string
+          id: string
+          label: string
+          notes: Json
+          tenant_id: string
+          token_validation_failures: number
+          verdict_auth: string
+          verdict_coalescer: string
+          verdict_heartbeat: string
+          window_end: string
+          window_start: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pp02b_canary_snapshots"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       submit_agent_evidence: {
         Args: {
           p_agent_id: string
