@@ -10,6 +10,7 @@ import { requireEnv } from './env.ts';
 import { logger, loggerWithContext } from './logger.ts';
 import { handleExceptionWithContext } from './error-handler.ts';
 import type { RateLimitOption } from './serve-tenant.ts';
+import type { AgentExtraField } from './agent-auth.ts';
 
 function jsonResponse(data: unknown, status = 200, extraHeaders?: Record<string, string>, origin?: string | null) {
   const cors = buildCorsHeaders(origin);
@@ -46,8 +47,10 @@ export interface AgentContext {
 export type AgentHandler = (req: Request, ctx: AgentContext) => Promise<Response | Record<string, unknown> | unknown>;
 
 export interface ServeAgentOptions {
-  /** Additional columns to select from the agents table beyond the defaults */
-  extraAgentFields?: string[];
+  /** Additional columns to select from the agents table beyond the defaults.
+   *  D1: restricted to existing agents columns (AgentExtraField) to prevent
+   *  metadata_hash-style regressions silently producing 401s. */
+  extraAgentFields?: ReadonlyArray<AgentExtraField>;
   /** Enable HMAC verification before handler execution. Default: false */
   hmacVerify?: boolean;
   /** Optional rate limiting config */
