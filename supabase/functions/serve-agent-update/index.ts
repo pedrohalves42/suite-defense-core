@@ -1,18 +1,28 @@
-// @ts-nocheck
 /**
  * serve-agent-update — Migrated to serveAgent middleware.
  * NOTE: HMAC is best-effort (token-only fallback for some agents).
  */
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
-import { normalizeVersion, normalizeForWindows, updateDecisionService } from '../_shared/hexagonal/update-decision-service.ts';
+import { normalizeVersion, updateDecisionService } from '../_shared/hexagonal/update-decision-service.ts';
 import { handleForceUpdate } from './force-update-handler.ts';
 import { calculateBucket, checkRolloutPolicy, logRolloutDecision } from './rollout-engine.ts';
 import { prepareScriptForDelivery } from './script-delivery.ts';
-import { buildCorsHeaders } from '../_shared/cors.ts';
+import type { Database } from '../_shared/database.types.ts';
+
+type AgentReleaseRow = Database['public']['Tables']['agent_releases']['Row'];
+type ReleasePick = Pick<
+  AgentReleaseRow,
+  'id' | 'version' | 'script_content' | 'sha256' | 'release_notes' | 'created_at' | 'signature_base64' | 'signed_at' | 'signed_by'
+>;
+
+const asNullableString = (v: unknown): string | null =>
+  typeof v === 'string' ? v : v == null ? null : null;
 
 serveAgent(async (req, ctx) => {
-  const { supabase, agentId, agentName, tenantId, hmacSecret, requestId, agentData } = ctx;
+  const { agentId, agentName, tenantId, hmacSecret, requestId, agentData } = ctx;
+  const supabase = ctx.supabase as SupabaseClient<Database>;
   const origin = req.headers.get('origin');
 
   // Best-effort HMAC verification (non-blocking)
@@ -34,46 +44,56 @@ serveAgent(async (req, ctx) => {
     } catch (err) { logger.warn('[serve-agent-update] HMAC check failed (best-effort)', err); }
   }
 
-  const platform = ((agentData.os_type as string) || 'windows').toLowerCase();
+  const agentVersion = asNullableString(agentData.agent_version);
+  const osType = asNullableString(agentData.os_type);
+  const forceUpdateVersion = asNullableString(agentData.force_update_version);
+  const forceUpdateReason = asNullableString(agentData.force_update_reason);
+
+  const platform = (osType ?? 'windows').toLowerCase();
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 
   // FORCE UPDATE: Priority
   const forceResponse = await handleForceUpdate(supabase, {
-    id: agentId, agent_name: agentName, tenant_id: tenantId, hmac_secret: hmacSecret || '',
-    agent_version: agentData.agent_version as string | null, os_type: agentData.os_type as string | null,
-    force_update_version: agentData.force_update_version as string | null, force_update_reason: agentData.force_update_reason as string | null,
+    id: agentId, agent_name: agentName, tenant_id: tenantId, hmac_secret: hmacSecret ?? '',
+    agent_version: agentVersion, os_type: osType,
+    force_update_version: forceUpdateVersion, force_update_reason: forceUpdateReason,
   }, platform, SUPABASE_URL, origin, requestId);
   if (forceResponse) return forceResponse;
 
   // ROLLOUT
   const bucket = await calculateBucket(agentId);
-  const { policy: rolloutPolicy, blockedResponse } = await checkRolloutPolicy(supabase, agentId, agentName, agentData.agent_version as string | null, platform, bucket, origin, requestId);
+  const { policy: rolloutPolicy, blockedResponse } = await checkRolloutPolicy(supabase, agentId, agentName, agentVersion, platform, bucket, origin, requestId);
   if (blockedResponse) return blockedResponse;
+
+  const rolloutPercentage =
+    rolloutPolicy && typeof (rolloutPolicy as { rollout_percentage?: unknown }).rollout_percentage === 'number'
+      ? ((rolloutPolicy as { rollout_percentage: number }).rollout_percentage)
+      : 100;
 
   // Fetch latest release
   const { data: release, error: releaseError } = await supabase
     .from('agent_releases')
     .select('id, version, script_content, sha256, release_notes, created_at, signature_base64, signed_at, signed_by')
     .eq('platform', platform).eq('channel', 'stable').eq('is_active', true)
-    .order('created_at', { ascending: false }).limit(1).single();
+    .order('created_at', { ascending: false }).limit(1).single<ReleasePick>();
 
   if (releaseError || !release) {
-    return { error: 'No update available', current_version: agentData.agent_version };
+    return { error: 'No update available', current_version: agentVersion };
   }
 
   // Version comparison
   const legacyVersions = ['3.10.37', '3.10.39', '3.10.14'];
-  const currentVersionNorm = normalizeVersion(agentData.agent_version as string | null);
+  const currentVersionNorm = normalizeVersion(agentVersion);
   const isLegacyAgent = legacyVersions.some(v => currentVersionNorm.includes(v));
 
   if (!isLegacyAgent) {
     const decision = await updateDecisionService.evaluate(
-      { agentId, agentName, currentVersion: agentData.agent_version as string | null, currentScriptSha256: req.headers.get('X-Script-SHA256') || req.headers.get('X-Current-SHA256'), platform },
+      { agentId, agentName, currentVersion: agentVersion, currentScriptSha256: req.headers.get('X-Script-SHA256') || req.headers.get('X-Current-SHA256'), platform },
       { version: release.version, scriptContent: release.script_content, sha256: release.sha256, releaseNotes: release.release_notes, createdAt: release.created_at },
     );
     if (decision.action === 'no_update') {
-      await logRolloutDecision(supabase, agentId, agentName, platform, agentData.agent_version as string | null, release.version, bucket, rolloutPolicy?.rollout_percentage || 100, 'already_current', requestId);
-      return { message: 'Already up to date', current_version: agentData.agent_version };
+      await logRolloutDecision(supabase, agentId, agentName, platform, agentVersion, release.version, bucket, rolloutPercentage, 'already_current', requestId);
+      return { message: 'Already up to date', current_version: agentVersion };
     }
   }
 
@@ -88,7 +108,7 @@ serveAgent(async (req, ctx) => {
     sha256: prepared.calculatedSha256,
     originalSignature: release.signature_base64,
     originalSignedAt: release.signed_at,
-    originalSignedBy: release.signed_by || null,
+    originalSignedBy: release.signed_by ?? null,
     contentChanged: prepared.contentChanged,
     logContext: { agentName, version: release.version, scope: 'serve-agent-update', requestId },
   });
@@ -117,7 +137,7 @@ serveAgent(async (req, ctx) => {
     }
   }
 
-  await logRolloutDecision(supabase, agentId, agentName, platform, agentData.agent_version as string | null, release.version, bucket, rolloutPolicy?.rollout_percentage || 100, 'allowed', requestId);
+  await logRolloutDecision(supabase, agentId, agentName, platform, agentVersion, release.version, bucket, rolloutPercentage, 'allowed', requestId);
 
   return {
     version: release.version, script_content: prepared.finalContent, sha256: prepared.calculatedSha256,
@@ -125,11 +145,11 @@ serveAgent(async (req, ctx) => {
     signature_base64: safeSignature, signed_at: safeSignedAt, signed_by: safeSignedBy,
     expected_sha256: prepared.calculatedSha256,
     signature_timestamp: safeSignedAt,
-    release_notes: release.release_notes, platform, current_version: agentData.agent_version,
+    release_notes: release.release_notes, platform, current_version: agentVersion,
     legacy_agent_detected: isLegacyAgent,
     self_healing_note: isLegacyAgent ? 'Script saved to disk. New version active after Windows reboot.' : null,
     confirm_url: `${SUPABASE_URL}/functions/v1/confirm-force-update`,
-    confirm_method: 'POST', confirm_body_schema: { new_version: release.version, old_version: agentData.agent_version || 'unknown' },
+    confirm_method: 'POST', confirm_body_schema: { new_version: release.version, old_version: agentVersion ?? 'unknown' },
     confirm_required_headers: ['X-Agent-Token', 'X-HMAC-Signature', 'X-Timestamp', 'X-Nonce'],
     confirm_instructions: 'After applying the update, POST to confirm_url with confirm_body_schema and HMAC headers.',
   };
