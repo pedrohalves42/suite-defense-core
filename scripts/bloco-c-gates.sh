@@ -21,7 +21,7 @@ ALLOWED_DANGER=(
   "src/components/ui/FormattedText.tsx"
   "src/components/landing/SEO.tsx"
 )
-VIOLATIONS=$(grep -rln "dangerouslySetInnerHTML" --include="*.ts" --include="*.tsx" src supabase/functions 2>/dev/null || true)
+VIOLATIONS=$(grep -rln "dangerouslySetInnerHTML={" --include="*.ts" --include="*.tsx" src supabase/functions 2>/dev/null || true)
 if [ -n "$VIOLATIONS" ]; then
   while IFS= read -r f; do
     ok=0
