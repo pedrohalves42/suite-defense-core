@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Shield, CheckCircle, AlertTriangle, Clock } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface HeaderInfo {
   name: string;
@@ -54,7 +55,7 @@ const SecurityMonitor = () => {
         
         setHeaders(checks);
       } catch (error) {
-        console.error('Error checking headers:', error);
+        logger.error('Error checking security headers', error);
       } finally {
         setLoading(false);
       }

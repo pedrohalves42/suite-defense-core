@@ -1,14 +1,24 @@
 import React from 'react';
+import { serializeJsonLd } from '@/lib/safe-json-ld';
 
 interface JsonLdProps {
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 }
 
+/**
+ * Renders a JSON-LD <script> block.
+ *
+ * Uses the centralized serializeJsonLd helper which escapes `<`, `>`, `&`,
+ * U+2028 and U+2029 — making the payload safe to inline. This is the only
+ * file (other than the DOMPurify-backed FormattedText) allowed by the Bloco C
+ * gate to call dangerouslySetInnerHTML.
+ */
 export const JsonLd: React.FC<JsonLdProps> = ({ data }) => {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      // eslint-disable-next-line react/no-danger -- payload sanitized via serializeJsonLd (bloco-c allowlist)
+      dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
     />
   );
 };

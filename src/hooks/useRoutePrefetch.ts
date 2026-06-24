@@ -1,17 +1,14 @@
 import { useCallback } from 'react';
+import { logger } from '@/lib/logger';
 
 /**
  * Hook to prefetch lazy-loaded routes/components
  */
 export function useRoutePrefetch() {
-  const prefetch = useCallback((importFn: () => Promise<any>) => {
-    // Start loading the component in the background
+  const prefetch = useCallback((importFn: () => Promise<unknown>) => {
     const promise = importFn();
-    
-    // Optional: add to a global cache if needed, 
-    // but just calling the import starts the network fetch.
-    promise.catch(err => {
-      console.warn('[useRoutePrefetch] Failed to prefetch route', err);
+    promise.catch((err) => {
+      logger.warn('[useRoutePrefetch] Failed to prefetch route', { err });
     });
   }, []);
 

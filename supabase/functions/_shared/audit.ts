@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.42.0';
+import { logger } from './logger.ts';
 
 /**
  * Standard audit logging for Edge Functions.
@@ -40,9 +41,9 @@ export async function createAuditLog(params: {
       });
 
     if (error) {
-      console.error('[AuditLog] Failed to persist log:', error);
+      logger.error('[AuditLog] Failed to persist log', error);
     }
   } catch (err) {
-    console.error('[AuditLog] Unexpected error:', err);
+    logger.error('[AuditLog] Unexpected error', err);
   }
 }

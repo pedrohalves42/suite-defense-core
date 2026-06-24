@@ -126,8 +126,9 @@ export function isSafeRedirectUrl(url: string | null | undefined): boolean {
  */
 export function safeNavigate(url: string | null | undefined): boolean {
   if (!isSafeRedirectUrl(url)) {
-    // eslint-disable-next-line no-console
-    console.warn('[security] Blocked unsafe redirect attempt');
+    void import('@/lib/logger').then(({ logger }) =>
+      logger.warn('Blocked unsafe redirect attempt', { category: 'auth' })
+    );
     return false;
   }
   window.location.href = url!;
