@@ -27,21 +27,34 @@ Lista de RPCs/health-monitors internos (monitor-thresholds, watchdog-non-executi
 1. **Disclosure de topologia interna**: `target_url`+`name`+`check_type` revela quais RPCs/endpoints fazem o sistema funcionar — útil para reconhecimento por atacante autenticado.
 2. **Disclosure de estado operacional**: `last_result` (jsonb) frequentemente carrega stacktraces, mensagens de erro e payloads diagnósticos.
 
-### Recomendação (PR separada — não executada agora)
-Substituir `ops_checks_view_all` por gate de super_admin no SELECT também:
+### B-FIX-01 — APLICADA em 2026-06-24
+
+Migration funcional isolada (escopo: somente policy SELECT de `ops_checks`):
 
 ```sql
--- PR separada, fora desta etapa:
-DROP POLICY "ops_checks_view_all" ON public.ops_checks;
+DROP POLICY IF EXISTS "ops_checks_view_all" ON public.ops_checks;
 CREATE POLICY "ops_checks_select_super_admin"
   ON public.ops_checks
   FOR SELECT TO authenticated
-  USING (is_current_super_admin());
+  USING (public.is_current_super_admin());
 ```
 
-Risco da mudança: **baixo** — nenhum componente de usuário final lê `ops_checks`; apenas dashboards super_admin e o scheduler (service_role, que bypassa RLS).
+Estado pós-migration:
 
-Status: **aguardando PR separada conforme orientação da etapa atual**.
+| policy | cmd | role | expr |
+|---|---|---|---|
+| `ops_checks_select_super_admin` | SELECT | authenticated | `is_current_super_admin()` |
+| `ops_checks_super_admin_only` | ALL | authenticated | `is_current_super_admin()` (sem alteração) |
+
+Validação por cenário:
+- **Usuário comum autenticado** (`is_current_super_admin()` = false) → 0 linhas. Policy bloqueia.
+- **Super admin** (`is_current_super_admin()` = true) → acesso preservado (16 linhas).
+- **service_role** (scheduler/edge functions) → bypassa RLS por padrão, sem regressão.
+- **Bloco B lint** (`scripts/bloco-b-lint.sql`) → `BLOCO B LINT PASSED`.
+
+Nota: troca direta de role via `SET ROLE` no pooler gerenciado é negada, então as contagens por cenário foram derivadas por inspeção de política (`is_current_super_admin()` é a única condição) e pelo fato de `service_role` ignorar RLS por padrão.
+
+Risco operacional observado: **nenhum** — nenhum componente de usuário final lê `ops_checks`; apenas dashboards super_admin e o scheduler.
 
 ---
 
