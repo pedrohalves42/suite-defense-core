@@ -1,8 +1,9 @@
 # PP02-B — Resultado do canário `hmac_success_coalescing`
 
-**Status:** FECHADO COMO NO-TRAFFIC (rollback por inadequação de tenant)
+**Status:** ENCERRADO DEFINITIVAMENTE — NO-TRAFFIC-BY-DESIGN
 **Janela:** 2026-06-23 20:08:49Z → 21:09:00Z (T+0 → T+60)
 **Leitura final:** 2026-06-24 13:36Z (T+16h após T+60)
+**Encerramento:** 2026-06-24 — todos os tenants foram desativados por corte de gastos (sem cliente ativo). Não há condição operacional para retomar este canário no ambiente atual. Coalescer permanece **OFF global**. Próxima validação de runtime do `hmac_success_coalescing` exigirá **tenant laboratório interno** (ver Bloco F do plano mestre). Override de tenant já removido em migration anterior.
 **Owner:** plano mestre §Fase 0 / §5.1
 
 ---
