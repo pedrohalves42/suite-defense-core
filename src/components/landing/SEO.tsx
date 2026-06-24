@@ -17,7 +17,7 @@ export const JsonLd: React.FC<JsonLdProps> = ({ data }) => {
   return (
     <script
       type="application/ld+json"
-      // eslint-disable-next-line react/no-danger -- payload sanitized via serializeJsonLd (bloco-c allowlist)
+      // payload sanitized via serializeJsonLd (bloco-c allowlist)
       dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
     />
   );
