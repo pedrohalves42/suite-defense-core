@@ -1,22 +1,28 @@
-// @ts-nocheck
 /**
- * submit-job-result ? Orchestrator
- * 
+ * submit-job-result — Orchestrator
+ *
  * Decomposed from 1,893-line monolith into modules:
  * - validation.ts: payload parsing & normalization
  * - security.ts: ownership, cross-tenant, tamper detection, version gate
  * - side-effects/: software inventory, web activity, antivirus, network, certs, disk
  * - execution.ts: audit trail finalization, signature verification
  * - post-completion.ts: governance, report triggers, blocked access analysis
- * 
+ *
  * ZERO TRUST: Side effects run BEFORE job is marked completed.
+ *
+ * D4 (Bloco D): `@ts-nocheck` removed. Runtime unchanged. Types tightened
+ * around the auth context, payload validation, and job update path so future
+ * regressions on evidence_hash / status transitions fail typecheck instead of
+ * silently shipping.
  */
 
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { handleException } from '../_shared/error-handler.ts'
 import { logger } from '../_shared/logger.ts'
 import { sanitizeJobOutput, sanitizeErrorMessage } from '../_shared/sanitize.ts'
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { serveAgent } from '../_shared/serve-agent.ts';
+import type { Database } from '../_shared/database.types.ts';
 
 import type { SubmitContext, AuthenticatedAgentInfo, JobRecord } from './types.ts'
 import { validateAndParsePayload, parseOutputData } from './validation.ts'
@@ -32,20 +38,30 @@ serveAgent(async (req, ctx) => {
   const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
 
   try {
-    const supabase = supabaseAny;
+    // serveAgent types supabase as `any` for backwards compatibility; narrow it
+    // here so the rest of the orchestrator is fully typed.
+    const supabase = supabaseAny as SupabaseClient<Database>;
 
     const agent: AuthenticatedAgentInfo = {
       id: agentId,
       agent_name: agentName,
       tenant_id: tenantId,
-      hmac_secret: ctx.hmacSecret || '',
+      hmac_secret: ctx.hmacSecret ?? '',
     };
 
-    const agentVersion = (agentData.agent_version as string | null) || 'v0.0.0';
+    const rawAgentVersion = agentData.agent_version;
+    const agentVersion =
+      typeof rawAgentVersion === 'string' && rawAgentVersion.length > 0
+        ? rawAgentVersion
+        : 'v0.0.0';
 
-    // ?? 5. Parse & validate payload ??
-    const validation = validateAndParsePayload(rawPayload as Record<string, unknown>);
-    if (!validation.success) return (validation as { success: false; response: Response }).response;
+    // ── 5. Parse & validate payload ──────────────────────────────────────────
+    const payloadRecord: Record<string, unknown> =
+      rawPayload && typeof rawPayload === 'object' && !Array.isArray(rawPayload)
+        ? (rawPayload as Record<string, unknown>)
+        : {};
+    const validation = validateAndParsePayload(payloadRecord);
+    if (!validation.success) return validation.response;
     const payload = validation.data;
 
     // ?? 6. Fetch job ??
