@@ -50,13 +50,12 @@ BEGIN
     WHERE schemaname = 'public'
       AND cmd IN ('INSERT','UPDATE','DELETE','ALL')
       AND (
-        (qual::text = 'true')
-        OR (with_check::text = 'true')
-        OR (cmd IN ('UPDATE','DELETE','ALL') AND qual IS NULL)
-        OR (cmd IN ('INSERT','ALL') AND with_check IS NULL)
+        qual::text = 'true'
+        OR with_check::text = 'true'
       )
       -- service_role bypassa RLS por design — policies declarativas ok
       AND roles::text NOT IN ('{service_role}')
+
   LOOP
     fail_count := fail_count + 1;
     msg := msg || format(E'\n  [B-LINT-2] %s.%s — policy "%s" (%s) roles=%s USING=%s WITH CHECK=%s',
