@@ -271,7 +271,12 @@ export class SupabaseCheckRepository implements ICheckRepository {
       p_details: details,
     });
     if (error) {
-      console.warn(`[SupabaseCheckRepository] Failed to update cron health for ${cronName}:`, error.message);
+      // Avoid console.* (Bloco C); fall back to a structured warn channel.
+      // Repository is shared infra; logger may not be wired — best-effort:
+      try {
+        const { logger } = await import('../../logger.ts');
+        logger.warn(`[SupabaseCheckRepository] Failed to update cron health for ${cronName}`, { error: error.message });
+      } catch { /* noop */ }
     }
   }
 
