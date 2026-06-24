@@ -207,7 +207,7 @@ serveAgent(async (req, ctx) => {
     return handleException(error, traceId, 'submit-job-result');
   }
 }, {
-  extraAgentFields: ['agent_version'],
+  extraAgentFields: ['agent_version'] as const,
   hmacVerify: true,
   rateLimit: {
     endpoint: 'submit-job-result',
