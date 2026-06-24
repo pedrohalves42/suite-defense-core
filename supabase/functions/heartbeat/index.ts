@@ -1,7 +1,6 @@
-// @ts-nocheck
 /**
  * Heartbeat Edge Function — Thin Orchestrator
- * 
+ *
  * Maintains Deno.serve() for raw body access (HMAC verification).
  * All business logic is delegated to focused modules:
  * - auth/hmac-validator.ts  → HMAC + version-gated enforcement
@@ -9,45 +8,75 @@
  * - state-updater.ts → DB writes (agent status, metrics, processes)
  * - force-update.ts → Force-update decision logic + delivery
  * - response-builder.ts → Normal response construction
- * 
+ *
  * COST-OPT: Uses EdgeRuntime.waitUntil() to defer non-critical
  * side-effects (metrics, processes, token touch) to background,
  * reducing response time from ~2.2s to ~200ms.
+ *
+ * D3 (Bloco D — type safety): @ts-nocheck removed. Runtime is unchanged;
+ * only typings, narrowing helpers, and the extra-fields allowlist were
+ * tightened to align with D1 (agent-auth) and D2 (state-updater).
  */
 
 // Declare EdgeRuntime for Deno/Supabase environment
 declare const EdgeRuntime: { waitUntil?: (promise: Promise<unknown>) => void } | undefined
 
-import { createTypedClient } from '../_shared/supabase-client.ts'
 import { logger } from '../_shared/logger.ts'
 import { requireEnv } from '../_shared/env.ts'
 import { serveAgent } from '../_shared/serve-agent.ts'
+import type { AgentExtraField } from '../_shared/agent-auth.ts'
 
-// Removed validateHeartbeatHmac import (now using serveAgent hmacVerify)
 import { parseHeartbeatPayload, buildAgentUpdate } from './parser/heartbeat-parser.ts'
-import { updateAgentStatus, executeParallelOps, TELEMETRY_THROTTLE_MS } from './state-updater.ts'
+import {
+  updateAgentStatus,
+  executeParallelOps,
+  TELEMETRY_THROTTLE_MS,
+  type HeartbeatUpdateData,
+} from './state-updater.ts'
 import { processForceUpdate } from './force-update.ts'
 import { buildNormalResponse } from './response-builder.ts'
 import type { AgentContext } from './types.ts'
 
-// Extra agent fields needed for delta-updates and force-update logic
-// HOTFIX-AUTH-01: 'metadata_hash' removed — column does not exist on public.agents
-// and was causing PostgREST to fail the agent_tokens → agents!inner join with a
-// "column agents_1.metadata_hash does not exist" error, surfacing as false 401s.
+/**
+ * Extra agent fields needed for delta-updates and force-update logic.
+ *
+ * HOTFIX-AUTH-01: 'metadata_hash' removed — column does not exist on
+ * public.agents and was causing PostgREST to fail the
+ * agent_tokens → agents!inner join with a "column agents_1.metadata_hash
+ * does not exist" error, surfacing as false 401s.
+ *
+ * D3: typed via the D1 allowlist (`AgentExtraField`). Any field outside
+ * the allowlist (or absent from the agents table) fails typecheck here.
+ * 'status' is not listed because it is already part of the base agent
+ * selection in agent-auth.ts.
+ */
 const HEARTBEAT_EXTRA_FIELDS = [
-  'status', 'skip_firewall_remediation', 'agent_version', 'hostname', 'os_type', 'os_version',
+  'skip_firewall_remediation', 'agent_version', 'hostname', 'os_type', 'os_version',
   'state', 'agent_state', 'ed25519_supported', 'signature_mode',
   'force_update_version', 'force_update_reason', 'force_update_at',
   'force_update_override_safe_mode', 'force_update_override_safe_mode_expires_at',
   'force_update_delivered_count', 'force_update_first_delivered_at',
   'last_forced_update_applied', 'last_telemetry_at', 'last_heartbeat',
-]
+] as const satisfies ReadonlyArray<AgentExtraField>
+
+/** Narrow an unknown agentData[key] to string|null without leaking `any`. */
+function asNullableString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null
+}
+function asBoolean(value: unknown, fallback = false): boolean {
+  return typeof value === 'boolean' ? value : fallback
+}
+function asNullableBoolean(value: unknown): boolean | null {
+  return typeof value === 'boolean' ? value : null
+}
+function asNumber(value: unknown, fallback = 0): number {
+  return typeof value === 'number' ? value : fallback
+}
 
 serveAgent(async (req, ctx) => {
   const handlerStart = Date.now()
-  const { requestId, supabase: supabaseAny, agentData, rawBody } = ctx
+  const { requestId, supabase, agentData, rawBody } = ctx
   const traceId = requestId
-  const supabase = supabaseAny
   const origin = req.headers.get('origin')
   const supabaseUrl = requireEnv('SUPABASE_URL')
 
@@ -67,16 +96,21 @@ serveAgent(async (req, ctx) => {
     hmac: 'ok',
     sourceIp,
     userAgent: ua.slice(0, 80),
-    prevLastHeartbeat: (agentData.last_heartbeat as string | null) || null,
-    prevAgentVersion: (agentData.agent_version as string | null) || null,
-    prevStatus: (agentData.status as string | null) || null,
+    prevLastHeartbeat: asNullableString(agentData.last_heartbeat),
+    prevAgentVersion: asNullableString(agentData.agent_version),
+    prevStatus: asNullableString(agentData.status),
     bodyBytes: rawBody?.length ?? 0,
   })
 
   // BUG 23: Guard against missing tenant_id (security and logic consistency)
   if (!ctx.tenantId) {
-    logger.error('[hb-diag] CRITICAL: tenantId missing from context', { traceId, agentId: ctx.agentId, agentName: ctx.agentName });
-    return new Response(JSON.stringify({ error: 'Unauthorized: missing tenant context' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    logger.error('[hb-diag] CRITICAL: tenantId missing from context', {
+      traceId, agentId: ctx.agentId, agentName: ctx.agentName,
+    })
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized: missing tenant context' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } },
+    )
   }
 
   // Context construction for internal modules
@@ -85,40 +119,45 @@ serveAgent(async (req, ctx) => {
     agent_name: ctx.agentName,
     hmac_secret: ctx.hmacSecret || '',
     tenant_id: ctx.tenantId,
-    status: (agentData.status as string) || '',
-    os_type: (agentData.os_type as string | null) || null,
-    os_version: (agentData.os_version as string | null) || null,
-    hostname: (agentData.hostname as string | null) || null,
-    ed25519_supported: (agentData.ed25519_supported as boolean | null) || null,
-    signature_mode: (agentData.signature_mode as string | null) || null,
-    skip_firewall_remediation: (agentData.skip_firewall_remediation as boolean) || false,
-    agent_version: (agentData.agent_version as string | null) || null,
-    force_update_version: (agentData.force_update_version as string | null) || null,
-    force_update_reason: (agentData.force_update_reason as string | null) || null,
-    force_update_at: (agentData.force_update_at as string | null) || null,
-    force_update_override_safe_mode: (agentData.force_update_override_safe_mode as boolean) || false,
-    force_update_override_safe_mode_expires_at: (agentData.force_update_override_safe_mode_expires_at as string | null) || null,
-    force_update_delivered_count: (agentData.force_update_delivered_count as number) || 0,
-    force_update_first_delivered_at: (agentData.force_update_first_delivered_at as string | null) || null,
-    last_forced_update_applied: (agentData.last_forced_update_applied as string | null) || null,
-    last_telemetry_at: (agentData.last_telemetry_at as string | null) || null,
-    last_heartbeat: (agentData.last_heartbeat as string | null) || null,
-    state: (agentData.state as string | null) || null,
-    agent_state: (agentData.agent_state as string | null) || null,
+    status: asNullableString(agentData.status) || '',
+    os_type: asNullableString(agentData.os_type),
+    os_version: asNullableString(agentData.os_version),
+    hostname: asNullableString(agentData.hostname),
+    ed25519_supported: asNullableBoolean(agentData.ed25519_supported),
+    signature_mode: asNullableString(agentData.signature_mode),
+    skip_firewall_remediation: asBoolean(agentData.skip_firewall_remediation),
+    agent_version: asNullableString(agentData.agent_version),
+    force_update_version: asNullableString(agentData.force_update_version),
+    force_update_reason: asNullableString(agentData.force_update_reason),
+    force_update_at: asNullableString(agentData.force_update_at),
+    force_update_override_safe_mode: asBoolean(agentData.force_update_override_safe_mode),
+    force_update_override_safe_mode_expires_at: asNullableString(
+      agentData.force_update_override_safe_mode_expires_at,
+    ),
+    force_update_delivered_count: asNumber(agentData.force_update_delivered_count),
+    force_update_first_delivered_at: asNullableString(agentData.force_update_first_delivered_at),
+    last_forced_update_applied: asNullableString(agentData.last_forced_update_applied),
+    last_telemetry_at: asNullableString(agentData.last_telemetry_at),
+    last_heartbeat: asNullableString(agentData.last_heartbeat),
+    state: asNullableString(agentData.state) ?? undefined,
+    agent_state: asNullableString(agentData.agent_state) ?? undefined,
     metadata_hash: null, // HOTFIX-AUTH-01: column not persisted; echoed from incoming payload only
-    version: (agentData.version as number) || 1,
+    version: asNumber(agentData.version, 1),
   }
 
   // ── 1. HMAC validation ──────────────────────────────────
-  // CENTRALIZED: Now uses serveAgent's hmacVerify. rawBody is guaranteed.
+  // CENTRALIZED: serveAgent's hmacVerify guarantees rawBody when enabled.
   if (rawBody === undefined) {
-    logger.error('CRITICAL: rawBody missing from ctx. Ensure hmacVerify: true is set in serveAgent options.');
-    return new Response(JSON.stringify({ error: 'Auth context error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    logger.error('CRITICAL: rawBody missing from ctx. Ensure hmacVerify: true is set in serveAgent options.')
+    return new Response(
+      JSON.stringify({ error: 'Auth context error' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    )
   }
 
   // ── 2. Parse payload ────────────────────────────────────
   const osInfo = parseHeartbeatPayload(rawBody)
-  const updateData = buildAgentUpdate(osInfo, agent)
+  const updateData: HeartbeatUpdateData = buildAgentUpdate(osInfo, agent)
   const platform = updateData.os_type || 'windows'
 
   logger.debug('Heartbeat received', { agentName: agent.agent_name, traceId })
@@ -128,17 +167,21 @@ serveAgent(async (req, ctx) => {
   const lastInsert = agent.last_telemetry_at ? new Date(agent.last_telemetry_at).getTime() : 0
   const driftBufferMs = 1000 // Small buffer for clock drift
   const shouldInsertTelemetry = (Date.now() - lastInsert) >= (TELEMETRY_THROTTLE_MS - driftBufferMs)
-  
+
   // Use agent's high-precision timestamp if available, else fallback to server now
   const telemetryTimestamp = osInfo.collected_at || new Date().toISOString()
-  
+
   if (shouldInsertTelemetry) {
-    (updateData as any).last_telemetry_at = telemetryTimestamp
+    updateData.last_telemetry_at = telemetryTimestamp
   }
-  
+
   // Always include a timestamp for the update to support idempotency in RPC
-  (updateData as any).update_timestamp = telemetryTimestamp;
-  (updateData as any)._current_agent = agentData; // Pass current state for efficient dirty-checking
+  updateData.update_timestamp = telemetryTimestamp
+  // Pass current state for efficient dirty-checking (avoids extra round-trip)
+  updateData._current_agent = {
+    version: asNumber(agentData.version, 1),
+    last_heartbeat: asNullableString(agentData.last_heartbeat),
+  }
 
   await updateAgentStatus(supabase, agent.id, agent.agent_name, updateData, agent.last_heartbeat)
   logger.info('[hb-diag] agent status updated', {
@@ -175,9 +218,13 @@ serveAgent(async (req, ctx) => {
 
   // ── 6. COST-OPT: Defer side-effects ─────────────────────
   const bgWork = executeParallelOps(supabase, agent, osInfo, shouldInsertTelemetry)
-    .catch(e => logger.warn('Deferred work failed', { error: e.message, agentName: agent.agent_name, traceId }));
-    
-  if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+    .catch((e: unknown) => logger.warn('Deferred work failed', {
+      error: e instanceof Error ? e.message : String(e),
+      agentName: agent.agent_name,
+      traceId,
+    }))
+
+  if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) {
     EdgeRuntime.waitUntil(bgWork)
   } else {
     // If not in EdgeRuntime (e.g. local dev), we MUST await to prevent data loss
@@ -201,5 +248,5 @@ serveAgent(async (req, ctx) => {
     maxRequests: 30,
     windowMinutes: 10,
     blockMinutes: 2,
-  }
+  },
 })

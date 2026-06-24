@@ -66,6 +66,7 @@ export interface AgentContext {
   ed25519_supported?: boolean | null;
   signature_mode?: string | null;
   state?: string; // Agent lifecycle state (ENFORCING, SAFE_MODE, DEGRADED, INITIALIZING)
+  agent_state?: string; // Canonical agent_state column persisted on agents (healthy/degraded/...)
   skip_firewall_remediation?: boolean;
   agent_version?: string | null;
   force_update_version?: string | null;
