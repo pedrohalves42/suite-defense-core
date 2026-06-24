@@ -96,8 +96,6 @@ export interface AgentUpdate {
   metadata_hash?: string;
   version?: number;
 }
-}
-}
 
 export interface HeartbeatContext {
   supabase: SupabaseClient<Database>;
