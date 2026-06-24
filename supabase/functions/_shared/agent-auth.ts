@@ -29,11 +29,43 @@ type AgentBaseField =
 /**
  * Allowed extra fields for `extraAgentFields`.
  *
- * Restricted to columns that actually exist on public.agents.
- * Adding a non-existent column here (e.g. `'metadata_hash'`) is a typecheck
- * error — this is the guard against the regression that produced silent 401s.
+ * D-FOLLOWUP-01: explicit allowlist (was `Exclude<keyof AgentRow, AgentBaseField>`).
+ * The previous form blocked non-existent columns but still permitted sensitive
+ * real columns (e.g. `hmac_secret`, `result_public_key`, `payload_hash`,
+ * `metadata_hash`) to be embedded into the agent context. This allowlist
+ * enumerates only columns that are safe to expose via the agent-auth path.
+ * Adding a new field requires an explicit, reviewed change here.
+ *
+ * Forbidden by construction: any secret/hash/key column on `agents`.
  */
-export type AgentExtraField = Exclude<keyof AgentRow, AgentBaseField>;
+type SafeAgentExtraField =
+  | 'agent_name'
+  | 'agent_version'
+  | 'hostname'
+  | 'os_type'
+  | 'os_version'
+  | 'state'
+  | 'agent_state'
+  | 'ed25519_supported'
+  | 'signature_mode'
+  | 'skip_firewall_remediation'
+  | 'last_heartbeat'
+  | 'last_telemetry_at'
+  | 'force_update_version'
+  | 'force_update_reason'
+  | 'force_update_at'
+  | 'force_update_override_safe_mode'
+  | 'force_update_override_safe_mode_expires_at'
+  | 'force_update_delivered_count'
+  | 'force_update_delivery_count'
+  | 'force_update_first_delivered_at'
+  | 'last_forced_update_applied';
+
+/**
+ * Intersect with actual `agents` columns so a typo or a removed column
+ * still fails typecheck (preserves the D1 metadata_hash regression guard).
+ */
+export type AgentExtraField = Extract<keyof AgentRow, SafeAgentExtraField>;
 
 /** Shape of the embedded `agents` object returned by the agent_tokens select. */
 type EmbeddedAgent = Pick<AgentRow, AgentBaseField> & Partial<AgentRow>;
