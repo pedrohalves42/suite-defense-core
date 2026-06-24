@@ -1,14 +1,37 @@
-// @ts-nocheck
 /**
  * ack-job — DEPRECATED (Sunset 2026-06-01). Use /submit-job-result instead.
  * Migrated to serveAgent middleware with HMAC verification.
+ *
+ * D7: removed @ts-nocheck. Runtime behavior unchanged; types tightened with
+ * narrowing and a local SupabaseClient<Database> cast.
  */
-import { serveAgent } from '../_shared/serve-tenant.ts';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import type { Database } from '../_shared/database.types.ts';
+import { serveAgent, type AgentContext } from '../_shared/serve-tenant.ts';
 import { JobIdSchema } from '../_shared/validation.ts';
 import { logger } from '../_shared/logger.ts';
 
-serveAgent(async (req, ctx) => {
-  const { supabase, agentName, requestId, body: rawBody } = ctx;
+type JobRow = Database['public']['Tables']['jobs']['Row'];
+type AckJob = Pick<
+  JobRow,
+  'id' | 'agent_id' | 'agent_name' | 'tenant_id' | 'type' | 'status' | 'payload' | 'created_at' | 'expires_at'
+>;
+
+const CRITICAL_JOB_TYPES = [
+  'security_scan',
+  'software_inventory',
+  'web_activity',
+  'collect_web_activity',
+  'scan_vulnerabilities',
+] as const;
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null;
+}
+
+serveAgent(async (req: Request, ctx: AgentContext) => {
+  const supabase = ctx.supabase as SupabaseClient<Database>;
+  const { agentName, requestId, body: rawBody } = ctx;
 
   logger.warn('[ack-job] DEPRECATED: Sunset 2026-06-01. Use /submit-job-result instead.');
 
@@ -20,9 +43,11 @@ serveAgent(async (req, ctx) => {
   if (jobIdFromUrl && jobIdFromUrl !== 'ack-job') {
     jobId = jobIdFromUrl;
   }
-  if (!jobId) {
-    const bodyObj = rawBody as Record<string, unknown>;
-    jobId = (bodyObj?.job_id as string) || null;
+  if (!jobId && isRecord(rawBody)) {
+    const fromBody = rawBody.job_id;
+    if (typeof fromBody === 'string' && fromBody.length > 0) {
+      jobId = fromBody;
+    }
   }
 
   if (!jobId) {
@@ -50,7 +75,7 @@ serveAgent(async (req, ctx) => {
     .eq('id', validatedJobId)
     .order('created_at', { ascending: false })
     .limit(1)
-    .maybeSingle();
+    .maybeSingle<AckJob>();
 
   if (fetchError || !existingJob) {
     return new Response(
@@ -59,14 +84,15 @@ serveAgent(async (req, ctx) => {
     );
   }
 
-  // Correção F-005: Bloquear encerramento de jobs críticos via endpoint legado (ack-job)
-  const CRITICAL_JOB_TYPES = ['security_scan', 'software_inventory', 'web_activity', 'collect_web_activity', 'scan_vulnerabilities'];
-  if (CRITICAL_JOB_TYPES.includes(existingJob.type)) {
-    logger.error(`[ACK_BYPASS_ATTEMPT] Bloqueada tentativa de finalizar job crítico ${existingJob.type} via ack-job legado. Agente: ${agentName}`);
+  // F-005: Bloquear encerramento de jobs críticos via endpoint legado (ack-job)
+  if ((CRITICAL_JOB_TYPES as readonly string[]).includes(existingJob.type)) {
+    logger.error(
+      `[ACK_BYPASS_ATTEMPT] Bloqueada tentativa de finalizar job crítico ${existingJob.type} via ack-job legado. Agente: ${agentName}`
+    );
     return new Response(
-      JSON.stringify({ 
-        error: 'INTEGRITY_VIOLATION', 
-        message: `Jobs do tipo ${existingJob.type} devem usar /submit-job-result para garantir a integridade da telemetria.` 
+      JSON.stringify({
+        error: 'INTEGRITY_VIOLATION',
+        message: `Jobs do tipo ${existingJob.type} devem usar /submit-job-result para garantir a integridade da telemetria.`,
       }),
       { status: 403, headers: { 'Content-Type': 'application/json' } }
     );
@@ -91,7 +117,7 @@ serveAgent(async (req, ctx) => {
 
   // S-P0.5 — Evidência de auditoria/rollback: hash determinístico do ack
   const completedAt = new Date().toISOString();
-  const statusBefore = existingJob.status as string;
+  const statusBefore: string = existingJob.status;
   const evidencePayload = {
     job_id: validatedJobId,
     agent_name: agentName,
