@@ -65,30 +65,11 @@ BEGIN
   END LOOP;
 
   -- ==========================================================================
-  -- B-LINT-3: SECURITY DEFINER fora da allowlist (se allowlist existir)
+  -- B-LINT-3: SECURITY DEFINER allowlist
+  -- Nota: public.security_definer_allowlist hoje cobre VIEWS, não FUNCTIONS.
+  -- Quando uma allowlist por função existir, plugar aqui. Por ora, no-op.
   -- ==========================================================================
-  SELECT EXISTS (
-    SELECT 1 FROM information_schema.tables
-    WHERE table_schema='public' AND table_name='security_definer_allowlist'
-  ) INTO has_allowlist;
 
-  IF has_allowlist THEN
-    FOR r IN EXECUTE $q$
-      SELECT p.proname,
-             pg_get_function_identity_arguments(p.oid) AS args
-      FROM pg_proc p
-      JOIN pg_namespace n ON n.oid = p.pronamespace
-      WHERE n.nspname='public' AND p.prosecdef=true
-        AND NOT EXISTS (
-          SELECT 1 FROM public.security_definer_allowlist a
-          WHERE a.function_name = p.proname
-        )
-    $q$
-    LOOP
-      -- aviso, não bloqueia: muitos definers legítimos podem não estar registrados ainda
-      RAISE NOTICE '[B-LINT-3] %( %) não está em security_definer_allowlist', r.proname, r.args;
-    END LOOP;
-  END IF;
 
   -- ==========================================================================
   -- B-LINT-4: EXECUTE para anon em SECURITY DEFINER (indevido)
