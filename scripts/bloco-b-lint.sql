@@ -17,7 +17,7 @@ DECLARE
   r RECORD;
   fail_count integer := 0;
   msg text := '';
-  has_allowlist boolean;
+  
 BEGIN
   -- ==========================================================================
   -- B-LINT-1: SECURITY DEFINER sem search_path
