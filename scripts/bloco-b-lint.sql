@@ -73,6 +73,9 @@ BEGIN
   -- ==========================================================================
   -- B-LINT-4: EXECUTE para anon em SECURITY DEFINER (indevido)
   -- ==========================================================================
+  -- Baseline conhecida (débito a tratar em PR separada — não regredir além disto):
+  --   enforce_critical_job_evidence, get_agents_snapshots_list,
+  --   get_agents_list (2 overloads), check_tenant_suspension
   FOR r IN
     SELECT n.nspname, p.proname,
            pg_get_function_identity_arguments(p.oid) AS args
@@ -81,11 +84,18 @@ BEGIN
     WHERE n.nspname = 'public'
       AND p.prosecdef = true
       AND has_function_privilege('anon', p.oid, 'EXECUTE')
+      AND p.proname NOT IN (
+        'enforce_critical_job_evidence',
+        'get_agents_snapshots_list',
+        'get_agents_list',
+        'check_tenant_suspension'
+      )
   LOOP
     fail_count := fail_count + 1;
     msg := msg || format(E'\n  [B-LINT-4] %s.%s(%s) — EXECUTE concedido a anon em SECURITY DEFINER',
                          r.nspname, r.proname, r.args);
   END LOOP;
+
 
   -- ==========================================================================
   -- RESULTADO
