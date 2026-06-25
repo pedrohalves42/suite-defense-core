@@ -1,9 +1,13 @@
-// @ts-nocheck
 /**
- * confirm-force-update — Migrated to serveAgent middleware.
- * NOTE: HMAC is optional for this endpoint (token-only fallback for pre-hotfix agents).
- * Uses serveAgent without hmacVerify, performs optional HMAC check internally.
+ * confirm-force-update — D8-C: typed (no @ts-nocheck).
+ *
+ * Typing-only change. Runtime behavior preserved:
+ * - HMAC is optional (best-effort) for pre-hotfix agents (token-only fallback).
+ * - Idempotency, mismatch (409) and staged (202) branches untouched.
+ * - Same fields cleared on agents update, same evidence rows inserted.
  */
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import type { Database } from '../_shared/database.types.ts';
 import { serveAgent } from '../_shared/serve-tenant.ts';
 import { normalizeVersion } from '../_shared/hexagonal/update-decision-service.ts';
 import { logger } from '../_shared/logger.ts';
@@ -14,8 +18,17 @@ const ConfirmForceUpdateSchema = z.object({
   old_version: z.string().max(50).optional(),
 });
 
+function asNullableString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function asNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 serveAgent(async (req, ctx) => {
-  const { supabase, agentId, agentName, tenantId, hmacSecret, requestId, body, agentData } = ctx;
+  const supabase = ctx.supabase as SupabaseClient<Database>;
+  const { agentId, agentName, tenantId, hmacSecret, requestId, body, agentData } = ctx;
 
   // Optional HMAC verification (non-blocking for pre-hotfix agents)
   const signature = req.headers.get('X-HMAC-Signature');
@@ -30,66 +43,130 @@ serveAgent(async (req, ctx) => {
         agentId, tenantId, endpoint: 'confirm-force-update',
       });
       if (!hmacResult.valid) {
-        logger.warn('[confirm-force-update] HMAC failed, accepting token-only', { requestId, errorCode: hmacResult.errorCode, agentName });
+        logger.warn('[confirm-force-update] HMAC failed, accepting token-only', {
+          requestId, errorCode: hmacResult.errorCode, agentName,
+        });
       }
-    } catch (err) { logger.warn('[confirm-force-update] HMAC check failed (best-effort)', err); }
+    } catch (err) {
+      logger.warn('[confirm-force-update] HMAC check failed (best-effort)', err);
+    }
   }
 
   const parsed = ConfirmForceUpdateSchema.safeParse(body);
   if (!parsed.success) {
-    return new Response(JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return new Response(
+      JSON.stringify({ error: 'Invalid payload', issues: parsed.error.flatten().fieldErrors }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
   }
   const { new_version, old_version } = parsed.data;
 
-  const currentNorm = normalizeVersion(agentData.agent_version as string | null);
+  const currentVersion = asNullableString(agentData.agent_version);
+  const targetVersion = asNullableString(agentData.force_update_version);
+
+  const currentNorm = normalizeVersion(currentVersion);
   const newNorm = normalizeVersion(new_version);
-  const targetNorm = normalizeVersion(agentData.force_update_version as string | null);
-  const deliveryCount = (agentData.force_update_delivered_count as number) ?? (agentData.force_update_delivery_count as number) ?? 0;
+  const targetNorm = normalizeVersion(targetVersion);
+
+  const deliveryCount =
+    asNumber(agentData.force_update_delivered_count) ??
+    asNumber(agentData.force_update_delivery_count) ??
+    0;
   const nowIso = new Date().toISOString();
 
   // GUARD 1: Idempotency
-  if (currentNorm === newNorm && !agentData.force_update_version) {
-    return { success: true, message: 'Already confirmed (idempotent)', agent_name: agentName, new_version, idempotent: true };
+  if (currentNorm === newNorm && !targetVersion) {
+    return {
+      success: true,
+      message: 'Already confirmed (idempotent)',
+      agent_name: agentName,
+      new_version,
+      idempotent: true,
+    };
   }
 
   // GUARD 2: Mismatch
   if (targetNorm && newNorm !== targetNorm) {
     return new Response(JSON.stringify({
       error: 'Reported version does not match pending force update target',
-      agent_name: agentName, current_version: agentData.agent_version, target_version: agentData.force_update_version, reported_version: new_version,
+      agent_name: agentName,
+      current_version: currentVersion,
+      target_version: targetVersion,
+      reported_version: new_version,
     }), { status: 409, headers: { 'Content-Type': 'application/json' } });
   }
 
   // Version not yet confirmed by heartbeat
   if (currentNorm !== newNorm) {
     await supabase.from('agent_evidence_logs').insert({
-      agent_id: agentId, agent_name: agentName, agent_version: agentData.agent_version as string, tenant_id: tenantId,
+      agent_id: agentId,
+      agent_name: agentName,
+      agent_version: currentVersion,
+      tenant_id: tenantId,
       event_type: 'force_update_staged',
-      event_data: { old_version: old_version || agentData.agent_version, new_version, pending_target_version: agentData.force_update_version, delivery_count: deliveryCount, staged_at: nowIso, waiting_for_post_update_heartbeat: true },
-      evidence_hash: crypto.randomUUID(), severity: 'info',
+      event_data: {
+        old_version: old_version || currentVersion,
+        new_version,
+        pending_target_version: targetVersion,
+        delivery_count: deliveryCount,
+        staged_at: nowIso,
+        waiting_for_post_update_heartbeat: true,
+      },
+      evidence_hash: crypto.randomUUID(),
+      severity: 'info',
     });
 
     return new Response(JSON.stringify({
-      success: true, message: 'Force update staged; waiting for heartbeat', agent_name: agentName,
-      current_version: agentData.agent_version, new_version, awaiting_heartbeat: true,
+      success: true,
+      message: 'Force update staged; waiting for heartbeat',
+      agent_name: agentName,
+      current_version: currentVersion,
+      new_version,
+      awaiting_heartbeat: true,
     }), { status: 202, headers: { 'Content-Type': 'application/json' } });
   }
 
   // Clear force update
   await supabase.from('agents').update({
-    force_update_version: null, force_update_reason: null, force_update_at: null,
-    force_update_delivery_count: 0, force_update_delivered_count: 0, force_update_first_delivered_at: null,
+    force_update_version: null,
+    force_update_reason: null,
+    force_update_at: null,
+    force_update_delivery_count: 0,
+    force_update_delivered_count: 0,
+    force_update_first_delivered_at: null,
     last_forced_update_applied: nowIso,
   }).eq('id', agentId);
 
   await supabase.from('agent_evidence_logs').insert({
-    agent_id: agentId, agent_name: agentName, agent_version: new_version, tenant_id: tenantId,
+    agent_id: agentId,
+    agent_name: agentName,
+    agent_version: new_version,
+    tenant_id: tenantId,
     event_type: 'force_update_applied',
-    event_data: { old_version: old_version || agentData.agent_version, new_version, was_force_update: !!agentData.force_update_version, delivery_count: deliveryCount, applied_at: nowIso },
-    evidence_hash: crypto.randomUUID(), severity: 'info',
+    event_data: {
+      old_version: old_version || currentVersion,
+      new_version,
+      was_force_update: !!targetVersion,
+      delivery_count: deliveryCount,
+      applied_at: nowIso,
+    },
+    evidence_hash: crypto.randomUUID(),
+    severity: 'info',
   });
 
-  return { success: true, message: 'Force update confirmed', agent_name: agentName, new_version, old_version: old_version || agentData.agent_version };
+  return {
+    success: true,
+    message: 'Force update confirmed',
+    agent_name: agentName,
+    new_version,
+    old_version: old_version || currentVersion,
+  };
 }, {
-  extraAgentFields: ['agent_version', 'force_update_version', 'force_update_reason', 'force_update_delivery_count', 'force_update_delivered_count'],
+  extraAgentFields: [
+    'agent_version',
+    'force_update_version',
+    'force_update_reason',
+    'force_update_delivery_count',
+    'force_update_delivered_count',
+  ],
 });
