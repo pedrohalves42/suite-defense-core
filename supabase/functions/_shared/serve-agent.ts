@@ -1,19 +1,22 @@
-// @ts-nocheck
 /**
  * serveAgent() — Middleware for agent-authenticated endpoints.
  * Extracted from serve-tenant.ts for modularity.
+ *
+ * D9-X1: removed @ts-nocheck. Typing only — no runtime, auth, HMAC, replay,
+ * honeypot, rate-limit, extraAgentFields or response-shape changes.
  */
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import type { Database } from './database.types.ts';
 import { buildCorsHeaders } from './cors.ts';
 import { securityHeaders } from './security-headers.ts';
 import { requireEnv } from './env.ts';
-import { logger, loggerWithContext } from './logger.ts';
+import { logger } from './logger.ts';
 import { handleExceptionWithContext } from './error-handler.ts';
 import type { RateLimitOption } from './serve-tenant.ts';
 import type { AgentExtraField } from './agent-auth.ts';
 
 function jsonResponse(data: unknown, status = 200, extraHeaders?: Record<string, string>, origin?: string | null) {
-  const cors = buildCorsHeaders(origin);
+  const cors = buildCorsHeaders(origin ?? null);
   return new Response(JSON.stringify(data), {
     status,
     headers: { ...cors, ...securityHeaders, 'Content-Type': 'application/json', ...extraHeaders },
@@ -36,7 +39,11 @@ export interface AgentContext {
   hmacSecret: string | null;
   /** Extra agent fields fetched via extraAgentFields option */
   agentData: Record<string, unknown>;
-  supabase: any;
+  /**
+   * Service-role Supabase client. Typed as `SupabaseClient<Database>` for
+   * IntelliSense; consumers that need looser typing already cast locally.
+   */
+  supabase: SupabaseClient<Database>;
   requestId: string;
   body: unknown;
   /** Raw body text (available when hmacVerify is true) */
@@ -44,7 +51,10 @@ export interface AgentContext {
   req: Request;
 }
 
-export type AgentHandler = (req: Request, ctx: AgentContext) => Promise<Response | Record<string, unknown> | unknown>;
+export type AgentHandler = (
+  req: Request,
+  ctx: AgentContext,
+) => Promise<Response | Record<string, unknown> | unknown>;
 
 export interface ServeAgentOptions {
   /** Additional columns to select from the agents table beyond the defaults.
@@ -77,9 +87,9 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
     let currentTenantId: string | undefined;
 
     try {
-      const supabase = createClient<any>(
+      const supabase: SupabaseClient<Database> = createClient<Database>(
         requireEnv('SUPABASE_URL'),
-        requireEnv('SUPABASE_SERVICE_ROLE_KEY')
+        requireEnv('SUPABASE_SERVICE_ROLE_KEY'),
       );
 
       // 1. JWT / Cross-Auth Protection
