@@ -408,9 +408,10 @@ export async function verifyHmacSignature(
           } else {
             await inlineFormatCacheUpsert(supabase, row);
           }
-        } catch (e: any) {
+        } catch (e: unknown) {
+          const message = e instanceof Error ? e.message : String(e);
           logger.error('[HMAC] Cache dispatch failed', {
-            error: e?.message,
+            error: message,
             tenant_id: resolvedTenantId,
             agent_id: row.agent_id,
           });
@@ -421,23 +422,25 @@ export async function verifyHmacSignature(
       // the coalescer upsert + error logs and contaminating PP02-A metrics.
       const promise = dispatch();
       try {
-        // deno-lint-ignore no-explicit-any
-        const runtime: any = (globalThis as any).EdgeRuntime;
+        type EdgeRuntimeLike = { waitUntil?: (p: Promise<unknown>) => void };
+        const runtime = (globalThis as { EdgeRuntime?: EdgeRuntimeLike }).EdgeRuntime;
         if (runtime && typeof runtime.waitUntil === 'function') {
           runtime.waitUntil(promise);
         } else {
           // Safe fallback: attach a catch so an unhandled rejection cannot
           // crash the isolate if the runtime cancels the promise early.
-          promise.catch((e: any) => {
+          promise.catch((e: unknown) => {
+            const message = e instanceof Error ? e.message : String(e);
             logger.error('[HMAC] Cache dispatch fallback rejected', {
-              error: e?.message,
+              error: message,
               tenant_id: resolvedTenantId,
               agent_id: row.agent_id,
             });
           });
         }
-      } catch (e: any) {
-        logger.error('[HMAC] waitUntil scheduling failed', { error: e?.message });
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        logger.error('[HMAC] waitUntil scheduling failed', { error: message });
       }
     }
 
