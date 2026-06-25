@@ -52,9 +52,10 @@ async function isHmacCoalescingEnabled(
       .maybeSingle();
     if (globalErr) throw globalErr;
     value = globalRow?.enabled === true;
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
     logger.warn('[hmac-coalescer] flag read failed, defaulting to disabled', {
-      message: e?.message,
+      message,
       tenantId: tenantId ?? null,
     });
     value = false;
