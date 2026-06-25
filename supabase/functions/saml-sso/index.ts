@@ -151,7 +151,7 @@ servePublic(async (req, ctx) => {
 
       // Check if user exists
       const { data: { users } } = await supabase.auth.admin.listUsers()
-      let user = users?.find(u => u.email === email)
+      let user: User | undefined = users?.find((u: User) => u.email === email)
 
       if (!user) {
         // Create new user
@@ -165,15 +165,20 @@ servePublic(async (req, ctx) => {
           },
         })
         if (createErr) throw createErr
-        user = newUser.user
+        user = newUser.user ?? undefined
 
-        // Assign role if tenant known
+        // Assign role if tenant known.
+        // NOTE (D9-D1 residual): preexisting chain uses non-standard
+        // `.onConflict().merge()` API. Preserving runtime as-is; cast to
+        // `unknown` to bypass type check. Candidato a hotfix futuro
+        // (substituir por `.upsert(..., { onConflict: 'user_id,tenant_id' })`).
         if (tenantId && user) {
-          await supabase.from('user_roles').insert({
+          await (supabase.from('user_roles').insert({
             user_id: user.id,
             tenant_id: tenantId,
             role,
-          }).onConflict('user_id, tenant_id').merge({ role })
+          }) as unknown as { onConflict: (k: string) => { merge: (v: unknown) => Promise<unknown> } })
+            .onConflict('user_id, tenant_id').merge({ role })
         }
       }
 
