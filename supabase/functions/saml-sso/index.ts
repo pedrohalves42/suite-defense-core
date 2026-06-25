@@ -1,9 +1,17 @@
-// @ts-nocheck
+/**
+ * saml-sso — SAML 2.0 SP endpoint (metadata / login / acs / configure / config).
+ *
+ * D9-D1: Tipagem estrita sem alterar runtime, validação SAML, tenant binding,
+ * RelayState handling, ou semântica de qualquer ação. Helpers compartilhados
+ * (servePublic, etc.) preservados.
+ */
+import type { SupabaseClient, User } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { handleException } from '../_shared/error-handler.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { servePublic } from '../_shared/serve-public.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
+import type { Database } from '../_shared/database.types.ts';
 
 const SamlSchema = z.object({
   action: z.enum(['metadata', 'login', 'acs', 'configure', 'config']).default('metadata'),
@@ -22,7 +30,8 @@ const ACS_URL = Deno.env.get('SAML_ACS_URL') || 'https://cybershield-audit.lovab
 const DASHBOARD_URL = Deno.env.get('DASHBOARD_URL') || 'https://cybershield-audit.lovable.app'
 
 servePublic(async (req, ctx) => {
-  const { requestId, supabase, body: rawBody } = ctx;
+  const { requestId, supabase: supabaseAny, body: rawBody } = ctx;
+  const supabase = supabaseAny as SupabaseClient<Database>;
   const origin = req.headers.get("origin");
 
   try {
@@ -142,7 +151,7 @@ servePublic(async (req, ctx) => {
 
       // Check if user exists
       const { data: { users } } = await supabase.auth.admin.listUsers()
-      let user = users?.find(u => u.email === email)
+      let user: User | undefined = users?.find((u: User) => u.email === email)
 
       if (!user) {
         // Create new user
@@ -156,15 +165,20 @@ servePublic(async (req, ctx) => {
           },
         })
         if (createErr) throw createErr
-        user = newUser.user
+        user = newUser.user ?? undefined
 
-        // Assign role if tenant known
+        // Assign role if tenant known.
+        // NOTE (D9-D1 residual): preexisting chain uses non-standard
+        // `.onConflict().merge()` API. Preserving runtime as-is; cast to
+        // `unknown` to bypass type check. Candidato a hotfix futuro
+        // (substituir por `.upsert(..., { onConflict: 'user_id,tenant_id' })`).
         if (tenantId && user) {
-          await supabase.from('user_roles').insert({
+          await (supabase.from('user_roles').insert({
             user_id: user.id,
             tenant_id: tenantId,
             role,
-          }).onConflict('user_id, tenant_id').merge({ role })
+          }) as unknown as { onConflict: (k: string) => { merge: (v: unknown) => Promise<unknown> } })
+            .onConflict('user_id, tenant_id').merge({ role })
         }
       }
 
@@ -182,13 +196,15 @@ servePublic(async (req, ctx) => {
 
       // Audit log
       if (tenantId) {
-        await supabase.from('audit_logs').insert({
-          tenant_id: tenantId,
-          user_id: user!.id,
-          action: 'saml_login_success',
-          resource_type: 'auth',
-          details: { email, role, groups },
-        }).catch(() => {})
+        await Promise.resolve(
+          supabase.from('audit_logs').insert({
+            tenant_id: tenantId,
+            user_id: user!.id,
+            action: 'saml_login_success',
+            resource_type: 'auth',
+            details: { email, role, groups },
+          })
+        ).catch(() => {})
       }
 
       logger.info(`[saml-sso] ACS: user ${email} authenticated via SAML`)
@@ -237,13 +253,15 @@ servePublic(async (req, ctx) => {
 
       if (upsertErr) throw upsertErr
 
-      await supabase.from('audit_logs').insert({
-        tenant_id: tenantId,
-        user_id: authUser.id,
-        action: 'saml_configured',
-        resource_type: 'saml_config',
-        details: { provider, ssoUrl },
-      }).catch(() => {})
+      await Promise.resolve(
+        supabase.from('audit_logs').insert({
+          tenant_id: tenantId,
+          user_id: authUser.id,
+          action: 'saml_configured',
+          resource_type: 'saml_config',
+          details: { provider, ssoUrl },
+        })
+      ).catch(() => {})
 
       return { success: true };
     }
