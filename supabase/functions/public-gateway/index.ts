@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * public-gateway — Unified Public API Gateway (Phase 5 + 6D + 7)
  *
@@ -9,7 +8,9 @@
  *   GET  ?action=public:health
  *   GET  ?action=public:approve-via-token&token=...
  */
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { buildCorsHeaders } from '../_shared/cors.ts';
+import type { Database } from '../_shared/database.types.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { securityHeaders } from '../_shared/security-headers.ts';
@@ -83,7 +84,8 @@ function jsonRes(data: unknown, status: number, origin: string | null) {
 }
 
 servePublic(async (req, ctx) => {
-  const { requestId, supabase, body: reqBody } = ctx;
+  const { requestId, body: reqBody } = ctx;
+  const supabase = ctx.supabase as SupabaseClient<Database>;
   const origin = req.headers.get('origin');
   const startedAt = Date.now();
 
@@ -126,7 +128,7 @@ servePublic(async (req, ctx) => {
     const resultObj = result as Record<string, unknown>;
     const status = typeof resultObj?.__status === 'number' ? resultObj.__status : 200;
     if (resultObj?.__status) {
-      const { __status, ...rest } = resultObj;
+      const { __status: _omit, ...rest } = resultObj;
       return jsonRes(rest, status, origin);
     }
 
