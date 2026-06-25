@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 /**
  * serveTenant() → Centralized Edge Function middleware for tenant validation.
  * 
@@ -85,17 +85,17 @@ function errorResponse(message: string, status: number, requestId: string, origi
   );
 }
 
-async function resolveDefaultTenant(supabase: any, userId: string): Promise<string | null> {
+async function resolveDefaultTenant(supabase: SupabaseClient<Database>, userId: string): Promise<string | null> {
   const { data } = await supabase
     .from('user_roles')
     .select('tenant_id')
     .eq('user_id', userId)
     .limit(1)
     .maybeSingle();
-  return data?.tenant_id || null;
+  return (data?.tenant_id as string | undefined) ?? null;
 }
 
-async function verifyUserTenantAccess(supabase: any, userId: string, tenantId: string): Promise<boolean> {
+async function verifyUserTenantAccess(supabase: SupabaseClient<Database>, userId: string, tenantId: string): Promise<boolean> {
   const { data } = await supabase
     .from('user_roles')
     .select('tenant_id')
