@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * public-gateway — Unified Public API Gateway (Phase 5 + 6D + 7)
  *
@@ -9,7 +8,9 @@
  *   GET  ?action=public:health
  *   GET  ?action=public:approve-via-token&token=...
  */
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { buildCorsHeaders } from '../_shared/cors.ts';
+import type { Database } from '../_shared/database.types.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { securityHeaders } from '../_shared/security-headers.ts';
