@@ -1,35 +1,75 @@
-// @ts-nocheck
 /**
  * SCIM 2.0 Group Operations
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { Database } from '../_shared/database.types.ts';
 import { SCIM_SCHEMAS, scimHeaders, scimError } from './constants.ts';
 
+type ScimSupabaseClient = SupabaseClient<Database>;
+
+interface ScimGroupRow {
+  id: string;
+  display_name: string;
+  tenant_id?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+interface ScimPatchOperation {
+  op: string;
+  path?: string;
+  value?: unknown;
+}
+
+interface ScimMemberRef {
+  value: string;
+}
+
+interface ScimAuthUser {
+  id: string;
+  email?: string;
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+function asArray<T = unknown>(value: unknown): T[] | undefined {
+  return Array.isArray(value) ? (value as T[]) : undefined;
+}
+
 export async function createGroup(
-  supabase: any,
+  supabase: ScimSupabaseClient,
   tenantId: string,
   body: Record<string, unknown>,
 ): Promise<Response> {
-  const displayName = body.displayName as string;
+  const displayName = asString(body.displayName);
   if (!displayName) return scimError(400, 'displayName is required');
+
+  const externalId = asString(body.externalId) ?? null;
 
   const { data: group, error } = await supabase
     .from('scim_groups')
-    .insert({ tenant_id: tenantId, display_name: displayName, external_id: body.externalId as string || null })
+    .insert({ tenant_id: tenantId, display_name: displayName, external_id: externalId } as never)
     .select()
     .single();
 
   if (error) throw error;
+  const row = group as ScimGroupRow;
 
   return new Response(JSON.stringify({
     schemas: [SCIM_SCHEMAS.GROUP],
-    id: group.id,
-    displayName: group.display_name,
-    meta: { resourceType: 'Group', created: group.created_at, lastModified: group.updated_at || group.created_at },
+    id: row.id,
+    displayName: row.display_name,
+    meta: { resourceType: 'Group', created: row.created_at, lastModified: row.updated_at || row.created_at },
   }), { headers: scimHeaders, status: 201 });
 }
 
-export async function getGroup(supabase: any, tenantId: string, groupId: string): Promise<Response> {
+export async function getGroup(
+  supabase: ScimSupabaseClient,
+  tenantId: string,
+  groupId: string,
+): Promise<Response> {
   const { data: group, error } = await supabase
     .from('scim_groups')
     .select('id, display_name, tenant_id, created_at, updated_at')
@@ -38,31 +78,34 @@ export async function getGroup(supabase: any, tenantId: string, groupId: string)
     .maybeSingle();
 
   if (error || !group) return scimError(404, 'Group not found');
+  const row = group as ScimGroupRow;
 
   const { data: members } = await supabase
     .from('group_members')
     .select('user_id')
     .eq('group_id', groupId);
 
-  const memberList = [];
-  for (const m of members || []) {
+  const memberRows = (members as Array<{ user_id: string }> | null) ?? [];
+  const memberList: Array<{ value: string; display?: string; type: string }> = [];
+  for (const m of memberRows) {
     const { data: authData } = await supabase.auth.admin.getUserById(m.user_id);
-    if (authData?.user) {
-      memberList.push({ value: m.user_id, display: authData.user.email, type: 'User' });
+    const user = authData?.user as ScimAuthUser | undefined;
+    if (user) {
+      memberList.push({ value: m.user_id, display: user.email, type: 'User' });
     }
   }
 
   return new Response(JSON.stringify({
     schemas: [SCIM_SCHEMAS.GROUP],
-    id: group.id,
-    displayName: group.display_name,
+    id: row.id,
+    displayName: row.display_name,
     members: memberList,
-    meta: { resourceType: 'Group', created: group.created_at, lastModified: group.updated_at || group.created_at },
+    meta: { resourceType: 'Group', created: row.created_at, lastModified: row.updated_at || row.created_at },
   }), { headers: scimHeaders });
 }
 
 export async function listGroups(
-  supabase: any,
+  supabase: ScimSupabaseClient,
   tenantId: string,
   params: URLSearchParams,
 ): Promise<Response> {
@@ -77,7 +120,8 @@ export async function listGroups(
 
   if (error) throw error;
 
-  const resources = (groups || []).map((g) => ({
+  const rows = (groups as ScimGroupRow[] | null) ?? [];
+  const resources = rows.map((g) => ({
     schemas: [SCIM_SCHEMAS.GROUP],
     id: g.id,
     displayName: g.display_name,
@@ -94,14 +138,15 @@ export async function listGroups(
 }
 
 export async function updateGroup(
-  supabase: any,
+  supabase: ScimSupabaseClient,
   tenantId: string,
   groupId: string,
   body: Record<string, unknown>,
 ): Promise<Response> {
+  const displayName = asString(body.displayName);
   const { error } = await supabase
     .from('scim_groups')
-    .update({ display_name: body.displayName as string, updated_at: new Date().toISOString() })
+    .update({ display_name: displayName, updated_at: new Date().toISOString() } as never)
     .eq('id', groupId)
     .eq('tenant_id', tenantId);
 
@@ -110,26 +155,28 @@ export async function updateGroup(
 }
 
 export async function patchGroup(
-  supabase: any,
+  supabase: ScimSupabaseClient,
   tenantId: string,
   groupId: string,
   body: Record<string, unknown>,
 ): Promise<Response> {
-  const operations = (body.Operations || []) as Array<{ op: string; path?: string; value?: unknown }>;
+  const operations = asArray<ScimPatchOperation>(body.Operations) ?? [];
 
   for (const op of operations) {
     if (op.op === 'add' && op.path === 'members') {
-      const members = op.value as Array<{ value: string }>;
-      for (const member of members || []) {
+      const members = asArray<ScimMemberRef>(op.value) ?? [];
+      for (const member of members) {
+        if (!member?.value) continue;
         await supabase.from('group_members').upsert(
-          { group_id: groupId, user_id: member.value, tenant_id: tenantId },
+          { group_id: groupId, user_id: member.value, tenant_id: tenantId } as never,
           { onConflict: 'group_id,user_id' },
         );
       }
     }
     if (op.op === 'remove' && op.path === 'members') {
-      const members = op.value as Array<{ value: string }>;
-      for (const member of members || []) {
+      const members = asArray<ScimMemberRef>(op.value) ?? [];
+      for (const member of members) {
+        if (!member?.value) continue;
         await supabase.from('group_members').delete().eq('group_id', groupId).eq('user_id', member.value);
       }
     }
@@ -138,7 +185,11 @@ export async function patchGroup(
   return getGroup(supabase, tenantId, groupId);
 }
 
-export async function deleteGroup(supabase: any, tenantId: string, groupId: string): Promise<Response> {
+export async function deleteGroup(
+  supabase: ScimSupabaseClient,
+  tenantId: string,
+  groupId: string,
+): Promise<Response> {
   await supabase.from('scim_groups').delete().eq('id', groupId).eq('tenant_id', tenantId);
   return new Response(null, { headers: scimHeaders, status: 204 });
 }
