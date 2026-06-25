@@ -30,7 +30,8 @@ const ACS_URL = Deno.env.get('SAML_ACS_URL') || 'https://cybershield-audit.lovab
 const DASHBOARD_URL = Deno.env.get('DASHBOARD_URL') || 'https://cybershield-audit.lovable.app'
 
 servePublic(async (req, ctx) => {
-  const { requestId, supabase, body: rawBody } = ctx;
+  const { requestId, supabase: supabaseAny, body: rawBody } = ctx;
+  const supabase = supabaseAny as SupabaseClient<Database>;
   const origin = req.headers.get("origin");
 
   try {
