@@ -1,14 +1,23 @@
-// @ts-nocheck
 /**
  * SCIM 2.0 Provisioning — RFC 7644
  * Suporte a Okta, Azure AD, Google Workspace
  */
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../_shared/logger.ts';
+import type { Database } from '../_shared/database.types.ts';
 import { SCIM_SCHEMAS, scimHeaders, scimError, serviceProviderConfig, resourceTypes, schemas } from './constants.ts';
 import * as userHandlers from './user-handlers.ts';
 import * as groupHandlers from './group-handlers.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { servePublic } from '../_shared/serve-public.ts';
+
+type ScimSupabaseClient = SupabaseClient<Database>;
+
+interface ScimTenant {
+  id: string;
+  name: string;
+  scim_config: unknown;
+}
 
 const ScimUserSchema = z.object({
   schemas: z.array(z.string().max(256)).max(10).optional(),
@@ -29,16 +38,27 @@ const ScimGroupSchema = z.object({
   Operations: z.array(z.object({ op: z.string().max(32), path: z.string().max(255).optional(), value: z.unknown().optional() })).max(100).optional(),
 }).passthrough();
 
-async function parseAndValidateScimBody(req: Request, schema: z.ZodType): Promise<{ data: Record<string, unknown> } | Response> {
+async function parseAndValidateScimBody(
+  req: Request,
+  schema: z.ZodTypeAny,
+): Promise<{ data: Record<string, unknown> } | Response> {
   let body: unknown;
   try { body = await req.json(); } catch { return scimError(400, 'Invalid JSON body'); }
   const parsed = schema.safeParse(body);
-  if (!parsed.success) return scimError(400, `Invalid SCIM payload: ${parsed.error.issues.map(i => i.message).join(', ')}`);
+  if (!parsed.success) return scimError(400, `Invalid SCIM payload: ${parsed.error.issues.map((i) => i.message).join(', ')}`);
   return { data: parsed.data as Record<string, unknown> };
 }
 
-async function authenticateTenant(supabase: any, apiKey: string) {
-  const { data, error } = await supabase
+async function authenticateTenant(supabase: ScimSupabaseClient, apiKey: string): Promise<ScimTenant | null> {
+  const { data, error } = await (supabase as unknown as {
+    from: (t: string) => {
+      select: (cols: string) => {
+        eq: (col: string, val: string) => {
+          maybeSingle: () => Promise<{ data: ScimTenant | null; error: unknown }>;
+        };
+      };
+    };
+  })
     .from('tenants')
     .select('id, name, scim_config')
     .eq('scim_api_key', apiKey)
@@ -48,8 +68,8 @@ async function authenticateTenant(supabase: any, apiKey: string) {
 }
 
 servePublic(async (req, ctx) => {
-  const { requestId, supabase, body: rawBody } = ctx;
-  
+  const supabase = ctx.supabase as ScimSupabaseClient;
+
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
