@@ -141,14 +141,19 @@ function recordTokenFailure(
       reason,
       ...(extra || {}),
     });
-    const work = supabase
+    // D9-X1-FIX: PostgREST builder is a `PromiseLike` (no `.catch`).
+    // Wrap with `Promise.resolve(...)` to get a real `Promise`, preserving
+    // the previous fire-and-forget semantics byte-for-byte.
+    const insertOp = supabase
       .from('token_validation_failures')
       .insert({
         token_hash_prefix: tokenPrefix || 'unknown',
         failure_reason: reasonPayload,
         client_ip: clientIp,
         user_agent: ua,
-      })
+      });
+
+    const work: Promise<void> = Promise.resolve(insertOp)
       .then((res: PostgrestLikeResponse) => {
         if (res?.error) {
           logger.warn(`[${endpoint}] token_validation_failures insert failed`, {
