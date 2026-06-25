@@ -209,9 +209,9 @@ export async function inlineFormatCacheUpsert(
     if (error) {
       logger.warn('[hmac-coalescer] inline upsert failed', { message: error.message });
     }
-  } catch (err) {
+  } catch (err: unknown) {
     logger.warn('[hmac-coalescer] inline upsert threw', {
-      message: (err as Error).message,
+      message: err instanceof Error ? err.message : String(err),
     });
   }
 }
