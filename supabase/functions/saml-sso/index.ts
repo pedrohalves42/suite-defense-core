@@ -253,13 +253,15 @@ servePublic(async (req, ctx) => {
 
       if (upsertErr) throw upsertErr
 
-      await supabase.from('audit_logs').insert({
-        tenant_id: tenantId,
-        user_id: authUser.id,
-        action: 'saml_configured',
-        resource_type: 'saml_config',
-        details: { provider, ssoUrl },
-      }).catch(() => {})
+      await Promise.resolve(
+        supabase.from('audit_logs').insert({
+          tenant_id: tenantId,
+          user_id: authUser.id,
+          action: 'saml_configured',
+          resource_type: 'saml_config',
+          details: { provider, ssoUrl },
+        })
+      ).catch(() => {})
 
       return { success: true };
     }
