@@ -1,12 +1,14 @@
-// @ts-nocheck
 /**
  * serve-dns-filter — Migrated to serveAgent middleware with HMAC verification.
  */
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import type { Database } from '../_shared/database.types.ts';
 import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 
 serveAgent(async (_req, ctx) => {
-  const { supabase, agentName, tenantId, requestId } = ctx;
+  const { agentName, tenantId, requestId } = ctx;
+  const supabase = ctx.supabase as SupabaseClient<Database>;
 
   logger.info(`[${requestId}] Authenticated agent: ${agentName}`);
 
