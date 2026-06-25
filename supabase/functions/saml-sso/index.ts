@@ -1,9 +1,17 @@
-// @ts-nocheck
+/**
+ * saml-sso — SAML 2.0 SP endpoint (metadata / login / acs / configure / config).
+ *
+ * D9-D1: Tipagem estrita sem alterar runtime, validação SAML, tenant binding,
+ * RelayState handling, ou semântica de qualquer ação. Helpers compartilhados
+ * (servePublic, etc.) preservados.
+ */
+import type { SupabaseClient, User } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { handleException } from '../_shared/error-handler.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { servePublic } from '../_shared/serve-public.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
+import type { Database } from '../_shared/database.types.ts';
 
 const SamlSchema = z.object({
   action: z.enum(['metadata', 'login', 'acs', 'configure', 'config']).default('metadata'),
