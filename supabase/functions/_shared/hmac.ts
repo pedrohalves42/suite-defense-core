@@ -153,7 +153,7 @@ function pruneCache<T>(cache: Map<string, { ts: number } & T>, maxEntries: numbe
 
 async function getCryptoKey(keyData: Uint8Array, keyName: string): Promise<CryptoKey> {
   // P3 FIX: Include a digest of the key data to prevent cross-agent cache collisions
-  const keyDigest = await crypto.subtle.digest('SHA-256', keyData);
+  const keyDigest = await crypto.subtle.digest('SHA-256', keyData.buffer as ArrayBuffer);
   const keyHash = Array.from(new Uint8Array(keyDigest)).map(b => b.toString(16).padStart(2, '0')).join('');
   const cacheKey = `${keyName}:${keyHash}`;
   const now = Date.now();
