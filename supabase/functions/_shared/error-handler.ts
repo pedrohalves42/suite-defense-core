@@ -74,12 +74,12 @@ export function createErrorResponse(
   requestId?: string,
   origin?: string | null
 ): Response {
-  const headers = buildCorsHeaders(origin || null);
+  const headers = buildCorsHeaders(origin ?? null);
 
   // New signature: createErrorResponse(error, status)
-  if (typeof errorOrCode === 'object' && 'error' in errorOrCode) {
-    const error = errorOrCode;
-    const statusCode = statusOrMessage as number || 500;
+  if (typeof errorOrCode === 'object' && errorOrCode !== null && 'error' in errorOrCode) {
+    const error: StandardError = errorOrCode;
+    const statusCode: number = typeof statusOrMessage === 'number' ? statusOrMessage : 500;
     return new Response(
       JSON.stringify(error),
       {
@@ -88,12 +88,12 @@ export function createErrorResponse(
       }
     );
   }
-  
+
   // Old signature: createErrorResponse(code, message, status, requestId)
-  const code = errorOrCode as string;
-  const message = statusOrMessage as string;
-  const statusCode = status || 500;
-  
+  const code: string = typeof errorOrCode === 'string' ? errorOrCode : String(errorOrCode);
+  const message: string = typeof statusOrMessage === 'string' ? statusOrMessage : '';
+  const statusCode: number = typeof status === 'number' ? status : 500;
+
   const standardError = createStandardError(code, message, undefined, requestId);
   return new Response(
     JSON.stringify(standardError),
