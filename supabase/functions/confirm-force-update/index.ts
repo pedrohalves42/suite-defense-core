@@ -63,7 +63,6 @@ serveAgent(async (req, ctx) => {
 
   const currentVersion = asNullableString(agentData.agent_version);
   const targetVersion = asNullableString(agentData.force_update_version);
-  const forceReason = asNullableString(agentData.force_update_reason);
 
   const currentNorm = normalizeVersion(currentVersion);
   const newNorm = normalizeVersion(new_version);
