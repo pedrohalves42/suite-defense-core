@@ -196,13 +196,15 @@ servePublic(async (req, ctx) => {
 
       // Audit log
       if (tenantId) {
-        await supabase.from('audit_logs').insert({
-          tenant_id: tenantId,
-          user_id: user!.id,
-          action: 'saml_login_success',
-          resource_type: 'auth',
-          details: { email, role, groups },
-        }).catch(() => {})
+        await Promise.resolve(
+          supabase.from('audit_logs').insert({
+            tenant_id: tenantId,
+            user_id: user!.id,
+            action: 'saml_login_success',
+            resource_type: 'auth',
+            details: { email, role, groups },
+          })
+        ).catch(() => {})
       }
 
       logger.info(`[saml-sso] ACS: user ${email} authenticated via SAML`)
