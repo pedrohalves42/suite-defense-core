@@ -131,10 +131,10 @@ async function flush(client: CoalescerClientLike): Promise<void> {
       lru_size: lru.size,
       metrics,
     });
-  } catch (err) {
+  } catch (err: unknown) {
     metrics.flush_errors += 1;
     logger.warn('[hmac-coalescer] batch flush failed, falling back to per-row upsert', {
-      message: (err as Error).message,
+      message: err instanceof Error ? err.message : String(err),
       rows: rows.length,
     });
     // Fallback: per-row upsert. Failures here are tolerable — the format
