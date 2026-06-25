@@ -148,7 +148,6 @@ serveAgent(async (req, ctx) => {
       old_version: old_version || currentVersion,
       new_version,
       was_force_update: !!targetVersion,
-      force_update_reason: forceReason,
       delivery_count: deliveryCount,
       applied_at: nowIso,
     },
