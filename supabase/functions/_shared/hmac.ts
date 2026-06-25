@@ -52,9 +52,10 @@ async function isHmacCoalescingEnabled(
       .maybeSingle();
     if (globalErr) throw globalErr;
     value = globalRow?.enabled === true;
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
     logger.warn('[hmac-coalescer] flag read failed, defaulting to disabled', {
-      message: e?.message,
+      message,
       tenantId: tenantId ?? null,
     });
     value = false;
@@ -152,7 +153,7 @@ function pruneCache<T>(cache: Map<string, { ts: number } & T>, maxEntries: numbe
 
 async function getCryptoKey(keyData: Uint8Array, keyName: string): Promise<CryptoKey> {
   // P3 FIX: Include a digest of the key data to prevent cross-agent cache collisions
-  const keyDigest = await crypto.subtle.digest('SHA-256', keyData);
+  const keyDigest = await crypto.subtle.digest('SHA-256', keyData.buffer as ArrayBuffer);
   const keyHash = Array.from(new Uint8Array(keyDigest)).map(b => b.toString(16).padStart(2, '0')).join('');
   const cacheKey = `${keyName}:${keyHash}`;
   const now = Date.now();
@@ -407,9 +408,10 @@ export async function verifyHmacSignature(
           } else {
             await inlineFormatCacheUpsert(supabase, row);
           }
-        } catch (e: any) {
+        } catch (e: unknown) {
+          const message = e instanceof Error ? e.message : String(e);
           logger.error('[HMAC] Cache dispatch failed', {
-            error: e?.message,
+            error: message,
             tenant_id: resolvedTenantId,
             agent_id: row.agent_id,
           });
@@ -420,23 +422,25 @@ export async function verifyHmacSignature(
       // the coalescer upsert + error logs and contaminating PP02-A metrics.
       const promise = dispatch();
       try {
-        // deno-lint-ignore no-explicit-any
-        const runtime: any = (globalThis as any).EdgeRuntime;
+        type EdgeRuntimeLike = { waitUntil?: (p: Promise<unknown>) => void };
+        const runtime = (globalThis as { EdgeRuntime?: EdgeRuntimeLike }).EdgeRuntime;
         if (runtime && typeof runtime.waitUntil === 'function') {
           runtime.waitUntil(promise);
         } else {
           // Safe fallback: attach a catch so an unhandled rejection cannot
           // crash the isolate if the runtime cancels the promise early.
-          promise.catch((e: any) => {
+          promise.catch((e: unknown) => {
+            const message = e instanceof Error ? e.message : String(e);
             logger.error('[HMAC] Cache dispatch fallback rejected', {
-              error: e?.message,
+              error: message,
               tenant_id: resolvedTenantId,
               agent_id: row.agent_id,
             });
           });
         }
-      } catch (e: any) {
-        logger.error('[HMAC] waitUntil scheduling failed', { error: e?.message });
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        logger.error('[HMAC] waitUntil scheduling failed', { error: message });
       }
     }
 
