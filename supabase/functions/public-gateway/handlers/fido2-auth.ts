@@ -58,7 +58,7 @@ export async function handleFido2Authenticate(
     const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
     if (listError) throw listError;
 
-    const user = users?.find(u => u.email === email);
+    const user = users?.find((u: { email?: string | null }) => u.email === email);
     if (!user) {
       return { error: 'No account found with this email', __status: 404 };
     }
@@ -110,7 +110,7 @@ export async function handleFido2Authenticate(
     const { email, authResponse, expectedChallenge } = parsed.data;
 
     const { data: { users } } = await supabase.auth.admin.listUsers();
-    const user = users?.find(u => u.email === email);
+    const user = users?.find((u: { email?: string | null }) => u.email === email);
     if (!user) {
       return { error: 'User not found', __status: 404 };
     }

@@ -11,7 +11,11 @@ export interface FingerprintCandidate {
 }
 
 export async function sha256Hex(bytes: Uint8Array): Promise<string> {
-  const hash = await crypto.subtle.digest('SHA-256', bytes);
+  // Copy into a fresh ArrayBuffer-backed Uint8Array to satisfy BufferSource typing
+  // (Deno lib types reject Uint8Array<ArrayBufferLike>). Byte-identical output preserved.
+  const copy = new Uint8Array(bytes.length);
+  copy.set(bytes);
+  const hash = await crypto.subtle.digest('SHA-256', copy.buffer);
   return Array.from(new Uint8Array(hash))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
