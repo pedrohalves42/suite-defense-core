@@ -2646,6 +2646,24 @@ export type Database = {
           },
         ]
       }
+      agent_hmac_signatures: {
+        Row: {
+          agent_name: string
+          created_at: string
+          signature: string
+        }
+        Insert: {
+          agent_name: string
+          created_at?: string
+          signature: string
+        }
+        Update: {
+          agent_name?: string
+          created_at?: string
+          signature?: string
+        }
+        Relationships: []
+      }
       agent_light_mode_configs: {
         Row: {
           activated_at: string | null
@@ -4273,6 +4291,63 @@ export type Database = {
           },
         ]
       }
+      agent_registration_locks: {
+        Row: {
+          agent_name: string
+          locked_at: string | null
+          locked_by_agent_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          agent_name: string
+          locked_at?: string | null
+          locked_by_agent_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          agent_name?: string
+          locked_at?: string | null
+          locked_by_agent_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_registration_locks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_registration_locks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_registration_locks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "agent_registration_locks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "agent_registration_locks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       agent_releases: {
         Row: {
           channel: string
@@ -4948,75 +5023,6 @@ export type Database = {
           },
         ]
       }
-      agent_system_metrics_2026_03: {
-        Row: {
-          agent_id: string
-          collected_at: string
-          cpu_cores: number | null
-          cpu_name: string | null
-          cpu_usage_percent: number | null
-          created_at: string
-          disk_free_gb: number | null
-          disk_total_gb: number | null
-          disk_usage_percent: number | null
-          disk_used_gb: number | null
-          id: string
-          last_boot_time: string | null
-          memory_free_gb: number | null
-          memory_total_gb: number | null
-          memory_usage_percent: number | null
-          memory_used_gb: number | null
-          network_bytes_received: number | null
-          network_bytes_sent: number | null
-          tenant_id: string
-          uptime_seconds: number | null
-        }
-        Insert: {
-          agent_id: string
-          collected_at?: string
-          cpu_cores?: number | null
-          cpu_name?: string | null
-          cpu_usage_percent?: number | null
-          created_at?: string
-          disk_free_gb?: number | null
-          disk_total_gb?: number | null
-          disk_usage_percent?: number | null
-          disk_used_gb?: number | null
-          id?: string
-          last_boot_time?: string | null
-          memory_free_gb?: number | null
-          memory_total_gb?: number | null
-          memory_usage_percent?: number | null
-          memory_used_gb?: number | null
-          network_bytes_received?: number | null
-          network_bytes_sent?: number | null
-          tenant_id: string
-          uptime_seconds?: number | null
-        }
-        Update: {
-          agent_id?: string
-          collected_at?: string
-          cpu_cores?: number | null
-          cpu_name?: string | null
-          cpu_usage_percent?: number | null
-          created_at?: string
-          disk_free_gb?: number | null
-          disk_total_gb?: number | null
-          disk_usage_percent?: number | null
-          disk_used_gb?: number | null
-          id?: string
-          last_boot_time?: string | null
-          memory_free_gb?: number | null
-          memory_total_gb?: number | null
-          memory_usage_percent?: number | null
-          memory_used_gb?: number | null
-          network_bytes_received?: number | null
-          network_bytes_sent?: number | null
-          tenant_id?: string
-          uptime_seconds?: number | null
-        }
-        Relationships: []
-      }
       agent_system_metrics_2026_04: {
         Row: {
           agent_id: string
@@ -5087,6 +5093,144 @@ export type Database = {
         Relationships: []
       }
       agent_system_metrics_2026_05: {
+        Row: {
+          agent_id: string
+          collected_at: string
+          cpu_cores: number | null
+          cpu_name: string | null
+          cpu_usage_percent: number | null
+          created_at: string
+          disk_free_gb: number | null
+          disk_total_gb: number | null
+          disk_usage_percent: number | null
+          disk_used_gb: number | null
+          id: string
+          last_boot_time: string | null
+          memory_free_gb: number | null
+          memory_total_gb: number | null
+          memory_usage_percent: number | null
+          memory_used_gb: number | null
+          network_bytes_received: number | null
+          network_bytes_sent: number | null
+          tenant_id: string
+          uptime_seconds: number | null
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id: string
+          uptime_seconds?: number | null
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id?: string
+          uptime_seconds?: number | null
+        }
+        Relationships: []
+      }
+      agent_system_metrics_2026_06: {
+        Row: {
+          agent_id: string
+          collected_at: string
+          cpu_cores: number | null
+          cpu_name: string | null
+          cpu_usage_percent: number | null
+          created_at: string
+          disk_free_gb: number | null
+          disk_total_gb: number | null
+          disk_usage_percent: number | null
+          disk_used_gb: number | null
+          id: string
+          last_boot_time: string | null
+          memory_free_gb: number | null
+          memory_total_gb: number | null
+          memory_usage_percent: number | null
+          memory_used_gb: number | null
+          network_bytes_received: number | null
+          network_bytes_sent: number | null
+          tenant_id: string
+          uptime_seconds: number | null
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id: string
+          uptime_seconds?: number | null
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id?: string
+          uptime_seconds?: number | null
+        }
+        Relationships: []
+      }
+      agent_system_metrics_2026_07: {
         Row: {
           agent_id: string
           collected_at: string
@@ -7083,6 +7227,7 @@ export type Database = {
           agent_version_code: number | null
           archived_at: string | null
           archived_reason: string | null
+          created_at: string | null
           display_name: string | null
           ed25519_supported: boolean | null
           enrolled_at: string
@@ -7123,6 +7268,7 @@ export type Database = {
           result_public_key: string | null
           revalidation_reason: string | null
           revalidation_required_at: string | null
+          row_version: number
           safe_mode_entered_at: string | null
           safe_mode_reason: string | null
           scheduling_paused: boolean
@@ -7134,6 +7280,8 @@ export type Database = {
           tenant_id: string
           throttle_reason: string | null
           throttled_at: string | null
+          updated_at: string | null
+          version: number | null
           web_activity_consent_at: string | null
           web_activity_consent_by: string | null
           web_activity_consent_enabled: boolean | null
@@ -7148,6 +7296,7 @@ export type Database = {
           agent_version_code?: number | null
           archived_at?: string | null
           archived_reason?: string | null
+          created_at?: string | null
           display_name?: string | null
           ed25519_supported?: boolean | null
           enrolled_at?: string
@@ -7188,6 +7337,7 @@ export type Database = {
           result_public_key?: string | null
           revalidation_reason?: string | null
           revalidation_required_at?: string | null
+          row_version?: number
           safe_mode_entered_at?: string | null
           safe_mode_reason?: string | null
           scheduling_paused?: boolean
@@ -7199,6 +7349,8 @@ export type Database = {
           tenant_id: string
           throttle_reason?: string | null
           throttled_at?: string | null
+          updated_at?: string | null
+          version?: number | null
           web_activity_consent_at?: string | null
           web_activity_consent_by?: string | null
           web_activity_consent_enabled?: boolean | null
@@ -7213,6 +7365,7 @@ export type Database = {
           agent_version_code?: number | null
           archived_at?: string | null
           archived_reason?: string | null
+          created_at?: string | null
           display_name?: string | null
           ed25519_supported?: boolean | null
           enrolled_at?: string
@@ -7253,6 +7406,7 @@ export type Database = {
           result_public_key?: string | null
           revalidation_reason?: string | null
           revalidation_required_at?: string | null
+          row_version?: number
           safe_mode_entered_at?: string | null
           safe_mode_reason?: string | null
           scheduling_paused?: boolean
@@ -7264,6 +7418,8 @@ export type Database = {
           tenant_id?: string
           throttle_reason?: string | null
           throttled_at?: string | null
+          updated_at?: string | null
+          version?: number | null
           web_activity_consent_at?: string | null
           web_activity_consent_by?: string | null
           web_activity_consent_enabled?: boolean | null
@@ -8161,6 +8317,78 @@ export type Database = {
           },
           {
             foreignKeyName: "fk_ai_actions_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      ai_analysis_cache: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          hit_count: number | null
+          id: string
+          input_hash: string
+          last_hit_at: string | null
+          model_name: string | null
+          result_data: Json
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          hit_count?: number | null
+          id?: string
+          input_hash: string
+          last_hit_at?: string | null
+          model_name?: string | null
+          result_data: Json
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          hit_count?: number | null
+          id?: string
+          input_hash?: string
+          last_hit_at?: string | null
+          model_name?: string | null
+          result_data?: Json
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_analysis_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_analysis_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_analysis_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_analysis_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_analysis_cache_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
@@ -18946,81 +19174,6 @@ export type Database = {
         }
         Relationships: []
       }
-      endpoint_network_events_partitioned_2026_03: {
-        Row: {
-          agent_id: string
-          bytes_received: number | null
-          bytes_sent: number | null
-          created_at: string
-          detection_tags: string[] | null
-          direction: string | null
-          dns_query_type: string | null
-          dns_response: string | null
-          domain: string | null
-          event_time: string
-          event_type: string
-          geo_country: string | null
-          id: string
-          is_suspicious: boolean | null
-          local_address: string | null
-          local_port: number | null
-          process_name: string | null
-          process_pid: number | null
-          protocol: string | null
-          remote_address: string | null
-          remote_port: number | null
-          tenant_id: string
-        }
-        Insert: {
-          agent_id: string
-          bytes_received?: number | null
-          bytes_sent?: number | null
-          created_at?: string
-          detection_tags?: string[] | null
-          direction?: string | null
-          dns_query_type?: string | null
-          dns_response?: string | null
-          domain?: string | null
-          event_time?: string
-          event_type?: string
-          geo_country?: string | null
-          id?: string
-          is_suspicious?: boolean | null
-          local_address?: string | null
-          local_port?: number | null
-          process_name?: string | null
-          process_pid?: number | null
-          protocol?: string | null
-          remote_address?: string | null
-          remote_port?: number | null
-          tenant_id: string
-        }
-        Update: {
-          agent_id?: string
-          bytes_received?: number | null
-          bytes_sent?: number | null
-          created_at?: string
-          detection_tags?: string[] | null
-          direction?: string | null
-          dns_query_type?: string | null
-          dns_response?: string | null
-          domain?: string | null
-          event_time?: string
-          event_type?: string
-          geo_country?: string | null
-          id?: string
-          is_suspicious?: boolean | null
-          local_address?: string | null
-          local_port?: number | null
-          process_name?: string | null
-          process_pid?: number | null
-          protocol?: string | null
-          remote_address?: string | null
-          remote_port?: number | null
-          tenant_id?: string
-        }
-        Relationships: []
-      }
       endpoint_network_events_partitioned_2026_04: {
         Row: {
           agent_id: string
@@ -22145,6 +22298,7 @@ export type Database = {
           id: string
           job_id: string | null
           next_action: string | null
+          processing_cost: number | null
           report_data: Json | null
           report_type: string
           risk_level: string | null
@@ -22155,6 +22309,7 @@ export type Database = {
           status: string | null
           tenant_id: string
           title: string
+          token_usage: Json | null
           triggered_by: string | null
           verified_at: string | null
           verified_by: string | null
@@ -22175,6 +22330,7 @@ export type Database = {
           id?: string
           job_id?: string | null
           next_action?: string | null
+          processing_cost?: number | null
           report_data?: Json | null
           report_type: string
           risk_level?: string | null
@@ -22185,6 +22341,7 @@ export type Database = {
           status?: string | null
           tenant_id: string
           title: string
+          token_usage?: Json | null
           triggered_by?: string | null
           verified_at?: string | null
           verified_by?: string | null
@@ -22205,6 +22362,7 @@ export type Database = {
           id?: string
           job_id?: string | null
           next_action?: string | null
+          processing_cost?: number | null
           report_data?: Json | null
           report_type?: string
           risk_level?: string | null
@@ -22215,6 +22373,7 @@ export type Database = {
           status?: string | null
           tenant_id?: string
           title?: string
+          token_usage?: Json | null
           triggered_by?: string | null
           verified_at?: string | null
           verified_by?: string | null
@@ -22728,27 +22887,6 @@ export type Database = {
         ]
       }
       hmac_signatures: {
-        Row: {
-          agent_name: string
-          id: string
-          signature: string
-          used_at: string
-        }
-        Insert: {
-          agent_name: string
-          id?: string
-          signature: string
-          used_at?: string
-        }
-        Update: {
-          agent_name?: string
-          id?: string
-          signature?: string
-          used_at?: string
-        }
-        Relationships: []
-      }
-      hmac_signatures_2026_03: {
         Row: {
           agent_name: string
           id: string
@@ -31024,6 +31162,66 @@ export type Database = {
           },
         ]
       }
+      pp02b_canary_snapshots: {
+        Row: {
+          canary_agent_id: string | null
+          canary_heartbeat_age_seconds: number | null
+          canary_last_heartbeat: string | null
+          coalescer_distinct_agents: number
+          coalescer_rows_written: number
+          coalescer_total_hit_count: number
+          created_at: string
+          id: string
+          label: string
+          notes: Json
+          tenant_id: string
+          token_validation_failures: number
+          verdict_auth: string
+          verdict_coalescer: string
+          verdict_heartbeat: string
+          window_end: string
+          window_start: string
+        }
+        Insert: {
+          canary_agent_id?: string | null
+          canary_heartbeat_age_seconds?: number | null
+          canary_last_heartbeat?: string | null
+          coalescer_distinct_agents: number
+          coalescer_rows_written: number
+          coalescer_total_hit_count: number
+          created_at?: string
+          id?: string
+          label: string
+          notes?: Json
+          tenant_id: string
+          token_validation_failures: number
+          verdict_auth: string
+          verdict_coalescer: string
+          verdict_heartbeat: string
+          window_end: string
+          window_start: string
+        }
+        Update: {
+          canary_agent_id?: string | null
+          canary_heartbeat_age_seconds?: number | null
+          canary_last_heartbeat?: string | null
+          coalescer_distinct_agents?: number
+          coalescer_rows_written?: number
+          coalescer_total_hit_count?: number
+          created_at?: string
+          id?: string
+          label?: string
+          notes?: Json
+          tenant_id?: string
+          token_validation_failures?: number
+          verdict_auth?: string
+          verdict_coalescer?: string
+          verdict_heartbeat?: string
+          window_end?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -38904,6 +39102,72 @@ export type Database = {
             foreignKeyName: "tenant_risk_scores_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      tenant_security_policies: {
+        Row: {
+          created_at: string | null
+          enforce_hmac_enrollment: boolean | null
+          id: string
+          max_clock_skew_seconds: number | null
+          tenant_id: string
+          token_expiry_days: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          enforce_hmac_enrollment?: boolean | null
+          id?: string
+          max_clock_skew_seconds?: number | null
+          tenant_id: string
+          token_expiry_days?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          enforce_hmac_enrollment?: boolean | null
+          id?: string
+          max_clock_skew_seconds?: number | null
+          tenant_id?: string
+          token_expiry_days?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_security_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_security_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_security_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_security_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_tenant_isolation_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_security_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
             referencedRelation: "v_tenant_plan_status"
             referencedColumns: ["tenant_id"]
           },
@@ -49895,6 +50159,10 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: Json
       }
+      check_tenant_suspension: {
+        Args: { p_tenant_id: string }
+        Returns: boolean
+      }
       claim_event_buffer_batch: {
         Args: { p_batch_id: string; p_limit?: number }
         Returns: number
@@ -49917,14 +50185,18 @@ export type Database = {
         Args: { p_error_message: string }
         Returns: string
       }
+      cleanup_agent_hmac_signatures: { Args: never; Returns: undefined }
       cleanup_all_problematic_agents: {
         Args: { p_tenant_id: string }
         Returns: Json
       }
+      cleanup_expired_ai_cache: { Args: never; Returns: undefined }
       cleanup_expired_cache: { Args: never; Returns: number }
+      cleanup_expired_hmac_signatures: { Args: never; Returns: undefined }
       cleanup_expired_keys: { Args: never; Returns: number }
       cleanup_expired_sessions: { Args: never; Returns: number }
       cleanup_expired_telemetry: { Args: never; Returns: Json }
+      cleanup_hmac_nonces: { Args: never; Returns: undefined }
       cleanup_honeypot_old_data: {
         Args: { p_retention_days?: number }
         Returns: Json
@@ -49949,7 +50221,7 @@ export type Database = {
         Returns: number
       }
       cleanup_old_failed_attempts: { Args: never; Returns: undefined }
-      cleanup_old_hmac_signatures: { Args: never; Returns: number }
+      cleanup_old_hmac_signatures: { Args: never; Returns: undefined }
       cleanup_old_metrics: { Args: never; Returns: undefined }
       cleanup_old_metrics_90days: {
         Args: never
@@ -50239,7 +50511,12 @@ export type Database = {
           version_id: string
         }[]
       }
-      diagnose_agent: { Args: { p_agent_name: string }; Returns: Json }
+      diagnose_agent:
+        | { Args: { p_agent_name: string }; Returns: Json }
+        | {
+            Args: { p_agent_name: string; p_tenant_id?: string }
+            Returns: Json
+          }
       diagnose_agent_issues: {
         Args: { p_agent_name: string; p_tenant_id: string }
         Returns: {
@@ -50266,6 +50543,30 @@ export type Database = {
         Args: { retention_days?: number }
         Returns: undefined
       }
+      enroll_agent_atomic:
+        | {
+            Args: {
+              p_agent_name: string
+              p_expires_at: string
+              p_hmac_secret: string
+              p_key_hash: string
+              p_token_hash: string
+              p_token_prefix: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_agent_name: string
+              p_expires_at: string
+              p_hmac_secret: string
+              p_key_hash: string
+              p_metadata_hash?: string
+              p_token_hash: string
+              p_token_prefix: string
+            }
+            Returns: Json
+          }
       ensure_partition_rls: { Args: never; Returns: undefined }
       ensure_tenant_features: {
         Args: {
@@ -50505,13 +50806,78 @@ export type Database = {
         }
       }
       get_agent_snapshot: { Args: { p_agent_id: string }; Returns: Json }
-      get_agents_list: {
-        Args: { p_include_archived?: boolean; p_tenant_id: string }
-        Returns: Json[]
-      }
+      get_agents_list:
+        | {
+            Args: { p_include_archived?: boolean; p_tenant_id: string }
+            Returns: {
+              agent_name: string
+              agent_state: string
+              agent_version: string
+              agent_version_code: number
+              archived_at: string
+              display_name: string
+              enrolled_at: string
+              hostname: string
+              id: string
+              is_isolated: boolean
+              is_throttled: boolean
+              last_block_sync_at: string
+              last_heartbeat: string
+              os_type: string
+              os_version: string
+              skip_firewall_remediation: boolean
+              status: string
+              tenant_id: string
+            }[]
+          }
+        | {
+            Args: {
+              p_agent_id?: string
+              p_include_archived?: boolean
+              p_tenant_id: string
+            }
+            Returns: {
+              agent_name: string
+              agent_state: string
+              agent_version: string
+              agent_version_code: number
+              archived_at: string
+              display_name: string
+              enrolled_at: string
+              hostname: string
+              id: string
+              is_isolated: boolean
+              is_throttled: boolean
+              last_block_sync_at: string
+              last_heartbeat: string
+              os_type: string
+              os_version: string
+              skip_firewall_remediation: boolean
+              status: string
+              tenant_id: string
+            }[]
+          }
       get_agents_snapshots_list: {
         Args: { p_tenant_id?: string }
-        Returns: Json[]
+        Returns: {
+          active_issues: number
+          agent_id: string
+          agent_name: string
+          agent_state: string
+          hostname: string
+          is_isolated: boolean
+          is_throttled: boolean
+          last_heartbeat: string
+          latency_ms: number
+          online: boolean
+          os_type: string
+          safe_mode: boolean
+          safe_mode_reason: string
+          snapshot_at: string
+          tenant_id: string
+          unresolved_insights: number
+          version: string
+        }[]
       }
       get_ai_provider_scores: {
         Args: never
@@ -50540,6 +50906,20 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      get_batch_counts: {
+        Args: { p_filters: Json; p_table: string; p_tenant_ids: string[] }
+        Returns: {
+          count: number
+          tenant_id: string
+        }[]
+      }
+      get_business_hours_batch: {
+        Args: { p_tenant_ids: string[] }
+        Returns: {
+          business_hours: Json
+          tenant_id: string
+        }[]
+      }
       get_cached_value: { Args: { p_key: string }; Returns: Json }
       get_critical_insights_count: {
         Args: { p_tenant_id: string }
@@ -50562,6 +50942,16 @@ export type Database = {
       get_honeypot_stats: {
         Args: { p_hours?: number; p_tenant_id?: string }
         Returns: Json
+      }
+      get_installation_health_batch: {
+        Args: { p_tenant_ids: string[] }
+        Returns: {
+          failed_attempts: number
+          failure_rate_pct: number
+          tenant_id: string
+          threshold: number
+          total_attempts: number
+        }[]
       }
       get_installation_health_status: {
         Args: { p_tenant_id: string }
@@ -50635,6 +51025,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_platform_tenant_id: { Args: never; Returns: string }
       get_playbook_execution_breakdown: {
         Args: { p_days_back?: number; p_tenant_id: string }
         Returns: {
@@ -50785,6 +51176,22 @@ export type Database = {
         Returns: Database["public"]["Enums"]["system_operational_mode"]
       }
       get_system_mode_safe: { Args: never; Returns: string }
+      get_tenant_abuse_metrics: {
+        Args: {
+          agent_overflow_ratio: number
+          failed_auth_threshold: number
+          job_threshold: number
+          lookback_interval?: string
+        }
+        Returns: {
+          abuse_type: string
+          current_value: number
+          severity: string
+          tenant_id: string
+          tenant_name: string
+          threshold: number
+        }[]
+      }
       get_tenant_cost_metrics: {
         Args: never
         Returns: {
@@ -50802,6 +51209,14 @@ export type Database = {
         }[]
       }
       get_tenant_mfa_policy: { Args: { _tenant_id: string }; Returns: Json }
+      get_tenants_compliance_scores: {
+        Args: never
+        Returns: {
+          category_scores: Json
+          overall_score: number
+          tenant_id: string
+        }[]
+      }
       get_threat_intel_stats: { Args: { p_tenant_id: string }; Returns: Json }
       get_trace_timeline: {
         Args: { p_trace_id: string }
@@ -50861,11 +51276,20 @@ export type Database = {
         }
         Returns: boolean
       }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
+      has_role:
+        | {
+            Args: {
+              _role: Database["public"]["Enums"]["app_role"]
+              _user_id: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: { _role: string; _tenant_id?: string; _user_id: string }
+            Returns: boolean
+          }
+      has_role_safe: {
+        Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
       }
       hash_agent_token: { Args: { p_token: string }; Returns: string }
@@ -50873,6 +51297,15 @@ export type Database = {
       hash_enrollment_key_secure: { Args: { p_key: string }; Returns: string }
       hmac_check_and_record: {
         Args: { p_agent_name: string; p_signature: string }
+        Returns: boolean
+      }
+      hmac_verify_signature_v2: {
+        Args: {
+          p_agent_id: string
+          p_payload: Json
+          p_signature: string
+          p_timestamp: string
+        }
         Returns: boolean
       }
       honeypot_alert_dedup_key: {
@@ -50884,6 +51317,10 @@ export type Database = {
         Returns: string
       }
       increment_ai_cache_hit: { Args: { cache_id: string }; Returns: undefined }
+      increment_enrollment_key_usage: {
+        Args: { p_agent_name: string; p_key_id: string }
+        Returns: Json
+      }
       increment_tenant_quota: {
         Args: { p_tenant_id: string }
         Returns: undefined
@@ -51023,6 +51460,7 @@ export type Database = {
         Returns: string
       }
       process_tenant_suspensions: { Args: never; Returns: Json }
+      prune_old_telemetry: { Args: never; Returns: undefined }
       purge_expired_hmac_signatures: { Args: never; Returns: number }
       reactivate_tenant: { Args: { p_tenant_id: string }; Returns: Json }
       reanchor_audit_log_chain: { Args: { p_tenant_id: string }; Returns: Json }
@@ -51124,6 +51562,7 @@ export type Database = {
         Args: { p_playbook_id: string; p_target_version: number }
         Returns: Json
       }
+      rotate_hmac_signatures: { Args: never; Returns: undefined }
       run_all_health_checks: {
         Args: never
         Returns: {
@@ -51139,7 +51578,7 @@ export type Database = {
         Returns: Json
       }
       run_partition_maintenance: { Args: never; Returns: undefined }
-      run_system_maintenance: { Args: never; Returns: Json }
+      run_system_maintenance: { Args: never; Returns: undefined }
       set_cached_value: {
         Args: { p_key: string; p_ttl_seconds?: number; p_value: Json }
         Returns: undefined
@@ -51154,6 +51593,34 @@ export type Database = {
         Returns: boolean
       }
       snapshot_mitre_coverage: { Args: { tenant_uuid: string }; Returns: Json }
+      snapshot_pp02b_canary: {
+        Args: { p_label: string }
+        Returns: {
+          canary_agent_id: string | null
+          canary_heartbeat_age_seconds: number | null
+          canary_last_heartbeat: string | null
+          coalescer_distinct_agents: number
+          coalescer_rows_written: number
+          coalescer_total_hit_count: number
+          created_at: string
+          id: string
+          label: string
+          notes: Json
+          tenant_id: string
+          token_validation_failures: number
+          verdict_auth: string
+          verdict_coalescer: string
+          verdict_heartbeat: string
+          window_end: string
+          window_start: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pp02b_canary_snapshots"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       submit_agent_evidence: {
         Args: {
           p_agent_id: string
@@ -51220,6 +51687,10 @@ export type Database = {
         }[]
       }
       try_acquire_rule_lock: { Args: { p_rule_id: string }; Returns: boolean }
+      update_agent_heartbeat_atomic: {
+        Args: { p_agent_id: string; p_update_data: Json }
+        Returns: Json
+      }
       update_agent_web_consent: {
         Args: { p_agent_id: string; p_enabled: boolean; p_user_id: string }
         Returns: undefined
