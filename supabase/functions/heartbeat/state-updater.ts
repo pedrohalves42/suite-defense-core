@@ -374,14 +374,14 @@ async function insertProcessData(
   const processRow = {
     agent_id: agent.id,
     tenant_id: agent.tenant_id,
-    processes: allProcs,
-    services: [],
+    processes: processSamplesToJson(allProcs),
+    services: [] as Json[],
     total_processes: processesPayload.total_processes || 0, // Avoid using allProcs.length as it only contains TOP processes
     total_services: 0,
     services_running: 0,
     services_stopped: 0,
-    new_processes: [],
-    suspicious_processes: anomalies,
+    new_processes: [] as Json[],
+    suspicious_processes: anomaliesToJson(anomalies),
     collected_at: new Date().toISOString(),
   }
 
