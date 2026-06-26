@@ -1,6 +1,25 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from './logger.ts';
+
+// Type-only narrowing helpers (D12-B8). No runtime/contract change.
+function asString(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+function asOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+function asPayload(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+function asDateInput(value: unknown): string | number | Date {
+  if (value instanceof Date) return value;
+  if (typeof value === 'string' || typeof value === 'number') return value;
+  // Preserve previous behavior: passing through to new Date() would yield Invalid Date.
+  // We surface that by returning NaN so new Date(NaN) === Invalid Date (same observable outcome).
+  return NaN as unknown as number;
+}
 
 /**
  * Domain Event Dispatcher for Edge Functions.
