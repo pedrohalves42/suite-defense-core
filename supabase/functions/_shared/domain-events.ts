@@ -70,12 +70,12 @@ export class EdgeDomainEventDispatcher {
     if (error) throw error;
 
     return (data || []).map((row: Record<string, unknown>) => ({
-      aggregateId: row.aggregate_id,
-      aggregateType: row.aggregate_type,
-      eventType: row.event_type,
-      payload: row.payload,
-      occurredOn: new Date(row.occurred_on),
-      tenantId: row.tenant_id,
+      aggregateId: asString(row.aggregate_id),
+      aggregateType: asString(row.aggregate_type),
+      eventType: asString(row.event_type),
+      payload: asPayload(row.payload),
+      occurredOn: new Date(asDateInput(row.occurred_on)),
+      tenantId: asOptionalString(row.tenant_id),
     }));
   }
 }
