@@ -21,6 +21,7 @@ PROTECTED_PATHS=(
   "supabase/functions/_shared/hexagonal/adapters.ts"
   "supabase/functions/_shared/ai-multi-provider.ts"
   "supabase/functions/_shared/hmac-success-coalescer.ts"
+  "supabase/functions/_shared/domain-events.ts"
 
   # _shared D12-B Onda 1
   "supabase/functions/_shared/ai-evidence-types.ts"
