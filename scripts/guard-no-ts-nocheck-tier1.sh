@@ -56,6 +56,11 @@ PROTECTED_PATHS=(
   "supabase/functions/scim-provisioning/index.ts"
   "supabase/functions/scim-provisioning/user-handlers.ts"
   "supabase/functions/scim-provisioning/group-handlers.ts"
+
+  # D14-A1 — Billing (Tier A crítico)
+  "supabase/functions/check-subscription/index.ts"
+  "supabase/functions/create-checkout/index.ts"
+  "supabase/functions/api-gateway/handlers/billing.ts"
 )
 
 FOUND=0
