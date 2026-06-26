@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 /**
  * Evaluate software risk handler
  */
