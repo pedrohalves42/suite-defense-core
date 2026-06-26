@@ -54,7 +54,7 @@ export async function enforceIPAllowlist(
   }
 
   const now = new Date()
-  const activeEntries = entries.filter(e => !e.expires_at || new Date(e.expires_at) > now)
+  const activeEntries = entries.filter((e: { ip_address: unknown; expires_at?: string | null }) => !e.expires_at || new Date(e.expires_at) > now)
 
   if (activeEntries.length === 0) {
     // All entries expired ? treat as no restriction
@@ -62,7 +62,7 @@ export async function enforceIPAllowlist(
   }
 
   // Check if IP matches any entry (ip_address is stored as inet type)
-  const isAllowed = activeEntries.some(e => {
+  const isAllowed = activeEntries.some((e: { ip_address: unknown }) => {
     const entryIP = String(e.ip_address)
     // Direct match
     if (entryIP === ip) return true

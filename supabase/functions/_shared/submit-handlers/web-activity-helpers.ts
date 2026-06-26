@@ -34,7 +34,7 @@ export async function loadBlockedPatterns(
     .eq('tenant_id', tenantId)
     .eq('is_active', true);
 
-  return blockedSites?.map(s => s.domain_pattern) || [];
+  return blockedSites?.map((s: { domain_pattern: string }) => s.domain_pattern) || [];
 }
 
 export function isDomainBlocked(domain: string, blockedPatterns: string[]): boolean {
