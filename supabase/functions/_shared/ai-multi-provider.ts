@@ -1,4 +1,4 @@
-// @ts-nocheck
+// D12-B7 — @ts-nocheck removido; mudanças apenas type-only.
 /**
  * AI Multi-Provider System v3.0 — Orchestrator
  * 
@@ -95,8 +95,9 @@ async function persistAIMetricsWithProvider(data: {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
       {
         global: {
-          fetch: (url: string, options: any) => fetchWithTimeout(url, { ...options, timeoutMs: 5000 })
-        }
+          fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+            fetchWithTimeout(input as any, { ...(init ?? {}), timeoutMs: 5000 }),
+        },
       }
     );
     await supabase.from('ai_inference_metrics').insert({
@@ -106,7 +107,7 @@ async function persistAIMetricsWithProvider(data: {
       tokens_completion: data.tokens_completion || null, tenant_id: data.tenant_id || null,
       used_fallback: data.used_fallback, cost_usd: data.cost_usd || 0,
       error: data.error || null, created_at: new Date().toISOString(),
-    });
+    } as never);
   } catch (err) { logger.warn('[AI Metrics] Failed to persist:', err); }
 }
 
