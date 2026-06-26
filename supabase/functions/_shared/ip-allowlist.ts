@@ -1,4 +1,4 @@
-// @ts-nocheck
+// D12-B2: @ts-nocheck removed (passes deno check; runtime unchanged).
 /**
  * IP Allowlist Enforcement Middleware
  * Restricts admin access to authorized IPs from admin_ip_whitelist table

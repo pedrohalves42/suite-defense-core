@@ -1,4 +1,4 @@
-// @ts-nocheck
+// D12-B3: @ts-nocheck removed (passes deno check; payload/contract unchanged).
 /**
  * Domain classification and blocking logic
  * Inlined from submit-web-activity/dns-classifier.ts for submit-hmac-router
