@@ -23,6 +23,7 @@ PROTECTED_PATHS=(
   "supabase/functions/_shared/ai-evidence-types.ts"
   "supabase/functions/_shared/ip-allowlist.ts"
   "supabase/functions/_shared/submit-handlers/web-activity-helpers.ts"
+  "supabase/functions/_shared/submit-handlers/alert-engine.ts"
 
   # Agent runtime core (D2–D9)
   "supabase/functions/heartbeat/index.ts"
