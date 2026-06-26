@@ -1,9 +1,9 @@
-// @ts-nocheck
 /**
  * Alert generation and auto-resolution engine for system metrics.
+ * D12-B4: @ts-nocheck removed; types added without runtime changes.
  */
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../logger.ts';
+
 
 interface AlertThresholdInput {
   cpu_usage_percent?: number;
