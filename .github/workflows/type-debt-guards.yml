@@ -1,0 +1,18 @@
+name: Type Debt Guards
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  ts-nocheck-tier1:
+    name: D11-E — no active @ts-nocheck in Tier 1 / type-clean files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run guard
+        run: |
+          chmod +x scripts/guard-no-ts-nocheck-tier1.sh
+          ./scripts/guard-no-ts-nocheck-tier1.sh
