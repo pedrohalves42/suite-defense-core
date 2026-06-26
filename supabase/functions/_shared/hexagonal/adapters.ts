@@ -1,9 +1,10 @@
-// @ts-nocheck
 /**
  * Deno-compatible Supabase adapters implementing the hexagonal output ports.
+ * D12-B6: @ts-nocheck removed; unused `SupabaseClient` type import dropped.
+ * Runtime, exports, adapter contracts and consumer wiring unchanged.
  */
 
-import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+
 import type {
   VersionQueryPort,
   UpdateJobPort,
