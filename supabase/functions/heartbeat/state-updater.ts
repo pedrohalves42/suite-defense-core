@@ -13,7 +13,7 @@
 
 import { logger } from '../_shared/logger.ts'
 import type { SupabaseClient, PostgrestError } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
-import { Database } from '../_shared/database.types.ts'
+import { Database, Json } from '../_shared/database.types.ts'
 import type { AgentContext, AgentUpdate, OSInfo, ProcessesPayload, ProcessEntry } from './types.ts'
 
 // Re-export types used by callers
@@ -318,6 +318,29 @@ interface ProcessSample {
   command_line?: string
 }
 
+/**
+ * D11-C: Convert ProcessSample[] / unknown[] into Json[] explicitly so the
+ * generated agent_processes Insert type is satisfied without a wide cast.
+ * Runtime payload is preserved byte-for-byte (same keys, same values).
+ */
+function processSamplesToJson(samples: ProcessSample[]): Json[] {
+  return samples.map((s): Json => ({
+    pid: s.pid,
+    name: s.name,
+    cpu_percent: s.cpu_percent,
+    memory_mb: s.memory_mb,
+    user: s.user,
+    command_line: s.command_line ?? null,
+  }))
+}
+
+function anomaliesToJson(items: unknown[]): Json[] {
+  // Anomalies arrive as opaque payloads from the agent. Round-trip through
+  // JSON.stringify/parse to guarantee Json compatibility without altering
+  // structure or values.
+  return items.map((item) => JSON.parse(JSON.stringify(item ?? null)) as Json)
+}
+
 async function insertProcessData(
   supabase: SupabaseClient<Database>,
   agent: AgentContext,
@@ -351,14 +374,14 @@ async function insertProcessData(
   const processRow = {
     agent_id: agent.id,
     tenant_id: agent.tenant_id,
-    processes: allProcs,
-    services: [],
+    processes: processSamplesToJson(allProcs),
+    services: [] as Json[],
     total_processes: processesPayload.total_processes || 0, // Avoid using allProcs.length as it only contains TOP processes
     total_services: 0,
     services_running: 0,
     services_stopped: 0,
-    new_processes: [],
-    suspicious_processes: anomalies,
+    new_processes: [] as Json[],
+    suspicious_processes: anomaliesToJson(anomalies),
     collected_at: new Date().toISOString(),
   }
 
