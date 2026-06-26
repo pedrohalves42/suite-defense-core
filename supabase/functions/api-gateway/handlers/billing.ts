@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 /**
  * Billing inlined handlers (migrated from billing-router + Phase 2B)
  */
