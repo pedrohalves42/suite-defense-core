@@ -318,6 +318,29 @@ interface ProcessSample {
   command_line?: string
 }
 
+/**
+ * D11-C: Convert ProcessSample[] / unknown[] into Json[] explicitly so the
+ * generated agent_processes Insert type is satisfied without a wide cast.
+ * Runtime payload is preserved byte-for-byte (same keys, same values).
+ */
+function processSamplesToJson(samples: ProcessSample[]): Json[] {
+  return samples.map((s): Json => ({
+    pid: s.pid,
+    name: s.name,
+    cpu_percent: s.cpu_percent,
+    memory_mb: s.memory_mb,
+    user: s.user,
+    command_line: s.command_line ?? null,
+  }))
+}
+
+function anomaliesToJson(items: unknown[]): Json[] {
+  // Anomalies arrive as opaque payloads from the agent. Round-trip through
+  // JSON.stringify/parse to guarantee Json compatibility without altering
+  // structure or values.
+  return items.map((item) => JSON.parse(JSON.stringify(item ?? null)) as Json)
+}
+
 async function insertProcessData(
   supabase: SupabaseClient<Database>,
   agent: AgentContext,
