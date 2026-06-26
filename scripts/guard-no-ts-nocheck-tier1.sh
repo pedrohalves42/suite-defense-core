@@ -19,6 +19,7 @@ PROTECTED_PATHS=(
   "supabase/functions/_shared/hmac.ts"
   "supabase/functions/_shared/dlq.ts"
   "supabase/functions/_shared/hexagonal/adapters.ts"
+  "supabase/functions/_shared/ai-multi-provider.ts"
   "supabase/functions/_shared/hmac-success-coalescer.ts"
 
   # _shared D12-B Onda 1
