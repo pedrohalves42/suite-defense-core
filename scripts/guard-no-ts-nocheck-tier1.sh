@@ -17,6 +17,7 @@ PROTECTED_PATHS=(
   "supabase/functions/_shared/serve-internal.ts"
   "supabase/functions/_shared/error-handler.ts"
   "supabase/functions/_shared/hmac.ts"
+  "supabase/functions/_shared/dlq.ts"
   "supabase/functions/_shared/hmac-success-coalescer.ts"
 
   # _shared D12-B Onda 1

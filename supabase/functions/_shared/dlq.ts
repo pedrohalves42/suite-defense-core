@@ -1,10 +1,10 @@
-// @ts-nocheck
 /**
  * Dead-Letter Queue (DLQ) utility for failed jobs
  * P2 Enhancement: Improved retry logic with exponential backoff
+ * D12-B5: @ts-nocheck removed; unused SupabaseClient import dropped.
+ * Runtime, payload, retry math and persistence unchanged.
  */
 
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { logger } from './logger.ts';
 
 export interface DLQEntry {
