@@ -13,7 +13,7 @@
 
 import { logger } from '../_shared/logger.ts'
 import type { SupabaseClient, PostgrestError } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
-import { Database } from '../_shared/database.types.ts'
+import { Database, Json } from '../_shared/database.types.ts'
 import type { AgentContext, AgentUpdate, OSInfo, ProcessesPayload, ProcessEntry } from './types.ts'
 
 // Re-export types used by callers
