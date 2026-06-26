@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 /**
  * fido2-authenticate handler — Inlined into public-gateway (Phase 6D)
  * WebAuthn authentication: begin (get options) and complete (verify assertion).
