@@ -1,4 +1,4 @@
-// @ts-nocheck
+// D12-B7 — @ts-nocheck removido; mudanças apenas type-only.
 /**
  * AI Multi-Provider System v3.0 — Orchestrator
  * 
