@@ -1,4 +1,4 @@
-// @ts-nocheck
+// D12-B3: @ts-nocheck removed (passes deno check; payload/contract unchanged).
 /**
  * Domain classification and blocking logic
  * Inlined from submit-web-activity/dns-classifier.ts for submit-hmac-router
@@ -34,7 +34,7 @@ export async function loadBlockedPatterns(
     .eq('tenant_id', tenantId)
     .eq('is_active', true);
 
-  return blockedSites?.map(s => s.domain_pattern) || [];
+  return blockedSites?.map((s: { domain_pattern: string }) => s.domain_pattern) || [];
 }
 
 export function isDomainBlocked(domain: string, blockedPatterns: string[]): boolean {

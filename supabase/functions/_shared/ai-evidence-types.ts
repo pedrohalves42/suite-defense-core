@@ -1,4 +1,4 @@
-// @ts-nocheck
+// D12-B1: @ts-nocheck removed (passes deno check, types-only file).
 // CS-IA Evidence Pack Types - TOP 5% Global Implementation
 // Provides explainability and auditability for all AI insights
 

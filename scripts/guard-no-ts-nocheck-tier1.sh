@@ -19,6 +19,11 @@ PROTECTED_PATHS=(
   "supabase/functions/_shared/hmac.ts"
   "supabase/functions/_shared/hmac-success-coalescer.ts"
 
+  # _shared D12-B Onda 1
+  "supabase/functions/_shared/ai-evidence-types.ts"
+  "supabase/functions/_shared/ip-allowlist.ts"
+  "supabase/functions/_shared/submit-handlers/web-activity-helpers.ts"
+
   # Agent runtime core (D2–D9)
   "supabase/functions/heartbeat/index.ts"
   "supabase/functions/heartbeat/state-updater.ts"
