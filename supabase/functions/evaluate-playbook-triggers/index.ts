@@ -50,13 +50,13 @@ serveInternal(async (req, ctx) => {
   if (hasRecentExec) return { triggered: false, reason: 'Cooldown active', cooldown_minutes: cooldownMinutes };
 
   // Evaluate conditions
-  if (!evaluateConditions(trigger_type, playbook.trigger_conditions || {}, context)) {
+  if (!evaluateConditions(trigger_type, (playbook.trigger_conditions || {}) as Record<string, unknown>, context)) {
     return { triggered: false, reason: 'Trigger conditions not met', conditions: playbook.trigger_conditions, context };
   }
 
   // Risk analysis
-  const { data: riskData, error: riskError } = await supabase.rpc('should_auto_execute_playbook', { p_playbook_id: playbook.id, p_event_type: trigger_type, p_context: context });
-  const riskAnalysis: RiskAnalysis = riskError ? { risk_score: 0.5, threshold: 0.8, should_auto_execute: false, has_destructive_actions: false, require_approval: playbook.require_approval, is_enabled: playbook.is_enabled, decision_reason: 'risk_calculation_failed' } : riskData as RiskAnalysis;
+  const { data: riskData, error: riskError } = await supabase.rpc('should_auto_execute_playbook', { p_playbook_id: playbook.id, p_event_type: trigger_type, p_context: context as Record<string, unknown> });
+  const riskAnalysis: RiskAnalysis = riskError ? { risk_score: 0.5, threshold: 0.8, should_auto_execute: false, has_destructive_actions: false, require_approval: playbook.require_approval, is_enabled: playbook.is_enabled, decision_reason: 'risk_calculation_failed' } : (riskData as unknown as RiskAnalysis);
 
   // Agent info
   let agentInfo = null;
