@@ -206,7 +206,7 @@ serveTenant(async (req, ctx) => {
       } as unknown as Json,
       priority: 1,
       expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-    })
+    } as never)
     .select('id')
     .single();
 
