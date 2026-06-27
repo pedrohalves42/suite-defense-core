@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * enroll-agent - Agent enrollment endpoint
  * REFACTORED: Uses enroll_agent_atomic RPC for transaction integrity and quota enforcement.

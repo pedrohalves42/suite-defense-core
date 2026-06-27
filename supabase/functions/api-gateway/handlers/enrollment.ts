@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Enrollment handlers — Phase 2F
  * Inlined: generate-enrollment-key, revoke-enrollment-key
