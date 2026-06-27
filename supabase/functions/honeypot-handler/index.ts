@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * honeypot-handler — Public endpoint for native honeypot interactions.
  * 

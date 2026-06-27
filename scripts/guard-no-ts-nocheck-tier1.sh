@@ -69,6 +69,11 @@ PROTECTED_PATHS=(
   "supabase/functions/enroll-agent/index.ts"
   "supabase/functions/enroll-agent/key-validator.ts"
   "supabase/functions/fido2-register/index.ts"
+
+  # D14-A3 — Public/Anti-abuse/HMAC surface (Tier A crítico)
+  "supabase/functions/submit-hmac-router/index.ts"
+  "supabase/functions/honeypot-handler/index.ts"
+  "supabase/functions/check-tenant-abuse/index.ts"
 )
 
 FOUND=0

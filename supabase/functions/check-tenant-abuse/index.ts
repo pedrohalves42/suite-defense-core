@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 /**
  * check-tenant-abuse - Detect abusive tenant behavior
  * Migrated to serveInternal middleware (cron/service_role only)
@@ -61,7 +61,7 @@ serveInternal(async (_req, ctx) => {
 
   return {
     success: true,
-    tenants_checked: tenants?.length ?? 0,
+    tenants_checked: alerts.length,
     alerts_created: alerts.length,
     alerts,
   };
