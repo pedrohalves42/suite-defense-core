@@ -114,7 +114,7 @@ serveTenant(async (req, ctx) => {
   if (executionMode === 'semi_automatic') {
     const { data: approvalRequest, error: approvalError } = await supabase
       .from('approval_requests')
-      .select('id, status, expires_at, approved_by, approved_at')
+      .select('id, status, expires_at, approved_at')
       .eq('playbook_execution_id', execution_id)
       .eq('status', 'approved')
       .single();
