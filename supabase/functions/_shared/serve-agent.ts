@@ -13,7 +13,7 @@ import { requireEnv } from './env.ts';
 import { logger } from './logger.ts';
 import { handleExceptionWithContext } from './error-handler.ts';
 import type { RateLimitOption } from './serve-tenant.ts';
-import type { AgentExtraField } from './agent-auth.ts';
+import type { AgentExtraField, AgentAuthResult } from './agent-auth.ts';
 
 function jsonResponse(data: unknown, status = 200, extraHeaders?: Record<string, string>, origin?: string | null) {
   const cors = buildCorsHeaders(origin ?? null);
@@ -111,7 +111,9 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
 
       // Import agent auth dynamically to avoid circular deps
       const { authenticateAgent } = await import('./agent-auth.ts');
-      const authResult = await authenticateAgent(supabase, req, requestId, {
+      // HF-SHARED-RECOVER-01: explicit AgentAuthResult annotation so the
+      // discriminated union narrows correctly through `await import(...)`.
+      const authResult: AgentAuthResult = await authenticateAgent(supabase, req, requestId, {
         extraAgentFields: options?.extraAgentFields,
       });
       
