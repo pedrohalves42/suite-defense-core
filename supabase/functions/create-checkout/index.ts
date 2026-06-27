@@ -6,6 +6,7 @@
 import Stripe from 'https://esm.sh/stripe@18.5.0';
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { createAuditLog } from '../_shared/audit.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
 const CheckoutBodySchema = z.object({
