@@ -577,7 +577,7 @@ export async function handleScheduledReportGenerator(
 
   for (const tenant of tenants) {
     try {
-      const planName = (tenant.subscription_plans as Record<string, unknown>)?.name || "free";
+      const planName = ((tenant.subscription_plans as Record<string, unknown>)?.name as string) || "free";
       const frequencyDays = PLAN_FREQUENCIES[planName] || PLAN_FREQUENCIES.starter;
 
       if (planName === "free" || tenant.status === "trialing") {
