@@ -3,7 +3,7 @@
 // which reads max_executions_per_day from the same table). No functional change.
 // D16-C3: @ts-nocheck removed; localized casts where supabase-js Insert types
 // drift vs real schema (ai_action_executions / security_logs Json columns).
-// @ts-nocheck retained until Json↔Record narrowing on inserts is addressed (D16-C2+).
+
 /**
  * AI Action Executor - Migrated to serveTenant
  * Executes AI-suggested actions after validation, whitelist check, and rate limiting.
