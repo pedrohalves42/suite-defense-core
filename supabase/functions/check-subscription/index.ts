@@ -7,6 +7,7 @@ import Stripe from 'https://esm.sh/stripe@18.5.0';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { createAuditLog } from '../_shared/audit.ts';
 
 const CheckSubBodySchema = z.object({
   tenantId: z.string().uuid().optional(),
@@ -79,7 +80,7 @@ serveTenant<CheckSubBody>(async (req, ctx) => {
       .maybeSingle();
 
     if (plan) {
-      await ctx.supabase
+      const { error: updateErr } = await ctx.supabase
         .from('tenant_subscriptions')
         .update({
           plan_id: plan.id,
@@ -90,7 +91,19 @@ serveTenant<CheckSubBody>(async (req, ctx) => {
         })
         .eq('tenant_id', tenantId);
 
-      logger.info('[CHECK-SUB] Synced subscription', { tenantId, planName });
+      if (!updateErr) {
+        logger.info('[CHECK-SUB] Synced subscription', { tenantId, planName });
+        // HF-BILLING-AUDIT-01: record subscription sync (no PII / no Stripe secrets).
+        await createAuditLog({
+          supabase: ctx.supabase, userId: ctx.userId, tenantId,
+          action: 'billing.subscription_synced', resourceType: 'tenant_subscription',
+          details: {
+            plan_name: planName, status: 'active',
+            current_period_end: currentPeriodEnd, request_id: ctx.requestId,
+          },
+          request: req, success: true,
+        });
+      }
     }
   }
 

@@ -6,6 +6,7 @@
 import Stripe from 'https://esm.sh/stripe@18.5.0';
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { createAuditLog } from '../_shared/audit.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
 const CheckoutBodySchema = z.object({
@@ -76,6 +77,14 @@ serveTenant<CheckoutBody>(async (req, ctx) => {
   });
 
   logger.info('[CREATE-CHECKOUT] Session created', { sessionId: session.id, tenantId, planName });
+
+  // HF-BILLING-AUDIT-01: record checkout session creation (session id only).
+  await createAuditLog({
+    supabase: ctx.supabase, userId: ctx.userId, tenantId,
+    action: 'billing.checkout_session_created', resourceType: 'checkout_session', resourceId: session.id,
+    details: { plan_name: planName, max_devices: maxDevices, request_id: ctx.requestId },
+    request: req, success: true,
+  });
 
   return { url: session.url };
 }, {
