@@ -117,7 +117,7 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
         extraAgentFields: options?.extraAgentFields,
       });
       
-      if (!authResult.success) {
+      if (authResult.success === false) {
         return authResult.response;
       }
 
