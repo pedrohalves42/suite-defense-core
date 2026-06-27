@@ -83,6 +83,27 @@ PROTECTED_PATHS=(
   "supabase/functions/api-gateway/handlers/security-advisor.ts"
   "supabase/functions/api-gateway/handlers/security-scanning.ts"
   "supabase/functions/api-gateway/handlers/security-threats.ts"
+
+  # D15-B1 — Ops Gateway / Ops Playbook (Tier B operacional)
+  "supabase/functions/ops-gateway/index.ts"
+  "supabase/functions/ops-gateway/handlers/access-review.ts"
+  "supabase/functions/ops-gateway/handlers/anomaly-ops.ts"
+  "supabase/functions/ops-gateway/handlers/block-website.ts"
+  "supabase/functions/ops-gateway/handlers/check-analytics.ts"
+  "supabase/functions/ops-gateway/handlers/check-honeypot.ts"
+  "supabase/functions/ops-gateway/handlers/cleanup.ts"
+  "supabase/functions/ops-gateway/handlers/edr-ops.ts"
+  "supabase/functions/ops-gateway/handlers/notify.ts"
+  "supabase/functions/ops-gateway/handlers/playbook-analysis.ts"
+  "supabase/functions/ops-gateway/handlers/playbook-automation.ts"
+  "supabase/functions/ops-gateway/handlers/playbook-core.ts"
+  "supabase/functions/ops-gateway/handlers/playbook.ts"
+  "supabase/functions/ops-gateway/handlers/report-scheduled.ts"
+  "supabase/functions/ops-gateway/handlers/security-ops.ts"
+  "supabase/functions/ops-gateway/handlers/sync-infra.ts"
+  "supabase/functions/ops-playbook/index.ts"
+  "supabase/functions/ops-playbook/handlers/playbook-core.ts"
+  "supabase/functions/ops-playbook/handlers/playbook-automation.ts"
 )
 
 FOUND=0
