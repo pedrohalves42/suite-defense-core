@@ -143,7 +143,7 @@ serveTenant(async (req, ctx) => {
           reason: 'Semi-automatic playbook requires approval before execution',
           pending_request_id: pendingRequest?.id || null,
           pending_request_expires: pendingRequest?.expires_at || null,
-        },
+        } as unknown as Json,
       });
 
       return new Response(JSON.stringify({
