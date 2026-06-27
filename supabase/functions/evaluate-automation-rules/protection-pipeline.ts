@@ -53,10 +53,10 @@ async function checkCircuitBreaker(supabase: any, rule: Record<string, unknown>)
 
 async function checkBlastRadius(supabase: any, rule: Record<string, unknown>, tenantId: string, totalAgents: number, severity?: string): Promise<ProtectionResult> {
   if (totalAgents === 0) return { allowed: true, decision: 'passed', reason: '' };
-  let maxPercent = rule.max_affected_percentage || 30;
+  let maxPercent = (rule.max_affected_percentage as number) || 30;
   try {
     const { data: adaptiveLimit } = await supabase.rpc('get_adaptive_blast_radius', { p_tenant_id: tenantId, p_action_type: rule.action_type || 'create_job', p_severity: severity || 'medium' });
-    if (adaptiveLimit != null) maxPercent = adaptiveLimit;
+    if (adaptiveLimit != null) maxPercent = adaptiveLimit as number;
   } catch (err) { logger.warn('[protection-pipeline] get_adaptive_blast_radius failed, using fallback', err); }
 
   const { count } = await supabase
