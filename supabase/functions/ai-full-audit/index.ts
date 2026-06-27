@@ -13,6 +13,13 @@ import {
   getDeterministicThreatLevel, isCreditsExhausted, isRateLimited, logGovernanceEvent,
 } from './helpers.ts';
 
+// D16-C2: narrow `Json` from RPC into the loose record shape the deterministic
+// helpers expect. Runtime contract is unchanged — the RPC returns a JSON object.
+const asMetrics = (m: unknown): Record<string, unknown> =>
+  (m && typeof m === 'object' ? m : {}) as Record<string, unknown>;
+const asRecord = <T = unknown>(v: unknown): Record<string, T> =>
+  (v && typeof v === 'object' ? v : {}) as Record<string, T>;
+
 serveTenant(async (req, ctx) => {
   const origin = req.headers.get("origin");
   const { supabase: serviceClient, tenantId, userId, isInternal, requestId } = ctx;
