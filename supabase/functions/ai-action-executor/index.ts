@@ -1,4 +1,6 @@
-// @ts-nocheck
+// HF-AI-SCHEMA-DRIFT-01: removed selection of ai_action_configs.rate_limit_per_hour
+// (column does not exist; rate limiting is enforced by check_action_rate_limit RPC,
+// which reads max_executions_per_day from the same table). No functional change.
 /**
  * AI Action Executor - Migrated to serveTenant
  * Executes AI-suggested actions after validation, whitelist check, and rate limiting.
@@ -41,7 +43,7 @@ serveTenant(async (req, ctx) => {
 
   // Whitelist check
   const { data: actionConfig, error: configError } = await supabase
-    .from('ai_action_configs').select('id, action_type, is_enabled, requires_approval, risk_level, rate_limit_per_hour, description').eq('action_type', action.action_type).maybeSingle();
+    .from('ai_action_configs').select('id, action_type, is_enabled, requires_approval, risk_level, max_executions_per_day, description').eq('action_type', action.action_type).maybeSingle();
   if (configError || !actionConfig) throw new Error(`Action type ${action.action_type} not found in whitelist`);
   if (!actionConfig.is_enabled) throw new Error(`Action type ${action.action_type} is disabled`);
   if (actionConfig.requires_approval && action.status !== 'pending') throw new Error('Action already processed');

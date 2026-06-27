@@ -1,4 +1,8 @@
-// @ts-nocheck
+// HF-AI-SCHEMA-DRIFT-01: aligned .select() to real schema:
+//   installation_analytics: step/duration_ms → event_type/installation_time_seconds
+//   agent_system_metrics_partitioned: cpu_usage/memory_usage/disk_usage → *_percent;
+//     dropped agent_name (column does not exist — enrichment uses agents JOIN map).
+// No functional change: only selected projection.
 /**
  * AI System Analyzer - Modularized
  * Auth: X-Internal-Secret / service_role (cron only)
@@ -58,9 +62,9 @@ serveInternal(async (_req, ctx) => {
 
       // Fetch data
       const { data: problematicJobs } = await supabase.from('v_problematic_jobs').select('id, job_type, agent_name, tenant_id, status, error_message, created_at, retry_count').eq('tenant_id', tenant.id).gte('created_at', cutoffDate.toISOString()).limit(100);
-      const { data: installationStats } = await supabase.from('installation_analytics').select('id, tenant_id, agent_id, success, error_message, step, duration_ms, created_at').eq('tenant_id', tenant.id).gte('created_at', cutoffDate.toISOString()).order('created_at', { ascending: false }).limit(500);
-      const { data: agentMetrics } = await supabase.from('agent_system_metrics_partitioned').select('agent_id, agent_name, tenant_id, cpu_usage, memory_usage, disk_usage, collected_at').eq('tenant_id', tenant.id).gte('collected_at', cutoffDate.toISOString()).order('collected_at', { ascending: false }).limit(500);
-      const enrichedAgentMetrics = (agentMetrics || []).map(metric => ({ ...metric, friendly_name: agentFriendlyNames.get(metric.agent_id) || metric.agent_name || metric.agent_id.slice(0, 8) }));
+      const { data: installationStats } = await supabase.from('installation_analytics').select('id, tenant_id, agent_id, success, error_message, event_type, installation_time_seconds, created_at').eq('tenant_id', tenant.id).gte('created_at', cutoffDate.toISOString()).order('created_at', { ascending: false }).limit(500);
+      const { data: agentMetrics } = await supabase.from('agent_system_metrics_partitioned').select('agent_id, tenant_id, cpu_usage_percent, memory_usage_percent, disk_usage_percent, collected_at').eq('tenant_id', tenant.id).gte('collected_at', cutoffDate.toISOString()).order('collected_at', { ascending: false }).limit(500);
+      const enrichedAgentMetrics = (agentMetrics || []).map((metric: Record<string, unknown>) => ({ ...metric, friendly_name: agentFriendlyNames.get(metric.agent_id as string) || (metric.agent_id as string).slice(0, 8) }));
       const { data: systemAlerts } = await supabase.from('system_alerts').select('id, alert_type, severity, message, resolved, tenant_id, created_at').eq('tenant_id', tenant.id).gte('created_at', cutoffDate.toISOString()).order('created_at', { ascending: false }).limit(100);
       const { data: jobStats } = await supabase.from('jobs').select('status, type, created_at').eq('tenant_id', tenant.id).gte('created_at', cutoffDate.toISOString()).limit(1000);
 
