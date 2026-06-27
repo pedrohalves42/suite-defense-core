@@ -111,7 +111,10 @@ serveTenant(async (_req, ctx) => {
     evidence.push(buildEvidence('Jobs com Falha', 'jobs', failedJobs.length, agent.id, failedJobs.length > 3 ? 'critical' : 'warning'));
   }
 
-  const rawContextSummary = buildContextSummary(agent, context);
+  // D16-C2: localized cast — Zod inferred shape uses optional fields under our
+  // current tsconfig but the schema validators guarantee presence. Domain
+  // interfaces (Agent / AgentContext) remain the source of truth at runtime.
+  const rawContextSummary = buildContextSummary(agent as Agent, context as AgentContext);
   const sanitizeResult = sanitizeForAI(rawContextSummary);
   if (sanitizeResult.blocked) {
     logger.warn('[ai-analyze-agent] Prompt injection attempt blocked:', sanitizeResult.blockedPatterns);
