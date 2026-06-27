@@ -64,7 +64,8 @@ serveInternal(async (_req, ctx) => {
         evidence: { prediction: p, analysis_type: 'trend_based' },
         recommendation: p.recommendation, confidence_score: p.failure_probability,
       }));
-      if (insights.length > 0) await supabase.from('ai_insights').insert(insights);
+      // D16-C2: cast to satisfy Json constraint on ai_insights.evidence; runtime payload unchanged.
+      if (insights.length > 0) await supabase.from('ai_insights').insert(insights as never);
       allPredictions.push(...predictions);
     }
   }
