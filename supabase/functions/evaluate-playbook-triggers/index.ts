@@ -9,6 +9,7 @@ import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
 import type { TriggerEvent, PlaybookAction, RiskAnalysis, TenantSettings } from './types.ts';
+import type { Database, Json } from '../_shared/database.types.ts';
 import { evaluateConditions } from './condition-engine.ts';
 import { handleSemiAutomaticApproval } from './approval-handler.ts';
 
