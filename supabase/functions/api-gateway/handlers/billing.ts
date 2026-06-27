@@ -5,6 +5,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
 import { fetchWithTimeout } from '../../_shared/fetch-with-timeout.ts';
+import { createAuditLog } from '../../_shared/audit.ts';
 import type { HandlerContext } from './admin.ts';
 
 type SB = any;
@@ -175,6 +176,13 @@ export async function handleCreateTrialSubscription(supabase: SB, requestId: str
   }
 
   logger.info(`[create-trial-subscription][${requestId}] Trial created for tenant ${tenantId}`);
+  // HF-BILLING-AUDIT-01: record trial creation (sanitized).
+  await createAuditLog({
+    supabase, userId: ctx?.userId, tenantId,
+    action: 'billing.trial_created', resourceType: 'tenant_subscription', resourceId: subscription?.id,
+    details: { plan: 'Free', trial_days: 14, trial_end: trialEndDate.toISOString(), request_id: requestId },
+    request: ctx?.req, success: true,
+  });
   return { success: true, subscription, trial_days: 14, trial_end: trialEndDate.toISOString() };
 }
 
@@ -244,6 +252,18 @@ export async function handleCreateCustomTrial(supabase: SB, requestId: string, p
 
   logger.info(`[create-custom-trial] Created ${trial_days}-day trial for ${company_name} (${email}).`);
   await supabase.auth.admin.generateLink({ type: 'recovery', email });
+
+  // HF-BILLING-AUDIT-01: record custom trial (super-admin action; no PII beyond email domain).
+  const emailDomain = email.split('@')[1] || 'unknown';
+  await createAuditLog({
+    supabase, userId, tenantId,
+    action: 'billing.custom_trial_created', resourceType: 'custom_trial', resourceId: customTrial?.id,
+    details: {
+      plan: 'starter', trial_days, trial_end: trialEnd.toISOString(),
+      company_name, email_domain: emailDomain, device_quantity: 30, request_id: requestId,
+    },
+    request: ctx?.req, success: true,
+  });
 
   return {
     success: true, tenant_id: tenantId, user_id: newUser.user.id, email, company_name,
