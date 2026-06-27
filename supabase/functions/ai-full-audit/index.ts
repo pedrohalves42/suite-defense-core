@@ -147,7 +147,7 @@ serveTenant(async (req, ctx) => {
   const anaTokens = anaAiResult.tokensUsed?.total || 0;
   let anaResult: Record<string, unknown> | null = null;
   try { anaResult = safeParseJSON(anaAiResult.content, 'ana'); } catch {
-    anaResult = createFallbackAudit('AI_JSON_PARSE_ERROR');
+    anaResult = createFallbackAudit('AI_JSON_PARSE_ERROR') as unknown as Record<string, unknown>;
     await logGovernanceEvent(serviceClient, tenantId, null, 'ana_fallback', null, 50, 'parse_error', 'Ana JSON parse falhou', {});
   }
 
