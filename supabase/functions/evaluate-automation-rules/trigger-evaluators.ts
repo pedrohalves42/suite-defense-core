@@ -18,11 +18,14 @@ export async function evaluateMetricThreshold(
 
   for (const [agentId, m] of latestMetrics) {
     if (!matchesScope(rule, agentId)) continue;
-    const metricMap: Record<string, number | null> = {
-      'cpu_usage_percent': m.cpu_usage_percent, 'cpu_percent': m.cpu_usage_percent,
-      'memory_usage_percent': m.memory_usage_percent, 'memory_percent': m.memory_usage_percent,
-      'disk_usage_percent': m.disk_usage_percent,
-      'disk_free_percent': m.disk_usage_percent != null ? 100 - m.disk_usage_percent : null,
+    const cpu = m.cpu_usage_percent as number | null | undefined;
+    const mem = m.memory_usage_percent as number | null | undefined;
+    const disk = m.disk_usage_percent as number | null | undefined;
+    const metricMap: Record<string, number | null | undefined> = {
+      'cpu_usage_percent': cpu, 'cpu_percent': cpu,
+      'memory_usage_percent': mem, 'memory_percent': mem,
+      'disk_usage_percent': disk,
+      'disk_free_percent': disk != null ? 100 - disk : null,
     };
     const metricValue = metricMap[conditions.metric as string];
     if (metricValue === null || metricValue === undefined) continue;
