@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Handler: security-copilot
  * Extracted from ai-security-copilot for direct dispatch.

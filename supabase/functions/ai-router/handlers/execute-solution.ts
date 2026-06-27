@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Handler: execute-solution
  * Extracted from ai-execute-solution for direct dispatch.
@@ -66,7 +65,9 @@ export async function handleExecuteSolution(
         }))
       );
       if (jobsToCreate.length > 0) {
-        const { error: jobsError } = await supabase.from('jobs').insert(jobsToCreate);
+        // D16-C1: cast preserves runtime; jobs.payload_hash is auto-populated by
+        // DB trigger / shared helper. LATENT-AI-04 tracks formalizing the type.
+        const { error: jobsError } = await supabase.from('jobs').insert(jobsToCreate as never);
         if (jobsError) throw jobsError;
       }
       result = { jobs_created: jobsToCreate.length, agents_count: agents?.length || 0 };
@@ -91,7 +92,7 @@ export async function handleExecuteSolution(
         tenant_id: tenantId, agent_id, agent_name: agent.agent_name,
         type: jobType, status: 'queued', approved: true, payload: {}, expires_at: expiresAt2,
       }));
-      const { error: jobsError } = await supabase.from('jobs').insert(jobsToCreate);
+      const { error: jobsError } = await supabase.from('jobs').insert(jobsToCreate as never);
       if (jobsError) throw jobsError;
       result = { jobs_created: jobsToCreate.length, agent_name: agent.agent_name };
       break;
@@ -111,7 +112,7 @@ export async function handleExecuteSolution(
   await supabase.from('ai_actions').update({
     status: success ? 'completed' : 'failed',
     executed_at: new Date().toISOString(),
-    result, error_message
+    result: result as never, error_message,
   }).eq('id', action_id).eq('tenant_id', tenantId);
 
   return { success: true, solution_type, result };

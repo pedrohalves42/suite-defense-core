@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * ai-system-audit — Migrated to serveTenant middleware
  * Module: dimension-mapper
@@ -46,17 +45,18 @@ serveTenant(async (req, ctx) => {
 
   let analysisResult: Record<string, unknown> | null = null;
   try {
-    analysisResult = safeParseJSON(aiResult.content, 'ai-system-audit');
+    analysisResult = safeParseJSON(aiResult.content, 'ai-system-audit') as Record<string, unknown> | null;
   } catch (err) {
     logger.warn('[ai-system-audit] JSON parse failed, using fallback', err);
-    analysisResult = createFallbackAudit('AI_JSON_PARSE_ERROR');
+    analysisResult = createFallbackAudit('AI_JSON_PARSE_ERROR') as unknown as Record<string, unknown>;
   }
 
   const combinedPromptHash = `${personaPrompt.hash.slice(0, 8)}-${analysisTemplate.hash.slice(0, 8)}`;
   const tokensUsed = aiResult.tokensUsed?.total || 0;
-  const insertData = buildAuditInsertData(tenantId, userId || 'system', analysisResult, metrics, aiResult.model, combinedPromptHash, tokensUsed);
+  const insertData = buildAuditInsertData(tenantId, userId || 'system', analysisResult, metrics as Record<string, unknown>, aiResult.model, combinedPromptHash, tokensUsed);
 
-  const { data: savedAudit, error: saveError } = await supabase.from('system_audits').insert(insertData).select().single();
+  // D16-C1: type-only cast; insert shape preserved.
+  const { data: savedAudit, error: saveError } = await supabase.from('system_audits').insert(insertData as never).select().single();
   if (saveError) logger.error('Error saving audit:', saveError);
 
   logger.info(`[ai-system-audit] Completed. Score: ${analysisResult!.overall_score}`);
