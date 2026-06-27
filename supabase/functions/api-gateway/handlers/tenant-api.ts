@@ -64,7 +64,7 @@ export async function handleTenantFeatures(
   // Correção F-006: Registro de Auditoria para acesso via API externa
   await createAuditLog({
     supabase,
-    userId: null, // Acesso via API Key não possui userId direto
+    userId: undefined, // Acesso via API Key não possui userId direto
     tenantId: auth.tenantId!,
     action: 'api_access_features',
     resourceType: 'tenant_features',
@@ -99,7 +99,7 @@ export async function handleTenantInfo(
   // Correção F-006: Registro de Auditoria
   await createAuditLog({
     supabase,
-    userId: null,
+    userId: undefined,
     tenantId: auth.tenantId!,
     action: 'api_access_info',
     resourceType: 'tenant',
@@ -136,7 +136,7 @@ export async function handleTenantStats(
   // Correção F-006: Registro de Auditoria
   await createAuditLog({
     supabase,
-    userId: null,
+    userId: undefined,
     tenantId,
     action: 'api_access_stats',
     resourceType: 'tenant_stats',

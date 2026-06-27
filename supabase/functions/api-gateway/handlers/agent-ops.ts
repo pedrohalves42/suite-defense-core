@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Agent ops handlers — Phase 2J
  * Hardened: token-rotate, recover-agent-credentials, agent-version-management
@@ -37,7 +36,7 @@ export async function handleTokenRotate(
     if (error) throw error;
     return { 
       needs_rotation: tokens?.length || 0, 
-      tokens: tokens?.map(t => ({ 
+      tokens: tokens?.map((t: any) => ({ 
         agentId: t.agent_id, 
         id: t.id, 
         expiresAt: t.expires_at, 

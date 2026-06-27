@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Security Scanning Handlers — Inlined from standalone functions
  * Handles: check-credential-leaks, classify-shadow-it, clear-failed-logins
@@ -92,7 +91,7 @@ export async function handleCheckCredentialLeaks(
       const { data: agents } = await supabase.from('agents').select('id, agent_name, hostname').eq('tenant_id', tenantId).eq('status', 'active').limit(50);
       const { data: recentAlerts } = await supabase.from('system_alerts').select('alert_type, severity, title, created_at').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(20);
       if (agents?.length) {
-        const prompt = `Analise os riscos de identidade. Endpoints: ${agents.length}. Dominios: ${monitors?.map(m => m.email_domain).join(', ') || 'Nenhum'}. Senhas comprometidas: ${results.passwords_compromised}. Vazamentos: ${results.leaks_found}. Alertas: ${JSON.stringify(recentAlerts?.slice(0, 5) || [])}. Forneca: Score de risco (0-100), Top 3 riscos, Recomendacoes.`;
+        const prompt = `Analise os riscos de identidade. Endpoints: ${agents.length}. Dominios: ${monitors?.map((m: any) => m.email_domain).join(', ') || 'Nenhum'}. Senhas comprometidas: ${results.passwords_compromised}. Vazamentos: ${results.leaks_found}. Alertas: ${JSON.stringify(recentAlerts?.slice(0, 5) || [])}. Forneca: Score de risco (0-100), Top 3 riscos, Recomendacoes.`;
         const aiResp = await fetchWithTimeout('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST', headers: { 'Authorization': `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ model: 'google/gemini-2.5-flash-lite', messages: [{ role: 'system', content: 'Voce e um analista de seguranca especializado em Identity Security.' }, { role: 'user', content: prompt }] }),

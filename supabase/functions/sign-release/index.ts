@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * sign-release — Migrated to serveTenant middleware
  * ECDSA/Ed25519 Release Signing Edge Function
@@ -107,6 +106,7 @@ serveTenant(async (req, ctx) => {
       if (!providedHash && !document_content) return respond({ error: 'Missing document_hash OR document_content' }, 400);
 
       const privateKey = Deno.env.get('ECDSA_PRIVATE_KEY');
+      if (!privateKey) return respond({ error: 'Missing ECDSA_PRIVATE_KEY secret' }, 400);
 
       let document_hash: string;
       let hashSource: 'provided' | 'calculated';
@@ -126,7 +126,7 @@ serveTenant(async (req, ctx) => {
         signed_at: now, signed_by: userEmail || 'CyberShield Root Key',
         invariants_version: invariants_version || null, audit_level: audit_level || 'STANDARD',
         metadata: { hash_source: hashSource, content_length: (document_content as string)?.length || null, signed_by_user_id: userId }
-      });
+      } as never);
       if (insertError) throw insertError;
       return respond({ success: true, document: document_name, algorithm: 'ECDSA-P256-SHA256', document_hash, signature_base64, signed_at: now, signed_by: userEmail, hash_source: hashSource, persisted: true });
     }

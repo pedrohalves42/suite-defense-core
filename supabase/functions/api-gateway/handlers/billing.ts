@@ -192,7 +192,7 @@ export async function handleCreateCustomTrial(supabase: SB, requestId: string, p
   if (!userId) return { error: 'Authentication required', __status: 401 };
 
   const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', userId);
-  const isSuperAdmin = roles?.some(r => r.role === 'super_admin');
+  const isSuperAdmin = roles?.some((r: any) => r.role === 'super_admin');
   if (!isSuperAdmin) return { error: 'Super admin access required', __status: 403 };
 
   const { z } = await import('https://esm.sh/zod@3.23.8');
@@ -209,7 +209,7 @@ export async function handleCreateCustomTrial(supabase: SB, requestId: string, p
   const { email, company_name, contact_name, trial_days, notes } = parsed.data;
 
   const { data: existingUsers } = await supabase.auth.admin.listUsers();
-  const emailExists = existingUsers?.users?.some(u => u.email === email);
+  const emailExists = existingUsers?.users?.some((u: any) => u.email === email);
   if (emailExists) return { error: 'Email already registered', __status: 409 };
 
   const tempPassword = crypto.randomUUID().replace(/-/g, '').substring(0, 16) + 'Aa1!';
@@ -489,7 +489,7 @@ export async function handleSubscriptionAnalytics(supabase: SB, requestId: strin
   const { data: roles } = await supabase.from('user_roles').select('role, tenant_id').eq('user_id', userId).in('role', ['admin', 'super_admin']);
   if (!roles || roles.length === 0) return { error: 'Forbidden: Admin access required', __status: 403 };
 
-  const isSuperAdmin = roles.some(r => r.role === 'super_admin');
+  const isSuperAdmin = roles.some((r: any) => r.role === 'super_admin');
   const tenantId = isSuperAdmin ? null : roles[0].tenant_id;
 
   logger.info(`[SUBSCRIPTION-ANALYTICS][${requestId}] User ${userId} (super_admin: ${isSuperAdmin})`);

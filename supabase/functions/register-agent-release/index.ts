@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * register-agent-release — Migrated to serveTenant middleware
  * Requires super_admin role.
@@ -116,7 +115,7 @@ serveTenant(async (req, ctx) => {
     releaseData.signed_by = finalSignedBy;
   }
 
-  const { error: releaseError } = await supabase.from('agent_releases').upsert(releaseData, { onConflict: 'platform,version,channel' });
+  const { error: releaseError } = await supabase.from('agent_releases').upsert(releaseData as never, { onConflict: 'platform,version,channel' });
   if (releaseError) throw releaseError;
 
   const { error: versionError } = await supabase.from('agent_versions').upsert({

@@ -74,6 +74,15 @@ PROTECTED_PATHS=(
   "supabase/functions/submit-hmac-router/index.ts"
   "supabase/functions/honeypot-handler/index.ts"
   "supabase/functions/check-tenant-abuse/index.ts"
+
+  # D14-A4 — Public / Release / Signing (Tier A crítico)
+  "supabase/functions/register-agent-release/index.ts"
+  "supabase/functions/sign-release/index.ts"
+  "supabase/functions/promote-agent-v5/index.ts"
+  "supabase/functions/api-gateway/handlers/agent-ops.ts"
+  "supabase/functions/api-gateway/handlers/security-advisor.ts"
+  "supabase/functions/api-gateway/handlers/security-scanning.ts"
+  "supabase/functions/api-gateway/handlers/security-threats.ts"
 )
 
 FOUND=0

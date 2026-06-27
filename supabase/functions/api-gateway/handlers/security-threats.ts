@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Security Threats Handlers — Inlined from standalone functions
  * Handles: auto-block-threats, auto-remediate, rollback-remediation
@@ -259,10 +258,10 @@ export async function handleRollbackRemediation(
   if (!action_id) return { __status: 400, error: 'action_id required' };
 
   const { data: userRoles } = await supabase.from('user_roles').select('tenant_id, role').eq('user_id', userId!);
-  const adminRoles = (userRoles || []).filter(r => ['admin', 'super_admin'].includes(r.role));
+  const adminRoles = (userRoles || []).filter((r: any) => ['admin', 'super_admin'].includes(r.role));
   if (adminRoles.length === 0) return { __status: 403, error: 'Admin role required for rollback' };
 
-  const userTenantIds = adminRoles.map(r => r.tenant_id);
+  const userTenantIds = adminRoles.map((r: any) => r.tenant_id);
   const { data: action, error: fetchErr } = await supabase
     .from('auto_remediation_actions').select('id, tenant_id, agent_id, agent_name, action_type, status, trigger_details, created_at').eq('id', action_id).in('tenant_id', userTenantIds).single();
   if (fetchErr || !action) return { __status: 404, error: 'Remediation action not found' };

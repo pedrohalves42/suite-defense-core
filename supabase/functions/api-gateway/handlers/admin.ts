@@ -209,7 +209,7 @@ export async function handleListUsers(supabase: SB, requestId: string, payload: 
   if (!tenantUsers || tenantUsers.length === 0) return { users: [], pagination: { total: totalCount || 0, limit, offset } };
 
   const { data: tenant } = await supabase.from('tenants').select('id, name').eq('id', targetTenantId).limit(1).maybeSingle();
-  const { data: profiles } = await supabase.from('profiles').select('user_id, full_name').in('user_id', tenantUsers.map(u => u.user_id));
+  const { data: profiles } = await supabase.from('profiles').select('user_id, full_name').in('user_id', tenantUsers.map((u: any) => u.user_id));
   
   // P3 FIX: Fetch auth details more efficiently. 
   // Instead of 100 parallel getUserById, we use listUsers if we are super admin, 
@@ -220,13 +220,13 @@ export async function handleListUsers(supabase: SB, requestId: string, payload: 
   const authResults = [];
   for (let i = 0; i < tenantUsers.length; i += BATCH_SIZE) {
     const batch = tenantUsers.slice(i, i + BATCH_SIZE);
-    const results = await Promise.all(batch.map(tu => supabase.auth.admin.getUserById(tu.user_id)));
+    const results = await Promise.all(batch.map((tu: any) => supabase.auth.admin.getUserById(tu.user_id)));
     authResults.push(...results);
   }
   const filteredAuthUsers = authResults.map(r => r?.data?.user).filter(Boolean);
 
-  const users = tenantUsers.map(tu => {
-    const profile = profiles?.find(p => p.user_id === tu.user_id);
+  const users = tenantUsers.map((tu: any) => {
+    const profile = profiles?.find((p: any) => p.user_id === tu.user_id);
     const authUser = filteredAuthUsers.find(au => au?.id === tu.user_id);
     const isBanned = authUser && (authUser as any).banned_until && new Date((authUser as any).banned_until) > new Date();
     return { 

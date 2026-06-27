@@ -89,7 +89,7 @@ export async function handleRevokeEnrollmentKey(
 
   // Get user's role
   const { data: userRoles } = await supabase.from('user_roles').select('role, tenant_id').eq('user_id', userId);
-  const userRole = userRoles?.find(r => r.role === 'super_admin') || userRoles?.[0] || null;
+  const userRole = userRoles?.find((r: any) => r.role === 'super_admin') || userRoles?.[0] || null;
   if (!userRole || !['admin', 'super_admin'].includes(userRole.role)) {
     return { __status: 403, error: 'Admin access required' };
   }

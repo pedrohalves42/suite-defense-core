@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * promote-agent-v5 — Migrated to serveTenant middleware
  * Emergency sync utility for v5.0.15.

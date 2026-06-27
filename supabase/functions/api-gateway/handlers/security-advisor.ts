@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * security-advisor handler — inlined from standalone security-advisor function
  * Analyzes tenant security posture and generates AI recommendations
@@ -47,7 +46,7 @@ export async function handleSecurityAdvisor(
     supabase.from('agent_certificates').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).lt('valid_until', new Date().toISOString()),
   ]);
 
-  const avEnabled = avData?.filter(a => a.antivirus_enabled).length || 0;
+  const avEnabled = avData?.filter((a: any) => a.antivirus_enabled).length || 0;
   const avTotal = avData?.length || 0;
 
   // Identify gaps

@@ -15,6 +15,7 @@ import { requireEnv } from '../_shared/env.ts';
 import {
   handleCohortAnalysisV2,
   handleUnitEconomicsV2,
+  handleRevenueProjectionsV2,
 } from './handlers/billing-v2.ts';
 import {
   handleListInvoicesV2, handleCustomerPortalV2,
@@ -45,7 +46,7 @@ import {
 } from './handlers/security-intel.ts';
 import {
   handleActivateAgentHoneypot, handleRevertAgentHoneypot,
-} from './honeypot.ts';
+} from './handlers/honeypot.ts';
 import {
   handleAgentSnapshot, handleCheckAgentNameAvailability,
   handleDiagnoseAgent, handleGetAgentTimeline,
@@ -82,6 +83,7 @@ import { ActionDispatcherUseCase } from './domain/router/use-cases/action-dispat
 import { validateDispatch } from '../_shared/schemas/registry.ts'; // Correção F-002: Validador de perímetro
 
 // Configuration for the Router Adapter
+type SB = any;
 const ACTION_TO_FUNCTION: Record<string, string> = {
   'security:scan-vulnerabilities': 'scan-vulnerabilities',
   'security:fido2-register': 'fido2-register',
@@ -230,7 +232,7 @@ servePublic(async (req, ctx) => {
       logger.error(`[api-gateway] Payload validation failed for ${action}`, validationErr);
       return createErrorResponse(
         ErrorCode.BAD_REQUEST, 
-        `Validation failed for ${action}: ${validationErr.message}`, 
+        `Validation failed for ${action}: ${(validationErr as Error).message}`, 
         400, 
         requestId, 
         origin
