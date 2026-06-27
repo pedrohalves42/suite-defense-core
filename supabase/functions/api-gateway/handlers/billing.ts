@@ -209,7 +209,7 @@ export async function handleCreateCustomTrial(supabase: SB, requestId: string, p
   const { email, company_name, contact_name, trial_days, notes } = parsed.data;
 
   const { data: existingUsers } = await supabase.auth.admin.listUsers();
-  const emailExists = existingUsers?.users?.some(u => u.email === email);
+  const emailExists = existingUsers?.users?.some((u: any) => u.email === email);
   if (emailExists) return { error: 'Email already registered', __status: 409 };
 
   const tempPassword = crypto.randomUUID().replace(/-/g, '').substring(0, 16) + 'Aa1!';
