@@ -230,8 +230,8 @@ serveTenant(async (req, ctx) => {
     ? [actionsSnapshot[action_index]]
     : actionsSnapshot;
 
-  const actionResults: ActionResult[] = execution.actions_taken || [];
-  const evidenceIds: string[] = execution.evidence_ids || [];
+  const actionResults: ActionResult[] = (execution.actions_taken as unknown as ActionResult[]) || [];
+  const evidenceIds: string[] = (execution.evidence_ids as string[] | null) || [];
 
   // Build action context
   const actionCtx: ActionContext = {
