@@ -44,7 +44,7 @@ async function executeAction(
           tenant_id: tenantId,
           agent_id: agentId,
           alert_type: 'automation_alert',
-          severity: triggerData.value >= 95 ? 'critical' : 'high',
+          severity: (triggerData.value as number) >= 95 ? 'critical' : 'high',
           title: `[Auto] ${rule.name}`,
           message: triggerData.message || `Rule triggered: ${JSON.stringify(triggerData)}`,
           details: { ...triggerData, rule_id: rule.id },
