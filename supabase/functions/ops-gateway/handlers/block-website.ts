@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Block website handler — creates block rules and distributes to agents.
  * Inlined from block-website (Phase 1B).

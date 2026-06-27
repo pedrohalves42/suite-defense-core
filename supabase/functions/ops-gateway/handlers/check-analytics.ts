@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Check analytics — Heavy/AI inlined handlers (Sub-batch 2C-3)
  * sli-collector (with bug fix), analyze-confidence-gap-trend, analyze-network-anomalies

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Behavioral anomaly detection handler.
  * Inlined from ai-behavioral-anomaly-detector (Phase 1B).

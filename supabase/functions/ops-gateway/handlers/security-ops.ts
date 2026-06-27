@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Security Operations Handlers — Inlined from standalone serveInternal functions
  * For ops-gateway: auto-quarantine, quarantine-agent, apply-security-patch,

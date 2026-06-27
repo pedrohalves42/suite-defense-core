@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Playbook Core Handlers — Phase 1C
  * Inlined from: execute-playbook, process-playbook-trigger-logs,
