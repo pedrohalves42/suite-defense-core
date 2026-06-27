@@ -241,7 +241,7 @@ serveTenant(async (req, ctx) => {
     userId: userId!,
     executionId: execution_id,
     playbookSnapshot,
-    triggerContext: execution.trigger_context as Record<string, unknown> || {},
+    triggerContext: (execution.trigger_context as unknown as Record<string, unknown>) || {},
   };
 
   // Execute each action from snapshot
