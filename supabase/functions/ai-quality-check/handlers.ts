@@ -45,8 +45,18 @@ export async function handleQualityCheck(tenantId: string, origin: string | null
   }), { headers: headers(origin) });
 }
 
+// D16-C2: explicit row shape narrows the unknown[] from a generic supabase
+// client without changing the SELECT projection or query semantics.
+interface InferenceMetricRow {
+  function_name: string;
+  latency_ms: number;
+  success: boolean;
+  created_at: string;
+}
+
 export async function handleDriftAnalysis(supabase: any, origin: string | null): Promise<Response> {
-  const { data: metrics } = await supabase.from('ai_inference_metrics').select('function_name, latency_ms, success, created_at').order('created_at', { ascending: false }).limit(1000);
+  const { data: metricsRaw } = await supabase.from('ai_inference_metrics').select('function_name, latency_ms, success, created_at').order('created_at', { ascending: false }).limit(1000);
+  const metrics = (metricsRaw ?? []) as InferenceMetricRow[];
 
   if (!metrics || metrics.length === 0) {
     return new Response(JSON.stringify({ success: true, message: 'No metrics available for drift analysis', data: null }), { headers: headers(origin) });
