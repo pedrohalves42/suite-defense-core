@@ -50,7 +50,10 @@ async function hashData(data: string): Promise<string> {
 }
 
 serveTenant(async (req, ctx) => {
-  const { supabase, userId, requestId, body } = ctx;
+  const { supabase, userId, requestId, body: rawBody } = ctx;
+  // D14-A2: serveTenant types body as unknown; downstream Zod schemas validate
+  // every shape. Type-only cast, no runtime change.
+  const body = (rawBody ?? {}) as { action?: string; credentialId?: string; [k: string]: unknown };
 
   const action = body.action || 'begin';
 
