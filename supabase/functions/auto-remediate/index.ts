@@ -7,6 +7,7 @@ import { serveTenant } from '../_shared/serve-tenant.ts';
 import { createAuditLog } from '../_shared/audit.ts';
 import { logger } from '../_shared/logger.ts';
 import type { Json } from '../_shared/database.types.ts';
+import { jobInsert } from '../_shared/job-insert.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
 type BlastCheckResult = { allowed?: boolean; affected_percent?: number };
