@@ -153,7 +153,7 @@ Responda APENAS com JSON valido no formato:
 
   if (!aiResult.success || !parsedAnalysis) {
     logger.warn('[ai-analyze-agent] AI call failed, using basic analysis:', aiResult.error);
-    const basicAnalysis = generateBasicAnalysis(context, evidence);
+    const basicAnalysis = generateBasicAnalysis(context as AgentContext, evidence);
     return { ...basicAnalysis, aiProvider: aiResult.provider, aiError: aiResult.error };
   }
 
