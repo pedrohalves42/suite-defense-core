@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * soc2-evidence-collector — Collects SOC 2 compliance evidence from DB
  * 
