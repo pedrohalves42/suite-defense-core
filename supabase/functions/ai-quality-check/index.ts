@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * ai-quality-check — Migrated to serveTenant middleware
  * Module: handlers

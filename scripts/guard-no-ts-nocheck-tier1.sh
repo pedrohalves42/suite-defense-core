@@ -146,6 +146,15 @@ PROTECTED_PATHS=(
   "supabase/functions/ai-system-audit/index.ts"
   "supabase/functions/ai-system-audit/dimension-mapper.ts"
   "supabase/functions/ai-agent-assist/index.ts"
+
+  # D16-C2 — AI Analysis (Tier C: analyze / predict / quality / full-audit)
+  "supabase/functions/ai-analyze-agent/index.ts"
+  "supabase/functions/ai-full-audit/index.ts"
+  "supabase/functions/ai-full-audit/helpers.ts"
+  "supabase/functions/ai-predict-agent-failure/index.ts"
+  "supabase/functions/ai-predict-agent-failure/trend-analyzer.ts"
+  "supabase/functions/ai-quality-check/index.ts"
+  "supabase/functions/ai-quality-check/handlers.ts"
 )
 
 FOUND=0
