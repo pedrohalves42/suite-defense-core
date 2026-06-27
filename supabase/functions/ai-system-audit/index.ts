@@ -53,7 +53,7 @@ serveTenant(async (req, ctx) => {
 
   const combinedPromptHash = `${personaPrompt.hash.slice(0, 8)}-${analysisTemplate.hash.slice(0, 8)}`;
   const tokensUsed = aiResult.tokensUsed?.total || 0;
-  const insertData = buildAuditInsertData(tenantId, userId || 'system', analysisResult, metrics, aiResult.model, combinedPromptHash, tokensUsed);
+  const insertData = buildAuditInsertData(tenantId, userId || 'system', analysisResult, metrics as Record<string, unknown>, aiResult.model, combinedPromptHash, tokensUsed);
 
   // D16-C1: type-only cast; insert shape preserved.
   const { data: savedAudit, error: saveError } = await supabase.from('system_audits').insert(insertData as never).select().single();
