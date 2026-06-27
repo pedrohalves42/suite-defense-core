@@ -83,6 +83,7 @@ import { ActionDispatcherUseCase } from './domain/router/use-cases/action-dispat
 import { validateDispatch } from '../_shared/schemas/registry.ts'; // Correção F-002: Validador de perímetro
 
 // Configuration for the Router Adapter
+type SB = any;
 const ACTION_TO_FUNCTION: Record<string, string> = {
   'security:scan-vulnerabilities': 'scan-vulnerabilities',
   'security:fido2-register': 'fido2-register',
