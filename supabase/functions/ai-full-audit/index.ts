@@ -208,7 +208,7 @@ serveTenant(async (req, ctx) => {
     if (dim) { insertData[mapping.scoreCol] = dim.score; insertData[mapping.analysisCol] = dim.analysis; }
   }
 
-  const { data: savedAna } = await serviceClient.from('system_audits').insert(insertData).select().single();
+  const { data: savedAna } = await serviceClient.from('system_audits').insert(insertData as never).select().single();
 
   // ============ PHASE 3: CONFIDENCE GAP ============
   const anaScore = anaResult!.overall_score as number;
