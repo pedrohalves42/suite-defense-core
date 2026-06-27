@@ -5,6 +5,7 @@
 import { TenantContext } from '../../_shared/serve-tenant.ts';
 import { corsHeaders } from '../../_shared/cors.ts';
 import { logger } from '../../_shared/logger.ts';
+import { jobInsertMany } from '../../_shared/job-insert.ts';
 
 export async function handleExecuteSolution(
   _req: Request,

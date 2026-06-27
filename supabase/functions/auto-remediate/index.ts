@@ -191,9 +191,11 @@ serveTenant(async (req, ctx) => {
   // Execute remediation via job
   const jobPayload = buildJobPayload(action_type, trigger_details);
 
+  // HF-JOBS-PAYLOAD-HASH-01: jobInsert() encodes the policy that
+  // jobs.payload_hash is owned by the DB trigger trg_auto_set_job_payload_hash.
   const { data: job, error: jobErr } = await supabase
     .from('jobs')
-    .insert({
+    .insert(jobInsert({
       agent_id,
       agent_name: agent.agent_name,
       tenant_id: resolvedTenantId,
@@ -206,7 +208,7 @@ serveTenant(async (req, ctx) => {
       } as unknown as Json,
       priority: 1,
       expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-    } as never)
+    }) as never)
     .select('id')
     .single();
 
