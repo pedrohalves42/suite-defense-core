@@ -185,7 +185,7 @@ export async function processBlockedAccessPatternRule(supabase: any, rule: RuleR
   // Batch fetch agent names for all suspicious agents instead of N+1
   const suspAgentIds = suspiciousAgents.map(([id]) => id);
   const { data: suspAgentInfos } = await supabase.from('agents').select('id, agent_name').in('id', suspAgentIds);
-  const suspAgentNameMap = new Map((suspAgentInfos || []).map(a => [a.id, a.agent_name]));
+  const suspAgentNameMap = new Map<string, string>((suspAgentInfos || []).map(a => [String(a.id), String(a.agent_name ?? '')]));
 
   for (const [agentId, data] of suspiciousAgents) {
     const agentName = suspAgentNameMap.get(agentId) || agentId.substring(0, 8);
