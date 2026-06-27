@@ -45,7 +45,7 @@ import {
 } from './handlers/security-intel.ts';
 import {
   handleActivateAgentHoneypot, handleRevertAgentHoneypot,
-} from './honeypot.ts';
+} from './handlers/honeypot.ts';
 import {
   handleAgentSnapshot, handleCheckAgentNameAvailability,
   handleDiagnoseAgent, handleGetAgentTimeline,
