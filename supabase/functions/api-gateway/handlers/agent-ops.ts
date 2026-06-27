@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Agent ops handlers — Phase 2J
  * Hardened: token-rotate, recover-agent-credentials, agent-version-management

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Security Scanning Handlers — Inlined from standalone functions
  * Handles: check-credential-leaks, classify-shadow-it, clear-failed-logins
