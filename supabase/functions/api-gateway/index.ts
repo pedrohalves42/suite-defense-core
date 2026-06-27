@@ -15,6 +15,7 @@ import { requireEnv } from '../_shared/env.ts';
 import {
   handleCohortAnalysisV2,
   handleUnitEconomicsV2,
+  handleRevenueProjectionsV2,
 } from './handlers/billing-v2.ts';
 import {
   handleListInvoicesV2, handleCustomerPortalV2,
