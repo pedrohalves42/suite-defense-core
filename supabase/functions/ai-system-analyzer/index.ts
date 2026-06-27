@@ -1,4 +1,5 @@
-// @ts-nocheck
+// D16-C3: @ts-nocheck removed; inserts of ai_insights/ai_actions cast `as never`
+// (Json columns + generated types drift — see LATENT-AUDIT-SCHEMA-01 / HF-TYPES-REGEN-01).
 // HF-AI-SCHEMA-DRIFT-01: aligned .select() to real schema:
 //   installation_analytics: step/duration_ms → event_type/installation_time_seconds
 //   agent_system_metrics_partitioned: cpu_usage/memory_usage/disk_usage → *_percent;
@@ -104,7 +105,7 @@ serveInternal(async (_req, ctx) => {
 
   // Save insights
   if (insights.length > 0) {
-    const { data: insertedInsights, error: insertError } = await supabase.from('ai_insights').insert(insights).select();
+    const { data: insertedInsights, error: insertError } = await supabase.from('ai_insights').insert(insights as never).select();
     if (insertError) { logger.error('[ai-system-analyzer] Error saving insights:', insertError); throw insertError; }
 
     if (insertedInsights && insertedInsights.length > 0) {

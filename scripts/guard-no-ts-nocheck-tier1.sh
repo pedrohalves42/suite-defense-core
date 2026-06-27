@@ -155,6 +155,23 @@ PROTECTED_PATHS=(
   "supabase/functions/ai-predict-agent-failure/trend-analyzer.ts"
   "supabase/functions/ai-quality-check/index.ts"
   "supabase/functions/ai-quality-check/handlers.ts"
+
+  # D16-C3 — AI Security/Closure (Tier C: action-executor / insight-dispatcher / red-team / system-analyzer)
+  "supabase/functions/ai-action-executor/index.ts"
+  "supabase/functions/ai-action-executor/handlers.ts"
+  "supabase/functions/ai-insight-dispatcher/index.ts"
+  "supabase/functions/ai-insight-dispatcher/action-guards.ts"
+  "supabase/functions/ai-insight-dispatcher/mode-handlers.ts"
+  "supabase/functions/ai-insight-dispatcher/types.ts"
+  "supabase/functions/ai-red-team-assessment/index.ts"
+  "supabase/functions/ai-red-team-assessment/assessment-saver.ts"
+  "supabase/functions/ai-red-team-assessment/deterministic-fallback.ts"
+  "supabase/functions/ai-red-team-assessment/metrics-collector.ts"
+  "supabase/functions/ai-red-team-assessment/types.ts"
+  "supabase/functions/ai-system-analyzer/index.ts"
+  "supabase/functions/ai-system-analyzer/analysis-engine.ts"
+  "supabase/functions/ai-system-analyzer/tenant-eligibility.ts"
+  "supabase/functions/ai-system-analyzer/types.ts"
 )
 
 FOUND=0
