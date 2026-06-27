@@ -62,13 +62,15 @@ export async function evaluateProcessAnomaly(
     const eventType = (conditions.eventType || conditions.event_type || 'suspicious_process') as string;
 
     if (eventType === 'suspicious_process') {
-      const suspiciousCount = (p.suspicious_processes || []).length;
+      const suspicious = (p.suspicious_processes as Record<string, unknown>[] | null) || [];
+      const suspiciousCount = suspicious.length;
       const threshold = (conditions.value as number) || 1;
       if (suspiciousCount >= threshold) {
-        candidates.push({ agentId, triggerData: { event_type: 'suspicious_process', count: suspiciousCount, threshold, severity: 'critical', processes: (p.suspicious_processes || []).slice(0, 5).map((sp: Record<string, unknown>) => sp.name), message: `${suspiciousCount} suspicious process(es) detected` } });
+        candidates.push({ agentId, triggerData: { event_type: 'suspicious_process', count: suspiciousCount, threshold, severity: 'critical', processes: suspicious.slice(0, 5).map((sp) => sp.name), message: `${suspiciousCount} suspicious process(es) detected` } });
       }
     } else if (eventType === 'new_process_burst') {
-      const newCount = (p.new_processes || []).length;
+      const newProcs = (p.new_processes as unknown[] | null) || [];
+      const newCount = newProcs.length;
       const threshold = (conditions.value as number) || 10;
       if (newCount >= threshold) {
         candidates.push({ agentId, triggerData: { event_type: 'new_process_burst', count: newCount, threshold, severity: 'high', message: `${newCount} new processes detected` } });
