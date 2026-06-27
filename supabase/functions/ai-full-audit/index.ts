@@ -76,7 +76,7 @@ serveTenant(async (req, ctx) => {
   let redResult: Record<string, unknown> | null = null;
   let redTeamFallbackUsed = false;
   try { redResult = safeParseJSON(redAiResult.content, 'red-team'); } catch {
-    redResult = createFallbackRedTeam('AI_JSON_PARSE_ERROR', calculateBinaryCriteria(asMetrics(metrics)));
+    redResult = createFallbackRedTeam('AI_JSON_PARSE_ERROR', calculateBinaryCriteria(asMetrics(metrics))) as unknown as Record<string, unknown>;
     redTeamFallbackUsed = true;
     await logGovernanceEvent(serviceClient, tenantId, null, 'red_team_fallback', null, 50, 'parse_error', 'Red Team JSON parse falhou', {});
   }
