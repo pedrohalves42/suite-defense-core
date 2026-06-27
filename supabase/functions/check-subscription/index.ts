@@ -80,7 +80,7 @@ serveTenant<CheckSubBody>(async (req, ctx) => {
       .maybeSingle();
 
     if (plan) {
-      await ctx.supabase
+      const { error: updateErr } = await ctx.supabase
         .from('tenant_subscriptions')
         .update({
           plan_id: plan.id,
@@ -91,7 +91,19 @@ serveTenant<CheckSubBody>(async (req, ctx) => {
         })
         .eq('tenant_id', tenantId);
 
-      logger.info('[CHECK-SUB] Synced subscription', { tenantId, planName });
+      if (!updateErr) {
+        logger.info('[CHECK-SUB] Synced subscription', { tenantId, planName });
+        // HF-BILLING-AUDIT-01: record subscription sync (no PII / no Stripe secrets).
+        await createAuditLog({
+          supabase: ctx.supabase, userId: ctx.userId, tenantId,
+          action: 'billing.subscription_synced', resourceType: 'tenant_subscription',
+          details: {
+            plan_name: planName, status: 'active',
+            current_period_end: currentPeriodEnd, request_id: ctx.requestId,
+          },
+          request: req, success: true,
+        });
+      }
     }
   }
 
