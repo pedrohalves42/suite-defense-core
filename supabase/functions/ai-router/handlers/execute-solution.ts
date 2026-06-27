@@ -65,9 +65,9 @@ export async function handleExecuteSolution(
         }))
       );
       if (jobsToCreate.length > 0) {
-        // D16-C1: cast preserves runtime; jobs.payload_hash is auto-populated by
-        // DB trigger / shared helper. LATENT-AI-04 tracks formalizing the type.
-        const { error: jobsError } = await supabase.from('jobs').insert(jobsToCreate as never);
+        // HF-JOBS-PAYLOAD-HASH-01: jobInsertMany() encodes the policy that
+        // jobs.payload_hash is owned by the DB trigger trg_auto_set_job_payload_hash.
+        const { error: jobsError } = await supabase.from('jobs').insert(jobInsertMany(jobsToCreate) as never);
         if (jobsError) throw jobsError;
       }
       result = { jobs_created: jobsToCreate.length, agents_count: agents?.length || 0 };
@@ -92,7 +92,7 @@ export async function handleExecuteSolution(
         tenant_id: tenantId, agent_id, agent_name: agent.agent_name,
         type: jobType, status: 'queued', approved: true, payload: {}, expires_at: expiresAt2,
       }));
-      const { error: jobsError } = await supabase.from('jobs').insert(jobsToCreate as never);
+      const { error: jobsError } = await supabase.from('jobs').insert(jobInsertMany(jobsToCreate) as never);
       if (jobsError) throw jobsError;
       result = { jobs_created: jobsToCreate.length, agent_name: agent.agent_name };
       break;
