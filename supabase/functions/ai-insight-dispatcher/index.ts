@@ -1,4 +1,4 @@
-// @ts-nocheck
+// D16-C3: @ts-nocheck removed; localized casts on insight passthrough cast (Zod passthrough → AIInsight).
 /**
  * ai-insight-dispatcher — Migrated to serveInternal
  * Modules: types, action-guards, mode-handlers

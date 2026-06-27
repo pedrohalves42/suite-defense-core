@@ -1,4 +1,4 @@
-// @ts-nocheck
+// D16-C3: @ts-nocheck removed; saver/fallback already use `any` clients localized.
 /**
  * ai-red-team-assessment — Migrated to serveTenant middleware
  * Modules: types, metrics-collector, deterministic-fallback, assessment-saver

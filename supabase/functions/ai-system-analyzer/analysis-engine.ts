@@ -1,4 +1,4 @@
-// @ts-nocheck
+// D16-C3: @ts-nocheck removed; localized any/cast usage retained where AI JSON shapes are dynamic.
 /**
  * AI analysis engine: builds prompts, calls AI, processes results
  */
