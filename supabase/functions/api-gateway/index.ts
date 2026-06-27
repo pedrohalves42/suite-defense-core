@@ -232,7 +232,7 @@ servePublic(async (req, ctx) => {
       logger.error(`[api-gateway] Payload validation failed for ${action}`, validationErr);
       return createErrorResponse(
         ErrorCode.BAD_REQUEST, 
-        `Validation failed for ${action}: ${validationErr.message}`, 
+        `Validation failed for ${action}: ${(validationErr as Error).message}`, 
         400, 
         requestId, 
         origin
