@@ -313,7 +313,7 @@ export async function processProgressiveDegradationRule(supabase: any, rule: Rul
   // Batch fetch agent names for all degrading agents instead of N+1
   const degradingIds = degradingAgents.slice(0, 10).map(d => d.agent_id);
   const { data: agentInfos } = await supabase.from('agents').select('id, agent_name').in('id', degradingIds);
-  const agentNameMap = new Map((agentInfos || []).map(a => [a.id, a.agent_name]));
+  const agentNameMap = new Map<string, string>((agentInfos || []).map(a => [String(a.id), String(a.agent_name ?? '')]));
 
   for (const degrading of degradingAgents.slice(0, 10)) {
     const agentName = agentNameMap.get(degrading.agent_id) || degrading.agent_id.substring(0, 8);
