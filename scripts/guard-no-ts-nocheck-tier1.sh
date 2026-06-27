@@ -61,6 +61,14 @@ PROTECTED_PATHS=(
   "supabase/functions/check-subscription/index.ts"
   "supabase/functions/create-checkout/index.ts"
   "supabase/functions/api-gateway/handlers/billing.ts"
+
+  # D14-A2 — Auth / Identity (Tier A crítico)
+  "supabase/functions/api-gateway/handlers/admin-auth.ts"
+  "supabase/functions/api-gateway/handlers/enrollment.ts"
+  "supabase/functions/auto-generate-enrollment/index.ts"
+  "supabase/functions/enroll-agent/index.ts"
+  "supabase/functions/enroll-agent/key-validator.ts"
+  "supabase/functions/fido2-register/index.ts"
 )
 
 FOUND=0
