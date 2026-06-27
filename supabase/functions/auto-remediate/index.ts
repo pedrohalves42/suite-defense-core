@@ -251,7 +251,7 @@ serveTenant(async (req, ctx) => {
     aggregate_id: agent_id,
     aggregate_type: 'agent',
     event_type: 'AutoRemediationExecuted',
-    payload: { action_id: action?.id, action_type, trigger_source, job_id: job?.id },
+    payload: { action_id: action?.id, action_type, trigger_source, job_id: job?.id } as unknown as Json,
     occurred_on: new Date().toISOString(),
     tenant_id: resolvedTenantId,
   });
