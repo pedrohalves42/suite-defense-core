@@ -237,7 +237,7 @@ export async function evaluateForTenant(
     for (const candidate of candidates) {
       totalDecisions++;
 
-      const protection = await runProtectionPipeline(supabase, rule, candidate.agentId, tenantId, totalAgents, candidate.triggerData?.severity);
+      const protection = await runProtectionPipeline(supabase, rule, candidate.agentId, tenantId, totalAgents, candidate.triggerData?.severity as string | undefined);
 
       if (!protection.allowed) {
         totalBlocked++;
