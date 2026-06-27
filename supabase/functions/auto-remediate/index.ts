@@ -212,7 +212,7 @@ serveTenant(async (req, ctx) => {
 
   // Update action with job reference
   await supabase.from('auto_remediation_actions').update({
-    result: { job_id: job?.id, rollback_supported: !!ROLLBACK_MAP[action_type] },
+    result: { job_id: job?.id, rollback_supported: !!ROLLBACK_MAP[action_type] } as unknown as Json,
     status: job ? 'executing' : 'failed',
     error_message: jobErr?.message,
   }).eq('id', action?.id);
