@@ -3,7 +3,12 @@
  * Extraído de enroll-agent/index.ts para modularização
  */
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { createAuditLog } from '../_shared/audit.ts';
+import { createAuditLog as _createAuditLog } from '../_shared/audit.ts';
+// D14-A2: type-only widening — userId is absent on pre-auth key validation paths;
+// runtime contract unchanged.
+const createAuditLog = _createAuditLog as (
+  params: Omit<Parameters<typeof _createAuditLog>[0], 'userId'> & { userId?: string }
+) => Promise<void>;
 import { getTokenPrefix } from '../_shared/token-hash.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';

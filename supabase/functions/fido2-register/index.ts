@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
@@ -51,7 +50,10 @@ async function hashData(data: string): Promise<string> {
 }
 
 serveTenant(async (req, ctx) => {
-  const { supabase, userId, requestId, body } = ctx;
+  const { supabase, userId, requestId, body: rawBody } = ctx;
+  // D14-A2: serveTenant types body as unknown; downstream Zod schemas validate
+  // every shape. Type-only cast, no runtime change.
+  const body = (rawBody ?? {}) as { action?: string; credentialId?: string; [k: string]: unknown };
 
   const action = body.action || 'begin';
 
@@ -165,7 +167,9 @@ serveTenant(async (req, ctx) => {
       .insert({
         user_id: userId,
         credential_id: registrationResponse.id,
-        public_key: new TextEncoder().encode(registrationResponse.response.clientDataJSON),
+        // D14-A2: column is bytea (typed as string by PostgREST). Runtime sends
+        // the Uint8Array exactly as before — type-only cast.
+        public_key: new TextEncoder().encode(registrationResponse.response.clientDataJSON) as unknown as string,
         sign_count: 0,
         device_name: stored.deviceName,
         transports: registrationResponse.response.transports || [],

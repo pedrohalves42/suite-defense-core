@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Admin/Auth handlers — Phase 2F
  * Inlined: accept-invite, delete-invite, send-invite
