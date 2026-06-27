@@ -61,7 +61,7 @@ async function executeAction(
         'high_cpu': 'metric_threshold',
         'low_disk': 'metric_threshold',
       };
-      const eventType = triggerData.event_type || rule.trigger_type;
+      const eventType = (triggerData.event_type || rule.trigger_type) as string;
       const playbookTrigger = triggerTypeMap[eventType];
 
       if (playbookTrigger) {
