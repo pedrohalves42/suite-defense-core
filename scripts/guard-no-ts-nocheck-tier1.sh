@@ -137,6 +137,15 @@ PROTECTED_PATHS=(
   "supabase/functions/autonomous-safe-mode/rules/agent-health.ts"
   "supabase/functions/autonomous-safe-mode/rules/quality.ts"
   "supabase/functions/autonomous-safe-mode/rules/security.ts"
+
+  # D16-C1 — AI Core (Tier C: router + audit + agent-assist)
+  "supabase/functions/ai-router/index.ts"
+  "supabase/functions/ai-router/handlers/correlate-alerts.ts"
+  "supabase/functions/ai-router/handlers/execute-solution.ts"
+  "supabase/functions/ai-router/handlers/security-copilot.ts"
+  "supabase/functions/ai-system-audit/index.ts"
+  "supabase/functions/ai-system-audit/dimension-mapper.ts"
+  "supabase/functions/ai-agent-assist/index.ts"
 )
 
 FOUND=0
