@@ -60,9 +60,14 @@ serveInternal(async (_req, ctx) => {
 
   logger.debug(`[rules-engine][${requestId}] Starting multi-rule evaluation...`);
 
+  // HF-AUTOMATION-02: decision_rules has columns {id, code, description,
+  // is_enabled, definition (jsonb), auto_execute, scope}. The previous select
+  // referenced name/severity/conditions/actions, which do not exist and would
+  // raise Postgres 42703, halting the entire engine. Handlers only need code +
+  // definition (already typed in RuleRecord); description kept for diagnostics.
   const { data: rules, error: rulesError } = await supabase
     .from('decision_rules')
-    .select('id, code, name, description, is_enabled, severity, conditions, actions')
+    .select('id, code, description, is_enabled, definition, auto_execute, scope')
     .eq('is_enabled', true)
     .order('code');
 
