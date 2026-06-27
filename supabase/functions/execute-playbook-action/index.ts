@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Execute Playbook Action - Orchestrator
  * Auth: serveTenant (JWT + tenant isolation)
