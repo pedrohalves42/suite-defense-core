@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Action handlers for AI quality check operations.
  */

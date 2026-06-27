@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * ai-predict-agent-failure → Migrated to serveInternal middleware
  * Module: trend-analyzer
