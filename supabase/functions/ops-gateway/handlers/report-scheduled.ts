@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * report-scheduled.ts — Inlined scheduled/cron report handlers (Phase 1D)
  * 

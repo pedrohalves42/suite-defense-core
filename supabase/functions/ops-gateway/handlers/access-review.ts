@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * access-review.ts — Periodic Access Review (SOC 2 CC6.3)
  * 

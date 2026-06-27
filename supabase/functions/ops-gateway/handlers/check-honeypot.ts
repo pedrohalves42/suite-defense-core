@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Honeypot cron handlers — inlined from check-honeypot-alerts + dispatch-honeypot-ai
  * Phase 4: Cron job migration to gateways

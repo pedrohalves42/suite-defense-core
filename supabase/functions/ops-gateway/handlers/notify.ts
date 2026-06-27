@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Notify namespace inlined handlers (migrated from notification-router + standalone)
  * 
