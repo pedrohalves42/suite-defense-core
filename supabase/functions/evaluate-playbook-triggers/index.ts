@@ -79,8 +79,8 @@ serveInternal(async (req, ctx) => {
   // Create execution
   const { data: execution, error: execError } = await supabase.from('playbook_executions').insert({
     playbook_id: playbook.id, tenant_id, agent_id: agent_id || null, trigger_source: trigger_type,
-    trigger_context: { ...context, agent_info: agentInfo, evaluated_at: new Date().toISOString(), risk_analysis: riskAnalysis, dry_run: isDryRun },
-    playbook_snapshot: playbookSnapshot, actions_snapshot: actionsSnapshot,
+    trigger_context: { ...context, agent_info: agentInfo, evaluated_at: new Date().toISOString(), risk_analysis: riskAnalysis, dry_run: isDryRun } as Record<string, unknown>,
+    playbook_snapshot: playbookSnapshot as Record<string, unknown>, actions_snapshot: actionsSnapshot as unknown as Record<string, unknown>[],
     status: shouldAutoExecute ? 'in_progress' : 'pending',
     auto_executed: shouldAutoExecute, risk_score: riskAnalysis.risk_score, triggered_by: triggeredBy, dry_run: isDryRun,
   }).select('id').single();
