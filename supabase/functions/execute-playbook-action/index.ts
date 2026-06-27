@@ -97,8 +97,8 @@ serveTenant(async (req, ctx) => {
   }
 
   // Use immutable snapshot
-  const actionsSnapshot = execution.actions_snapshot as PlaybookAction[] || [];
-  const playbookSnapshot = execution.playbook_snapshot as Record<string, unknown> || {};
+  const actionsSnapshot = (execution.actions_snapshot as unknown as PlaybookAction[]) || [];
+  const playbookSnapshot = (execution.playbook_snapshot as unknown as Record<string, unknown>) || {};
 
   if (actionsSnapshot.length === 0) {
     return new Response(JSON.stringify({ error: 'No actions found in snapshot' }), {
