@@ -3,12 +3,8 @@
  * REFACTORED: Uses enroll_agent_atomic RPC for transaction integrity and quota enforcement.
  */
 import { EnrollAgentSchema } from '../_shared/validation.ts';
-import { createAuditLog as _createAuditLog } from '../_shared/audit.ts';
-// D14-A2: type-only widening — `userId` is genuinely absent in the unauthenticated
-// enrollment path; runtime is unchanged (audit.ts already tolerates undefined).
-const createAuditLog = _createAuditLog as (
-  params: Omit<Parameters<typeof _createAuditLog>[0], 'userId'> & { userId?: string }
-) => Promise<void>;
+// HF-AUDIT-CONTRACT-01: createAuditLog now accepts optional userId natively.
+import { createAuditLog } from '../_shared/audit.ts';
 import { logger } from '../_shared/logger.ts';
 import { hashToken, getTokenPrefix } from '../_shared/token-hash.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
