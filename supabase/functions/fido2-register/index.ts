@@ -164,7 +164,9 @@ serveTenant(async (req, ctx) => {
       .insert({
         user_id: userId,
         credential_id: registrationResponse.id,
-        public_key: new TextEncoder().encode(registrationResponse.response.clientDataJSON),
+        // D14-A2: column is bytea (typed as string by PostgREST). Runtime sends
+        // the Uint8Array exactly as before — type-only cast.
+        public_key: new TextEncoder().encode(registrationResponse.response.clientDataJSON) as unknown as string,
         sign_count: 0,
         device_name: stored.deviceName,
         transports: registrationResponse.response.transports || [],
