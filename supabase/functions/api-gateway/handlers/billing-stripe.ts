@@ -5,6 +5,7 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { logger } from '../../_shared/logger.ts';
 import { Database } from '../../_shared/database.types.ts';
+import { createAuditLog } from '../../_shared/audit.ts';
 import type { HandlerContext } from './admin.ts';
 
 type SB = any;
@@ -99,6 +100,14 @@ export async function handleCustomerPortal(supabase: SB, requestId: string, _pay
   });
 
   logger.info(`[CUSTOMER-PORTAL] Portal session created for ${subscription.stripe_customer_id}`);
+
+  // HF-BILLING-AUDIT-01: record portal session creation (no Stripe URL/secret persisted).
+  await createAuditLog({
+    supabase, userId: ctx?.userId, tenantId,
+    action: 'billing.customer_portal_session_created', resourceType: 'tenant_subscription',
+    details: { billing_period: subscription.billing_period || 'monthly', request_id: requestId },
+    request: ctx?.req, success: true,
+  });
 
   return {
     url: session.url,
@@ -353,6 +362,17 @@ export async function handleCreateCheckout(supabase: SB, requestId: string, payl
 
   const session = await stripe.checkout.sessions.create(sessionParams);
   logStep('Checkout session created', { sessionId: session.id, url: session.url });
+
+  // HF-BILLING-AUDIT-01: record checkout creation (session id only, no URL/secrets).
+  await createAuditLog({
+    supabase, userId, tenantId,
+    action: 'billing.checkout_session_created', resourceType: 'checkout_session', resourceId: session.id,
+    details: {
+      plan_name: planName, base_devices: planConfig.baseDevices, extra_devices: extraDevices,
+      total_devices: totalDevices, trial_period_days: 14, request_id: requestId,
+    },
+    request: ctx?.req, success: true,
+  });
 
   return { url: session.url };
 }
