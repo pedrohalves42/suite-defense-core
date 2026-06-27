@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 /**
  * check-tenant-abuse - Detect abusive tenant behavior
  * Migrated to serveInternal middleware (cron/service_role only)
