@@ -104,6 +104,11 @@ PROTECTED_PATHS=(
   "supabase/functions/ops-playbook/index.ts"
   "supabase/functions/ops-playbook/handlers/playbook-core.ts"
   "supabase/functions/ops-playbook/handlers/playbook-automation.ts"
+
+  # D15-B2 — Ops Sync (Tier B operacional: jobs, DLQ, scheduler, EDR sync)
+  "supabase/functions/ops-sync/index.ts"
+  "supabase/functions/ops-sync/handlers/sync-jobs.ts"
+  "supabase/functions/ops-sync/handlers/edr-ops.ts"
 )
 
 FOUND=0
