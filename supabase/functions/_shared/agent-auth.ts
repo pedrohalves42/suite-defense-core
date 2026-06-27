@@ -252,7 +252,13 @@ export async function authenticateAgent(
     .eq('is_active', true)
     .maybeSingle();
 
-  const token = tokenRaw as TokenWithAgent | null;
+  // HF-SHARED-RECOVER-01: PostgREST's select-query-parser may infer a
+  // `GenericStringError` for joined selects built from a runtime string
+  // (`agentSelectColumns`). The shape returned at runtime is exactly
+  // `TokenWithAgent | null` (validated by integration). Localized cast via
+  // `unknown` keeps the rest of the function strongly typed without altering
+  // runtime behaviour.
+  const token = (tokenRaw as unknown) as TokenWithAgent | null;
 
   if (tokenError || !token?.agents) {
     logger.warn(`[${endpoint}] Invalid agent token attempt, prefix: ${tokenPrefix}`);
