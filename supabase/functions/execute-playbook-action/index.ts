@@ -186,7 +186,7 @@ serveTenant(async (req, ctx) => {
             label: a.label,
           })),
           reason: 'Assistive mode does not allow destructive actions',
-        },
+        } as unknown as Json,
       });
 
       return new Response(JSON.stringify({
