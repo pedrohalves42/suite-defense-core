@@ -35,7 +35,7 @@ interface StripeInstance {
     cancel(id: string, params?: Record<string, unknown>): Promise<StripeSubscription>;
   };
   products: { list(params?: Record<string, unknown>): Promise<{ data: any[] }>; create(params: Record<string, unknown>): Promise<any> };
-  prices: { list(params?: Record<string, unknown>): Promise<{ data: any[] }>; create(params: Record<string, unknown>): Promise<any> };
+  prices: { list(params?: Record<string, unknown>): Promise<{ data: any[] }>; create(params: Record<string, unknown>): Promise<any>; retrieve(id: string): Promise<{ product: string | unknown }> };
   coupons: { list(params?: Record<string, unknown>): Promise<{ data: any[] }>; create(params: Record<string, unknown>): Promise<any> };
   accounts: { retrieve(): Promise<any> };
 }
