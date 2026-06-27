@@ -291,7 +291,7 @@ serveTenant(async (req, ctx) => {
     .from('playbook_executions')
     .update({
       status: finalStatus,
-      actions_taken: actionResults,
+      actions_taken: actionResults as unknown as Json,
       evidence_ids: evidenceIds,
       completed_at: allActionsExecuted ? new Date().toISOString() : null,
     })
