@@ -203,7 +203,7 @@ serveTenant(async (req, ctx) => {
         ...jobPayload.payload,
         remediation_action_id: action?.id,
         rollback_supported: !!ROLLBACK_MAP[action_type],
-      },
+      } as unknown as Json,
       priority: 1,
       expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     })
