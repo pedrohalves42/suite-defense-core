@@ -97,7 +97,8 @@ Detalhes:\n${alerts.slice(0, 20).map(a => `[${a.severity}] ${a.title} (${agentMa
       }));
 
     if (insights.length > 0) {
-      await supabase.from('ai_insights').insert(insights);
+      // D16-C1: type-only cast; runtime payload unchanged.
+      await supabase.from('ai_insights').insert(insights as never);
     }
 
     allCorrelations.push(...correlations.map(c => ({ ...c, tenant_id: tenantId })));
