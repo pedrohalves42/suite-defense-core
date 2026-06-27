@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * AI Action Executor - Migrated to serveTenant
  * Executes AI-suggested actions after validation, whitelist check, and rate limiting.

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * AI analysis engine: builds prompts, calls AI, processes results
  */

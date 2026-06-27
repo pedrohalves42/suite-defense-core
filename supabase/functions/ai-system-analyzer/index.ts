@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * AI System Analyzer - Modularized
  * Auth: X-Internal-Secret / service_role (cron only)

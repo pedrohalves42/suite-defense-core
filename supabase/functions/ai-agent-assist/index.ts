@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * ai-agent-assist — Modularized
  * Modules: types, prompt-builder

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * ai-system-audit — Migrated to serveTenant middleware
  * Module: dimension-mapper
