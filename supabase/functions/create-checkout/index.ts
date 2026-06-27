@@ -78,6 +78,14 @@ serveTenant<CheckoutBody>(async (req, ctx) => {
 
   logger.info('[CREATE-CHECKOUT] Session created', { sessionId: session.id, tenantId, planName });
 
+  // HF-BILLING-AUDIT-01: record checkout session creation (session id only).
+  await createAuditLog({
+    supabase: ctx.supabase, userId: ctx.userId, tenantId,
+    action: 'billing.checkout_session_created', resourceType: 'checkout_session', resourceId: session.id,
+    details: { plan_name: planName, max_devices: maxDevices, request_id: ctx.requestId },
+    request: req, success: true,
+  });
+
   return { url: session.url };
 }, {
   methods: ['POST'],
