@@ -128,7 +128,7 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
 
     const promptSanitizeResult = sanitizeForAI(rawPrompt);
     if (promptSanitizeResult.blocked) {
-      logger.warn('[ai-system-analyzer] Prompt injection blocked for tenant:', tenantId, promptSanitizeResult.blockedPatterns);
+      logger.warn('[ai-system-analyzer] Prompt injection blocked for tenant:', { tenantId, patterns: promptSanitizeResult.blockedPatterns });
     }
     const prompt = promptSanitizeResult.sanitized;
 
@@ -141,7 +141,7 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
     );
 
     if (!aiResult.success || !parsedInsights) {
-      logger.error('[ai-system-analyzer] AI call failed for tenant:', tenantId, aiResult.error);
+      logger.error('[ai-system-analyzer] AI call failed for tenant:', { tenantId, error: aiResult.error });
       return [];
     }
 

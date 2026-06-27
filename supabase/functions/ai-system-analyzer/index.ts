@@ -105,7 +105,7 @@ serveInternal(async (_req, ctx) => {
 
   // Save insights
   if (insights.length > 0) {
-    const { data: insertedInsights, error: insertError } = await supabase.from('ai_insights').insert(insights).select();
+    const { data: insertedInsights, error: insertError } = await supabase.from('ai_insights').insert(insights as never).select();
     if (insertError) { logger.error('[ai-system-analyzer] Error saving insights:', insertError); throw insertError; }
 
     if (insertedInsights && insertedInsights.length > 0) {

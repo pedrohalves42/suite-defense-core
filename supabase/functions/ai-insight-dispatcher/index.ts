@@ -43,9 +43,9 @@ serveInternal(async (req, ctx) => {
     case 'suggest':
       return { success: true, action: 'suggested' };
     case 'auto':
-      return await handleAutoExecute(supabase, insightData as AIInsight, req.headers.get('origin'));
+      return await handleAutoExecute(supabase, insightData as unknown as AIInsight, req.headers.get('origin'));
     case 'auto_with_approval':
-      return await handleAutoWithApproval(supabase, insightData as AIInsight, req.headers.get('origin'));
+      return await handleAutoWithApproval(supabase, insightData as unknown as AIInsight, req.headers.get('origin'));
     default:
       return { success: true, action: 'none' };
   }

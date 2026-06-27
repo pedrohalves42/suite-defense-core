@@ -85,10 +85,11 @@ serveTenant(async (req, ctx) => {
   });
 
   // Update action status atomically - only if still pending
+  // D16-C3: result is Json column; cast to never bypasses Record↔Json overload mismatch.
   const { error: updateError } = await supabase.from('ai_actions').update({
     status: executionStatus, executed_by: userId,
     executed_at: new Date().toISOString(), result: executionResult,
-  }).eq('id', action.id).eq('status', 'pending');
+  } as never).eq('id', action.id).eq('status', 'pending');
 
   if (updateError) {
     log.error('Failed to update action status', { error: updateError.message });
@@ -96,6 +97,7 @@ serveTenant(async (req, ctx) => {
 
   // Security logging
   if (executionStatus === 'executed') {
+    // D16-C3: details is Json column; cast to never resolves Record↔Json overload + tenant_id drift.
     await supabase.from('security_logs').insert({
       tenant_id: action.tenant_id, user_id: userId,
       ip_address: req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'unknown',
@@ -103,7 +105,7 @@ serveTenant(async (req, ctx) => {
       severity: actionConfig.risk_level === 'high' ? 'high' : 'info', blocked: false,
       user_agent: req.headers.get('user-agent') || 'unknown',
       details: { action_id: action.id, action_type: action.action_type, executed_by: userId, insight_id: action.insight_id, risk_level: actionConfig.risk_level, result_summary: executionResult },
-    });
+    } as never);
   }
 
   log.info('Action completed', { action_id, status: executionStatus });
