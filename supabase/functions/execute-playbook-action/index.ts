@@ -317,7 +317,7 @@ serveTenant(async (req, ctx) => {
       actions_succeeded: actionResults.filter(r => r.success).length,
       used_immutable_snapshot: true,
       execution_time_ms: Date.now() - startTime,
-    },
+    } as unknown as Json,
   });
 
   logger.info(`[execute-playbook-action] Completed in ${Date.now() - startTime}ms (snapshot v${playbookSnapshot.version})`);
