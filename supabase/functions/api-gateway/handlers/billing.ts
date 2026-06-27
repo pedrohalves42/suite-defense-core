@@ -192,7 +192,7 @@ export async function handleCreateCustomTrial(supabase: SB, requestId: string, p
   if (!userId) return { error: 'Authentication required', __status: 401 };
 
   const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', userId);
-  const isSuperAdmin = roles?.some(r => r.role === 'super_admin');
+  const isSuperAdmin = roles?.some((r: any) => r.role === 'super_admin');
   if (!isSuperAdmin) return { error: 'Super admin access required', __status: 403 };
 
   const { z } = await import('https://esm.sh/zod@3.23.8');
