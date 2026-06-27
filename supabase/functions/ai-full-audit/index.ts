@@ -114,7 +114,7 @@ serveTenant(async (req, ctx) => {
     ai_model: redAiResult.model, ai_prompt_hash: redPromptHash,
     ai_response_raw: redResult, metrics_snapshot: metrics,
     binary_criteria: binaryCriteria, criteria_count_true: criteriaCountTrue,
-  }).select().single();
+  } as never).select().single();
 
   logger.info(`[ai-full-audit] Phase 1 complete. Red Score: ${redResult!.red_score}, Threat: ${redResult!.threat_level}, Criteria TRUE: ${criteriaCountTrue}`);
 
