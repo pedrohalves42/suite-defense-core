@@ -288,7 +288,7 @@ serveTenant(async (req, ctx) => {
 }, {
   methods: ['POST'],
   skipTenantValidation: true,
-  rateLimit: { maxRequests: 10, windowMinutes: 1 },
+  rateLimit: { endpoint: 'auto-remediate', maxRequests: 10, windowMinutes: 1 },
 });
 
 function buildJobPayload(actionType: ActionType, details: Record<string, unknown>) {
