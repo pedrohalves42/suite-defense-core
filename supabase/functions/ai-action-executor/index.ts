@@ -66,7 +66,7 @@ serveTenant(async (req, ctx) => {
 
   try {
     executionResult = await executeActionByType(
-      action.action_type, action.action_payload, supabase,
+      action.action_type, (action.action_payload ?? {}) as Record<string, unknown>, supabase,
       action.tenant_id, action.insight_id, userId!, req,
     );
   } catch (execError: unknown) {
@@ -77,12 +77,12 @@ serveTenant(async (req, ctx) => {
     executionResult = { error: err.message };
   }
 
-  // Audit log
+  // Audit log (D16-C3: execution_result is Json column; cast bypass overload mismatch)
   await supabase.from('ai_action_executions').insert({
     action_id: action.id, tenant_id: action.tenant_id, executed_by: userId,
     execution_status: executionStatus, execution_result: executionResult,
     error_message: errorMessage, executed_at: new Date().toISOString(),
-  });
+  } as never);
 
   // Update action status atomically - only if still pending
   // D16-C3: result is Json column; cast to never bypasses Record↔Json overload mismatch.
