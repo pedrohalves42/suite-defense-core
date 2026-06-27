@@ -61,9 +61,9 @@ serveTenant(async (req, ctx) => {
   if (!redAiResult.success || !redAiResult.content) {
     logger.error('[ai-full-audit] Red Team AI failed:', redAiResult.error);
     if (isCreditsExhausted(redAiResult.error)) {
-      const fallbackCriteria = calculateBinaryCriteria(metrics);
+      const fallbackCriteria = calculateBinaryCriteria(asMetrics(metrics));
       const criteriaCount = Object.values(fallbackCriteria).filter(Boolean).length;
-      const deterministicScore = calculateDeterministicScore(metrics);
+      const deterministicScore = calculateDeterministicScore(asMetrics(metrics));
       await logGovernanceEvent(serviceClient, tenantId, null, 'ai_providers_unavailable', null, Math.min(100, criteriaCount * 15), 'deterministic_fallback', 'Todos os provedores de IA falharam.', { criteria_count: criteriaCount, deterministic_score: deterministicScore, error: redAiResult.error });
       return new Response(JSON.stringify({ success: true, audit_id: null, overall_score: deterministicScore, market_score: Math.round(deterministicScore * 0.9), threat_level: getDeterministicThreatLevel(criteriaCount), red_score: Math.min(100, criteriaCount * 15), confidence_gap: 0, is_deterministic: true, fallback_reason: 'AI_PROVIDERS_UNAVAILABLE', binary_criteria: fallbackCriteria, tokens_used: 0, warning: 'AI providers unavailable. Deterministic fallback audit.' }),
         { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
@@ -76,7 +76,7 @@ serveTenant(async (req, ctx) => {
   let redResult: Record<string, unknown> | null = null;
   let redTeamFallbackUsed = false;
   try { redResult = safeParseJSON(redAiResult.content, 'red-team'); } catch {
-    redResult = createFallbackRedTeam('AI_JSON_PARSE_ERROR', calculateBinaryCriteria(metrics));
+    redResult = createFallbackRedTeam('AI_JSON_PARSE_ERROR', calculateBinaryCriteria(asMetrics(metrics)));
     redTeamFallbackUsed = true;
     await logGovernanceEvent(serviceClient, tenantId, null, 'red_team_fallback', null, 50, 'parse_error', 'Red Team JSON parse falhou', {});
   }
@@ -85,7 +85,7 @@ serveTenant(async (req, ctx) => {
   let binaryCriteria = (redResult!.binary_criteria || {}) as Record<string, unknown>;
   let binaryCriteriaFallbackUsed = false;
   if (Object.keys(binaryCriteria).length < 7) {
-    binaryCriteria = calculateBinaryCriteria(metrics);
+    binaryCriteria = calculateBinaryCriteria(asMetrics(metrics));
     redResult!.binary_criteria = binaryCriteria;
     binaryCriteriaFallbackUsed = true;
     await logGovernanceEvent(serviceClient, tenantId, null, 'binary_criteria_fallback', null, Object.values(binaryCriteria).filter((v: unknown) => v === true).length, 'llm_fallback', 'LLM nao retornou binary_criteria completo', {});
@@ -135,7 +135,7 @@ serveTenant(async (req, ctx) => {
   if (!anaAiResult.success || !anaAiResult.content) {
     logger.error('[ai-full-audit] Ana AI failed:', anaAiResult.error);
     if (isCreditsExhausted(anaAiResult.error)) {
-      const deterministicScore = calculateDeterministicScore(metrics);
+      const deterministicScore = calculateDeterministicScore(asMetrics(metrics));
       await logGovernanceEvent(serviceClient, tenantId, null, 'ai_unavailable_ana_phase', null, deterministicScore, 'deterministic_fallback', 'Provedores indisponiveis na fase Ana.', {});
       return new Response(JSON.stringify({ success: true, audit_id: null, overall_score: deterministicScore, market_score: Math.round(deterministicScore * 0.9), threat_level: getDeterministicThreatLevel(criteriaCountTrue), red_score: redResult!.red_score, confidence_gap: 0, is_deterministic: true, fallback_reason: 'AI_UNAVAILABLE_ANA_PHASE', red_team_completed: true, tokens_used: redTokens, warning: 'AI unavailable during Ana phase.' }),
         { status: 200, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
@@ -152,7 +152,7 @@ serveTenant(async (req, ctx) => {
   }
 
   // Score Governance
-  const deterministicBaseScore = calculateDeterministicScore(metrics);
+  const deterministicBaseScore = calculateDeterministicScore(asMetrics(metrics));
   const redRiskFactor = calculateRiskFactor(redResult!.red_score as number);
   await logGovernanceEvent(serviceClient, tenantId, null, 'deterministic_base_applied', null, deterministicBaseScore, 'fixed_rules', 'Base score calculada com regras deterministicas', {});
   await logGovernanceEvent(serviceClient, tenantId, null, 'risk_factor_applied', null, redRiskFactor * 100, 'red_team_adjustment', `Red score ${redResult!.red_score} → fator ${redRiskFactor.toFixed(3)}`, {});
