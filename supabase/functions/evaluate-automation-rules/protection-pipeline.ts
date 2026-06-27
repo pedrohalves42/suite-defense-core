@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 /**
  * Enterprise Protection Pipeline — Layers 0-6
@@ -54,10 +53,10 @@ async function checkCircuitBreaker(supabase: any, rule: Record<string, unknown>)
 
 async function checkBlastRadius(supabase: any, rule: Record<string, unknown>, tenantId: string, totalAgents: number, severity?: string): Promise<ProtectionResult> {
   if (totalAgents === 0) return { allowed: true, decision: 'passed', reason: '' };
-  let maxPercent = rule.max_affected_percentage || 30;
+  let maxPercent = (rule.max_affected_percentage as number) || 30;
   try {
     const { data: adaptiveLimit } = await supabase.rpc('get_adaptive_blast_radius', { p_tenant_id: tenantId, p_action_type: rule.action_type || 'create_job', p_severity: severity || 'medium' });
-    if (adaptiveLimit != null) maxPercent = adaptiveLimit;
+    if (adaptiveLimit != null) maxPercent = adaptiveLimit as number;
   } catch (err) { logger.warn('[protection-pipeline] get_adaptive_blast_radius failed, using fallback', err); }
 
   const { count } = await supabase
@@ -94,13 +93,14 @@ export async function runProtectionPipeline(
 ): Promise<ProtectionResult> {
   if (rule.mode === 'disabled') return { allowed: false, decision: 'blocked_disabled', reason: 'Rule is disabled' };
 
-  const deps = await checkRuleDependencies(supabase, rule.id, tenantId);
+  const ruleId = rule.id as string;
+  const deps = await checkRuleDependencies(supabase, ruleId, tenantId);
   if (!deps.allowed) return deps;
 
-  const cooldown = await checkExecutionCooldown(supabase, agentId, rule.id, rule.execution_cooldown_minutes || 60);
+  const cooldown = await checkExecutionCooldown(supabase, agentId, ruleId, (rule.execution_cooldown_minutes as number) || 60);
   if (!cooldown.allowed) return cooldown;
 
-  const rateLimit = await checkRateLimit(supabase, tenantId, rule.id, rule.max_executions_per_hour || 50);
+  const rateLimit = await checkRateLimit(supabase, tenantId, ruleId, (rule.max_executions_per_hour as number) || 50);
   if (!rateLimit.allowed) return rateLimit;
 
   const circuit = await checkCircuitBreaker(supabase, rule);
@@ -109,7 +109,7 @@ export async function runProtectionPipeline(
   const blast = await checkBlastRadius(supabase, rule, tenantId, totalAgents, severity);
   if (!blast.allowed) return blast;
 
-  const idempotencyKey = generateIdempotencyKey(agentId, rule.id);
+  const idempotencyKey = generateIdempotencyKey(agentId, ruleId);
   const idemp = await checkIdempotency(supabase, idempotencyKey);
   if (!idemp.allowed) return idemp;
 

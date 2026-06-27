@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 /**
  * Trigger evaluators for automation rules
@@ -19,11 +18,14 @@ export async function evaluateMetricThreshold(
 
   for (const [agentId, m] of latestMetrics) {
     if (!matchesScope(rule, agentId)) continue;
-    const metricMap: Record<string, number | null> = {
-      'cpu_usage_percent': m.cpu_usage_percent, 'cpu_percent': m.cpu_usage_percent,
-      'memory_usage_percent': m.memory_usage_percent, 'memory_percent': m.memory_usage_percent,
-      'disk_usage_percent': m.disk_usage_percent,
-      'disk_free_percent': m.disk_usage_percent != null ? 100 - m.disk_usage_percent : null,
+    const cpu = m.cpu_usage_percent as number | null | undefined;
+    const mem = m.memory_usage_percent as number | null | undefined;
+    const disk = m.disk_usage_percent as number | null | undefined;
+    const metricMap: Record<string, number | null | undefined> = {
+      'cpu_usage_percent': cpu, 'cpu_percent': cpu,
+      'memory_usage_percent': mem, 'memory_percent': mem,
+      'disk_usage_percent': disk,
+      'disk_free_percent': disk != null ? 100 - disk : null,
     };
     const metricValue = metricMap[conditions.metric as string];
     if (metricValue === null || metricValue === undefined) continue;
@@ -60,13 +62,15 @@ export async function evaluateProcessAnomaly(
     const eventType = (conditions.eventType || conditions.event_type || 'suspicious_process') as string;
 
     if (eventType === 'suspicious_process') {
-      const suspiciousCount = (p.suspicious_processes || []).length;
+      const suspicious = (p.suspicious_processes as Record<string, unknown>[] | null) || [];
+      const suspiciousCount = suspicious.length;
       const threshold = (conditions.value as number) || 1;
       if (suspiciousCount >= threshold) {
-        candidates.push({ agentId, triggerData: { event_type: 'suspicious_process', count: suspiciousCount, threshold, severity: 'critical', processes: (p.suspicious_processes || []).slice(0, 5).map((sp: Record<string, unknown>) => sp.name), message: `${suspiciousCount} suspicious process(es) detected` } });
+        candidates.push({ agentId, triggerData: { event_type: 'suspicious_process', count: suspiciousCount, threshold, severity: 'critical', processes: suspicious.slice(0, 5).map((sp) => sp.name), message: `${suspiciousCount} suspicious process(es) detected` } });
       }
     } else if (eventType === 'new_process_burst') {
-      const newCount = (p.new_processes || []).length;
+      const newProcs = (p.new_processes as unknown[] | null) || [];
+      const newCount = newProcs.length;
       const threshold = (conditions.value as number) || 10;
       if (newCount >= threshold) {
         candidates.push({ agentId, triggerData: { event_type: 'new_process_burst', count: newCount, threshold, severity: 'high', message: `${newCount} new processes detected` } });

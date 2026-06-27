@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Execute Playbook Action - Orchestrator
  * Auth: serveTenant (JWT + tenant isolation)
@@ -13,6 +12,7 @@ import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import type { PlaybookAction, ExecuteRequest, ActionResult, ActionContext } from './types.ts';
+import type { Json } from '../_shared/database.types.ts';
 import { executeAction } from './action-dispatcher.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
@@ -97,8 +97,8 @@ serveTenant(async (req, ctx) => {
   }
 
   // Use immutable snapshot
-  const actionsSnapshot = execution.actions_snapshot as PlaybookAction[] || [];
-  const playbookSnapshot = execution.playbook_snapshot as Record<string, unknown> || {};
+  const actionsSnapshot = (execution.actions_snapshot as unknown as PlaybookAction[]) || [];
+  const playbookSnapshot = (execution.playbook_snapshot as unknown as Record<string, unknown>) || {};
 
   if (actionsSnapshot.length === 0) {
     return new Response(JSON.stringify({ error: 'No actions found in snapshot' }), {
@@ -114,7 +114,7 @@ serveTenant(async (req, ctx) => {
   if (executionMode === 'semi_automatic') {
     const { data: approvalRequest, error: approvalError } = await supabase
       .from('approval_requests')
-      .select('id, status, expires_at, approved_by, approved_at')
+      .select('id, status, expires_at, approved_at')
       .eq('playbook_execution_id', execution_id)
       .eq('status', 'approved')
       .single();
@@ -143,7 +143,7 @@ serveTenant(async (req, ctx) => {
           reason: 'Semi-automatic playbook requires approval before execution',
           pending_request_id: pendingRequest?.id || null,
           pending_request_expires: pendingRequest?.expires_at || null,
-        },
+        } as unknown as Json,
       });
 
       return new Response(JSON.stringify({
@@ -186,7 +186,7 @@ serveTenant(async (req, ctx) => {
             label: a.label,
           })),
           reason: 'Assistive mode does not allow destructive actions',
-        },
+        } as unknown as Json,
       });
 
       return new Response(JSON.stringify({
@@ -230,8 +230,8 @@ serveTenant(async (req, ctx) => {
     ? [actionsSnapshot[action_index]]
     : actionsSnapshot;
 
-  const actionResults: ActionResult[] = execution.actions_taken || [];
-  const evidenceIds: string[] = execution.evidence_ids || [];
+  const actionResults: ActionResult[] = (execution.actions_taken as unknown as ActionResult[]) || [];
+  const evidenceIds: string[] = (execution.evidence_ids as string[] | null) || [];
 
   // Build action context
   const actionCtx: ActionContext = {
@@ -241,7 +241,7 @@ serveTenant(async (req, ctx) => {
     userId: userId!,
     executionId: execution_id,
     playbookSnapshot,
-    triggerContext: execution.trigger_context as Record<string, unknown> || {},
+    triggerContext: (execution.trigger_context as unknown as Record<string, unknown>) || {},
   };
 
   // Execute each action from snapshot
@@ -291,7 +291,7 @@ serveTenant(async (req, ctx) => {
     .from('playbook_executions')
     .update({
       status: finalStatus,
-      actions_taken: actionResults,
+      actions_taken: actionResults as unknown as Json,
       evidence_ids: evidenceIds,
       completed_at: allActionsExecuted ? new Date().toISOString() : null,
     })
@@ -317,7 +317,7 @@ serveTenant(async (req, ctx) => {
       actions_succeeded: actionResults.filter(r => r.success).length,
       used_immutable_snapshot: true,
       execution_time_ms: Date.now() - startTime,
-    },
+    } as unknown as Json,
   });
 
   logger.info(`[execute-playbook-action] Completed in ${Date.now() - startTime}ms (snapshot v${playbookSnapshot.version})`);

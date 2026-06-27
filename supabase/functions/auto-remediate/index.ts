@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Auto Remediate - Migrated to serveTenant middleware
  * Auth: JWT (admin UI) or internal (serveTenant handles both via skipTenantValidation)
@@ -7,7 +6,11 @@
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { createAuditLog } from '../_shared/audit.ts';
 import { logger } from '../_shared/logger.ts';
+import type { Json } from '../_shared/database.types.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
+
+type BlastCheckResult = { allowed?: boolean; affected_percent?: number };
+type GlobalBreakerResult = { allowed?: boolean };
 
 type ActionType = 'kill_process' | 'firewall_block' | 'patch_apply' | 'quarantine_file' | 'restart_service' | 'enable_antivirus' | 'enable_firewall' | 'block_usb_device' | 'suggest_patch' | 'force_windows_update';
 
@@ -81,11 +84,12 @@ serveTenant(async (req, ctx) => {
 
   // Blast Radius Check
   try {
-    const { data: blastCheck, error: blastError } = await supabase.rpc('check_blast_radius' as never, {
+    const { data: blastCheckRaw, error: blastError } = await supabase.rpc('check_blast_radius' as never, {
       p_tenant_id: resolvedTenantId,
       p_action_type: action_type,
       p_severity: trigger_details.severity || 'medium',
-    });
+    } as never);
+    const blastCheck = blastCheckRaw as BlastCheckResult | null;
 
     if (!blastError && blastCheck && !blastCheck.allowed) {
       logger.warn(`[auto-remediate] Blast radius exceeded for ${action_type}: ${blastCheck.affected_percent}%`);
@@ -96,7 +100,7 @@ serveTenant(async (req, ctx) => {
         agent_name: agent.agent_name,
         action_type,
         trigger_source,
-        trigger_details: { ...trigger_details, blast_radius_blocked: true },
+        trigger_details: { ...trigger_details, blast_radius_blocked: true } as unknown as Json,
         requires_approval: false,
         status: 'failed',
         error_message: `Blast radius exceeded: ${blastCheck.affected_percent?.toFixed(1)}% of fleet affected`,
@@ -121,11 +125,12 @@ serveTenant(async (req, ctx) => {
 
   // Global Circuit Breaker
   try {
-    const { data: globalBreaker } = await supabase.rpc('check_global_circuit_breaker' as never, {
+    const { data: globalBreakerRaw } = await supabase.rpc('check_global_circuit_breaker' as never, {
       p_tenant_id: resolvedTenantId,
       p_max_impact_percent: 30,
       p_window_minutes: 10,
-    });
+    } as never);
+    const globalBreaker = globalBreakerRaw as GlobalBreakerResult | null;
 
     if (globalBreaker && !globalBreaker.allowed) {
       logger.warn(`[auto-remediate] Global circuit breaker tripped for tenant ${resolvedTenantId}`);
@@ -153,7 +158,7 @@ serveTenant(async (req, ctx) => {
       agent_name: agent.agent_name,
       action_type,
       trigger_source,
-      trigger_details,
+      trigger_details: trigger_details as unknown as Json,
       requires_approval,
       status: requires_approval ? 'pending' : 'executing',
       executed_at: requires_approval ? null : new Date().toISOString(),
@@ -172,7 +177,7 @@ serveTenant(async (req, ctx) => {
       severity: 'medium',
       title: 'Aprovacao de Remediacao Necessaria',
       message: `Acao "${action_type}" no agente "${agent.agent_name}" aguarda aprovacao`,
-      details: { action_id: action?.id, action_type, trigger_source, trigger_details },
+      details: { action_id: action?.id, action_type, trigger_source, trigger_details } as unknown as Json,
     });
 
     return {
@@ -198,16 +203,16 @@ serveTenant(async (req, ctx) => {
         ...jobPayload.payload,
         remediation_action_id: action?.id,
         rollback_supported: !!ROLLBACK_MAP[action_type],
-      },
+      } as unknown as Json,
       priority: 1,
       expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-    })
+    } as never)
     .select('id')
     .single();
 
   // Update action with job reference
   await supabase.from('auto_remediation_actions').update({
-    result: { job_id: job?.id, rollback_supported: !!ROLLBACK_MAP[action_type] },
+    result: { job_id: job?.id, rollback_supported: !!ROLLBACK_MAP[action_type] } as unknown as Json,
     status: job ? 'executing' : 'failed',
     error_message: jobErr?.message,
   }).eq('id', action?.id);
@@ -226,7 +231,7 @@ serveTenant(async (req, ctx) => {
       action_type,
       trigger_source,
       rollback_supported: !!ROLLBACK_MAP[action_type],
-    },
+    } as unknown as Json,
   });
 
   // Audit
@@ -246,7 +251,7 @@ serveTenant(async (req, ctx) => {
     aggregate_id: agent_id,
     aggregate_type: 'agent',
     event_type: 'AutoRemediationExecuted',
-    payload: { action_id: action?.id, action_type, trigger_source, job_id: job?.id },
+    payload: { action_id: action?.id, action_type, trigger_source, job_id: job?.id } as unknown as Json,
     occurred_on: new Date().toISOString(),
     tenant_id: resolvedTenantId,
   });
@@ -283,7 +288,7 @@ serveTenant(async (req, ctx) => {
 }, {
   methods: ['POST'],
   skipTenantValidation: true,
-  rateLimit: { maxRequests: 10, windowMinutes: 1 },
+  rateLimit: { endpoint: 'auto-remediate', maxRequests: 10, windowMinutes: 1 },
 });
 
 function buildJobPayload(actionType: ActionType, details: Record<string, unknown>) {

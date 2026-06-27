@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 /**
  * Per-tenant evaluation with enterprise protection pipeline v2
@@ -45,7 +44,7 @@ async function executeAction(
           tenant_id: tenantId,
           agent_id: agentId,
           alert_type: 'automation_alert',
-          severity: triggerData.value >= 95 ? 'critical' : 'high',
+          severity: (triggerData.value as number) >= 95 ? 'critical' : 'high',
           title: `[Auto] ${rule.name}`,
           message: triggerData.message || `Rule triggered: ${JSON.stringify(triggerData)}`,
           details: { ...triggerData, rule_id: rule.id },
@@ -62,7 +61,7 @@ async function executeAction(
         'high_cpu': 'metric_threshold',
         'low_disk': 'metric_threshold',
       };
-      const eventType = triggerData.event_type || rule.trigger_type;
+      const eventType = (triggerData.event_type || rule.trigger_type) as string;
       const playbookTrigger = triggerTypeMap[eventType];
 
       if (playbookTrigger) {
@@ -238,7 +237,7 @@ export async function evaluateForTenant(
     for (const candidate of candidates) {
       totalDecisions++;
 
-      const protection = await runProtectionPipeline(supabase, rule, candidate.agentId, tenantId, totalAgents, candidate.triggerData?.severity);
+      const protection = await runProtectionPipeline(supabase, rule, candidate.agentId, tenantId, totalAgents, candidate.triggerData?.severity as string | undefined);
 
       if (!protection.allowed) {
         totalBlocked++;

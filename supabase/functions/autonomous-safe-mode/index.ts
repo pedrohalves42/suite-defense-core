@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * autonomous-safe-mode — Rules Engine Orchestrator
  * Migrated to serveInternal middleware + modular rule processors
@@ -77,7 +76,7 @@ serveInternal(async (_req, ctx) => {
   const allResults: RuleResult[] = [];
   let totalActions = 0;
 
-  for (const rule of (rules || []) as RuleRecord[]) {
+  for (const rule of ((rules || []) as unknown) as RuleRecord[]) {
     const handler = RULE_HANDLERS[rule.code];
     if (!handler) {
       logger.debug(`[rules-engine][${requestId}] Unknown rule code: ${rule.code}, skipping`);

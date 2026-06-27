@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Security rules: AGENT_ISOLATE_003, UPDATE_BLOCK_004,
  * BLOCKED_ACCESS_PATTERN_010, AGENT_DIVERGENT_011
@@ -186,7 +185,7 @@ export async function processBlockedAccessPatternRule(supabase: any, rule: RuleR
   // Batch fetch agent names for all suspicious agents instead of N+1
   const suspAgentIds = suspiciousAgents.map(([id]) => id);
   const { data: suspAgentInfos } = await supabase.from('agents').select('id, agent_name').in('id', suspAgentIds);
-  const suspAgentNameMap = new Map((suspAgentInfos || []).map(a => [a.id, a.agent_name]));
+  const suspAgentNameMap = new Map<string, string>((suspAgentInfos || []).map(a => [String(a.id), String(a.agent_name ?? '')]));
 
   for (const [agentId, data] of suspiciousAgents) {
     const agentName = suspAgentNameMap.get(agentId) || agentId.substring(0, 8);
@@ -328,7 +327,7 @@ export async function processAgentDivergentRule(supabase: any, rule: RuleRecord)
   // Batch fetch agent names for divergent agents instead of N+1
   const divAgentIds = divergentAgents.slice(0, 10).map(d => d.agent_id);
   const { data: divAgentInfos } = await supabase.from('agents').select('id, agent_name').in('id', divAgentIds);
-  const divAgentNameMap = new Map((divAgentInfos || []).map(a => [a.id, a.agent_name]));
+  const divAgentNameMap = new Map<string, string>((divAgentInfos || []).map(a => [String(a.id), String(a.agent_name ?? '')]));
 
   for (const divergent of divergentAgents.slice(0, 10)) {
     const agentName = divAgentNameMap.get(divergent.agent_id) || divergent.agent_id.substring(0, 8);

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * evaluate-playbook-triggers — Migrated to serveInternal middleware
  * Evaluates trigger events against active playbooks and creates executions.
@@ -10,6 +9,7 @@ import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
 import type { TriggerEvent, PlaybookAction, RiskAnalysis, TenantSettings } from './types.ts';
+import type { Database, Json } from '../_shared/database.types.ts';
 import { evaluateConditions } from './condition-engine.ts';
 import { handleSemiAutomaticApproval } from './approval-handler.ts';
 
@@ -51,13 +51,13 @@ serveInternal(async (req, ctx) => {
   if (hasRecentExec) return { triggered: false, reason: 'Cooldown active', cooldown_minutes: cooldownMinutes };
 
   // Evaluate conditions
-  if (!evaluateConditions(trigger_type, playbook.trigger_conditions || {}, context)) {
+  if (!evaluateConditions(trigger_type, (playbook.trigger_conditions || {}) as Record<string, unknown>, context)) {
     return { triggered: false, reason: 'Trigger conditions not met', conditions: playbook.trigger_conditions, context };
   }
 
   // Risk analysis
-  const { data: riskData, error: riskError } = await supabase.rpc('should_auto_execute_playbook', { p_playbook_id: playbook.id, p_event_type: trigger_type, p_context: context });
-  const riskAnalysis: RiskAnalysis = riskError ? { risk_score: 0.5, threshold: 0.8, should_auto_execute: false, has_destructive_actions: false, require_approval: playbook.require_approval, is_enabled: playbook.is_enabled, decision_reason: 'risk_calculation_failed' } : riskData as RiskAnalysis;
+  const { data: riskData, error: riskError } = await supabase.rpc('should_auto_execute_playbook', { p_playbook_id: playbook.id, p_event_type: trigger_type, p_context: context as Json });
+  const riskAnalysis: RiskAnalysis = riskError ? { risk_score: 0.5, threshold: 0.8, should_auto_execute: false, has_destructive_actions: false, require_approval: playbook.require_approval, is_enabled: playbook.is_enabled, decision_reason: 'risk_calculation_failed' } : (riskData as unknown as RiskAnalysis);
 
   // Agent info
   let agentInfo = null;
@@ -78,13 +78,15 @@ serveInternal(async (req, ctx) => {
   const triggeredBy = shouldAutoExecute ? 'risk_engine' : (isDryRun ? 'dry_run' : 'trigger');
 
   // Create execution
-  const { data: execution, error: execError } = await supabase.from('playbook_executions').insert({
+  type PEInsert = Database['public']['Tables']['playbook_executions']['Insert'];
+  const insertPayload: PEInsert = {
     playbook_id: playbook.id, tenant_id, agent_id: agent_id || null, trigger_source: trigger_type,
-    trigger_context: { ...context, agent_info: agentInfo, evaluated_at: new Date().toISOString(), risk_analysis: riskAnalysis, dry_run: isDryRun },
-    playbook_snapshot: playbookSnapshot, actions_snapshot: actionsSnapshot,
+    trigger_context: { ...context, agent_info: agentInfo, evaluated_at: new Date().toISOString(), risk_analysis: riskAnalysis, dry_run: isDryRun } as unknown as Json,
+    playbook_snapshot: playbookSnapshot as unknown as Json, actions_snapshot: actionsSnapshot as unknown as Json,
     status: shouldAutoExecute ? 'in_progress' : 'pending',
     auto_executed: shouldAutoExecute, risk_score: riskAnalysis.risk_score, triggered_by: triggeredBy, dry_run: isDryRun,
-  }).select('id').single();
+  };
+  const { data: execution, error: execError } = await supabase.from('playbook_executions').insert(insertPayload).select('id').single();
   if (execError) throw execError;
 
   // Risk decision log
