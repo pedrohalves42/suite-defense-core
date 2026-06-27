@@ -565,6 +565,17 @@ export async function handleManageSubscription(supabase: SB, requestId: string, 
       throw new Error(`Invalid operation: ${operation}`);
   }
 
+  // HF-BILLING-AUDIT-01: record management operation (sanitized, success-only).
+  await createAuditLog({
+    supabase, userId, tenantId,
+    action: `billing.subscription_${operation}`, resourceType: 'tenant_subscription',
+    resourceId: subscription.stripe_subscription_id ?? undefined,
+    details: {
+      operation, target_plan: targetPlan || undefined, extra_devices: extraDevices,
+      previous_plan: currentPlan, request_id: requestId,
+    },
+    request: ctx?.req, success: true,
+  });
   return result;
 }
 
