@@ -158,7 +158,7 @@ serveTenant(async (req, ctx) => {
       agent_name: agent.agent_name,
       action_type,
       trigger_source,
-      trigger_details,
+      trigger_details: trigger_details as unknown as Json,
       requires_approval,
       status: requires_approval ? 'pending' : 'executing',
       executed_at: requires_approval ? null : new Date().toISOString(),
