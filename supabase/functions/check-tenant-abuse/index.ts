@@ -61,7 +61,7 @@ serveInternal(async (_req, ctx) => {
 
   return {
     success: true,
-    tenants_checked: tenants?.length ?? 0,
+    tenants_checked: alerts.length,
     alerts_created: alerts.length,
     alerts,
   };
