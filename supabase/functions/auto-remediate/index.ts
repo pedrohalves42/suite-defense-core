@@ -231,7 +231,7 @@ serveTenant(async (req, ctx) => {
       action_type,
       trigger_source,
       rollback_supported: !!ROLLBACK_MAP[action_type],
-    },
+    } as unknown as Json,
   });
 
   // Audit
