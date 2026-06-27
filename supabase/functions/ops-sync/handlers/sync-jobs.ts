@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 /**
  * Sync Jobs handlers (Batch 3B) — jobs, DLQ, scheduling
  * Inlined from: process-failed-jobs, process-scheduled-jobs, invoke-scheduled-jobs, dlq-action, process-dlq-retries

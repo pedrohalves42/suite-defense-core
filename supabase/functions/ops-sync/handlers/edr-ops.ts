@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 /**
  * edr-ops — Phase 2I handlers
  * Inlined from: fetch-nvd-cves, correlate-edr-events, evaluate-edr-detections
@@ -166,7 +166,7 @@ export const handleCorrelateEdrEvents: InlinedHandler = async (supabase, request
   if (hasGlobalRules) {
     const { data: tenantRows } = await supabase.from('endpoint_detection_events').select('tenant_id').gte('event_time', since).eq('status', 'open').limit(2000);
     const fromEvents = [...new Set((tenantRows || []).map(r => r.tenant_id))];
-    allTenantIds = [...new Set([...ruleTenantIds, ...fromEvents])];
+    allTenantIds = [...new Set([...ruleTenantIds, ...fromEvents])] as string[];
   }
 
   if (!allTenantIds.length) return { message: 'No tenants with active rules/detections' };
@@ -222,7 +222,7 @@ export const handleCorrelateEdrEvents: InlinedHandler = async (supabase, request
             }
           }
           if (matched.length >= rule.min_events && patternIdx >= patterns.length) {
-            await createIncident(supabase, tenantId, agentId, rule, matched, [...new Set(matched.map(m => m.mitre_tactic).filter(Boolean))]);
+            await createIncident(supabase, tenantId, agentId, rule, matched, [...new Set(matched.map(m => m.mitre_tactic).filter(Boolean))] as string[]);
             incidentsCreated++;
           }
         }
