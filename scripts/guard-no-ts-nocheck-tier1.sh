@@ -109,6 +109,14 @@ PROTECTED_PATHS=(
   "supabase/functions/ops-sync/index.ts"
   "supabase/functions/ops-sync/handlers/sync-jobs.ts"
   "supabase/functions/ops-sync/handlers/edr-ops.ts"
+
+  # D15-B3 — Ops Reports (Tier B operacional: relatórios, evidências, uploads)
+  "supabase/functions/ops-reports/index.ts"
+  "supabase/functions/ops-reports/handlers/report-generators.ts"
+  "supabase/functions/ops-reports/handlers/report-scheduled.ts"
+  "supabase/functions/list-reports/index.ts"
+  "supabase/functions/upload-report/index.ts"
+  "supabase/functions/soc2-evidence-collector/index.ts"
 )
 
 FOUND=0
