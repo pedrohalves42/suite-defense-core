@@ -84,11 +84,12 @@ serveTenant(async (req, ctx) => {
 
   // Blast Radius Check
   try {
-    const { data: blastCheck, error: blastError } = await supabase.rpc('check_blast_radius' as never, {
+    const { data: blastCheckRaw, error: blastError } = await supabase.rpc('check_blast_radius' as never, {
       p_tenant_id: resolvedTenantId,
       p_action_type: action_type,
       p_severity: trigger_details.severity || 'medium',
-    });
+    } as never);
+    const blastCheck = blastCheckRaw as BlastCheckResult | null;
 
     if (!blastError && blastCheck && !blastCheck.allowed) {
       logger.warn(`[auto-remediate] Blast radius exceeded for ${action_type}: ${blastCheck.affected_percent}%`);
@@ -99,7 +100,7 @@ serveTenant(async (req, ctx) => {
         agent_name: agent.agent_name,
         action_type,
         trigger_source,
-        trigger_details: { ...trigger_details, blast_radius_blocked: true },
+        trigger_details: { ...trigger_details, blast_radius_blocked: true } as unknown as Json,
         requires_approval: false,
         status: 'failed',
         error_message: `Blast radius exceeded: ${blastCheck.affected_percent?.toFixed(1)}% of fleet affected`,
