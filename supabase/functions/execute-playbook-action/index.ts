@@ -12,6 +12,7 @@ import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import type { PlaybookAction, ExecuteRequest, ActionResult, ActionContext } from './types.ts';
+import type { Json } from '../_shared/database.types.ts';
 import { executeAction } from './action-dispatcher.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
