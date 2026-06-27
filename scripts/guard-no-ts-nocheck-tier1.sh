@@ -117,6 +117,26 @@ PROTECTED_PATHS=(
   "supabase/functions/list-reports/index.ts"
   "supabase/functions/upload-report/index.ts"
   "supabase/functions/soc2-evidence-collector/index.ts"
+
+  # D15-B4 — Automation Runtime (motor de regras / playbooks / remediação)
+  "supabase/functions/evaluate-automation-rules/index.ts"
+  "supabase/functions/evaluate-automation-rules/helpers.ts"
+  "supabase/functions/evaluate-automation-rules/protection-pipeline.ts"
+  "supabase/functions/evaluate-automation-rules/tenant-evaluator.ts"
+  "supabase/functions/evaluate-automation-rules/trigger-evaluators.ts"
+  "supabase/functions/evaluate-playbook-triggers/index.ts"
+  "supabase/functions/evaluate-playbook-triggers/approval-handler.ts"
+  "supabase/functions/evaluate-playbook-triggers/condition-engine.ts"
+  "supabase/functions/execute-playbook-action/index.ts"
+  "supabase/functions/execute-playbook-action/action-dispatcher.ts"
+  "supabase/functions/execute-playbook-action/handlers/agent-jobs.ts"
+  "supabase/functions/execute-playbook-action/handlers/notify.ts"
+  "supabase/functions/execute-playbook-action/handlers/security.ts"
+  "supabase/functions/auto-remediate/index.ts"
+  "supabase/functions/autonomous-safe-mode/index.ts"
+  "supabase/functions/autonomous-safe-mode/rules/agent-health.ts"
+  "supabase/functions/autonomous-safe-mode/rules/quality.ts"
+  "supabase/functions/autonomous-safe-mode/rules/security.ts"
 )
 
 FOUND=0
