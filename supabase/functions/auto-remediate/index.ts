@@ -177,7 +177,7 @@ serveTenant(async (req, ctx) => {
       severity: 'medium',
       title: 'Aprovacao de Remediacao Necessaria',
       message: `Acao "${action_type}" no agente "${agent.agent_name}" aguarda aprovacao`,
-      details: { action_id: action?.id, action_type, trigger_source, trigger_details },
+      details: { action_id: action?.id, action_type, trigger_source, trigger_details } as unknown as Json,
     });
 
     return {
