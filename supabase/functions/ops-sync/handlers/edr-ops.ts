@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 /**
  * edr-ops — Phase 2I handlers
  * Inlined from: fetch-nvd-cves, correlate-edr-events, evaluate-edr-detections

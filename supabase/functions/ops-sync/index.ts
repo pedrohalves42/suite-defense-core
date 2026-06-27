@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import { servePublic } from '../_shared/serve-public.ts';
 import { assertInternalCaller } from '../_shared/assert-internal-caller.ts';
 import { logger } from '../_shared/logger.ts';
