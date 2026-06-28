@@ -146,7 +146,8 @@ serveTenant(async (req, ctx) => {
   logPromptUsage('ana-auditor-persona', anaPersona.hash, tenantId, 'ai-full-audit', { phase: 2 });
   logPromptUsage('ana-analysis-template', anaTemplate.hash, tenantId, 'ai-full-audit', { phase: 2 });
 
-  const redTeamContext = `\nCONTEXTO RED TEAM:\n- Red Score: ${redResult!.red_score}/100\n- Threat Level: ${redResult!.threat_level}\n- Vetores: ${(redResult!.attack_vectors as any[])?.slice(0, 3).map((v) => v.name).join(', ') || 'nenhum'}\n- Pior cenario: ${redResult!.worst_case_scenario || 'nao especificado'}\n`;
+  const attackVectors = Array.isArray(redResult!.attack_vectors) ? redResult!.attack_vectors as Array<{ name?: string }> : [];
+  const redTeamContext = `\nCONTEXTO RED TEAM:\n- Red Score: ${redResult!.red_score}/100\n- Threat Level: ${redResult!.threat_level}\n- Vetores: ${attackVectors.slice(0, 3).map((v) => v.name).join(', ') || 'nenhum'}\n- Pior cenario: ${redResult!.worst_case_scenario || 'nao especificado'}\n`;
   const anaPrompt = anaTemplate.content.replace('{metrics}', JSON.stringify(metrics, null, 2) + '\n\n' + redTeamContext);
   const anaMessages: AIMessage[] = [{ role: 'system', content: anaPersona.content }, { role: 'user', content: anaPrompt }];
   const anaAiResult = await callAI(anaMessages, { maxTokens: 8192, functionName: 'ai-full-audit-ana', tenantId });
