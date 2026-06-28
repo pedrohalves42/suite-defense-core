@@ -10,7 +10,13 @@ import type { Json } from '../_shared/database.types.ts';
 import { jobInsert } from '../_shared/job-insert.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
-type BlastCheckResult = { allowed?: boolean; affected_percent?: number };
+// HF-LATENT-RPC-MISSING-01a: official check_blast_radius contract.
+type BlastCheckResult = {
+  allowed: boolean;
+  reason: string | null;
+  current_radius: number;
+  max_radius: number;
+};
 type GlobalBreakerResult = { allowed?: boolean };
 
 type ActionType = 'kill_process' | 'firewall_block' | 'patch_apply' | 'quarantine_file' | 'restart_service' | 'enable_antivirus' | 'enable_firewall' | 'block_usb_device' | 'suggest_patch' | 'force_windows_update';
