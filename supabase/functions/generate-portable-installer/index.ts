@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 /**
  * generate-portable-installer Edge Function
  * 

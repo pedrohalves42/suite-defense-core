@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 /**
  * build-agent-exe Edge Function ? Modularized & migrated to serveTenant
  *
@@ -129,7 +129,7 @@ serveTenant(async (req, ctx) => {
       const agentScriptHash = prepared.sha256;
 
       // 5. Check build cache
-      const cachedResponse = await checkBuildCache(supabase, tenantId, agentScriptHash, requestId);
+      const cachedResponse = await checkBuildCache(supabase, tenantId, agentScriptHash, requestId, origin);
       if (cachedResponse) return cachedResponse;
 
       // 6. Generate installer content
@@ -153,7 +153,8 @@ serveTenant(async (req, ctx) => {
 
       if (buildResult instanceof Response) return buildResult;
       const installerContent = buildResult.templateContent;
-      const agentScriptHash = buildResult.agentScriptHash;
+      // HF-BUILD-DUP-DECL-01: removed dead duplicate `const agentScriptHash = buildResult.agentScriptHash;`
+      // The hash from prepared storage script (line 129) is the canonical one used for cache key and DB record.
 
       // 7. Create build record
       const { data: buildRecord, error: buildError } = await supabase

@@ -1,7 +1,7 @@
-// @ts-nocheck
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders, buildCorsHeaders } from '../_shared/cors.ts';
+import { buildCorsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import type { Database } from '../_shared/database.types.ts';
 
 export interface CachedBuild {
   id: string;
@@ -13,12 +13,16 @@ export interface CachedBuild {
 /**
  * Check if a valid cached build exists for this tenant/script combination.
  * Returns the cached build response if valid, or null if a new build is needed.
+ *
+ * HF-BUILD-CACHE-ORIGIN-01: accept origin so CORS headers are correct
+ * (previously referenced an undefined `origin` variable).
  */
 export async function checkBuildCache(
-  supabase: any,
+  supabase: SupabaseClient<Database>,
   tenantId: string,
   scriptHash: string,
-  requestId: string
+  requestId: string,
+  origin: string | null = null,
 ): Promise<Response | null> {
   const { data: cachedBuild } = await supabase
     .from('agent_builds')

@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 /**
  * Get Agent Script Content
  * SECURITY: Only accessible to super_admin users
