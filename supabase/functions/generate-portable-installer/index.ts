@@ -90,9 +90,10 @@ serveTenant(async (_req, ctx) => {
     persistIfChanged: false,
   });
 
-  if (!prepared || !validateAgentScriptContent(prepared.content)) {
+  const scriptValidation = prepared ? validateAgentScriptContent(prepared.content) : { valid: false, errors: ['Script preparation failed'] };
+  if (!prepared || !scriptValidation.valid) {
     return new Response(
-      JSON.stringify({ error: 'Agent script validation failed' }),
+      JSON.stringify({ error: 'Agent script validation failed', details: scriptValidation.errors }),
       { status: 503, headers: { 'Content-Type': 'application/json' } }
     );
   }
