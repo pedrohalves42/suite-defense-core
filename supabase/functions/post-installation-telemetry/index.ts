@@ -27,7 +27,12 @@ serveAgent(async (_req, ctx) => {
   if (!parsed.success) {
     return new Response(JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten().fieldErrors }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
+  // `b` is the parsed payload; passthrough fields (network_tests, os_version, …) are
+  // accessed via a permissive view since they are not part of the strict schema above.
   const b = parsed.data;
+  const bx = parsed.data as Record<string, unknown>;
+  const ad = agentData as Record<string, unknown>;
+  const networkTests = (bx.network_tests as Record<string, unknown> | undefined) ?? {};
 
   logger.info(`[${requestId}] Telemetry data received:`, {
     agent_name: agentName,
@@ -46,28 +51,28 @@ serveAgent(async (_req, ctx) => {
     platform: 'windows',
     success: b.success ?? true,
     error_message: b.errors ? JSON.stringify(b.errors) : null,
-    network_connectivity: (b.network_tests as Record<string, unknown>)?.health_check_passed ?? null,
-    dns_resolution: (b.network_tests as Record<string, unknown>)?.dns_test ?? null,
-    api_connectivity: (b.network_tests as Record<string, unknown>)?.api_test ?? null,
+    network_connectivity: networkTests.health_check_passed ?? null,
+    dns_resolution: networkTests.dns_test ?? null,
+    api_connectivity: networkTests.api_test ?? null,
     os_info: {
-      type: agentData.os_type,
-      version: b.os_version || agentData.os_version,
-      hostname: agentData.hostname,
-      powershell_version: b.powershell_version || null,
+      type: ad.os_type ?? null,
+      version: (bx.os_version as string | undefined) || (ad.os_version as string | undefined) || null,
+      hostname: ad.hostname ?? null,
+      powershell_version: (bx.powershell_version as string | null | undefined) ?? null,
     },
     installation_method: 'windows_ps1',
-    firewall_status: b.firewall_status || 'unknown',
-    proxy_detected: b.proxy_detected || false,
+    firewall_status: (bx.firewall_status as string | undefined) || 'unknown',
+    proxy_detected: (bx.proxy_detected as boolean | undefined) || false,
     metadata: {
-      task_created: b.task_created,
-      task_running: b.task_running,
-      script_exists: b.script_exists,
-      script_size_bytes: b.script_size_bytes,
+      task_created: b.task_created ?? null,
+      task_running: b.task_running ?? null,
+      script_exists: (bx.script_exists as unknown) ?? null,
+      script_size_bytes: (bx.script_size_bytes as unknown) ?? null,
       verified: true,
       request_id: requestId,
     },
-    timestamp: b.installation_time || new Date().toISOString(),
-  };
+    timestamp: (bx.installation_time as string | undefined) || new Date().toISOString(),
+  } as never;
 
   // Insert telemetry (with idempotency check)
   const { error: insertError } = await supabase
@@ -97,7 +102,7 @@ serveAgent(async (_req, ctx) => {
   });
 
   // Track expected first_heartbeat after installation
-  const metadata = b.metadata as Record<string, unknown> | undefined;
+  const metadata = bx.metadata as Record<string, unknown> | undefined;
   if (b.success && metadata?.installation_complete) {
     await supabase.from('installation_analytics').insert({
       tenant_id: tenantId,
@@ -118,17 +123,22 @@ serveAgent(async (_req, ctx) => {
     logger.info(`[${requestId}] Installation failed, checking for admin notification`, { errors: b.errors });
     const { data: adminRole } = await supabase
       .from('user_roles')
-      .select('user_id, profiles!inner(email)')
+      .select('user_id')
       .eq('tenant_id', tenantId)
       .eq('role', 'admin')
       .limit(1)
       .maybeSingle();
 
-    if (adminRole) {
-      const profiles = adminRole.profiles as Record<string, unknown>;
-      logger.info(`[${requestId}] Admin found for notification`, { adminEmail: profiles?.email });
+    if (adminRole?.user_id) {
+      const { data: adminProfile } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', adminRole.user_id)
+        .maybeSingle();
+      logger.info(`[${requestId}] Admin found for notification`, { adminEmail: adminProfile?.email });
     }
   }
+
 
   return {
     status: 'success',
