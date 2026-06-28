@@ -7,12 +7,23 @@ import { serveTenant } from '../_shared/serve-tenant.ts';
 import { requireEnv } from '../_shared/env.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
+import { asJson, toRecord } from '../_shared/json.ts';
+import type { Database } from '../_shared/database.types.ts';
 
 import {
   calculateDeterministicScore, calculateRiskFactor, calculateBinaryCriteria,
   getDeterministicThreatLevel, isCreditsExhausted, isRateLimited, logGovernanceEvent,
 } from './helpers.ts';
 
+type RedTeamInsert = Database['public']['Tables']['red_team_assessments']['Insert'];
+type SystemAuditInsert = Database['public']['Tables']['system_audits']['Insert'];
+
+// D18-3 / LATENT-AUDIT-SCHEMA-01: `as never` casts on red_team_assessments /
+// system_audits inserts replaced by precise named-type casts to the generated
+// Insert row types; `as unknown as Record<string, unknown>` on fallback
+// factories replaced by `toRecord()`; Json column payloads narrowed via `asJson`.
+// All runtime payloads preserved.
+//
 // D16-C2: narrow `Json` from RPC into the loose record shape the deterministic
 // helpers expect. Runtime contract is unchanged — the RPC returns a JSON object.
 const asMetrics = (m: unknown): Record<string, unknown> =>
