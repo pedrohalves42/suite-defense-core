@@ -34,8 +34,13 @@ export class CronSentinelUseCase {
     
     if (existingTask) return { success: true, message: 'Alert task already exists', existing_task_id: existingTask.id, silent_jobs: unhealthyJobs.length };
 
-    // Get runbook
-    const { data: runbook } = await this.checkRepository.rpc('get_runbook_by_type' as any, { p_anomaly_type: 'cron_silent_failure' } as any);
+    // HF-LATENT-RPC-MISSING-01b: get_runbook_by_type never existed.
+    // Replaced with a trivial SELECT on the runbooks table (UNIQUE on anomaly_type).
+    const { data: runbook } = await this.checkRepository.supabase
+      .from('runbooks')
+      .select('id, title')
+      .eq('anomaly_type', 'cron_silent_failure')
+      .maybeSingle();
     
     const jobNames = unhealthyJobs.map((j: any) => j.job_key || j.job_name).slice(0, 10).join(', ');
     const moreCount = unhealthyJobs.length > 10 ? ` (+${unhealthyJobs.length - 10} more)` : '';

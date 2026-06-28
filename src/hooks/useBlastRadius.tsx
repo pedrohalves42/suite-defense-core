@@ -18,10 +18,9 @@ export interface BlastRadiusPolicy {
 
 export interface BlastRadiusCheck {
   allowed: boolean;
-  requires_approval: boolean;
-  affected_percent: number;
-  max_allowed_percent: number;
-  message: string;
+  reason: string | null;
+  current_radius: number;
+  max_radius: number;
 }
 
 export const useBlastRadiusPolicies = () => {

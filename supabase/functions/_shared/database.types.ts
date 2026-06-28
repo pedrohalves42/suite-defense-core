@@ -50039,6 +50039,15 @@ export type Database = {
         Returns: Json
       }
       check_approval_complete: { Args: { p_request_id: string }; Returns: Json }
+      check_blast_radius: {
+        Args: {
+          p_action_type: string
+          p_affected_count?: number
+          p_severity?: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       check_execution_orphans: {
         Args: never
         Returns: {

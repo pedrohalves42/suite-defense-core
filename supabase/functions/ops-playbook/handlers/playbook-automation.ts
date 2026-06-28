@@ -65,13 +65,25 @@ export async function handleSoarEngine(supabase: any, requestId: string, payload
       }
 
       try {
-        const { data: blastCheck } = await supabase.rpc('check_blast_radius', { p_tenant_id: event.tenant_id, p_action_type: rule.action_type, p_severity: event.severity });
-        if (blastCheck && !blastCheck.allowed) {
+        // HF-LATENT-RPC-MISSING-01a: official check_blast_radius facade, fail-closed.
+        const { data: blastCheckRaw, error: blastError } = await supabase.rpc('check_blast_radius', {
+          p_tenant_id: event.tenant_id,
+          p_action_type: rule.action_type,
+          p_affected_count: 1,
+          p_severity: event.severity,
+        });
+        if (blastError) {
+          logger.error(`[${requestId}] [SOAR] Blast radius RPC error - BLOCKING`, { error: blastError.message });
+          results.push({ event_type: event.event_type, rule: rule.name, action: rule.action_type, status: 'blast_radius_unavailable' });
+          continue;
+        }
+        const blastCheck = blastCheckRaw as unknown as { allowed: boolean; reason: string | null; current_radius: number; max_radius: number } | null;
+        if (!blastCheck || blastCheck.allowed !== true) {
           results.push({ event_type: event.event_type, rule: rule.name, action: rule.action_type, status: 'blast_radius_blocked' });
           continue;
         }
       } catch (e) {
-        logger.error(`[${requestId}] [SOAR] Blast radius check failed - BLOCKING`, { error: e instanceof Error ? e.message : String(e) });
+        logger.error(`[${requestId}] [SOAR] Blast radius check threw - BLOCKING`, { error: e instanceof Error ? e.message : String(e) });
         results.push({ event_type: event.event_type, rule: rule.name, action: rule.action_type, status: 'blast_radius_unavailable' });
         continue;
       }
