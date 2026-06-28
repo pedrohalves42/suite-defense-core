@@ -23,6 +23,8 @@
     "test:coverage": "vitest run --coverage",
     "validate:code": "npm run typecheck && npm run lint",
     "validate:tests": "npm run test",
+    "types:sync": "bash scripts/sync-database-types.sh",
+    "types:check": "bash scripts/guard-database-types-sync.sh",
     "sync:agent": "bash scripts/sync-agent-script.sh",
     "sync:agent:windows": "pwsh -File scripts/sync-agent-script.ps1",
     "sync:agent:linux": "bash scripts/sync-agent-linux.sh",
