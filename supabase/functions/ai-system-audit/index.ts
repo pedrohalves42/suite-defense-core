@@ -8,6 +8,7 @@ import { callAI, type AIMessage } from "../_shared/ai-provider-helper.ts";
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { serveTenant } from '../_shared/serve-tenant.ts';
+import { asJson, toRecord } from '../_shared/json.ts';
 import { buildAuditInsertData } from './dimension-mapper.ts';
 
 serveTenant(async (req, ctx) => {
