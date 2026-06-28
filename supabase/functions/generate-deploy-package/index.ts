@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 /**
  * generate-deploy-package Edge Function (P2)
  * 
