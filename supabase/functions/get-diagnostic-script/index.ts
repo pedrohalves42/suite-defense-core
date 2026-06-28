@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import { servePublic } from '../_shared/serve-public.ts';
 import { handleGetDiagnosticScript } from '../_shared/handlers/diagnostic-script.ts';
 
