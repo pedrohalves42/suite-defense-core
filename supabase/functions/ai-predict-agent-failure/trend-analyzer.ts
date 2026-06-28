@@ -26,10 +26,10 @@ interface MetricRow {
 }
 
 interface AgentInfo {
-  display_name?: string;
-  hostname?: string;
-  agent_name?: string;
-  status?: string;
+  display_name?: string | null;
+  hostname?: string | null;
+  agent_name?: string | null;
+  status?: string | null;
 }
 
 function calcTrend(values: number[]): string {
