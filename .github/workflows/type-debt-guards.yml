@@ -16,3 +16,13 @@ jobs:
         run: |
           chmod +x scripts/guard-no-ts-nocheck-tier1.sh
           ./scripts/guard-no-ts-nocheck-tier1.sh
+
+  database-types-sync:
+    name: D18-2 — database.types.ts mirror in sync (Vite ↔ Deno)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run guard
+        run: |
+          chmod +x scripts/guard-database-types-sync.sh
+          ./scripts/guard-database-types-sync.sh
