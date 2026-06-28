@@ -20,9 +20,9 @@ export interface AgentTrend {
 
 interface MetricRow {
   agent_id: string;
-  cpu_usage_percent?: number;
-  memory_usage_percent?: number;
-  disk_usage_percent?: number;
+  cpu_usage_percent?: number | null;
+  memory_usage_percent?: number | null;
+  disk_usage_percent?: number | null;
 }
 
 interface AgentInfo {
