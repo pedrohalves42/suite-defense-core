@@ -1,1 +1,9 @@
 npm run validate:security
+
+# D18-2 / HF-TYPES-REGEN-01 — keep Deno mirror of database.types.ts in sync
+# with the Vite typegen source of truth. Idempotent: only re-stages on change.
+bash scripts/sync-database-types.sh
+if ! git diff --quiet -- supabase/functions/_shared/database.types.ts 2>/dev/null; then
+  git add supabase/functions/_shared/database.types.ts
+  echo "↻ database.types.ts mirror re-synced and staged"
+fi
