@@ -108,24 +108,32 @@ serveTenant(async (req, ctx) => {
   if (redResult!.threat_level !== expectedThreatLevel) redResult!.threat_level = expectedThreatLevel;
 
   const redPromptHash = `${redPersona.hash.slice(0, 8)}-${redTemplate.hash.slice(0, 8)}`;
-  const { data: savedRed } = await serviceClient.from('red_team_assessments').insert({
-    tenant_id: tenantId, threat_level: redResult!.threat_level, red_score: redResult!.red_score || 50,
-    attack_vectors: redResult!.attack_vectors || [], residual_risks: redResult!.residual_risks || [],
-    threat_system_identity: (redResult!.dimension_threats as Record<string, unknown>)?.system_identity,
-    threat_governance: (redResult!.dimension_threats as Record<string, unknown>)?.governance,
-    threat_evidence_proof: (redResult!.dimension_threats as Record<string, unknown>)?.evidence_proof,
-    threat_human_oversight: (redResult!.dimension_threats as Record<string, unknown>)?.human_oversight,
-    threat_operational_resilience: (redResult!.dimension_threats as Record<string, unknown>)?.operational_resilience,
-    threat_cross_tenant_isolation: (redResult!.dimension_threats as Record<string, unknown>)?.cross_tenant_isolation,
-    threat_transparency_explainability: (redResult!.dimension_threats as Record<string, unknown>)?.transparency_explainability,
-    threat_compliance_alignment: (redResult!.dimension_threats as Record<string, unknown>)?.compliance_alignment,
-    threat_market_trust: (redResult!.dimension_threats as Record<string, unknown>)?.market_trust,
-    executive_threat_summary: redResult!.executive_threat_summary, worst_case_scenario: redResult!.worst_case_scenario,
-    recommended_hardening: redResult!.recommended_hardening || [],
-    ai_model: redAiResult.model, ai_prompt_hash: redPromptHash,
-    ai_response_raw: redResult, metrics_snapshot: metrics,
-    binary_criteria: binaryCriteria, criteria_count_true: criteriaCountTrue,
-  } as never).select().single();
+  const redInsert: RedTeamInsert = {
+    tenant_id: tenantId,
+    threat_level: redResult!.threat_level as string,
+    red_score: (redResult!.red_score as number) || 50,
+    attack_vectors: asJson(redResult!.attack_vectors || []),
+    residual_risks: asJson(redResult!.residual_risks || []),
+    threat_system_identity: (redResult!.dimension_threats as Record<string, number>)?.system_identity,
+    threat_governance: (redResult!.dimension_threats as Record<string, number>)?.governance,
+    threat_evidence_proof: (redResult!.dimension_threats as Record<string, number>)?.evidence_proof,
+    threat_human_oversight: (redResult!.dimension_threats as Record<string, number>)?.human_oversight,
+    threat_operational_resilience: (redResult!.dimension_threats as Record<string, number>)?.operational_resilience,
+    threat_cross_tenant_isolation: (redResult!.dimension_threats as Record<string, number>)?.cross_tenant_isolation,
+    threat_transparency_explainability: (redResult!.dimension_threats as Record<string, number>)?.transparency_explainability,
+    threat_compliance_alignment: (redResult!.dimension_threats as Record<string, number>)?.compliance_alignment,
+    threat_market_trust: (redResult!.dimension_threats as Record<string, number>)?.market_trust,
+    executive_threat_summary: redResult!.executive_threat_summary as string | null,
+    worst_case_scenario: redResult!.worst_case_scenario as string | null,
+    recommended_hardening: asJson(redResult!.recommended_hardening || []),
+    ai_model: redAiResult.model,
+    ai_prompt_hash: redPromptHash,
+    ai_response_raw: asJson(redResult),
+    metrics_snapshot: asJson(metrics),
+    binary_criteria: asJson(binaryCriteria),
+    criteria_count_true: criteriaCountTrue,
+  };
+  const { data: savedRed } = await serviceClient.from('red_team_assessments').insert(redInsert).select().single();
 
   logger.info(`[ai-full-audit] Phase 1 complete. Red Score: ${redResult!.red_score}, Threat: ${redResult!.threat_level}, Criteria TRUE: ${criteriaCountTrue}`);
 
