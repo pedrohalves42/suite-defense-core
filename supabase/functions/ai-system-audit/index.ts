@@ -55,9 +55,10 @@ serveTenant(async (req, ctx) => {
     return new Response(JSON.stringify({ error: 'AI analysis failed', details: aiResult.error }), { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
   }
 
-  let analysisResult: Record<string, unknown> | null = null;
+  let analysisResult: Record<string, unknown> = toRecord(createFallbackAudit('AI_RESULT_PENDING'));
   try {
-    analysisResult = safeParseJSON(aiResult.content, 'ai-system-audit') as Record<string, unknown> | null;
+    const parsed = safeParseJSON(aiResult.content, 'ai-system-audit') as Record<string, unknown> | null;
+    if (parsed) analysisResult = parsed;
   } catch (err) {
     logger.warn('[ai-system-audit] JSON parse failed, using fallback', err);
     analysisResult = toRecord(createFallbackAudit('AI_JSON_PARSE_ERROR'));
