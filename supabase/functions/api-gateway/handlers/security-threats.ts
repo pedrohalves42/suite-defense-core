@@ -179,7 +179,7 @@ export async function handleAutoRemediate(
 
   // Global Circuit Breaker (fail-closed)
   try {
-    const { data: globalBreaker } = await supabase.rpc('check_global_circuit_breaker' as never, {
+    const { data: globalBreaker } = await supabase.rpc('check_global_circuit_breaker', {
       p_tenant_id: resolvedTenantId, p_max_impact_percent: 30, p_window_minutes: 10,
     });
     if (globalBreaker && !globalBreaker.allowed) {
