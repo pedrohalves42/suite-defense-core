@@ -1,4 +1,5 @@
-// @ts-nocheck
+// D17-D3: @ts-nocheck removed. Typing only — feed builder, action dispatch,
+// service-role wiring and gateway proxy POST contract unchanged.
 /**
  * action-center-feed — Orchestrator
  * Migrated to serveTenant middleware + modular handlers

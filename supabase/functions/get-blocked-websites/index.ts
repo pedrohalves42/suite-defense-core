@@ -1,4 +1,5 @@
-// @ts-nocheck
+// D17-D3: @ts-nocheck removed. Typing only — agent HMAC verification,
+// group scoping and policy-rule merge unchanged.
 /**
  * get-blocked-websites — Migrated to serveAgent middleware with HMAC verification.
  */

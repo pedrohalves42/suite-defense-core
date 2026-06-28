@@ -1,4 +1,5 @@
-// @ts-nocheck
+// D17-D3: @ts-nocheck removed. Typing only — baseline stats, EMA merge,
+// anomaly detection thresholds and alert emission unchanged.
 /**
  * update-baseline Edge Function
  * 
