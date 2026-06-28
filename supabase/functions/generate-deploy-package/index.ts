@@ -189,10 +189,10 @@ serveTenant(async (req, ctx) => {
     );
   }
 
-  // Fetch enrollment key (verify it belongs to user's tenant)
+  // HF-BUILD-DEPLOY-SCHEMA-01: enrollment_keys uses `key` (not `key_value`) and `description` (not `name`).
   const { data: enrollmentKey, error: ekError } = await supabase
     .from('enrollment_keys')
-    .select('id, key_value, tenant_id, name')
+    .select('id, key, tenant_id, description')
     .eq('id', enrollmentKeyId)
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
@@ -213,7 +213,14 @@ serveTenant(async (req, ctx) => {
     .maybeSingle();
 
   const tenantName = tenant?.name || 'CyberShield Customer';
-  const keyValue = enrollmentKey.key_value;
+  const keyValue = enrollmentKey.key;
+  if (!keyValue) {
+    return new Response(
+      JSON.stringify({ error: 'Enrollment key value missing' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+  const keyLabel = enrollmentKey.description || 'deploy';
 
   let script = '';
   let filename = '';
@@ -221,19 +228,19 @@ serveTenant(async (req, ctx) => {
   switch (platform) {
     case 'intune':
       script = generateIntuneScript(keyValue, supabaseUrl, tenantName);
-      filename = `CyberShield-Intune-${enrollmentKey.name || 'deploy'}.ps1`;
+      filename = `CyberShield-Intune-${keyLabel}.ps1`;
       break;
     case 'gpo':
       script = generateGPOScript(keyValue, supabaseUrl, tenantName);
-      filename = `CyberShield-GPO-${enrollmentKey.name || 'deploy'}.bat`;
+      filename = `CyberShield-GPO-${keyLabel}.bat`;
       break;
     case 'rmm':
       script = generateRMMScript(keyValue, supabaseUrl, tenantName);
-      filename = `CyberShield-RMM-${enrollmentKey.name || 'deploy'}.ps1`;
+      filename = `CyberShield-RMM-${keyLabel}.ps1`;
       break;
     default:
       script = generateRMMScript(keyValue, supabaseUrl, tenantName);
-      filename = `CyberShield-Manual-${enrollmentKey.name || 'deploy'}.ps1`;
+      filename = `CyberShield-Manual-${keyLabel}.ps1`;
   }
 
   return {
@@ -241,7 +248,7 @@ serveTenant(async (req, ctx) => {
     platform,
     filename,
     script,
-    enrollment_key_name: enrollmentKey.name,
+    enrollment_key_name: enrollmentKey.description,
     instructions: platform === 'intune'
       ? 'Wrap this .ps1 in an .intunewin package. Detection Rule: File exists C:\\CyberShield\\config.json'
       : platform === 'gpo'

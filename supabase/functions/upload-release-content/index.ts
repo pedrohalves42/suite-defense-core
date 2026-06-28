@@ -79,19 +79,18 @@ serveInternal(async (_req, ctx) => {
   // Deactivate previous releases
   await supabase.from('agent_releases').update({ is_active: false }).eq('platform', platform).eq('channel', 'stable');
 
-  // Upsert release
-  const releaseData: Record<string, unknown> = {
+  // Upsert release (cast localized: dynamic optional signing fields)
+  const releaseData = {
     platform, version, channel: 'stable', script_content: normalized, sha256,
     is_active: true, release_notes: release_notes || `Release ${version}`,
+    ...(signatureBase64 ? {
+      signature_base64: signatureBase64,
+      signed_at: new Date().toISOString(),
+      signed_by: 'automation',
+    } : {}),
   };
 
-  if (signatureBase64) {
-    releaseData.signature_base64 = signatureBase64;
-    releaseData.signed_at = new Date().toISOString();
-    releaseData.signed_by = 'automation';
-  }
-
-  const { error: releaseError } = await supabase.from('agent_releases').upsert(releaseData, { onConflict: 'platform,version,channel' });
+  const { error: releaseError } = await supabase.from('agent_releases').upsert(releaseData as never, { onConflict: 'platform,version,channel' });
   if (releaseError) throw releaseError;
 
   // Update agent_versions
