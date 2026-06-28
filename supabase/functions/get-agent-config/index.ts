@@ -19,11 +19,7 @@ serveAgent(async (_req, ctx) => {
   const { data: config } = await supabase
     .from('agent_light_mode_configs')
     .select(
-      'id, agent_id, is_active, collection_interval_seconds, skip_process_collection, ' +
-      'skip_network_collection, compress_payloads, reason, expires_at, active_media_processes, ' +
-      'aggregation_enabled, aggregation_window_seconds, aggregation_file_threshold, ' +
-      'aggregation_process_threshold, aggregation_network_threshold, aggregation_max_buffer_size, ' +
-      'created_at, updated_at'
+      'id,agent_id,is_active,collection_interval_seconds,skip_process_collection,skip_network_collection,compress_payloads,reason,expires_at,active_media_processes,aggregation_enabled,aggregation_window_seconds,aggregation_file_threshold,aggregation_process_threshold,aggregation_network_threshold,aggregation_max_buffer_size,created_at,updated_at'
     )
     .eq('agent_id', agentId)
     .maybeSingle();

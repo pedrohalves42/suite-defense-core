@@ -22,12 +22,13 @@ interface PolicyContract {
 serveAgent(async (_req, ctx) => {
   const { supabase, agentName, tenantId, requestId } = ctx;
 
-  // NOTE: `tenant_settings` is a key/value table; legacy code referenced direct columns
-  // (dns_enabled, heartbeat_interval, …) that never existed. Behavior preserved (always
-  // hits the defaults below). Tracked as LATENT-DEPLOY-POLICY-01.
+  // NOTE: legacy code referenced columns on `tenant_settings` that never existed
+  // (dns_enabled, heartbeat_interval, dns_upstream, blocked_categories, …) and a
+  // bogus `setting_key/setting_value` projection. Behavior preserved (always
+  // falls back to defaults below). Tracked as LATENT-DEPLOY-POLICY-01.
   const { data: tenantSettingsRow } = await supabase
     .from('tenant_settings')
-    .select('tenant_id, setting_key, setting_value')
+    .select('tenant_id')
     .eq('tenant_id', tenantId)
     .maybeSingle();
   const tenantSettings = tenantSettingsRow as Record<string, unknown> | null;
