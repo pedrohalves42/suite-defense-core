@@ -172,6 +172,16 @@ PROTECTED_PATHS=(
   "supabase/functions/ai-system-analyzer/analysis-engine.ts"
   "supabase/functions/ai-system-analyzer/tenant-eligibility.ts"
   "supabase/functions/ai-system-analyzer/types.ts"
+
+  # D17-D1 — Build / Release
+  "supabase/functions/build-agent-exe/index.ts"
+  "supabase/functions/build-agent-exe/cache.ts"
+  "supabase/functions/generate-deploy-package/index.ts"
+  "supabase/functions/generate-portable-installer/index.ts"
+  "supabase/functions/upload-release-content/index.ts"
+  "supabase/functions/validate-build-pipeline/index.ts"
+  "supabase/functions/setup-agent-script/index.ts"
+  "supabase/functions/get-agent-script-content/index.ts"
 )
 
 FOUND=0

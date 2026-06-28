@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 /**
  * setup-agent-script - Migrated to serveInternal
  * Sets up agent script in storage
