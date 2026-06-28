@@ -339,48 +339,44 @@ export class SupabaseCheckRepository implements ICheckRepository {
 
   async getBatchCounts(table: keyof Tables, tenantIds: string[], filters: any): Promise<Record<string, number>> {
     if (tenantIds.length === 0) return {};
-    
-    // @ts-ignore: missing in types
+
     const { data, error } = await this.supabase.rpc('get_batch_counts', {
       p_table: table as string,
       p_tenant_ids: tenantIds,
-      p_filters: filters
+      p_filters: filters,
     });
-    
+
     if (error) throw error;
-    
+
     const counts: Record<string, number> = {};
-    ((data as any[]) || []).forEach(row => {
-      counts[row.tenant_id] = parseInt(row.count, 10);
+    ((data as Array<{ tenant_id: string; count: number | string }>) || []).forEach(row => {
+      counts[row.tenant_id] = typeof row.count === 'number' ? row.count : parseInt(row.count, 10);
     });
-    
+
     return counts;
   }
 
   async getBusinessHoursBatch(tenantIds: string[]): Promise<Record<string, any>> {
-    // @ts-ignore: missing in types
     const { data, error } = await this.supabase.rpc('get_business_hours_batch', {
-      p_tenant_ids: tenantIds
+      p_tenant_ids: tenantIds,
     });
     if (error) throw error;
     const result: Record<string, any> = {};
-    ((data as any[]) || []).forEach((row: any) => {
+    ((data as Array<{ tenant_id: string; business_hours: any }>) || []).forEach(row => {
       result[row.tenant_id] = row.business_hours;
     });
     return result;
   }
 
   async getInstallationHealthBatch(tenantIds: string[]): Promise<any[]> {
-    // @ts-ignore: missing in types
     const { data, error } = await this.supabase.rpc('get_installation_health_batch', {
-      p_tenant_ids: tenantIds
+      p_tenant_ids: tenantIds,
     });
     if (error) throw error;
     return (data as any[]) || [];
   }
 
   async getTenantsComplianceScores(): Promise<any[]> {
-    // @ts-ignore: missing in types
     const { data, error } = await this.supabase.rpc('get_tenants_compliance_scores');
     if (error) throw error;
     return (data as any[]) || [];
