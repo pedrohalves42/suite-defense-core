@@ -59,13 +59,13 @@ serveTenant(async (req, ctx) => {
     return { success: true, message: 'No agents need reinstallation', jobs_created: 0 };
   }
 
-  // ADR-VELLUM V-310: Blast radius governance
+  // ADR-VELLUM V-310 + HF-LATENT-RPC-MISSING-01a: official check_blast_radius facade.
   const { data: blastCheckRaw, error: blastError } = await supabase
-    .rpc('check_blast_radius' as never, {
+    .rpc('check_blast_radius', {
       p_tenant_id: tenantId,
       p_action_type: 'force_update_agents',
       p_affected_count: agentsToReinstall.length,
-    } as never);
+    });
 
   if (blastError) {
     logger.error(`[${requestId}] Blast radius check failed`, blastError);
@@ -75,24 +75,22 @@ serveTenant(async (req, ctx) => {
     );
   }
 
-  const blastCheck = blastCheckRaw as {
-    allowed?: boolean;
-    affected_percent?: number;
-    max_allowed_percent?: number;
-    requires_approval?: boolean;
-    message?: string;
+  const blastCheck = blastCheckRaw as unknown as {
+    allowed: boolean;
+    reason: string | null;
+    current_radius: number;
+    max_radius: number;
   } | null;
 
-  if (!blastCheck?.allowed) {
+  if (!blastCheck || blastCheck.allowed !== true) {
     logger.warn(`[${requestId}] Blast radius exceeded`);
     return new Response(
       JSON.stringify({
         error: 'BLAST_RADIUS_EXCEEDED',
         requested: agentsToReinstall.length,
-        affected_percent: blastCheck?.affected_percent,
-        max_allowed_percent: blastCheck?.max_allowed_percent,
-        requires_approval: blastCheck?.requires_approval,
-        message: blastCheck?.message || 'Blast radius exceeded',
+        current_radius: blastCheck?.current_radius ?? 0,
+        max_radius: blastCheck?.max_radius ?? 0,
+        reason: blastCheck?.reason ?? 'BLAST_RADIUS_UNAVAILABLE',
         requestId,
       }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
