@@ -1,33 +1,43 @@
-// @ts-nocheck
 import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 
+const DEFAULT_AGGREGATION = {
+  enabled: true,
+  window_seconds: 3,
+  file_threshold: 50,
+  process_threshold: 20,
+  network_threshold: 100,
+  max_buffer_size: 500,
+};
+
 serveAgent(async (_req, ctx) => {
-  const { supabase, agentId, tenantId, requestId } = ctx;
+  const { supabase, agentId, requestId } = ctx;
 
   // Get light mode config for this agent
+  // NOTE: schema uses `is_active` (not `light_mode_active`) and individual
+  // aggregation_* columns (no `aggregation_config`). Drift fixed in HF-DEPLOY-CONFIG-SCHEMA-01.
   const { data: config } = await supabase
     .from('agent_light_mode_configs')
-    .select('id, agent_id, light_mode_active, collection_interval_seconds, skip_process_collection, skip_network_collection, compress_payloads, aggregation_config, created_at, updated_at')
+    .select(
+      'id, agent_id, is_active, collection_interval_seconds, skip_process_collection, ' +
+      'skip_network_collection, compress_payloads, reason, expires_at, active_media_processes, ' +
+      'aggregation_enabled, aggregation_window_seconds, aggregation_file_threshold, ' +
+      'aggregation_process_threshold, aggregation_network_threshold, aggregation_max_buffer_size, ' +
+      'created_at, updated_at'
+    )
     .eq('agent_id', agentId)
     .maybeSingle();
 
+  void logger;
+
   if (!config) {
-    // No config exists ? return defaults (normal mode)
     return {
       light_mode_active: false,
       collection_interval_seconds: 180,
       skip_process_collection: false,
       skip_network_collection: false,
       compress_payloads: false,
-      aggregation: {
-        enabled: true,
-        window_seconds: 3,
-        file_threshold: 50,
-        process_threshold: 20,
-        network_threshold: 100,
-        max_buffer_size: 500,
-      },
+      aggregation: { ...DEFAULT_AGGREGATION },
     };
   }
 
@@ -58,17 +68,14 @@ serveAgent(async (_req, ctx) => {
         skip_network_collection: false,
         compress_payloads: false,
         light_mode_expired: true,
-        aggregation: {
-          enabled: true,
-          window_seconds: 3,
-          file_threshold: 50,
-          process_threshold: 20,
-          network_threshold: 100,
-          max_buffer_size: 500,
-        },
+        aggregation: { ...DEFAULT_AGGREGATION },
       };
     }
   }
+
+  const activeMedia = Array.isArray(config.active_media_processes)
+    ? config.active_media_processes
+    : [];
 
   return {
     light_mode_active: config.is_active,
@@ -78,7 +85,7 @@ serveAgent(async (_req, ctx) => {
     compress_payloads: config.compress_payloads,
     light_mode_reason: config.reason || undefined,
     light_mode_expires_at: config.expires_at || undefined,
-    active_media_processes: config.active_media_processes || [],
+    active_media_processes: activeMedia,
     remaining_minutes: config.expires_at
       ? Math.max(0, Math.ceil((new Date(config.expires_at).getTime() - Date.now()) / 60000))
       : 0,
