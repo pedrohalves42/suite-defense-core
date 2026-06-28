@@ -95,11 +95,34 @@ serveTenant(async (req, ctx) => {
       p_tenant_id: resolvedTenantId,
       p_action_type: action_type,
       p_severity: trigger_details.severity || 'medium',
-    } as never);
-    const blastCheck = blastCheckRaw as BlastCheckResult | null;
+  // Blast Radius Check (fail-closed)
+  // HF-LATENT-RPC-MISSING-01a: official RPC + polarity fix.
+  // Previously: `if (!blastError && blastCheck && !blastCheck.allowed)` — an RPC error
+  // would silently skip the guard. Now: any error OR !allowed blocks the action.
+  try {
+    const { data: blastCheckRaw, error: blastError } = await supabase.rpc('check_blast_radius', {
+      p_tenant_id: resolvedTenantId,
+      p_action_type: action_type,
+      p_affected_count: 1,
+      p_severity: (trigger_details.severity as string) || 'medium',
+    });
 
-    if (!blastError && blastCheck && !blastCheck.allowed) {
-      logger.warn(`[auto-remediate] Blast radius exceeded for ${action_type}: ${blastCheck.affected_percent}%`);
+    if (blastError) {
+      logger.error('[auto-remediate] Blast radius RPC error - BLOCKING (fail-closed)', { error: blastError.message });
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'BLAST_RADIUS_UNAVAILABLE',
+        message: 'Blast radius check unavailable - remediation blocked for safety',
+      }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    const blastCheck = blastCheckRaw as unknown as BlastCheckResult | null;
+
+    if (!blastCheck || blastCheck.allowed !== true) {
+      const currentRadius = blastCheck?.current_radius ?? 0;
+      const maxRadius = blastCheck?.max_radius ?? 0;
+      const reason = blastCheck?.reason ?? 'BLAST_RADIUS_UNAVAILABLE';
+      logger.warn(`[auto-remediate] Blast radius blocked for ${action_type}: ${currentRadius}% > ${maxRadius}% (${reason})`);
 
       await supabase.from('auto_remediation_actions').insert({
         tenant_id: resolvedTenantId,
@@ -107,22 +130,24 @@ serveTenant(async (req, ctx) => {
         agent_name: agent.agent_name,
         action_type,
         trigger_source,
-        trigger_details: { ...trigger_details, blast_radius_blocked: true } as unknown as Json,
+        trigger_details: { ...trigger_details, blast_radius_blocked: true, blast_radius_reason: reason } as unknown as Json,
         requires_approval: false,
         status: 'failed',
-        error_message: `Blast radius exceeded: ${blastCheck.affected_percent?.toFixed(1)}% of fleet affected`,
+        error_message: `Blast radius exceeded: ${currentRadius.toFixed(1)}% of fleet (max ${maxRadius.toFixed(1)}%)`,
         executed_at: new Date().toISOString(),
       });
 
       return new Response(JSON.stringify({
         success: false,
         error: 'BLAST_RADIUS_EXCEEDED',
-        affected_percent: blastCheck.affected_percent,
-        message: `Remediacao bloqueada: ${blastCheck.affected_percent?.toFixed(1)}% da frota ja esta sendo remediada. Limite: 10%.`,
+        reason,
+        current_radius: currentRadius,
+        max_radius: maxRadius,
+        message: `Remediacao bloqueada: ${currentRadius.toFixed(1)}% da frota afetada (limite ${maxRadius.toFixed(1)}%).`,
       }), { status: 429, headers: { 'Content-Type': 'application/json' } });
     }
   } catch (blastErr) {
-    logger.error('[auto-remediate] Blast radius check failed - BLOCKING (fail-closed)', { error: blastErr instanceof Error ? blastErr.message : String(blastErr) });
+    logger.error('[auto-remediate] Blast radius check threw - BLOCKING (fail-closed)', { error: blastErr instanceof Error ? blastErr.message : String(blastErr) });
     return new Response(JSON.stringify({
       success: false,
       error: 'BLAST_RADIUS_UNAVAILABLE',
