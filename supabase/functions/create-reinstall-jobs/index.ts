@@ -1,6 +1,7 @@
 
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { jobInsertMany } from '../_shared/job-insert.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
 const CreateReinstallJobsSchema = z.object({
