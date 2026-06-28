@@ -4,6 +4,7 @@
  */
 import { TenantContext } from '../../_shared/serve-tenant.ts';
 import { callAIJson } from '../../_shared/ai-provider-helper.ts';
+import { asJson } from '../../_shared/json.ts';
 
 interface CorrelationResult {
   cluster_name: string;
@@ -91,14 +92,14 @@ Detalhes:\n${alerts.slice(0, 20).map(a => `[${a.severity}] ${a.title} (${agentMa
         severity: c.severity as 'info' | 'warning' | 'critical',
         title: `RCA: ${c.cluster_name}`,
         description: `Causa raiz: ${c.root_cause}. ${c.related_alerts.length} tipos correlacionados afetando ${c.affected_agents.length} agente(s).`,
-        evidence: { correlation: c, alert_count: alerts.length, time_range_hours: timeRangeHours },
+        evidence: asJson({ correlation: c, alert_count: alerts.length, time_range_hours: timeRangeHours }),
         recommendation: c.recommendation,
         confidence_score: c.confidence,
       }));
 
     if (insights.length > 0) {
-      // D16-C1: type-only cast; runtime payload unchanged.
-      await supabase.from('ai_insights').insert(insights as never);
+      // D18-3: `evidence` narrowed via asJson; insert call is now type-clean.
+      await supabase.from('ai_insights').insert(insights);
     }
 
     allCorrelations.push(...correlations.map(c => ({ ...c, tenant_id: tenantId })));

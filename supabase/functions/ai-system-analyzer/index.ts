@@ -1,11 +1,9 @@
-// D16-C3: @ts-nocheck removed; inserts of ai_insights/ai_actions cast `as never`
-// (Json columns + generated types drift — see LATENT-AUDIT-SCHEMA-01 / HF-TYPES-REGEN-01).
-// HF-AI-SCHEMA-DRIFT-01: aligned .select() to real schema:
-//   installation_analytics: step/duration_ms → event_type/installation_time_seconds
-//   agent_system_metrics_partitioned: cpu_usage/memory_usage/disk_usage → *_percent;
-//     dropped agent_name (column does not exist — enrichment uses agents JOIN map).
-// No functional change: only selected projection. @ts-nocheck retained until
-// pending Json↔Record narrowing in ai_insights insert is addressed (D16-C2+).
+// D18-3 / LATENT-AUDIT-SCHEMA-01: `as never` cast on ai_insights insert removed.
+// `evidence` (jsonb) is narrowed via `asJson` from `_shared/json.ts` at the
+// single mapping point; the array insert is then type-clean.
+// HF-AI-SCHEMA-DRIFT-01 history retained: .select() projections aligned to real
+// schema (installation_analytics event_type/installation_time_seconds;
+// agent_system_metrics_partitioned *_percent columns).
 /**
  * AI System Analyzer - Modularized
  * Auth: X-Internal-Secret / service_role (cron only)
@@ -13,6 +11,7 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { asJson } from '../_shared/json.ts';
 
 import type { AnalysisData, AIInsight } from './types.ts';
 import { checkTenantAIEligibility, incrementAIQuotaUsage } from './tenant-eligibility.ts';
@@ -103,9 +102,10 @@ serveInternal(async (_req, ctx) => {
     }
   }
 
-  // Save insights
+  // Save insights — narrow each `evidence` (Record<string, unknown>) to Json.
   if (insights.length > 0) {
-    const { data: insertedInsights, error: insertError } = await supabase.from('ai_insights').insert(insights as never).select();
+    const insightRows = insights.map(i => ({ ...i, evidence: asJson(i.evidence) }));
+    const { data: insertedInsights, error: insertError } = await supabase.from('ai_insights').insert(insightRows).select();
     if (insertError) { logger.error('[ai-system-analyzer] Error saving insights:', insertError); throw insertError; }
 
     if (insertedInsights && insertedInsights.length > 0) {
