@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 
@@ -21,14 +20,17 @@ interface PolicyContract {
 }
 
 serveAgent(async (_req, ctx) => {
-  const { supabase, agentId, agentName, tenantId, requestId } = ctx;
+  const { supabase, agentName, tenantId, requestId } = ctx;
 
-  // Get tenant settings
-  const { data: tenantSettings } = await supabase
+  // NOTE: `tenant_settings` is a key/value table; legacy code referenced direct columns
+  // (dns_enabled, heartbeat_interval, …) that never existed. Behavior preserved (always
+  // hits the defaults below). Tracked as LATENT-DEPLOY-POLICY-01.
+  const { data: tenantSettingsRow } = await supabase
     .from('tenant_settings')
     .select('tenant_id, setting_key, setting_value')
     .eq('tenant_id', tenantId)
-    .single();
+    .maybeSingle();
+  const tenantSettings = tenantSettingsRow as Record<string, unknown> | null;
 
   // Get latest agent version
   const { data: latestVersion } = await supabase
@@ -38,23 +40,23 @@ serveAgent(async (_req, ctx) => {
     .eq('is_active', true)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
-  // Build policy contract
+  // Build policy contract (preserves prior fallback-driven behavior)
   const policy: PolicyContract = {
     version: "2025-01-v1",
     expected: {
-      dns_enabled: tenantSettings?.dns_enabled ?? true,
-      dns_service_running: tenantSettings?.dns_enabled ?? true,
+      dns_enabled: (tenantSettings?.dns_enabled as boolean | undefined) ?? true,
+      dns_service_running: (tenantSettings?.dns_enabled as boolean | undefined) ?? true,
       dns_filter_available: false,
       agent_min_version: latestVersion?.version ?? "v4.0.0",
       blocked_domains_synced: true,
-      heartbeat_interval_max: tenantSettings?.heartbeat_interval ?? 120,
+      heartbeat_interval_max: (tenantSettings?.heartbeat_interval as number | undefined) ?? 120,
       job_execution_enabled: true,
     },
     tenant_config: {
-      dns_upstream: tenantSettings?.dns_upstream ?? ["8.8.8.8:53", "1.1.1.1:53"],
-      blocked_categories: tenantSettings?.blocked_categories ?? [],
+      dns_upstream: (tenantSettings?.dns_upstream as string[] | undefined) ?? ["8.8.8.8:53", "1.1.1.1:53"],
+      blocked_categories: (tenantSettings?.blocked_categories as string[] | undefined) ?? [],
       custom_rules: [],
     },
   };
