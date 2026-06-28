@@ -75,9 +75,12 @@ export async function buildInstallerScript(
   const agentScriptContent = prepared.content;
   const agentScriptHash = prepared.sha256;
 
-  if (platform === 'windows' && !validateAgentScriptContent(agentScriptContent)) {
-    logger.error(`[${requestId}] CRITICAL: Script validation failed for ${platform} release`);
-    return new Response('Failed to generate secure installer - script validation failed', { status: 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain' } });
+  if (platform === 'windows') {
+    const scriptValidation = validateAgentScriptContent(agentScriptContent);
+    if (!scriptValidation.valid) {
+      logger.error(`[${requestId}] CRITICAL: Script validation failed for ${platform} release`, { errors: scriptValidation.errors });
+      return new Response(`Failed to generate secure installer - script validation failed: ${(scriptValidation.errors ?? []).join('; ')}`, { status: 503, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'text/plain' } });
+    }
   }
 
   if (platform === 'windows' && agentScriptContent.length < 5000) {
