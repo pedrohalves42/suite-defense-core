@@ -112,7 +112,7 @@ serveTenant(async (req, ctx) => {
 
   const { data: createdJobs, error: createError } = await supabase
     .from('jobs')
-    .insert(jobsToCreate)
+    .insert(jobInsertMany(jobsToCreate) as never)
     .select('id, agent_name');
 
   if (createError) throw createError;
