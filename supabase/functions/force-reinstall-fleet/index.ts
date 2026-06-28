@@ -228,4 +228,4 @@ if ($task) {
       ]
     }
   };
-}, { methods: ['POST'], rateLimit: { maxRequests: 3, windowMinutes: 5 } });
+}, { methods: ['POST'], rateLimit: { endpoint: 'force-reinstall-fleet', maxRequests: 3, windowMinutes: 5 } });

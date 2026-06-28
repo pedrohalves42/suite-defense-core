@@ -130,14 +130,12 @@ serveAgent(async (_req, ctx) => {
       .maybeSingle();
 
     if (adminRole?.user_id) {
-      const { data: adminProfile } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('id', adminRole.user_id)
-        .maybeSingle();
-      logger.info(`[${requestId}] Admin found for notification`, { adminEmail: adminProfile?.email });
+      // profiles has no `email` column; admin email lives on auth.users which is not
+      // accessible from this surface — log the user id for downstream notification.
+      logger.info(`[${requestId}] Admin found for notification`, { adminUserId: adminRole.user_id });
     }
   }
+
 
 
   return {
