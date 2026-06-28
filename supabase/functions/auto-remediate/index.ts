@@ -89,12 +89,6 @@ serveTenant(async (req, ctx) => {
     );
   }
 
-  // Blast Radius Check
-  try {
-    const { data: blastCheckRaw, error: blastError } = await supabase.rpc('check_blast_radius' as never, {
-      p_tenant_id: resolvedTenantId,
-      p_action_type: action_type,
-      p_severity: trigger_details.severity || 'medium',
   // Blast Radius Check (fail-closed)
   // HF-LATENT-RPC-MISSING-01a: official RPC + polarity fix.
   // Previously: `if (!blastError && blastCheck && !blastCheck.allowed)` — an RPC error
