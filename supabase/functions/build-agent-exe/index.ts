@@ -144,7 +144,7 @@ serveTenant(async (req, ctx) => {
         supabase,
         'windows',
         'args',
-        { agent_name, hmac_secret: creds.data.hmacSecret },
+        { agent_name, hmac_secret: creds.data.hmacSecret, os_type: 'windows' },
         agentToken,
         SUPABASE_URL,
         requestId,
