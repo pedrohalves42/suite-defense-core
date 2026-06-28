@@ -87,7 +87,7 @@ serveTenant(async (req, ctx) => {
   let redResult: Record<string, unknown> | null = null;
   let redTeamFallbackUsed = false;
   try { redResult = safeParseJSON(redAiResult.content, 'red-team'); } catch {
-    redResult = createFallbackRedTeam('AI_JSON_PARSE_ERROR', calculateBinaryCriteria(asMetrics(metrics))) as unknown as Record<string, unknown>;
+    redResult = toRecord(createFallbackRedTeam('AI_JSON_PARSE_ERROR', calculateBinaryCriteria(asMetrics(metrics))));
     redTeamFallbackUsed = true;
     await logGovernanceEvent(serviceClient, tenantId, null, 'red_team_fallback', null, 50, 'parse_error', 'Red Team JSON parse falhou', {});
   }
@@ -166,7 +166,7 @@ serveTenant(async (req, ctx) => {
   const anaTokens = anaAiResult.tokensUsed?.total || 0;
   let anaResult: Record<string, unknown> | null = null;
   try { anaResult = safeParseJSON(anaAiResult.content, 'ana'); } catch {
-    anaResult = createFallbackAudit('AI_JSON_PARSE_ERROR') as unknown as Record<string, unknown>;
+    anaResult = toRecord(createFallbackAudit('AI_JSON_PARSE_ERROR'));
     await logGovernanceEvent(serviceClient, tenantId, null, 'ana_fallback', null, 50, 'parse_error', 'Ana JSON parse falhou', {});
   }
 
@@ -211,23 +211,24 @@ serveTenant(async (req, ctx) => {
     'market_trust': { scoreCol: 'score_simplicity', analysisCol: 'analysis_simplicity' },
   };
 
-  // deno-lint-ignore no-explicit-any
-  const insertData: Record<string, any> = {
+  // D18-3: typed Insert (was `Record<string, any>` + `as never`). Dimension
+  // columns are added dynamically; precise named-type cast at the insert call.
+  const insertData: Record<string, unknown> = {
     tenant_id: tenantId, created_by: null, overall_score: guardedScore, raw_score: rawScore,
     official_score: officialScore, market_score: marketScore, deterministic_base_score: deterministicBaseScore,
     red_risk_factor: redRiskFactor, guardrail_applied: guardrailApplied, guardrail_reason: guardrailReason,
     executive_summary: anaResult!.executive_summary, final_sentence: anaResult!.final_sentence,
-    recommendation: anaResult!.recommendation, metrics_snapshot: metrics,
+    recommendation: anaResult!.recommendation, metrics_snapshot: asJson(metrics),
     ai_model: anaAiResult.model, prompt_hash: `${anaPersona.hash.slice(0, 8)}-${anaTemplate.hash.slice(0, 8)}`,
-    tokens_used: anaTokens, evidence_basis: anaResult!.evidence_basis || [],
-    falsification_criteria: anaResult!.falsification_criteria || [],
+    tokens_used: anaTokens, evidence_basis: asJson(anaResult!.evidence_basis || []),
+    falsification_criteria: asJson(anaResult!.falsification_criteria || []),
   };
   for (const [dimKey, mapping] of Object.entries(dimensionMapping)) {
     const dim = (anaResult!.dimensions as Record<string, Record<string, unknown>>)?.[dimKey];
     if (dim) { insertData[mapping.scoreCol] = dim.score; insertData[mapping.analysisCol] = dim.analysis; }
   }
 
-  const { data: savedAna } = await serviceClient.from('system_audits').insert(insertData as never).select().single();
+  const { data: savedAna } = await serviceClient.from('system_audits').insert(insertData as SystemAuditInsert).select().single();
 
   // ============ PHASE 3: CONFIDENCE GAP ============
   const anaScore = anaResult!.overall_score as number;
