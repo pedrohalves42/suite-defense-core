@@ -39,8 +39,10 @@ export class RunScheduledChecksUseCase {
         if (checkType === 'rpc') {
           const rpcName = check.name.replaceAll('-', '_');
           try {
-            // @ts-ignore: dynamic RPC call
-            checkResult = await this.checkRepository.rpc(rpcName);
+            // Dynamic RPC: name resolved from check config at runtime.
+            // We assert the narrowed key type at the boundary.
+            type RpcName = Parameters<typeof this.checkRepository.rpc>[0];
+            checkResult = await this.checkRepository.rpc(rpcName as RpcName);
           } catch (rpcErr) {
             logger.warn(`[RunScheduledChecksUseCase] RPC ${rpcName} failed: ${rpcErr instanceof Error ? rpcErr.message : String(rpcErr)}`);
             throw rpcErr;
