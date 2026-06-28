@@ -107,7 +107,7 @@ async function persistAIMetricsWithProvider(data: {
       tokens_completion: data.tokens_completion || null, tenant_id: data.tenant_id || null,
       used_fallback: data.used_fallback, cost_usd: data.cost_usd || 0,
       error: data.error || null, created_at: new Date().toISOString(),
-    } as never);
+    });
   } catch (err) { logger.warn('[AI Metrics] Failed to persist:', err); }
 }
 
