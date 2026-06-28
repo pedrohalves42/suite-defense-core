@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { requireEnv } from '../_shared/env.ts';

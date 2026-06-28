@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
@@ -59,12 +59,12 @@ serveTenant(async (req, ctx) => {
   }
 
   // ADR-VELLUM V-310: Blast radius governance
-  const { data: blastCheck, error: blastError } = await supabase
+  const { data: blastCheckRaw, error: blastError } = await supabase
     .rpc('check_blast_radius' as never, {
       p_tenant_id: tenantId,
       p_action_type: 'force_update_agents',
       p_affected_count: agentsToReinstall.length,
-    });
+    } as never);
 
   if (blastError) {
     logger.error(`[${requestId}] Blast radius check failed`, blastError);
@@ -73,6 +73,14 @@ serveTenant(async (req, ctx) => {
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
+
+  const blastCheck = blastCheckRaw as {
+    allowed?: boolean;
+    affected_percent?: number;
+    max_allowed_percent?: number;
+    requires_approval?: boolean;
+    message?: string;
+  } | null;
 
   if (!blastCheck?.allowed) {
     logger.warn(`[${requestId}] Blast radius exceeded`);
