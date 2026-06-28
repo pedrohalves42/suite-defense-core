@@ -20,16 +20,16 @@ export interface AgentTrend {
 
 interface MetricRow {
   agent_id: string;
-  cpu_usage_percent?: number;
-  memory_usage_percent?: number;
-  disk_usage_percent?: number;
+  cpu_usage_percent?: number | null;
+  memory_usage_percent?: number | null;
+  disk_usage_percent?: number | null;
 }
 
 interface AgentInfo {
-  display_name?: string;
-  hostname?: string;
-  agent_name?: string;
-  status?: string;
+  display_name?: string | null;
+  hostname?: string | null;
+  agent_name?: string | null;
+  status?: string | null;
 }
 
 function calcTrend(values: number[]): string {

@@ -1,8 +1,10 @@
 // HF-AI-SCHEMA-DRIFT-01: removed selection of ai_action_configs.rate_limit_per_hour
 // (column does not exist; rate limiting is enforced by check_action_rate_limit RPC,
 // which reads max_executions_per_day from the same table). No functional change.
-// D16-C3: @ts-nocheck removed; localized casts where supabase-js Insert types
-// drift vs real schema (ai_action_executions / security_logs Json columns).
+// D18-3 / LATENT-AUDIT-SCHEMA-01: `as never` casts on audit-table inserts/updates
+// replaced by the `asJson` helper (`_shared/json.ts`), which narrows
+// `Record<string, unknown>` to the recursive `Json` type via a single, contained,
+// documented cast. Runtime payloads unchanged.
 
 /**
  * AI Action Executor - Migrated to serveTenant
@@ -10,6 +12,7 @@
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger, loggerWithContext } from '../_shared/logger.ts';
+import { asJson } from '../_shared/json.ts';
 import { executeActionByType } from './handlers.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
@@ -77,35 +80,33 @@ serveTenant(async (req, ctx) => {
     executionResult = { error: err.message };
   }
 
-  // Audit log (D16-C3: execution_result is Json column; cast bypass overload mismatch)
+  // Audit log — execution_result is jsonb; asJson narrows the local Record to Json.
   await supabase.from('ai_action_executions').insert({
     action_id: action.id, tenant_id: action.tenant_id, executed_by: userId,
-    execution_status: executionStatus, execution_result: executionResult,
+    execution_status: executionStatus, execution_result: asJson(executionResult),
     error_message: errorMessage, executed_at: new Date().toISOString(),
-  } as never);
+  });
 
-  // Update action status atomically - only if still pending
-  // D16-C3: result is Json column; cast to never bypasses Record↔Json overload mismatch.
+  // Update action status atomically - only if still pending. `result` is jsonb.
   const { error: updateError } = await supabase.from('ai_actions').update({
     status: executionStatus, executed_by: userId,
-    executed_at: new Date().toISOString(), result: executionResult,
-  } as never).eq('id', action.id).eq('status', 'pending');
+    executed_at: new Date().toISOString(), result: asJson(executionResult),
+  }).eq('id', action.id).eq('status', 'pending');
 
   if (updateError) {
     log.error('Failed to update action status', { error: updateError.message });
   }
 
-  // Security logging
+  // Security logging — `details` is jsonb.
   if (executionStatus === 'executed') {
-    // D16-C3: details is Json column; cast to never resolves Record↔Json overload + tenant_id drift.
     await supabase.from('security_logs').insert({
       tenant_id: action.tenant_id, user_id: userId,
       ip_address: req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'unknown',
       endpoint: '/functions/v1/ai-action-executor', attack_type: 'ai_action_executed',
       severity: actionConfig.risk_level === 'high' ? 'high' : 'info', blocked: false,
       user_agent: req.headers.get('user-agent') || 'unknown',
-      details: { action_id: action.id, action_type: action.action_type, executed_by: userId, insight_id: action.insight_id, risk_level: actionConfig.risk_level, result_summary: executionResult },
-    } as never);
+      details: asJson({ action_id: action.id, action_type: action.action_type, executed_by: userId, insight_id: action.insight_id, risk_level: actionConfig.risk_level, result_summary: executionResult }),
+    });
   }
 
   log.info('Action completed', { action_id, status: executionStatus });

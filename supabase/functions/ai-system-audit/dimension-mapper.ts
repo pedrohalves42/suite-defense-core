@@ -40,8 +40,9 @@ export function buildAuditInsertData(
     falsification_criteria: analysisResult.falsification_criteria || [],
   };
 
+  const dimensions = (analysisResult.dimensions ?? {}) as Record<string, { score?: unknown; analysis?: unknown }>;
   for (const [dimKey, mapping] of Object.entries(DIMENSION_MAPPING)) {
-    const dim = analysisResult.dimensions?.[dimKey];
+    const dim = dimensions[dimKey];
     if (dim) {
       insertData[mapping.scoreCol] = dim.score;
       insertData[mapping.analysisCol] = dim.analysis;

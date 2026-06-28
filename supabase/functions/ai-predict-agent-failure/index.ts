@@ -5,6 +5,7 @@
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { callAIJson } from '../_shared/ai-provider-helper.ts';
 import { logger } from '../_shared/logger.ts';
+import { asJson } from '../_shared/json.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { buildAgentTrends, filterRiskyAgents } from './trend-analyzer.ts';
 
@@ -61,11 +62,11 @@ serveInternal(async (_req, ctx) => {
         severity: p.failure_probability > 0.8 ? 'critical' : 'warning',
         title: `Previsao: ${p.agent_name} pode falhar em ${p.time_horizon_hours}h`,
         description: `Probabilidade: ${Math.round(p.failure_probability * 100)}%. Fatores: ${p.contributing_factors.join(', ')}`,
-        evidence: { prediction: p, analysis_type: 'trend_based' },
+        evidence: asJson({ prediction: p, analysis_type: 'trend_based' }),
         recommendation: p.recommendation, confidence_score: p.failure_probability,
       }));
-      // D16-C2: cast to satisfy Json constraint on ai_insights.evidence; runtime payload unchanged.
-      if (insights.length > 0) await supabase.from('ai_insights').insert(insights as never);
+      // D18-3: insights array now type-clean (evidence narrowed via asJson).
+      if (insights.length > 0) await supabase.from('ai_insights').insert(insights);
       allPredictions.push(...predictions);
     }
   }

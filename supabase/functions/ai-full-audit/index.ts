@@ -7,12 +7,23 @@ import { serveTenant } from '../_shared/serve-tenant.ts';
 import { requireEnv } from '../_shared/env.ts';
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
+import { asJson, toRecord } from '../_shared/json.ts';
+import type { Database } from '../_shared/database.types.ts';
 
 import {
   calculateDeterministicScore, calculateRiskFactor, calculateBinaryCriteria,
   getDeterministicThreatLevel, isCreditsExhausted, isRateLimited, logGovernanceEvent,
 } from './helpers.ts';
 
+type RedTeamInsert = Database['public']['Tables']['red_team_assessments']['Insert'];
+type SystemAuditInsert = Database['public']['Tables']['system_audits']['Insert'];
+
+// D18-3 / LATENT-AUDIT-SCHEMA-01: `as never` casts on red_team_assessments /
+// system_audits inserts replaced by precise named-type casts to the generated
+// Insert row types; `as unknown as Record<string, unknown>` on fallback
+// factories replaced by `toRecord()`; Json column payloads narrowed via `asJson`.
+// All runtime payloads preserved.
+//
 // D16-C2: narrow `Json` from RPC into the loose record shape the deterministic
 // helpers expect. Runtime contract is unchanged — the RPC returns a JSON object.
 const asMetrics = (m: unknown): Record<string, unknown> =>
@@ -76,7 +87,7 @@ serveTenant(async (req, ctx) => {
   let redResult: Record<string, unknown> | null = null;
   let redTeamFallbackUsed = false;
   try { redResult = safeParseJSON(redAiResult.content, 'red-team'); } catch {
-    redResult = createFallbackRedTeam('AI_JSON_PARSE_ERROR', calculateBinaryCriteria(asMetrics(metrics))) as unknown as Record<string, unknown>;
+    redResult = toRecord(createFallbackRedTeam('AI_JSON_PARSE_ERROR', calculateBinaryCriteria(asMetrics(metrics))));
     redTeamFallbackUsed = true;
     await logGovernanceEvent(serviceClient, tenantId, null, 'red_team_fallback', null, 50, 'parse_error', 'Red Team JSON parse falhou', {});
   }
@@ -97,24 +108,32 @@ serveTenant(async (req, ctx) => {
   if (redResult!.threat_level !== expectedThreatLevel) redResult!.threat_level = expectedThreatLevel;
 
   const redPromptHash = `${redPersona.hash.slice(0, 8)}-${redTemplate.hash.slice(0, 8)}`;
-  const { data: savedRed } = await serviceClient.from('red_team_assessments').insert({
-    tenant_id: tenantId, threat_level: redResult!.threat_level, red_score: redResult!.red_score || 50,
-    attack_vectors: redResult!.attack_vectors || [], residual_risks: redResult!.residual_risks || [],
-    threat_system_identity: (redResult!.dimension_threats as Record<string, unknown>)?.system_identity,
-    threat_governance: (redResult!.dimension_threats as Record<string, unknown>)?.governance,
-    threat_evidence_proof: (redResult!.dimension_threats as Record<string, unknown>)?.evidence_proof,
-    threat_human_oversight: (redResult!.dimension_threats as Record<string, unknown>)?.human_oversight,
-    threat_operational_resilience: (redResult!.dimension_threats as Record<string, unknown>)?.operational_resilience,
-    threat_cross_tenant_isolation: (redResult!.dimension_threats as Record<string, unknown>)?.cross_tenant_isolation,
-    threat_transparency_explainability: (redResult!.dimension_threats as Record<string, unknown>)?.transparency_explainability,
-    threat_compliance_alignment: (redResult!.dimension_threats as Record<string, unknown>)?.compliance_alignment,
-    threat_market_trust: (redResult!.dimension_threats as Record<string, unknown>)?.market_trust,
-    executive_threat_summary: redResult!.executive_threat_summary, worst_case_scenario: redResult!.worst_case_scenario,
-    recommended_hardening: redResult!.recommended_hardening || [],
-    ai_model: redAiResult.model, ai_prompt_hash: redPromptHash,
-    ai_response_raw: redResult, metrics_snapshot: metrics,
-    binary_criteria: binaryCriteria, criteria_count_true: criteriaCountTrue,
-  } as never).select().single();
+  const redInsert: RedTeamInsert = {
+    tenant_id: tenantId,
+    threat_level: redResult!.threat_level as string,
+    red_score: (redResult!.red_score as number) || 50,
+    attack_vectors: asJson(redResult!.attack_vectors || []),
+    residual_risks: asJson(redResult!.residual_risks || []),
+    threat_system_identity: (redResult!.dimension_threats as Record<string, number>)?.system_identity,
+    threat_governance: (redResult!.dimension_threats as Record<string, number>)?.governance,
+    threat_evidence_proof: (redResult!.dimension_threats as Record<string, number>)?.evidence_proof,
+    threat_human_oversight: (redResult!.dimension_threats as Record<string, number>)?.human_oversight,
+    threat_operational_resilience: (redResult!.dimension_threats as Record<string, number>)?.operational_resilience,
+    threat_cross_tenant_isolation: (redResult!.dimension_threats as Record<string, number>)?.cross_tenant_isolation,
+    threat_transparency_explainability: (redResult!.dimension_threats as Record<string, number>)?.transparency_explainability,
+    threat_compliance_alignment: (redResult!.dimension_threats as Record<string, number>)?.compliance_alignment,
+    threat_market_trust: (redResult!.dimension_threats as Record<string, number>)?.market_trust,
+    executive_threat_summary: redResult!.executive_threat_summary as string | null,
+    worst_case_scenario: redResult!.worst_case_scenario as string | null,
+    recommended_hardening: asJson(redResult!.recommended_hardening || []),
+    ai_model: redAiResult.model,
+    ai_prompt_hash: redPromptHash,
+    ai_response_raw: asJson(redResult),
+    metrics_snapshot: asJson(metrics),
+    binary_criteria: asJson(binaryCriteria),
+    criteria_count_true: criteriaCountTrue,
+  };
+  const { data: savedRed } = await serviceClient.from('red_team_assessments').insert(redInsert).select().single();
 
   logger.info(`[ai-full-audit] Phase 1 complete. Red Score: ${redResult!.red_score}, Threat: ${redResult!.threat_level}, Criteria TRUE: ${criteriaCountTrue}`);
 
@@ -127,7 +146,8 @@ serveTenant(async (req, ctx) => {
   logPromptUsage('ana-auditor-persona', anaPersona.hash, tenantId, 'ai-full-audit', { phase: 2 });
   logPromptUsage('ana-analysis-template', anaTemplate.hash, tenantId, 'ai-full-audit', { phase: 2 });
 
-  const redTeamContext = `\nCONTEXTO RED TEAM:\n- Red Score: ${redResult!.red_score}/100\n- Threat Level: ${redResult!.threat_level}\n- Vetores: ${(redResult!.attack_vectors as any[])?.slice(0, 3).map((v) => v.name).join(', ') || 'nenhum'}\n- Pior cenario: ${redResult!.worst_case_scenario || 'nao especificado'}\n`;
+  const attackVectors = Array.isArray(redResult!.attack_vectors) ? redResult!.attack_vectors as Array<{ name?: string }> : [];
+  const redTeamContext = `\nCONTEXTO RED TEAM:\n- Red Score: ${redResult!.red_score}/100\n- Threat Level: ${redResult!.threat_level}\n- Vetores: ${attackVectors.slice(0, 3).map((v) => v.name).join(', ') || 'nenhum'}\n- Pior cenario: ${redResult!.worst_case_scenario || 'nao especificado'}\n`;
   const anaPrompt = anaTemplate.content.replace('{metrics}', JSON.stringify(metrics, null, 2) + '\n\n' + redTeamContext);
   const anaMessages: AIMessage[] = [{ role: 'system', content: anaPersona.content }, { role: 'user', content: anaPrompt }];
   const anaAiResult = await callAI(anaMessages, { maxTokens: 8192, functionName: 'ai-full-audit-ana', tenantId });
@@ -147,7 +167,7 @@ serveTenant(async (req, ctx) => {
   const anaTokens = anaAiResult.tokensUsed?.total || 0;
   let anaResult: Record<string, unknown> | null = null;
   try { anaResult = safeParseJSON(anaAiResult.content, 'ana'); } catch {
-    anaResult = createFallbackAudit('AI_JSON_PARSE_ERROR') as unknown as Record<string, unknown>;
+    anaResult = toRecord(createFallbackAudit('AI_JSON_PARSE_ERROR'));
     await logGovernanceEvent(serviceClient, tenantId, null, 'ana_fallback', null, 50, 'parse_error', 'Ana JSON parse falhou', {});
   }
 
@@ -192,23 +212,24 @@ serveTenant(async (req, ctx) => {
     'market_trust': { scoreCol: 'score_simplicity', analysisCol: 'analysis_simplicity' },
   };
 
-  // deno-lint-ignore no-explicit-any
-  const insertData: Record<string, any> = {
+  // D18-3: typed Insert (was `Record<string, any>` + `as never`). Dimension
+  // columns are added dynamically; precise named-type cast at the insert call.
+  const insertData: Record<string, unknown> = {
     tenant_id: tenantId, created_by: null, overall_score: guardedScore, raw_score: rawScore,
     official_score: officialScore, market_score: marketScore, deterministic_base_score: deterministicBaseScore,
     red_risk_factor: redRiskFactor, guardrail_applied: guardrailApplied, guardrail_reason: guardrailReason,
     executive_summary: anaResult!.executive_summary, final_sentence: anaResult!.final_sentence,
-    recommendation: anaResult!.recommendation, metrics_snapshot: metrics,
+    recommendation: anaResult!.recommendation, metrics_snapshot: asJson(metrics),
     ai_model: anaAiResult.model, prompt_hash: `${anaPersona.hash.slice(0, 8)}-${anaTemplate.hash.slice(0, 8)}`,
-    tokens_used: anaTokens, evidence_basis: anaResult!.evidence_basis || [],
-    falsification_criteria: anaResult!.falsification_criteria || [],
+    tokens_used: anaTokens, evidence_basis: asJson(anaResult!.evidence_basis || []),
+    falsification_criteria: asJson(anaResult!.falsification_criteria || []),
   };
   for (const [dimKey, mapping] of Object.entries(dimensionMapping)) {
     const dim = (anaResult!.dimensions as Record<string, Record<string, unknown>>)?.[dimKey];
     if (dim) { insertData[mapping.scoreCol] = dim.score; insertData[mapping.analysisCol] = dim.analysis; }
   }
 
-  const { data: savedAna } = await serviceClient.from('system_audits').insert(insertData as never).select().single();
+  const { data: savedAna } = await serviceClient.from('system_audits').insert(insertData as SystemAuditInsert).select().single();
 
   // ============ PHASE 3: CONFIDENCE GAP ============
   const anaScore = anaResult!.overall_score as number;

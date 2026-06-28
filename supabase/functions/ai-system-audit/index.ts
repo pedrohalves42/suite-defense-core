@@ -1,6 +1,14 @@
 /**
  * ai-system-audit — Migrated to serveTenant middleware
  * Module: dimension-mapper
+ *
+ * D18-3 / LATENT-AUDIT-SCHEMA-01:
+ *   - `as never` on system_audits.insert replaced by a precise named-type cast
+ *     to `Database['public']['Tables']['system_audits']['Insert']`. Justified
+ *     by the dynamic shape of the AI JSON response (cannot be statically
+ *     narrowed at parse-time without a runtime schema validator).
+ *   - `as unknown as Record<string, unknown>` on the fallback factory replaced
+ *     by the `toRecord()` helper from `_shared/json.ts` (single documented cast).
  */
 import { AIPromptRegistry, logPromptUsage } from "../_shared/ai-prompt-registry.ts";
 import { safeParseJSON, createFallbackAudit } from "../_shared/json-parser.ts";
@@ -8,7 +16,11 @@ import { callAI, type AIMessage } from "../_shared/ai-provider-helper.ts";
 import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { serveTenant } from '../_shared/serve-tenant.ts';
+import { asJson, toRecord } from '../_shared/json.ts';
+import type { Database } from '../_shared/database.types.ts';
 import { buildAuditInsertData } from './dimension-mapper.ts';
+
+type SystemAuditInsert = Database['public']['Tables']['system_audits']['Insert'];
 
 serveTenant(async (req, ctx) => {
   const { supabase, tenantId, userId } = ctx;
@@ -43,20 +55,24 @@ serveTenant(async (req, ctx) => {
     return new Response(JSON.stringify({ error: 'AI analysis failed', details: aiResult.error }), { status: 500, headers: { ...buildCorsHeaders(origin), 'Content-Type': 'application/json' } });
   }
 
-  let analysisResult: Record<string, unknown> | null = null;
+  let analysisResult: Record<string, unknown> = toRecord(createFallbackAudit('AI_RESULT_PENDING'));
   try {
-    analysisResult = safeParseJSON(aiResult.content, 'ai-system-audit') as Record<string, unknown> | null;
+    const parsed = safeParseJSON(aiResult.content, 'ai-system-audit') as Record<string, unknown> | null;
+    if (parsed) analysisResult = parsed;
   } catch (err) {
     logger.warn('[ai-system-audit] JSON parse failed, using fallback', err);
-    analysisResult = createFallbackAudit('AI_JSON_PARSE_ERROR') as unknown as Record<string, unknown>;
+    analysisResult = toRecord(createFallbackAudit('AI_JSON_PARSE_ERROR'));
   }
 
   const combinedPromptHash = `${personaPrompt.hash.slice(0, 8)}-${analysisTemplate.hash.slice(0, 8)}`;
   const tokensUsed = aiResult.tokensUsed?.total || 0;
   const insertData = buildAuditInsertData(tenantId, userId || 'system', analysisResult, metrics as Record<string, unknown>, aiResult.model, combinedPromptHash, tokensUsed);
 
-  // D16-C1: type-only cast; insert shape preserved.
-  const { data: savedAudit, error: saveError } = await supabase.from('system_audits').insert(insertData as never).select().single();
+  // D18-3: precise named-type cast (AI JSON shape is dynamic at compile time).
+  const { data: savedAudit, error: saveError } = await supabase
+    .from('system_audits')
+    .insert({ ...insertData, metrics_snapshot: asJson(metrics) } as SystemAuditInsert)
+    .select().single();
   if (saveError) logger.error('Error saving audit:', saveError);
 
   logger.info(`[ai-system-audit] Completed. Score: ${analysisResult!.overall_score}`);
