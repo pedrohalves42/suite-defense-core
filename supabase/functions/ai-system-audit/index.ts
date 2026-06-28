@@ -1,6 +1,14 @@
 /**
  * ai-system-audit — Migrated to serveTenant middleware
  * Module: dimension-mapper
+ *
+ * D18-3 / LATENT-AUDIT-SCHEMA-01:
+ *   - `as never` on system_audits.insert replaced by a precise named-type cast
+ *     to `Database['public']['Tables']['system_audits']['Insert']`. Justified
+ *     by the dynamic shape of the AI JSON response (cannot be statically
+ *     narrowed at parse-time without a runtime schema validator).
+ *   - `as unknown as Record<string, unknown>` on the fallback factory replaced
+ *     by the `toRecord()` helper from `_shared/json.ts` (single documented cast).
  */
 import { AIPromptRegistry, logPromptUsage } from "../_shared/ai-prompt-registry.ts";
 import { safeParseJSON, createFallbackAudit } from "../_shared/json-parser.ts";
@@ -9,7 +17,10 @@ import { logger } from '../_shared/logger.ts';
 import { buildCorsHeaders } from '../_shared/cors.ts';
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { asJson, toRecord } from '../_shared/json.ts';
+import type { Database } from '../_shared/database.types.ts';
 import { buildAuditInsertData } from './dimension-mapper.ts';
+
+type SystemAuditInsert = Database['public']['Tables']['system_audits']['Insert'];
 
 serveTenant(async (req, ctx) => {
   const { supabase, tenantId, userId } = ctx;
