@@ -158,22 +158,33 @@ export async function handleAutoRemediate(
   if (!resolvedTenantId) resolvedTenantId = agent.tenant_id;
   if (resolvedTenantId !== agent.tenant_id) return { __status: 403, error: 'Access denied: agent belongs to different tenant' };
 
-  // Blast Radius Check (fail-closed)
+  // Blast Radius Check (fail-closed) — HF-LATENT-RPC-MISSING-01a
   try {
-    const { data: blastCheck, error: blastError } = await supabase.rpc('check_blast_radius' as never, {
-      p_tenant_id: resolvedTenantId, p_action_type: action_type, p_severity: trigger_details.severity || 'medium',
+    const { data: blastCheckRaw, error: blastError } = await supabase.rpc('check_blast_radius', {
+      p_tenant_id: resolvedTenantId,
+      p_action_type: action_type,
+      p_affected_count: 1,
+      p_severity: (trigger_details.severity as string) || 'medium',
     });
-    if (!blastError && blastCheck && !blastCheck.allowed) {
+    if (blastError) {
+      logger.error('[security-threats] Blast radius RPC error - BLOCKING (fail-closed)', { error: blastError.message });
+      return { __status: 503, success: false, error: 'BLAST_RADIUS_UNAVAILABLE', message: 'Blast radius check unavailable - remediation blocked for safety' };
+    }
+    const blastCheck = blastCheckRaw as unknown as { allowed: boolean; reason: string | null; current_radius: number; max_radius: number } | null;
+    if (!blastCheck || blastCheck.allowed !== true) {
+      const currentRadius = blastCheck?.current_radius ?? 0;
+      const maxRadius = blastCheck?.max_radius ?? 0;
+      const reason = blastCheck?.reason ?? 'BLAST_RADIUS_UNAVAILABLE';
       await supabase.from('auto_remediation_actions').insert({
         tenant_id: resolvedTenantId, agent_id, agent_name: agent.agent_name, action_type, trigger_source,
-        trigger_details: { ...trigger_details, blast_radius_blocked: true }, requires_approval: false, status: 'failed',
-        error_message: `Blast radius exceeded: ${blastCheck.affected_percent?.toFixed(1)}% of fleet affected`,
+        trigger_details: { ...trigger_details, blast_radius_blocked: true, blast_radius_reason: reason }, requires_approval: false, status: 'failed',
+        error_message: `Blast radius exceeded: ${currentRadius.toFixed(1)}% of fleet (max ${maxRadius.toFixed(1)}%)`,
         executed_at: new Date().toISOString(),
       });
-      return { __status: 429, success: false, error: 'BLAST_RADIUS_EXCEEDED', affected_percent: blastCheck.affected_percent };
+      return { __status: 429, success: false, error: 'BLAST_RADIUS_EXCEEDED', reason, current_radius: currentRadius, max_radius: maxRadius };
     }
   } catch (blastErr) {
-    logger.error('[auto-remediate] Blast radius check failed - BLOCKING (fail-closed)', { error: blastErr instanceof Error ? blastErr.message : String(blastErr) });
+    logger.error('[security-threats] Blast radius check threw - BLOCKING (fail-closed)', { error: blastErr instanceof Error ? blastErr.message : String(blastErr) });
     return { __status: 503, success: false, error: 'BLAST_RADIUS_UNAVAILABLE', message: 'Blast radius check unavailable - remediation blocked for safety' };
   }
 
