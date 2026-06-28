@@ -5,6 +5,7 @@
 import { serveInternal } from '../_shared/serve-tenant.ts';
 import { callAIJson } from '../_shared/ai-provider-helper.ts';
 import { logger } from '../_shared/logger.ts';
+import { asJson } from '../_shared/json.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { buildAgentTrends, filterRiskyAgents } from './trend-analyzer.ts';
 
