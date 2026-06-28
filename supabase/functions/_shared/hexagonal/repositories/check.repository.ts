@@ -134,23 +134,21 @@ export class SupabaseCheckRepository implements ICheckRepository {
     neq?: Record<string, string | number>, 
     in?: Record<string, (string | number)[]> 
   }): Promise<Tables['agents']['Row'][]> {
+    type Col = keyof Tables['agents']['Row'] & string;
     let query = this.supabase.from('agents').select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        // @ts-ignore: dynamic mapping
-        query = query.gte(key, val);
+        query = query.gte(key as Col, val);
       }
     }
     if (filters?.neq) {
       for (const [key, val] of Object.entries(filters.neq)) {
-        // @ts-ignore: dynamic mapping
-        query = query.neq(key, val);
+        query = query.neq(key as Col, val);
       }
     }
     if (filters?.in) {
       for (const [key, val] of Object.entries(filters.in)) {
-        // @ts-ignore: dynamic mapping
-        query = query.in(key, val);
+        query = query.in(key as Col, val);
       }
     }
     const { data, error } = await query;
@@ -162,17 +160,16 @@ export class SupabaseCheckRepository implements ICheckRepository {
     gte?: Record<string, string | number>, 
     in?: Record<string, (string | number)[]> 
   }): Promise<Tables['installation_analytics']['Row'][]> {
+    type Col = keyof Tables['installation_analytics']['Row'] & string;
     let query = this.supabase.from('installation_analytics').select('*');
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        // @ts-ignore: dynamic mapping
-        query = query.gte(key, val);
+        query = query.gte(key as Col, val);
       }
     }
     if (filters?.in) {
       for (const [key, val] of Object.entries(filters.in)) {
-        // @ts-ignore: dynamic mapping
-        query = query.in(key, val);
+        query = query.in(key as Col, val);
       }
     }
     const { data, error } = await query;
@@ -186,26 +183,24 @@ export class SupabaseCheckRepository implements ICheckRepository {
     gte?: Record<string, string | number>,
     tenant_id?: string
   }): Promise<Tables['jobs']['Row'][]> {
+    type Col = keyof Tables['jobs']['Row'] & string;
     let query = this.supabase.from('jobs').select('*');
     if (filters?.tenant_id) {
       query = query.eq('tenant_id', filters.tenant_id);
     }
     if (filters?.eq) {
       for (const [key, val] of Object.entries(filters.eq)) {
-        // @ts-ignore: dynamic mapping
-        query = query.eq(key, val);
+        query = query.eq(key as Col, val);
       }
     }
     if (filters?.gte) {
       for (const [key, val] of Object.entries(filters.gte)) {
-        // @ts-ignore: dynamic mapping
-        query = query.gte(key, val);
+        query = query.gte(key as Col, val);
       }
     }
     if (filters?.lt) {
       for (const [key, val] of Object.entries(filters.lt)) {
-        // @ts-ignore: dynamic mapping
-        query = query.lt(key, val);
+        query = query.lt(key as Col, val);
       }
     }
     const { data, error } = await query;
