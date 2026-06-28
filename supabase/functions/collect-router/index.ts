@@ -1,4 +1,5 @@
-// @ts-nocheck
+// D17-D3: @ts-nocheck removed. Typing only — handler routing map, alias
+// keys (kebab/snake) and agent-token auth via serveAgent unchanged.
 /**
  * collect-router -- Consolidated agent data collection endpoint
  * 

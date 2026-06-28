@@ -1,4 +1,5 @@
-// @ts-nocheck
+// D17-D3: @ts-nocheck removed. Typing only — runtime, HMAC verification,
+// quota checks, scanner fallbacks and auto-quarantine invocation unchanged.
 /**
  * scan-virus — Migrated to serveAgent middleware with HMAC verification.
  */

@@ -1,4 +1,5 @@
-// @ts-nocheck
+// D17-D3: @ts-nocheck removed. Typing only — public passthrough to the
+// shared handler is unchanged.
 import { servePublic } from '../_shared/serve-public.ts';
 import { handleGetLatestAgentScript } from '../_shared/handlers/latest-agent-script.ts';
 

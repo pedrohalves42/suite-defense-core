@@ -1,4 +1,5 @@
-// @ts-nocheck
+// D17-D3: @ts-nocheck removed. Typing only — batch/single scan orchestration,
+// CVE upsert/delete contract and playbook trigger emission unchanged.
 /**
  * Scan Vulnerabilities - Orchestrator
  * Auth: serveTenant (JWT + tenant isolation)
