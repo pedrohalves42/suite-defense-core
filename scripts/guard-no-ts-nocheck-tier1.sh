@@ -192,6 +192,15 @@ PROTECTED_PATHS=(
   "supabase/functions/create-reinstall-jobs/index.ts"
   "supabase/functions/force-reinstall-fleet/index.ts"
   "supabase/functions/post-installation-telemetry/index.ts"
+
+  # D17-D3 — Wave final (orquestradores e routers de coleta/scan)
+  "supabase/functions/collect-router/index.ts"
+  "supabase/functions/get-blocked-websites/index.ts"
+  "supabase/functions/get-latest-agent-script/index.ts"
+  "supabase/functions/scan-virus/index.ts"
+  "supabase/functions/scan-vulnerabilities/index.ts"
+  "supabase/functions/update-baseline/index.ts"
+  "supabase/functions/action-center-feed/index.ts"
 )
 
 FOUND=0
