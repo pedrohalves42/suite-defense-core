@@ -126,11 +126,11 @@ serveTenant(async (req, ctx) => {
 
   // Global Circuit Breaker
   try {
-    const { data: globalBreakerRaw } = await supabase.rpc('check_global_circuit_breaker' as never, {
+    const { data: globalBreakerRaw } = await supabase.rpc('check_global_circuit_breaker', {
       p_tenant_id: resolvedTenantId,
       p_max_impact_percent: 30,
       p_window_minutes: 10,
-    } as never);
+    });
     const globalBreaker = globalBreakerRaw as GlobalBreakerResult | null;
 
     if (globalBreaker && !globalBreaker.allowed) {
