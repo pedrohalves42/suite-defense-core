@@ -123,8 +123,10 @@ serveTenant(async (req, ctx) => {
       }
 
       const agentScriptContent = prepared.content;
-      if (!validateAgentScriptContent(agentScriptContent)) {
-        return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Agent script content is invalid', 503, requestId);
+      const scriptValidation = validateAgentScriptContent(agentScriptContent);
+      if (!scriptValidation.valid) {
+        logger.error(`[${requestId}] Agent script content invalid`, { errors: scriptValidation.errors });
+        return createErrorResponse(ErrorCode.INTERNAL_ERROR, `Agent script content is invalid: ${(scriptValidation.errors ?? []).join('; ')}`, 503, requestId);
       }
       const agentScriptHash = prepared.sha256;
 
