@@ -70,9 +70,11 @@ serveTenant(async (_req, ctx) => {
   }
 
   // ===== DEFAULT: fetch script content for a platform =====
+  // Use already-validated parsedBody.data (typed) to access `platform`.
   let platform: 'windows' | 'linux' | 'macos' = 'windows';
-  if (body?.platform && ['windows', 'linux', 'macos'].includes(body.platform as string)) {
-    platform = body.platform as 'windows' | 'linux' | 'macos';
+  const bodyPlatform = parsedBody.data.platform;
+  if (bodyPlatform && ['windows', 'linux', 'macos'].includes(bodyPlatform)) {
+    platform = bodyPlatform;
   }
 
   logger.info(`[get-agent-script-content][${requestId}] Admin ${userId} requesting script for ${platform}`);
