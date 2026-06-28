@@ -86,15 +86,8 @@ export function useAIActionApprovalData() {
           affectedCount: Number(action.action_payload.affected_count),
         });
         if (!blastResult.allowed) {
-          toast({ title: 'Ação bloqueada pelo Blast Radius', description: blastResult.message, variant: 'destructive' });
-          return;
-        }
-        if (blastResult.requires_approval) {
-          setSelectedActionId(actionId);
-          setSelectedRiskLevel(riskLevel);
-          setApprovalNotes(`⚠️ Blast Radius: ${blastResult.message}`);
-          setReviewedDetails(false);
-          setApprovalDialogOpen(true);
+          const desc = `Raio atual ${blastResult.current_radius.toFixed(1)}% excede o limite de ${blastResult.max_radius.toFixed(1)}% (${blastResult.reason ?? 'sem motivo'})`;
+          toast({ title: 'Ação bloqueada pelo Blast Radius', description: desc, variant: 'destructive' });
           return;
         }
       } catch (error) {
