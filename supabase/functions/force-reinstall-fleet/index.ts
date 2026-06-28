@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { requireEnv } from '../_shared/env.ts';
@@ -228,4 +228,4 @@ if ($task) {
       ]
     }
   };
-}, { methods: ['POST'], rateLimit: { maxRequests: 3, windowMinutes: 5 } });
+}, { methods: ['POST'], rateLimit: { endpoint: 'force-reinstall-fleet', maxRequests: 3, windowMinutes: 5 } });

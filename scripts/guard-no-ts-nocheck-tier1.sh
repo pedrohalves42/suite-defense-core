@@ -182,6 +182,16 @@ PROTECTED_PATHS=(
   "supabase/functions/validate-build-pipeline/index.ts"
   "supabase/functions/setup-agent-script/index.ts"
   "supabase/functions/get-agent-script-content/index.ts"
+
+  # D17-D2 — Agent Deployment (Tier B operacional: deployment/distribuição)
+  "supabase/functions/check-agent-updates/index.ts"
+  "supabase/functions/get-agent-config/index.ts"
+  "supabase/functions/get-agent-policy/index.ts"
+  "supabase/functions/get-diagnostic-script/index.ts"
+  "supabase/functions/diagnostics-agent-logs/index.ts"
+  "supabase/functions/create-reinstall-jobs/index.ts"
+  "supabase/functions/force-reinstall-fleet/index.ts"
+  "supabase/functions/post-installation-telemetry/index.ts"
 )
 
 FOUND=0
