@@ -27,7 +27,7 @@ export interface TestTenant {
 export const SECURITY_TEST_USERS: Record<string, TestUser> = {
   super_admin: {
     email: process.env.TEST_SUPER_ADMIN_EMAIL || 'super@cybershield.test',
-    password: process.env.TEST_SUPER_ADMIN_PASSWORD || 'SuperSecure123!',
+    password: process.env.TEST_SUPER_ADMIN_PASSWORD || 'SupZ9!kV2pQrW8tN',
     role: 'super_admin',
     fullName: 'Super Admin Test',
     tenantSlug: 'test-tenant-a',
