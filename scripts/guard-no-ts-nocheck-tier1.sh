@@ -212,7 +212,7 @@ MISSING=0
 for path in "${PROTECTED_PATHS[@]}"; do
   if [[ -f "$path" ]]; then
     if grep -nE "$PATTERN" "$path"; then
-      echo "  ^ active @ts-nocheck in protected file: $path"
+      echo "  ^ active @ts-nocheck/@ts-ignore in protected file: $path"
       FOUND=1
     fi
   else
@@ -223,11 +223,12 @@ done
 
 echo
 if [[ "$FOUND" -ne 0 ]]; then
-  echo "ERROR: active @ts-nocheck found in protected Tier 1 / type-clean files."
-  echo "       Remove the directive or fix types — these files are post-cleanup and must stay clean."
+  echo "ERROR: active @ts-nocheck or @ts-ignore found in protected Tier 1 / type-clean files."
+  echo "       Policy: docs/policies/16_type_safety_policy.md — these directives are prohibited."
+  echo "       Fix the underlying type error; do not suppress it."
   exit 1
 fi
 
-echo "PASS: no active @ts-nocheck in protected Tier 1 / type-clean files."
+echo "PASS: no active @ts-nocheck/@ts-ignore in protected Tier 1 / type-clean files."
 [[ "$MISSING" -ne 0 ]] && echo "NOTE: some protected paths were missing; review the list."
 exit 0
