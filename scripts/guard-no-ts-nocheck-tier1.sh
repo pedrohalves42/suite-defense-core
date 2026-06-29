@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
-# D11-E — Anti-regression gate for active @ts-nocheck in Tier 1 / type-clean files.
-# Scope: ONLY protected paths below. Does NOT block the rest of supabase/functions
-# (known debt tracked in D10 v2 inventory).
+# D11-E / Program Closure D2–D19 — Anti-regression gate for active @ts-nocheck
+# AND @ts-ignore in Tier 1 / type-clean files.
+#
+# Post-closure policy (see docs/policies/16_type_safety_policy.md):
+#   - @ts-nocheck and @ts-ignore are PROHIBITED in protected files. No exceptions.
+#   - Type escapes (`as unknown as X`) must carry a `// type-escape:` justification.
 #
 # Regex (validated in D11-A): matches active directives only, ignores JSDoc/docs.
 
 set -uo pipefail
 
-PATTERN='^[[:space:]]*(//|/\*)[[:space:]]*@ts-nocheck\b'
+PATTERN='^[[:space:]]*(//|/\*)[[:space:]]*@ts-(nocheck|ignore)\b'
 
 PROTECTED_PATHS=(
   # _shared (Tier 1 helpers)
