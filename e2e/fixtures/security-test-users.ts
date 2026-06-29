@@ -59,7 +59,7 @@ export const SECURITY_TEST_USERS: Record<string, TestUser> = {
   },
   viewer: {
     email: process.env.TEST_VIEWER_EMAIL || 'viewer@test.com',
-    password: process.env.TEST_VIEWER_PASSWORD || 'Test1234!',
+    password: process.env.TEST_VIEWER_PASSWORD || 'VwR7#mB4zX1cT6Y',
     role: 'viewer',
     fullName: 'Viewer Test',
     tenantSlug: 'test-tenant-a',
