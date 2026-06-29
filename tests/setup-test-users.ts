@@ -1,18 +1,30 @@
 /**
- * Setup de Usuarios de Teste para E2E
- * 
- * Este script cria todos os usuarios de teste necessarios para os testes E2E.
- * Deve ser executado ANTES de rodar o seed SQL.
- * 
+ * Setup de Usuarios de Teste para E2E (Sprint 1 — run-rls-tests authz)
+ *
+ * Idempotente. Pode ser executado localmente OU no pipeline de CI:
+ *   1. Carrega variáveis de .env.test / .env.test.local (override:false).
+ *   2. Cria/garante usuarios em auth.users via Admin API.
+ *   3. Garante tenants de teste (test-tenant-a, test-tenant-b).
+ *   4. Garante user_roles (super_admin, admin, operator, viewer, member).
+ *
  * Uso:
  *   npx tsx tests/setup-test-users.ts
- * 
+ *
  * Requer:
  *   - VITE_SUPABASE_URL
- *   - SUPABASE_SERVICE_ROLE_KEY
+ *   - SUPABASE_SERVICE_ROLE_KEY  (CI secret — nunca commitado)
  */
 
+import { config as loadEnv } from 'dotenv';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
+
+// Carrega .env.test antes de ler process.env
+for (const f of ['.env.test', '.env.test.local']) {
+  const p = resolve(process.cwd(), f);
+  if (existsSync(p)) loadEnv({ path: p, override: false });
+}
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL!;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -20,7 +32,7 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error('[ERROR] Variaveis de ambiente faltando:');
   console.error('   - VITE_SUPABASE_URL');
-  console.error('   - SUPABASE_SERVICE_ROLE_KEY');
+  console.error('   - SUPABASE_SERVICE_ROLE_KEY (configure como secret no CI)');
   process.exit(1);
 }
 
@@ -30,6 +42,11 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     persistSession: false,
   },
 });
+
+const TEST_TENANTS = [
+  { id: 'a0000000-0000-0000-0000-000000000001', slug: 'test-tenant-a', name: 'Test Tenant A' },
+  { id: 'b0000000-0000-0000-0000-000000000002', slug: 'test-tenant-b', name: 'Test Tenant B' },
+];
 
 // Definicao de todos os usuarios de teste
 const TEST_USERS = [
