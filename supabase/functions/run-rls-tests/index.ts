@@ -76,9 +76,11 @@ serve(async (req) => {
   const userEmail = userData.user.email ?? null;
 
   // 2. Autorização explícita: super_admin obrigatório
+  // Passamos `_tenant_id: null` para desambiguar entre os overloads de has_role
+  // (PGRST203 ocorre quando ambos os candidatos batem com os mesmos named args).
   const { data: isSuperAdmin, error: roleErr } = await authClient.rpc(
     "has_role",
-    { _user_id: userId, _role: "super_admin" },
+    { _user_id: userId, _role: "super_admin", _tenant_id: null },
   );
   if (roleErr || isSuperAdmin !== true) {
     // Audit log: tentativa não autorizada
