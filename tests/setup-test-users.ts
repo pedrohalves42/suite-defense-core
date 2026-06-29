@@ -142,6 +142,54 @@ async function createTestUser(
   return data.user.id;
 }
 
+async function ensureTenants(): Promise<void> {
+  console.log('\n→ Garantindo tenants de teste...');
+  // owner_user_id é NOT NULL; usar o primeiro super_admin/admin criado como owner.
+  const { data: adminUser } = await supabaseAdmin.auth.admin.listUsers();
+  const ownerA = adminUser?.users.find((u) => u.email === (process.env.TEST_ADMIN_EMAIL || 'admin@test.com'))?.id;
+  const ownerB = adminUser?.users.find((u) => u.email === (process.env.TEST_ADMIN_B_EMAIL || 'admin-b@test.com'))?.id;
+  const ownerMap: Record<string, string | undefined> = {
+    'test-tenant-a': ownerA,
+    'test-tenant-b': ownerB,
+  };
+
+  for (const t of TEST_TENANTS) {
+    const owner = ownerMap[t.slug];
+    if (!owner) {
+      console.log(`[WARN] tenant ${t.slug}: owner ausente (admin não criado). Pulando.`);
+      continue;
+    }
+    const { error } = await supabaseAdmin
+      .from('tenants')
+      .upsert({ id: t.id, slug: t.slug, name: t.name, owner_user_id: owner }, { onConflict: 'id' });
+    if (error) {
+      console.error(`[ERROR] tenant ${t.slug}:`, error.message);
+    } else {
+      console.log(`[OK] tenant ${t.slug} (${t.id})`);
+    }
+  }
+}
+
+async function ensureRoles(users: CreatedUser[]): Promise<void> {
+  console.log('\n→ Garantindo user_roles...');
+  for (const u of users) {
+    const tenant = TEST_TENANTS.find((t) => t.slug === u.tenant);
+    if (!tenant) continue;
+    const { error } = await supabaseAdmin
+      .from('user_roles')
+      .upsert(
+        { user_id: u.userId, tenant_id: tenant.id, role: u.role },
+        { onConflict: 'user_id,tenant_id,role' },
+      );
+    if (error) {
+      // Trigger prevent_super_admin_self_assignment pode bloquear via service_role? Não, ele checa auth.uid().
+      console.error(`[ERROR] role ${u.role} para ${u.email}:`, error.message);
+    } else {
+      console.log(`[OK] role ${u.role} → ${u.email} @ ${u.tenant}`);
+    }
+  }
+}
+
 async function main() {
   console.log('=====================================================');
   console.log(' Setup de Usuarios de Teste para E2E');
@@ -150,10 +198,8 @@ async function main() {
   const createdUsers: CreatedUser[] = [];
   let hasErrors = false;
 
-  // Criar todos os usuarios
   for (const user of TEST_USERS) {
     const userId = await createTestUser(user.email, user.password, user.fullName);
-    
     if (userId) {
       createdUsers.push({
         email: user.email,
@@ -166,35 +212,22 @@ async function main() {
     }
   }
 
-  // Resumo
+  await ensureTenants();
+  await ensureRoles(createdUsers);
+
   console.log('\n=====================================================');
   console.log(' RESUMO');
   console.log('=====================================================');
-  console.log(`\n[OK] Usuarios criados/existentes: ${createdUsers.length}/${TEST_USERS.length}`);
-  
-  if (hasErrors) {
-    console.log('[WARN] Alguns usuarios falharam - verifique os erros acima');
-  }
+  console.log(`\n[OK] Usuarios processados: ${createdUsers.length}/${TEST_USERS.length}`);
+  if (hasErrors) console.log('[WARN] Alguns usuarios falharam - verifique os erros acima');
 
-  // Tabela de usuarios criados
   console.log('\n| Email | Role | Tenant |');
   console.log('|-------|------|--------|');
   for (const user of createdUsers) {
     console.log(`| ${user.email} | ${user.role} | ${user.tenant} |`);
   }
 
-  // Proximos passos
-  console.log('\n=====================================================');
-  console.log(' PROXIMOS PASSOS');
-  console.log('=====================================================');
-  console.log('\n1. Execute o seed SQL para criar tenants e roles:');
-  console.log('   - Acesse o SQL Editor do Supabase');
-  console.log('   - Cole o conteudo de supabase/seed-test-users.sql');
-  console.log('   - Execute a query');
-  console.log('\n2. Verifique se o .env.test esta configurado');
-  console.log('\n3. Execute os testes E2E:');
-  console.log('   npx playwright test');
-  console.log('\n=====================================================');
+  console.log('\nProximo passo: npx playwright test e2e/sprint1-run-rls-tests-authz.spec.ts');
 
   process.exit(hasErrors ? 1 : 0);
 }
