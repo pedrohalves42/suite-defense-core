@@ -57,6 +57,14 @@ export default tseslint.config(
       
       // Novas regras uteis
       "@typescript-eslint/no-explicit-any": "error",
+      // Program Closure D2–D19 — policy 16_type_safety_policy.md
+      // @ts-nocheck and @ts-ignore are prohibited. @ts-expect-error requires justification.
+      "@typescript-eslint/ban-ts-comment": ["error", {
+        "ts-nocheck": true,
+        "ts-ignore": true,
+        "ts-expect-error": "allow-with-description",
+        "minimumDescriptionLength": 10
+      }],
       "no-console": "error",
       "no-restricted-syntax": [
         "error",
