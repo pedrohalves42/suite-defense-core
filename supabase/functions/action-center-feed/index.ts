@@ -60,9 +60,17 @@ serveTenant(async (req, ctx) => {
       return feed;
     }
 
-    // Create user-context client for function invocations
+    // Create user-context client for function invocations.
+    // SECURITY (Sprint 1 / FINDING-2026-06-29-ACF-SERVICE-ROLE-PROPAGATION):
+    // MUST use ANON_KEY here — never SERVICE_ROLE_KEY. Downstream Edge Functions
+    // (execute-playbook-action, auto-remediate, ai-router) authenticate from the
+    // forwarded `Authorization: Bearer <user_jwt>` header via serveTenant →
+    // supabase.auth.getUser(token). The `apikey` header is intentionally the
+    // public anon key so a compromised downstream cannot be tricked into
+    // operating with service-role privileges.
     const authHeader = req.headers.get('Authorization') || '';
-    const userClient = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const userClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
