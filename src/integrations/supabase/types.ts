@@ -50620,57 +50620,29 @@ export type Database = {
         }
       }
       get_agent_snapshot: { Args: { p_agent_id: string }; Returns: Json }
-      get_agents_list:
-        | {
-            Args: { p_include_archived?: boolean; p_tenant_id: string }
-            Returns: {
-              agent_name: string
-              agent_state: string
-              agent_version: string
-              agent_version_code: number
-              archived_at: string
-              display_name: string
-              enrolled_at: string
-              hostname: string
-              id: string
-              is_isolated: boolean
-              is_throttled: boolean
-              last_block_sync_at: string
-              last_heartbeat: string
-              os_type: string
-              os_version: string
-              skip_firewall_remediation: boolean
-              status: string
-              tenant_id: string
-            }[]
-          }
-        | {
-            Args: {
-              p_agent_id?: string
-              p_include_archived?: boolean
-              p_tenant_id: string
-            }
-            Returns: {
-              agent_name: string
-              agent_state: string
-              agent_version: string
-              agent_version_code: number
-              archived_at: string
-              display_name: string
-              enrolled_at: string
-              hostname: string
-              id: string
-              is_isolated: boolean
-              is_throttled: boolean
-              last_block_sync_at: string
-              last_heartbeat: string
-              os_type: string
-              os_version: string
-              skip_firewall_remediation: boolean
-              status: string
-              tenant_id: string
-            }[]
-          }
+      get_agents_list: {
+        Args: { p_include_archived?: boolean; p_tenant_id: string }
+        Returns: {
+          agent_name: string
+          agent_state: string
+          agent_version: string
+          agent_version_code: number
+          archived_at: string
+          display_name: string
+          enrolled_at: string
+          hostname: string
+          id: string
+          is_isolated: boolean
+          is_throttled: boolean
+          last_block_sync_at: string
+          last_heartbeat: string
+          os_type: string
+          os_version: string
+          skip_firewall_remediation: boolean
+          status: string
+          tenant_id: string
+        }[]
+      }
       get_agents_snapshots_list: {
         Args: { p_tenant_id?: string }
         Returns: {
