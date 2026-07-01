@@ -1,3 +1,5 @@
+import { timingSafeEqual } from './crypto-utils.ts';
+
 /**
  * Hashes a token using SHA-256
  * Used for secure token storage and comparison
@@ -18,9 +20,15 @@ export function getTokenPrefix(token: string, length: number = 8): string {
 }
 
 /**
- * Validates that a token matches a stored hash
+ * Validates that a token matches a stored hash.
+ * D20-B: Uses timing-safe comparison to prevent timing side-channel attacks
+ * against token authentication. Both operands are hex-encoded SHA-256 digests
+ * (fixed 64 chars), so length equality alone would leak no information — but
+ * we still route through `timingSafeEqual` to keep the invariant enforced by
+ * a single, audited primitive.
  */
 export async function validateTokenHash(token: string, storedHash: string): Promise<boolean> {
   const computedHash = await hashToken(token);
-  return computedHash === storedHash;
+  return await timingSafeEqual(computedHash, storedHash);
 }
+
