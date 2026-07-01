@@ -77,7 +77,7 @@ BEGIN
   FROM offenders;
 
   IF offender_count > 0 THEN
-    RAISE EXCEPTION E'D21-B RLS COVERAGE VIOLATION\n%s public table(s)/partition(s) without RLS:\n%\n\nFix: enable RLS + attach the canonical tenant policy, OR add an explicit entry to the allowlist in this file with a justification.',
+    RAISE EXCEPTION E'D21-B RLS COVERAGE VIOLATION\n% public table(s)/partition(s) without RLS:\n%\n\nFix: enable RLS + attach the canonical tenant policy, OR add an explicit entry to the allowlist in this file with a justification.',
       offender_count, offender_list;
   END IF;
 
