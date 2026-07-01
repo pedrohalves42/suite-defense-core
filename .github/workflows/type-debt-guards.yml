@@ -7,8 +7,20 @@ on:
     branches: [main, develop]
 
 jobs:
+  ts-nocheck-global:
+    name: D20-Gate-2 — no active @ts-nocheck/@ts-ignore anywhere in src/ or supabase/functions/
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ripgrep
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ripgrep
+      - name: Run global denylist guard
+        run: |
+          chmod +x scripts/guard-no-ts-nocheck-global.sh
+          ./scripts/guard-no-ts-nocheck-global.sh
+
   ts-nocheck-tier1:
-    name: D11-E — no active @ts-nocheck in Tier 1 / type-clean files
+    name: D11-E — Tier 1 allowlist guard (legacy defence-in-depth)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,3 +38,4 @@ jobs:
         run: |
           chmod +x scripts/guard-database-types-sync.sh
           ./scripts/guard-database-types-sync.sh
+

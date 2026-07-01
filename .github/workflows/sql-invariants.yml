@@ -1,0 +1,90 @@
+name: SQL Invariants Gate (D20-Gate-1)
+
+# Runs every tools/tests/assert_*.sql invariant against the live database.
+# Each script uses DO $$ ... RAISE EXCEPTION $$ so a violation aborts psql
+# with a non-zero exit code (ON_ERROR_STOP=1). No warning mode — FAIL blocks
+# the merge.
+#
+# Requires GitHub secret: SUPABASE_DB_URL  (postgres connection string,
+# session-pooler or direct, with permission to SELECT from pg_catalog).
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+
+jobs:
+  sql-invariants:
+    name: 🔒 SQL Invariants (assert_*.sql)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install psql client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Verify DB URL secret is present
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            echo "❌ Missing GitHub secret SUPABASE_DB_URL — cannot run SQL invariants."
+            echo "   Add it under: repo → Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          echo "✅ SUPABASE_DB_URL present."
+
+      - name: Run all tools/tests/assert_*.sql
+        id: run-invariants
+        env:
+          PGCONN: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -uo pipefail
+          shopt -s nullglob
+          FILES=(tools/tests/assert_*.sql)
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "No assert_*.sql files found — nothing to enforce. Failing to avoid silent regressions."
+            exit 1
+          fi
+
+          FAILED=()
+          PASSED=()
+          for f in "${FILES[@]}"; do
+            echo "────────────────────────────────────────"
+            echo "▶ Running $f"
+            if psql "$PGCONN" -v ON_ERROR_STOP=1 -X -q -f "$f"; then
+              echo "  ✅ PASS: $f"
+              PASSED+=("$f")
+            else
+              echo "  ❌ FAIL: $f"
+              FAILED+=("$f")
+            fi
+          done
+
+          echo
+          echo "════════════════════════════════════════"
+          echo "SQL Invariants Summary"
+          echo "  PASS: ${#PASSED[@]}"
+          echo "  FAIL: ${#FAILED[@]}"
+
+          {
+            echo "## SQL Invariants Gate"
+            echo ""
+            echo "| Result | Invariant |"
+            echo "|--------|-----------|"
+            for f in "${PASSED[@]}"; do echo "| ✅ PASS | \`$f\` |"; done
+            for f in "${FAILED[@]}"; do echo "| ❌ FAIL | \`$f\` |"; done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ ${#FAILED[@]} -ne 0 ]; then
+            echo
+            echo "🚨 CRITICAL: one or more SQL invariants FAILED. Merge is BLOCKED."
+            echo "   See docs/audits/active/d20-gate-report.md for the invariant catalog."
+            exit 1
+          fi
