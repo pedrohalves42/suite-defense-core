@@ -98,7 +98,9 @@ export async function handleUpdateMemberRole(supabase: SB, requestId: string, pa
   const userId = ctx?.userId;
   if (!userId) return { __status: 401, error: 'Authentication required' };
 
-  const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin', _tenant_id: ctx?.tenantId });
+  // HF-RPC-OVERLOAD-AUDIT-01: pass _tenant_id explicitly (null-coalesced) to
+  // resolve unambiguously to the 3-arg overload and avoid PGRST203.
+  const { data: hasAdminRole, error: roleError } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin', _tenant_id: ctx?.tenantId ?? null });
   if (roleError || !hasAdminRole) return { __status: 403, error: 'Acesso negado' };
 
   const validation = UpdateMemberRoleSchema.safeParse(payload);
