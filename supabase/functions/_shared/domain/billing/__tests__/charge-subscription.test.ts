@@ -49,13 +49,13 @@ Deno.test("ChargeSubscriptionUseCase - should charge successfully and log event"
   assertEquals(result.transactionId, 'tx-123');
   
   // Verify interactions
-  // @ts-ignore: using mock spy
+  // @ts-expect-error: mock spy — repo methods are wrapped with Deno.spy
   assertEquals(repo.getSubscriptionByTenantId.calls.length, 1);
-  // @ts-ignore: using mock spy
+  // @ts-expect-error: mock spy — gateway.charge is wrapped with Deno.spy
   assertEquals(gateway.charge.calls.length, 1);
-  // @ts-ignore: using mock spy
+  // @ts-expect-error: mock spy — repo methods are wrapped with Deno.spy
   assertEquals(repo.logEvent.calls.length, 1);
-  // @ts-ignore: using mock spy
+  // @ts-expect-error: mock spy — repo methods are wrapped with Deno.spy
   assertEquals(repo.updateSubscription.calls.length, 1);
 });
 
