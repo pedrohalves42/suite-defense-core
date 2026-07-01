@@ -49691,6 +49691,10 @@ export type Database = {
         Args: { p_batch_size?: number; p_older_than_days?: number }
         Returns: Json
       }
+      assert_partition_rls: {
+        Args: { p_partition_name: string }
+        Returns: undefined
+      }
       assert_system_allows_jobs: { Args: never; Returns: undefined }
       assert_system_not_stopped: { Args: never; Returns: undefined }
       audit_credential_rotation: { Args: never; Returns: Json }
@@ -50381,7 +50385,9 @@ export type Database = {
             }
             Returns: Json
           }
-      ensure_partition_rls: { Args: never; Returns: undefined }
+      ensure_partition_rls:
+        | { Args: never; Returns: undefined }
+        | { Args: { p_partition_name: string }; Returns: undefined }
       ensure_tenant_features: {
         Args: {
           p_device_quantity?: number
