@@ -1,0 +1,32 @@
+public.check_blast_radius	p_tenant_id uuid, p_action_type text, p_affected_count integer, p_severity text	true	true
+public.get_agents_snapshots_list	p_tenant_id uuid	true	true
+public.has_role	_user_id uuid, _role text, _tenant_id uuid	true	true
+public.archive_agent	p_agent_id uuid	false	true
+public.diagnose_agent	p_agent_name text, p_tenant_id uuid	false	true
+public.get_alert_decision_chain	p_alert_id uuid	false	true
+public.get_governance_snapshot	p_tenant_id uuid	false	true
+public.get_honeypot_stats	p_tenant_id uuid, p_hours integer	false	true
+public.get_mitre_coverage_by_platform	tenant_uuid uuid	false	true
+public.get_mitre_coverage_by_tactic	tenant_uuid uuid	false	true
+public.get_smart_notifications	p_tenant_id uuid	false	true
+public.authorize_agent_recovery	p_agent_id uuid, p_approved_by uuid, p_expires_in_minutes integer	false	false
+public.auto_approve_safe_actions	p_tenant_id uuid	false	false
+public.auto_create_evidence_from_execution		false	false
+public.backfill_audit_log_hashes	p_tenant_id uuid	false	false
+public.can_hard_delete_agent	p_agent_id uuid	false	false
+public.check_installation_failure_rate	p_tenant_id uuid, p_hours_back integer, p_threshold_pct numeric	false	false
+public.claim_jobs_for_agent	p_agent_id uuid, p_limit integer	false	false
+public.collect_soc2_evidence_for_tenant	p_tenant_id uuid	false	false
+public.create_approval_request	p_action_type text, p_action_payload jsonb, p_target_agent_id uuid, p_playbook_execution_id uuid	false	false
+public.diagnose_chain_health	p_tenant_id uuid	false	false
+public.hard_delete_agent	p_agent_id uuid	false	false
+public.reanchor_execution_chains	p_agent_id uuid	false	false
+public.recalculate_risk_scores	p_tenant_id uuid	false	false
+public.reconstruct_incident_timeline	p_agent_id uuid, p_start_time timestamp with time zone, p_end_time timestamp with time zone	false	false
+public.review_dlq_item	p_dlq_id uuid, p_review_notes text, p_risk_category text	false	false
+public.revoke_agent_signing_key	p_agent_id uuid, p_reason text	false	false
+public.snapshot_mitre_coverage	tenant_uuid uuid	false	false
+public.soar_evaluate_alert		false	false
+public.submit_alert_feedback	p_alert_id uuid, p_tenant_id uuid, p_user_id uuid, p_is_true_positive boolean	false	false
+public.submit_approval	p_request_id uuid, p_decision text, p_reason text	false	false
+public.trigger_playbook_on_multiple_dns_blocks		false	false
