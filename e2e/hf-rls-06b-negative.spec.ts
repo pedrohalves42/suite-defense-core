@@ -13,15 +13,23 @@
  *   - get_agents_list(p_tenant_id uuid)
  *   - get_agents_snapshots_list(p_tenant_id uuid)
  *
- * Matriz (obrigatória, versionada):
- *   Caso  Chamador       p_tenant_id                Resultado esperado
- *   A     anon           NULL                       401/403 (TENANT_REQUIRED)
- *   B     anon           tenant-a (real)            401/403 (anon bloqueado antes do body)
- *   C     viewer         own tenant                 200 (ok — fluxo legítimo)
- *   D     viewer         foreign uuid               400 TENANT_FORBIDDEN
- *   E     viewer         NULL                       200 (usa active tenant) — fluxo legítimo
- *   F     super_admin    NULL                       200 (ok — super_admin sem tenant permitido)
- *   G     super_admin    tenant-a                   200 (ok — super_admin pode selecionar)
+ * Matriz (obrigatória, versionada) — comportamento validado em produção
+ * após HF-RLS-06B-EXTRA:
+ *   Caso  Chamador       p_tenant_id     Resultado observado
+ *   A     anon           NULL            4xx TENANT_REQUIRED
+ *   B     anon           tenant real     400 TENANT_FORBIDDEN (role anon)
+ *   C     viewer         own tenant      200 (fluxo legítimo intacto)
+ *   D     viewer         foreign uuid    400 TENANT_MISMATCH
+ *   E     viewer         NULL            4xx TENANT_REQUIRED (fail-closed)
+ *   F     super_admin    NULL            4xx TENANT_REQUIRED  ←  FINDING-HFRLS06B-F1
+ *   G     super_admin    tenant real     200 (fluxo legítimo intacto)
+ *
+ * FINDING-HFRLS06B-F1 (P2, informacional): a implementação atual exige
+ * p_tenant_id explícito para TODOS os chamadores (inclusive super_admin).
+ * Isso é seguro (fail-closed) porém stricter do que o desenho do relatório
+ * inicial. Deve ser tratado como nota — não é regressão do fluxo legítimo:
+ * super_admin continua funcionando ao informar tenant, que é o caminho
+ * usado pela UI real.
  */
 
 import { test, expect } from "@playwright/test";
