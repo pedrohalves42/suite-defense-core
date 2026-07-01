@@ -1,0 +1,86 @@
+name: RPC Governance Inventory (D21-C)
+
+# Regenerates the RPC governance inventory report so a future auditor
+# doesn't have to repeat weeks of investigation. Runs on PRs that touch
+# SECURITY DEFINER surface, on push to main, and on a weekly schedule
+# to catch DB-side drift that no PR would surface.
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/functions/**"
+      - "src/**"
+      - "tools/reports/**"
+      - ".github/workflows/rpc-governance-inventory.yml"
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 4 * * 1"   # Mondays 04:17 UTC
+  workflow_dispatch:
+
+jobs:
+  inventory:
+    name: 📋 Generate RPC governance inventory
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install psql client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Verify DB URL secret is present
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            echo "❌ Missing GitHub secret SUPABASE_DB_URL."
+            exit 1
+          fi
+
+      - name: Generate report
+        env:
+          PGCONN: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          mkdir -p docs/audits/active
+          python3 tools/reports/generate_rpc_governance_inventory.py \
+            > docs/audits/active/d21-c-rpc-governance-inventory.md
+          echo "✅ Report generated ($(wc -l < docs/audits/active/d21-c-rpc-governance-inventory.md) lines)"
+
+      - name: Summarize into job output
+        run: |
+          {
+            echo "## RPC Governance Inventory"
+            echo ""
+            head -40 docs/audits/active/d21-c-rpc-governance-inventory.md
+            echo ""
+            echo "_Full report available as workflow artifact._"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpc-governance-inventory
+          path: |
+            docs/audits/active/d21-c-rpc-governance-inventory.md
+            docs/audits/active/d21-c-rpc-governance-inventory.csv
+          retention-days: 90
+
+      - name: Fail if any RPC is classified RISK
+        run: |
+          if grep -qE "^## RISK \([1-9]" docs/audits/active/d21-c-rpc-governance-inventory.md; then
+            echo "❌ RPC(s) classified as RISK — see report."
+            echo "   Definition: EXECUTE granted to PUBLIC/anon AND no tenant guard in body."
+            exit 1
+          fi
+          echo "✅ No RPCs classified as RISK."
