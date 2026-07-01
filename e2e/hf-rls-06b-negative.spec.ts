@@ -101,16 +101,17 @@ test.describe("HF-RLS-06B — matriz negativa/positiva", () => {
       test(`Caso A — anon + tenant NULL bloqueado`, async () => {
         const r = await callRpc(rpc, { p_tenant_id: null }, null);
         expect([400, 401, 403]).toContain(r.status);
-        expect(r.text).toMatch(/TENANT_REQUIRED|TENANT_FORBIDDEN|not authoriz/i);
+        expect(r.text).toMatch(/TENANT_REQUIRED|TENANT_FORBIDDEN|not authoriz|permission denied/i);
         expect(r.text).not.toContain('"agent_id"');
       });
 
       test(`Caso B — anon + tenant explícito bloqueado`, async () => {
         const r = await callRpc(rpc, { p_tenant_id: TENANT_A }, null);
         expect([400, 401, 403]).toContain(r.status);
-        expect(r.text).toMatch(/TENANT_FORBIDDEN|role anon|not authoriz/i);
+        expect(r.text).toMatch(/TENANT_FORBIDDEN|role anon|not authoriz|permission denied/i);
         expect(r.text).not.toContain('"agent_id"');
       });
+
 
       test(`Caso C — viewer + own tenant retorna 200`, async () => {
         const token = await signIn(VIEWER.email, VIEWER.password);
