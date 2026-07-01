@@ -71,8 +71,8 @@ Deno.test("ChargeSubscriptionUseCase - should handle payment failure", async () 
   assertEquals(result.success, false);
   assertEquals(result.error, 'Card declined');
   
-  // @ts-ignore
+  // @ts-expect-error: mock spy — repo.logEvent is wrapped with Deno.spy
   assertEquals(repo.logEvent.calls[0].args[1], 'subscription_charge_failed');
-  // @ts-ignore
+  // @ts-expect-error: mock spy — repo.updateSubscription is wrapped with Deno.spy
   assertEquals(repo.updateSubscription.calls[0].args[1].status, 'past_due');
 });
