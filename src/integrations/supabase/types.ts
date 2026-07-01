@@ -13212,6 +13212,195 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs_2026_10: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          trace_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          trace_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          trace_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2026_11: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          trace_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          trace_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          trace_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs_2026_12: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          integrity_hash: string | null
+          ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
+          resource_id: string | null
+          resource_type: string
+          state_after: Json | null
+          state_before: Json | null
+          success: boolean
+          tenant_id: string
+          trace_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id: string
+          trace_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          integrity_hash?: string | null
+          ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
+          success?: boolean
+          tenant_id?: string
+          trace_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       audit_logs_default: {
         Row: {
           action: string
