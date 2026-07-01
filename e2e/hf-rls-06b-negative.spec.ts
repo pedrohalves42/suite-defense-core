@@ -14,15 +14,20 @@
  *   - get_agents_snapshots_list(p_tenant_id uuid)
  *
  * Matriz (obrigatória, versionada) — comportamento validado em produção
- * após HF-RLS-06B-EXTRA:
+ * após HF-RLS-06B-EXTRA + HF-RLS-06C (revoke EXECUTE de PUBLIC/anon):
  *   Caso  Chamador       p_tenant_id     Resultado observado
- *   A     anon           NULL            4xx TENANT_REQUIRED
- *   B     anon           tenant real     400 TENANT_FORBIDDEN (role anon)
+ *   A     anon           NULL            401 permission denied (grant layer, 06C)
+ *   B     anon           tenant real     401 permission denied (grant layer, 06C)
  *   C     viewer         own tenant      200 (fluxo legítimo intacto)
  *   D     viewer         foreign uuid    400 TENANT_MISMATCH
  *   E     viewer         NULL            4xx TENANT_REQUIRED (fail-closed)
  *   F     super_admin    NULL            4xx TENANT_REQUIRED  ←  FINDING-HFRLS06B-F1
  *   G     super_admin    tenant real     200 (fluxo legítimo intacto)
+ *
+ * Nota HF-RLS-06C: após revogação do grant EXECUTE de PUBLIC/anon, os casos
+ * A e B são bloqueados no nível de grant (Postgres 42501) antes mesmo de
+ * atingir a whitelist interna da função. Isso é defense-in-depth — o
+ * comportamento observável (4xx sem dados) permanece o mesmo.
  *
  * FINDING-HFRLS06B-F1 (P2, informacional): a implementação atual exige
  * p_tenant_id explícito para TODOS os chamadores (inclusive super_admin).
@@ -31,6 +36,7 @@
  * super_admin continua funcionando ao informar tenant, que é o caminho
  * usado pela UI real.
  */
+
 
 import { test, expect } from "@playwright/test";
 import {
