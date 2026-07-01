@@ -60,10 +60,12 @@ export async function fetchAgentById(
   agentId: string,
   includeArchived = false
 ): Promise<AgentRecord | null> {
+  // HF-RLS-06B-EXTRA-C: overload 3-arg de get_agents_list foi removido
+  // para eliminar PGRST203. Filtramos por agent_id no cliente a partir
+  // da lista canônica do tenant.
   const { data, error } = await supabase.rpc('get_agents_list', {
     p_tenant_id: tenantId,
     p_include_archived: includeArchived,
-    p_agent_id: agentId,
   });
 
   if (error) {
@@ -72,8 +74,9 @@ export async function fetchAgentById(
   }
 
   const agents = (data as unknown as AgentRecord[]) || [];
-  return agents[0] || null;
+  return agents.find((a) => a.id === agentId) || null;
 }
+
 
 /**
  * Get agent count for a tenant (replaces count queries on agents_safe)
