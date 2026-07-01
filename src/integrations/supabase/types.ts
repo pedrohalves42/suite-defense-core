@@ -51099,7 +51099,7 @@ export type Database = {
             Returns: boolean
           }
         | {
-            Args: { _role: string; _tenant_id?: string; _user_id: string }
+            Args: { _role: string; _tenant_id: string; _user_id: string }
             Returns: boolean
           }
       has_role_safe: {
