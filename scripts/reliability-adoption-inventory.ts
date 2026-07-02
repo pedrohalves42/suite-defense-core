@@ -118,6 +118,13 @@ async function listFunctions(): Promise<string[]> {
   return names;
 }
 
+interface CoverageRatios {
+  retry: number;
+  breaker: number;
+  timeout: number;
+  idempotency: number;
+}
+
 interface WrapperRollup {
   wrapper: Wrapper;
   functions: number;
@@ -125,7 +132,12 @@ interface WrapperRollup {
   breaker: number;
   timeout: number;
   idempotency: number;
+  coverage: CoverageRatios;
   status: 'None' | 'Partial' | 'Good' | 'Full';
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
 }
 
 function rollup(adoptions: FunctionAdoption[]): WrapperRollup[] {
@@ -141,17 +153,42 @@ function rollup(adoptions: FunctionAdoption[]): WrapperRollup[] {
     const breaker = list.filter(a => a.breaker).length;
     const timeout = list.filter(a => a.timeout).length;
     const idempotency = list.filter(a => a.idempotency).length;
-    // Status: coverage of the four primitives across the wrapper's functions.
-    const total = list.length * 4;
+    const n = list.length;
+    const coverage: CoverageRatios = {
+      retry: n === 0 ? 0 : round2(retry / n),
+      breaker: n === 0 ? 0 : round2(breaker / n),
+      timeout: n === 0 ? 0 : round2(timeout / n),
+      idempotency: n === 0 ? 0 : round2(idempotency / n),
+    };
+    const total = n * 4;
     const covered = retry + breaker + timeout + idempotency;
     const ratio = total === 0 ? 0 : covered / total;
     const status: WrapperRollup['status'] =
       ratio === 0 ? 'None' : ratio < 0.5 ? 'Partial' : ratio < 1 ? 'Good' : 'Full';
-    rows.push({ wrapper, functions: list.length, retry, breaker, timeout, idempotency, status });
+    rows.push({ wrapper, functions: n, retry, breaker, timeout, idempotency, coverage, status });
   }
   rows.sort((a, b) => a.wrapper.localeCompare(b.wrapper));
   return rows;
 }
+
+async function resolveCommit(): Promise<string | null> {
+  // Best-effort. Scanner must not fail if git is unavailable or repo is shallow.
+  try {
+    const cmd = new Deno.Command('git', {
+      args: ['rev-parse', 'HEAD'],
+      stdout: 'piped',
+      stderr: 'null',
+    });
+    const { code, stdout } = await cmd.output();
+    if (code !== 0) return null;
+    const sha = new TextDecoder().decode(stdout).trim();
+    return sha || null;
+  } catch {
+    return null;
+  }
+}
+
+const SCHEMA_VERSION = 1;
 
 function renderMarkdown(rows: WrapperRollup[], adoptions: FunctionAdoption[]): string {
   const totalFns = adoptions.length;
