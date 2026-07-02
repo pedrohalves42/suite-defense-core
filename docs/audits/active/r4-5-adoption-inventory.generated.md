@@ -1,6 +1,6 @@
 # R4.5 — Reliability Adoption Inventory (generated)
 
-Generated: 2026-07-02T19:43:00.736Z
+Generated: 2026-07-02T19:47:20.450Z
 Total edge functions scanned: 74
 
 > Static scan. Measures OPT-IN adoption of R4 primitives per wrapper.
