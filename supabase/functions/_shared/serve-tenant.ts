@@ -15,6 +15,7 @@ import { logger, loggerWithContext } from './logger.ts';
 import { timingSafeEqual } from './crypto-utils.ts';
 import { withTimeout } from './timeout.ts';
 import { handleExceptionWithContext } from './error-handler.ts';
+import { composePipeline } from './reliability/pipeline.ts';
 
 // Re-export extracted middlewares for backward compatibility
 export { servePublic } from './serve-public.ts';
@@ -267,25 +268,30 @@ export function serveTenant<T = unknown>(handler: TenantHandler<T>, options?: Se
         req,
       };
 
-      const executeHandler = () => handler(req, ctx);
-      const result = handlerTimeoutMs > 0
-        ? await withTimeout(executeHandler, {
-            timeoutMs: handlerTimeoutMs,
-            timeoutMessage: `Handler timeout after ${handlerTimeoutMs}ms`,
-          })
-        : await executeHandler();
+      // R4 Wave 1: business logic routed through composePipeline (identity —
+      // no stages other than `business` are configured, so behavior is
+      // observationally equivalent to the pre-pipeline path). This wires the
+      // integration point without enabling any primitive by default.
+      const businessFn = async (r: Request): Promise<Response> => {
+        const executeHandler = () => handler(r, ctx);
+        const result = handlerTimeoutMs > 0
+          ? await withTimeout(executeHandler, {
+              timeoutMs: handlerTimeoutMs,
+              timeoutMessage: `Handler timeout after ${handlerTimeoutMs}ms`,
+            })
+          : await executeHandler();
 
-      const responseTime = `${Date.now() - startTime}ms`;
-      
-      if (result instanceof Response) {
-        return result;
-      }
+        if (result instanceof Response) return result;
 
-      return jsonResponse(result, 200, {
-        'X-Request-ID': requestId,
-        'X-Trace-ID': traceId,
-        'X-Response-Time': responseTime,
-      }, origin);
+        const responseTime = `${Date.now() - startTime}ms`;
+        return jsonResponse(result, 200, {
+          'X-Request-ID': requestId,
+          'X-Trace-ID': traceId,
+          'X-Response-Time': responseTime,
+        }, origin);
+      };
+
+      return await composePipeline({ business: businessFn })(req);
 
     } catch (error) {
       const isTimeout = error instanceof Error && error.message.includes('Handler timeout');

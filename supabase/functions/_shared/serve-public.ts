@@ -8,6 +8,7 @@ import { securityHeaders } from './security-headers.ts';
 import { requireEnv } from './env.ts';
 import { loggerWithContext } from './logger.ts';
 import { handleExceptionWithContext, createErrorResponse, ErrorCode } from './error-handler.ts';
+import { composePipeline } from './reliability/pipeline.ts';
 
 function jsonResponse(data: unknown, status = 200, extraHeaders?: Record<string, string>, origin?: string | null) {
   const cors = buildCorsHeaders(origin ?? null);
@@ -107,10 +108,13 @@ export function servePublic(handler: PublicHandler, options?: ServePublicOptions
         }
       }
 
-      const result = await handler(req, { supabase, requestId, body, rawBody });
-      
-      if (result instanceof Response) return result;
-      return jsonResponse(result, 200, { 'X-Request-ID': requestId, 'X-Trace-ID': traceId }, origin);
+      // R4 Wave 1: identity pipeline (no stages active besides business).
+      const businessFn = async (r: Request): Promise<Response> => {
+        const result = await handler(r, { supabase, requestId, body, rawBody });
+        if (result instanceof Response) return result;
+        return jsonResponse(result, 200, { 'X-Request-ID': requestId, 'X-Trace-ID': traceId }, origin);
+      };
+      return await composePipeline({ business: businessFn })(req);
     } catch (error) {
       return handleExceptionWithContext(error, requestId, 'servePublic', startTime);
     }

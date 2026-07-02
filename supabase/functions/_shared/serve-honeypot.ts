@@ -29,6 +29,7 @@ import { classifyPayload } from './honeypot/classify.ts';
 import { checkHoneypotRateLimit } from './honeypot/rate-limit.ts';
 import { buildHoneypotResponse, type ResponseProfileType } from './honeypot/response-profiles.ts';
 import { logger } from './logger.ts';
+import { composePipeline } from './reliability/pipeline.ts';
 
 export interface HoneypotContext {
   supabase: any;
@@ -160,9 +161,13 @@ export function serveHoneypot(handler: HoneypotHandler) {
         responseProfile: 'default',
       };
 
-      const result = await handler(req, ctx);
-      if (result instanceof Response) return result;
-      return jsonResponse(result, 200, { ...corsH, 'X-Request-ID': requestId, 'X-Trace-ID': traceId });
+      // R4 Wave 1: identity pipeline (no stages active besides business).
+      const businessFn = async (r: Request): Promise<Response> => {
+        const result = await handler(r, ctx);
+        if (result instanceof Response) return result;
+        return jsonResponse(result, 200, { ...corsH, 'X-Request-ID': requestId, 'X-Trace-ID': traceId });
+      };
+      return await composePipeline({ business: businessFn })(req);
     } catch (error) {
       // Never leak stack traces or topology
       logger.error(`[serveHoneypot][${requestId}] Error`, error instanceof Error ? error : undefined);

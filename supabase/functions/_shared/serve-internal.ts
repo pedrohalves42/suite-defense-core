@@ -10,6 +10,7 @@ import { buildCorsHeaders } from './cors.ts';
 import { securityHeaders } from './security-headers.ts';
 import { requireEnv } from './env.ts';
 import { loggerWithContext } from './logger.ts';
+import { composePipeline } from './reliability/pipeline.ts';
 
 function jsonResponse(
   data: unknown,
@@ -88,14 +89,18 @@ export function serveInternal(handler: InternalHandler): void {
       }
 
       const ctx: InternalContext = { supabase, requestId, body };
-      const result = await handler(req, ctx);
-      if (result instanceof Response) return result;
-      return jsonResponse(
-        result,
-        200,
-        { 'X-Request-ID': requestId, 'X-Trace-ID': traceId },
-        origin,
-      );
+      // R4 Wave 1: identity pipeline (no stages active besides business).
+      const businessFn = async (r: Request): Promise<Response> => {
+        const result = await handler(r, ctx);
+        if (result instanceof Response) return result;
+        return jsonResponse(
+          result,
+          200,
+          { 'X-Request-ID': requestId, 'X-Trace-ID': traceId },
+          origin,
+        );
+      };
+      return await composePipeline({ business: businessFn })(req);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Internal server error';
       log.error(`[serveInternal] Error`, { message: msg });
