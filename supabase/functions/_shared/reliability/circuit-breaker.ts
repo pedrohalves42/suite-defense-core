@@ -103,11 +103,7 @@ export class CircuitBreaker {
       this.onFailure(err);
       throw err;
     } finally {
-      if (this.state === 'HALF_OPEN' || this.state === 'OPEN') {
-        this.halfOpenInFlight = false;
-      } else {
-        this.halfOpenInFlight = false;
-      }
+      this.halfOpenInFlight = false;
     }
   }
 

@@ -73,7 +73,8 @@ function canonicalize(v: unknown): string {
 }
 
 async function sha256Hex(input: Uint8Array): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', input);
+  // deno-lint-ignore no-explicit-any
+  const digest = await crypto.subtle.digest('SHA-256', input as any);
   return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
