@@ -29,13 +29,13 @@ Capability IDs marked as **RFC** are defined normatively in `r2-runtime-standard
 | 5  | Error Handling        | `RSC.ERR`        | `_shared/error-handler.ts`      | Ready   | Runtime      | Standard error shape `{ error: { code, message, requestId } }`.                           |
 | 6  | Tenant Assertion      | `RSC.TEN`        | `_shared/serve-tenant.ts`       | Ready   | Runtime      | Enforces active tenant scoping for tenant-scoped handlers.                                |
 | 7  | Fetch Timeout         | `RSC.TMO`        | `_shared/fetch-with-timeout.ts` | Ready   | Runtime      | Provider exists; adoption gap tracked for R4, not for R2.                                 |
-| 8  | Handler Timeout       | `RSC.HTMO`       | (planned in `serve-*`)          | Partial | Runtime      | Requires `ErrorCode.TIMEOUT` — Deferred Architectural Decision recorded in RFC.           |
+| 8  | Handler Timeout       | `RSC.HTMO`       | No provider (planned)           | Partial | Runtime      | Requires `ErrorCode.TIMEOUT` — Deferred Architectural Decision recorded in RFC.           |
 | 9  | APM / Metrics         | `RSC.APM`        | `_shared/apm.ts`                | Ready   | Runtime      | Provider exists; only 2/74 functions currently emit metrics (adoption belongs to R4).     |
 | 10 | Audit Trail           | `RSC.AUD`        | `_shared/audit.ts`              | Ready   | Runtime      | Compatible with the standard; no signature change required.                               |
 | 11 | Rate Limiting         | `RSC.RL`         | Per-function ad-hoc             | Partial | Runtime      | No unified provider. Not in scope for R3 unless promoted explicitly.                      |
-| 12 | Retry / Backoff       | *Proposed (R3)*  | —                               | Missing | Runtime (R3) | No shared primitive. To be designed in R3.                                                |
-| 13 | Circuit Breaker       | *Proposed (R3)*  | AI Gateway only                 | Partial | Runtime (R3) | Localized breaker for AI providers; no general-purpose primitive. To be designed in R3.   |
-| 14 | Idempotency           | *Proposed (R3)*  | —                               | Missing | Runtime (R3) | No shared primitive. To be designed in R3.                                                |
+| 12 | Retry / Backoff       | *Proposed (R3)*  | —                               | Missing | TBD (R3)     | No shared primitive. To be designed in R3.                                                |
+| 13 | Circuit Breaker       | *Proposed (R3)*  | AI Gateway only                 | Partial | TBD (R3)     | Domain-specific implementation (`_shared/ai-circuit-breaker.ts`); no general-purpose primitive. To be designed in R3. |
+| 14 | Idempotency           | *Proposed (R3)*  | —                               | Missing | TBD (R3)     | No shared primitive. To be designed in R3.                                                |
 
 ---
 
@@ -47,7 +47,7 @@ Capability IDs marked as **RFC** are defined normatively in `r2-runtime-standard
 
 The **State** column reflects the *availability of a shared provider*, not the *adoption rate* across Edge Functions. Adoption is measured separately by R1 / R1.5 and will be re-measured during R4.
 
-The **Owner** column identifies the team responsible for the provider's contract and evolution. "Runtime" refers to the platform runtime team that owns `_shared/`. The `(R3)` suffix marks capabilities that do not yet have an approved owner-facing API and depend on the R3 design block.
+The **Owner** column identifies the team responsible for the provider's contract and evolution. "Runtime" refers to the platform runtime team that owns `_shared/`. `TBD (R3)` marks capabilities that do not yet have an approved contract; ownership will be assigned when the R3 design block is approved.
 
 ---
 
