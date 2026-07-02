@@ -116,6 +116,20 @@ Wave 2 is complete when:
 2. The generated inventory in §5 remains stable (no accidental
    opt-ins introduced).
 3. §5 baseline is re-run and archived as the Wave 2 closing snapshot.
+4. **Quantitative equivalence gate (frozen):** no observable difference
+   between a target function before and after Wave 1 wiring, except for
+   the expected new telemetry events. Concretely:
+   - response payload — identical;
+   - response headers — identical (modulo `X-Response-Time`, whose
+     value naturally varies);
+   - HTTP status — identical;
+   - latency — within the defined margin (p50/p95 drift ≤ documented
+     envelope);
+   - error behavior — identical error class, code, and status for the
+     same input.
+
+   Any deviation outside this list blocks closure and triggers the
+   Wave 2 rollback plan (§3.3).
 
 Only after that does Wave 3 (simple writes) open.
 
