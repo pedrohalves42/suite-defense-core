@@ -23,7 +23,9 @@ import re
 import subprocess
 import sys
 from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
+
 
 REPO = Path(__file__).resolve().parents[2]
 SQL = REPO / "tools/reports/rpc_governance_inventory.sql"
