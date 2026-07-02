@@ -51,11 +51,13 @@ jobs:
       - name: Generate report
         env:
           PGCONN: ${{ secrets.SUPABASE_DB_URL }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
           mkdir -p docs/audits/active
           python3 tools/reports/generate_rpc_governance_inventory.py \
             > docs/audits/active/d21-c-rpc-governance-inventory.md
           echo "✅ Report generated ($(wc -l < docs/audits/active/d21-c-rpc-governance-inventory.md) lines)"
+
 
       - name: Summarize into job output
         run: |
