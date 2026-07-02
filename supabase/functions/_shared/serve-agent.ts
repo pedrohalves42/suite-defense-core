@@ -12,6 +12,7 @@ import { securityHeaders } from './security-headers.ts';
 import { requireEnv } from './env.ts';
 import { logger } from './logger.ts';
 import { handleExceptionWithContext } from './error-handler.ts';
+import { composePipeline } from './reliability/pipeline.ts';
 import type { RateLimitOption } from './serve-tenant.ts';
 import type { AgentExtraField, AgentAuthResult } from './agent-auth.ts';
 
@@ -232,9 +233,13 @@ export function serveAgent(handler: AgentHandler, options?: ServeAgentOptions) {
         req,
       };
 
-      const result = await handler(req, ctx);
-      if (result instanceof Response) return result;
-      return jsonResponse(result, 200, { 'X-Request-ID': requestId, 'X-Trace-ID': traceId }, origin);
+      // R4 Wave 1: identity pipeline (no stages active besides business).
+      const businessFn = async (r: Request): Promise<Response> => {
+        const result = await handler(r, ctx);
+        if (result instanceof Response) return result;
+        return jsonResponse(result, 200, { 'X-Request-ID': requestId, 'X-Trace-ID': traceId }, origin);
+      };
+      return await composePipeline({ business: businessFn })(req);
     } catch (error) {
       return handleExceptionWithContext(error, requestId, 'serveAgent', startTime, {
         agentId: currentAgentId,
