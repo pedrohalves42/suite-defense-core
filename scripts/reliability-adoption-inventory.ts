@@ -251,11 +251,18 @@ async function main(): Promise<void> {
   }
   const rows = rollup(adoptions);
   renderConsole(rows);
+
+  const envelope = {
+    schema_version: SCHEMA_VERSION,
+    generated_at: new Date().toISOString(),
+    commit: await resolveCommit(),
+    total_functions: adoptions.length,
+    rollup: rows,
+    functions: adoptions,
+  };
+
   await Deno.writeTextFile(OUT_MD, renderMarkdown(rows, adoptions));
-  await Deno.writeTextFile(
-    OUT_JSON,
-    JSON.stringify({ generatedAt: new Date().toISOString(), rollup: rows, functions: adoptions }, null, 2),
-  );
+  await Deno.writeTextFile(OUT_JSON, JSON.stringify(envelope, null, 2));
   console.log(`\nWrote ${OUT_MD}`);
   console.log(`Wrote ${OUT_JSON}`);
 }
