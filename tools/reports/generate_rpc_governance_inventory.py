@@ -45,6 +45,23 @@ def run_psql(sql_path: Path) -> str:
     return result.stdout
 
 
+def _git_head() -> str | None:
+    try:
+        r = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True)
+        return r.stdout.strip()
+    except Exception:
+        return None
+
+
+def _migration_head() -> str | None:
+    migrations = REPO / "supabase/migrations"
+    if not migrations.exists():
+        return None
+    files = sorted(p.name for p in migrations.glob("*.sql"))
+    return files[-1] if files else None
+
+
+
 def scan_consumers() -> dict[str, list[str]]:
     """Map rpc_name -> list of relative file paths that call it."""
     consumers: dict[str, set[str]] = defaultdict(set)
