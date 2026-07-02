@@ -1,0 +1,653 @@
+{
+  "generatedAt": "2026-07-02T19:43:00.778Z",
+  "rollup": [
+    {
+      "wrapper": "none",
+      "functions": 3,
+      "retry": 0,
+      "breaker": 0,
+      "timeout": 0,
+      "idempotency": 0,
+      "status": "None"
+    },
+    {
+      "wrapper": "serveAgent",
+      "functions": 21,
+      "retry": 0,
+      "breaker": 0,
+      "timeout": 0,
+      "idempotency": 0,
+      "status": "None"
+    },
+    {
+      "wrapper": "serveHoneypot",
+      "functions": 1,
+      "retry": 0,
+      "breaker": 0,
+      "timeout": 0,
+      "idempotency": 0,
+      "status": "None"
+    },
+    {
+      "wrapper": "serveInternal",
+      "functions": 9,
+      "retry": 0,
+      "breaker": 0,
+      "timeout": 0,
+      "idempotency": 0,
+      "status": "None"
+    },
+    {
+      "wrapper": "servePublic",
+      "functions": 15,
+      "retry": 0,
+      "breaker": 0,
+      "timeout": 0,
+      "idempotency": 0,
+      "status": "None"
+    },
+    {
+      "wrapper": "serveTenant",
+      "functions": 25,
+      "retry": 0,
+      "breaker": 0,
+      "timeout": 25,
+      "idempotency": 0,
+      "status": "Partial"
+    }
+  ],
+  "functions": [
+    {
+      "name": "ack-job",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "action-center-feed",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "ai-action-executor",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "ai-agent-assist",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "ai-analyze-agent",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "ai-full-audit",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "ai-insight-dispatcher",
+      "wrapper": "serveInternal",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "ai-predict-agent-failure",
+      "wrapper": "serveInternal",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "ai-quality-check",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "ai-red-team-assessment",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "ai-router",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "ai-system-analyzer",
+      "wrapper": "serveInternal",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "ai-system-audit",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "api-gateway",
+      "wrapper": "servePublic",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "auto-generate-enrollment",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "auto-remediate",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "autonomous-safe-mode",
+      "wrapper": "serveInternal",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "build-agent-exe",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "check-agent-updates",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "check-subscription",
+      "wrapper": "none",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "check-tenant-abuse",
+      "wrapper": "serveInternal",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "cleanup-router",
+      "wrapper": "servePublic",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "collect-router",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "confirm-force-update",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "create-checkout",
+      "wrapper": "none",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "create-reinstall-jobs",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "diagnostics-agent-logs",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "enroll-agent",
+      "wrapper": "servePublic",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "evaluate-automation-rules",
+      "wrapper": "serveInternal",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "evaluate-playbook-triggers",
+      "wrapper": "serveInternal",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "execute-playbook-action",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "fido2-register",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "force-reinstall-fleet",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "generate-deploy-package",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "generate-portable-installer",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "get-agent-config",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "get-agent-policy",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "get-agent-script-content",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "get-blocked-websites",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "get-diagnostic-script",
+      "wrapper": "servePublic",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "get-latest-agent-script",
+      "wrapper": "servePublic",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "heartbeat",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "honeypot-handler",
+      "wrapper": "serveHoneypot",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "list-reports",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "ops-checks",
+      "wrapper": "servePublic",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "ops-gateway",
+      "wrapper": "servePublic",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "ops-playbook",
+      "wrapper": "servePublic",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "ops-reports",
+      "wrapper": "servePublic",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "ops-sync",
+      "wrapper": "servePublic",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "poll-jobs",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "post-installation-telemetry",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "promote-agent-v5",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "public-gateway",
+      "wrapper": "servePublic",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "register-agent-key",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "register-agent-release",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "run-rls-tests",
+      "wrapper": "none",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "saml-sso",
+      "wrapper": "servePublic",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "scan-virus",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "scan-vulnerabilities",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "scim-provisioning",
+      "wrapper": "servePublic",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "serve-agent-update",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "serve-dns-filter",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "serve-installer",
+      "wrapper": "servePublic",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "setup-agent-script",
+      "wrapper": "serveInternal",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "sign-release",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "soc2-evidence-collector",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    },
+    {
+      "name": "stripe-webhook",
+      "wrapper": "servePublic",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "submit-hmac-router",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "submit-job-result",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "submit-router",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "update-baseline",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "upload-release-content",
+      "wrapper": "serveInternal",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "upload-report",
+      "wrapper": "serveAgent",
+      "retry": false,
+      "breaker": false,
+      "timeout": false,
+      "idempotency": false
+    },
+    {
+      "name": "validate-build-pipeline",
+      "wrapper": "serveTenant",
+      "retry": false,
+      "breaker": false,
+      "timeout": true,
+      "idempotency": false
+    }
+  ]
+}
