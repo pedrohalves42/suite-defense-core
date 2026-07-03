@@ -143,6 +143,42 @@ a pure aggregation over the JSON artifact
 (`docs/audits/active/r4-5-adoption-inventory.generated.json`), not a
 new audit campaign.
 
+### 7.1 Dependency direction (frozen)
+
+The dependency is one-way:
+
+```text
+Scanner  →  Inventory JSON  →  R5
+```
+
+The reverse is forbidden:
+
+- R5 MUST NOT invoke the scanner, embed scanner logic, or re-derive
+  adoption facts from source code.
+- R5 MUST NOT write to the inventory JSON.
+- The scanner MUST NOT import from, or be aware of, any R5 module.
+
+Rationale: keeping the scanner independent preserves it as a reusable
+artifact — other dashboards, audits, or CI gates can consume the same
+JSON without pulling in R5. R5 stays a pure consumer, which keeps its
+surface small and its outputs reproducible from an archived JSON alone.
+
+### 7.2 Schema-version compatibility rule (frozen)
+
+The inventory envelope carries `schema_version` (currently `1`). R5, and
+any other consumer, MUST:
+
+- Accept `schema_version` equal to the version it was built against.
+- **Reject** — with an explicit error, not a partial parse — any file
+  whose `schema_version` is greater than the supported version.
+- Treat a lower `schema_version` as a hard incompatibility unless an
+  explicit migration path is documented.
+
+Rationale: silent partial interpretation of a newer schema is the most
+common source of drift between producers and consumers of governance
+artifacts. Explicit rejection forces a conscious version bump on the
+consumer side.
+
 Recommended CI wiring (deferred, not part of Wave 2):
 
 ```yaml
@@ -154,3 +190,4 @@ Recommended CI wiring (deferred, not part of Wave 2):
     name: reliability-adoption-inventory
     path: docs/audits/active/r4-5-adoption-inventory.generated.*
 ```
+
