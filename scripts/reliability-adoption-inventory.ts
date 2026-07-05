@@ -189,6 +189,8 @@ async function resolveCommit(): Promise<string | null> {
 }
 
 const SCHEMA_VERSION = 1;
+const INVENTORY_TYPE = 'edge-function-adoption';
+const PROJECT = 'backend-runtime';
 
 function renderMarkdown(rows: WrapperRollup[], adoptions: FunctionAdoption[]): string {
   const totalFns = adoptions.length;
