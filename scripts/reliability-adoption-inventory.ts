@@ -255,6 +255,8 @@ async function main(): Promise<void> {
   renderConsole(rows);
 
   const envelope = {
+    project: PROJECT,
+    inventory_type: INVENTORY_TYPE,
     schema_version: SCHEMA_VERSION,
     generated_at: new Date().toISOString(),
     commit: await resolveCommit(),
