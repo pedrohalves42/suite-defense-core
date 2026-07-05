@@ -189,6 +189,8 @@ async function resolveCommit(): Promise<string | null> {
 }
 
 const SCHEMA_VERSION = 1;
+const INVENTORY_TYPE = 'edge-function-adoption';
+const PROJECT = 'backend-runtime';
 
 function renderMarkdown(rows: WrapperRollup[], adoptions: FunctionAdoption[]): string {
   const totalFns = adoptions.length;
@@ -253,6 +255,8 @@ async function main(): Promise<void> {
   renderConsole(rows);
 
   const envelope = {
+    project: PROJECT,
+    inventory_type: INVENTORY_TYPE,
     schema_version: SCHEMA_VERSION,
     generated_at: new Date().toISOString(),
     commit: await resolveCommit(),

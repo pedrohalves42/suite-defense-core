@@ -179,6 +179,40 @@ common source of drift between producers and consumers of governance
 artifacts. Explicit rejection forces a conscious version bump on the
 consumer side.
 
+### 7.3 Unknown-fields policy (frozen)
+
+To allow the envelope to grow without breaking historical consumers,
+the following rules apply within a single `schema_version`:
+
+- Consumers **MAY** ignore additional top-level or nested fields they
+  do not recognize (forward-compatible reads).
+- Consumers **MUST NOT** ignore or silently reinterpret changes to the
+  meaning, type, or units of any field defined by the current
+  `schema_version`. Any such change requires a `schema_version` bump
+  and follows §7.2.
+- Producers **MAY** add new fields within the same `schema_version`
+  only if existing fields keep their exact meaning. Otherwise the
+  version MUST be incremented.
+
+Rationale: this lets R5 (and other consumers) tolerate additive
+metadata — e.g. a future `project`, `inventory_type`, per-function
+annotations — while still guaranteeing that historical JSON files
+remain interpretable by their original consumers.
+
+### 7.4 Envelope identity fields (frozen at schema_version=1)
+
+The envelope carries two identity fields so that multiple inventory
+types can coexist in the same pipeline without ambiguity:
+
+- `project` — logical project identifier (currently `backend-runtime`).
+- `inventory_type` — kind of inventory (currently
+  `edge-function-adoption`). Reserved for future inventories such as
+  `rpc-governance`, `rls-coverage`, or `observability-adoption`.
+
+Consumers SHOULD verify `inventory_type` before applying schema-specific
+logic and MUST refuse to interpret an inventory whose `inventory_type`
+they do not recognize.
+
 Recommended CI wiring (deferred, not part of Wave 2):
 
 ```yaml
