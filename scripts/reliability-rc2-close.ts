@@ -256,13 +256,23 @@ function evaluateGates(inp: Inputs, endRollup: Rollup): GateResult {
   if (!e6) reasons.push(`E6: ${correlated.length} incidente(s) correlato(s) ao Retry`);
 
   // Decisão
+  // NOTA (reframe RC-2, 2026-07-07): RC-2 é um Validation Gate pré-produção,
+  // NÃO uma janela de observação com tráfego comercial. Mesmo com todos os
+  // gates ✅, se não houver evidência de carga real (heurística: baseline
+  // muito baixo), a recomendação é Hold em vez de Promote.
   let decision: GateResult['decision'];
   const blocking =
     inp.e1_functional.duplicate_writes > 0 ||
     inp.e2_retry.attempts_on_permanent_4xx > 0 ||
     correlated.some(i => i.severity === 'critical' || i.severity === 'high');
+  const syntheticOnly =
+    inp.e1_functional.scans_initiated.baseline < 50 ||
+    inp.e1_functional.scans_initiated.rc2 < 50;
   if (blocking) decision = 'Rollback';
-  else if (e1 && e2 && e3 && e4 && e5 && e6) decision = 'Promote';
+  else if (syntheticOnly && e1 && e2 && e3 && e4 && e5 && e6) {
+    decision = 'Hold';
+    reasons.push('HOLD: volume insuficiente para validar carga real (baseline/RC-2 < 50 scans). Mecanismo validado; falta workload representativo. Ver Commercial Readiness Gate.');
+  } else if (e1 && e2 && e3 && e4 && e5 && e6) decision = 'Promote';
   else decision = 'Extend';
 
   return { e1, e2, e3, e4, e5, e6, decision, reasons };
