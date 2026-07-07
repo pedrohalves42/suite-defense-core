@@ -2,19 +2,97 @@
 // quota checks, scanner fallbacks and auto-quarantine invocation unchanged.
 /**
  * scan-virus — Migrated to serveAgent middleware with HMAC verification.
+ *
+ * R4 Wave 3A.2 (2026-07-07): the two external malware-lookup GETs
+ * (Hybrid Analysis and VirusTotal) are wrapped with `withRetry`.
+ * `fetchWithTimeout` is preserved as per-attempt timeout. Persistence
+ * (virus_scans insert, quota update, auto-quarantine invoke) stays
+ * OUTSIDE the retry envelope so a retried lookup never duplicates
+ * writes. Non-retriable statuses (404, other 4xx) continue to fall
+ * through to the existing `return null` fallback path unchanged.
  */
 import { serveAgent } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { checkQuotaAvailable } from '../_shared/quota.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { withRetry } from '../_shared/reliability/retry.ts';
 import { z } from 'https://esm.sh/zod@3.23.8';
 
 const FETCH_TIMEOUT_MS = 30000;
 
-const ScanVirusSchema = z.object({
-  filePath: z.string().min(1).max(1024),
-  fileHash: z.string().min(32).max(128).regex(/^[a-fA-F0-9]+$/),
-});
+/** Retry policy for external malware-lookup GETs — conservative, small budget. */
+const LOOKUP_RETRY = {
+  method: 'GET' as const,
+  idempotent: true,
+  maxAttempts: 3,
+  baseDelayMs: 200,
+  maxDelayMs: 2000,
+  totalBudgetMs: 6000,
+  jitter: 'full' as const,
+};
+
+/**
+ * GET an external malware-analysis URL with per-attempt timeout and
+ * transient-only retry. Same shape as `githubGet` in
+ * validate-build-pipeline (Wave 3A.1): retriable statuses (408, 425,
+ * 429, 5xx) throw a classifier-friendly error; other responses are
+ * returned as-is so the caller keeps its existing non-retriable
+ * handling (404, other 4xx → return null).
+ */
+async function lookupGet(
+  url: string,
+  init: RequestInit & { timeoutMs?: number },
+  provider: 'virustotal' | 'hybrid_analysis',
+  requestId?: string,
+): Promise<Response> {
+  return await withRetry(async () => {
+    const res = await fetchWithTimeout(url, init);
+    if (res.status === 408 || res.status === 425 || res.status === 429 || (res.status >= 500 && res.status <= 599)) {
+      const retryAfterHeader = res.headers.get('retry-after');
+      const retryAfterMs = retryAfterHeader && /^\d+$/.test(retryAfterHeader)
+        ? Number(retryAfterHeader) * 1000
+        : undefined;
+      // Body must be consumed to release the Deno stream before the retry sleeps.
+      await res.text().catch(() => {});
+      const err = new Error(`${provider} transient ${res.status}`) as Error & { status: number; retryAfterMs?: number };
+      err.status = res.status;
+      if (retryAfterMs !== undefined) err.retryAfterMs = retryAfterMs;
+      throw err;
+    }
+    return res;
+  }, { ...LOOKUP_RETRY, requestId });
+}
+
+async function scanWithHybridAnalysis(fileHash: string, apiKey: string, requestId?: string): Promise<ScanResult | null> {
+  try {
+    const resp = await lookupGet(
+      `https://www.hybrid-analysis.com/api/v2/report/${fileHash}/summary`,
+      { timeoutMs: FETCH_TIMEOUT_MS, headers: { 'api-key': apiKey, 'User-Agent': 'CyberShield' } },
+      'hybrid_analysis',
+      requestId,
+    );
+    if (resp.status === 404 || !resp.ok) { await resp.text().catch(() => {}); return null; }
+    const data = await resp.json();
+    const threatScore = data.threat_score || 0;
+    const isMalicious = threatScore >= 50 || (data.verdict || '').includes('malicious');
+    return { isMalicious, positives: isMalicious ? threatScore : 0, totalScans: 100, permalink: `https://www.hybrid-analysis.com/sample/${fileHash}`, scanDate: data.analysis_start_time, scans: data, scannerUsed: 'hybrid_analysis' };
+  } catch (err) { logger.warn('[scan-virus] Hybrid Analysis scan failed', err); return null; }
+}
+
+async function scanWithVirusTotal(fileHash: string, apiKey: string, requestId?: string): Promise<ScanResult | null> {
+  try {
+    const resp = await lookupGet(
+      `https://www.virustotal.com/vtapi/v2/file/report?apikey=${apiKey}&resource=${fileHash}`,
+      { timeoutMs: FETCH_TIMEOUT_MS },
+      'virustotal',
+      requestId,
+    );
+    if (!resp.ok) { await resp.text().catch(() => {}); return null; }
+    const data = await resp.json();
+    if (data.response_code !== 1) return null;
+    return { isMalicious: data.positives > 0, positives: data.positives || 0, totalScans: data.total || 0, permalink: data.permalink, scanDate: data.scan_date, scans: data.scans, scannerUsed: 'virustotal' };
+  } catch (err) { logger.warn('[scan-virus] VirusTotal scan failed', err); return null; }
+}
 
 interface ScanResult {
   isMalicious: boolean;
@@ -26,28 +104,10 @@ interface ScanResult {
   scannerUsed: 'hybrid_analysis' | 'virustotal';
 }
 
-async function scanWithHybridAnalysis(fileHash: string, apiKey: string): Promise<ScanResult | null> {
-  try {
-    const resp = await fetchWithTimeout(`https://www.hybrid-analysis.com/api/v2/report/${fileHash}/summary`, {
-      timeoutMs: FETCH_TIMEOUT_MS, headers: { 'api-key': apiKey, 'User-Agent': 'CyberShield' },
-    });
-    if (resp.status === 404 || !resp.ok) return null;
-    const data = await resp.json();
-    const threatScore = data.threat_score || 0;
-    const isMalicious = threatScore >= 50 || (data.verdict || '').includes('malicious');
-    return { isMalicious, positives: isMalicious ? threatScore : 0, totalScans: 100, permalink: `https://www.hybrid-analysis.com/sample/${fileHash}`, scanDate: data.analysis_start_time, scans: data, scannerUsed: 'hybrid_analysis' };
-  } catch (err) { logger.warn('[scan-virus] Hybrid Analysis scan failed', err); return null; }
-}
-
-async function scanWithVirusTotal(fileHash: string, apiKey: string): Promise<ScanResult | null> {
-  try {
-    const resp = await fetchWithTimeout(`https://www.virustotal.com/vtapi/v2/file/report?apikey=${apiKey}&resource=${fileHash}`);
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    if (data.response_code !== 1) return null;
-    return { isMalicious: data.positives > 0, positives: data.positives || 0, totalScans: data.total || 0, permalink: data.permalink, scanDate: data.scan_date, scans: data.scans, scannerUsed: 'virustotal' };
-  } catch (err) { logger.warn('[scan-virus] VirusTotal scan failed', err); return null; }
-}
+const ScanVirusSchema = z.object({
+  filePath: z.string().min(1).max(1024),
+  fileHash: z.string().min(32).max(128).regex(/^[a-fA-F0-9]+$/),
+});
 
 serveAgent(async (_req, ctx) => {
   const { supabase, agentName, tenantId, body, requestId } = ctx;
@@ -83,10 +143,10 @@ serveAgent(async (_req, ctx) => {
     return { cached: true, isMalicious: existingScan.is_malicious, positives: existingScan.positives, totalScans: existingScan.total_scans, permalink: existingScan.virustotal_permalink, scannedAt: existingScan.scanned_at };
   }
 
-  // Scan
+  // Scan (external lookups wrapped in withRetry via lookupGet)
   let scanResult: ScanResult | null = null;
-  if (hybridAnalysisApiKey) scanResult = await scanWithHybridAnalysis(fileHash, hybridAnalysisApiKey);
-  if (!scanResult && virusTotalApiKey) scanResult = await scanWithVirusTotal(fileHash, virusTotalApiKey);
+  if (hybridAnalysisApiKey) scanResult = await scanWithHybridAnalysis(fileHash, hybridAnalysisApiKey, requestId);
+  if (!scanResult && virusTotalApiKey) scanResult = await scanWithVirusTotal(fileHash, virusTotalApiKey, requestId);
 
   if (!scanResult) {
     return new Response(JSON.stringify({ error: 'Arquivo nao encontrado em nenhum servico de scan' }), { status: 404, headers: { 'Content-Type': 'application/json' } });

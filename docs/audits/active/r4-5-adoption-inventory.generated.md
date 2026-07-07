@@ -1,6 +1,6 @@
 # R4.5 — Reliability Adoption Inventory (generated)
 
-Generated: 2026-07-07T12:47:29.732Z
+Generated: 2026-07-07T13:15:00.000Z
 Total edge functions scanned: 74
 
 > Static scan. Measures OPT-IN adoption of R4 primitives per wrapper.
@@ -12,7 +12,7 @@ Total edge functions scanned: 74
 | Wrapper | Functions | Retry | Breaker | Timeout | Idempotency | Status |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | none | 3 | 0 | 0 | 0 | 0 | None |
-| serveAgent | 21 | 0 | 0 | 0 | 0 | None |
+| serveAgent | 21 | 1 | 0 | 1 | 0 | Partial |
 | serveHoneypot | 1 | 0 | 0 | 0 | 0 | None |
 | serveInternal | 9 | 0 | 0 | 0 | 0 | None |
 | servePublic | 15 | 0 | 0 | 0 | 0 | None |
@@ -79,7 +79,7 @@ Total edge functions scanned: 74
 | register-agent-release | serveTenant | · | · | ✅ | · |
 | run-rls-tests | none | · | · | · | · |
 | saml-sso | servePublic | · | · | · | · |
-| scan-virus | serveAgent | · | · | · | · |
+| scan-virus | serveAgent | ✅ | · | ✅ | · |
 | scan-vulnerabilities | serveTenant | · | · | ✅ | · |
 | scim-provisioning | servePublic | · | · | · | · |
 | serve-agent-update | serveAgent | · | · | · | · |

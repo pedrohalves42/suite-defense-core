@@ -20,14 +20,19 @@ staging/production and preparation (spec only) of R5.
 | R4-prep | ✅ frozen |
 | R4 Wave 1 (wrappers via `composePipeline`) | ✅ frozen |
 | R4 Wave 2 (staging equivalence) | ✅ frozen |
-| R4 Wave 3A.1 (`validate-build-pipeline` Retry) | ✅ implemented, observing |
-| R4 Wave 3A.2 (`scan-virus`) | ⏸ deferred |
+| R4 Wave 3A.1 (`validate-build-pipeline` Retry) | ✅ RC-1 closed |
+| R4 Wave 3A.2 (`scan-virus` external-lookup Retry) | ✅ shipped, observing (RC-2) |
 | R5 (Reliability Score) | 🔒 spec-only, no computation |
 
 ## Frozen invariants under RC-1
 
-1. `withRetry` is used in exactly **one** production edge function
-   (`validate-build-pipeline`), around the two GitHub GET calls only.
+1. `withRetry` is used in exactly **two** production edge functions:
+   - `validate-build-pipeline` — around the two GitHub GET calls only
+     (RC-1, closed).
+   - `scan-virus` — around the Hybrid Analysis and VirusTotal lookup
+     GETs only (Wave 3A.2, currently under RC-2 observation). The DB
+     insert into `virus_scans`, the `update_quota_usage` RPC, and the
+     `auto-quarantine` invoke remain OUTSIDE the retry envelope.
 2. `fetchWithTimeout` is preserved per attempt; Retry does not replace it.
 3. No handler is wrapped in Retry as a whole.
 4. No HTTP contract, payload, header, or status code changed.
@@ -38,10 +43,10 @@ staging/production and preparation (spec only) of R5.
 8. R4.5 inventory scanner remains the single source of truth for
    adoption metrics.
 
-## What is explicitly out of scope for RC-1
+## What is explicitly out of scope while RC-2 observes Wave 3A.2
 
-- Adopting Retry in any other function (`scan-virus`, `ai-router`,
-  `ops-gateway`, etc.).
+- Adopting Retry in any additional function (`ai-router`, `ops-gateway`,
+  any POST path, etc.).
 - Any change to `_shared/reliability/*` primitives.
 - Any change to `serve*` wrappers or `composePipeline`.
 - Creation of `idempotency_records` table or related infra.
