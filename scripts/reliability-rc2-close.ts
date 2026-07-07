@@ -179,7 +179,7 @@ function parseRollup(md: string): Rollup {
 
 // ---------- Gate evaluation ----------
 
-interface GateResult { e1: boolean; e2: boolean; e3: boolean; e4: boolean; e5: boolean; e6: boolean; decision: 'Promote' | 'Extend' | 'Rollback'; reasons: string[]; }
+interface GateResult { e1: boolean; e2: boolean; e3: boolean; e4: boolean; e5: boolean; e6: boolean; decision: 'Promote' | 'Extend' | 'Rollback' | 'Hold'; reasons: string[]; }
 
 function evaluateGates(inp: Inputs, endRollup: Rollup): GateResult {
   const reasons: string[] = [];
