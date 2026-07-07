@@ -1,9 +1,13 @@
-# Programa R1–R5 — Plano consolidado (pós Wave 3A.2 / RC-2 aberta)
+# Programa R1–R5 — Plano consolidado (pós reframe RC-2)
 
-Data: 2026-07-07
-Status: **RC-2 Observation Window ACTIVE** — runtime frozen
+Data: 2026-07-07 (atualizado com reframe RC-2 → Validation Gate)
+Status: **RC-2 ACTIVE (validation gate, no commercial traffic)** —
+runtime frozen, decisão esperada **Hold — hardening required**
 
-Este plano reorganiza o estado atual do programa de Reliability Runtime,
+> Reframe registrado em
+> `docs/audits/active/reliability-runtime-RC-2-reframe.md`. RC-2 deixa
+> de ser "observação pós-produção" e passa a ser "pré-produção
+> controlada + readiness validation".
 marcando o que já está congelado e o que ainda depende de evidências ou
 decisões futuras. **Nenhuma etapa "a fazer" envolve alteração de código
 enquanto a janela RC-2 estiver aberta.**
