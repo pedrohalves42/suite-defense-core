@@ -95,7 +95,7 @@ serveTenant(async (_req, ctx) => {
   if (BUILD_GH_TOKEN && BUILD_GH_REPOSITORY) {
     const ghHeaders = { 'Authorization': `Bearer ${BUILD_GH_TOKEN}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'CyberShield-Pipeline-Validator' };
     try {
-      const workflowsResponse = await fetchWithTimeout(`https://api.github.com/repos/${BUILD_GH_REPOSITORY}/actions/workflows`, { headers: ghHeaders });
+      const workflowsResponse = await githubGet(`https://api.github.com/repos/${BUILD_GH_REPOSITORY}/actions/workflows`, ghHeaders, ctx.requestId);
       if (workflowsResponse.ok) {
         const workflowsData = await workflowsResponse.json();
         const targetWorkflow = workflowsData.workflows?.find((w: Record<string, unknown>) => w.name === 'Build Agent EXE' || (w.path as string).includes('build-agent-exe'));
