@@ -1,6 +1,8 @@
 {
+  "project": "backend-runtime",
+  "inventory_type": "edge-function-adoption",
   "schema_version": 1,
-  "generated_at": "2026-07-07T00:00:00.000Z",
+  "generated_at": "2026-07-07T12:47:29.722Z",
   "commit": null,
   "total_functions": 74,
   "rollup": [
@@ -12,10 +14,10 @@
       "timeout": 0,
       "idempotency": 0,
       "coverage": {
-        "retry": 0.0,
-        "breaker": 0.0,
-        "timeout": 0.0,
-        "idempotency": 0.0
+        "retry": 0,
+        "breaker": 0,
+        "timeout": 0,
+        "idempotency": 0
       },
       "status": "None"
     },
@@ -27,10 +29,10 @@
       "timeout": 0,
       "idempotency": 0,
       "coverage": {
-        "retry": 0.0,
-        "breaker": 0.0,
-        "timeout": 0.0,
-        "idempotency": 0.0
+        "retry": 0,
+        "breaker": 0,
+        "timeout": 0,
+        "idempotency": 0
       },
       "status": "None"
     },
@@ -42,10 +44,10 @@
       "timeout": 0,
       "idempotency": 0,
       "coverage": {
-        "retry": 0.0,
-        "breaker": 0.0,
-        "timeout": 0.0,
-        "idempotency": 0.0
+        "retry": 0,
+        "breaker": 0,
+        "timeout": 0,
+        "idempotency": 0
       },
       "status": "None"
     },
@@ -57,10 +59,10 @@
       "timeout": 0,
       "idempotency": 0,
       "coverage": {
-        "retry": 0.0,
-        "breaker": 0.0,
-        "timeout": 0.0,
-        "idempotency": 0.0
+        "retry": 0,
+        "breaker": 0,
+        "timeout": 0,
+        "idempotency": 0
       },
       "status": "None"
     },
@@ -72,10 +74,10 @@
       "timeout": 0,
       "idempotency": 0,
       "coverage": {
-        "retry": 0.0,
-        "breaker": 0.0,
-        "timeout": 0.0,
-        "idempotency": 0.0
+        "retry": 0,
+        "breaker": 0,
+        "timeout": 0,
+        "idempotency": 0
       },
       "status": "None"
     },
@@ -88,9 +90,9 @@
       "idempotency": 0,
       "coverage": {
         "retry": 0.04,
-        "breaker": 0.0,
-        "timeout": 1.0,
-        "idempotency": 0.0
+        "breaker": 0,
+        "timeout": 1,
+        "idempotency": 0
       },
       "status": "Partial"
     }
