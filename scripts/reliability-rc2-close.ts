@@ -428,7 +428,11 @@ function renderAutoBlock(inp: Inputs, gates: GateResult, endRollup: Rollup, diff
   // Decisão
   rows.push('### Decisão recomendada (auto)');
   rows.push('');
-  const badge = gates.decision === 'Promote' ? '✅ **PROMOTE**' : gates.decision === 'Extend' ? '⏸️ **EXTEND**' : '❌ **ROLLBACK**';
+  const badge =
+    gates.decision === 'Promote' ? '✅ **PROMOTE**' :
+    gates.decision === 'Extend'  ? '⏸️ **EXTEND**'  :
+    gates.decision === 'Hold'    ? '🛠️ **HOLD — hardening required before commercial traffic**' :
+    '❌ **ROLLBACK**';
   rows.push(`Decisão: ${badge}`);
   rows.push('');
   if (gates.reasons.length) {
