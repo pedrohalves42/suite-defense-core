@@ -12,8 +12,8 @@
 | Função observada | `scan-virus` |
 | Wrapper | `serveAgent` |
 | Início da janela (`:window_start`) | **2026-07-07T13:15:00Z** |
-| Encerramento da janela (`:window_end`) | **2026-07-10T13:15:00Z** |
-| Duração efetiva | **72.00h** |
+| Encerramento da janela (`:window_end`) | _pendente_ |
+| Duração efetiva | _pendente_ |
 | Baseline comparativa (janela pré-3A.2) | _a definir no encerramento (mesma duração, imediatamente anterior a `:window_start`)_ |
 | Responsável pelo relatório | _pendente_ |
 | Versão do runtime | RC-2 |
