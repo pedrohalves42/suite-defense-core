@@ -2,7 +2,7 @@
   "project": "backend-runtime",
   "inventory_type": "edge-function-adoption",
   "schema_version": 1,
-  "generated_at": "2026-07-07T12:47:29.722Z",
+  "generated_at": "2026-07-07T13:15:00.000Z",
   "commit": null,
   "total_functions": 74,
   "rollup": [
@@ -24,17 +24,17 @@
     {
       "wrapper": "serveAgent",
       "functions": 21,
-      "retry": 0,
+      "retry": 1,
       "breaker": 0,
-      "timeout": 0,
+      "timeout": 1,
       "idempotency": 0,
       "coverage": {
-        "retry": 0,
+        "retry": 0.05,
         "breaker": 0,
-        "timeout": 0,
+        "timeout": 0.05,
         "idempotency": 0
       },
-      "status": "None"
+      "status": "Partial"
     },
     {
       "wrapper": "serveHoneypot",
@@ -557,9 +557,9 @@
     {
       "name": "scan-virus",
       "wrapper": "serveAgent",
-      "retry": false,
+      "retry": true,
       "breaker": false,
-      "timeout": false,
+      "timeout": true,
       "idempotency": false
     },
     {
