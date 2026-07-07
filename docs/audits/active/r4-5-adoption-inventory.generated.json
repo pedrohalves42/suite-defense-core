@@ -2,8 +2,8 @@
   "project": "backend-runtime",
   "inventory_type": "edge-function-adoption",
   "schema_version": 1,
-  "generated_at": "2026-07-07T13:15:00.000Z",
-  "commit": null,
+  "generated_at": "2026-07-07T23:36:18.255Z",
+  "commit": "ec01e839c59e91eb6c9b7e39eb949654e114a7f6",
   "total_functions": 74,
   "rollup": [
     {
@@ -26,12 +26,12 @@
       "functions": 21,
       "retry": 1,
       "breaker": 0,
-      "timeout": 1,
+      "timeout": 0,
       "idempotency": 0,
       "coverage": {
         "retry": 0.05,
         "breaker": 0,
-        "timeout": 0.05,
+        "timeout": 0,
         "idempotency": 0
       },
       "status": "Partial"
@@ -559,7 +559,7 @@
       "wrapper": "serveAgent",
       "retry": true,
       "breaker": false,
-      "timeout": true,
+      "timeout": false,
       "idempotency": false
     },
     {

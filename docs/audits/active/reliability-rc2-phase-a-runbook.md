@@ -148,7 +148,40 @@ volume estatisticamente representativo de scan-virus
 nenhum evento da Seção 4 pendente de investigação
 ```
 
-Sequência do gate:
+### 6.1 Automação disponível
+
+Dois scripts encapsulam o gate:
+
+| Script | Função |
+| --- | --- |
+| `scripts/reliability-rc2-window-check.ts` | Watchdog: lê `:window_start` do relatório vivo, calcula horas decorridas e reporta READY/PENDING (gate de tempo **ou** volume). Read-only, ideal para cron. |
+| `scripts/reliability-rc2-close.ts` | Closer: roda o scanner R4.5, gera `r4-5-adoption-inventory.rc2-end.md`, diff, e preenche E1–E6 no relatório entre marcadores `AUTO-RC2-CLOSE`. Aplica regras de gate e escreve a **decisão recomendada** (Promote / Extend / Rollback). |
+
+Fluxo:
+
+```bash
+# 1) Verificar se o gate foi atingido
+deno run --allow-read scripts/reliability-rc2-window-check.ts \
+  --scans-count=<N>
+
+# 2) Preencher inputs (schema em scripts/reliability-rc2-inputs.example.json)
+
+# 3) Preview (dry-run)
+deno run -A scripts/reliability-rc2-close.ts \
+  --inputs=<path>.json --dry-run
+
+# 4) Encerramento efetivo
+deno run -A scripts/reliability-rc2-close.ts \
+  --inputs=<path>.json
+```
+
+Após execução do closer, o relatório vivo contém bloco automático com
+todas as tabelas E1–E6 preenchidas, diff do inventário e decisão
+recomendada. **A assinatura humana permanece obrigatória** no bloco
+"Decisão final" — a automação não substitui o gate humano, apenas
+consolida evidências e sugere.
+
+### 6.2 Sequência manual (referência)
 
 1. Definir `:window_end` em `reliability-rc2-evidence-report.md`.
 2. Executar pacote completo E1–E6 (seção 6 de
@@ -157,6 +190,8 @@ Sequência do gate:
    em E5.
 4. Preencher todas as tabelas do relatório de evidências.
 5. Decisão formal: **Promover** / **Estender** / **Rollback**.
+
+
 
 ---
 
