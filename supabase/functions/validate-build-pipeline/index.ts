@@ -1,16 +1,59 @@
 
 /**
  * validate-build-pipeline — Migrated to serveTenant
+ *
+ * R4 Wave 3A.1 (first real adoption of the Retry primitive):
+ * The two GitHub API GETs (workflows list + repo metadata) are read-only,
+ * idempotent, and prone to transient 429/5xx from the GitHub API. They are
+ * wrapped with `withRetry` (per-attempt timeout preserved by fetchWithTimeout).
+ * Nothing else in this function is retried.
  */
 import { serveTenant } from '../_shared/serve-tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { fetchWithTimeout } from '../_shared/fetch-with-timeout.ts';
+import { withRetry } from '../_shared/reliability/retry.ts';
 
 interface PipelineCheck {
   name: string;
   status: 'pass' | 'fail' | 'warn';
   message: string;
   details?: unknown;
+}
+
+/** Retry policy for GitHub API GETs — conservative, small budget. */
+const GITHUB_RETRY = {
+  method: 'GET' as const,
+  idempotent: true,
+  maxAttempts: 3,
+  baseDelayMs: 200,
+  maxDelayMs: 2000,
+  totalBudgetMs: 6000,
+  jitter: 'full' as const,
+};
+
+/**
+ * GET a GitHub URL with per-attempt timeout and transient-only retry.
+ * Throws a classifier-friendly error (status + optional retryAfterMs) on
+ * retriable HTTP statuses so `withRetry` can decide; returns the Response
+ * otherwise (including permanent 4xx, which the caller inspects normally).
+ */
+async function githubGet(url: string, headers: Record<string, string>, requestId?: string): Promise<Response> {
+  return await withRetry(async () => {
+    const res = await fetchWithTimeout(url, { headers });
+    if (res.status === 408 || res.status === 425 || res.status === 429 || (res.status >= 500 && res.status <= 599)) {
+      const retryAfterHeader = res.headers.get('retry-after');
+      const retryAfterMs = retryAfterHeader && /^\d+$/.test(retryAfterHeader)
+        ? Number(retryAfterHeader) * 1000
+        : undefined;
+      // Body must be consumed to release the Deno stream before the retry sleeps.
+      await res.text().catch(() => {});
+      const err = new Error(`GitHub API transient ${res.status}`) as Error & { status: number; retryAfterMs?: number };
+      err.status = res.status;
+      if (retryAfterMs !== undefined) err.retryAfterMs = retryAfterMs;
+      throw err;
+    }
+    return res;
+  }, { ...GITHUB_RETRY, requestId });
 }
 
 serveTenant(async (_req, ctx) => {
@@ -52,7 +95,7 @@ serveTenant(async (_req, ctx) => {
   if (BUILD_GH_TOKEN && BUILD_GH_REPOSITORY) {
     const ghHeaders = { 'Authorization': `Bearer ${BUILD_GH_TOKEN}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'CyberShield-Pipeline-Validator' };
     try {
-      const workflowsResponse = await fetchWithTimeout(`https://api.github.com/repos/${BUILD_GH_REPOSITORY}/actions/workflows`, { headers: ghHeaders });
+      const workflowsResponse = await githubGet(`https://api.github.com/repos/${BUILD_GH_REPOSITORY}/actions/workflows`, ghHeaders, ctx.requestId);
       if (workflowsResponse.ok) {
         const workflowsData = await workflowsResponse.json();
         const targetWorkflow = workflowsData.workflows?.find((w: Record<string, unknown>) => w.name === 'Build Agent EXE' || (w.path as string).includes('build-agent-exe'));
@@ -64,7 +107,7 @@ serveTenant(async (_req, ctx) => {
         checks.push({ name: 'workflow_exists', status: 'fail', message: `GitHub API error: ${workflowsResponse.status}` });
       }
 
-      const repoResponse = await fetchWithTimeout(`https://api.github.com/repos/${BUILD_GH_REPOSITORY}`, { headers: ghHeaders });
+      const repoResponse = await githubGet(`https://api.github.com/repos/${BUILD_GH_REPOSITORY}`, ghHeaders, ctx.requestId);
       if (repoResponse.ok) {
         const repoData = await repoResponse.json();
         checks.push({ name: 'github_api_connectivity', status: 'pass', message: 'GitHub API is accessible', details: { repository: repoData.full_name, default_branch: repoData.default_branch } });

@@ -1,6 +1,6 @@
 # R4.5 — Reliability Adoption Inventory (generated)
 
-Generated: 2026-07-02T19:47:20.450Z
+Generated: 2026-07-07T12:47:29.732Z
 Total edge functions scanned: 74
 
 > Static scan. Measures OPT-IN adoption of R4 primitives per wrapper.
@@ -16,7 +16,7 @@ Total edge functions scanned: 74
 | serveHoneypot | 1 | 0 | 0 | 0 | 0 | None |
 | serveInternal | 9 | 0 | 0 | 0 | 0 | None |
 | servePublic | 15 | 0 | 0 | 0 | 0 | None |
-| serveTenant | 25 | 0 | 0 | 25 | 0 | Partial |
+| serveTenant | 25 | 1 | 0 | 25 | 0 | Partial |
 
 ## Per-function detail
 
@@ -95,4 +95,4 @@ Total edge functions scanned: 74
 | update-baseline | serveAgent | · | · | · | · |
 | upload-release-content | serveInternal | · | · | · | · |
 | upload-report | serveAgent | · | · | · | · |
-| validate-build-pipeline | serveTenant | · | · | ✅ | · |
+| validate-build-pipeline | serveTenant | ✅ | · | ✅ | · |
