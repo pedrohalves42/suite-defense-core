@@ -460,7 +460,10 @@ function extractWindowStart(md: string): string {
 // ---------- Main ----------
 
 async function main() {
-  const { inputs, dryRun } = parseArgs();
+  const { inputs, dryRun, productionConfirmation } = parseArgs();
+  if (productionConfirmation) {
+    console.log('⚠  --production-confirmation active: this run WILL write to the live evidence report.');
+  }
   const inp: Inputs = JSON.parse(await Deno.readTextFile(inputs));
 
   const reportMd = await Deno.readTextFile(REPORT);
