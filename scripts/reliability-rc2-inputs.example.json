@@ -1,0 +1,62 @@
+{
+  "$schema": "./reliability-rc2-inputs.schema.json",
+  "window_end": "2026-07-10T13:15:00Z",
+  "baseline": {
+    "start": "2026-07-04T13:15:00Z",
+    "end": "2026-07-07T13:15:00Z"
+  },
+  "responsible": "reliability-oncall",
+  "e1_functional": {
+    "scans_initiated": { "baseline": 1240, "rc2": 1287 },
+    "scans_succeeded": { "baseline": 1231, "rc2": 1282 },
+    "virus_scans_writes": { "baseline": 1231, "rc2": 1282 },
+    "update_quota_usage_calls": { "baseline": 1231, "rc2": 1282 },
+    "auto_quarantine_invokes": { "baseline": 14, "rc2": 12 },
+    "duplicate_writes": 0,
+    "http_contract_unchanged": true,
+    "payload_headers_status_unchanged": true
+  },
+  "e2_retry": {
+    "attempt_1": 47,
+    "attempt_2": 9,
+    "attempt_3": 2,
+    "exhausted": 1,
+    "by_cause": [
+      { "category": "transient", "status": "429", "count": 31 },
+      { "category": "transient", "status": "500", "count": 4 },
+      { "category": "transient", "status": "502", "count": 6 },
+      { "category": "transient", "status": "503", "count": 3 },
+      { "category": "transient", "status": "504", "count": 8 },
+      { "category": "transient", "status": "timeout", "count": 6 }
+    ],
+    "attempts_on_permanent_4xx": 0,
+    "requestid_preserved": true,
+    "traceid_preserved": true
+  },
+  "e3_latency_ms": {
+    "p50": { "baseline": 412, "rc2": 418 },
+    "p95": { "baseline": 1180, "rc2": 1240 },
+    "p99": { "baseline": 2100, "rc2": 2280 },
+    "over_6s_retry_budget": 0,
+    "over_30s_per_attempt": 0
+  },
+  "e4_classification": [
+    { "status": "400", "count": 3,  "retry_expected": false, "retry_observed": false },
+    { "status": "401", "count": 0,  "retry_expected": false, "retry_observed": false },
+    { "status": "403", "count": 1,  "retry_expected": false, "retry_observed": false },
+    { "status": "404", "count": 22, "retry_expected": false, "retry_observed": false },
+    { "status": "409", "count": 0,  "retry_expected": false, "retry_observed": false },
+    { "status": "422", "count": 2,  "retry_expected": false, "retry_observed": false },
+    { "status": "501", "count": 0,  "retry_expected": false, "retry_observed": false },
+    { "status": "408", "count": 0,  "retry_expected": true,  "retry_observed": false },
+    { "status": "425", "count": 0,  "retry_expected": true,  "retry_observed": false },
+    { "status": "429", "count": 31, "retry_expected": true,  "retry_observed": true  },
+    { "status": "5xx", "count": 21, "retry_expected": true,  "retry_observed": true  }
+  ],
+  "e4_flags": {
+    "retry_after_respected": true,
+    "no_false_positive": true,
+    "no_false_negative": true
+  },
+  "e6_incidents": []
+}
