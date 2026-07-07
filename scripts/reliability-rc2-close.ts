@@ -68,15 +68,29 @@ interface Inputs {
 function parseArgs() {
   let inputs = '';
   let dryRun = false;
+  let productionConfirmation = false;
   for (const a of Deno.args) {
     if (a.startsWith('--inputs=')) inputs = a.split('=')[1];
     else if (a === '--dry-run') dryRun = true;
+    else if (a === '--production-confirmation') productionConfirmation = true;
   }
   if (!inputs) {
     console.error('ERROR: --inputs=<path> is required.');
     Deno.exit(2);
   }
-  return { inputs, dryRun };
+  // Modo seguro por padrão: sem --production-confirmation, força dry-run.
+  if (!dryRun && !productionConfirmation) {
+    console.error('');
+    console.error('⚠  Safe mode: neither --dry-run nor --production-confirmation was passed.');
+    console.error('   Rerun with one of:');
+    console.error('     --dry-run                   preview only, no files changed');
+    console.error('     --production-confirmation   commit the RC-2 close package');
+    console.error('');
+    console.error('   The RC-2 close writes AUTO-* blocks into the live evidence report.');
+    console.error('   Require explicit confirmation to prevent accidental production writes.');
+    Deno.exit(3);
+  }
+  return { inputs, dryRun, productionConfirmation };
 }
 
 // ---------- Helpers ----------
@@ -446,7 +460,10 @@ function extractWindowStart(md: string): string {
 // ---------- Main ----------
 
 async function main() {
-  const { inputs, dryRun } = parseArgs();
+  const { inputs, dryRun, productionConfirmation } = parseArgs();
+  if (productionConfirmation) {
+    console.log('⚠  --production-confirmation active: this run WILL write to the live evidence report.');
+  }
   const inp: Inputs = JSON.parse(await Deno.readTextFile(inputs));
 
   const reportMd = await Deno.readTextFile(REPORT);

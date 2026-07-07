@@ -149,6 +149,8 @@ Assinatura / data: `_________________________`
 
 ---
 
+
+
 ## Log de coleta (append-only)
 
 Registrar cada rodada de coleta com timestamp e query executada
