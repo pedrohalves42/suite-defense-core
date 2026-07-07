@@ -107,7 +107,7 @@ serveTenant(async (_req, ctx) => {
         checks.push({ name: 'workflow_exists', status: 'fail', message: `GitHub API error: ${workflowsResponse.status}` });
       }
 
-      const repoResponse = await fetchWithTimeout(`https://api.github.com/repos/${BUILD_GH_REPOSITORY}`, { headers: ghHeaders });
+      const repoResponse = await githubGet(`https://api.github.com/repos/${BUILD_GH_REPOSITORY}`, ghHeaders, ctx.requestId);
       if (repoResponse.ok) {
         const repoData = await repoResponse.json();
         checks.push({ name: 'github_api_connectivity', status: 'pass', message: 'GitHub API is accessible', details: { repository: repoData.full_name, default_branch: repoData.default_branch } });
