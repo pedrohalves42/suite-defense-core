@@ -21,7 +21,7 @@ staging/production and preparation (spec only) of R5.
 | R4 Wave 1 (wrappers via `composePipeline`) | ✅ frozen |
 | R4 Wave 2 (staging equivalence) | ✅ frozen |
 | R4 Wave 3A.1 (`validate-build-pipeline` Retry) | ✅ RC-1 closed |
-| R4 Wave 3A.2 (`scan-virus` external-lookup Retry) | ✅ shipped, observing (RC-2) |
+| R4 Wave 3A.2 (`scan-virus` external-lookup Retry) | 🟡 shipped, observing — RC-2 window OPEN since 2026-07-07T13:15:00Z (`reliability-rc2-evidence-report.md`) |
 | R5 (Reliability Score) | 🔒 spec-only, no computation |
 
 ## Frozen invariants under RC-1
