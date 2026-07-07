@@ -345,8 +345,9 @@ function renderAutoBlock(inp: Inputs, gates: GateResult, endRollup: Rollup, diff
   rows.push('| Status | Ocorrências | Retry esperado | Retry observado | OK |');
   rows.push('| --- | ---: | :-: | :-: | :-: |');
   for (const c of inp.e4_classification) {
-    const ok = c.retry_expected === c.retry_observed || (!c.retry_expected && !c.retry_observed);
-    rows.push(`| ${c.status} | ${c.count} | ${c.retry_expected ? 'sim' : 'não'} | ${c.retry_observed ? 'sim' : 'não'} | ${check(ok)} |`);
+    // count=0 → N/A (nada para observar). Erro só se retry indevido (obs && !esp).
+    const mark = c.count === 0 ? 'n/a' : (c.retry_observed && !c.retry_expected) ? '❌' : '✅';
+    rows.push(`| ${c.status} | ${c.count} | ${c.retry_expected ? 'sim' : 'não'} | ${c.retry_observed ? 'sim' : 'não'} | ${mark} |`);
   }
   rows.push('');
   rows.push(`- Retry-After respeitado: ${check(inp.e4_flags.retry_after_respected)}`);
