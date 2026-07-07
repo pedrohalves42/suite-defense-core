@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-02T19:47:20.449Z",
+  "generated_at": "2026-07-07T00:00:00.000Z",
   "commit": null,
   "total_functions": 74,
   "rollup": [
@@ -12,10 +12,10 @@
       "timeout": 0,
       "idempotency": 0,
       "coverage": {
-        "retry": 0,
-        "breaker": 0,
-        "timeout": 0,
-        "idempotency": 0
+        "retry": 0.0,
+        "breaker": 0.0,
+        "timeout": 0.0,
+        "idempotency": 0.0
       },
       "status": "None"
     },
@@ -27,10 +27,10 @@
       "timeout": 0,
       "idempotency": 0,
       "coverage": {
-        "retry": 0,
-        "breaker": 0,
-        "timeout": 0,
-        "idempotency": 0
+        "retry": 0.0,
+        "breaker": 0.0,
+        "timeout": 0.0,
+        "idempotency": 0.0
       },
       "status": "None"
     },
@@ -42,10 +42,10 @@
       "timeout": 0,
       "idempotency": 0,
       "coverage": {
-        "retry": 0,
-        "breaker": 0,
-        "timeout": 0,
-        "idempotency": 0
+        "retry": 0.0,
+        "breaker": 0.0,
+        "timeout": 0.0,
+        "idempotency": 0.0
       },
       "status": "None"
     },
@@ -57,10 +57,10 @@
       "timeout": 0,
       "idempotency": 0,
       "coverage": {
-        "retry": 0,
-        "breaker": 0,
-        "timeout": 0,
-        "idempotency": 0
+        "retry": 0.0,
+        "breaker": 0.0,
+        "timeout": 0.0,
+        "idempotency": 0.0
       },
       "status": "None"
     },
@@ -72,25 +72,25 @@
       "timeout": 0,
       "idempotency": 0,
       "coverage": {
-        "retry": 0,
-        "breaker": 0,
-        "timeout": 0,
-        "idempotency": 0
+        "retry": 0.0,
+        "breaker": 0.0,
+        "timeout": 0.0,
+        "idempotency": 0.0
       },
       "status": "None"
     },
     {
       "wrapper": "serveTenant",
       "functions": 25,
-      "retry": 0,
+      "retry": 1,
       "breaker": 0,
       "timeout": 25,
       "idempotency": 0,
       "coverage": {
-        "retry": 0,
-        "breaker": 0,
-        "timeout": 1,
-        "idempotency": 0
+        "retry": 0.04,
+        "breaker": 0.0,
+        "timeout": 1.0,
+        "idempotency": 0.0
       },
       "status": "Partial"
     }
@@ -683,7 +683,7 @@
     {
       "name": "validate-build-pipeline",
       "wrapper": "serveTenant",
-      "retry": false,
+      "retry": true,
       "breaker": false,
       "timeout": true,
       "idempotency": false
