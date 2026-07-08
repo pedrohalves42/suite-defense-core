@@ -477,11 +477,20 @@ function extractWindowStart(md: string): string {
 // ---------- Main ----------
 
 async function main() {
-  const { inputs, dryRun, productionConfirmation } = parseArgs();
+  const { inputs, dryRun, productionConfirmation, minRealScans, minRealScansExplicit } = parseArgs();
   if (productionConfirmation) {
     console.log('⚠  --production-confirmation active: this run WILL write to the live evidence report.');
   }
   const inp: Inputs = JSON.parse(await Deno.readTextFile(inputs));
+
+  // Precedência de threshold (governança, não runtime):
+  //   1) --min-real-scans=N na CLI
+  //   2) inputs.min_real_workload["scan-virus"]
+  //   3) fallback 50
+  const effectiveMinScans = minRealScansExplicit
+    ? minRealScans
+    : inp.min_real_workload?.['scan-virus'] ?? minRealScans;
+  console.log(`  threshold: min_real_scans = ${effectiveMinScans}`);
 
   const reportMd = await Deno.readTextFile(REPORT);
   const windowStart = extractWindowStart(reportMd);
@@ -493,7 +502,8 @@ async function main() {
   const endRollup = parseRollup(endMd);
 
   // 2. Gates + decisão
-  const gates = evaluateGates(inp, endRollup);
+  const gates = evaluateGates(inp, endRollup, effectiveMinScans);
+
 
   // 3. Bloco automático
   const durH = ((Date.parse(inp.window_end) - Date.parse(windowStart)) / 3_600_000).toFixed(2);
