@@ -269,12 +269,12 @@ function evaluateGates(inp: Inputs, endRollup: Rollup, minRealScans: number): Ga
     inp.e2_retry.attempts_on_permanent_4xx > 0 ||
     correlated.some(i => i.severity === 'critical' || i.severity === 'high');
   const syntheticOnly =
-    inp.e1_functional.scans_initiated.baseline < 50 ||
-    inp.e1_functional.scans_initiated.rc2 < 50;
+    inp.e1_functional.scans_initiated.baseline < minRealScans ||
+    inp.e1_functional.scans_initiated.rc2 < minRealScans;
   if (blocking) decision = 'Rollback';
   else if (syntheticOnly && e1 && e2 && e3 && e4 && e5 && e6) {
     decision = 'Hold';
-    reasons.push('HOLD: volume insuficiente para validar carga real (baseline/RC-2 < 50 scans). Mecanismo validado; falta workload representativo. Ver Commercial Readiness Gate.');
+    reasons.push(`HOLD: volume insuficiente para validar carga real (baseline/RC-2 < ${minRealScans} scans). Mecanismo validado; falta workload representativo. Threshold é decisão de governança, ajustável via --min-real-scans ou inputs.min_real_workload["scan-virus"]. Ver Commercial Readiness Gate e Pilot Readiness Review.`);
   } else if (e1 && e2 && e3 && e4 && e5 && e6) decision = 'Promote';
   else decision = 'Extend';
 
