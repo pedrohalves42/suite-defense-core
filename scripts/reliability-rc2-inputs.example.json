@@ -1,5 +1,6 @@
 {
   "$schema": "./reliability-rc2-inputs.schema.json",
+  "min_real_workload": { "scan-virus": 50 },
   "window_end": "2026-07-10T13:15:00Z",
   "baseline": {
     "start": "2026-07-04T13:15:00Z",

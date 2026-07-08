@@ -71,6 +71,22 @@ Cada cenário gera pelo menos uma amostra por execução da suíte.
 
 ---
 
+## 4.1 Matriz de cobertura (evidência obrigatória)
+
+Cada execução da suíte precisa provar cobertura completa desta matriz.
+Falta de evidência em qualquer linha invalida a execução.
+
+| Cenário | Resultado esperado | Fonte de evidência |
+| --- | --- | --- |
+| Scan limpo | Resultado benigno | log `scan-virus` + linha em `virus_scans` |
+| Malware detectado (EICAR) | Quarentena disparada | evento `auto-quarantine` + estado do arquivo |
+| Timeout API upstream | Retry acionado | telemetria `reliability.retry.attempt` |
+| 429 provider | `Retry-After` respeitado | telemetria retry + status upstream |
+| API indisponível | Fallback ou exhausted controlado | log `reliability.retry.exhausted` |
+| Agente offline | Alerta emitido | dashboard + `system_alerts` |
+| Atualização de agente | Versão nova aplicada | release log + heartbeat pós-update |
+| Rollback de update | Versão anterior restaurada | release log + heartbeat pós-rollback |
+
 ## 5. Registro
 
 Cada execução da suíte:

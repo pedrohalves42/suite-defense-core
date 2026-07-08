@@ -61,6 +61,7 @@ interface Inputs {
   e4_classification: { status: string; count: number; retry_expected: boolean; retry_observed: boolean }[];
   e4_flags: { retry_after_respected: boolean; no_false_positive: boolean; no_false_negative: boolean };
   e6_incidents: { date: string; system: string; severity: string; correlated: boolean; notes: string }[];
+  min_real_workload?: Record<string, number>; // ex.: { "scan-virus": 50 } — threshold de governança, externo ao runtime
 }
 
 // ---------- Args ----------
@@ -69,16 +70,18 @@ function parseArgs() {
   let inputs = '';
   let dryRun = false;
   let productionConfirmation = false;
+  let minRealScans = 50; // fallback; deve ser sobrescrito por --min-real-scans ou inputs.min_real_workload["scan-virus"]
+  let minRealScansExplicit = false;
   for (const a of Deno.args) {
     if (a.startsWith('--inputs=')) inputs = a.split('=')[1];
     else if (a === '--dry-run') dryRun = true;
     else if (a === '--production-confirmation') productionConfirmation = true;
+    else if (a.startsWith('--min-real-scans=')) { minRealScans = Number(a.split('=')[1]); minRealScansExplicit = true; }
   }
   if (!inputs) {
     console.error('ERROR: --inputs=<path> is required.');
     Deno.exit(2);
   }
-  // Modo seguro por padrão: sem --production-confirmation, força dry-run.
   if (!dryRun && !productionConfirmation) {
     console.error('');
     console.error('⚠  Safe mode: neither --dry-run nor --production-confirmation was passed.');
@@ -90,7 +93,7 @@ function parseArgs() {
     console.error('   Require explicit confirmation to prevent accidental production writes.');
     Deno.exit(3);
   }
-  return { inputs, dryRun, productionConfirmation };
+  return { inputs, dryRun, productionConfirmation, minRealScans, minRealScansExplicit };
 }
 
 // ---------- Helpers ----------
@@ -181,7 +184,7 @@ function parseRollup(md: string): Rollup {
 
 interface GateResult { e1: boolean; e2: boolean; e3: boolean; e4: boolean; e5: boolean; e6: boolean; decision: 'Promote' | 'Extend' | 'Rollback' | 'Hold'; reasons: string[]; }
 
-function evaluateGates(inp: Inputs, endRollup: Rollup): GateResult {
+function evaluateGates(inp: Inputs, endRollup: Rollup, minRealScans: number): GateResult {
   const reasons: string[] = [];
 
   // E1 — funcional
@@ -266,12 +269,12 @@ function evaluateGates(inp: Inputs, endRollup: Rollup): GateResult {
     inp.e2_retry.attempts_on_permanent_4xx > 0 ||
     correlated.some(i => i.severity === 'critical' || i.severity === 'high');
   const syntheticOnly =
-    inp.e1_functional.scans_initiated.baseline < 50 ||
-    inp.e1_functional.scans_initiated.rc2 < 50;
+    inp.e1_functional.scans_initiated.baseline < minRealScans ||
+    inp.e1_functional.scans_initiated.rc2 < minRealScans;
   if (blocking) decision = 'Rollback';
   else if (syntheticOnly && e1 && e2 && e3 && e4 && e5 && e6) {
     decision = 'Hold';
-    reasons.push('HOLD: volume insuficiente para validar carga real (baseline/RC-2 < 50 scans). Mecanismo validado; falta workload representativo. Ver Commercial Readiness Gate.');
+    reasons.push(`HOLD: volume insuficiente para validar carga real (baseline/RC-2 < ${minRealScans} scans). Mecanismo validado; falta workload representativo. Threshold é decisão de governança, ajustável via --min-real-scans ou inputs.min_real_workload["scan-virus"]. Ver Commercial Readiness Gate e Pilot Readiness Review.`);
   } else if (e1 && e2 && e3 && e4 && e5 && e6) decision = 'Promote';
   else decision = 'Extend';
 
@@ -474,11 +477,20 @@ function extractWindowStart(md: string): string {
 // ---------- Main ----------
 
 async function main() {
-  const { inputs, dryRun, productionConfirmation } = parseArgs();
+  const { inputs, dryRun, productionConfirmation, minRealScans, minRealScansExplicit } = parseArgs();
   if (productionConfirmation) {
     console.log('⚠  --production-confirmation active: this run WILL write to the live evidence report.');
   }
   const inp: Inputs = JSON.parse(await Deno.readTextFile(inputs));
+
+  // Precedência de threshold (governança, não runtime):
+  //   1) --min-real-scans=N na CLI
+  //   2) inputs.min_real_workload["scan-virus"]
+  //   3) fallback 50
+  const effectiveMinScans = minRealScansExplicit
+    ? minRealScans
+    : inp.min_real_workload?.['scan-virus'] ?? minRealScans;
+  console.log(`  threshold: min_real_scans = ${effectiveMinScans}`);
 
   const reportMd = await Deno.readTextFile(REPORT);
   const windowStart = extractWindowStart(reportMd);
@@ -490,7 +502,8 @@ async function main() {
   const endRollup = parseRollup(endMd);
 
   // 2. Gates + decisão
-  const gates = evaluateGates(inp, endRollup);
+  const gates = evaluateGates(inp, endRollup, effectiveMinScans);
+
 
   // 3. Bloco automático
   const durH = ((Date.parse(inp.window_end) - Date.parse(windowStart)) / 3_600_000).toFixed(2);
