@@ -97,6 +97,69 @@ qualifica-os para execução.
 
 ---
 
+## Plano de execução — 5 dias
+
+Ordem derivada das dependências do backlog. Cada dia é somente **leitura +
+reprodução observacional**; nenhuma alteração de runtime.
+
+### Dia 1 — Controles independentes (Segurança + Backup)
+
+Paralelizável. Podem invalidar o restante do sprint se falharem.
+
+- `P0-01` RLS — Security Lead
+- `P0-10` Segredos em logs — Security Lead
+- `P0-07` Installer signing — Security Lead
+- `P0-08` Backup + restore — Ops Lead
+
+Meta: **4/18 classificados**.
+
+### Dia 2 — Agent lifecycle
+
+- `P0-02` Heartbeat — Agent Lead
+- `P0-06` Rollback (herda achado de P0-02) — Agent Lead
+
+Meta: **6/18 classificados**.
+
+### Dia 3 — Reliability (cadeia dependente)
+
+Executar na ordem — testar recuperação antes de garantir idempotência
+gera evidência inválida.
+
+- `P0-04` Auth/MFA — Security Lead
+- `P0-05` Idempotency em jobs — Reliability Lead
+- `P0-03` Scan recovery — Reliability Lead
+- `P0-09` Kill-switch por tenant — Ops Lead
+
+Meta: **10/18 classificados** (todos os P0).
+
+**Gate intermediário:** se qualquer P0 sair como `Confirmed` em Grupo A
+(P0-01, P0-10, P0-07) com severidade real, pausar o resto do Sprint 0 e
+escalar antes de prosseguir para P1.
+
+### Dia 4 — P1 observabilidade e operação
+
+- `P1-01` Alertas ruidosos — Ops Lead
+- `P1-02` Campos obrigatórios em logs — Reliability Lead
+- `P1-07` Dashboard por tenant — Ops Lead
+- `P1-08` Runbooks — Ops Lead
+
+Meta: **14/18 classificados**.
+
+### Dia 5 — P1 restantes + consolidação
+
+- `P1-03` Envelope de latência — Reliability Lead
+- `P1-04` Qualidade do relatório de scan — Product Lead
+- `P1-05` UX de erro — Product Lead
+- `P1-06` Rate limiting — Security Lead
+
+Meta: **18/18 classificados** + revisão final e commit único
+"Sprint 0 Discovery: complete" atualizando a coluna Discovery no
+`hardening-tracking-board.md`.
+
+---
+
+
+
 ## Critério de encerramento do Sprint 0
 
 Sprint 0 fecha quando **todos os 18 itens** têm classificação diferente de
