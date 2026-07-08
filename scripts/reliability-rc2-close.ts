@@ -61,6 +61,7 @@ interface Inputs {
   e4_classification: { status: string; count: number; retry_expected: boolean; retry_observed: boolean }[];
   e4_flags: { retry_after_respected: boolean; no_false_positive: boolean; no_false_negative: boolean };
   e6_incidents: { date: string; system: string; severity: string; correlated: boolean; notes: string }[];
+  min_real_workload?: Record<string, number>; // ex.: { "scan-virus": 50 } — threshold de governança, externo ao runtime
 }
 
 // ---------- Args ----------
