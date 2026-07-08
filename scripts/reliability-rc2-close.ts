@@ -69,16 +69,18 @@ function parseArgs() {
   let inputs = '';
   let dryRun = false;
   let productionConfirmation = false;
+  let minRealScans = 50; // fallback; deve ser sobrescrito por --min-real-scans ou inputs.min_real_workload["scan-virus"]
+  let minRealScansExplicit = false;
   for (const a of Deno.args) {
     if (a.startsWith('--inputs=')) inputs = a.split('=')[1];
     else if (a === '--dry-run') dryRun = true;
     else if (a === '--production-confirmation') productionConfirmation = true;
+    else if (a.startsWith('--min-real-scans=')) { minRealScans = Number(a.split('=')[1]); minRealScansExplicit = true; }
   }
   if (!inputs) {
     console.error('ERROR: --inputs=<path> is required.');
     Deno.exit(2);
   }
-  // Modo seguro por padrão: sem --production-confirmation, força dry-run.
   if (!dryRun && !productionConfirmation) {
     console.error('');
     console.error('⚠  Safe mode: neither --dry-run nor --production-confirmation was passed.');
@@ -90,7 +92,7 @@ function parseArgs() {
     console.error('   Require explicit confirmation to prevent accidental production writes.');
     Deno.exit(3);
   }
-  return { inputs, dryRun, productionConfirmation };
+  return { inputs, dryRun, productionConfirmation, minRealScans, minRealScansExplicit };
 }
 
 // ---------- Helpers ----------
