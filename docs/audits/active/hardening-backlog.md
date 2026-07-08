@@ -23,51 +23,53 @@ item **P0 aberto**.
 
 ## P0 — bloqueia piloto
 
-Exemplos de categoria (preencher com IDs reais conforme forem
-identificados):
-
-- Isolamento entre tenants (RLS gap, cross-tenant read/write).
-- Agente sem comunicação (heartbeat perdido, sem detecção).
-- Perda de resultado (scan ou job).
-- Falha de autenticação (login, MFA, sessão).
-- Corrupção de dados (write parcial, escrita duplicada).
-- Atualização de agente quebrada (rollback não funciona).
+Cada item tem owner nomeado, severidade justificada e critério de
+aceitação **verificável** (comando, query ou artefato). Sem evidência,
+o item **não fecha**.
 
 ### Fila P0
 
-| ID | Área | Impacto | Detecção | Owner | Status |
-| --- | --- | --- | --- | --- | :-: |
-| _(vazio — preencher)_ | | | | | |
+| ID | Área | Impacto | Owner | Status | Detecção |
+| --- | --- | --- | --- | :-: | --- |
+| P0-01 | Isolamento tenant (RLS) | Cross-tenant read/write compromete confidencialidade e contrato SLA | Security Lead | Open | Auditoria `supabase--linter` + query cruzada `select count(*) from <tabela> where tenant_id <> get_active_tenant_id()` retorna 0 em toda tabela pública |
+| P0-02 | Heartbeat / agente offline não detectado | Cliente crê que endpoint está protegido quando não está | Agent Lead | Open | Simular agente parado 3× intervalo → alerta gerado em `agent_status` + evento em `audit_log` |
+| P0-03 | Perda de resultado de scan | Scan aparece "concluído" sem persistir findings | Reliability Lead | Open | Injetar falha pós-upload no `scan-virus`; job deve reprocessar via idempotency e produzir findings idênticos |
+| P0-04 | Auth / MFA / step-up | Ação crítica executada sem MFA válido dentro dos 5 min | Security Lead | Open | Suite e2e cobrindo login, refresh, step-up expirado, logout global; 100% verde |
+| P0-05 | Corrupção por escrita duplicada em jobs | Duplo processamento gera billing/telemetria inflados | Reliability Lead | Open | Reenviar mesmo `job_id` 10× → exatamente 1 execução materializada (`select count(*) group by job_id`) |
+| P0-06 | Rollback de atualização de agente | Update quebrado deixa frota inoperante sem volta | Agent Lead | Open | Deploy canário → forçar falha → comando rollback restaura versão anterior em <5 min em 100% do canário |
+| P0-07 | Signing / integridade do installer | Installer adulterado poderia executar em endpoint cliente | Security Lead | Open | Manifest assinado HMAC-SHA256 verificado; teste com hash alterado deve **recusar** execução e logar em `audit_log` |
+| P0-08 | Backup + restore verificado | Restore nunca testado = backup teórico | Ops Lead | Open | Restore em ambiente isolado a partir do último snapshot; smoke-test de leitura de 5 tabelas críticas passa |
+| P0-09 | Kill-switch por tenant | Sem forma de parar rápido um tenant problemático | Ops Lead | Open | Feature flag por tenant desativa ingestão + jobs em <60s; evento em `audit_log` |
+| P0-10 | Segredos em logs / respostas | Vazamento de token/SERVICE_ROLE nos logs | Security Lead | Open | `rg -n "service_role\|Bearer \|sk_"` em logs de 24h retorna zero; scanner de segredos em CI verde |
 
 ---
 
 ## P1 — antes de escala
 
-- Alertas inconsistentes ou ruidosos.
-- Relatórios incompletos.
-- Lentidão (p95/p99 acima do envelope).
-- Logs insuficientes (sem `tenant_id` / `request_id` / `trace_id`).
-- UX confusa em fluxos críticos.
-
 ### Fila P1
 
-| ID | Área | Impacto | Detecção | Owner | Status |
-| --- | --- | --- | --- | --- | :-: |
-| _(vazio — preencher)_ | | | | | |
+| ID | Área | Impacto | Owner | Status | Detecção |
+| --- | --- | --- | --- | :-: | --- |
+| P1-01 | Alertas ruidosos / duplicados | Fatiga de operação, incidente real perdido | Ops Lead | Open | Taxa alerta/hora <5 em 72h sintéticos; deduplicação por `fingerprint` |
+| P1-02 | Observabilidade — `tenant_id` / `request_id` / `trace_id` obrigatórios | Impossível correlacionar incidente | Reliability Lead | Open | Amostra de 200 logs → 100% com os 3 campos populados |
+| P1-03 | p95/p99 fora do envelope em rotas críticas | UX ruim, breaker pode disparar | Reliability Lead | Open | Load test RC-2.1: p95 < 800ms, p99 < 2000ms nas rotas do envelope |
+| P1-04 | Relatório de scan incompleto (findings sem severidade/rule_id) | Cliente não confia no output | Product Lead | Open | Query de qualidade: 0 findings com campos obrigatórios nulos em 24h de tráfego sintético |
+| P1-05 | UX de erro em fluxos críticos (upload, ativação de agente) | Cliente trava sem saber o que fazer | Product Lead | Open | Playwright cobre 6 fluxos de erro; cada tela mostra mensagem, ação e link de suporte |
+| P1-06 | Rate limiting mínimo em endpoints públicos | Abuso trivial derruba serviço | Security Lead | Open | 100 req/min por IP em `/scan-virus`; teste de carga confirma HTTP 429 acima do limite |
+| P1-07 | Cobertura de dashboard de saúde por tenant | Operação cega para tenant específico | Ops Lead | Open | Dashboard mostra jobs, erros, latência por `tenant_id`; validado com 3 tenants sintéticos |
+| P1-08 | Runbook de incidente por categoria (P0-01…P0-10) | On-call sem playbook trava resposta | Ops Lead | Open | 10 runbooks publicados, revisados e linkados no alerta correspondente |
 
 ---
 
 ## P2 — pós-piloto
 
-- Melhorias visuais.
-- Automações extras.
-- Novos módulos.
-
 ### Fila P2
 
-| ID | Área | Impacto | Detecção | Owner | Status |
-| --- | --- | --- | --- | --- | :-: |
-| _(vazio — preencher)_ | | | | | |
+| ID | Área | Impacto | Owner | Status |
+| --- | --- | --- | --- | :-: |
+| P2-01 | Melhorias visuais dashboard | Baixo | Product Lead | Deferred |
+| P2-02 | Automações extras de resposta | Baixo | Ops Lead | Deferred |
+| P2-03 | Novos módulos (Wave 3B, R5) | N/A — bloqueado por freeze | — | Blocked |
 
 ---
 
