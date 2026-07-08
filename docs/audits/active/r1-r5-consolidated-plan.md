@@ -51,11 +51,13 @@ enquanto a janela RC-2 estiver aberta.**
 ## 2. Estado atual
 
 ```
-Runtime Reliability:   RC-2 Observation Window ACTIVE
+Runtime Reliability:   RC-2 Validation Gate ACTIVE (no commercial traffic)
 Adoption:              2/74 functions with Retry (frozen)
 Wrappers:              serveAgent=1, serveTenant=1, others=0
 Breaker / Idempotency: 0 in production
+Evidence:              PENDING real workload
 R5 Score:              not computed (spec-only)
+Priority:              bug fixing + hardening
 ```
 
 | Bloco | Status |
@@ -63,7 +65,10 @@ R5 Score:              not computed (spec-only)
 | R1 / R1.5 / R2 / R3 / R3.1 / R4-prep | ✅ congelado |
 | Wave 1 / Wave 2 | ✅ congelado |
 | Wave 3A.1 (`validate-build-pipeline`) | ✅ RC-1 encerrada |
-| Wave 3A.2 (`scan-virus`) | 🟡 shipped — RC-2 observando |
+| Wave 3A.2 (`scan-virus`) | 🟡 shipped — RC-2 aberta |
+| RC-2 validation gate | 🟡 Hold — hardening required |
+| RC-2.1 Synthetic Validation | 📋 planejada (`rc-2-1-synthetic-validation-plan.md`) |
+| Commercial Readiness Gate | ⬜ OPEN (`commercial-readiness-gate.md`) |
 | Wave 3B (POST idempotente) | 🔒 checklist congelado, sem execução |
 | R5 (Reliability Score) | 🔒 spec-only |
 
@@ -71,35 +76,46 @@ R5 Score:              not computed (spec-only)
 
 ## 3. O que falta resolver
 
-### Fase A — Observação da RC-2 (em andamento, sem código)
+### Fase Hardening — bug fixing + estabilização (prioridade atual)
 
-Coleta periódica read-only durante a janela, usando
-`reliability-rc2-evidence-queries.md`:
+Sem novas waves. Foco em fechar bugs conhecidos por prioridade:
 
-1. **Monitoramento contínuo** (diário/semanal, conforme volume):
-   - Seção 2.1 — `reliability.retry.attempt` por causa.
-   - Seção 2.2 — `reliability.retry.exhausted`.
-   - Seção 3.2 — duplicatas em `virus_scans` (esperado: 0).
-   - Seção 2.3 — sanidade: nenhum retry em 4xx permanente.
-2. **Detecção precoce de anomalia** — se qualquer alarme dispara,
-   avaliar rollback imediato de 3A.2 antes de consolidar E1–E6.
+**P0** (bloqueadores): erros que quebram scan, falhas de auth, perda
+de dados, inconsistência multi-tenant, jobs travados, agentes offline
+não detectados.
 
-### Fase B — Encerramento da RC-2 (evento único, sem código)
+**P1**: UX, alertas, performance, logs, relatórios.
 
-Executado quando houver evidência suficiente (mínimo recomendado: 72h
-de tráfego ou N invocações estatisticamente relevantes de
-`scan-virus`):
+### Fase RC-2.1 — Synthetic Validation
 
-1. Registrar `:window_end` em `reliability-rc2-evidence-report.md`.
-2. Rodar o pacote completo de queries (E1 + E3 + E2 + E4 + E5 + E6) na
-   ordem da seção 6 do documento de queries.
-3. Arquivar `r4-5-adoption-inventory.rc2-end.md` e colar o diff em E5.
-4. Preencher todas as tabelas do relatório de evidências.
-5. Registrar decisão formal:
-   - ✅ **Promover** → abre Fase C.
-   - ⏸️ **Estender** → mantém RC-2 aberta por N dias adicionais.
-   - ❌ **Rollback** → reverte diff de `scan-virus/index.ts`, scanner
-     volta a 1 função com Retry.
+Executar plano em `rc-2-1-synthetic-validation-plan.md`: tenants
+sintéticos, agentes simulados por SO, corpus de arquivos conhecidos,
+cenários provocados (429, 500, timeout, offline). Mínimo 3 execuções
+em dias distintos. Checkpoints marcados `SYNTHETIC-*` — não contam
+como carga real.
+
+### Fase Commercial Readiness
+
+Checklist completo em `commercial-readiness-gate.md`. Bloqueia o
+primeiro cliente até 100% ✅ com assinaturas de Engineering,
+Segurança e Produto.
+
+### Fase Piloto — primeiro tenant real
+
+Somente após Hardening + RC-2.1 + Commercial Readiness ✅. Gera a
+evidência de workload real que a RC-2 precisa para emitir `Promote`.
+
+### Fase B — Encerramento da RC-2
+
+Executado com evidência real (não sintética). O closer
+(`scripts/reliability-rc2-close.ts`) já reconhece o cenário e emite
+`Hold` automaticamente quando o volume é insuficiente. Decisões:
+
+- ✅ **Promote** → abre Fase C.
+- ⏸️ **Extend** → mantém RC-2 aberta.
+- 🛠️ **Hold** → hardening required (decisão atual esperada).
+- ❌ **Rollback** → reverte diff de `scan-virus/index.ts`.
+
 
 ### Fase C — Wave 3B (POST idempotente / Retry controlado)
 
