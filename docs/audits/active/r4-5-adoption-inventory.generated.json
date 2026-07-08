@@ -2,8 +2,8 @@
   "project": "backend-runtime",
   "inventory_type": "edge-function-adoption",
   "schema_version": 1,
-  "generated_at": "2026-07-07T23:46:46.006Z",
-  "commit": "2774d35ec86ddfd25d9216d38d014e884141bb3a",
+  "generated_at": "2026-07-08T00:02:37.733Z",
+  "commit": "6377566822b46e542fcc577d2311a539de838902",
   "total_functions": 74,
   "rollup": [
     {
