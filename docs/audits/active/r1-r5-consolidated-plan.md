@@ -181,9 +181,12 @@ Wave 2 (staging equivalence)                   ✅
 Wave 3A.1 validate-build-pipeline              ✅
    └─ RC-1 observation                         ✅ closed
 Wave 3A.2 scan-virus                           ✅ shipped
-   └─ RC-2 observation                         🟡 ACTIVE  ← estamos aqui
-       ├─ Fase A: coleta contínua              (em curso)
-       └─ Fase B: encerramento + decisão       (pendente)
+   └─ RC-2 validation gate                     🟡 ACTIVE (Hold)  ← estamos aqui
+       ├─ Hardening (bug fixing P0/P1)         (em curso)
+       ├─ RC-2.1 Synthetic Validation          (planejada)
+       ├─ Commercial Readiness Gate            (OPEN)
+       ├─ Primeiro tenant piloto               (bloqueado)
+       └─ Fase B: encerramento + decisão       (pendente workload real)
 Wave 3B POST idempotente                       🔒 checklist frozen
    └─ RC-3 observation                         🔒 pendente
 R5 Reliability Score                           🔒 spec-only
@@ -193,8 +196,17 @@ R5 Reliability Score                           🔒 spec-only
 
 ## 6. Próxima ação imediata
 
-Nenhuma alteração de código. Executar a rotina de monitoramento
-contínuo da **Fase A** — queries 2.1, 2.2, 2.3 e 3.2 do documento
-`reliability-rc2-evidence-queries.md` — e aguardar volume suficiente
-para a **Fase B** (encerramento formal da RC-2 com preenchimento
-completo do relatório e decisão Promover/Estender/Rollback).
+Nenhuma alteração de runtime. Trabalho concentrado em três frentes
+paralelas, todas fora de `_shared/reliability/*` e wrappers:
+
+1. **Hardening** — fechar bugs P0/P1 conhecidos.
+2. **RC-2.1 Synthetic Validation** — executar a suíte descrita em
+   `rc-2-1-synthetic-validation-plan.md`.
+3. **Commercial Readiness Gate** — preencher evidências em
+   `commercial-readiness-gate.md`.
+
+O closer da RC-2 (`scripts/reliability-rc2-close.ts`) permanece
+disponível e emite `Hold` automaticamente enquanto o volume for
+insuficiente. Nenhuma decisão `Promote` é admissível antes de
+workload real.
+
