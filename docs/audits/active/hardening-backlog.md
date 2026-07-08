@@ -29,18 +29,25 @@ o item **não fecha**.
 
 ### Fila P0
 
-| ID | Área | Impacto | Owner | Status | Detecção |
-| --- | --- | --- | --- | :-: | --- |
-| P0-01 | Isolamento tenant (RLS) | Cross-tenant read/write compromete confidencialidade e contrato SLA | Security Lead | Open | Auditoria `supabase--linter` + query cruzada `select count(*) from <tabela> where tenant_id <> get_active_tenant_id()` retorna 0 em toda tabela pública |
-| P0-02 | Heartbeat / agente offline não detectado | Cliente crê que endpoint está protegido quando não está | Agent Lead | Open | Simular agente parado 3× intervalo → alerta gerado em `agent_status` + evento em `audit_log` |
-| P0-03 | Perda de resultado de scan | Scan aparece "concluído" sem persistir findings | Reliability Lead | Open | Injetar falha pós-upload no `scan-virus`; job deve reprocessar via idempotency e produzir findings idênticos |
-| P0-04 | Auth / MFA / step-up | Ação crítica executada sem MFA válido dentro dos 5 min | Security Lead | Open | Suite e2e cobrindo login, refresh, step-up expirado, logout global; 100% verde |
-| P0-05 | Corrupção por escrita duplicada em jobs | Duplo processamento gera billing/telemetria inflados | Reliability Lead | Open | Reenviar mesmo `job_id` 10× → exatamente 1 execução materializada (`select count(*) group by job_id`) |
-| P0-06 | Rollback de atualização de agente | Update quebrado deixa frota inoperante sem volta | Agent Lead | Open | Deploy canário → forçar falha → comando rollback restaura versão anterior em <5 min em 100% do canário |
-| P0-07 | Signing / integridade do installer | Installer adulterado poderia executar em endpoint cliente | Security Lead | Open | Manifest assinado HMAC-SHA256 verificado; teste com hash alterado deve **recusar** execução e logar em `audit_log` |
-| P0-08 | Backup + restore verificado | Restore nunca testado = backup teórico | Ops Lead | Open | Restore em ambiente isolado a partir do último snapshot; smoke-test de leitura de 5 tabelas críticas passa |
-| P0-09 | Kill-switch por tenant | Sem forma de parar rápido um tenant problemático | Ops Lead | Open | Feature flag por tenant desativa ingestão + jobs em <60s; evento em `audit_log` |
-| P0-10 | Segredos em logs / respostas | Vazamento de token/SERVICE_ROLE nos logs | Security Lead | Open | `rg -n "service_role\|Bearer \|sk_"` em logs de 24h retorna zero; scanner de segredos em CI verde |
+Campos adicionais:
+
+- **Prio**: `Critical` > `High` > `Medium` — ordem operacional interna ao P0.
+- **Tipo**: `Defect` (bug confirmado) / `Security Control` / `Reliability Control` / `Operational Readiness` (ausência de controle, não bug).
+- **Depende de**: itens que devem ser fechados antes; testar fora de ordem gera evidência inválida.
+- **Discovery**: estado no Hardening Sprint 0 (`Pending` / `Confirmed` / `False Positive` / `Needs Investigation`).
+
+| ID | Prio | Tipo | Área | Depende de | Discovery | Owner | Status | Critério de aceitação |
+| --- | :-: | --- | --- | :-: | :-: | --- | :-: | --- |
+| P0-01 | Critical | Security Control | Isolamento tenant (RLS) | — | Pending | Security Lead | Open | `supabase--linter` verde + query cruzada `select count(*) from <t> where tenant_id <> get_active_tenant_id()` = 0 em toda tabela pública |
+| P0-10 | Critical | Security Control | Segredos em logs / respostas | — | Pending | Security Lead | Open | `rg -n "service_role\|Bearer \|sk_"` em 24h de logs = 0 hits + scanner de segredos em CI verde |
+| P0-04 | Critical | Security Control | Auth / MFA / step-up | P0-01 | Pending | Security Lead | Open | Suite e2e (login, refresh, step-up expirado, logout global) 100% verde |
+| P0-05 | High | Reliability Control | Escrita duplicada em jobs | P0-01, P0-04 | Pending | Reliability Lead | Open | Reenvio 10× do mesmo `job_id` → 1 execução materializada (`count(*) group by job_id`) |
+| P0-03 | High | Defect | Perda de resultado de scan | P0-05 | Pending | Reliability Lead | Open | Injeção de falha pós-upload → reprocess via idempotency → findings idênticos (hash antes/depois) |
+| P0-08 | High | Operational Readiness | Backup + restore verificado | — | Pending | Ops Lead | Open | Restore em ambiente isolado + smoke-test de 5 tabelas críticas verde |
+| P0-02 | Medium | Defect | Heartbeat / agente offline não detectado | — | Pending | Agent Lead | Open | Agente parado 3× intervalo → alerta em `agent_status` + evento em `audit_log` |
+| P0-06 | Medium | Defect | Rollback de update de agente | P0-02 | Pending | Agent Lead | Open | Canário quebrado → rollback restaura 100% em <5 min, com log temporal |
+| P0-07 | Medium | Security Control | Signing / integridade do installer | — | Pending | Security Lead | Open | Manifest HMAC-SHA256 verificado; teste com hash alterado **recusa** execução + `audit_log` |
+| P0-09 | Medium | Operational Readiness | Kill-switch por tenant | P0-01 | Pending | Ops Lead | Open | Flag por tenant desativa ingestão + jobs em <60s, medido, com `audit_log` |
 
 ---
 
