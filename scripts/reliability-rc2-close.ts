@@ -184,7 +184,7 @@ function parseRollup(md: string): Rollup {
 
 interface GateResult { e1: boolean; e2: boolean; e3: boolean; e4: boolean; e5: boolean; e6: boolean; decision: 'Promote' | 'Extend' | 'Rollback' | 'Hold'; reasons: string[]; }
 
-function evaluateGates(inp: Inputs, endRollup: Rollup): GateResult {
+function evaluateGates(inp: Inputs, endRollup: Rollup, minRealScans: number): GateResult {
   const reasons: string[] = [];
 
   // E1 — funcional
