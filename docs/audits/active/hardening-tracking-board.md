@@ -59,12 +59,12 @@ Regra: **não iniciar um item** enquanto suas dependências não estiverem `In R
 | P0-05 | High | Reliability Control | Escrita duplicada em jobs | P0-01, P0-04 | Pending | Reliability Lead | ⬜ | Reenvio 10× produz N>1 execuções materializadas | Reenvio 10× produz exatamente 1 execução | `evidence/P0-05-idempotency/{before,after}.sql` |
 | P0-03 | High | Defect | Perda de resultado de scan | P0-05 | Pending | Reliability Lead | ⬜ | Trace: scan `completed` com `findings = NULL` (job_id, hash) | Reprocess via idempotency-key → `findings` populados, hash idêntico ao esperado | `evidence/P0-03-scan-loss/{before,after}.md` |
 | P0-08 | High | Operational Readiness | Backup + restore verificado | — | Confirmed | Ops Lead | ⬜ | Nenhum restore documentado nos últimos 90 dias | Restore em ambiente isolado + smoke-test de 5 tabelas críticas verde, com timestamp | `evidence/P0-08-restore/{before,after}.md` |
-| P0-02 | Medium | Defect | Heartbeat offline não detectado | — | Pending | Agent Lead | ⬜ | Agente parado 3× intervalo, nenhum alerta gerado | Mesma simulação → alerta em `agent_status` + evento em `audit_log` | `evidence/P0-02-heartbeat/{before,after}.md` |
-| P0-06 | Medium | Defect | Rollback de update de agente | P0-02 | Pending | Agent Lead | ⬜ | Canário quebrado sem caminho de volta documentado | Rollback restaura 100% do canário em <5 min, log temporal anexo | `evidence/P0-06-rollback/{before,after}.md` |
+| P0-02 | Medium | Defect | Heartbeat offline não detectado | — | Confirmed | Agent Lead | ⬜ | Agente parado 3× intervalo, nenhum alerta gerado | Mesma simulação → alerta em `agent_status` + evento em `audit_log` | `evidence/P0-02-heartbeat/{before,after}.md` |
+| P0-06 | Medium | Defect | Rollback de update de agente | P0-02 | Needs Investigation | Agent Lead | ⬜ | Canário quebrado sem caminho de volta documentado | Rollback restaura 100% do canário em <5 min, log temporal anexo | `evidence/P0-06-rollback/{before,after}.md` |
 | P0-07 | Medium | Security Control | Signing / integridade do installer | — | Needs Investigation | Security Lead | ⬜ | Discovery: verificar se existe manifest/assinatura/verificação hoje | Manifest HMAC-SHA256 verificado; hash alterado → recusa + `audit_log` | `evidence/P0-07-installer/{before,after}.md` |
 | P0-09 | Medium | Operational Readiness | Kill-switch por tenant | P0-01 | Pending | Ops Lead | ⬜ | Nenhuma flag por tenant capaz de parar ingestão/jobs em <60s | Flag ativada desativa ingestão + jobs em <60s medidos + `audit_log` | `evidence/P0-09-killswitch/{before,after}.md` |
 
-Total P0: **10 abertos / 0 fechados / 4 classificados no Discovery** (Sprint 0 Day 1: 1 Confirmed · 1 False Positive pendente evidência 24h · 2 Needs Investigation) — RC-2.1 e piloto **BLOQUEADOS**.
+Total P0: **10 abertos / 0 fechados / 6 classificados no Discovery** (Sprint 0 Days 1–2: 2 Confirmed · 1 False Positive pendente evidência 24h · 3 Needs Investigation) — RC-2.1 e piloto **BLOQUEADOS**.
 
 ---
 
