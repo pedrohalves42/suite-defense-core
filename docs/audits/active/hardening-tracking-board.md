@@ -1,9 +1,15 @@
 # Hardening Tracking Board — P0 & P1
 
-Date: 2026-07-08
+Date: 2026-07-09
 Owner: Reliability Program
 Source of truth: `hardening-backlog.md`
 Rule: nada fecha sem par de evidências **Antes / Depois** anexado.
+
+**Fase atual:** `Hardening Execution — Sprint 1` (ver
+`hardening-execution-sprint-1-kickoff.md`). Sprint 0 Discovery ✅ COMPLETE.
+Item ativo: **P0-01** em `Investigation` — spike read-only concluído,
+aguardando query cruzada tenant×tenant para veredito final
+(`evidence/P0-01-rls/investigation.md`).
 
 Este board rastreia execução, dependências, tipo do trabalho e prova
 exigida para destravar o piloto. É consumido por:
@@ -53,7 +59,7 @@ Regra: **não iniciar um item** enquanto suas dependências não estiverem `In R
 
 | ID | Prio | Tipo | Título | Depende | Discovery | Owner | Status | Evidência ANTES | Evidência DEPOIS | Local |
 | --- | :-: | --- | --- | :-: | :-: | --- | :-: | --- | --- | --- |
-| P0-01 | Critical | Security Control | RLS cross-tenant | — | Needs Investigation | Security Lead | ⬜ | Query cruzada mostra N>0 OU linter aponta tabela sem RLS | Query cruzada = 0 em todas tabelas + linter verde | `evidence/P0-01-rls/{before,after}.sql` |
+| P0-01 | Critical | Security Control | RLS cross-tenant | — | Investigation (H1/H2/H3 = 0 unsafe; falta query cruzada) | Security Lead | 🟨 | Query cruzada mostra N>0 OU linter aponta tabela sem RLS | Query cruzada = 0 em todas tabelas + linter verde | `evidence/P0-01-rls/{investigation.md,before,after}.sql` |
 | P0-10 | Critical | Security Control | Segredos em logs | — | False Positive (pendente 24h) | Security Lead | ⬜ | Grep em logs mostra N hits de token/service_role | Grep = 0 em 24h + scanner CI verde | `evidence/P0-10-secrets/{before,after}.md` |
 | P0-04 | Critical | Security Control | Auth / MFA / step-up | P0-01 | Needs Investigation | Security Lead | ⬜ | e2e reproduz ação crítica sem MFA válido | Suite e2e 100% verde em CI (link do run) | `evidence/P0-04-auth-mfa/discovery.md` |
 | P0-05 | High | Reliability Control | Escrita duplicada em jobs | P0-01, P0-04 | Needs Investigation | Reliability Lead | ⬜ | Reenvio 10× produz N>1 execuções materializadas | Reenvio 10× produz exatamente 1 execução | `evidence/P0-05-idempotency/discovery.md` |
