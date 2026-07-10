@@ -119,11 +119,7 @@ Deno.serve(async (req) => {
     tenantB: tenantBPassword as string,
   };
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  );
+  const supabase = svcClient;
 
   const audit: Array<Record<string, unknown>> = [];
   const results: Record<string, { id: string; user_id: string; email: string; created: { user: boolean; tenant: boolean; role: boolean } }> = {} as never;
