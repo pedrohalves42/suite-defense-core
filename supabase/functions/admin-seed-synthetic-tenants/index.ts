@@ -82,8 +82,10 @@ Deno.serve(async (req) => {
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
   const expected = Deno.env.get("SEED_ADMIN_TOKEN");
+  const oneshot = Deno.env.get("SEED_ONESHOT_TOKEN");
   const provided = req.headers.get("x-seed-token");
   let authorized = !!(expected && provided && provided === expected);
+  if (!authorized && oneshot && provided === oneshot) authorized = true;
   if (!authorized) {
     const authz = req.headers.get("authorization") ?? "";
     const bearer = authz.toLowerCase().startsWith("bearer ") ? authz.slice(7) : null;
@@ -100,30 +102,7 @@ Deno.serve(async (req) => {
       }
     }
   }
-  if (!authorized) {
-    const authz = req.headers.get("authorization") ?? "";
-    const bearer = authz.toLowerCase().startsWith("bearer ") ? authz.slice(7) : null;
-    let dbg_user_id: string | null = null;
-    let dbg_get_user_err: string | null = null;
-    if (bearer) {
-      const { data: uData, error: uErr } = await svcClient.auth.getUser(bearer);
-      dbg_user_id = uData?.user?.id ?? null;
-      dbg_get_user_err = uErr?.message ?? null;
-    }
-    return json(401, {
-      error: "unauthorized",
-      debug: {
-        has_seed_token_header: !!provided,
-        has_expected_seed_token_env: !!expected,
-        has_authorization_header: !!authz,
-        authorization_len: authz.length,
-        has_bearer: !!bearer,
-        bearer_len: bearer?.length ?? 0,
-        resolved_user_id: dbg_user_id,
-        get_user_error: dbg_get_user_err,
-      },
-    });
-  }
+  if (!authorized) return json(401, { error: "unauthorized" });
 
   // Body — passwords may come from the caller OR from SPRINT1_TENANT_*_PASSWORD
   // secrets. Never echoed back, never logged.
