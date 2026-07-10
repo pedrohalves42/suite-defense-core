@@ -23,16 +23,23 @@ spec ao rodar em CI/local com os secrets sintéticos populados.
 
 1. **Rodar o seed** (uma vez, contra o backend gerenciado):
 
+   Pré-requisito: `ALLOW_SYNTHETIC_SEED=true` no environment da função
+   (guarda contra execução acidental em produção). Senhas são
+   fornecidas pelo caller no body — **nunca voltam na resposta**.
+
    ```bash
    curl -X POST \
      "$SUPABASE_URL/functions/v1/admin-seed-synthetic-tenants" \
      -H "x-seed-token: $SEED_ADMIN_TOKEN" \
-     -H "apikey: $SUPABASE_ANON_KEY"
+     -H "apikey: $SUPABASE_ANON_KEY" \
+     -H "content-type: application/json" \
+     -d "{\"tenantAPassword\":\"$SPRINT1_TENANT_A_PASSWORD\",\"tenantBPassword\":\"$SPRINT1_TENANT_B_PASSWORD\"}"
    ```
 
-   Copiar `tenantA.id/email/password` e `tenantB.id/email/password` para
-   `.env.test` (ver `e2e/.env.test.example`) como
-   `TEST_TENANT_A_* / TEST_TENANT_B_*`.
+   A resposta traz apenas `id` + `email` + flags `created.*` (idempotência).
+   Copiar esses `id`/`email` para `.env.test` como `TEST_TENANT_A_* / TEST_TENANT_B_*`;
+   as senhas em `.env.test` são as mesmas que você acabou de enviar no body
+   (armazenadas como secrets `SPRINT1_TENANT_A_PASSWORD` / `_B_PASSWORD`).
 
 2. **Executar o spec**:
 
