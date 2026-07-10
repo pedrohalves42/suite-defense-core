@@ -135,11 +135,14 @@ Deno.serve(async (req) => {
         // deno-lint-ignore no-explicit-any
         .select("*", { count: "exact", head: true } as any)
         .eq("tenant_id", s.otherTenant);
+      const errText = error
+        ? (error.message || error.details || error.hint || error.code || JSON.stringify(error))
+        : null;
       results.push({
         scenario: s.name,
         table,
         leaked_rows: error ? null : (count ?? 0),
-        error: error?.message ?? null,
+        error: errText,
       });
     }
   }
