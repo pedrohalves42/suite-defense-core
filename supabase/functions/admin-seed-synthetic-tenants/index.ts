@@ -100,7 +100,30 @@ Deno.serve(async (req) => {
       }
     }
   }
-  if (!authorized) return json(401, { error: "unauthorized" });
+  if (!authorized) {
+    const authz = req.headers.get("authorization") ?? "";
+    const bearer = authz.toLowerCase().startsWith("bearer ") ? authz.slice(7) : null;
+    let dbg_user_id: string | null = null;
+    let dbg_get_user_err: string | null = null;
+    if (bearer) {
+      const { data: uData, error: uErr } = await svcClient.auth.getUser(bearer);
+      dbg_user_id = uData?.user?.id ?? null;
+      dbg_get_user_err = uErr?.message ?? null;
+    }
+    return json(401, {
+      error: "unauthorized",
+      debug: {
+        has_seed_token_header: !!provided,
+        has_expected_seed_token_env: !!expected,
+        has_authorization_header: !!authz,
+        authorization_len: authz.length,
+        has_bearer: !!bearer,
+        bearer_len: bearer?.length ?? 0,
+        resolved_user_id: dbg_user_id,
+        get_user_error: dbg_get_user_err,
+      },
+    });
+  }
 
   // Body — passwords may come from the caller OR from SPRINT1_TENANT_*_PASSWORD
   // secrets. Never echoed back, never logged.
