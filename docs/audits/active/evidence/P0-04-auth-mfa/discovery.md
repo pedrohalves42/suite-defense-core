@@ -7,11 +7,15 @@
 
 ## Classificação
 
-**Needs Investigation.**
+**Confirmed (Sprint 1A · 2026-07-10).**
 
-Existe superfície de step-up no frontend e política de MFA por tenant,
-mas a **enforcement server-side (AAL2 nas RPCs/edge functions
-sensíveis)** não foi comprovada nesta janela read-only.
+A investigação de Sprint 1A confirmou o gap. O único ponto server-side
+com "step-up enforcement" (`supabase/functions/api-gateway/handlers/honeypot.ts`,
+2 handlers) baseia a decisão em um header HTTP arbitrário
+(`X-Step-Up-Verified: true`) — bypass trivial via `curl`. Todos os
+demais endpoints destrutivos enumerados em `before.md` não têm
+qualquer checagem de AAL2/step-up. Detalhes completos, PoC e lista
+de endpoints em `./before.md`. Correção runtime em Frente 2.
 
 ## Evidência coletada
 
