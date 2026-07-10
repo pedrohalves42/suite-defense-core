@@ -7,10 +7,9 @@ Rule: nada fecha sem par de evidências **Antes / Depois** anexado.
 
 **Fase atual:** `Hardening Execution — Sprint 1` (ver
 `hardening-execution-sprint-1-kickoff.md`). Sprint 0 Discovery ✅ COMPLETE.
-Item ativo: **P0-01** em `Investigation` (confidence **95% False Positive**)
-— probe estrutural cobre 44/44 tabelas (RLS + `tenant_id` + policies).
-Bloqueador único: rodar `tests/security/cross-tenant-rls.spec.ts` em CI
-com dois usuários sintéticos. Bundle: `evidence/P0-01-rls/README.md`.
+Sprint 1 até aqui: **P0-02 ✅ Closed** (heartbeat) e **P0-01 ✅ Closed**
+(RLS · False Positive — 88/88 probes limpos em `evidence/P0-01-rls/report.json`).
+Próximos alvos desbloqueados: **P0-04**, **P0-05**, **P0-09**.
 
 Este board rastreia execução, dependências, tipo do trabalho e prova
 exigida para destravar o piloto. É consumido por:
@@ -60,7 +59,7 @@ Regra: **não iniciar um item** enquanto suas dependências não estiverem `In R
 
 | ID | Prio | Tipo | Título | Depende | Discovery | Owner | Status | Evidência ANTES | Evidência DEPOIS | Local |
 | --- | :-: | --- | --- | :-: | :-: | --- | :-: | --- | --- | --- |
-| P0-01 | Critical | Security Control | RLS cross-tenant | — | Investigation · 95% False Positive (H1/H2/H3 = 0 unsafe; estrutural 44/44 OK; falta run funcional em CI) | Security Lead | 🟨 | `evidence/P0-01-rls/before-structural.txt` (44/44 RLS+tenant_id+policies) | `report.json` + `after.sql` gerados por `tests/security/cross-tenant-rls.spec.ts` = 0 leaks em 88 probes | `evidence/P0-01-rls/README.md` |
+| P0-01 | Critical | Security Control | RLS cross-tenant | — | **False Positive · Closed** (2026-07-10) | Security Lead | ✅ | `evidence/P0-01-rls/before-structural.txt` (44/44 RLS+tenant_id+policies) | `evidence/P0-01-rls/report.json` + `after.sql` — 88 probes, 0 leaked, 82 RLS-clean, 6 grant-blocked (mais restritivo que RLS) | `evidence/P0-01-rls/closure.md` |
 | P0-10 | Critical | Security Control | Segredos em logs | — | False Positive (pendente 24h) | Security Lead | ⬜ | Grep em logs mostra N hits de token/service_role | Grep = 0 em 24h + scanner CI verde | `evidence/P0-10-secrets/{before,after}.md` |
 | P0-04 | Critical | Security Control | Auth / MFA / step-up | P0-01 | Needs Investigation | Security Lead | ⬜ | e2e reproduz ação crítica sem MFA válido | Suite e2e 100% verde em CI (link do run) | `evidence/P0-04-auth-mfa/discovery.md` |
 | P0-05 | High | Reliability Control | Escrita duplicada em jobs | P0-01, P0-04 | Needs Investigation | Reliability Lead | ⬜ | Reenvio 10× produz N>1 execuções materializadas | Reenvio 10× produz exatamente 1 execução | `evidence/P0-05-idempotency/discovery.md` |
@@ -71,7 +70,7 @@ Regra: **não iniciar um item** enquanto suas dependências não estiverem `In R
 | P0-07 | Medium | Security Control | Signing / integridade do installer | — | Needs Investigation | Security Lead | ⬜ | Discovery: verificar se existe manifest/assinatura/verificação hoje | Manifest HMAC-SHA256 verificado; hash alterado → recusa + `audit_log` | `evidence/P0-07-installer/discovery.md` |
 | P0-09 | Medium | Operational Readiness | Kill-switch por tenant | P0-01 | Needs Investigation | Ops Lead | ⬜ | Nenhuma flag por tenant capaz de parar ingestão/jobs em <60s | Flag ativada desativa ingestão + jobs em <60s medidos + `audit_log` | `evidence/P0-09-kill-switch/discovery.md` |
 
-Total P0: **9 abertos / 1 fechados / 10 classificados no Discovery** (Sprint 1 Day 1: P0-02 Closed; P0-01 em Investigation 95% False Positive aguardando run funcional; demais Needs Investigation / Confirmed) — RC-2.1 e piloto **BLOQUEADOS**.
+Total P0: **8 abertos / 2 fechados / 10 classificados no Discovery** (Sprint 1: P0-02 e P0-01 Closed; P0-04, P0-05 e P0-09 destravados) — RC-2.1 e piloto **BLOQUEADOS** até restante dos P0 fecharem.
 
 ---
 

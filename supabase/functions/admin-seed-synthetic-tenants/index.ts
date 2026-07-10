@@ -73,38 +73,55 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Auth guard — shared token.
-  const expected = Deno.env.get("SEED_ADMIN_TOKEN");
-  const provided = req.headers.get("x-seed-token");
-  if (!expected || !provided || provided !== expected) {
-    return json(401, { error: "unauthorized" });
-  }
-
-  // Body — passwords come from the caller, never echoed back.
-  let body: Record<string, unknown>;
-  try {
-    body = await req.json();
-  } catch {
-    return json(400, { error: "invalid_json_body" });
-  }
-  const tenantAPassword = body.tenantAPassword;
-  const tenantBPassword = body.tenantBPassword;
-  if (!isValidPassword(tenantAPassword) || !isValidPassword(tenantBPassword)) {
-    return json(400, {
-      error: "invalid_passwords",
-      hint: "Both tenantAPassword and tenantBPassword must be strings of length 16..256.",
-    });
-  }
-  const passwords: Record<SeedSpec["key"], string> = {
-    tenantA: tenantAPassword,
-    tenantB: tenantBPassword,
-  };
-
-  const supabase = createClient(
+  // Auth guard — accept EITHER of:
+  //   (a) X-Seed-Token header matching SEED_ADMIN_TOKEN secret (operator/CI path)
+  //   (b) A Bearer JWT belonging to a super_admin user (agent/preview path)
+  const svcClient = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
+  const expected = Deno.env.get("SEED_ADMIN_TOKEN");
+  const oneshot = Deno.env.get("SEED_ONESHOT_TOKEN");
+  const provided = req.headers.get("x-seed-token");
+  let authorized = !!(expected && provided && provided === expected);
+  if (!authorized && oneshot && provided === oneshot) authorized = true;
+  if (!authorized) {
+    const authz = req.headers.get("authorization") ?? "";
+    const bearer = authz.toLowerCase().startsWith("bearer ") ? authz.slice(7) : null;
+    if (bearer) {
+      const { data: userData } = await svcClient.auth.getUser(bearer);
+      if (userData?.user) {
+        const { data: role } = await svcClient
+          .from("user_roles")
+          .select("id")
+          .eq("user_id", userData.user.id)
+          .eq("role", "super_admin")
+          .maybeSingle();
+        if (role) authorized = true;
+      }
+    }
+  }
+  if (!authorized) return json(401, { error: "unauthorized" });
+
+  // Body — passwords may come from the caller OR from SPRINT1_TENANT_*_PASSWORD
+  // secrets. Never echoed back, never logged.
+  let body: Record<string, unknown> = {};
+  try { body = await req.json(); } catch { body = {}; }
+  const tenantAPassword = body.tenantAPassword ?? Deno.env.get("SPRINT1_TENANT_A_PASSWORD");
+  const tenantBPassword = body.tenantBPassword ?? Deno.env.get("SPRINT1_TENANT_B_PASSWORD");
+  if (!isValidPassword(tenantAPassword) || !isValidPassword(tenantBPassword)) {
+    return json(400, {
+      error: "invalid_passwords",
+      hint: "Provide tenantAPassword/tenantBPassword in body OR set SPRINT1_TENANT_A_PASSWORD / SPRINT1_TENANT_B_PASSWORD secrets (16..256 chars).",
+    });
+  }
+  const passwords: Record<SeedSpec["key"], string> = {
+    tenantA: tenantAPassword as string,
+    tenantB: tenantBPassword as string,
+  };
+
+  const supabase = svcClient;
 
   const audit: Array<Record<string, unknown>> = [];
   const results: Record<string, { id: string; user_id: string; email: string; created: { user: boolean; tenant: boolean; role: boolean } }> = {} as never;
@@ -157,15 +174,26 @@ Deno.serve(async (req) => {
       tenantCreated = true;
     }
 
-    // 3. Role binding (idempotent)
+    // 3. Role binding (idempotent). The public.user_roles table has a UNIQUE
+    //    constraint on (user_id, role), so the same user cannot hold the same
+    //    role in two tenants. Reuse the existing binding and — if it points at
+    //    a different tenant — repoint it to our synthetic tenant.
     const { data: existingRole } = await supabase
       .from("user_roles")
-      .select("id")
+      .select("id, tenant_id")
       .eq("user_id", userId)
-      .eq("tenant_id", tenantId)
       .eq("role", "admin")
       .maybeSingle();
-    if (!existingRole) {
+    if (existingRole) {
+      if (existingRole.tenant_id !== tenantId) {
+        const { error: uErr } = await supabase
+          .from("user_roles")
+          .update({ tenant_id: tenantId })
+          .eq("id", existingRole.id);
+        if (uErr) return json(500, { step: "user_roles_update", key: spec.key, error: uErr.message });
+        roleCreated = true;
+      }
+    } else {
       const { error: rErr } = await supabase
         .from("user_roles")
         .insert({ user_id: userId, tenant_id: tenantId, role: "admin" });

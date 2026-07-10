@@ -1,0 +1,541 @@
+{
+    "generated_at": "2026-07-10T12:22:38.543Z",
+    "executed_by": "admin-run-cross-tenant-probe",
+    "tenant_a": "9860347a-649a-4f31-85a4-35177e52e7b9",
+    "tenant_b": "139102fa-5af3-4580-b306-709be6275c95",
+    "total_probes": 88,
+    "clean": 82,
+    "leaked": 0,
+    "errored": 6,
+    "leaks": [],
+    "results": [
+        {
+            "scenario": "A_sees_B",
+            "table": "agents",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "tasks",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "system_alerts",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "jobs",
+            "leaked_rows": null,
+            "error": "{\"message\":\"\"}"
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "ai_insights",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "agent_web_activity",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "agent_disk_metrics",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "agent_network_info",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "agent_builds",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "agent_evidence_logs",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "agent_rollback_events",
+            "leaked_rows": null,
+            "error": "{\"message\":\"\"}"
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "agent_safe_mode_events",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "enrollment_keys",
+            "leaked_rows": null,
+            "error": "{\"message\":\"\"}"
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "security_policies",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "governance_reports",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "playbook_executions",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "scheduled_jobs",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "vuln_findings",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "software_inventory",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "user_roles",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "tenant_features",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "tenant_action_policies",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "blocked_websites",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "ai_action_logs",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "api_keys",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "api_request_logs",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "compliance_policies",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "failed_login_attempts",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "quarantined_files",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "report_executions",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "reports",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "security_logs",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "soc2_controls",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "soc2_criteria",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "tenant_settings",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "tenant_subscriptions",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "vendor_risk_registry",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "virus_scans",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "anomaly_events",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "audit_reason_trees",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "ai_action_validations",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "antivirus_status",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "custom_trials",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "A_sees_B",
+            "table": "policy_assignments",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "agents",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "tasks",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "system_alerts",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "jobs",
+            "leaked_rows": null,
+            "error": "{\"message\":\"\"}"
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "ai_insights",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "agent_web_activity",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "agent_disk_metrics",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "agent_network_info",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "agent_builds",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "agent_evidence_logs",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "agent_rollback_events",
+            "leaked_rows": null,
+            "error": "{\"message\":\"\"}"
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "agent_safe_mode_events",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "enrollment_keys",
+            "leaked_rows": null,
+            "error": "{\"message\":\"\"}"
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "security_policies",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "governance_reports",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "playbook_executions",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "scheduled_jobs",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "vuln_findings",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "software_inventory",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "user_roles",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "tenant_features",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "tenant_action_policies",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "blocked_websites",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "ai_action_logs",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "api_keys",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "api_request_logs",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "compliance_policies",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "failed_login_attempts",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "quarantined_files",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "report_executions",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "reports",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "security_logs",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "soc2_controls",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "soc2_criteria",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "tenant_settings",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "tenant_subscriptions",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "vendor_risk_registry",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "virus_scans",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "anomaly_events",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "audit_reason_trees",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "ai_action_validations",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "antivirus_status",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "custom_trials",
+            "leaked_rows": 0,
+            "error": null
+        },
+        {
+            "scenario": "B_sees_A",
+            "table": "policy_assignments",
+            "leaked_rows": 0,
+            "error": null
+        }
+    ]
+}
