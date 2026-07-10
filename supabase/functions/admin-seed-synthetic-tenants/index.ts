@@ -174,15 +174,26 @@ Deno.serve(async (req) => {
       tenantCreated = true;
     }
 
-    // 3. Role binding (idempotent)
+    // 3. Role binding (idempotent). The public.user_roles table has a UNIQUE
+    //    constraint on (user_id, role), so the same user cannot hold the same
+    //    role in two tenants. Reuse the existing binding and — if it points at
+    //    a different tenant — repoint it to our synthetic tenant.
     const { data: existingRole } = await supabase
       .from("user_roles")
-      .select("id")
+      .select("id, tenant_id")
       .eq("user_id", userId)
-      .eq("tenant_id", tenantId)
       .eq("role", "admin")
       .maybeSingle();
-    if (!existingRole) {
+    if (existingRole) {
+      if (existingRole.tenant_id !== tenantId) {
+        const { error: uErr } = await supabase
+          .from("user_roles")
+          .update({ tenant_id: tenantId })
+          .eq("id", existingRole.id);
+        if (uErr) return json(500, { step: "user_roles_update", key: spec.key, error: uErr.message });
+        roleCreated = true;
+      }
+    } else {
       const { error: rErr } = await supabase
         .from("user_roles")
         .insert({ user_id: userId, tenant_id: tenantId, role: "admin" });
