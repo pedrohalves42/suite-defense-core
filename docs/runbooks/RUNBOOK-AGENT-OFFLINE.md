@@ -135,6 +135,7 @@ ORDER BY created_at DESC;
 
 ## Historico
 
-| Versao | Data | Autor | Alteracoes |
-|--------|------|-------|------------|
-| 1.0 | 2026-03-31 | CyberShield Ops | Versao inicial |
+| Versao | Data       | Autor            | Alteracoes                                                                                          |
+|--------|------------|------------------|-----------------------------------------------------------------------------------------------------|
+| 1.0    | 2026-03-31 | CyberShield Ops  | Versao inicial                                                                                      |
+| 1.1    | 2026-07-10 | Reliability Prog | P0-02: thresholds canonicos, `system_alerts` (nao `agent_health_alerts`), alerta curto 3min + longo 48h |
