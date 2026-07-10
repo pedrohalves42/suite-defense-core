@@ -70,7 +70,7 @@ Regra: **não iniciar um item** enquanto suas dependências não estiverem `In R
 | P0-07 | Medium | Security Control | Signing / integridade do installer | — | Needs Investigation | Security Lead | ⬜ | Discovery: verificar se existe manifest/assinatura/verificação hoje | Manifest HMAC-SHA256 verificado; hash alterado → recusa + `audit_log` | `evidence/P0-07-installer/discovery.md` |
 | P0-09 | Medium | Operational Readiness | Kill-switch por tenant | P0-01 | Needs Investigation | Ops Lead | ⬜ | Nenhuma flag por tenant capaz de parar ingestão/jobs em <60s | Flag ativada desativa ingestão + jobs em <60s medidos + `audit_log` | `evidence/P0-09-kill-switch/discovery.md` |
 
-Total P0: **9 abertos / 1 fechados / 10 classificados no Discovery** (Sprint 1 Day 1: P0-02 Closed; P0-01 em Investigation 95% False Positive aguardando run funcional; demais Needs Investigation / Confirmed) — RC-2.1 e piloto **BLOQUEADOS**.
+Total P0: **8 abertos / 2 fechados / 10 classificados no Discovery** (Sprint 1: P0-02 e P0-01 Closed; P0-04, P0-05 e P0-09 destravados) — RC-2.1 e piloto **BLOQUEADOS** até restante dos P0 fecharem.
 
 ---
 
