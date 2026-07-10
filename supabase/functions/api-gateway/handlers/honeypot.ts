@@ -33,11 +33,13 @@ export async function handleActivateAgentHoneypot(
   const flippedEnabled = await isKillSwitchEnabled(supabase, 'HONEYPOT_FLIPPED_ENABLED', tenantId);
   if (!flippedEnabled) return errRes('Honeypot flipping is currently disabled', 503);
 
-  // === STEP-UP AUTH ===
-  const stepUpVerified = ctx?.req?.headers.get('X-Step-Up-Verified');
-  if (stepUpVerified !== 'true') {
-    return errRes('Step-up authentication required for honeypot activation', 403, { code: 'STEP_UP_REQUIRED' });
-  }
+  // === STEP-UP AUTH (P0-04: server-side AAL2 enforcement) ===
+  // NOTE: `X-Step-Up-Verified` header is intentionally ignored. Enforcement
+  // is based exclusively on JWT `aal`/`amr` via requireAAL2().
+  if (!ctx?.req) return errRes('Request context required', 500);
+  const stepUp = await requireAAL2({ req: ctx.req, supabase });
+  if (!stepUp.ok) return errRes(stepUp.error, stepUp.status, { code: stepUp.code });
+
 
   const agentId = payload.agent_id as string;
   const reason = (payload.reason as string)?.trim();
