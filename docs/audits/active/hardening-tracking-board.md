@@ -7,10 +7,9 @@ Rule: nada fecha sem par de evidências **Antes / Depois** anexado.
 
 **Fase atual:** `Hardening Execution — Sprint 1` (ver
 `hardening-execution-sprint-1-kickoff.md`). Sprint 0 Discovery ✅ COMPLETE.
-Item ativo: **P0-01** em `Investigation` (confidence **95% False Positive**)
-— probe estrutural cobre 44/44 tabelas (RLS + `tenant_id` + policies).
-Bloqueador único: rodar `tests/security/cross-tenant-rls.spec.ts` em CI
-com dois usuários sintéticos. Bundle: `evidence/P0-01-rls/README.md`.
+Sprint 1 até aqui: **P0-02 ✅ Closed** (heartbeat) e **P0-01 ✅ Closed**
+(RLS · False Positive — 88/88 probes limpos em `evidence/P0-01-rls/report.json`).
+Próximos alvos desbloqueados: **P0-04**, **P0-05**, **P0-09**.
 
 Este board rastreia execução, dependências, tipo do trabalho e prova
 exigida para destravar o piloto. É consumido por:
