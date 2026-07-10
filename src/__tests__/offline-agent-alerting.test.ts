@@ -31,7 +31,7 @@ function detectLongOfflineAgents(
   existingAlerts: ExistingAlert[],
   now: Date = new Date()
 ): Agent[] {
-  const threshold48h = 48 * 60 * 60 * 1000;
+  const threshold48h = ALERT_LONG_THRESHOLD_HOURS * 60 * 60 * 1000;
 
   return agents.filter(agent => {
     if (agent.status !== 'inactive') return false;
