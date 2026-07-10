@@ -49850,6 +49850,7 @@ export type Database = {
       aggregate_honeypot_hourly: { Args: never; Returns: number }
       aggregate_honeypot_hourly_stats: { Args: never; Returns: undefined }
       alert_long_offline_agents: { Args: never; Returns: Json }
+      alert_short_offline_agents: { Args: never; Returns: Json }
       apply_agent_isolation: {
         Args: { p_agent_id: string; p_reason?: string }
         Returns: boolean
