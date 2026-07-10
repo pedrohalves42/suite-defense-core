@@ -60,7 +60,7 @@ Regra: **não iniciar um item** enquanto suas dependências não estiverem `In R
 
 | ID | Prio | Tipo | Título | Depende | Discovery | Owner | Status | Evidência ANTES | Evidência DEPOIS | Local |
 | --- | :-: | --- | --- | :-: | :-: | --- | :-: | --- | --- | --- |
-| P0-01 | Critical | Security Control | RLS cross-tenant | — | Investigation (H1/H2/H3 = 0 unsafe; falta query cruzada) | Security Lead | 🟨 | Query cruzada mostra N>0 OU linter aponta tabela sem RLS | Query cruzada = 0 em todas tabelas + linter verde | `evidence/P0-01-rls/{investigation.md,before,after}.sql` |
+| P0-01 | Critical | Security Control | RLS cross-tenant | — | Investigation · 95% False Positive (H1/H2/H3 = 0 unsafe; estrutural 44/44 OK; falta run funcional em CI) | Security Lead | 🟨 | `evidence/P0-01-rls/before-structural.txt` (44/44 RLS+tenant_id+policies) | `report.json` + `after.sql` gerados por `tests/security/cross-tenant-rls.spec.ts` = 0 leaks em 88 probes | `evidence/P0-01-rls/README.md` |
 | P0-10 | Critical | Security Control | Segredos em logs | — | False Positive (pendente 24h) | Security Lead | ⬜ | Grep em logs mostra N hits de token/service_role | Grep = 0 em 24h + scanner CI verde | `evidence/P0-10-secrets/{before,after}.md` |
 | P0-04 | Critical | Security Control | Auth / MFA / step-up | P0-01 | Needs Investigation | Security Lead | ⬜ | e2e reproduz ação crítica sem MFA válido | Suite e2e 100% verde em CI (link do run) | `evidence/P0-04-auth-mfa/discovery.md` |
 | P0-05 | High | Reliability Control | Escrita duplicada em jobs | P0-01, P0-04 | Needs Investigation | Reliability Lead | ⬜ | Reenvio 10× produz N>1 execuções materializadas | Reenvio 10× produz exatamente 1 execução | `evidence/P0-05-idempotency/discovery.md` |
