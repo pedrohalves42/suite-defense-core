@@ -6,6 +6,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { hashToken } from '../../_shared/token-hash.ts';
 import { isKillSwitchEnabled } from '../../_shared/feature-flags.ts';
 import { logger } from '../../_shared/logger.ts';
+import { requireAAL2 } from '../../_shared/auth/require-aal2.ts';
 import type { HandlerContext } from './admin.ts';
 
 /** 24 hour cooldown between state changes */
