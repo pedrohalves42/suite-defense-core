@@ -130,3 +130,93 @@ describe('Offline Agent Detection', () => {
     expect(result[0].id).toBe('agent-3');
   });
 });
+
+// ---------------------------------------------------------------------------
+// P0-02: Short-offline detection (alert <= 3 * heartbeat_interval).
+// Mirrors supabase migration `alert_short_offline_agents()` behavior.
+// ---------------------------------------------------------------------------
+
+function detectShortOfflineAgents(
+  agents: Agent[],
+  existingAlerts: ExistingAlert[],
+  now: Date = new Date()
+): Agent[] {
+  const shortMs = ALERT_SHORT_THRESHOLD_SECONDS * 1000;
+  const longMs = ALERT_LONG_THRESHOLD_HOURS * 60 * 60 * 1000;
+
+  return agents.filter(agent => {
+    if (agent.status !== 'offline') return false;
+    if (!agent.lastHeartbeat) return false;
+
+    const offline = now.getTime() - agent.lastHeartbeat.getTime();
+    // In the short window: >= shortMs and < longMs (long alert takes over past 48h)
+    if (offline < shortMs || offline >= longMs) return false;
+
+    const dup = existingAlerts.some(
+      a => a.agentId === agent.id && a.alertType === 'agent_short_offline' && !a.resolved
+    );
+    return !dup;
+  });
+}
+
+describe('P0-02 · Short-offline detection', () => {
+  const now = new Date('2026-07-10T12:00:00Z');
+  const mk = (id: string, hbSecondsAgo: number, status = 'offline'): Agent => ({
+    id,
+    agentName: `agent-${id}`,
+    tenantId: 'tenant-A',
+    status,
+    lastHeartbeat: new Date(now.getTime() - hbSecondsAgo * 1000),
+  });
+
+  it('does NOT alert for a healthy heartbeat (<3x interval)', () => {
+    const res = detectShortOfflineAgents([mk('a', 60, 'active')], [], now);
+    expect(res).toHaveLength(0);
+  });
+
+  it('does NOT alert exactly at threshold - 1 second', () => {
+    const res = detectShortOfflineAgents(
+      [mk('a', ALERT_SHORT_THRESHOLD_SECONDS - 1)],
+      [],
+      now
+    );
+    expect(res).toHaveLength(0);
+  });
+
+  it('DOES alert when offline > 3x interval', () => {
+    const res = detectShortOfflineAgents(
+      [mk('a', ALERT_SHORT_THRESHOLD_SECONDS + 60)],
+      [],
+      now
+    );
+    expect(res).toHaveLength(1);
+    expect(res[0].id).toBe('a');
+  });
+
+  it('dedups when an unresolved short-alert already exists', () => {
+    const res = detectShortOfflineAgents(
+      [mk('a', ALERT_SHORT_THRESHOLD_SECONDS + 60)],
+      [{ agentId: 'a', alertType: 'agent_short_offline', resolved: false }],
+      now
+    );
+    expect(res).toHaveLength(0);
+  });
+
+  it('re-alerts after resolved (heartbeat recovered then lost again)', () => {
+    const res = detectShortOfflineAgents(
+      [mk('a', ALERT_SHORT_THRESHOLD_SECONDS + 60)],
+      [{ agentId: 'a', alertType: 'agent_short_offline', resolved: true }],
+      now
+    );
+    expect(res).toHaveLength(1);
+  });
+
+  it('yields to long-offline alert past 48h', () => {
+    const res = detectShortOfflineAgents(
+      [mk('a', ALERT_LONG_THRESHOLD_HOURS * 3600 + 10)],
+      [],
+      now
+    );
+    expect(res).toHaveLength(0);
+  });
+});
