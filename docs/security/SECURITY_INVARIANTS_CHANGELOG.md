@@ -24,6 +24,21 @@ Um breaking change ocorre quando:
 
 ## Histórico de Versões
 
+### [1.5.0] - 2026-07-10
+
+#### Added
+- **P0-02 Heartbeat alignment** — novo invariante `tools/tests/assert_heartbeat_thresholds.sql`.
+  Enforça: `auto_mark_agents_inactive()` e `alert_short_offline_agents()` são
+  `SECURITY DEFINER` com `search_path` explícito; `alert_short_offline_agents()`
+  referencia `system_alerts` e usa threshold `3 minutes` (3× o intervalo de
+  heartbeat canônico de 60s). Fecha o gap classificado em Sprint 0 Day 2
+  (código = 10min, alerta = 48h, requisito ≤ 3× heartbeat).
+- Constantes canônicas em `supabase/functions/_shared/agent-lifecycle/heartbeat-thresholds.ts`.
+- Runbook `RUNBOOK-AGENT-OFFLINE.md` v1.1 — thresholds canônicos, referência
+  correta a `system_alerts` (a tabela `agent_health_alerts` nunca existiu).
+
+
+
 ### [1.4.0] - 2026-01-31
 
 #### Added

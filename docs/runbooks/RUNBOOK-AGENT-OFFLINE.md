@@ -8,10 +8,24 @@
 
 ## Sintomas
 
-- Agente nao reporta heartbeat ha mais de 2x o intervalo configurado
-- Status do agente como `offline` ou `stale` no dashboard
-- Alertas de `agent_health_alerts` disparados
+- Agente sem heartbeat ha mais de 3 minutos (3x o intervalo canonico de 60s)
+- Status do agente como `offline` no dashboard
+- Alerta `system_alerts.alert_type = 'agent_short_offline'` (severity medium)
+- Escalacao para `alert_type = 'agent_long_offline'` (severity high) apos 48h
 - Jobs pendentes acumulando para o agente
+
+---
+
+## Thresholds Canonicos (P0-02)
+
+| Constante                       | Valor | Fonte                                                                                      |
+|---------------------------------|-------|--------------------------------------------------------------------------------------------|
+| `HEARTBEAT_INTERVAL_SECONDS`    | 60    | `supabase/functions/_shared/agent-lifecycle/heartbeat-thresholds.ts`                       |
+| `OFFLINE_THRESHOLD_SECONDS`     | 180   | `auto_mark_agents_inactive()` (cron `auto-mark-inactive-1m`)                               |
+| `ALERT_SHORT_THRESHOLD_SECONDS` | 180   | `alert_short_offline_agents()` (cron `alert-short-offline-1m`, severity medium)            |
+| `ALERT_LONG_THRESHOLD_HOURS`    | 48    | `alert_long_offline_agents()` (severity high, escalacao)                                   |
+
+Regra: `alert_short_threshold = 3 * heartbeat_interval`. Qualquer divergencia entre codigo e este runbook deve ser tratada como defeito.
 
 ---
 
@@ -121,6 +135,7 @@ ORDER BY created_at DESC;
 
 ## Historico
 
-| Versao | Data | Autor | Alteracoes |
-|--------|------|-------|------------|
-| 1.0 | 2026-03-31 | CyberShield Ops | Versao inicial |
+| Versao | Data       | Autor            | Alteracoes                                                                                          |
+|--------|------------|------------------|-----------------------------------------------------------------------------------------------------|
+| 1.0    | 2026-03-31 | CyberShield Ops  | Versao inicial                                                                                      |
+| 1.1    | 2026-07-10 | Reliability Prog | P0-02: thresholds canonicos, `system_alerts` (nao `agent_health_alerts`), alerta curto 3min + longo 48h |
