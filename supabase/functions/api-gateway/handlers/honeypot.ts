@@ -116,11 +116,12 @@ export async function handleRevertAgentHoneypot(
   const honeypotEnabled = await isKillSwitchEnabled(supabase, 'HONEYPOT_ENABLED', tenantId);
   if (!honeypotEnabled) return errRes('Honeypot feature is currently disabled', 503);
 
-  // === STEP-UP AUTH ===
-  const stepUpVerified = ctx?.req?.headers.get('X-Step-Up-Verified');
-  if (stepUpVerified !== 'true') {
-    return errRes('Step-up authentication required for honeypot reversion', 403, { code: 'STEP_UP_REQUIRED' });
-  }
+  // === STEP-UP AUTH (P0-04: server-side AAL2 enforcement) ===
+  // NOTE: `X-Step-Up-Verified` header is intentionally ignored.
+  if (!ctx?.req) return errRes('Request context required', 500);
+  const stepUp = await requireAAL2({ req: ctx.req, supabase });
+  if (!stepUp.ok) return errRes(stepUp.error, stepUp.status, { code: stepUp.code });
+
 
   const agentId = payload.agent_id as string;
   const reason = (payload.reason as string)?.trim();
