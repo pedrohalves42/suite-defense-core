@@ -1,8 +1,15 @@
 import { describe, it, expect } from 'vitest';
+import {
+  ALERT_LONG_THRESHOLD_HOURS,
+  ALERT_SHORT_THRESHOLD_SECONDS,
+} from '../../supabase/functions/_shared/agent-lifecycle/heartbeat-thresholds';
 
 /**
  * Offline Agent Alerting Logic Tests
- * Validates the detection of long-offline agents (>48h)
+ * Validates:
+ *   - long-offline detection (>= ALERT_LONG_THRESHOLD_HOURS, default 48h)
+ *   - short-offline detection (>= ALERT_SHORT_THRESHOLD_SECONDS, default 180s)
+ *     — P0-02 canonical fix: alert <= 3 * heartbeat_interval.
  */
 
 interface Agent {
