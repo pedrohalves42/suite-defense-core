@@ -4,14 +4,18 @@
  * One-shot idempotent seed of two synthetic tenants + users used by the
  * P0-01 cross-tenant RLS spec (tests/security/cross-tenant-rls.spec.ts).
  *
- * Guardrails:
+ * Guardrails (hardened per Sprint 1 review):
  *   - Protected by header X-Seed-Token (must equal SEED_ADMIN_TOKEN secret).
+ *   - Refuses to execute unless ALLOW_SYNTHETIC_SEED === "true" — prevents
+ *     accidental invocation in production.
  *   - Uses service_role internally.
- *   - Idempotent: safe to call repeatedly; existing rows are reused.
+ *   - Idempotent: existing auth users, tenants, and role bindings are reused;
+ *     never recreated.
+ *   - Passwords are supplied by the caller in the request body (Opção A).
+ *     They are NEVER echoed back in the response and NEVER logged.
  *   - Emails/slugs are stable and namespaced under `sprint1-*`.
- *   - Passwords come from SPRINT1_TENANT_A_PASSWORD / _B_PASSWORD secrets;
- *     they are echoed in the response only so the caller can populate
- *     .env.test — do not log them.
+ *   - Writes an audit_logs row (action=synthetic_seed) with executor IP,
+ *     timestamp, and a summary of what was created vs. reused.
  *
  * Not runtime: this function has no callers from the app. It exists solely
  * to seed the isolated test-only tenants required to close P0-01.
@@ -31,32 +35,70 @@ const json = (status: number, body: unknown) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const SEED = [
+type SeedSpec = {
+  key: "tenantA" | "tenantB";
+  slug: string;
+  name: string;
+  email: string;
+};
+
+const SEED: readonly SeedSpec[] = [
   {
     key: "tenantA",
     slug: "sprint1-tenant-a",
     name: "Sprint1 Tenant A (synthetic)",
     email: "sprint1-a@synthetic.local",
-    passwordEnv: "SPRINT1_TENANT_A_PASSWORD",
   },
   {
     key: "tenantB",
     slug: "sprint1-tenant-b",
     name: "Sprint1 Tenant B (synthetic)",
     email: "sprint1-b@synthetic.local",
-    passwordEnv: "SPRINT1_TENANT_B_PASSWORD",
   },
 ] as const;
+
+function isValidPassword(p: unknown): p is string {
+  return typeof p === "string" && p.length >= 16 && p.length <= 256;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
 
+  // Environment guard — must be explicitly enabled.
+  if (Deno.env.get("ALLOW_SYNTHETIC_SEED") !== "true") {
+    return json(403, {
+      error: "synthetic_seed_disabled",
+      hint: "Set ALLOW_SYNTHETIC_SEED=true in the function environment to enable this seed. Never enable in production.",
+    });
+  }
+
+  // Auth guard — shared token.
   const expected = Deno.env.get("SEED_ADMIN_TOKEN");
   const provided = req.headers.get("x-seed-token");
   if (!expected || !provided || provided !== expected) {
     return json(401, { error: "unauthorized" });
   }
+
+  // Body — passwords come from the caller, never echoed back.
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return json(400, { error: "invalid_json_body" });
+  }
+  const tenantAPassword = body.tenantAPassword;
+  const tenantBPassword = body.tenantBPassword;
+  if (!isValidPassword(tenantAPassword) || !isValidPassword(tenantBPassword)) {
+    return json(400, {
+      error: "invalid_passwords",
+      hint: "Both tenantAPassword and tenantBPassword must be strings of length 16..256.",
+    });
+  }
+  const passwords: Record<SeedSpec["key"], string> = {
+    tenantA: tenantAPassword,
+    tenantB: tenantBPassword,
+  };
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -64,30 +106,33 @@ Deno.serve(async (req) => {
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
 
-  const results: Record<string, unknown> = {};
+  const audit: Array<Record<string, unknown>> = [];
+  const results: Record<string, { id: string; user_id: string; email: string; created: { user: boolean; tenant: boolean; role: boolean } }> = {} as never;
 
   for (const spec of SEED) {
-    const password = Deno.env.get(spec.passwordEnv);
-    if (!password) return json(500, { error: `missing_secret:${spec.passwordEnv}` });
+    const password = passwords[spec.key];
+    let userCreated = false;
+    let tenantCreated = false;
+    let roleCreated = false;
 
-    // 1. Auth user (idempotent — reuse if exists)
+    // 1. Auth user (idempotent — reuse if exists; do NOT reset password)
     let userId: string | null = null;
-    const { data: created, error: createErr } = await supabase.auth.admin.createUser({
-      email: spec.email,
-      password,
-      email_confirm: true,
-      app_metadata: { synthetic: true, sprint: 1 },
-    });
-    if (createErr) {
-      // Already exists → look up
-      const { data: list } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
-      const found = list?.users.find((u) => u.email === spec.email);
-      if (!found) return json(500, { step: "auth", error: createErr.message });
-      userId = found.id;
-      // Force password to match current secret
-      await supabase.auth.admin.updateUserById(found.id, { password });
+    const { data: list } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
+    const existingUser = list?.users.find((u) => u.email === spec.email);
+    if (existingUser) {
+      userId = existingUser.id;
     } else {
-      userId = created.user!.id;
+      const { data: created, error: createErr } = await supabase.auth.admin.createUser({
+        email: spec.email,
+        password,
+        email_confirm: true,
+        app_metadata: { synthetic: true, sprint: 1 },
+      });
+      if (createErr || !created?.user) {
+        return json(500, { step: "auth", key: spec.key, error: createErr?.message ?? "create_failed" });
+      }
+      userId = created.user.id;
+      userCreated = true;
     }
 
     // 2. Tenant (idempotent by slug)
@@ -105,22 +150,31 @@ Deno.serve(async (req) => {
         .insert({ slug: spec.slug, name: spec.name, owner_user_id: userId })
         .select("id")
         .single();
-      if (tErr) return json(500, { step: "tenant", error: tErr.message });
+      if (tErr || !newTenant) {
+        return json(500, { step: "tenant", key: spec.key, error: tErr?.message ?? "insert_failed" });
+      }
       tenantId = newTenant.id;
+      tenantCreated = true;
     }
 
-    // 3. Role binding (unique on tenant_id+user_id)
-    const { error: rErr } = await supabase
+    // 3. Role binding (idempotent)
+    const { data: existingRole } = await supabase
       .from("user_roles")
-      .upsert(
-        { user_id: userId, tenant_id: tenantId, role: "admin" },
-        { onConflict: "tenant_id,user_id" },
-      );
-    if (rErr) return json(500, { step: "user_roles", error: rErr.message });
+      .select("id")
+      .eq("user_id", userId)
+      .eq("tenant_id", tenantId)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (!existingRole) {
+      const { error: rErr } = await supabase
+        .from("user_roles")
+        .insert({ user_id: userId, tenant_id: tenantId, role: "admin" });
+      if (rErr) return json(500, { step: "user_roles", key: spec.key, error: rErr.message });
+      roleCreated = true;
+    }
 
     // 4. Minimal seed row so the probe distinguishes
     //    "0 because RLS filtered" from "0 because empty".
-    //    Insert one system_alert (schema tolerant, minimal columns).
     await supabase.from("system_alerts").insert({
       tenant_id: tenantId,
       alert_type: "synthetic_seed",
@@ -130,13 +184,45 @@ Deno.serve(async (req) => {
       source: "seed",
     });
 
-    results[spec.key] = { id: tenantId, user_id: userId, email: spec.email, password };
+    results[spec.key] = {
+      id: tenantId,
+      user_id: userId,
+      email: spec.email,
+      created: { user: userCreated, tenant: tenantCreated, role: roleCreated },
+    };
+    audit.push({
+      key: spec.key,
+      slug: spec.slug,
+      tenant_id: tenantId,
+      user_id: userId,
+      created: { user: userCreated, tenant: tenantCreated, role: roleCreated },
+    });
   }
+
+  // Audit log — executor + timestamp + summary. Passwords are NEVER logged.
+  const executorIp =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown";
+  await supabase.from("audit_logs").insert({
+    action: "synthetic_seed",
+    resource_type: "tenants",
+    ip_address: executorIp,
+    user_agent: req.headers.get("user-agent") ?? null,
+    metadata: {
+      function: "admin-seed-synthetic-tenants",
+      sprint: 1,
+      p0_item: "P0-01",
+      results: audit,
+      generated_at: new Date().toISOString(),
+    },
+  });
 
   return json(200, {
     ok: true,
     generated_at: new Date().toISOString(),
-    note: "Populate .env.test with TEST_TENANT_A_* / TEST_TENANT_B_* using this response, then run scripts/security/test-cross-tenant-isolation.ts.",
-    ...results,
+    note: "Populate .env.test with TEST_TENANT_A_* / TEST_TENANT_B_* using the ids/emails below. Passwords are the ones you supplied in the request body — they are not echoed here by design.",
+    tenantA: { id: results.tenantA.id, email: results.tenantA.email, created: results.tenantA.created },
+    tenantB: { id: results.tenantB.id, email: results.tenantB.email, created: results.tenantB.created },
   });
 });
