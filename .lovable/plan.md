@@ -1,52 +1,65 @@
-# Relatório de Inventário — Banco de Dados + Edge Functions (pré-migração)
+# P0-05 / P0-03 — Prova de deduplicação e chave de idempotência de scan
 
-Objetivo: produzir um dossiê único, versionado no repositório, com tudo que é necessário para planejar a saída da plataforma atual com exatidão (schema, volume, segurança, auth, funções, storage, realtime, frontend, custo).
+## Bloqueio imediato
 
-## Estado atual verificado
+O banco hospedado está **pausado** agora. Toda consulta retorna timeout de conexão. Nada dos Passos 1–3 pode rodar até você reativar o backend nas configurações do projeto (Cloud). Assim que estiver ativo, a sequência abaixo é executada na ordem.
 
-- 79 diretórios em `supabase/functions` (inclui `_shared`).
-- 100 arquivos de migração em `supabase/migrations`.
-- `supabase/config.toml` declara 206 blocos `[functions.*]`; a maior parte dos crons está marcada como DISABLED por otimização de custo — os schedules ativos precisam ser extraídos um a um.
-- Tipos gerados (`src/integrations/supabase/types.ts`) têm ~52k linhas — fonte confiável de tabelas/colunas/enums/funções expostas caso o banco fique indisponível.
-- **Acesso direto ao banco está falhando agora** (`psql` sem credenciais válidas e as consultas de leitura retornam timeout de conexão). Nenhuma métrica de linhas, tamanho, RLS ou `hmac_secret` foi coletada ainda.
+## O que já está confirmado por leitura do repositório (sem banco)
 
-## Entregáveis
+Do arquivo de baseline `supabase/migrations/20260426000000_baseline.sql`:
 
-Um documento principal mais anexos de dados brutos:
+- `idx_jobs_dedup_active` — `UNIQUE (agent_id, type) WHERE status IN ('pending','queued','delivered')` (linha 46301).
+- `idx_exec_log_idempotency` — `UNIQUE (idempotency_key) WHERE idempotency_key IS NOT NULL` em `automation_execution_log` (linha 45328).
+- `job_executions_job_id_nonce_key` — `UNIQUE (job_id, nonce)` (linha 38512).
+- `public.virus_scans` **não tem** a coluna `scan_key` hoje (definição na linha 34944).
 
-```text
-docs/audits/active/inventory/
-├── README.md                     # relatório consolidado (seções 1–8 + checklist)
-├── db-schema.md                  # tabelas, colunas, PK/UK, FKs, índices, defaults, enums/checks
-├── db-volume.csv                 # linhas aproximadas + tamanho em disco por tabela
-├── db-security.md                # RLS por tabela, texto das policies, grants por role, colunas sensíveis
-├── db-programmability.md         # views, matviews, functions (SECURITY DEFINER), triggers, extensões
-├── edge-functions.csv            # 1 linha por função: auth, chamador, tabelas, service role, cron, MVP sim/não
-├── auth-identity.md              # provedores, users/profiles/membership, claims JWT, MFA, SCIM, convites
-└── storage-realtime.md           # buckets, tamanho, política de acesso; canais realtime; filas/jobs
+Ou seja, o resultado esperado do Passo 1 já bate com o schema versionado; a execução no banco serve como confirmação de que o ambiente real não sofreu drift.
+
+## Correção necessária no SQL do Passo 2
+
+A tabela `jobs` usa a coluna **`type`**, não `job_type` — o índice de dedup é sobre `(agent_id, type)`. O INSERT como está escrito falharia por coluna inexistente, e não por violação de unicidade, o que daria uma falsa prova. O probe será executado com `type`.
+
+## Execução proposta
+
+### Passo 1 — Inventário de constraints (somente leitura)
+Rodar as duas consultas de catálogo exatamente como enviadas e colar o output completo no chat.
+
+### Passo 2 — Contagem de duplicidade ativa (somente leitura)
+Rodar a contagem de `agent_id, type` com status ativo e reportar o número de linhas (esperado: 0).
+
+### Passo 2b — Prova funcional do dedup em `jobs`
+A ferramenta de leitura não executa INSERT, e a ferramenta de escrita não permite `BEGIN/ROLLBACK` — cada comando confirma sozinho. O padrão equivalente, sem sujar dados, é:
+
+1. Inserir uma linha-sonda em `jobs` (`type = 'service_health_check'`, `status = 'pending'`, agente e tenant reais).
+2. Repetir o mesmo INSERT — o esperado é o erro `duplicate key value violates unique constraint "idx_jobs_dedup_active"`, que é a evidência.
+3. `DELETE` da linha-sonda pelo `id`, restaurando o estado.
+
+O output bruto dos três passos, incluindo o texto do erro, vai para a evidência.
+
+### Passo 3 — P0-03: `virus_scans.scan_key`
+Mudança de schema, portanto entra como migração para sua aprovação (não como comando avulso):
+
+```sql
+ALTER TABLE public.virus_scans ADD COLUMN IF NOT EXISTS scan_key text;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_virus_scans_scan_key
+  ON public.virus_scans (scan_key) WHERE scan_key IS NOT NULL;
+COMMENT ON COLUMN public.virus_scans.scan_key IS
+  'P0-03 idempotency key: tenant_id:file_hash:UTC-date. NULL for legacy rows.';
 ```
 
-## Execução
+Depois de aplicada, o mesmo padrão de sonda do Passo 2b em `virus_scans` (inserir, repetir esperando `uq_virus_scans_scan_key`, apagar a sonda).
 
-1. **Restabelecer leitura do banco.** Reexecutar as consultas de inventário; se o timeout persistir, gerar as seções de schema a partir de `types.ts` + migrações e marcar explicitamente cada número ausente como `PENDENTE — banco indisponível`, em vez de estimar.
-2. **Seção 1 — Banco.** Rodar as consultas de catálogo (tabelas, colunas, FKs, índices, `pg_policies`, `pg_stat_user_tables`, `pg_total_relation_size`, `pg_proc`, triggers, extensões) e exportar os resultados para os anexos.
-3. **Seção 1.4 — Dados sensíveis.** Contagem de `hmac_secret` ausente/inválido em `agents`, mapa de colunas com PII (e-mail, nome, IP) e volume das tabelas de auditoria/telemetria com a política de retenção atual.
-4. **Seção 2 — Auth.** Levantar provedores realmente configurados, o par `auth.users` ↔ perfis ↔ vínculo de tenant, claims customizados, exigência de AAL2 e as funções de SAML/FIDO2/SCIM/convites presentes no repositório.
-5. **Seção 3 — Edge Functions.** Para cada função: modo de autenticação (HMAC de agente, JWT, interno, anônimo), quem chama (UI, agente, cron, webhook), tabelas acessadas, uso de service role, schedule ativo no `config.toml` e classificação MVP / fase 2. Volume por função vem dos logs, com janela declarada no relatório.
-6. **Seções 4–6.** Buckets de storage e uso, canais realtime, modelo de fila de jobs, e o mapa do frontend (chamadas diretas ao cliente, variáveis de ambiente, alvos Electron/Capacitor, CORS).
-7. **Seções 7–8 + checklist.** Montar o quadro final de decisão com os 12 itens do checklist, cada um marcado como coletado ou dependente de resposta do usuário.
+Observação de escopo: esta migração apenas cria a coluna e o índice. Fazer as edge functions de scan **gravarem** `scan_key` é mudança de runtime e continua sob o congelamento pré-produção — fica como item seguinte, separado.
 
-## Restrições respeitadas
+### Passo 4 — Registro da evidência
+Consolidar os outputs em:
 
-- Trabalho 100% somente leitura: nenhuma migração, nenhum `pg_dump`, nenhuma alteração de runtime. Compatível com o congelamento pré-produção vigente.
-- Segredos nunca são impressos: colunas sensíveis são inventariadas por nome, formato e contagem de validade, jamais por valor.
+- `docs/audits/active/evidence/P0-05-idempotency/dedup-proof.md`
+- `docs/audits/active/evidence/P0-03-scan-recovery/scan-key-proof.md`
 
-## Informações que só você pode fornecer
+e atualizar o quadro de rastreamento com a nova classificação de P0-05 e P0-03.
 
-Estas entram no relatório como campos de decisão e ficam em branco até você responder:
+## Confirmação que preciso de você
 
-- Fatura mensal atual, quebrada por serviço, e teto de custo alvo.
-- Ambientes existentes (só produção, ou dev/staging/prod) e SLA exigido.
-- Migrar os dados de produção ou partir de banco zerado.
-- Preferência final de destino: Postgres próprio, Mongo ou híbrido.
-- Quem administra a operação depois do cutover (um dev ou time).
+- Reative o backend pausado; sem isso nada roda.
+- Confirme que aceita as sondas com INSERT + DELETE imediato em `jobs` e `virus_scans` (não há como usar `ROLLBACK` por aqui). Se preferir zero escrita em produção, faço apenas os Passos 1 e 2 (somente leitura) e a prova funcional fica pendente.
