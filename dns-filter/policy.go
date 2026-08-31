@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -20,6 +21,7 @@ type Policy struct {
 // PolicyEngine manages domain blocking policies
 type PolicyEngine struct {
 	mu         sync.RWMutex
+	stopOnce   sync.Once
 	policy     *Policy
 	policyPath string
 	watcher    *fsnotify.Watcher
@@ -54,9 +56,10 @@ func NewPolicyEngine(policyPath string) (*PolicyEngine, error) {
 
 	// Add path to watcher
 	if err := watcher.Add(policyPath); err != nil {
-		// Try watching the directory instead
-		dir := strings.TrimSuffix(policyPath, "/"+strings.Split(policyPath, "/")[len(strings.Split(policyPath, "/"))-1])
-		watcher.Add(dir)
+		// The file may not exist yet; watch the parent directory for create events.
+		if dir := filepath.Dir(policyPath); dir != "." && dir != "" {
+			_ = watcher.Add(dir)
+		}
 	}
 
 	return pe, nil
@@ -72,6 +75,14 @@ func (pe *PolicyEngine) reload() error {
 	var policy Policy
 	if err := json.Unmarshal(data, &policy); err != nil {
 		return err
+	}
+
+	policy.Blocked = normalizePolicyPatterns(policy.Blocked)
+	if policy.Version == "" {
+		policy.Version = "1.0.0"
+	}
+	if policy.UpdatedAt == "" {
+		policy.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 	}
 
 	pe.mu.Lock()
@@ -93,11 +104,9 @@ func (pe *PolicyEngine) watchPolicy() {
 			if !ok {
 				return
 			}
-			if event.Op&(fsnotify.Write|fsnotify.Create) != 0 {
-				if strings.Contains(event.Name, "blocked_websites") {
-					time.Sleep(100 * time.Millisecond) // Debounce
-					pe.reload()
-				}
+			if event.Op&(fsnotify.Write|fsnotify.Create) != 0 && pe.isPolicyEvent(event.Name) {
+				time.Sleep(100 * time.Millisecond) // Debounce
+				_ = pe.reload()
 			}
 		case <-pe.watcher.Errors:
 			// Ignore errors, continue watching
@@ -105,6 +114,10 @@ func (pe *PolicyEngine) watchPolicy() {
 			return
 		}
 	}
+}
+
+func (pe *PolicyEngine) isPolicyEvent(eventName string) bool {
+	return filepath.Clean(eventName) == filepath.Clean(pe.policyPath)
 }
 
 // IsBlocked checks if a domain should be blocked
@@ -121,8 +134,6 @@ func (pe *PolicyEngine) IsBlocked(domain string) (bool, string) {
 	domain = normalizeDomain(domain)
 
 	for _, pattern := range pe.policy.Blocked {
-		pattern = normalizeDomain(pattern)
-
 		if domainMatches(domain, pattern) {
 			return true, pattern
 		}
@@ -133,9 +144,30 @@ func (pe *PolicyEngine) IsBlocked(domain string) (bool, string) {
 
 // normalizeDomain normalizes a domain for comparison
 func normalizeDomain(domain string) string {
+	domain = strings.TrimSpace(domain)
 	domain = strings.TrimSuffix(domain, ".")
 	domain = strings.ToLower(domain)
 	return domain
+}
+
+// normalizePolicyPatterns canonicalizes policy patterns and drops empty entries.
+func normalizePolicyPatterns(patterns []string) []string {
+	normalized := make([]string, 0, len(patterns))
+	seen := make(map[string]struct{}, len(patterns))
+
+	for _, pattern := range patterns {
+		pattern = normalizeDomain(pattern)
+		if pattern == "" || pattern == "*" || pattern == "*." {
+			continue
+		}
+		if _, ok := seen[pattern]; ok {
+			continue
+		}
+		seen[pattern] = struct{}{}
+		normalized = append(normalized, pattern)
+	}
+
+	return normalized
 }
 
 // domainMatches implements CORRECT domain matching
@@ -174,15 +206,23 @@ func domainMatches(domain, pattern string) bool {
 
 // Stop stops the policy engine
 func (pe *PolicyEngine) Stop() {
-	close(pe.stopChan)
-	if pe.watcher != nil {
-		pe.watcher.Close()
-	}
+	pe.stopOnce.Do(func() {
+		close(pe.stopChan)
+		if pe.watcher != nil {
+			_ = pe.watcher.Close()
+		}
+	})
 }
 
 // GetPolicy returns current policy (for debugging)
 func (pe *PolicyEngine) GetPolicy() *Policy {
 	pe.mu.RLock()
 	defer pe.mu.RUnlock()
-	return pe.policy
+	if pe.policy == nil {
+		return nil
+	}
+
+	policyCopy := *pe.policy
+	policyCopy.Blocked = append([]string(nil), pe.policy.Blocked...)
+	return &policyCopy
 }
